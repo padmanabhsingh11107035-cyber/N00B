@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <radialGradient id="neonGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E2FF00" />
+      <stop offset="85%" stop-color="#CCFF00" />
+      <stop offset="100%" stop-color="#A6E600" />
+    </radialGradient>
+    <filter id="grungeRough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+
+  <!-- Outer Ring with Distressed Edge -->
+  <circle cx="250" cy="250" r="235" fill="url(#neonGlow)" />
+  <circle cx="250" cy="250" r="232" fill="none" stroke="#000000" stroke-width="7" stroke-dasharray="80 3 40 4 120 2" filter="url(#grungeRough)" />
+  <circle cx="250" cy="250" r="226" fill="none" stroke="#000000" stroke-width="2.5" opacity="0.6" />
+
+  <!-- Stars / Sparkles -->
+  <!-- Top Left Sparkle (Black) -->
+  <path d="M 105 145 Q 105 130 100 125 Q 105 120 105 105 Q 105 120 110 125 Q 105 130 105 145 Z" fill="#000000" />
+  <circle cx="85" cy="155" r="4.5" fill="#000000" />
+
+  <!-- Top Right Sparkle (White) -->
+  <path d="M 370 125 Q 370 110 364 105 Q 370 100 370 85 Q 370 100 376 105 Q 370 110 370 125 Z" fill="#FFFFFF" />
+  
+  <!-- Bottom Right Sparkle (Black) -->
+  <path d="M 375 330 Q 375 315 368 310 Q 375 305 375 290 Q 375 305 382 310 Q 375 315 375 330 Z" fill="#000000" />
+
+  <!-- Dynamic Lightning Bolt (Angled through background) -->
+  <polygon points="310,48 240,195 295,185 160,430 225,275 175,285" fill="#000000" />
+
+  <!-- "noob" Bold Italicized Typographic Wordmark -->
+  <g transform="skewX(-10)">
+    <text 
+      x="250" 
+      y="295" 
+      font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Impact', 'Montserrat Black', 'Arial Black', sans-serif" 
+      font-size="122" 
+      font-weight="900" 
+      font-style="italic"
+      letter-spacing="-4" 
+      fill="#000000" 
+      text-anchor="middle"
+    >noob</text>
+  </g>
+</svg>

@@ -1,0 +1,499 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Heart,
+  MessageCircle,
+  Send,
+  Bookmark,
+  Music,
+  Sliders,
+  History,
+  Volume2,
+  VolumeX,
+  ExternalLink,
+  Sparkles,
+  Globe,
+  Share2,
+  Check,
+  Film
+} from 'lucide-react';
+import { Reel, User } from '../../types';
+import { toggleLikeReel, recordReelView } from '../../services/api';
+import { VerifiedBadge } from '../Common/VerifiedBadge';
+import confetti from 'canvas-confetti';
+
+interface ReelsViewProps {
+  reels: Reel[];
+  currentUser: User;
+  onNavigateToChat: () => void;
+  initialReelId?: string;
+}
+
+export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavigateToChat, initialReelId }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showHeartAnim, setShowHeartAnim] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showAlgorithmModal, setShowAlgorithmModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [algorithmWeights, setAlgorithmWeights] = useState({
+    robotics: 85,
+    code: 90,
+    cad: 70,
+    gaming: 60,
+    synth: 75
+  });
+  const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
+  const [localReels, setLocalReels] = useState<Reel[]>(reels);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    setLocalReels(reels);
+    if (initialReelId) {
+      const idx = reels.findIndex((r) => r.id === initialReelId);
+      if (idx !== -1) {
+        setCurrentIndex(idx);
+      }
+    }
+  }, [reels, initialReelId]);
+
+  const currentReel = localReels[currentIndex] || localReels[0];
+
+  useEffect(() => {
+    if (currentReel) {
+      recordReelView(currentReel.id).catch(console.error);
+    }
+  }, [currentIndex, currentReel]);
+
+  const handleToggleLike = async () => {
+    if (!currentReel) return;
+    try {
+      const res = await toggleLikeReel(currentReel.id);
+      setLocalReels(
+        localReels.map((r) =>
+          r.id === currentReel.id ? { ...r, isLiked: res.isLiked, likesCount: res.likesCount } : r
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDoubleTap = () => {
+    if (!currentReel.isLiked) {
+      handleToggleLike();
+    }
+    setShowHeartAnim(true);
+    confetti({ particleCount: 30, spread: 60, origin: { y: 0.6 } });
+    setTimeout(() => setShowHeartAnim(false), 800);
+  };
+
+  const handleNextReel = () => {
+    if (currentIndex < localReels.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      setCurrentIndex(0); // loop
+    }
+  };
+
+  const handlePrevReel = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  if (!currentReel || localReels.length === 0) {
+    return (
+      <div className="w-full h-[70vh] flex flex-col items-center justify-center text-center px-4">
+        <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-[#00FF66]">
+          <Film className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-bold text-white mb-1">No Reels Yet</h3>
+        <p className="text-xs text-zinc-400 max-w-xs leading-relaxed">
+          Be the first to record and share a reel with the NOOB community!
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id="reels-page-container"
+      className="relative w-full h-[calc(100vh-60px)] max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
+    >
+      {/* 1. Main Vertical Video Player */}
+      <div
+        className="relative w-full h-full flex items-center justify-center cursor-pointer"
+        onClick={() => setIsPlaying(!isPlaying)}
+        onDoubleClick={handleDoubleTap}
+      >
+        <video
+          ref={videoRef}
+          src={currentReel.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+          loop
+          autoPlay
+          playsInline
+          muted={isMuted}
+          onError={(e) => {
+            console.warn('Video failed to load source:', e);
+          }}
+          className="w-full h-full object-cover"
+        />
+
+        {/* Double-tap heart animation */}
+        {showHeartAnim && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
+            <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
+          </div>
+        )}
+
+        {/* Top Control Bar */}
+        <div className="absolute top-3 inset-x-3 z-30 flex items-center justify-between pointer-events-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-extrabold text-white tracking-tight drop-shadow-md">
+              Reels
+            </span>
+            {currentReel.isTrialReel && (
+              <span className="px-2 py-0.5 bg-yellow-500/80 text-black text-[10px] font-bold rounded-full">
+                Trial Reel
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Your Algorithm Tuner Button */}
+            <button
+              id="your-algorithm-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAlgorithmModal(true);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 bg-black/60 hover:bg-[#00FF66]/20 border border-[#00FF66]/50 rounded-full text-[10px] text-[#00FF66] font-bold backdrop-blur-md transition-colors cursor-pointer"
+              title="Tune Algorithm Recommendations"
+            >
+              <Sliders className="w-3 h-3 text-[#00FF66]" />
+              <span>Your Algorithm</span>
+            </button>
+
+            {/* Watch History */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowHistoryModal(true);
+              }}
+              className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
+              title="Watch History Log"
+            >
+              <History className="w-4 h-4" />
+            </button>
+
+            {/* Audio Mute */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMuted(!isMuted);
+              }}
+              className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
+            >
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Left Creator Overlay */}
+        <div className="absolute bottom-6 left-3 right-16 z-20 space-y-2 pointer-events-auto text-left">
+          {/* Creator Profile & Follow (with Instagram-style Dual Overlapping Avatars) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex items-center">
+              <img
+                src={currentReel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                alt={currentReel.username}
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-[#00FF66]"
+                referrerPolicy="no-referrer"
+              />
+              {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
+                <div className="relative -ml-3 mt-2 w-6 h-6 rounded-full ring-2 ring-black bg-zinc-800 overflow-hidden shadow-md">
+                  <img
+                    src={currentReel.collabUserAvatar || currentReel.taggedUsers?.[0]?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                    alt={currentReel.collabUsername || 'Tagged user'}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-xs font-bold text-white tracking-tight">{currentReel.username}</span>
+              {currentReel.isVerified && (
+                <VerifiedBadge size="xs" />
+              )}
+
+              {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
+                <>
+                  <span className="text-[10px] text-zinc-400 font-normal">and</span>
+                  <span className="text-xs font-bold text-[#00FF66] flex items-center gap-1">
+                    @{currentReel.collabUsername || currentReel.taggedUsers?.[0]?.username}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocalReels(
+                  localReels.map((r) =>
+                    r.id === currentReel.id ? { ...r, isFollowing: !r.isFollowing } : r
+                  )
+                );
+              }}
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                currentReel.isFollowing
+                  ? 'bg-black/50 border-neutral-700 text-gray-300'
+                  : 'bg-[#00FF66] border-[#00FF66] text-black'
+              }`}
+            >
+              {currentReel.isFollowing ? 'Following' : 'Follow'}
+            </button>
+          </div>
+
+          {/* Caption */}
+          <p className="text-xs text-gray-200 line-clamp-2 leading-snug drop-shadow-md">
+            {currentReel.caption}
+          </p>
+
+          {/* Outbound Web Link (Meta-Verified) */}
+          {currentReel.webLink && (
+            <a
+              href={currentReel.webLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 bg-black/60 border border-[#00FF66]/40 px-2 py-0.5 rounded-full text-[10px] text-[#00FF66] font-medium"
+            >
+              <ExternalLink className="w-2.5 h-2.5" /> {currentReel.webLink}
+            </a>
+          )}
+
+          {/* AI Voice Translation Button */}
+          {currentReel.aiTranslationAvailable && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setAiVoiceTranslationActive(!aiVoiceTranslationActive);
+              }}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                aiVoiceTranslationActive
+                  ? 'bg-[#00FF66] text-black border-[#00FF66]'
+                  : 'bg-black/60 text-purple-300 border-purple-500/40'
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              <span>{aiVoiceTranslationActive ? 'AI Voice Dubbed (EN)' : 'AI Translate Voice'}</span>
+            </button>
+          )}
+
+          {/* Audio Marquee */}
+          <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full px-2.5 py-1 w-fit">
+            <Music className="w-3 h-3 text-[#00FF66] animate-spin" />
+            <span className="text-[10px] text-gray-300 font-medium truncate max-w-[200px]">
+              {currentReel.audioTrack.title} • {currentReel.audioTrack.artist}
+            </span>
+          </div>
+        </div>
+
+        {/* Right Floating Engagement Buttons */}
+        <div className="absolute bottom-6 right-2.5 z-20 flex flex-col items-center gap-4 pointer-events-auto">
+          {/* Like */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleLike();
+            }}
+            className="flex flex-col items-center gap-1 group cursor-pointer"
+          >
+            <div
+              className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform ${
+                currentReel.isLiked ? 'text-red-500' : 'text-white'
+              }`}
+            >
+              <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'fill-current' : ''}`} />
+            </div>
+            <span className="text-[10px] font-bold text-white drop-shadow">
+              {currentReel.likesCount.toLocaleString()}
+            </span>
+          </button>
+
+          {/* Comment */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowComments(true);
+            }}
+            className="flex flex-col items-center gap-1 group cursor-pointer"
+          >
+            <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
+              <MessageCircle className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-bold text-white drop-shadow">
+              {currentReel.commentsCount}
+            </span>
+          </button>
+
+          {/* Share */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigateToChat();
+            }}
+            className="flex flex-col items-center gap-1 group cursor-pointer"
+          >
+            <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
+              <Send className="w-5 h-5 -rotate-12" />
+            </div>
+            <span className="text-[10px] font-bold text-white drop-shadow">
+              {currentReel.sharesCount}
+            </span>
+          </button>
+
+          {/* Save / Bookmark */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocalReels(
+                localReels.map((r) =>
+                  r.id === currentReel.id ? { ...r, isSaved: !r.isSaved } : r
+                )
+              );
+            }}
+            className="flex flex-col items-center gap-1 group cursor-pointer"
+          >
+            <div
+              className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform ${
+                currentReel.isSaved ? 'text-[#00FF66]' : 'text-white'
+              }`}
+            >
+              <Bookmark className={`w-6 h-6 ${currentReel.isSaved ? 'fill-current' : ''}`} />
+            </div>
+          </button>
+
+          {/* Audio Spinning Disc */}
+          <div className="w-8 h-8 rounded-full border-2 border-neutral-700 overflow-hidden animate-spin bg-neutral-900 flex items-center justify-center">
+            <Music className="w-4 h-4 text-[#00FF66]" />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Your Algorithm Tuning Modal */}
+      {showAlgorithmModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#121212] border border-[#00FF66]/40 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-[#00FF66]" />
+                <h3 className="text-sm font-bold text-white">Your Reel Algorithm Controls</h3>
+              </div>
+              <button onClick={() => setShowAlgorithmModal(false)} className="text-gray-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Fine-tune the recommendation weight for specific content topics in your Reels feed.
+            </p>
+
+            <div className="space-y-3">
+              {Object.entries(algorithmWeights).map(([key, val]) => (
+                <div key={key} className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold capitalize text-gray-200">
+                    <span>{key} Topics</span>
+                    <span className="text-[#00FF66]">{val}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={val}
+                    onChange={(e) =>
+                      setAlgorithmWeights({ ...algorithmWeights, [key]: Number(e.target.value) })
+                    }
+                    className="w-full accent-[#00FF66]"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowAlgorithmModal(false);
+                confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
+              }}
+              className="w-full py-2 bg-[#00FF66] text-black font-bold text-xs rounded-xl cursor-pointer"
+            >
+              Apply Algorithm Preferences
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Watch History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#121212] border border-neutral-800 rounded-2xl p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-[#00FF66]" />
+                <h3 className="text-sm font-bold text-white">Reel Watch History</h3>
+              </div>
+              <button onClick={() => setShowHistoryModal(false)} className="text-gray-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <div className="py-3 space-y-2 max-h-60 overflow-y-auto">
+              {localReels.map((r, i) => (
+                <div
+                  key={r.id}
+                  onClick={() => {
+                    setCurrentIndex(i);
+                    setShowHistoryModal(false);
+                  }}
+                  className="p-2 bg-neutral-900/80 rounded-xl flex items-center gap-2.5 hover:bg-neutral-800 cursor-pointer"
+                >
+                  <img src={r.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  <div className="truncate flex-1">
+                    <span className="text-xs font-bold text-white block">@{r.username}</span>
+                    <span className="text-[10px] text-gray-400 truncate block">{r.caption}</span>
+                  </div>
+                  <span className="text-[10px] text-[#00FF66] font-semibold">{r.viewsCount} views</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Sliding Comments Sheet Overlay */}
+      {showComments && (
+        <div className="absolute inset-x-0 bottom-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60%] flex flex-col animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+            <h4 className="text-xs font-bold text-white">Reel Comments</h4>
+            <button onClick={() => setShowComments(false)} className="text-gray-400 hover:text-white">
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto py-3 space-y-2 text-xs text-gray-300">
+            <div className="p-2 bg-neutral-900 rounded-lg">
+              <span className="font-bold text-[#00FF66]">@elena_robotics:</span> That circuit frequency is insane!
+            </div>
+            <div className="p-2 bg-neutral-900 rounded-lg">
+              <span className="font-bold text-[#00E5FF]">@kai_cad_craft:</span> 10,000 FPS capture looks so clean.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

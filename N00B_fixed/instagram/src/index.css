@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #000000;
+    color: #FFFFFF;
+    overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  body.light {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+  }
+
+  body.light .bg-black,
+  body.light .bg-zinc-950,
+  body.light [class*="bg-zinc-950"] {
+    background-color: #ffffff !important;
+  }
+
+  body.light .bg-zinc-900,
+  body.light [class*="bg-zinc-900"] {
+    background-color: #f1f5f9 !important;
+  }
+
+  /* Light mode gradient adaptations */
+  body.light [class*="from-zinc-950"],
+  body.light [class*="from-zinc-900"] {
+    --tw-gradient-from: #f8fafc !important;
+  }
+
+  body.light [class*="via-zinc-900"],
+  body.light [class*="via-zinc-950"] {
+    --tw-gradient-stops: var(--tw-gradient-from), #ffffff, var(--tw-gradient-to) !important;
+  }
+
+  body.light [class*="to-zinc-950"],
+  body.light [class*="to-zinc-900"],
+  body.light [class*="to-black"] {
+    --tw-gradient-to: #f1f5f9 !important;
+  }
+
+  body.light .border-zinc-800,
+  body.light [class*="border-zinc-800"],
+  body.light .border-zinc-700,
+  body.light .border-white\/5,
+  body.light .border-white\/10 {
+    border-color: #e2e8f0 !important;
+  }
+
+  body.light .text-white {
+    color: #0f172a !important;
+  }
+
+  body.light .text-zinc-200,
+  body.light .text-zinc-300 {
+    color: #334155 !important;
+  }
+
+  body.light .text-zinc-400 {
+    color: #64748b !important;
+  }
+
+  body.light .text-zinc-500 {
+    color: #94a3b8 !important;
+  }
+
+  /* Elements marked as forced dark (e.g. Call modal, video player, dark overlays) */
+  .force-dark,
+  body.light .force-dark {
+    background-color: #09090b !important;
+    color: #ffffff !important;
+  }
+
+  .force-dark .text-white,
+  body.light .force-dark .text-white,
+  .force-white-text,
+  body.light .force-white-text {
+    color: #ffffff !important;
+  }
+
+  .force-dark .text-zinc-200,
+  body.light .force-dark .text-zinc-200,
+  .force-dark .text-zinc-300,
+  body.light .force-dark .text-zinc-300 {
+    color: #cbd5e1 !important;
+  }
+
+  .force-dark .text-zinc-400,
+  body.light .force-dark .text-zinc-400 {
+    color: #94a3b8 !important;
+  }
+
+  .force-dark .border-zinc-800,
+  body.light .force-dark .border-zinc-800,
+  body.light .force-dark [class*="border-zinc-800"] {
+    border-color: #27272a !important;
+  }
+
+  .force-dark [class*="bg-zinc-900"],
+  body.light .force-dark [class*="bg-zinc-900"] {
+    background-color: #18181b !important;
+  }
+
+  .force-dark [class*="bg-zinc-950"],
+  body.light .force-dark [class*="bg-zinc-950"] {
+    background-color: #09090b !important;
+  }
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 102, 0.5);
+}
+
+/* Sophisticated Dark Glows */
+.neon-glow {
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.15), 0 0 40px rgba(0, 255, 102, 0.08);
+}
+
+.neon-glow-sm {
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.25);
+}
+
+.neon-glow-btn {
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+}
+
+.neon-border {
+  border-color: rgba(0, 255, 102, 0.3);
+  box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.15), 0 0 12px rgba(0, 255, 102, 0.2);
+}
+
+.font-script {
+  font-family: 'Pacifico', 'Caveat', cursive, sans-serif;
+}
+
+.noob-wordmark {
+  font-family: 'Pacifico', cursive, sans-serif;
+  background: linear-gradient(135deg, #FF4E6A 0%, #FF758C 50%, #FF8E53 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(255, 78, 106, 0.35));
+}
+
+/* Hide scrollbars for stories & pills horizontal containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+

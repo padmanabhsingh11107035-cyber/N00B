@@ -1,0 +1,6 @@
+{
+  "name": "NOOB",
+  "description": "NOOB is a social media interaction app designed for fun, sharing moments, and connecting people with genuine interactions, real profiles, and community discovery.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

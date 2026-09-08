@@ -702,7 +702,7 @@ export default function App() {
       </aside>
 
       {/* 2. Center View / Main App Screen Container */}
-      <main className="relative w-full max-w-[480px] bg-black lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] pb-24 overflow-hidden shrink-0">
+      <main className="relative w-full max-w-[480px] md:max-w-2xl lg:max-w-2xl xl:max-w-[480px] bg-black lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] pb-24 overflow-hidden shrink-0">
         {activeTab === 'feed' && (
           <FeedView
             currentUser={currentUser}

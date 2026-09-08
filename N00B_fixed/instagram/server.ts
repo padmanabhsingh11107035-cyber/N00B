@@ -106,6 +106,7 @@ async function startServer() {
   let comments: Record<string, any[]> = {};
   let stories: any[] = [];
   let reels: any[] = [...MOCK_REELS];
+  let supportReviews: { rating: number; feedback?: string; username?: string; timestamp: string }[] = [];
 
   let notifications: any[] = [
     {
@@ -2000,6 +2001,32 @@ User message: ${userText}`
   app.put('/api/settings', (req, res) => {
     settings = { ...settings, ...req.body };
     res.json({ success: true, settings });
+  });
+
+  // --- SUPPORT REVIEWS: real aggregate rating, not cosmetic ---
+  app.post('/api/support/review', (req, res) => {
+    const { rating, feedback } = req.body;
+    const active = getActiveUser(req);
+    const numericRating = Number(rating);
+    if (!numericRating || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ error: 'rating must be a number from 1 to 5' });
+    }
+    supportReviews.push({
+      rating: numericRating,
+      feedback: feedback || '',
+      username: active?.username,
+      timestamp: new Date().toISOString(),
+    });
+    const average = supportReviews.reduce((sum, r) => sum + r.rating, 0) / supportReviews.length;
+    res.json({ success: true, average: Math.round(average * 10) / 10, count: supportReviews.length });
+  });
+
+  app.get('/api/support/rating-summary', (_req, res) => {
+    if (supportReviews.length === 0) {
+      return res.json({ average: null, count: 0 });
+    }
+    const average = supportReviews.reduce((sum, r) => sum + r.rating, 0) / supportReviews.length;
+    res.json({ average: Math.round(average * 10) / 10, count: supportReviews.length });
   });
 
   // --- AI CUSTOMER SUPPORT ASSISTANT (Voice & Context Enabled) ---

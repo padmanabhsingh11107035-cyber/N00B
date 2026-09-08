@@ -491,7 +491,42 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           <span className="text-zinc-600">•</span>
           <span className="text-violet-400">Grow</span>
         </div>
+
+        {/* Feature pill row — visible on every screen size, not just large ones */}
+        <div className="flex items-center gap-1.5 mt-3 flex-wrap justify-center px-4">
+          {[
+            { icon: 'heart', label: 'Real People', color: 'text-pink-300 border-pink-500/30 bg-pink-500/10' },
+            { icon: 'game', label: '50 Games', color: 'text-[#00FF66] border-[#00FF66]/30 bg-[#00FF66]/10' },
+            { icon: 'chat', label: 'Live Chat', color: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10' },
+            { icon: 'music', label: 'Music Hub', color: 'text-violet-300 border-violet-500/30 bg-violet-500/10' }
+          ].map((chip) => (
+            <span
+              key={chip.label}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-bold ${chip.color}`}
+            >
+              {chip.icon === 'heart' && (
+                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+              )}
+              {chip.icon === 'game' && (
+                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="10" rx="5" /><path d="M7 10v4M5 12h4M15.5 11.5h.01M18.5 13.5h.01" /></svg>
+              )}
+              {chip.icon === 'chat' && (
+                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
+              )}
+              {chip.icon === 'music' && (
+                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" fill="currentColor" stroke="none" /><circle cx="18" cy="16" r="3" fill="currentColor" stroke="none" /></svg>
+              )}
+              {chip.label}
+            </span>
+          ))}
+        </div>
       </header>
+
+      {/* Small scattered accents in the margins above/below the card — visible on every screen size */}
+      <svg viewBox="0 0 24 24" className="absolute top-[14%] left-[10%] w-4 h-4 text-amber-300/40 rotate-12 pointer-events-none select-none" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+      <svg viewBox="0 0 24 24" className="absolute top-[18%] right-[8%] w-4 h-4 text-cyan-300/40 -rotate-6 pointer-events-none select-none" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+      <svg viewBox="0 0 24 24" className="absolute bottom-[10%] left-[12%] w-4 h-4 text-violet-300/40 rotate-6 pointer-events-none select-none" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+      <svg viewBox="0 0 24 24" className="absolute bottom-[12%] right-[10%] w-4 h-4 text-[#00FF66]/40 -rotate-12 pointer-events-none select-none" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4z" /></svg>
 
       {/* Main Authentication Card */}
       <main className="w-full max-w-lg my-auto z-10 py-3">

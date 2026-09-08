@@ -45,120 +45,6 @@ export const formatNoobPoints = (points: number): string => {
   return points.toString();
 };
 
-// Fallback default leaderboard entries with top 10 users
-const DEFAULT_LEADERBOARD = [
-  {
-    rank: 1,
-    userId: 'u_alex',
-    username: 'alex_cyber',
-    displayName: 'Alex Rivers',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 2450,
-    gamesWon: 24,
-    gamesPlayed: 32,
-    isVerified: true
-  },
-  {
-    rank: 2,
-    userId: 'u_kenji',
-    username: 'pixel_samurai',
-    displayName: 'Kenji Sato',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 1980,
-    gamesWon: 19,
-    gamesPlayed: 28,
-    isVerified: true
-  },
-  {
-    rank: 3,
-    userId: 'u_zara',
-    username: 'neon_rider',
-    displayName: 'Zara Vance',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 1720,
-    gamesWon: 16,
-    gamesPlayed: 25,
-    isVerified: false
-  },
-  {
-    rank: 4,
-    userId: 'u_riku',
-    username: 'shadow_ninja',
-    displayName: 'Riku Tanaka',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 1400,
-    gamesWon: 14,
-    gamesPlayed: 20,
-    isVerified: false
-  },
-  {
-    rank: 5,
-    userId: 'u_elena',
-    username: 'cosmic_gamer',
-    displayName: 'Elena Rostova',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 1250,
-    gamesWon: 12,
-    gamesPlayed: 18,
-    isVerified: true
-  },
-  {
-    rank: 6,
-    userId: 'u_marcus',
-    username: 'marcus_dev',
-    displayName: 'Marcus Vance',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 1120,
-    gamesWon: 11,
-    gamesPlayed: 16,
-    isVerified: true
-  },
-  {
-    rank: 7,
-    userId: 'u_maya',
-    username: 'maya_ai',
-    displayName: 'Maya Lin',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 1050,
-    gamesWon: 10,
-    gamesPlayed: 15,
-    isVerified: false
-  },
-  {
-    rank: 8,
-    userId: 'u_david',
-    username: 'david_crypto',
-    displayName: 'David K.',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 950,
-    gamesWon: 9,
-    gamesPlayed: 14,
-    isVerified: false
-  },
-  {
-    rank: 9,
-    userId: 'u_sophia',
-    username: 'sophia_code',
-    displayName: 'Sophia Perez',
-    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 880,
-    gamesWon: 8,
-    gamesPlayed: 13,
-    isVerified: true
-  },
-  {
-    rank: 10,
-    userId: 'u_kai',
-    username: 'kai_synth',
-    displayName: 'Kai Sterling',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=300&auto=format&fit=crop&q=80',
-    noobPoints: 790,
-    gamesWon: 7,
-    gamesPlayed: 11,
-    isVerified: false
-  }
-];
-
 export const GamesView: React.FC<GamesViewProps> = ({
   currentUser,
   allUsers,
@@ -186,27 +72,13 @@ export const GamesView: React.FC<GamesViewProps> = ({
     };
   }, [showMenu]);
 
-  // Leaderboard state with immediate non-empty defaults
-  const [leaderboard, setLeaderboard] = useState<any[]>(() => {
-    const list = [...DEFAULT_LEADERBOARD];
-    if (currentUser && !list.some(u => u.username === currentUser.username)) {
-      list.push({
-        rank: list.length + 1,
-        userId: currentUser.id,
-        username: currentUser.username,
-        displayName: currentUser.displayName || currentUser.username,
-        avatar: currentUser.avatar,
-        noobPoints: currentUser.noobPoints ?? 0,
-        gamesWon: currentUser.gamesWonCount || 0,
-        gamesPlayed: currentUser.gamesPlayedCount || 0,
-        isVerified: !!currentUser.isVerified
-      });
-    }
-    return list.sort((a, b) => (b.noobPoints || 0) - (a.noobPoints || 0)).map((item, idx) => ({ ...item, rank: idx + 1 }));
-  });
+  // Leaderboard state — starts empty; only ever populated with real data
+  // from the server, never placeholder/demo people.
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [userPoints, setUserPoints] = useState<number>(currentUser?.noobPoints ?? 0);
   const [userRank, setUserRank] = useState<number>(1);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(false);
 
   useEffect(() => {
     loadLeaderboardData();
@@ -215,34 +87,18 @@ export const GamesView: React.FC<GamesViewProps> = ({
   const loadLeaderboardData = async () => {
     try {
       setIsLoadingLeaderboard(true);
+      setLeaderboardError(false);
       const data = await fetchGameLeaderboard();
-      if (data && data.leaderboard && data.leaderboard.length > 0) {
+      if (data && Array.isArray(data.leaderboard)) {
         setLeaderboard(data.leaderboard);
         setUserPoints(data.currentUserPoints ?? (currentUser?.noobPoints ?? 0));
         setUserRank(data.currentUserRank || 1);
       } else {
-        // Build robust list with current user included
-        const list = [...DEFAULT_LEADERBOARD];
-        if (currentUser && !list.some(u => u.username === currentUser.username)) {
-          list.push({
-            rank: list.length + 1,
-            userId: currentUser.id,
-            username: currentUser.username,
-            displayName: currentUser.displayName || currentUser.username,
-            avatar: currentUser.avatar,
-            noobPoints: currentUser.noobPoints ?? 0,
-            gamesWon: currentUser.gamesWonCount || 0,
-            gamesPlayed: currentUser.gamesPlayedCount || 0,
-            isVerified: !!currentUser.isVerified
-          });
-        }
-        const sorted = list
-          .sort((a, b) => (b.noobPoints || 0) - (a.noobPoints || 0))
-          .map((p, idx) => ({ ...p, rank: idx + 1 }));
-        setLeaderboard(sorted);
+        setLeaderboardError(true);
       }
     } catch (err) {
       console.error('Failed to load leaderboard:', err);
+      setLeaderboardError(true);
     } finally {
       setIsLoadingLeaderboard(false);
     }
@@ -499,7 +355,29 @@ export const GamesView: React.FC<GamesViewProps> = ({
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-4 shadow-xl space-y-2">
             <h2 className="text-sm font-bold text-zinc-300 px-2 mb-2">Top 10 Leaderboard Rankings</h2>
 
-            {leaderboard.slice(0, 10).map((player, idx) => (
+            {isLoadingLeaderboard && leaderboard.length === 0 ? (
+              <div className="py-10 flex flex-col items-center justify-center gap-2 text-zinc-500">
+                <Radio className="w-6 h-6 animate-pulse text-[#00FF66]" />
+                <span className="text-xs">Loading rankings...</span>
+              </div>
+            ) : leaderboardError && leaderboard.length === 0 ? (
+              <div className="py-10 flex flex-col items-center justify-center gap-2 text-center px-4">
+                <ShieldAlert className="w-6 h-6 text-amber-400" />
+                <span className="text-xs text-zinc-400">Couldn't load the leaderboard right now.</span>
+                <button
+                  onClick={loadLeaderboardData}
+                  className="mt-1 text-xs text-[#00FF66] hover:underline cursor-pointer font-semibold"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <div className="py-10 flex flex-col items-center justify-center gap-1.5 text-center px-4">
+                <Trophy className="w-6 h-6 text-zinc-600" />
+                <span className="text-xs text-zinc-400">No rankings yet — be the first to play!</span>
+              </div>
+            ) : (
+              leaderboard.slice(0, 10).map((player, idx) => (
               <div
                 key={player.userId || player.username || idx}
                 className={`p-3 rounded-2xl flex items-center justify-between gap-3 transition-colors ${
@@ -546,7 +424,8 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   <span className="text-[9px] text-zinc-500 block">Score</span>
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}

@@ -208,6 +208,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
       loadMessages(activeChatId);
       setInChatSearchQuery('');
       setShowInChatSearch(false);
+      setShowChatActionsMenu(false);
     }
   }, [activeChatId]);
 

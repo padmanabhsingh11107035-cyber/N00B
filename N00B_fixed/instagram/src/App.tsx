@@ -63,6 +63,7 @@ import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { GamePlayModal } from './components/Games/GamePlayModal';
 import { Headphones, Bot } from 'lucide-react';
+import { initPushNotifications } from './services/pushNotifications';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -105,17 +106,19 @@ export default function App() {
     challenger?: string;
     roomCode?: string;
   } | null>(null);
+  const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
 
   useEffect(() => {
     loadInitialData();
 
-    // Check URL parameters for direct game invite link
+    // Check URL parameters for direct game invite / shared profile links
     if (typeof window !== 'undefined') {
       try {
         const params = new URLSearchParams(window.location.search);
         const gameParam = params.get('playGame');
         const challengerParam = params.get('challenger');
         const roomParam = params.get('room');
+        const profileParam = params.get('profile');
 
         if (gameParam) {
           const matched = ALL_50_MINI_GAMES.find(
@@ -130,11 +133,41 @@ export default function App() {
             setActiveTab('games');
           }
         }
+
+        if (profileParam) {
+          setSharedProfileUsername(profileParam);
+        }
       } catch (err) {
         console.error('URL param parse error:', err);
       }
     }
   }, []);
+
+  // Resolve a shared-profile link once the viewer is logged in and the user
+  // directory has loaded — a login/signup can happen in between, so this
+  // can't just run once on mount alongside the URL parsing above.
+  useEffect(() => {
+    if (!sharedProfileUsername || !currentUser || registeredUsers.length === 0) return;
+
+    const target = registeredUsers.find(
+      (u) => u.username.toLowerCase() === sharedProfileUsername.toLowerCase()
+    );
+    if (target) {
+      setViewingProfileUser(target.id === currentUser.id ? null : target);
+      setActiveTab('profile');
+    }
+    setSharedProfileUsername(null);
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('profile');
+    window.history.replaceState({}, '', url.toString());
+  }, [sharedProfileUsername, currentUser, registeredUsers]);
+
+  useEffect(() => {
+    if (currentUser) {
+      initPushNotifications();
+    }
+  }, [currentUser?.id]);
 
   const loadInitialData = async () => {
     try {

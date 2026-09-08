@@ -697,6 +697,24 @@ async function startServer() {
     });
   });
 
+  // Store a device's push notification token against the logged-in account.
+  // Actually sending notifications still needs a Firebase service account
+  // key configured on the server (not set up yet) — this just persists
+  // tokens so that piece can be wired in later without a client change.
+  app.post('/api/users/push-token', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Push token is required.' });
+
+    const index = users.findIndex(u => u.id === active.id);
+    if (index === -1) return res.status(404).json({ error: 'User not found.' });
+
+    users[index].pushTokens = Array.from(new Set([...(users[index].pushTokens || []), token]));
+    res.json({ success: true });
+  });
+
   // Verification endpoint (Coupon code, 100M permanent points, or 50k/mo points with password authentication)
   app.post('/api/users/verify', (req, res) => {
     const active = getActiveUser(req);

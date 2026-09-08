@@ -821,6 +821,15 @@ export async function suspendUserAccount(payload: {
   return await res.json();
 }
 
+export async function registerPushToken(token: string): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/users/push-token`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ token })
+  });
+  return await res.json();
+}
+
 export async function deleteUserAccount(targetUserId: string): Promise<{ success: boolean; message?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/admin/delete-user`, {
     method: 'POST',

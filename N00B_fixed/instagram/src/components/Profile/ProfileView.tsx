@@ -303,6 +303,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return r.author?.id === targetUser.id || r.author?.username === targetUser.username;
   });
 
+  // Builds a real deep link to this specific profile (?profile=username) rather
+  // than just copying the current page URL, which is always the same generic
+  // app URL since there's no per-profile routing. App.tsx reads this param on
+  // load and opens the matching profile once the viewer is logged in.
+  const handleShareProfile = (username: string) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?profile=${encodeURIComponent(username)}`;
+    navigator.clipboard?.writeText(shareUrl);
+    confetti({ particleCount: 20, spread: 40 });
+  };
+
   const handleToggleFollowTargetUser = async () => {
     if (isOwnProfile) return;
     try {
@@ -783,8 +793,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <button
                     onClick={() => {
                       setShowThreeDotsMenu(false);
-                      navigator.clipboard?.writeText(window.location.href);
-                      confetti({ particleCount: 20, spread: 40 });
+                      handleShareProfile(targetUser.username);
                     }}
                     className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                   >
@@ -897,20 +906,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {isOwnProfile ? (
               <>
                 <button
-                  onClick={() => setShowEditProfileModal(true)}
-                  className="flex-1 py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#00FF66]/50 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-[#00FF66]" /> Edit Profile
-                </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard?.writeText(window.location.href);
-                    confetti({ particleCount: 20, spread: 40 });
-                  }}
-                  className="py-2 px-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  onClick={() => handleShareProfile(targetUser.username)}
+                  className="flex-1 py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                   title="Share Profile Link"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share
+                  <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share Profile
                 </button>
               </>
             ) : (
@@ -953,10 +953,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     )}
 
                     <button
-                      onClick={() => {
-                        navigator.clipboard?.writeText(window.location.href);
-                        confetti({ particleCount: 20, spread: 40 });
-                      }}
+                      onClick={() => handleShareProfile(targetUser.username)}
                       className="py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm"
                       title="Share Profile Link"
                     >

@@ -1041,7 +1041,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
           }}
         >
           {/* Active Chat Header */}
-          <div className="px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
+          <div className="relative z-10 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               {/* Back to list on mobile */}
               <button

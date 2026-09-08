@@ -393,11 +393,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute top-1/2 left-5 w-[300px] h-[300px] bg-[#00FF66]/10 rounded-full blur-[120px] pointer-events-none" />
+      {/* Corner gradient "blob" accents for depth */}
+      <div className="hidden lg:block absolute bottom-0 left-0 w-[380px] h-[320px] bg-gradient-to-tr from-[#00FF66]/20 via-cyan-500/10 to-transparent rounded-tr-[100%] blur-3xl pointer-events-none" />
+      <div className="hidden lg:block absolute top-0 right-0 w-[320px] h-[260px] bg-gradient-to-bl from-violet-500/15 to-transparent rounded-bl-[100%] blur-3xl pointer-events-none" />
 
       {/* Scattered hand-drawn doodles & callouts (decorative, hidden on small screens where the card fills the width) */}
       <div className="hidden lg:block absolute inset-0 pointer-events-none select-none z-[1]" aria-hidden="true">
-        {/* Top-left: "Make Friends" callout */}
-        <div className="absolute top-[8%] left-[6%] -rotate-6 text-center">
+        {/* Top-left: "Make Friends" polaroid callout */}
+        <div className="absolute top-[8%] left-[5%] -rotate-6 text-center">
           <div className="w-24 h-24 border-2 border-white/25 rounded-xl p-1.5 bg-white/[0.02]">
             <div className="w-full h-full border border-dashed border-white/20 rounded-lg flex items-center justify-center">
               <svg viewBox="0 0 24 24" className="w-8 h-8 text-white/30" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" /></svg>
@@ -406,52 +409,82 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           <span className="font-script text-xl text-cyan-300/80 block mt-1">Make Friends ♡</span>
         </div>
 
+        {/* Left, mid: phone mockup with a "story" preview */}
+        <div className="absolute top-[30%] left-[3%] w-28 -rotate-3">
+          <div className="rounded-[22px] border-2 border-white/15 bg-zinc-900/40 p-1.5 shadow-2xl">
+            <div className="rounded-2xl overflow-hidden aspect-[9/16] bg-gradient-to-b from-orange-400/70 via-pink-500/50 to-indigo-700/70 relative">
+              <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-white/70">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h12v16l-6-4-6 4V4z" /></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Top-right: "Good Vibes Only" */}
-        <div className="absolute top-[10%] right-[7%] rotate-3 text-right">
+        <div className="absolute top-[10%] right-[6%] rotate-3 text-right">
           <span className="font-script text-2xl text-violet-300/80 leading-tight block">Good Vibes<br />Only</span>
           <svg viewBox="0 0 100 10" className="w-24 h-3 text-violet-300/60 ml-auto mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
         </div>
 
+        {/* Right, mid: stacked colorful icon badges */}
+        <div className="absolute top-[32%] right-[7%] flex flex-col gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center rotate-6 shadow-lg shadow-pink-500/20">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center -rotate-3 shadow-lg shadow-cyan-500/20 ml-3">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center rotate-6 shadow-lg shadow-violet-500/20">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" /><path d="M18 8h4M20 6v4" /></svg>
+          </div>
+        </div>
+
         {/* Left, lower: "Real People, Real Connections" */}
-        <div className="absolute bottom-[22%] left-[4%] -rotate-3">
+        <div className="absolute bottom-[20%] left-[4%] -rotate-3">
           <span className="font-script text-xl text-emerald-300/80 leading-tight block">Real People<br />Real Connections</span>
         </div>
 
         {/* Right, lower: feature list */}
-        <div className="absolute bottom-[24%] right-[5%] rotate-2 text-left">
+        <div className="absolute bottom-[22%] right-[5%] rotate-2 text-left">
           <span className="font-script text-xl text-pink-300/80 leading-tight block">Post • Reels<br />Chat • Follow</span>
           <svg viewBox="0 0 100 10" className="w-24 h-3 text-pink-300/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
         </div>
 
-        {/* Small scattered sparkles & hearts for texture */}
-        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[16%] w-4 h-4 text-amber-300/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute top-[32%] right-[18%] w-5 h-5 text-cyan-300/40" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute bottom-[16%] left-[22%] w-4 h-4 text-violet-300/40 -rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute top-[45%] right-[8%] w-4 h-4 text-emerald-300/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        {/* Small scattered sparkles, hearts & a paper-plane for texture */}
+        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[18%] w-4 h-4 text-amber-300/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[6%] left-[38%] w-5 h-5 text-white/30 rotate-[20deg]" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute bottom-[16%] left-[24%] w-4 h-4 text-violet-300/40 -rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[48%] right-[14%] w-4 h-4 text-emerald-300/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
       </div>
 
-      {/* Top Header: Logo is to the left of "NOOB", both are larger and centered in the middle */}
-      <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-4 pb-2">
-        <div className="flex items-center justify-center gap-3.5 transition-transform hover:scale-[1.02]">
-          {/* Logo to the left of NOOB */}
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00FF66] via-cyan-400 to-indigo-600 p-[2.5px] shadow-[0_0_25px_rgba(0,255,102,0.3)] flex items-center justify-center">
-            <div className="w-full h-full bg-black rounded-[14px] flex items-center justify-center">
-              <span className="font-black text-transparent bg-clip-text bg-gradient-to-tr from-[#00FF66] to-cyan-300 text-xl tracking-tighter">
-                N
+      {/* Top Header: Circular brand badge + wordmark, centered */}
+      <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
+        <div className="relative transition-transform hover:scale-[1.02]">
+          {/* Circular gradient-ring badge */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#00FF66] via-cyan-400 to-indigo-600 p-[3px] shadow-[0_0_35px_rgba(0,255,102,0.35)]">
+            <div className="w-full h-full rounded-full bg-black flex flex-col items-center justify-center overflow-hidden relative">
+              {/* Crown accent */}
+              <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 -mb-0.5" fill="currentColor"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
+              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#00FF66] to-cyan-300 text-lg sm:text-xl tracking-tighter leading-none">
+                NOOB
               </span>
+              {/* Tiny chat-bubble accent */}
+              <svg viewBox="0 0 24 24" className="absolute top-2 right-2 w-3 h-3 text-cyan-300/70" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
             </div>
           </div>
-
-          {/* "NOOB" text larger in size and centered */}
-          <div className="flex flex-col items-start justify-center">
-            <span className="text-3xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-100 to-zinc-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-              NOOB
-            </span>
-          </div>
+          {/* Sparkle accent beside the badge */}
+          <svg viewBox="0 0 24 24" className="absolute -top-1 -right-2 w-5 h-5 text-amber-300 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
         </div>
 
+        {/* "NOOB" text lockup below the badge */}
+        <span className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-100 to-zinc-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+          NOOB
+        </span>
+
         {/* Tagline */}
-        <div className="flex items-center gap-2 mt-1.5 text-xs sm:text-sm font-bold tracking-wide">
+        <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm font-bold tracking-wide">
           <span className="text-[#00FF66]">Connect</span>
           <span className="text-zinc-600">•</span>
           <span className="text-cyan-400">Share</span>

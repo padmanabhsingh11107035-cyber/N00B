@@ -28,6 +28,18 @@ interface ReelsViewProps {
   initialReelId?: string;
 }
 
+// Fisher-Yates shuffle — used to randomize reel order and to reshuffle
+// into a fresh order once a full pass finishes, so playback never repeats
+// the same sequence back-to-back.
+function shuffleReels<T>(arr: T[]): T[] {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavigateToChat, initialReelId }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -49,13 +61,16 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    setLocalReels(reels);
     if (initialReelId) {
-      const idx = reels.findIndex((r) => r.id === initialReelId);
-      if (idx !== -1) {
-        setCurrentIndex(idx);
-      }
+      // Deep-linked reel (e.g. opened from a share or profile grid) plays
+      // first, with the rest of the feed shuffled behind it.
+      const target = reels.find((r) => r.id === initialReelId);
+      const rest = reels.filter((r) => r.id !== initialReelId);
+      setLocalReels(target ? [target, ...shuffleReels(rest)] : shuffleReels(reels));
+    } else {
+      setLocalReels(shuffleReels(reels));
     }
+    setCurrentIndex(0);
   }, [reels, initialReelId]);
 
   const currentReel = localReels[currentIndex] || localReels[0];
@@ -93,7 +108,18 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
     if (currentIndex < localReels.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      setCurrentIndex(0); // loop
+      // Finished a full pass with no repeats — reshuffle into a fresh
+      // order for the next pass instead of replaying the same sequence.
+      setLocalReels((prev: Reel[]) => {
+        const reshuffled = shuffleReels(prev);
+        // Avoid the last reel of this pass landing right back at the front,
+        // which would read as an immediate repeat across the pass boundary.
+        if (reshuffled.length > 1 && reshuffled[0].id === prev[prev.length - 1].id) {
+          [reshuffled[0], reshuffled[1]] = [reshuffled[1], reshuffled[0]];
+        }
+        return reshuffled;
+      });
+      setCurrentIndex(0);
     }
   };
 
@@ -102,6 +128,51 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
       setCurrentIndex(currentIndex - 1);
     }
   };
+
+  // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
+  const touchStartY = useRef<number | null>(null);
+  const isNavLockedRef = useRef(false);
+  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal;
+
+  const navigateWithCooldown = (direction: 'next' | 'prev') => {
+    if (isNavLockedRef.current) return;
+    isNavLockedRef.current = true;
+    if (direction === 'next') handleNextReel();
+    else handlePrevReel();
+    setTimeout(() => {
+      isNavLockedRef.current = false;
+    }, 400);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (anyModalOpen || touchStartY.current === null) return;
+    const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+    touchStartY.current = null;
+    const SWIPE_THRESHOLD = 50;
+    if (deltaY > SWIPE_THRESHOLD) navigateWithCooldown('next');
+    else if (deltaY < -SWIPE_THRESHOLD) navigateWithCooldown('prev');
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (anyModalOpen) return;
+    if (e.deltaY > 20) navigateWithCooldown('next');
+    else if (e.deltaY < -20) navigateWithCooldown('prev');
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (anyModalOpen) return;
+      if (e.key === 'ArrowDown') navigateWithCooldown('next');
+      else if (e.key === 'ArrowUp') navigateWithCooldown('prev');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anyModalOpen, currentIndex, localReels]);
 
   if (!currentReel || localReels.length === 0) {
     return (
@@ -127,6 +198,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
         className="relative w-full h-full flex items-center justify-center cursor-pointer"
         onClick={() => setIsPlaying(!isPlaying)}
         onDoubleClick={handleDoubleTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
       >
         <video
           ref={videoRef}

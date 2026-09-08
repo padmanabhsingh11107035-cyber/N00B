@@ -166,6 +166,10 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       const analysis = analyzeMediaFile(firstFile);
 
       if (forceType === 'video' || analysis.destination === 'reels' || analysis.mediaType === 'video') {
+        // The file itself is authoritative — always route to Reels here even
+        // if it was picked from the "Create Post" tab's file input (mobile
+        // OS file pickers don't reliably honor the accept="image/*" filter).
+        setCreationType('reel');
         setMediaMode('video');
         setUploadStatusMsg(`Verified video format (${analysis.mimeType}) • Ready for Reels`);
         const res = await uploadMediaFile(firstFile, 'reels');
@@ -176,6 +180,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           setVideoObjectKey(res.objectKey);
         }
       } else {
+        setCreationType('post');
         setMediaMode('photos');
         setUploadStatusMsg(`Adding photo attachments (${files.length} file${files.length > 1 ? 's' : ''})`);
         

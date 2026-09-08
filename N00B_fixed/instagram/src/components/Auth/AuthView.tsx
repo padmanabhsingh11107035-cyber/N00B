@@ -394,6 +394,42 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute top-1/2 left-5 w-[300px] h-[300px] bg-[#00FF66]/10 rounded-full blur-[120px] pointer-events-none" />
 
+      {/* Scattered hand-drawn doodles & callouts (decorative, hidden on small screens where the card fills the width) */}
+      <div className="hidden lg:block absolute inset-0 pointer-events-none select-none z-[1]" aria-hidden="true">
+        {/* Top-left: "Make Friends" callout */}
+        <div className="absolute top-[8%] left-[6%] -rotate-6 text-center">
+          <div className="w-24 h-24 border-2 border-white/25 rounded-xl p-1.5 bg-white/[0.02]">
+            <div className="w-full h-full border border-dashed border-white/20 rounded-lg flex items-center justify-center">
+              <svg viewBox="0 0 24 24" className="w-8 h-8 text-white/30" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" /></svg>
+            </div>
+          </div>
+          <span className="font-script text-xl text-cyan-300/80 block mt-1">Make Friends ♡</span>
+        </div>
+
+        {/* Top-right: "Good Vibes Only" */}
+        <div className="absolute top-[10%] right-[7%] rotate-3 text-right">
+          <span className="font-script text-2xl text-violet-300/80 leading-tight block">Good Vibes<br />Only</span>
+          <svg viewBox="0 0 100 10" className="w-24 h-3 text-violet-300/60 ml-auto mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
+        </div>
+
+        {/* Left, lower: "Real People, Real Connections" */}
+        <div className="absolute bottom-[22%] left-[4%] -rotate-3">
+          <span className="font-script text-xl text-emerald-300/80 leading-tight block">Real People<br />Real Connections</span>
+        </div>
+
+        {/* Right, lower: feature list */}
+        <div className="absolute bottom-[24%] right-[5%] rotate-2 text-left">
+          <span className="font-script text-xl text-pink-300/80 leading-tight block">Post • Reels<br />Chat • Follow</span>
+          <svg viewBox="0 0 100 10" className="w-24 h-3 text-pink-300/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
+        </div>
+
+        {/* Small scattered sparkles & hearts for texture */}
+        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[16%] w-4 h-4 text-amber-300/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[32%] right-[18%] w-5 h-5 text-cyan-300/40" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute bottom-[16%] left-[22%] w-4 h-4 text-violet-300/40 -rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[45%] right-[8%] w-4 h-4 text-emerald-300/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+      </div>
+
       {/* Top Header: Logo is to the left of "NOOB", both are larger and centered in the middle */}
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-4 pb-2">
         <div className="flex items-center justify-center gap-3.5 transition-transform hover:scale-[1.02]">
@@ -412,6 +448,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
               NOOB
             </span>
           </div>
+        </div>
+
+        {/* Tagline */}
+        <div className="flex items-center gap-2 mt-1.5 text-xs sm:text-sm font-bold tracking-wide">
+          <span className="text-[#00FF66]">Connect</span>
+          <span className="text-zinc-600">•</span>
+          <span className="text-cyan-400">Share</span>
+          <span className="text-zinc-600">•</span>
+          <span className="text-violet-400">Grow</span>
         </div>
       </header>
 

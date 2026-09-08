@@ -73,6 +73,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [isCallProcessing, setIsCallProcessing] = useState(false);
   const [callTranscript, setCallTranscript] = useState<Array<{ sender: 'ai' | 'user'; text: string; time: string }>>([]);
   const [callActiveTopic, setCallActiveTopic] = useState<string>('');
+  const [lastAiReply, setLastAiReply] = useState<string>('');
+  const [speechSupported, setSpeechSupported] = useState(true);
 
   // Post-Chat Review & Rating State (Exclusively for Customer Support)
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -189,8 +191,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const isMutedRef = useRef(isMuted);
   const isSpeakingRef = useRef(isSpeaking);
   const isCallProcessingRef = useRef(isCallProcessing);
-  const audioStreamRef = useRef<MediaStream | null>(null);
   const silenceTimerRef = useRef<any>(null);
+  const micPermissionDeniedRef = useRef(false);
 
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
@@ -230,10 +232,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         try {
           recognitionRef.current.stop();
         } catch (e) {}
-      }
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach((track) => track.stop());
-        audioStreamRef.current = null;
       }
     };
   }, []);
@@ -327,9 +325,12 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       return;
     }
 
+    if (micPermissionDeniedRef.current) return;
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn('SpeechRecognition API not available');
+      setSpeechSupported(false);
       return;
     }
 
@@ -383,20 +384,31 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       recognition.onerror = (event: any) => {
         console.warn('Speech recognition warning:', event.error);
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          micPermissionDeniedRef.current = true;
+          setIsListening(false);
+        } else if (event.error === 'audio-capture') {
+          // No microphone hardware detected — stop retrying
+          micPermissionDeniedRef.current = true;
+          setSpeechSupported(false);
           setIsListening(false);
         }
       };
 
       recognition.onend = () => {
-        if (isCallActiveRef.current && !isMutedRef.current && !isSpeakingRef.current && !isCallProcessingRef.current) {
-          // Restart listening seamlessly
-          try {
-            recognition.start();
-          } catch (e) {
-            setIsListening(false);
-          }
-        } else {
-          setIsListening(false);
+        setIsListening(false);
+        // Always spin up a brand-new recognition instance rather than
+        // restarting this one: Chrome's continuous SpeechRecognition is
+        // known to silently stop delivering results after a restart on the
+        // same instance, even though the mic indicator stays lit. A fresh
+        // instance each cycle avoids that "mic on, nothing heard" state.
+        if (
+          isCallActiveRef.current &&
+          !isMutedRef.current &&
+          !isSpeakingRef.current &&
+          !isCallProcessingRef.current &&
+          !micPermissionDeniedRef.current
+        ) {
+          setTimeout(() => startVoiceListening(), 250);
         }
       };
 
@@ -485,7 +497,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     }, 50);
   };
 
-  const handleStartCall = async () => {
+  const handleStartCall = () => {
     // iOS Safari (and other strict browsers) only allow speechSynthesis to
     // produce audio when triggered directly within a user gesture. Any
     // `await` before the first speak() call breaks that chain and causes
@@ -504,6 +516,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     setCallStatus('connected');
     setCallDuration(0);
     setIsMuted(false);
+    micPermissionDeniedRef.current = false;
+    setSpeechSupported(true);
 
     const greeting = `Hello @${currentUser.username}! You are connected to the NOOB AI Voice Support Specialist. I am listening to your microphone—what issue can I solve for your account today?`;
     setCallTranscript([
@@ -513,20 +527,16 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
-    // Speak the greeting BEFORE the mic-permission await below — that await
-    // is what broke the gesture chain in the first place.
+    setLastAiReply(greeting);
+    // Speak the greeting BEFORE anything else — any `await` here would break
+    // the user-gesture chain that unlocked speechSynthesis above.
     speakText(greeting);
 
-    // Request active microphone stream from browser
-    try {
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioStreamRef.current = stream;
-      }
-    } catch (micErr) {
-      console.warn('Microphone permission request:', micErr);
-    }
-
+    // Note: we deliberately do NOT call getUserMedia() here. SpeechRecognition
+    // requests and manages its own microphone access internally — grabbing a
+    // second, unused raw MediaStream in parallel held the mic device open for
+    // the whole call and could starve SpeechRecognition of exclusive access,
+    // which showed up as "the mic indicator is on but nothing is transcribed."
     // Also initiate listening as fallback if speech finishes fast or user interrupts
     setTimeout(() => {
       if (isCallActiveRef.current && !isMutedRef.current && !isSpeakingRef.current) {
@@ -561,6 +571,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setCallTranscript((prev) => [...prev, aiEntry]);
+      setLastAiReply(aiReply);
 
       if (isSpeakerOn && voiceEnabled) {
         speakText(aiReply);
@@ -575,6 +586,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
+      setLastAiReply(fallbackReply);
       if (isSpeakerOn && voiceEnabled) speakText(fallbackReply);
     } finally {
       setIsCallProcessing(false);
@@ -590,10 +602,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       try {
         recognitionRef.current.stop();
       } catch (e) {}
-    }
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach((track) => track.stop());
-      audioStreamRef.current = null;
     }
     setIsListening(false);
     setCallStatus('ended');
@@ -1400,7 +1408,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             {/* Dynamic Status Indicator */}
             <div className="text-center space-y-1">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-zinc-900/90 border border-zinc-700/80 text-xs font-bold shadow-md">
-                {isMuted ? (
+                {!speechSupported ? (
+                  <span className="text-amber-400 flex items-center gap-1.5">
+                    <MicOff className="w-3.5 h-3.5" /> Voice input unavailable — type below
+                  </span>
+                ) : isMuted ? (
                   <span className="text-rose-400 flex items-center gap-1.5">
                     <MicOff className="w-3.5 h-3.5" /> Microphone Muted
                   </span>
@@ -1420,13 +1432,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   <span className="text-zinc-400">Microphone Ready</span>
                 )}
               </div>
-
-              {/* User live speech transcription readout */}
-              {callInputText && isListening && !isSpeaking && (
-                <div className="max-w-md mx-auto px-3 py-1.5 rounded-xl bg-cyan-950/40 border border-cyan-500/40 text-xs text-cyan-200 animate-pulse">
-                  🗣️ <span className="font-semibold text-white">You:</span> "{callInputText}"
-                </div>
-              )}
             </div>
 
             {/* 18-bar Animated Voice Equalizer */}
@@ -1450,26 +1455,21 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               ))}
             </div>
 
-            {/* Live Call Conversation Transcript Box */}
-            <div className="w-full bg-zinc-950/90 border border-zinc-800/80 rounded-2xl p-3.5 max-h-44 sm:max-h-52 overflow-y-auto space-y-2.5 text-left text-xs shadow-inner">
-              {callTranscript.map((t, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-xl transition-all ${
-                    t.sender === 'ai'
-                      ? 'bg-cyan-950/40 border border-cyan-500/30 text-cyan-100'
-                      : 'bg-zinc-900 border border-zinc-700 text-white font-medium ml-4'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[10px] text-zinc-400 mb-1">
-                    <span className="font-bold flex items-center gap-1.5">
-                      {t.sender === 'ai' ? '🤖 NOOB AI Specialist' : `👤 @${currentUser.username}`}
-                    </span>
-                    <span>{t.time}</span>
-                  </div>
-                  <p className="whitespace-pre-line leading-relaxed">{t.text}</p>
-                </div>
-              ))}
+            {/* Live Caption: shows only what's being said right now — no persisted chat history */}
+            <div className="w-full min-h-[3.5rem] flex items-center justify-center text-center px-3">
+              {isSpeaking && lastAiReply ? (
+                <p className="max-w-md text-sm text-cyan-100 leading-relaxed line-clamp-3">
+                  {lastAiReply}
+                </p>
+              ) : callInputText && isListening ? (
+                <p className="max-w-md text-sm text-white font-medium leading-relaxed animate-pulse">
+                  🗣️ "{callInputText}"
+                </p>
+              ) : (
+                <p className="text-[11px] text-zinc-500">
+                  This call isn't recorded as a chat log — just speak naturally.
+                </p>
+              )}
             </div>
 
             {/* Spoken Quick Problem Solver Chips */}
@@ -1519,10 +1519,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 <button
                   type="button"
                   onClick={toggleListening}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg ${
+                  disabled={!speechSupported}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed ${
                     isListening ? 'text-cyan-400 animate-pulse' : 'text-zinc-400 hover:text-white'
                   }`}
-                  title={isListening ? 'Stop listening' : 'Start Voice Input'}
+                  title={!speechSupported ? 'Voice input not supported in this browser' : isListening ? 'Stop listening' : 'Start Voice Input'}
                 >
                   {isListening ? <Mic className="w-3.5 h-3.5 text-cyan-400" /> : <MicOff className="w-3.5 h-3.5" />}
                 </button>

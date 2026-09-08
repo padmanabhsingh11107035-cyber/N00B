@@ -1236,7 +1236,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
           )}
 
           {/* Messages History Container */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
+          <div className="flex-1 overflow-y-auto p-4 pb-28 space-y-3 scroll-smooth">
             {/* Encryption notice banner */}
             <div className="flex justify-center my-2">
               <div className="px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/80 text-zinc-400 text-[10px] font-medium flex items-center gap-1.5 shadow-sm">

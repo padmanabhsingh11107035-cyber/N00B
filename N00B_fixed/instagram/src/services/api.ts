@@ -795,6 +795,14 @@ export async function fetchAppNotifications(): Promise<{ notifications: import('
   return await res.json();
 }
 
+export async function clearAllNotifications(): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/notifications/clear`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  return await res.json();
+}
+
 export async function sendAdminNotification(payload: {
   target?: string;
   title: string;

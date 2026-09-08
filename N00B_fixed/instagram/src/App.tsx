@@ -39,7 +39,8 @@ import {
   updateUserStatusNote,
   logoutUser,
   deleteAllUsers,
-  fetchAppNotifications
+  fetchAppNotifications,
+  clearAllNotifications
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
@@ -403,6 +404,18 @@ export default function App() {
     setShowNotificationsModal(true);
     setUnreadNotificationCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await clearAllNotifications();
+    } catch (err) {
+      console.error('Failed to clear notifications:', err);
+    }
+    // Clear locally regardless — these are permanently dismissed for this
+    // user server-side too, so they won't come back on the next fetch.
+    setNotifications([]);
+    setUnreadNotificationCount(0);
   };
 
   const handleAcceptFollowRequest = (notifId: string, actorUsername: string) => {
@@ -1018,11 +1031,13 @@ export default function App() {
       {/* 6. Notifications & Following Activity Modal */}
       {showNotificationsModal && (
         <NotificationsModal
+          currentUser={currentUser}
           notifications={notifications}
           notificationSettings={notificationSettings}
           onUpdateSettings={setNotificationSettings}
           onAcceptFollowRequest={handleAcceptFollowRequest}
           onDeclineFollowRequest={handleDeclineFollowRequest}
+          onClearAll={handleClearAllNotifications}
           onSimulateNotification={handleSimulateNotification}
           onClose={() => setShowNotificationsModal(false)}
         />

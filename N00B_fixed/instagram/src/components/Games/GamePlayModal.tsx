@@ -47,7 +47,8 @@ interface GamePlayModalProps {
   onPointsUpdated: (pointsEarned: number, totalPoints: number) => void;
 }
 
-type PlayMode = 'select_mode' | 'matchmaking' | 'play_bot' | 'play_friend' | 'play_match' | 'game_over';
+type PlayMode = 'select_mode' | 'matchmaking' | 'play_bot' | 'play_friend' | 'play_match' | 'pass_play_handoff' | 'game_over';
+type RoundResult = 'win' | 'tie' | 'loss';
 
 export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   game,
@@ -83,6 +84,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const [pointsEarned, setPointsEarned] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Pass and Play: two humans take turns on this device, each attempting the
+  // same game's built-in challenge; whichever round did better (win > tie >
+  // loss) wins the match.
+  const [isPassAndPlay, setIsPassAndPlay] = useState(false);
+  const [passPlayStage, setPassPlayStage] = useState<'p1' | 'p2'>('p1');
+  const [passPlayP1Result, setPassPlayP1Result] = useState<RoundResult | null>(null);
+
   // Matchmaking 30s timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -106,6 +114,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
   // Start Bot Game setup
   const handleStartBotGame = () => {
+    setIsPassAndPlay(false);
     setCurrentMode('play_bot');
     setGameResult(null);
     setPointsEarned(0);
@@ -148,6 +157,73 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   };
 
   const shuffleArray = (arr: number[]) => [...arr].sort(() => Math.random() - 0.5);
+
+  // Begin a brand new Pass and Play match (from the mode-select screen)
+  const handleStartPassAndPlay = () => {
+    setPassPlayStage('p1');
+    setPassPlayP1Result(null);
+    handleStartBotGame();
+    setIsPassAndPlay(true);
+  };
+
+  // Start round 2, once Player 2 has the device (from the handoff screen)
+  const handleStartPassAndPlayRound2 = () => {
+    handleStartBotGame();
+    setIsPassAndPlay(true);
+  };
+
+  const RESULT_RANK: Record<RoundResult, number> = { win: 2, tie: 1, loss: 0 };
+
+  // Called instead of finishGame() while in Pass and Play mode
+  const finishPassPlayRound = async (result: RoundResult) => {
+    if (passPlayStage === 'p1') {
+      setPassPlayP1Result(result);
+      setPassPlayStage('p2');
+      setCurrentMode('pass_play_handoff');
+      return;
+    }
+
+    // Round 2 just finished — compare both players' results
+    const p1Result = passPlayP1Result as RoundResult;
+    const overall: RoundResult =
+      RESULT_RANK[p1Result] > RESULT_RANK[result]
+        ? 'win'
+        : RESULT_RANK[p1Result] < RESULT_RANK[result]
+        ? 'loss'
+        : 'tie';
+
+    setIsSubmitting(true);
+    setGameResult(overall);
+
+    let earned = 0;
+    if (overall === 'win') {
+      earned = 100;
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+    } else if (overall === 'tie') {
+      earned = 50;
+    }
+    setPointsEarned(earned);
+
+    try {
+      const res = await recordGameMatch(game.id, game.title, overall, 'Player 2 (Pass & Play)');
+      if (res.success) {
+        onPointsUpdated(earned, res.totalNoobPoints);
+      }
+    } catch (err) {
+      console.error(err);
+      onPointsUpdated(earned, (currentUser.noobPoints || 0) + earned);
+    } finally {
+      setIsSubmitting(false);
+      setCurrentMode('game_over');
+    }
+  };
+
+  // Dispatches to the right finish handler depending on mode — every game
+  // engine's onGameOver wires here instead of calling finishGame directly.
+  const handleGameOver = (result: RoundResult) => {
+    if (isPassAndPlay) finishPassPlayRound(result);
+    else finishGame(result);
+  };
 
   // Handle Game Finish & Point Awarding
   const finishGame = async (result: 'win' | 'tie' | 'loss', opponentName = 'Bot Pro') => {
@@ -426,6 +502,27 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   </div>
                   <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
                 </button>
+
+                {/* Option 4: Pass and Play */}
+                <button
+                  onClick={handleStartPassAndPlay}
+                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-amber-500/50 flex items-center justify-between transition-all group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-sm font-bold text-white block group-hover:text-amber-300 transition-colors">
+                        4. Pass and Play
+                      </span>
+                      <span className="text-[11px] text-zinc-400 block">
+                        Two players take turns on this one device
+                      </span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                </button>
               </div>
             </div>
           )}
@@ -622,52 +719,80 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             </div>
           )}
 
+          {/* PASS AND PLAY HANDOFF (between Round 1 and Round 2) */}
+          {currentMode === 'pass_play_handoff' && (
+            <div className="py-8 flex flex-col items-center text-center space-y-5">
+              <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-3xl">
+                🔄
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-black text-white">Round 1 Complete!</h3>
+                <p className="text-xs text-zinc-400">
+                  Player 1 result:{' '}
+                  <span className="font-bold text-white capitalize">{passPlayP1Result}</span>
+                </p>
+              </div>
+              <p className="text-sm font-bold text-amber-300">📱 Pass the device to Player 2</p>
+              <button
+                onClick={handleStartPassAndPlayRound2}
+                className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black text-sm font-bold hover:scale-105 transition-transform cursor-pointer"
+              >
+                Player 2 Ready — Start Round 2
+              </button>
+            </div>
+          )}
+
           {/* 4. ACTIVE GAMEPLAY */}
           {currentMode === 'play_bot' && (
             <div className="space-y-3">
+              {isPassAndPlay && (
+                <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold text-center">
+                  Pass and Play — {passPlayStage === 'p1' ? "Player 1's Turn" : "Player 2's Turn"}
+                </div>
+              )}
               {/* Game Specific Engines */}
               {(game.id === 'cyber_snake' || game.id === 'snake' || game.id === 'pac_grid') && (
-                <CyberSnakeGame onGameOver={(result) => finishGame(result)} targetScore={8} />
+                <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} />
               )}
 
               {game.id === 'tictactoe' && (
-                <TicTacToeGame onGameOver={(result) => finishGame(result)} opponentName={opponentChallenger || 'AI Bot'} />
+                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
               )}
 
               {(game.id === 'rps' || game.id === 'rps_extreme') && (
-                <RockPaperScissorsGame onGameOver={(result) => finishGame(result)} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} />
+                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} />
               )}
 
               {(game.id === 'speed_math' || game.id === 'mental_calc' || game.id === 'trivia_quest') && (
-                <SpeedMathGame onGameOver={(result) => finishGame(result)} targetScore={6} />
+                <SpeedMathGame onGameOver={handleGameOver} targetScore={6} />
               )}
 
               {(game.id === 'memory_match' || game.id === 'emoji_match' || game.id === 'cyber_memory') && (
-                <MemoryMatchGame onGameOver={(result) => finishGame(result)} />
+                <MemoryMatchGame onGameOver={handleGameOver} />
               )}
 
               {(game.id === 'reaction_tap' || game.id === 'laser_dodge' || game.id === 'ninja_tap' || game.id === 'speed_reflex') && (
-                <ReactionTapGame onGameOver={(result) => finishGame(result)} />
+                <ReactionTapGame onGameOver={handleGameOver} />
               )}
 
               {(game.id === 'brick_breaker' || game.id === 'pinball_pulse' || game.id === 'neon_pong') && (
-                <BrickBreakerGame onGameOver={(result) => finishGame(result)} />
+                <BrickBreakerGame onGameOver={handleGameOver} />
               )}
 
               {(game.id === 'cyber_drone' || game.id === 'pixel_runner' || game.id === 'galaxy_shooter' || game.id === 'astro_jump') && (
-                <CyberDroneGame onGameOver={(result) => finishGame(result)} targetScore={5} />
+                <CyberDroneGame onGameOver={handleGameOver} targetScore={5} />
               )}
 
               {(game.id === 'color_rush' || game.id === 'bubble_blitz' || game.id === 'laser_matrix') && (
-                <ColorRushGame onGameOver={(result) => finishGame(result)} targetScore={8} />
+                <ColorRushGame onGameOver={handleGameOver} targetScore={8} />
               )}
 
               {(game.id === 'word_guess' || game.id === 'wordle' || game.id === 'code_breaker') && (
-                <WordleGuessGame onGameOver={(result) => finishGame(result)} />
+                <WordleGuessGame onGameOver={handleGameOver} />
               )}
 
               {(game.id === 'scribble_art' || game.id === 'doodle_rush') && (
-                <ScribbleGame onFinishGame={(result) => finishGame(result)} opponentName={opponentChallenger || 'AI Bot'} />
+                <ScribbleGame onFinishGame={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
               )}
 
               {/* Universal Rich Arcade Engine for any other game in catalog */}
@@ -684,7 +809,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'word_guess', 'wordle', 'code_breaker',
                 'scribble_art', 'doodle_rush'
               ].includes(game.id) && (
-                <GenericArcadeGame game={game} onGameOver={(result) => finishGame(result)} targetScore={12} />
+                <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}
             </div>
           )}
@@ -697,7 +822,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center mx-auto text-3xl shadow-[0_0_25px_rgba(251,191,36,0.3)] animate-bounce">
                     🏆
                   </div>
-                  <h3 className="text-xl font-black text-white">Victory! You Won!</h3>
+                  <h3 className="text-xl font-black text-white">
+                    {isPassAndPlay ? 'Player 1 Wins!' : 'Victory! You Won!'}
+                  </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-sm">
                     <Sparkles className="w-4 h-4" />
                     <span>+100 NOOB Points Awarded!</span>
@@ -708,7 +835,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <div className="w-20 h-20 rounded-full bg-blue-500/20 border-2 border-blue-400 text-blue-300 flex items-center justify-center mx-auto text-3xl">
                     🤝
                   </div>
-                  <h3 className="text-xl font-black text-white">Well Played! It's a Tie!</h3>
+                  <h3 className="text-xl font-black text-white">
+                    {isPassAndPlay ? "It's a Tie!" : "Well Played! It's a Tie!"}
+                  </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-300 font-extrabold text-sm">
                     <Sparkles className="w-4 h-4" />
                     <span>+50 NOOB Points Awarded!</span>
@@ -719,7 +848,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <div className="w-20 h-20 rounded-full bg-rose-500/20 border-2 border-rose-400 text-rose-300 flex items-center justify-center mx-auto text-3xl">
                     💥
                   </div>
-                  <h3 className="text-xl font-black text-white">Defeat! Better Luck Next Time!</h3>
+                  <h3 className="text-xl font-black text-white">
+                    {isPassAndPlay ? 'Player 2 Wins!' : 'Defeat! Better Luck Next Time!'}
+                  </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-zinc-800 text-zinc-400 font-bold text-sm">
                     <span>+0 NOOB Points</span>
                   </div>
@@ -732,7 +863,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
               <div className="flex gap-3 justify-center pt-2">
                 <button
-                  onClick={handleStartBotGame}
+                  onClick={isPassAndPlay ? handleStartPassAndPlay : handleStartBotGame}
                   className="px-5 py-2.5 rounded-2xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-bold text-xs transition-colors cursor-pointer"
                 >
                   Play Again

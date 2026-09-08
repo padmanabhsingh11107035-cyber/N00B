@@ -1080,25 +1080,8 @@ async function startServer() {
   });
 
   // Collections endpoints
-  let savedCollections: any[] = [
-    {
-      id: 'col_default_1',
-      name: 'Design & Aesthetics',
-      coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80',
-      postsCount: 3,
-      isCollaborative: false
-    },
-    {
-      id: 'col_default_2',
-      name: 'Gaming & Cyber Highlights',
-      coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop&q=80',
-      postsCount: 2,
-      isCollaborative: false
-    }
-  ];
-
   app.get('/api/collections', (req, res) => {
-    res.json({ collections: savedCollections });
+    res.json({ collections });
   });
 
   app.post('/api/collections', (req, res) => {
@@ -1110,7 +1093,7 @@ async function startServer() {
       postsCount: 0,
       isCollaborative: false
     };
-    savedCollections.unshift(newCol);
+    collections.unshift(newCol);
     res.status(201).json({ success: true, collection: newCol });
   });
 
@@ -2573,10 +2556,33 @@ COMPLETE PLATFORM CAPABILITIES:
     }
 
     const userNotifs = notifications.filter(
-      n => n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase()
+      n =>
+        (n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase()) &&
+        !n.clearedByUserIds?.includes(active.id)
     );
 
     res.json({ notifications: userNotifs });
+  });
+
+  // Permanently dismiss all of the active user's currently-visible notifications.
+  // Some notifications (targetUserId 'all') are shared broadcasts, so this only
+  // hides them for this one user rather than deleting the underlying record.
+  app.post('/api/notifications/clear', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    notifications.forEach(n => {
+      const isVisibleToUser =
+        n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase();
+      if (isVisibleToUser) {
+        n.clearedByUserIds = n.clearedByUserIds || [];
+        if (!n.clearedByUserIds.includes(active.id)) {
+          n.clearedByUserIds.push(active.id);
+        }
+      }
+    });
+
+    res.json({ success: true });
   });
 
   // Admin: Get all accounts for Admin Dashboard overview

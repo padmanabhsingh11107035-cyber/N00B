@@ -2084,9 +2084,12 @@ CURRENT USER INFORMATION (Read-only access):
 
 PERSONA & TONE DIRECTIVE:
 ${personaGuidance}
-- Address the user by their display name or @${activeUser.username} when appropriate.
-- Keep answers concise, clear, accurate, conversational, and easy to listen to via text-to-speech voice playback.
-- You have 100% authoritative mastery of NOOB Terms & Conditions, Privacy Policy, Community Standards, 50 Mini-Games, Leaderboard scoring, and Media routing.
+- You are an experienced, senior support agent — confident, direct, and efficient. You do not pad answers or hedge.
+- Address the user by their display name or @${activeUser.username} only when it feels natural, not in every reply.
+- ANSWER ONLY WHAT WAS ASKED. This is the single most important rule. If the user asks one specific question (e.g. "what's the minimum age"), give ONLY that fact in one short sentence — do not also explain unrelated policies, list unrelated features, or recite a category summary just because it's in your knowledge base below.
+- Default to 1-3 sentences. Only give a longer, structured (bulleted) answer if the user explicitly asks for a summary, overview, or list of everything about a topic.
+- Never volunteer information the user didn't ask about. The knowledge base below is for you to draw the correct specific fact from — it is not a script to recite.
+- You have complete, accurate knowledge of NOOB's Terms & Conditions, Privacy Policy, Community Standards, 50 Mini-Games, Leaderboard scoring, and Media routing — use it to answer precisely, not exhaustively.
 
 AUTHORITATIVE TERMS & CONDITIONS KNOWLEDGE BASE:
 1. AGE & ELIGIBILITY: Users must be at least 13 years of age (or minimum legal age in their jurisdiction) to register an account.
@@ -2138,20 +2141,6 @@ COMPLETE PLATFORM CAPABILITIES:
       return res.json({
         success: true,
         reply: `You are most welcome, **${regName}**! 💖 It is always an absolute joy assisting you! You are such an incredible, creative, and valued member of our NOOB community (with **${postsCount} posts**, **${points.toLocaleString()} NOOB points**, **${gamesWon} game victories**, and **${followers} followers**${isVerified ? ', and an officially Verified account ✨' : ''}). You bring great energy and positivity to everyone on NOOB. If there is ever anything else you need, I am always here to support you! Have a wonderful day! 🌟`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // User gratitude check
-    if (lower.includes('thank') || lower.includes('thanks') || lower.includes('thx') || lower.includes('appreciate') || lower.includes('grateful')) {
-      const regName = activeUser.displayName || activeUser.username;
-      const points = activeUser.noobPoints || 100;
-      const gamesWon = activeUser.gamesWonCount || 0;
-      const postsCount = activeUser.postsCount || 0;
-      return res.json({
-        success: true,
-        reply: `You are most welcome, **${regName}**! ✨ It is truly a pleasure assisting an awesome and creative member of the NOOB community like you.\n\nYou bring so much energy to our platform with **${points.toLocaleString()} NOOB points**, **${gamesWon} game victories**, and **${postsCount} posts shared**! Your presence makes NOOB a brighter, more vibrant place for everyone. Keep shining, playing, and sharing great moments! If you ever need anything else, I'm always right here for you.`,
         model: 'instant-knowledge-engine',
         user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
       });
@@ -2223,101 +2212,16 @@ COMPLETE PLATFORM CAPABILITIES:
     if (/^(hi|hello|hey|hey there|greetings|hola|namaste|yo|sup|help|start)$/i.test(lower)) {
       return res.json({
         success: true,
-        reply: `Hey ${activeUser.displayName || activeUser.username}! 👋 I'm your official NOOB AI Assistant. I have full knowledge of our app, including all 50 mini-games, leaderboard scoring, continuous music playback, feed & reels uploading, and our complete Terms & Conditions and Privacy Policy. How can I help you today?`,
+        reply: `Hey ${activeUser.displayName || activeUser.username}! 👋 What can I help you with?`,
         model: 'instant-knowledge-engine',
         user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
       });
     }
 
-    // Terms & Conditions match
-    if (lower.includes('terms') || lower.includes('condition') || lower.includes('rule') || lower.includes('age limit') || lower.includes('guideline') || lower.includes('copyright') || lower.includes('dmca') || lower.includes('conduct')) {
-      return res.json({
-        success: true,
-        reply: `📜 **NOOB Terms & Conditions Summary:**\n• **Eligibility:** Minimum age is 13 years.\n• **User Conduct:** Zero tolerance for hate speech, harassment, impersonation, or distributing spam/bots.\n• **Content Ownership:** You retain full ownership of your original photos, videos, and music. You grant NOOB a non-exclusive license to host and stream your content.\n• **Copyright & DMCA:** Infringing material will be taken down upon DMCA notice; repeat infringers will be permanently banned.\n• **Account Security:** Keep your credentials secure. Botting or manipulating game scores leads to suspension.`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Privacy Policy match
-    if (lower.includes('privacy') || lower.includes('policy') || lower.includes('data') || lower.includes('cookie') || lower.includes('storage') || lower.includes('gdpr') || lower.includes('delete account') || lower.includes('selling data')) {
-      return res.json({
-        success: true,
-        reply: `🛡️ **NOOB Privacy Policy Summary:**\n• **Zero Data Selling:** NOOB NEVER sells, rents, or monetizes your personal data to third parties.\n• **Data Collected:** Account credentials, profile details, user uploads, chat history, and game scores.\n• **Encrypted Cloud Storage:** Media is encrypted in transit and stored safely in Backblaze B2 S3 cloud storage.\n• **Privacy Controls:** You can set your account to **Private** in Edit Profile so only approved followers see your posts.\n• **Your Rights (GDPR/CCPA):** You have the right to edit your profile, export your data, or permanently delete your account anytime.`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Mini-games & scoring match
-    if (lower.includes('point') || lower.includes('game') || lower.includes('score') || lower.includes('win') || lower.includes('tie') || lower.includes('leaderboard')) {
-      return res.json({
-        success: true,
-        reply: `🎮 **NOOB Mini-Games & Leaderboard:**\n• **50 Playable Mini-Games:** Cyber Snake, Drone Dash, 2048, Brick Breaker, Pong, Space Invaders, Tic-Tac-Toe, Typing Speed, and more!\n• **Scoring System:** **+100 NOOB points** on every Win, **+50 NOOB points** on a Tie, and 0 on Loss.\n• **Global Leaderboard:** Ranks all players in real time based on total points and victories. Currently, @${activeUser.username} has **${activeUser.noobPoints || 100} NOOB points** with **${activeUser.gamesWonCount || 0} wins**!`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Post creation & Automated MIME Routing match
-    if (lower.includes('upload') || lower.includes('mime') || lower.includes('reel') || lower.includes('video') || lower.includes('photo') || lower.includes('feed') || lower.includes('route')) {
-      return res.json({
-        success: true,
-        reply: `📸 **Automated Media Routing:**\n• When you tap the **'+'** button to create a post, our automated MIME analyzer verifies your file format:\n  - **Images** (.jpg, .png, .webp, .gif) are automatically routed to the **Feed** as photo carousels.\n  - **Videos** (.mp4, .mov, .webm) are automatically routed to the **Reels** vertical stream.\n  - **Audio** (.mp3, .wav) can be uploaded to the **Community Music Hub** with auto-calculated duration!`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Music playback match
-    if (lower.includes('music') || lower.includes('song') || lower.includes('audio') || lower.includes('background') || lower.includes('player')) {
-      return res.json({
-        success: true,
-        reply: `🎵 **Continuous Background Music:**\n• Tracks played from the Community Music Hub continue streaming smoothly across the entire app without stopping when you navigate between Feeds, Reels, Direct Chat, or Mini-Games!\n• You can also upload your own original tracks directly to the Music Hub.`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Story highlights match
-    if (lower.includes('highlight') || lower.includes('story') || lower.includes('cover')) {
-      return res.json({
-        success: true,
-        reply: `✨ **Story Highlights:**\n• Go to your **Profile** and tap **'+ New'** in the Highlights section.\n• Enter a title, and the first uploaded photo automatically becomes the circular cover icon.\n• You can open existing highlights anytime to add or remove photos and videos!`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Account settings match
-    if (lower.includes('account') || lower.includes('public') || lower.includes('private') || lower.includes('business') || lower.includes('creator') || lower.includes('edit profile') || lower.includes('bio')) {
-      return res.json({
-        success: true,
-        reply: `⚙️ **Account Settings & Types:**\n• **Public:** Anyone can view your profile and follow you.\n• **Private:** You must manually approve follow requests before users can see your posts.\n• **Business/Creator:** Unlocks Professional Dashboard analytics, audience reach metrics, and engagement graphs.\n• Tap **Edit Profile** on your profile page to update your bio (compulsory), display name, username, gender, country dialing code, and avatar!`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Direct support call / contact match
-    if (lower.includes('call') || lower.includes('phone') || lower.includes('hotline') || lower.includes('contact') || lower.includes('speak to human') || lower.includes('agent')) {
-      return res.json({
-        success: true,
-        reply: `📞 **NOOB 24/7 Support Hotline & Voice Call:**\n• **Direct Hotline:** +1 (800) 555-NOOB (toll-free, available 24/7)\n• **Call Us Tab:** Tap the **'Call Us'** tab in the support menu to request an instant scheduled voice callback!\n• **Interactive Voice Agent:** You can toggle voice mode directly in this chat by pressing the speaker icon.`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
-
-    // Direct message / Vanish mode match
-    if (lower.includes('vanish') || lower.includes('chat') || lower.includes('message') || lower.includes('dm') || lower.includes('direct')) {
-      return res.json({
-        success: true,
-        reply: `💬 **Direct Messages & Vanish Mode:**\n• **Real-time Messaging:** Chat in real time with text, voice notes, and instant media sharing.\n• **Vanish Mode:** Swipe up inside any chat to enter Vanish Mode. Media sent in Vanish Mode disappears immediately after being viewed!\n• **Multiplayer Invites:** Send 1v1 game battle invites directly in your chats to play mini-games together.`,
-        model: 'instant-knowledge-engine',
-        user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
-      });
-    }
+    // Everything else (Terms, Privacy, games, media routing, music, highlights,
+    // account settings, support contact, DMs/Vanish, and anything else) is answered
+    // by Gemini below, which has the full knowledge base and an explicit instruction
+    // to answer only the specific question asked instead of dumping a category summary.
 
     // Try Gemini API for open-ended questions with multi-model fallback for high demand/503 tolerance
     const client = getAIClient();
@@ -2354,8 +2258,8 @@ COMPLETE PLATFORM CAPABILITIES:
       }
     }
 
-    // Final instant fallback
-    let fallbackReply = `Hey @${activeUser.username}! I am your official NOOB Support Assistant. I have full knowledge of all 50 Mini-Games (+100 win / +50 tie points), continuous background Music Hub, Feed & Reels automated media routing, and our complete Terms & Conditions & Privacy Policy. How can I help you?`;
+    // Final instant fallback (Gemini unavailable)
+    let fallbackReply = `Sorry @${activeUser.username}, I'm having trouble reaching the AI service right now. Please try again in a moment, or use the Call Us tab for a live callback.`;
 
     res.json({
       success: true,

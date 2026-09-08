@@ -363,7 +363,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 >
                   <Upload className="w-3 h-3 text-[#00FF66]" /> Audio File
                 </button>
-                <input ref={audioFileRef} type="file" accept="audio/*" onChange={handleAudioUpload} className="hidden" />
+                <input ref={audioFileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.wma" onChange={handleAudioUpload} className="hidden" />
               </div>
 
               {/* Auto Duration Status */}

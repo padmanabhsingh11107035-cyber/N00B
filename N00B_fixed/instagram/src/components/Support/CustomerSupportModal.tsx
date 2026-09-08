@@ -31,7 +31,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { User } from '../../types';
-import { askAiSupportAssistant, submitSafetyReport } from '../../services/api';
+import { askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary } from '../../services/api';
 import confetti from 'canvas-confetti';
 
 interface CustomerSupportModalProps {
@@ -78,6 +78,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
+  const [ratingSummary, setRatingSummary] = useState<{ average: number | null; count: number }>({ average: null, count: 0 });
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [isChatEnded, setIsChatEnded] = useState(false);
@@ -161,6 +162,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  // Load the real aggregate support rating on open
+  useEffect(() => {
+    fetchSupportRatingSummary()
+      .then(setRatingSummary)
+      .catch(() => {});
+  }, []);
 
   // Call timer effect
   useEffect(() => {
@@ -478,10 +486,36 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   };
 
   const handleStartCall = async () => {
+    // iOS Safari (and other strict browsers) only allow speechSynthesis to
+    // produce audio when triggered directly within a user gesture. Any
+    // `await` before the first speak() call breaks that chain and causes
+    // audio to fail silently forever after — including every reply for the
+    // rest of the call, since AI replies are generated asynchronously too.
+    // Fix: fire a silent "unlock" utterance synchronously, right here,
+    // before anything else runs. This primes the engine for the whole
+    // call session, so later async-triggered speech keeps working.
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const unlock = new SpeechSynthesisUtterance('');
+      unlock.volume = 0;
+      window.speechSynthesis.speak(unlock);
+    }
+
     setIsCallActive(true);
     setCallStatus('connected');
     setCallDuration(0);
     setIsMuted(false);
+
+    const greeting = `Hello @${currentUser.username}! You are connected to the NOOB AI Voice Support Specialist. I am listening to your microphone—what issue can I solve for your account today?`;
+    setCallTranscript([
+      {
+        sender: 'ai',
+        text: greeting,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    // Speak the greeting BEFORE the mic-permission await below — that await
+    // is what broke the gesture chain in the first place.
+    speakText(greeting);
 
     // Request active microphone stream from browser
     try {
@@ -493,15 +527,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       console.warn('Microphone permission request:', micErr);
     }
 
-    const greeting = `Hello @${currentUser.username}! You are connected to the NOOB AI Voice Support Specialist. I am listening to your microphone—what issue can I solve for your account today?`;
-    setCallTranscript([
-      {
-        sender: 'ai',
-        text: greeting,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }
-    ]);
-    speakText(greeting);
     // Also initiate listening as fallback if speech finishes fast or user interrupts
     setTimeout(() => {
       if (isCallActiveRef.current && !isMutedRef.current && !isSpeakingRef.current) {
@@ -650,6 +675,15 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               <p className="text-xs text-zinc-400">
                 24/7 AI Chat &amp; Community Support Specialist
               </p>
+              {ratingSummary.average !== null && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                  <span className="text-[11px] font-bold text-amber-400">{ratingSummary.average}</span>
+                  <span className="text-[10px] text-zinc-500">
+                    average from {ratingSummary.count} review{ratingSummary.count === 1 ? '' : 's'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1573,6 +1607,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   e.preventDefault();
                   setReviewSubmitted(true);
                   confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+                  submitSupportReview(reviewRating, reviewFeedback)
+                    .then((res) => {
+                      if (res && typeof res.average === 'number') {
+                        setRatingSummary({ average: res.average, count: res.count });
+                      }
+                    })
+                    .catch(() => {});
                   setTimeout(() => {
                     setShowReviewModal(false);
                     onClose();

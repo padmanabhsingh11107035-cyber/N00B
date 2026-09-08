@@ -18,6 +18,7 @@ import {
   INITIAL_SETTINGS
 } from './src/data/mockData';
 import { uploadMediaToB2, signMediaKey, getB2Client } from './server/b2Storage';
+import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 
 // Lazy initialized Gemini client
 let aiClient: GoogleGenAI | null = null;
@@ -64,6 +65,8 @@ function checkRateLimit(ip: string, limit: number = 60, windowMs: number = 60000
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  await connectDB();
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -278,6 +281,85 @@ async function startServer() {
     }
   ];
 
+  // --- MongoDB persistence ---
+  // If MONGODB_URI is configured, replace the mock seed data above with whatever
+  // was last saved, so state survives server restarts / Railway redeploys.
+  const PERSISTED_STATE_KEYS = [
+    'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
+    'notifications', 'chats', 'messages', 'collections', 'gameScores',
+    'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks'
+  ] as const;
+
+  if (isDbConnected()) {
+    const loaded: Record<string, any> = {};
+    await Promise.all(PERSISTED_STATE_KEYS.map(async (key) => {
+      loaded[key] = await loadCollection(key);
+    }));
+
+    if (loaded.users) users = loaded.users;
+    if (loaded.posts) posts = loaded.posts;
+    if (loaded.comments) comments = loaded.comments;
+    if (loaded.stories) stories = loaded.stories;
+    if (loaded.reels) reels = loaded.reels;
+    if (loaded.supportReviews) supportReviews = loaded.supportReviews;
+    if (loaded.notifications) notifications = loaded.notifications;
+    if (loaded.chats) chats = loaded.chats;
+    if (loaded.messages) messages = loaded.messages;
+    if (loaded.collections) collections = loaded.collections;
+    if (loaded.gameScores) gameScores = loaded.gameScores;
+    if (loaded.highlights) highlights = loaded.highlights;
+    if (loaded.reports) reports = loaded.reports;
+    if (loaded.chatReviews) chatReviews = loaded.chatReviews;
+    if (loaded.settings) settings = loaded.settings;
+    if (loaded.reelHistory) reelHistory = loaded.reelHistory;
+    if (loaded.musicTracks) musicTracks = loaded.musicTracks;
+
+    console.log('MongoDB: restored persisted app state');
+  }
+
+  // Debounced full-state save: any non-GET request schedules a save a few
+  // seconds out, coalescing bursts of mutations into a single write.
+  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function persistStateNow() {
+    if (!isDbConnected()) return;
+    await Promise.all([
+      saveCollection('users', users),
+      saveCollection('posts', posts),
+      saveCollection('comments', comments),
+      saveCollection('stories', stories),
+      saveCollection('reels', reels),
+      saveCollection('supportReviews', supportReviews),
+      saveCollection('notifications', notifications),
+      saveCollection('chats', chats),
+      saveCollection('messages', messages),
+      saveCollection('collections', collections),
+      saveCollection('gameScores', gameScores),
+      saveCollection('highlights', highlights),
+      saveCollection('reports', reports),
+      saveCollection('chatReviews', chatReviews),
+      saveCollection('settings', settings),
+      saveCollection('reelHistory', reelHistory),
+      saveCollection('musicTracks', musicTracks),
+    ]);
+  }
+
+  function schedulePersist() {
+    if (!isDbConnected() || persistTimer) return;
+    persistTimer = setTimeout(() => {
+      persistTimer = null;
+      persistStateNow().catch(err => console.error('MongoDB persist failed:', err));
+    }, 3000);
+  }
+
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, async () => {
+      if (persistTimer) clearTimeout(persistTimer);
+      await persistStateNow();
+      process.exit(0);
+    });
+  }
+
   // Helper to sanitize user object (remove password)
   function sanitizeUser(u: any) {
     if (!u) return null;
@@ -311,6 +393,14 @@ async function startServer() {
     return null;
   }
 
+  // Schedule a debounced state save after every mutating request finishes
+  app.use((req, res, next) => {
+    res.on('finish', () => {
+      if (req.method !== 'GET') schedulePersist();
+    });
+    next();
+  });
+
   // --- API Routes ---
 
   // Health check
@@ -319,7 +409,8 @@ async function startServer() {
       status: 'ok',
       serverTime: new Date().toISOString(),
       usersCount: users.length,
-      b2Storage: getB2Client().isConfigured ? 'connected' : 'ready'
+      b2Storage: getB2Client().isConfigured ? 'connected' : 'ready',
+      mongoStorage: getDbStatusLabel()
     });
   });
 

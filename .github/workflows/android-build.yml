@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'N00B_fixed/instagram/**'
+      - '.github/workflows/android-build.yml'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install web app dependencies
+        run: npm install
+
+      - name: Build web app (pointed at the deployed backend)
+        run: npm run build
+        env:
+          # The native app has no backend of its own — every relative
+          # /api call gets rewritten to this URL at build time (see
+          # src/main.tsx). Change this if the Railway URL ever changes.
+          VITE_API_BASE: https://n00b-production.up.railway.app/api
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync web build into the native project
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: N00B_fixed/instagram/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: noob-debug-apk
+          path: N00B_fixed/instagram/android/app/build/outputs/apk/debug/app-debug.apk

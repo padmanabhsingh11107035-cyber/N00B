@@ -393,28 +393,37 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute top-1/2 left-5 w-[300px] h-[300px] bg-[#00FF66]/10 rounded-full blur-[120px] pointer-events-none" />
-      {/* Corner gradient "blob" accents for depth */}
-      <div className="hidden lg:block absolute bottom-0 left-0 w-[380px] h-[320px] bg-gradient-to-tr from-[#00FF66]/20 via-cyan-500/10 to-transparent rounded-tr-[100%] blur-3xl pointer-events-none" />
-      <div className="hidden lg:block absolute top-0 right-0 w-[320px] h-[260px] bg-gradient-to-bl from-violet-500/15 to-transparent rounded-bl-[100%] blur-3xl pointer-events-none" />
+      {/* Corner gradient "blob" accents for depth, with a small crown resting on the left one */}
+      <div className="absolute bottom-0 left-0 w-[220px] h-[180px] sm:w-[380px] sm:h-[320px] bg-gradient-to-tr from-[#00FF66]/25 via-cyan-500/10 to-transparent rounded-tr-[100%] blur-3xl pointer-events-none" />
+      <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[26%] left-[6%] w-6 h-6 text-amber-400/70 -rotate-12 pointer-events-none select-none z-[1]" fill="currentColor" aria-hidden="true"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
+      <div className="hidden sm:block absolute top-0 right-0 w-[320px] h-[260px] bg-gradient-to-bl from-violet-500/15 to-transparent rounded-bl-[100%] blur-3xl pointer-events-none" />
 
-      {/* Scattered hand-drawn doodles & callouts (decorative, hidden on small screens where the card fills the width) */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none select-none z-[1]" aria-hidden="true">
+      {/* Small picture-frame + heart accent, bottom-right corner */}
+      <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[6%] right-[4%] w-10 h-10 text-white/20 pointer-events-none select-none z-[1]" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <path d="M9 15.5s-3.2-2-4.3-3.9C3.8 9.9 4.9 8 6.5 8c.9 0 1.6.55 2 1.3.4-.75 1.1-1.3 2-1.3 1.6 0 2.7 1.9 1.8 3.6C11.2 13.5 9 15.5 9 15.5z" fill="currentColor" stroke="none" />
+      </svg>
+
+      {/* Scattered hand-drawn doodles & callouts — smaller on phones, full size from sm: up */}
+      <div className="absolute inset-0 pointer-events-none select-none z-[1] overflow-hidden" aria-hidden="true">
         {/* Top-left: "Make Friends" polaroid callout */}
-        <div className="absolute top-[8%] left-[5%] -rotate-6 text-center">
-          <div className="w-24 h-24 border-2 border-white/25 rounded-xl p-1.5 bg-white/[0.02]">
-            <div className="w-full h-full border border-dashed border-white/20 rounded-lg flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-8 h-8 text-white/30" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" /></svg>
+        <div className="absolute top-[6%] left-[3%] sm:left-[5%] -rotate-6 text-center">
+          <div className="w-14 h-14 sm:w-24 sm:h-24 border-2 border-white/25 rounded-lg sm:rounded-xl p-1 sm:p-1.5 bg-white/[0.02]">
+            <div className="w-full h-full border border-dashed border-white/20 rounded sm:rounded-lg flex items-center justify-center">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-8 sm:h-8 text-white/30" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" /></svg>
             </div>
           </div>
-          <span className="font-script text-xl text-cyan-300/80 block mt-1">Make Friends ♡</span>
+          <span className="font-script text-sm sm:text-xl text-cyan-300/80 block mt-0.5 sm:mt-1 whitespace-nowrap">Make Friends ♡</span>
         </div>
 
         {/* Left, mid: phone mockup with a "story" preview */}
-        <div className="absolute top-[30%] left-[3%] w-28 -rotate-3">
+        <div className="hidden sm:block absolute top-[30%] left-[3%] w-28 -rotate-3">
           <div className="rounded-[22px] border-2 border-white/15 bg-zinc-900/40 p-1.5 shadow-2xl">
             <div className="rounded-2xl overflow-hidden aspect-[9/16] bg-gradient-to-b from-orange-400/70 via-pink-500/50 to-indigo-700/70 relative">
+              <div className="absolute top-1.5 left-1.5 w-4 h-4 rounded-full bg-white/20 border border-white/40" />
               <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-white/70">
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h12v16l-6-4-6 4V4z" /></svg>
               </div>
             </div>
@@ -422,41 +431,41 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         </div>
 
         {/* Top-right: "Good Vibes Only" */}
-        <div className="absolute top-[10%] right-[6%] rotate-3 text-right">
-          <span className="font-script text-2xl text-violet-300/80 leading-tight block">Good Vibes<br />Only</span>
-          <svg viewBox="0 0 100 10" className="w-24 h-3 text-violet-300/60 ml-auto mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
+        <div className="absolute top-[7%] right-[3%] sm:right-[6%] rotate-3 text-right">
+          <span className="font-script text-base sm:text-2xl text-violet-300/80 leading-tight block whitespace-nowrap">Good Vibes<br />Only</span>
+          <svg viewBox="0 0 100 10" className="w-16 h-2.5 sm:w-24 sm:h-3 text-violet-300/60 ml-auto mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
         </div>
 
         {/* Right, mid: stacked colorful icon badges */}
-        <div className="absolute top-[32%] right-[7%] flex flex-col gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center rotate-6 shadow-lg shadow-pink-500/20">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+        <div className="absolute top-[26%] sm:top-[32%] right-[3%] sm:right-[7%] flex flex-col gap-1.5 sm:gap-2.5">
+          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center rotate-6 shadow-lg shadow-pink-500/20">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center -rotate-3 shadow-lg shadow-cyan-500/20 ml-3">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
+          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center -rotate-3 shadow-lg shadow-cyan-500/20 ml-2 sm:ml-3">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center rotate-6 shadow-lg shadow-violet-500/20">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" /><path d="M18 8h4M20 6v4" /></svg>
+          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center rotate-6 shadow-lg shadow-violet-500/20">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" /><path d="M18 8h4M20 6v4" /></svg>
           </div>
         </div>
 
         {/* Left, lower: "Real People, Real Connections" */}
-        <div className="absolute bottom-[20%] left-[4%] -rotate-3">
-          <span className="font-script text-xl text-emerald-300/80 leading-tight block">Real People<br />Real Connections</span>
+        <div className="absolute bottom-[16%] sm:bottom-[20%] left-[2%] sm:left-[4%] -rotate-3">
+          <span className="font-script text-sm sm:text-xl text-emerald-300/80 leading-tight block whitespace-nowrap">Real People<br />Real Connections</span>
         </div>
 
         {/* Right, lower: feature list */}
-        <div className="absolute bottom-[22%] right-[5%] rotate-2 text-left">
-          <span className="font-script text-xl text-pink-300/80 leading-tight block">Post • Reels<br />Chat • Follow</span>
-          <svg viewBox="0 0 100 10" className="w-24 h-3 text-pink-300/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
+        <div className="absolute bottom-[18%] sm:bottom-[22%] right-[2%] sm:right-[5%] rotate-2 text-left">
+          <span className="font-script text-sm sm:text-xl text-pink-300/80 leading-tight block whitespace-nowrap">Post • Reels<br />Chat • Follow</span>
+          <svg viewBox="0 0 100 10" className="w-16 h-2.5 sm:w-24 sm:h-3 text-pink-300/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
         </div>
 
         {/* Small scattered sparkles, hearts & a paper-plane for texture */}
-        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[18%] w-4 h-4 text-amber-300/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute top-[6%] left-[38%] w-5 h-5 text-white/30 rotate-[20deg]" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute bottom-[16%] left-[24%] w-4 h-4 text-violet-300/40 -rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute top-[48%] right-[14%] w-4 h-4 text-emerald-300/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[15%] sm:left-[18%] w-3 h-3 sm:w-4 sm:h-4 text-amber-300/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="hidden sm:block absolute top-[6%] left-[38%] w-5 h-5 text-white/30 rotate-[20deg]" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute bottom-[16%] left-[20%] sm:left-[24%] w-3 h-3 sm:w-4 sm:h-4 text-violet-300/40 -rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[45%] sm:top-[48%] right-[10%] sm:right-[14%] w-3 h-3 sm:w-4 sm:h-4 text-emerald-300/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
       </div>
 
       {/* Top Header: Circular brand badge + wordmark, centered */}
@@ -465,17 +474,27 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           {/* Circular gradient-ring badge */}
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#00FF66] via-cyan-400 to-indigo-600 p-[3px] shadow-[0_0_35px_rgba(0,255,102,0.35)]">
             <div className="w-full h-full rounded-full bg-black flex flex-col items-center justify-center overflow-hidden relative">
+              {/* Faint phone-outline silhouette behind the wordmark */}
+              <svg viewBox="0 0 24 24" className="absolute w-11 h-11 sm:w-14 sm:h-14 text-white/10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="7" y="2" width="10" height="20" rx="2" /></svg>
               {/* Crown accent */}
-              <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 -mb-0.5" fill="currentColor"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
-              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#00FF66] to-cyan-300 text-lg sm:text-xl tracking-tighter leading-none">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 -mb-0.5 relative" fill="currentColor"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
+              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#00FF66] to-cyan-300 text-lg sm:text-xl tracking-tighter leading-none relative">
                 NOOB
               </span>
+              {/* Tiny heart accent, left side */}
+              <svg viewBox="0 0 24 24" className="absolute top-2.5 left-2 w-2.5 h-2.5 text-[#00FF66]/70 relative" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
               {/* Tiny chat-bubble accent */}
               <svg viewBox="0 0 24 24" className="absolute top-2 right-2 w-3 h-3 text-cyan-300/70" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
             </div>
           </div>
           {/* Sparkle accent beside the badge */}
           <svg viewBox="0 0 24 24" className="absolute -top-1 -right-2 w-5 h-5 text-amber-300 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+          {/* Tiny confetti dashes around the badge */}
+          <span className="absolute -top-2 left-1 w-2.5 h-0.5 rounded-full bg-amber-300 -rotate-45" />
+          <span className="absolute top-1 -left-3 w-2 h-0.5 rounded-full bg-cyan-300 rotate-12" />
+          <span className="absolute -bottom-1 -left-2 w-2.5 h-0.5 rounded-full bg-pink-400 rotate-45" />
+          {/* Tiny paper-plane accent */}
+          <svg viewBox="0 0 24 24" className="absolute -bottom-2 -right-1 w-3.5 h-3.5 text-teal-300/80 rotate-[15deg]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
         </div>
 
         {/* "NOOB" text lockup below the badge */}
@@ -491,42 +510,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           <span className="text-zinc-600">•</span>
           <span className="text-violet-400">Grow</span>
         </div>
-
-        {/* Feature pill row — visible on every screen size, not just large ones */}
-        <div className="flex items-center gap-1.5 mt-3 flex-wrap justify-center px-4">
-          {[
-            { icon: 'heart', label: 'Real People', color: 'text-pink-300 border-pink-500/30 bg-pink-500/10' },
-            { icon: 'game', label: '50 Games', color: 'text-[#00FF66] border-[#00FF66]/30 bg-[#00FF66]/10' },
-            { icon: 'chat', label: 'Live Chat', color: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10' },
-            { icon: 'music', label: 'Music Hub', color: 'text-violet-300 border-violet-500/30 bg-violet-500/10' }
-          ].map((chip) => (
-            <span
-              key={chip.label}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-bold ${chip.color}`}
-            >
-              {chip.icon === 'heart' && (
-                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
-              )}
-              {chip.icon === 'game' && (
-                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="10" rx="5" /><path d="M7 10v4M5 12h4M15.5 11.5h.01M18.5 13.5h.01" /></svg>
-              )}
-              {chip.icon === 'chat' && (
-                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
-              )}
-              {chip.icon === 'music' && (
-                <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" fill="currentColor" stroke="none" /><circle cx="18" cy="16" r="3" fill="currentColor" stroke="none" /></svg>
-              )}
-              {chip.label}
-            </span>
-          ))}
-        </div>
       </header>
-
-      {/* Small scattered accents in the margins above/below the card — visible on every screen size */}
-      <svg viewBox="0 0 24 24" className="absolute top-[14%] left-[10%] w-4 h-4 text-amber-300/40 rotate-12 pointer-events-none select-none" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-      <svg viewBox="0 0 24 24" className="absolute top-[18%] right-[8%] w-4 h-4 text-cyan-300/40 -rotate-6 pointer-events-none select-none" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
-      <svg viewBox="0 0 24 24" className="absolute bottom-[10%] left-[12%] w-4 h-4 text-violet-300/40 rotate-6 pointer-events-none select-none" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-      <svg viewBox="0 0 24 24" className="absolute bottom-[12%] right-[10%] w-4 h-4 text-[#00FF66]/40 -rotate-12 pointer-events-none select-none" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4V4z" /></svg>
 
       {/* Main Authentication Card */}
       <main className="w-full max-w-lg my-auto z-10 py-3">
@@ -1112,21 +1096,25 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 />
               </div>
 
-              {/* Login Button: Premium Gen Z vibrant gradient */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-3 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-400 hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-black text-sm shadow-[0_0_25px_rgba(99,102,241,0.35)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Log In to NOOB</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              {/* Login Button: Premium Gen Z vibrant gradient, with small flanking accent dashes */}
+              <div className="relative mt-3">
+                <svg viewBox="0 0 24 24" className="absolute -left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400/70 pointer-events-none select-none" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h10" /></svg>
+                <svg viewBox="0 0 24 24" className="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400/70 pointer-events-none select-none" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h10" /></svg>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-400 hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-black text-sm shadow-[0_0_25px_rgba(99,102,241,0.35)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Log In to NOOB</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
 
               {/* Bottom "Create Account" Link strictly in Blue */}
               <div className="text-center pt-3 border-t border-white/5">

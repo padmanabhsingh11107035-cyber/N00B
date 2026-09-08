@@ -206,7 +206,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl overflow-hidden border-2 border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.4)] bg-black p-0.5">
-              <img src="/noob-logo.svg" alt="NOOB Logo" className="w-full h-full object-cover" />
+              <img src="/noob-logo.svg.jpeg" alt="NOOB Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -359,7 +359,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={user.avatar || '/noob-logo.svg'}
+                            src={user.avatar || '/noob-logo.svg.jpeg'}
                             alt={user.username}
                             className="w-10 h-10 rounded-full object-cover border border-zinc-700 shrink-0"
                             referrerPolicy="no-referrer"
@@ -471,7 +471,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
                           <img
-                            src={rep.targetAvatar || '/noob-logo.svg'}
+                            src={rep.targetAvatar || '/noob-logo.svg.jpeg'}
                             alt={rep.targetUsername}
                             className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0"
                           />

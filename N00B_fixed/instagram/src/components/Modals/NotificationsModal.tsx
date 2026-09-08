@@ -269,7 +269,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         {/* Avatar with type badge */}
                         <div className="relative shrink-0">
                           <img
-                            src={notif.senderAvatar || notif.actorAvatar || '/noob-logo.svg'}
+                            src={notif.senderAvatar || notif.actorAvatar || '/noob-logo.svg.jpeg'}
                             alt={notif.senderUsername || notif.actorUsername || 'User'}
                             className="w-10 h-10 rounded-2xl object-cover ring-1 ring-zinc-700"
                             referrerPolicy="no-referrer"

@@ -149,7 +149,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
             activeTab === 'profile' ? 'ring-2 ring-[#00FF66]' : 'bg-gradient-to-tr from-[#00FF66] to-[#00E5FF]'
           }`}>
             <img
-              src={userAvatar || '/noob-logo.svg'}
+              src={userAvatar || '/noob-logo.svg.jpeg'}
               alt="User"
               className="w-full h-full rounded-full object-cover"
               referrerPolicy="no-referrer"

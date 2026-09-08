@@ -92,7 +92,8 @@ import {
   deleteMessage,
   translateMessage,
   updateChatSettings,
-  fetchUsers
+  fetchUsers,
+  createChat
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -319,7 +320,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
   const canStartChatWith = (u: User) =>
     isUserFriend(u) || (allUsers.length <= 4 && u.id !== currentUser.id && !u.isAi);
 
-  const handleStartChatWithUser = (user: User) => {
+  const handleStartChatWithUser = async (user: User) => {
     // Private chats are limited to users with a follow relationship in
     // either direction (matches the "Connected Friends" list rules).
     if (!canStartChatWith(user)) {
@@ -335,33 +336,23 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
       setActiveChatId(existing.id);
       setMobileView('chat');
       setSearchQuery('');
-    } else {
-      const newChat: ChatConversation = {
-        id: `c_${Date.now()}`,
-        participants: [user, currentUser],
-        isGroup: false,
-        unreadCount: 0,
-        isPinned: false,
-        isMuted: false,
-        themeColor: '#00FF66',
-        vanishMode: false,
-        readReceiptsEnabled: true,
-        createdAt: 'Just now',
-        lastMessage: {
-          id: `m_${Date.now()}`,
-          chatId: `c_${Date.now()}`,
-          senderId: currentUser.id,
-          text: `👋 Started a direct chat with friend @${user.username}`,
-          createdAt: 'Just now',
-          status: 'read'
-        }
-      };
+      return;
+    }
+
+    // Create the chat on the server (not just local state) so it survives
+    // the next live-sync poll instead of getting wiped out and falling
+    // back to the first real chat (the global lounge).
+    try {
+      const newChat = await createChat({ participantIds: [user.id, currentUser.id], isGroup: false });
       const updated = [newChat, ...conversations];
       setConversations(updated);
       localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(updated));
       setActiveChatId(newChat.id);
       setMobileView('chat');
       setSearchQuery('');
+    } catch (err) {
+      console.error('Failed to start chat:', err);
+      setChatBlockedNotice('Could not start the chat. Please try again.');
     }
   };
 
@@ -1307,11 +1298,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
                   id: m.senderId,
                   username: m.senderUsername,
                   displayName: m.senderDisplayName || m.senderUsername,
-                  avatar: m.senderAvatar || '/noob-logo.svg',
+                  avatar: m.senderAvatar || '/noob-logo.svg.jpeg',
                   isVerified: m.senderIsVerified
                 } : null);
 
-              const senderAvatar = m.senderAvatar || senderUser?.avatar || '/noob-logo.svg';
+              const senderAvatar = m.senderAvatar || senderUser?.avatar || '/noob-logo.svg.jpeg';
               const senderName = m.senderDisplayName || senderUser?.displayName || m.senderUsername || senderUser?.username || 'NOOB Member';
               const senderVerified = !!(m.senderIsVerified || senderUser?.isVerified);
 

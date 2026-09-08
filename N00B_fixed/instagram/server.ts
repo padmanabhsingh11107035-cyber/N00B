@@ -81,7 +81,7 @@ async function startServer() {
       lastName: 'Admin',
       email: 'admin@noob.app',
       password: '12345678',
-      avatar: '/noob-logo.svg',
+      avatar: '/noob-logo.svg.jpeg',
       bio: '⚡ Official Administrator & Platform Overseer of NOOB. Connect, stream, compete and explore.',
       accountType: 'public',
       isVerified: true,
@@ -116,7 +116,7 @@ async function startServer() {
       id: 'notif_welcome',
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
-      senderAvatar: '/noob-logo.svg',
+      senderAvatar: '/noob-logo.svg.jpeg',
       senderIsVerified: true,
       targetUserId: 'all',
       title: '⚡ Welcome to NOOB',
@@ -534,7 +534,7 @@ async function startServer() {
       mobileNumber: (mobileNumber || '').trim(),
       gender: gender || 'Prefer not to say',
       password,
-      avatar: avatar || '/noob-logo.svg',
+      avatar: avatar || '/noob-logo.svg.jpeg',
       bio: bio?.trim() || '🎉 Here for fun, laughs & connecting with cool people!',
       accountType: chosenAccountType,
       isBusiness: chosenAccountType === 'business',
@@ -1030,7 +1030,7 @@ async function startServer() {
       postId,
       userId: active?.id || 'u_anon',
       username: active?.username || 'user',
-      userAvatar: active?.avatar || '/noob-logo.svg',
+      userAvatar: active?.avatar || '/noob-logo.svg.jpeg',
       isVerified: !!active?.isVerified,
       text: text.trim(),
       likesCount: 0,
@@ -1684,7 +1684,7 @@ User message: ${userText}`
     const senderUserObj = users.find(u => u.id === effectiveSenderId) || active;
     const finalSenderUsername = senderUsername || senderUserObj?.username || active?.username || 'NOOB';
     const finalSenderDisplayName = senderDisplayName || senderUserObj?.displayName || senderUserObj?.username || active?.displayName || 'NOOB';
-    const finalSenderAvatar = senderAvatar || senderUserObj?.avatar || active?.avatar || '/noob-logo.svg';
+    const finalSenderAvatar = senderAvatar || senderUserObj?.avatar || active?.avatar || '/noob-logo.svg.jpeg';
     const finalSenderVerified = !!(senderUserObj?.isVerified ?? active?.isVerified);
 
     const newMsg = {
@@ -1936,7 +1936,7 @@ User message: ${userText}`
       targetUserId: targetUser.id,
       targetUsername: targetUser.username,
       targetDisplayName: targetUser.displayName || targetUser.username,
-      targetAvatar: targetUser.avatar || '/noob-logo.svg',
+      targetAvatar: targetUser.avatar || '/noob-logo.svg.jpeg',
       reason: reason || 'Cyber Bullying & Harassment',
       details: details?.trim() || 'Report submitted via Trust & Safety',
       status: 'pending_review',
@@ -2463,7 +2463,7 @@ COMPLETE PLATFORM CAPABILITIES:
       id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
-      senderAvatar: '/noob-logo.svg',
+      senderAvatar: '/noob-logo.svg.jpeg',
       senderIsVerified: true,
       targetUserId: target.id,
       targetUsername: target.username,
@@ -2512,7 +2512,7 @@ COMPLETE PLATFORM CAPABILITIES:
       id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
-      senderAvatar: '/noob-logo.svg',
+      senderAvatar: '/noob-logo.svg.jpeg',
       senderIsVerified: true,
       targetUserId,
       targetUsername,

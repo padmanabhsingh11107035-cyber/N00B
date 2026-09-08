@@ -96,7 +96,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
               title="Add to Story"
             >
               <img
-                src={currentUser.avatar || '/noob-logo.svg'}
+                src={currentUser.avatar || '/noob-logo.svg.jpeg'}
                 alt="My Story"
                 className="w-full h-full rounded-full object-cover"
                 referrerPolicy="no-referrer"
@@ -127,7 +127,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
             >
               <div className="w-full h-full rounded-full p-[2px] bg-black">
                 <img
-                  src={story.userAvatar || '/noob-logo.svg'}
+                  src={story.userAvatar || '/noob-logo.svg.jpeg'}
                   alt={story.username}
                   className="w-full h-full rounded-full object-cover"
                   referrerPolicy="no-referrer"

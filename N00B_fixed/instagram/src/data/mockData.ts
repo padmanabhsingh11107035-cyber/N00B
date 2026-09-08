@@ -1,7 +1,7 @@
 import { User, Post, Story, Reel, ChatConversation, Message, SavedCollection, GameScore, StoryHighlight, PostComment } from '../types';
 
-export const NOOB_LOGO = '/noob-logo.svg';
-export const DEFAULT_AVATAR = '/noob-logo.svg';
+export const NOOB_LOGO = '/noob-logo.svg.jpeg';
+export const DEFAULT_AVATAR = '/noob-logo.svg.jpeg';
 export const DEFAULT_MEDIA = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
 
 export const NOOB_ADMIN_USER: User = {

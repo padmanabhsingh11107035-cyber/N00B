@@ -363,6 +363,22 @@ export async function fetchChats(): Promise<ChatConversation[]> {
   return data.chats;
 }
 
+export async function createChat(payload: {
+  participantIds: string[];
+  isGroup?: boolean;
+  name?: string;
+  avatar?: string;
+  description?: string;
+}): Promise<ChatConversation> {
+  const res = await fetch(`${API_BASE}/chats`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  const data = await res.json();
+  return data.chat;
+}
+
 export async function deleteChat(chatId: string): Promise<boolean> {
   const res = await fetch(`${API_BASE}/chats/${chatId}`, {
     method: 'DELETE',

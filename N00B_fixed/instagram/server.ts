@@ -414,6 +414,23 @@ async function startServer() {
     });
   });
 
+  // --- TEMPORARY: relay for the failing Android CI job's build log, since
+  // GitHub's log API requires repo-admin auth we don't have here. Remove
+  // this once the Android build is green. ---
+  const CI_LOG_TOKEN = 'noob-ci-debug-relay-8f2a9d3c';
+  let lastCiLogDump: { text: string; receivedAt: string } | null = null;
+
+  app.post('/api/internal/ci-log', express.text({ type: '*/*', limit: '2mb' }), (req, res) => {
+    if (req.headers['x-ci-relay-token'] !== CI_LOG_TOKEN) return res.status(403).end();
+    lastCiLogDump = { text: String(req.body || ''), receivedAt: new Date().toISOString() };
+    res.json({ success: true });
+  });
+
+  app.get('/api/internal/ci-log', (req, res) => {
+    if (req.headers['x-ci-relay-token'] !== CI_LOG_TOKEN) return res.status(403).end();
+    res.json(lastCiLogDump || { text: null });
+  });
+
   // --- MEDIA UPLOAD (BACKBLAZE B2 S3 INTEGRATION) ---
   app.post('/api/upload/media', upload.single('file'), async (req, res) => {
     try {

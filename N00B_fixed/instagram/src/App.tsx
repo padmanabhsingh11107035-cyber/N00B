@@ -567,7 +567,7 @@ export default function App() {
         <div className="space-y-7">
           {/* Logo & Brand Header */}
           <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(239,68,68,0.35)]">
+            <div className="w-10 h-10 rounded-full overflow-hidden shadow-[0_0_20px_rgba(239,68,68,0.35)]">
               <img src="/noob-logo.svg.jpeg" alt="NOOB" className="w-full h-full object-cover" />
             </div>
             <div>

@@ -1116,8 +1116,26 @@ async function startServer() {
 
   // --- STORIES ROUTES ---
   app.get('/api/stories', async (req, res) => {
+    const active = getActiveUser(req);
+    const now = Date.now();
+
+    const visible = stories.filter(s => {
+      // Auto-expire after 24 hours
+      if (s.expiresAt && new Date(s.expiresAt).getTime() < now) return false;
+
+      // Privacy: public accounts are visible to everyone; private accounts
+      // only to the author themself or accounts they follow / are followed by.
+      if (s.userId === active?.id) return true;
+      const author = users.find(u => u.id === s.userId);
+      if (!author || author.accountType !== 'private') return true;
+      if (!active) return false;
+      const isFollowing = active.followingIds?.includes(author.id);
+      const isFollower = author.followingIds?.includes(active.id);
+      return !!(isFollowing || isFollower);
+    });
+
     const mapped = await Promise.all(
-      stories.map(async s => ({
+      visible.map(async s => ({
         ...s,
         mediaUrl: await signMediaKey(s.mediaUrl),
         userAvatar: await signMediaKey(s.userAvatar)

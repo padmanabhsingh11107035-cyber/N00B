@@ -152,6 +152,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
   const chatActionsMenuRef = useRef<HTMLDivElement>(null);
   const leftMenuRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const creatingChatWithRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
@@ -339,20 +340,32 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
       return;
     }
 
+    // Guard against duplicate chats: a repeated call for the same user
+    // (double-tapping "Message", or the pendingChatUser effect re-firing)
+    // before the first createChat() below resolves would otherwise still
+    // see no existing chat and create another one.
+    if (creatingChatWithRef.current.has(user.id)) return;
+    creatingChatWithRef.current.add(user.id);
+
     // Create the chat on the server (not just local state) so it survives
     // the next live-sync poll instead of getting wiped out and falling
     // back to the first real chat (the global lounge).
     try {
       const newChat = await createChat({ participantIds: [user.id, currentUser.id], isGroup: false });
-      const updated = [newChat, ...conversations];
-      setConversations(updated);
-      localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(updated));
+      setConversations((prev) => {
+        if (prev.some((c) => c.id === newChat.id)) return prev;
+        const updated = [newChat, ...prev];
+        localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(updated));
+        return updated;
+      });
       setActiveChatId(newChat.id);
       setMobileView('chat');
       setSearchQuery('');
     } catch (err) {
       console.error('Failed to start chat:', err);
       setChatBlockedNotice('Could not start the chat. Please try again.');
+    } finally {
+      creatingChatWithRef.current.delete(user.id);
     }
   };
 

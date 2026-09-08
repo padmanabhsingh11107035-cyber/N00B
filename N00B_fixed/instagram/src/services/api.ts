@@ -558,6 +558,24 @@ export async function submitSafetyReport(
   return await res.json();
 }
 
+// Support Reviews — real aggregate rating, not cosmetic
+export async function submitSupportReview(
+  rating: number,
+  feedback?: string
+): Promise<{ success: boolean; average: number; count: number }> {
+  const res = await fetch(`${API_BASE}/support/review`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ rating, feedback })
+  });
+  return await res.json();
+}
+
+export async function fetchSupportRatingSummary(): Promise<{ average: number | null; count: number }> {
+  const res = await fetch(`${API_BASE}/support/rating-summary`);
+  return await res.json();
+}
+
 // Saved Collections
 export async function fetchCollections(): Promise<SavedCollection[]> {
   const res = await fetch(`${API_BASE}/collections`, { headers: getAuthHeaders() });
@@ -819,5 +837,3 @@ export async function deleteChatMessage(
   });
   return await res.json();
 }
-
-

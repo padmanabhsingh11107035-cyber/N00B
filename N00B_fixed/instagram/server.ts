@@ -1927,7 +1927,7 @@ User message: ${userText}`
 
     const active = getActiveUser(req);
     res.json({
-      leaderboard: leaderboard.slice(0, 10),
+      leaderboard: leaderboard.slice(0, 50),
       currentUserPoints: active?.noobPoints || 0,
       currentUserRank: leaderboard.findIndex(p => p.username === active?.username) + 1 || 1
     });

@@ -296,10 +296,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowMenu(false)} />
-                  {/* Anchored to the viewport (not the tiny 3-dot button) so it
-                      can never overflow off-screen regardless of where the
-                      button sits in the header or how narrow the screen is. */}
-                  <div className="fixed left-4 right-4 top-24 mx-auto max-w-sm z-40 p-4 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 text-left">
+                  <div className="absolute right-0 top-10 z-40 w-72 max-w-[calc(100vw-2rem)] p-4 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 text-left">
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-zinc-800/80">
                     <Info className="w-4 h-4 text-[#00FF66]" />
                     <h3 className="text-xs font-black text-white uppercase tracking-wider">
@@ -648,11 +645,11 @@ export const GamesView: React.FC<GamesViewProps> = ({
             </div>
           </div>
 
-          {/* Full Rankings List (Top 10 only) */}
+          {/* Full Rankings List */}
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-4 shadow-xl space-y-2">
-            <h2 className="text-sm font-bold text-zinc-300 px-2 mb-2">Top 10 Leaderboard Rankings</h2>
+            <h2 className="text-sm font-bold text-zinc-300 px-2 mb-2">Global Leaderboard Rankings</h2>
 
-            {leaderboard.slice(0, 10).map((player, idx) => (
+            {leaderboard.map((player, idx) => (
               <div
                 key={player.userId || player.username || idx}
                 className={`p-3 rounded-2xl flex items-center justify-between gap-3 transition-colors ${

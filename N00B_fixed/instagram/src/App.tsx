@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   ChevronRight,
   LogOut,
-  Smile,
   Users,
   UserCheck,
   UserPlus
@@ -535,8 +534,8 @@ export default function App() {
         <div className="space-y-7">
           {/* Logo & Brand Header */}
           <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-rose-400 flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.35)]">
-              <Smile className="w-5 h-5 text-white stroke-[2.5]" />
+            <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(239,68,68,0.35)]">
+              <img src="/noob-logo.svg.jpeg" alt="NOOB" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">

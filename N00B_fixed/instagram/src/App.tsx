@@ -100,6 +100,7 @@ export default function App() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);
   const [viewingProfileUser, setViewingProfileUser] = useState<User | null>(null);
+  const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
   const [gameToPlay, setGameToPlay] = useState<{
     game: MiniGameMeta;
     challenger?: string;
@@ -765,6 +766,8 @@ export default function App() {
           <div className="py-2 px-2">
             <ChatView
               currentUser={currentUser}
+              pendingChatUser={pendingChatUser}
+              onPendingChatUserHandled={() => setPendingChatUser(null)}
               onPlayGame={(gameId, challengerUsername, roomCode) => {
                 const matched = ALL_50_MINI_GAMES.find(
                   (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
@@ -811,6 +814,7 @@ export default function App() {
             onToggleFollowUser={handleToggleFollowUser}
             onBackToMyProfile={() => setViewingProfileUser(null)}
             onNavigateToChatWithUser={(targetUser) => {
+              setPendingChatUser(targetUser);
               setActiveTab('chat');
             }}
           />

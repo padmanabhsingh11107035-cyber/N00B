@@ -206,6 +206,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
   }, [targetUser.id, targetUser.isFollowing, currentUser.followingIds]);
 
+  // Private chat is only available between users where at least one follows the other
+  const targetFollowsMe = !!targetUser.followingIds?.includes(currentUser.id);
+  const canMessageTarget = isTargetFollowing || targetFollowsMe;
+
   // Highlights state: Start with empty / custom highlights (NO default fake icons)
   const [highlights, setHighlights] = useState<HighlightItem[]>(() => {
     try {
@@ -939,7 +943,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       )}
                     </button>
 
-                    {onNavigateToChatWithUser && (
+                    {onNavigateToChatWithUser && canMessageTarget && (
                       <button
                         onClick={() => onNavigateToChatWithUser(targetUser)}
                         className="flex-1 py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-blue-500/50 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
@@ -1728,10 +1732,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* 12. Fullscreen Profile Picture Modal */}
       <FullscreenAvatarModal
         isOpen={showFullscreenAvatar}
-        avatarUrl={currentUser.avatar}
-        username={currentUser.username}
-        displayName={currentUser.displayName}
-        isVerified={currentUser.isVerified}
+        avatarUrl={targetUser.avatar}
+        username={targetUser.username}
+        displayName={targetUser.displayName}
+        isVerified={targetUser.isVerified}
         onClose={() => setShowFullscreenAvatar(false)}
       />
 

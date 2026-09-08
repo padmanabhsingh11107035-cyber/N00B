@@ -103,6 +103,8 @@ import confetti from 'canvas-confetti';
 interface ChatViewProps {
   currentUser: User;
   onPlayGame?: (gameId: string, challengerUsername: string, roomCode?: string) => void;
+  pendingChatUser?: User | null;
+  onPendingChatUserHandled?: () => void;
 }
 
 type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
@@ -114,7 +116,7 @@ const THEME_COLORS = [
   { name: 'Sunset Coral', hex: '#FF6B6B' }
 ];
 
-export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pendingChatUser, onPendingChatUserHandled }) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -126,6 +128,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
   const [searchQuery, setSearchQuery] = useState('');
   const [inChatSearchQuery, setInChatSearchQuery] = useState('');
   const [showInChatSearch, setShowInChatSearch] = useState(false);
+  const [chatBlockedNotice, setChatBlockedNotice] = useState('');
   const [isEditingMessageId, setIsEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -152,6 +155,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
+
+  useEffect(() => {
+    if (!chatBlockedNotice) return;
+    const timer = setTimeout(() => setChatBlockedNotice(''), 4000);
+    return () => clearTimeout(timer);
+  }, [chatBlockedNotice]);
 
   // Close menus on click outside
   useEffect(() => {
@@ -298,11 +307,25 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
   const isUserFriend = (u: User) => {
     if (u.id === currentUser.id || u.isAi) return false;
     const isFollowing = u.isFollowing || currentUser.followingIds?.includes(u.id);
-    const isFollower = u.isFollower || u.followers?.includes?.(currentUser.id) || currentUser.followers?.includes?.(u.id);
-    return isFollowing || isFollower;
+    const isFollower = u.followingIds?.includes(currentUser.id);
+    return !!(isFollowing || isFollower);
   };
 
+  // Same eligibility rule used everywhere a chat can be started: a real
+  // follow relationship in either direction, or (while the community is
+  // tiny) anyone at all, so a fresh install with a couple of users isn't a
+  // dead end.
+  const canStartChatWith = (u: User) =>
+    isUserFriend(u) || (allUsers.length <= 4 && u.id !== currentUser.id && !u.isAi);
+
   const handleStartChatWithUser = (user: User) => {
+    // Private chats are limited to users with a follow relationship in
+    // either direction (matches the "Connected Friends" list rules).
+    if (!canStartChatWith(user)) {
+      setChatBlockedNotice(`You can only message @${user.username} if you follow them or they follow you.`);
+      return;
+    }
+    setChatBlockedNotice('');
     // Check if chat already exists
     const existing = conversations.find(
       (c) => !c.isGroup && c.participants.some((p) => p.id === user.id)
@@ -340,6 +363,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
       setSearchQuery('');
     }
   };
+
+  // Opens a chat with a user handed off from elsewhere in the app (e.g. the
+  // "Message" button on a profile), once the friends list has loaded.
+  useEffect(() => {
+    if (pendingChatUser && allUsers.length > 0) {
+      handleStartChatWithUser(pendingChatUser);
+      onPendingChatUserHandled?.();
+    }
+  }, [pendingChatUser, allUsers]);
 
   const handleTogglePin = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -588,9 +620,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
   };
 
   // Filter Friends: all users who follow me OR whom I follow
-  const myFriends = allUsers.filter(
-    (u) => isUserFriend(u) || (allUsers.length <= 4 && u.id !== currentUser.id && !u.isAi)
-  );
+  const myFriends = allUsers.filter((u) => canStartChatWith(u));
 
   // Synthesize contacts for friends who don't have an active conversation yet
   const friendsWithoutConversation = myFriends.filter(
@@ -661,11 +691,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
   return (
     <div
       id="chat-view-container"
-      className="w-full max-w-6xl mx-auto h-[calc(100vh-80px)] min-h-[580px] max-h-[880px] bg-zinc-950 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col mb-16 sm:mb-0"
+      className="relative w-full max-w-6xl mx-auto h-[calc(100vh-80px)] min-h-[580px] max-h-[880px] bg-zinc-950 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col mb-16 sm:mb-0"
     >
+      {chatBlockedNotice && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-2xl bg-zinc-900 border border-rose-500/40 text-rose-300 text-xs font-semibold shadow-2xl max-w-[90%] text-center">
+          {chatBlockedNotice}
+        </div>
+      )}
+
       {/* WhatsApp/Signal Style Main Container */}
       <div className="flex-1 flex overflow-hidden relative">
-        
+
         {/* LEFT COLUMN: WhatsApp-style Chats List (Matching Screenshot) */}
         <aside
           className={`w-full md:w-80 lg:w-96 shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex flex-col z-20 ${
@@ -1793,6 +1829,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
               </button>
             </div>
 
+            <p className="text-[11px] text-zinc-500 -mt-2">
+              You can message people who follow you or who you follow.
+            </p>
+
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
@@ -1808,6 +1848,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
             <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
               {allUsers
                 .filter((u) => u.id !== currentUser.id)
+                .filter((u) => canStartChatWith(u))
                 .filter(
                   (u) =>
                     !newChatSearch.trim() ||
@@ -1850,9 +1891,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame }) =
                     </button>
                   </div>
                 ))}
-              {allUsers.filter((u) => u.id !== currentUser.id).length === 0 && (
+              {allUsers.filter((u) => canStartChatWith(u)).length === 0 && (
                 <div className="text-center py-6 text-xs text-zinc-500">
-                  No other registered users found.
+                  Follow someone (or get followed back) to start a direct chat with them.
                 </div>
               )}
             </div>

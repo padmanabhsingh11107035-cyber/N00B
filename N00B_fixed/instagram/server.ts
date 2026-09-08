@@ -1518,6 +1518,21 @@ async function startServer() {
     res.json({ success: true, isMuted: chat.isMuted });
   });
 
+  // Update per-chat settings: theme color, vanish mode, read receipts, nickname
+  app.put('/api/chats/:id/settings', (req, res) => {
+    const chatId = req.params.id;
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    const { themeColor, vanishMode, readReceiptsEnabled, nickname } = req.body;
+    if (themeColor !== undefined) chat.themeColor = themeColor;
+    if (vanishMode !== undefined) chat.vanishMode = !!vanishMode;
+    if (readReceiptsEnabled !== undefined) chat.readReceiptsEnabled = !!readReceiptsEnabled;
+    if (nickname !== undefined) chat.nickname = nickname;
+
+    res.json({ success: true, chat });
+  });
+
   // Helper function to generate AI response with exact user intent compliance
   async function generateAIResponse(userText: string, activeUser: any, chatHistory: any[]) {
     const registeredName =

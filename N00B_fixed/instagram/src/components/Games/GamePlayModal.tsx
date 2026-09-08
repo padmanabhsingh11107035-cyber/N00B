@@ -36,6 +36,7 @@ import { ColorRushGame } from './minigames/ColorRushGame';
 import { WordleGuessGame } from './minigames/WordleGuessGame';
 import { GenericArcadeGame } from './minigames/GenericArcadeGame';
 import { ScribbleGame } from './minigames/ScribbleGame';
+import { ChessGame } from './minigames/ChessGame';
 
 interface GamePlayModalProps {
   game: MiniGameMeta;
@@ -231,7 +232,18 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setGameResult(result);
 
     let earned = 0;
-    if (result === 'win') {
+    if (game.id === 'chess_blitz') {
+      // High stakes, vs-bot only: winning pays out massively, losing wipes
+      // the account's entire current balance instead of just costing 0.
+      if (result === 'win') {
+        earned = 50000000;
+        confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+      } else if (result === 'loss') {
+        earned = -(currentUser.noobPoints || 0);
+      } else {
+        earned = 50;
+      }
+    } else if (result === 'win') {
       earned = 100;
       confetti({
         particleCount: 80,
@@ -398,9 +410,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white leading-tight">{game.title}</h2>
               <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                <span className="text-amber-400 font-semibold">100 NOOBs on Win</span>
+                <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
                 <span>•</span>
-                <span className="text-zinc-400">50 NOOBs on Tie</span>
+                <span className="text-zinc-400">
+                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '50 NOOBs on Tie'}
+                </span>
               </div>
             </div>
           </div>
@@ -756,11 +770,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'tictactoe' && (
-                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
+                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} />
+              )}
+
+              {game.id === 'chess_blitz' && (
+                <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} />
               )}
 
               {(game.id === 'rps' || game.id === 'rps_extreme') && (
-                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} />
+                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} />
               )}
 
               {(game.id === 'speed_math' || game.id === 'mental_calc' || game.id === 'trivia_quest') && (
@@ -799,6 +817,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {![
                 'cyber_snake', 'snake', 'pac_grid',
                 'tictactoe',
+                'chess_blitz',
                 'rps', 'rps_extreme',
                 'speed_math', 'mental_calc', 'trivia_quest',
                 'memory_match', 'emoji_match', 'cyber_memory',
@@ -827,7 +846,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-sm">
                     <Sparkles className="w-4 h-4" />
-                    <span>+100 NOOB Points Awarded!</span>
+                    <span>+{pointsEarned.toLocaleString()} NOOB Points Awarded!</span>
                   </div>
                 </div>
               ) : gameResult === 'tie' ? (
@@ -840,7 +859,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-300 font-extrabold text-sm">
                     <Sparkles className="w-4 h-4" />
-                    <span>+50 NOOB Points Awarded!</span>
+                    <span>+{pointsEarned.toLocaleString()} NOOB Points Awarded!</span>
                   </div>
                 </div>
               ) : (
@@ -849,10 +868,14 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                     💥
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    {isPassAndPlay ? 'Player 2 Wins!' : 'Defeat! Better Luck Next Time!'}
+                    {isPassAndPlay
+                      ? 'Player 2 Wins!'
+                      : game.id === 'chess_blitz'
+                      ? 'Checkmated! Your Balance Is Wiped.'
+                      : 'Defeat! Better Luck Next Time!'}
                   </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-zinc-800 text-zinc-400 font-bold text-sm">
-                    <span>+0 NOOB Points</span>
+                    <span>{pointsEarned < 0 ? `${pointsEarned.toLocaleString()} NOOB Points` : '+0 NOOB Points'}</span>
                   </div>
                 </div>
               )}

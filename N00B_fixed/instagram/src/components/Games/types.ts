@@ -455,14 +455,14 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     id: 'chess_blitz',
     title: 'Chess Blitz 3-Min',
     category: 'brain',
-    description: 'Quick chess endgames and tactics against smart bot or real player.',
+    description: 'High-stakes chess vs a genuinely strong bot: win for +50,000,000 NOOBs, but lose vs the bot and your entire balance resets to 0. Play a friend instead for no risk.',
     bannerBg: 'from-[#27272a] to-[#09090b]',
     badgeColor: 'bg-zinc-400/20 text-zinc-200 border-zinc-400/30',
-    pointsReward: 100,
+    pointsReward: 50000000,
     difficulty: 'Hard',
-    players: '1v1 Online',
+    players: 'vs Bot',
     iconType: 'chess',
-    tags: ['Chess', 'Tactics', 'Grandmaster']
+    tags: ['Chess', 'High Stakes', 'Grandmaster']
   },
   {
     id: 'card_high_low',

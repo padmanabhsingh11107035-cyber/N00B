@@ -301,7 +301,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                         {game.title}
                       </h3>
                       <span className="text-[10px] font-extrabold text-amber-400 shrink-0">
-                        +100 NOOBs
+                        +{game.pointsReward.toLocaleString()} NOOBs
                       </span>
                     </div>
 

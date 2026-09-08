@@ -32,6 +32,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK platform 36 & accept licenses
+        # Capacitor's Android template currently targets compileSdkVersion 36,
+        # which android-actions/setup-android doesn't install by default —
+        # without this, the Gradle build fails trying to fetch it mid-build
+        # without a pre-accepted license.
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
+
       - name: Install web app dependencies
         run: npm install
 

@@ -19,7 +19,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   return (
     <nav
       id="floating-bottom-nav"
-      className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[96%] max-w-[480px] pointer-events-auto"
+      className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[96%] max-w-[480px] pointer-events-auto xl:hidden"
     >
       <div className="bg-[#0f1914]/95 backdrop-blur-xl border border-[#00FF66]/30 rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1 shadow-[0_0_25px_rgba(0,255,102,0.2)]">
         {/* 1. Feed Item (Left 1) */}

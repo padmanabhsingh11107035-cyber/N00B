@@ -11,10 +11,11 @@ import {
   Users,
   X,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { User } from '../../types';
-import { fetchAdminUsersList, suspendUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction } from '../../services/api';
+import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
 interface AdminControlModalProps {
@@ -42,6 +43,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   // Suspension modal prompt states
   const [selectedUserForSuspend, setSelectedUserForSuspend] = useState<User | null>(null);
   const [suspendReason, setSuspendReason] = useState('Violation of NOOB Community Guidelines');
+
+  // Delete-account confirmation state
+  const [selectedUserForDelete, setSelectedUserForDelete] = useState<User | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -115,6 +119,27 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         await loadUsers();
       } else {
         setStatusMessage({ text: res.error || 'Failed to update account status.', type: 'error' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteUser = async (targetUser: User) => {
+    try {
+      setActionLoading(targetUser.id);
+      const res = await deleteUserAccount(targetUser.id);
+      if (res.success) {
+        setStatusMessage({
+          text: res.message || `Account @${targetUser.username} has been permanently deleted.`,
+          type: 'success'
+        });
+        setSelectedUserForDelete(null);
+        await loadUsers();
+      } else {
+        setStatusMessage({ text: res.error || 'Failed to delete account.', type: 'error' });
       }
     } catch (err: any) {
       setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
@@ -366,27 +391,39 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         </div>
 
                         {/* Action buttons */}
-                        <div className="shrink-0">
+                        <div className="shrink-0 flex items-center gap-1.5">
                           {isSelf ? (
                             <span className="text-[11px] text-zinc-500 font-bold px-3 py-1.5">Immune</span>
-                          ) : isSuspended ? (
-                            <button
-                              onClick={() => handleToggleSuspend(user, false)}
-                              disabled={actionLoading === user.id}
-                              className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                            >
-                              <UserCheck className="w-3.5 h-3.5" />
-                              {actionLoading === user.id ? 'Unsuspending...' : 'Unsuspend'}
-                            </button>
                           ) : (
-                            <button
-                              onClick={() => setSelectedUserForSuspend(user)}
-                              disabled={actionLoading === user.id}
-                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                            >
-                              <UserX className="w-3.5 h-3.5" />
-                              Suspend
-                            </button>
+                            <>
+                              {isSuspended ? (
+                                <button
+                                  onClick={() => handleToggleSuspend(user, false)}
+                                  disabled={actionLoading === user.id}
+                                  className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                  {actionLoading === user.id ? 'Unsuspending...' : 'Unsuspend'}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setSelectedUserForSuspend(user)}
+                                  disabled={actionLoading === user.id}
+                                  className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                  <UserX className="w-3.5 h-3.5" />
+                                  Suspend
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setSelectedUserForDelete(user)}
+                                disabled={actionLoading === user.id}
+                                title="Permanently delete this account and their content"
+                                className="p-1.5 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -642,6 +679,39 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black shadow-lg cursor-pointer"
               >
                 Confirm Suspension
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Sub-Modal for Permanent Deletion */}
+      {selectedUserForDelete && (
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-zinc-950 border border-red-500/50 rounded-3xl p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-red-400">
+              <Trash2 className="w-6 h-6" />
+              <h3 className="text-base font-black text-white">Delete @{selectedUserForDelete.username}?</h3>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              This permanently deletes the account along with every post, reel, and comment it authored. This
+              cannot be undone — suspend the account instead if you just want to block their access.
+            </p>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={() => setSelectedUserForDelete(null)}
+                className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteUser(selectedUserForDelete)}
+                disabled={actionLoading === selectedUserForDelete.id}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-lg cursor-pointer"
+              >
+                {actionLoading === selectedUserForDelete.id ? 'Deleting...' : 'Permanently Delete'}
               </button>
             </div>
           </div>

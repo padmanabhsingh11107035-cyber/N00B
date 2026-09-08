@@ -226,7 +226,10 @@ export async function toggleLikeCountPost(postId: string): Promise<{ isLikeCount
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/posts/${postId}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}/posts/${postId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
   const data = await res.json();
   return data.success;
 }
@@ -798,6 +801,15 @@ export async function suspendUserAccount(payload: {
     method: 'POST',
     headers: getAuthHeaders(),
     body: safeJsonStringify(payload)
+  });
+  return await res.json();
+}
+
+export async function deleteUserAccount(targetUserId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/admin/delete-user`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ targetUserId })
   });
   return await res.json();
 }

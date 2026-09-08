@@ -881,17 +881,25 @@ async function startServer() {
   // Delete Post
   app.delete('/api/posts/:id', (req, res) => {
     const postId = req.params.id;
-    const postIndex = posts.findIndex(p => p.id === postId);
-    if (postIndex !== -1) {
-      const deletedPost = posts.splice(postIndex, 1)[0];
-      const author = users.find(u => u.id === deletedPost.userId || u.username === deletedPost.username);
-      if (author) {
-        author.postsCount = Math.max(0, (author.postsCount || 0) - 1);
-      }
-      delete comments[postId];
-      return res.json({ success: true, message: 'Post deleted successfully' });
+    const post = posts.find(p => p.id === postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
     }
-    res.status(404).json({ error: 'Post not found' });
+
+    const active = getActiveUser(req);
+    const isOwner = active && (active.id === post.userId || active.username === post.username);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isOwner && !isMasterAdmin) {
+      return res.status(403).json({ error: 'You can only delete your own posts.' });
+    }
+
+    posts = posts.filter(p => p.id !== postId);
+    const author = users.find(u => u.id === post.userId || u.username === post.username);
+    if (author) {
+      author.postsCount = Math.max(0, (author.postsCount || 0) - 1);
+    }
+    delete comments[postId];
+    res.json({ success: true, message: 'Post deleted successfully' });
   });
 
   // --- COMMENTS ROUTES ---
@@ -995,12 +1003,6 @@ async function startServer() {
     };
     savedCollections.unshift(newCol);
     res.status(201).json({ success: true, collection: newCol });
-  });
-
-  app.delete('/api/posts/:id', (req, res) => {
-    const postId = req.params.id;
-    posts = posts.filter(p => p.id !== postId);
-    res.json({ success: true });
   });
 
   // --- STORIES ROUTES ---
@@ -1128,12 +1130,20 @@ async function startServer() {
   // Delete Reel
   app.delete('/api/reels/:id', (req, res) => {
     const reelId = req.params.id;
-    const reelIndex = reels.findIndex(r => r.id === reelId);
-    if (reelIndex !== -1) {
-      reels.splice(reelIndex, 1);
-      return res.json({ success: true, message: 'Reel deleted successfully' });
+    const reel = reels.find(r => r.id === reelId);
+    if (!reel) {
+      return res.status(404).json({ error: 'Reel not found' });
     }
-    res.status(404).json({ error: 'Reel not found' });
+
+    const active = getActiveUser(req);
+    const isOwner = active && (active.id === reel.userId || active.username === reel.username);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isOwner && !isMasterAdmin) {
+      return res.status(403).json({ error: 'You can only delete your own reels.' });
+    }
+
+    reels = reels.filter(r => r.id !== reelId);
+    res.json({ success: true, message: 'Reel deleted successfully' });
   });
 
   // --- MUSIC HUB API ---
@@ -2364,6 +2374,54 @@ COMPLETE PLATFORM CAPABILITIES:
   // ==========================================
 
   // Admin: Suspend or unsuspend any user account
+  // Admin: Permanently delete an account and everything it authored
+  app.post('/api/admin/delete-user', (req, res) => {
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Access denied. Only the NOOB administrator can delete accounts.' });
+    }
+
+    const { targetUserId } = req.body;
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'Target user ID or username is required.' });
+    }
+
+    const target = users.find(u => u.id === targetUserId || u.username.toLowerCase() === targetUserId.toLowerCase());
+    if (!target) {
+      return res.status(404).json({ error: 'Target account not found.' });
+    }
+
+    if (target.id === 'u_noob_admin' || target.username.toLowerCase() === 'noob') {
+      return res.status(400).json({ error: 'The primary NOOB administrator account cannot be deleted.' });
+    }
+
+    // Remove everything this account authored
+    posts.filter(p => p.userId === target.id).forEach(p => delete comments[p.id]);
+    posts = posts.filter(p => p.userId !== target.id);
+    reels = reels.filter(r => r.userId !== target.id);
+    stories = stories.filter(s => s.userId !== target.id);
+    Object.keys(comments).forEach(postId => {
+      comments[postId] = comments[postId].filter((c: any) => c.userId !== target.id);
+    });
+
+    // Detach them from other accounts' follow graphs and chats
+    users.forEach(u => {
+      if (u.followingIds) u.followingIds = u.followingIds.filter((id: string) => id !== target.id);
+      if (u.blockedUserIds) u.blockedUserIds = u.blockedUserIds.filter((id: string) => id !== target.id);
+    });
+    chats.forEach(c => {
+      c.participants = c.participants.filter((p: any) => p.id !== target.id);
+    });
+
+    users = users.filter(u => u.id !== target.id);
+
+    res.json({
+      success: true,
+      message: `Account @${target.username} and their content have been permanently deleted.`
+    });
+  });
+
   app.post('/api/admin/suspend-user', (req, res) => {
     const active = getActiveUser(req);
     const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');

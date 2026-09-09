@@ -1532,30 +1532,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               )}
             </div>
 
-            {/* Spoken Quick Problem Solver Chips */}
-            <div className="w-full text-left">
-              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1.5">
-                Speak or Tap a Quick Topic:
-              </span>
-              <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
-                {[
-                  'How do I earn 100 points in 50 mini-games?',
-                  'What are the official Terms & Conditions?',
-                  'How does Backblaze cloud storage secure my data?',
-                  'How does continuous background music work?'
-                ].map((topic, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    disabled={isCallProcessing}
-                    onClick={() => handleAskCallQuestion(topic)}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-cyan-500/50 text-[11px] text-zinc-300 hover:text-white transition-all text-left cursor-pointer"
-                  >
-                    💬 {topic}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Bottom Bar: Input Fallback + High-Visibility Call Controls */}

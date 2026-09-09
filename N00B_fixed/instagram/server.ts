@@ -1378,6 +1378,29 @@ async function startServer() {
       resolvedParticipants.push(sanitizeUser(active));
     }
 
+    // A 1:1 chat needs two distinct, resolved participants. If the other
+    // person's id didn't resolve, don't silently create a one-person "chat"
+    // that ends up displaying the current user's own name as the partner.
+    if (!isGroup && resolvedParticipants.length < 2) {
+      return res.status(404).json({ error: 'Could not find the other participant to start this chat.' });
+    }
+
+    // Reuse an existing 1:1 chat between the same two people instead of
+    // creating a duplicate — the client already checks its local state for
+    // this, but that can go stale after a sync gap, so this is the
+    // authoritative guard against repeated "Chat" taps spawning new threads.
+    if (!isGroup) {
+      const participantIdSet = new Set(resolvedParticipants.map(p => p.id));
+      const existingChat = chats.find(c =>
+        !c.isGroup &&
+        c.participants.length === participantIdSet.size &&
+        c.participants.every(p => participantIdSet.has(p.id))
+      );
+      if (existingChat) {
+        return res.status(200).json({ success: true, chat: existingChat });
+      }
+    }
+
     const creatorId = active?.id || 'u_noob_admin';
     const adminIds = isGroup ? Array.from(new Set([creatorId, 'u_noob_admin'])) : undefined;
 

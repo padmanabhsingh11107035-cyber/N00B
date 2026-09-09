@@ -482,7 +482,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* Dropdown Menu */}
           {showThreeDotsMenu && (
-            <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] bg-zinc-950 border border-zinc-700/80 rounded-2xl p-2 shadow-2xl z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl max-h-[80vh] overflow-y-auto">
+            <div className="liquid-glass absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] rounded-2xl p-2 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-[80vh] overflow-y-auto">
               {/* Universal: Theme Toggle */}
               <button
                 onClick={() => {

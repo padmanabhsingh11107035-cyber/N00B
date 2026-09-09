@@ -50,7 +50,7 @@ jobs:
           # The native app has no backend of its own — every relative
           # /api call gets rewritten to this URL at build time (see
           # src/main.tsx). Change this if the Railway URL ever changes.
-          VITE_API_BASE: https://noob.up.railway.app/api
+          VITE_API_BASE: https://n00b-production.up.railway.app/api
 
       - name: Add Android platform
         run: npx cap add android

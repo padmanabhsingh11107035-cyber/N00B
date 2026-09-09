@@ -199,13 +199,20 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
     );
   }
 
-  // --- Board rendering: radial track that scales with player count ---
-  const size = 300;
+  // --- Board rendering: square-tile radial track + colored yards, styled to
+  // read as "Ludo" (yard panels with 4 token slots, a colored home lane per
+  // player, a pie-sliced center) rather than a bare dotted ring, while still
+  // scaling cleanly from 2 to 8 players. ---
+  const size = 320;
   const center = size / 2;
-  const ringRadius = 105;
-  const yardRadius = 135;
-  const homeStretchOuter = 90;
-  const homeStretchInner = 35;
+  const ringRadius = 118;
+  const yardRadius = 152;
+  const homeStretchOuter = 104;
+  const homeStretchInner = 44;
+  const hubRadius = 42;
+
+  const cellArc = (2 * Math.PI * ringRadius) / pathLength;
+  const cellSize = Math.max(7, Math.min(15, cellArc * 0.8));
 
   const cellPos = (index: number, radius: number) => {
     const angle = (index / pathLength) * 2 * Math.PI - Math.PI / 2;
@@ -213,6 +220,13 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
   };
 
   const entryAngleOf = (playerIdx: number) => (playerIdx * ARM_LENGTH / pathLength) * 2 * Math.PI - Math.PI / 2;
+
+  const yardSlotOffsets: [number, number][] = [
+    [-11, 4],
+    [11, 4],
+    [-11, 22],
+    [11, 22]
+  ];
 
   return (
     <div className="w-full flex flex-col items-center gap-3 p-2">
@@ -231,65 +245,143 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[300px]">
-        {/* Shared ring cells */}
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[320px]">
+        {/* Board backdrop */}
+        <circle cx={center} cy={center} r={yardRadius + 30} fill="#0a0a0a" stroke="#27272a" strokeWidth="1" />
+
+        {/* Center hub: pie wedge per player, pointing down each player's home lane */}
+        {Array.from({ length: numPlayers }).map((_, p) => {
+          const angle = entryAngleOf(p);
+          const half = Math.PI / numPlayers;
+          const x1 = center + hubRadius * Math.cos(angle - half);
+          const y1 = center + hubRadius * Math.sin(angle - half);
+          const x2 = center + hubRadius * Math.cos(angle + half);
+          const y2 = center + hubRadius * Math.sin(angle + half);
+          return (
+            <path
+              key={p}
+              d={`M ${center} ${center} L ${x1} ${y1} A ${hubRadius} ${hubRadius} 0 0 1 ${x2} ${y2} Z`}
+              fill={PLAYER_COLORS[p]}
+              fillOpacity="0.85"
+              stroke="#0a0a0a"
+              strokeWidth="1.5"
+            />
+          );
+        })}
+        <circle cx={center} cy={center} r={hubRadius * 0.42} fill="#0a0a0a" stroke="#3f3f46" strokeWidth="1" />
+        <text x={center} y={center + 3} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="900">
+          HOME
+        </text>
+
+        {/* Home stretch lane: a strip of colored squares per player, ring to hub */}
+        {Array.from({ length: numPlayers }).map((_, p) => {
+          const angle = entryAngleOf(p);
+          return (
+            <g key={p}>
+              {Array.from({ length: HOME_STRETCH }).map((_, s) => {
+                const t = (s + 0.5) / HOME_STRETCH;
+                const radius = homeStretchOuter - t * (homeStretchOuter - homeStretchInner);
+                const x = center + radius * Math.cos(angle);
+                const y = center + radius * Math.sin(angle);
+                return (
+                  <rect
+                    key={s}
+                    x={x - cellSize / 2}
+                    y={y - cellSize / 2}
+                    width={cellSize}
+                    height={cellSize}
+                    rx="1.5"
+                    fill={PLAYER_COLORS[p]}
+                    fillOpacity="0.55"
+                    stroke={PLAYER_COLORS[p]}
+                    strokeWidth="0.75"
+                  />
+                );
+              })}
+            </g>
+          );
+        })}
+
+        {/* Shared ring path: square tiles, gold star tile marks each player's safe entry cell */}
         {Array.from({ length: pathLength }).map((_, i) => {
           const { x, y } = cellPos(i, ringRadius);
           const isSafe = i % ARM_LENGTH === 0;
-          return <circle key={i} cx={x} cy={y} r={isSafe ? 6 : 4} fill={isSafe ? '#fbbf2455' : '#27272a'} stroke="#3f3f46" strokeWidth="0.5" />;
+          return (
+            <rect
+              key={i}
+              x={x - cellSize / 2}
+              y={y - cellSize / 2}
+              width={cellSize}
+              height={cellSize}
+              rx="1.5"
+              fill={isSafe ? '#fbbf24' : '#1c1c1f'}
+              fillOpacity={isSafe ? 0.9 : 1}
+              stroke="#3f3f46"
+              strokeWidth="0.6"
+            />
+          );
         })}
 
-        {/* Home stretch spokes + yard markers per player */}
+        {/* Yard panels: colored rounded-square base holding a 2x2 grid of token slots */}
         {Array.from({ length: numPlayers }).map((_, p) => {
           const angle = entryAngleOf(p);
           const yx = center + yardRadius * Math.cos(angle);
           const yy = center + yardRadius * Math.sin(angle);
           return (
             <g key={p}>
-              <line
-                x1={center + homeStretchOuter * Math.cos(angle)}
-                y1={center + homeStretchOuter * Math.sin(angle)}
-                x2={center + homeStretchInner * Math.cos(angle)}
-                y2={center + homeStretchInner * Math.sin(angle)}
+              <rect
+                x={yx - 26}
+                y={yy - 26}
+                width="52"
+                height="52"
+                rx="10"
+                fill={`${PLAYER_COLORS[p]}26`}
                 stroke={PLAYER_COLORS[p]}
-                strokeWidth="4"
-                strokeOpacity="0.25"
+                strokeWidth={currentPlayer === p && winner === null ? 2.5 : 1.5}
               />
-              <circle cx={yx} cy={yy} r="14" fill={`${PLAYER_COLORS[p]}22`} stroke={PLAYER_COLORS[p]} strokeWidth="1.5" />
-              <text x={yx} y={yy + 3} fontSize="8" fill={PLAYER_COLORS[p]} textAnchor="middle" fontWeight="bold">
+              <text x={yx} y={yy - 14} fontSize="7.5" fill={PLAYER_COLORS[p]} textAnchor="middle" fontWeight="900">
                 {p === 0 ? 'YOU' : `P${p + 1}`}
               </text>
+              {yardSlotOffsets.map(([dx, dy], slotIdx) => {
+                const hasToken = tokens[p]?.[slotIdx] === 0;
+                return (
+                  <circle
+                    key={slotIdx}
+                    cx={yx + dx}
+                    cy={yy + dy}
+                    r="6"
+                    fill={hasToken ? PLAYER_COLORS[p] : '#00000055'}
+                    stroke={PLAYER_COLORS[p]}
+                    strokeWidth={hasToken ? 1.4 : 0.75}
+                    strokeOpacity={hasToken ? 1 : 0.5}
+                  />
+                );
+              })}
             </g>
           );
         })}
 
-        {/* Center home */}
-        <circle cx={center} cy={center} r={homeStretchInner - 5} fill="#000" stroke="#3f3f46" />
-        <text x={center} y={center + 3} fontSize="9" fill="#00FF66" textAnchor="middle" fontWeight="bold">
-          HOME
-        </text>
-
-        {/* Tokens */}
+        {/* Tokens currently on the shared ring or home stretch */}
         {tokens.map((toks, p) =>
           toks.map((progress, t) => {
-            if (progress === 0) {
-              const angle = entryAngleOf(p) + (t - 1.5) * 0.15;
-              const x = center + (yardRadius + 10) * Math.cos(angle);
-              const y = center + (yardRadius + 10) * Math.sin(angle);
-              return <circle key={`${p}-${t}`} cx={x} cy={y} r="5" fill={PLAYER_COLORS[p]} stroke="#000" strokeWidth="1" />;
-            }
-            if (progress === finishProgress) return null; // shown via home counter only
+            if (progress === 0 || progress === finishProgress) return null; // shown via yard slot / home counter
+            let x: number;
+            let y: number;
             if (progress <= pathLength) {
-              const { x, y } = cellPos(absoluteCell(p, progress), ringRadius);
-              return <circle key={`${p}-${t}`} cx={x} cy={y} r="6" fill={PLAYER_COLORS[p]} stroke="#000" strokeWidth="1.2" />;
+              ({ x, y } = cellPos(absoluteCell(p, progress), ringRadius));
+            } else {
+              const stretchT = (progress - pathLength - 0.5) / HOME_STRETCH;
+              const radius = homeStretchOuter - stretchT * (homeStretchOuter - homeStretchInner);
+              const angle = entryAngleOf(p);
+              x = center + radius * Math.cos(angle);
+              y = center + radius * Math.sin(angle);
             }
-            // On home stretch: interpolate between outer and inner radius
-            const stretchProgress = (progress - pathLength) / (HOME_STRETCH + 1);
-            const radius = homeStretchOuter - stretchProgress * (homeStretchOuter - homeStretchInner);
-            const angle = entryAngleOf(p);
-            const x = center + radius * Math.cos(angle);
-            const y = center + radius * Math.sin(angle);
-            return <circle key={`${p}-${t}`} cx={x} cy={y} r="6" fill={PLAYER_COLORS[p]} stroke="#fff" strokeWidth="1" />;
+            return (
+              <g key={`${p}-${t}`}>
+                <circle cx={x} cy={y} r="7" fill={PLAYER_COLORS[p]} stroke="#000" strokeWidth="1.3" />
+                <circle cx={x - 2} cy={y - 2} r="2.2" fill="#ffffff" fillOpacity="0.55" />
+              </g>
+            );
           })
         )}
       </svg>

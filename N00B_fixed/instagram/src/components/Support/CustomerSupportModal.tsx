@@ -75,6 +75,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [callActiveTopic, setCallActiveTopic] = useState<string>('');
   const [lastAiReply, setLastAiReply] = useState<string>('');
   const [speechSupported, setSpeechSupported] = useState(true);
+  // True when the mic has been "listening" for a while with nothing heard at
+  // all — some mobile browsers/webviews grant mic permission and report
+  // isListening but never deliver a single result, leaving the call stuck
+  // silently forever with no way for the user to know voice isn't working.
+  const [micStalled, setMicStalled] = useState(false);
 
   // Post-Chat Review & Rating State (Exclusively for Customer Support)
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -193,6 +198,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const isCallProcessingRef = useRef(isCallProcessing);
   const silenceTimerRef = useRef<any>(null);
   const micPermissionDeniedRef = useRef(false);
+  const stallTimerRef = useRef<any>(null);
+  const stalledStopRef = useRef(false);
 
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
@@ -201,6 +208,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   useEffect(() => {
     isMutedRef.current = isMuted;
     if (isMuted && isListening) {
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
+      stalledStopRef.current = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -227,6 +239,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       }
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
+      }
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
       }
       if (recognitionRef.current) {
         try {
@@ -334,6 +349,23 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       return;
     }
 
+    // Give up on a listening session that never hears anything, instead of
+    // sitting in "Listening..." forever with no feedback — some mobile
+    // browsers/webviews grant mic permission and fire onstart but never
+    // deliver a single onresult (no audio actually reaches the recognition
+    // service). Re-armed on every result so mid-sentence pauses don't trip it.
+    const armStallTimer = () => {
+      if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = setTimeout(() => {
+        stalledStopRef.current = true;
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {}
+        }
+      }, 9000);
+    };
+
     try {
       if (recognitionRef.current) {
         try {
@@ -348,6 +380,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
       recognition.onstart = () => {
         setIsListening(true);
+        setMicStalled(false);
+        armStallTimer();
       };
 
       recognition.onresult = (event: any) => {
@@ -364,6 +398,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
         const trimmed = transcript.trim();
         if (trimmed) {
+          setMicStalled(false);
+          armStallTimer();
           setCallInputText(trimmed);
 
           // Clear any active silence timer
@@ -396,6 +432,18 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
       recognition.onend = () => {
         setIsListening(false);
+        if (stallTimerRef.current) {
+          clearTimeout(stallTimerRef.current);
+          stallTimerRef.current = null;
+        }
+        if (stalledStopRef.current) {
+          // We stopped this one ourselves because it never heard anything —
+          // surface that to the user instead of silently restarting into
+          // another identical, doomed listening loop.
+          stalledStopRef.current = false;
+          setMicStalled(true);
+          return;
+        }
         // Always spin up a brand-new recognition instance rather than
         // restarting this one: Chrome's continuous SpeechRecognition is
         // known to silently stop delivering results after a restart on the
@@ -517,7 +565,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     setCallDuration(0);
     setIsMuted(false);
     micPermissionDeniedRef.current = false;
+    stalledStopRef.current = false;
     setSpeechSupported(true);
+    setMicStalled(false);
 
     const greeting = `Hello @${currentUser.username}! You are connected to the NOOB AI Voice Support Specialist. I am listening to your microphone—what issue can I solve for your account today?`;
     setCallTranscript([
@@ -551,6 +601,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     const cleanQuery = queryText.trim();
     setCallInputText('');
     setIsCallProcessing(true);
+    setMicStalled(false);
 
     const userEntry = {
       sender: 'user' as const,
@@ -598,6 +649,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current);
+    }
+    stalledStopRef.current = false;
+    setMicStalled(false);
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -1427,6 +1483,10 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 ) : isListening ? (
                   <span className="text-cyan-400 flex items-center gap-1.5">
                     <Mic className="w-3.5 h-3.5 animate-pulse" /> Listening to your microphone... (Speak now)
+                  </span>
+                ) : micStalled ? (
+                  <span className="text-amber-400 flex items-center gap-1.5">
+                    <MicOff className="w-3.5 h-3.5" /> Didn't catch that — type your question below
                   </span>
                 ) : (
                   <span className="text-zinc-400">Microphone Ready</span>

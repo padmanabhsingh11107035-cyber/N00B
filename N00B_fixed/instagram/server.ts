@@ -176,6 +176,10 @@ async function startServer() {
   let chatReviews: any[] = [];
   let settings = { ...INITIAL_SETTINGS };
   let reelHistory: string[] = [];
+  // Discount coupons — only the NOOB admin account can create these. Each is
+  // either global (targetUsername unset) or aimed at one specific user, and
+  // is visible in that user's Wallet > My Coupons page immediately.
+  let coupons: any[] = [];
 
   // Initial community music tracks (featuring Dhurandhar movie soundtrack)
   let musicTracks: any[] = [
@@ -287,7 +291,8 @@ async function startServer() {
   const PERSISTED_STATE_KEYS = [
     'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
     'notifications', 'chats', 'messages', 'collections', 'gameScores',
-    'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks'
+    'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks',
+    'coupons'
   ] as const;
 
   if (isDbConnected()) {
@@ -313,6 +318,7 @@ async function startServer() {
     if (loaded.settings) settings = loaded.settings;
     if (loaded.reelHistory) reelHistory = loaded.reelHistory;
     if (loaded.musicTracks) musicTracks = loaded.musicTracks;
+    if (loaded.coupons) coupons = loaded.coupons;
 
     console.log('MongoDB: restored persisted app state');
   }
@@ -341,6 +347,7 @@ async function startServer() {
       saveCollection('settings', settings),
       saveCollection('reelHistory', reelHistory),
       saveCollection('musicTracks', musicTracks),
+      saveCollection('coupons', coupons),
     ]);
   }
 
@@ -382,6 +389,20 @@ async function startServer() {
     if (user.noobTransactions.length > 200) {
       user.noobTransactions.length = 200;
     }
+  }
+
+  // Finds an active coupon by code that this user is actually eligible to
+  // use (global, or specifically targeted at their username). Case-insensitive
+  // on the code since users may retype it with different casing.
+  function findEligibleCoupon(code: string | undefined | null, username: string | undefined) {
+    if (!code || !code.trim()) return null;
+    const normalized = code.trim().toUpperCase();
+    return coupons.find(
+      (c) =>
+        c.active &&
+        c.code === normalized &&
+        (!c.targetUsername || c.targetUsername.toLowerCase() === (username || '').toLowerCase())
+    ) || null;
   }
 
   function getActiveUser(req: express.Request) {
@@ -720,7 +741,7 @@ async function startServer() {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in to verify your account.' });
 
-    const { password, method, couponCode } = req.body;
+    const { password, method, couponCode, discountCouponCode } = req.body;
     if (!password) {
       return res.status(400).json({ error: 'Password is required to authenticate verification request.' });
     }
@@ -735,6 +756,13 @@ async function startServer() {
       return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
     }
 
+    // A general discount coupon (from the admin-issued Wallet coupons, distinct
+    // from the hidden full-bypass VIP code above) can reduce the points price
+    // on either points-based plan.
+    const discountCoupon = findEligibleCoupon(discountCouponCode, users[index].username);
+    const applyDiscount = (points: number) =>
+      discountCoupon ? Math.max(0, Math.round(points * (1 - discountCoupon.discountPercent / 100))) : points;
+
     // Check method
     if (method === 'coupon') {
       const validCoupon = 'noob_4t95uirowejhfhiyr75u8432iwju';
@@ -742,23 +770,31 @@ async function startServer() {
         return res.status(400).json({ error: 'Invalid or expired verification coupon code.' });
       }
     } else if (method === 'points_permanent') {
-      const requiredPoints = 100000000;
+      const requiredPoints = applyDiscount(100000000);
       if ((users[index].noobPoints || 0) < requiredPoints) {
         return res.status(400).json({
           error: `Insufficient NOOB Points. You have ${users[index].noobPoints || 0} points, but ${requiredPoints.toLocaleString()} points are required for permanent verification.`
         });
       }
       users[index].noobPoints -= requiredPoints;
-      recordTransaction(users[index], -requiredPoints, 'Permanent verification badge');
+      recordTransaction(
+        users[index],
+        -requiredPoints,
+        discountCoupon ? `Permanent verification badge (${discountCoupon.discountPercent}% off: ${discountCoupon.code})` : 'Permanent verification badge'
+      );
     } else if (method === 'points_monthly') {
-      const requiredPoints = 50000;
+      const requiredPoints = applyDiscount(50000);
       if ((users[index].noobPoints || 0) < requiredPoints) {
         return res.status(400).json({
           error: `Insufficient NOOB Points. You have ${users[index].noobPoints || 0} points, but ${requiredPoints.toLocaleString()} points are required for monthly verification.`
         });
       }
       users[index].noobPoints -= requiredPoints;
-      recordTransaction(users[index], -requiredPoints, 'Monthly verification badge');
+      recordTransaction(
+        users[index],
+        -requiredPoints,
+        discountCoupon ? `Monthly verification badge (${discountCoupon.discountPercent}% off: ${discountCoupon.code})` : 'Monthly verification badge'
+      );
     } else if (method === 'direct_vip' || method === 'upi' || method === 'card' || method === 'crypto') {
       // Direct VIP checkout authorized via password & mock gateway
       users[index].vipPaymentRef = `PAY_NOOB_${Date.now()}`;
@@ -775,6 +811,179 @@ async function startServer() {
       message: 'Congratulations! Your account @' + users[index].username + ' is now officially verified with the blue checkmark!',
       user: sanitizeUser(users[index])
     });
+  });
+
+  // ==========================================
+  // --- DISCOUNT COUPONS (Wallet > My Coupons) ---
+  // Only the NOOB admin account can create these; a coupon is either global
+  // or aimed at one specific user, and shows up in that user's coupon list
+  // the moment it's created.
+  // ==========================================
+
+  const sanitizeCoupon = (c: any) => ({
+    id: c.id,
+    code: c.code,
+    title: c.title,
+    discountPercent: c.discountPercent,
+    terms: c.terms,
+    targetUsername: c.targetUsername || null,
+    createdAt: c.createdAt,
+    active: c.active
+  });
+
+  // Coupons visible to the logged-in user (global + specifically theirs).
+  // Admin passing ?manage=1 instead gets every coupon they've issued, so
+  // they can see and retire ones nobody else can.
+  app.get('/api/coupons', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const isMasterAdmin = active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin';
+
+    if (req.query.manage === '1' && isMasterAdmin) {
+      return res.json({ coupons: coupons.map(sanitizeCoupon) });
+    }
+
+    const visible = coupons.filter(
+      (c) => c.active && (!c.targetUsername || c.targetUsername.toLowerCase() === active.username.toLowerCase())
+    );
+    res.json({ coupons: visible.map(sanitizeCoupon) });
+  });
+
+  // Create a coupon — admin only.
+  app.post('/api/coupons', (req, res) => {
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Only the NOOB admin account can create coupons.' });
+    }
+
+    const { title, discountPercent, terms, targetUsername } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'A coupon title is required.' });
+    }
+    const pct = Number(discountPercent);
+    if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+      return res.status(400).json({ error: 'Discount must be a percentage between 1 and 100.' });
+    }
+
+    let resolvedTarget: string | undefined;
+    if (targetUsername && targetUsername.trim()) {
+      const cleanTarget = targetUsername.trim().replace(/^@/, '');
+      const targetUser = users.find((u) => u.username.toLowerCase() === cleanTarget.toLowerCase());
+      if (!targetUser) {
+        return res.status(404).json({ error: `No account found for @${cleanTarget}.` });
+      }
+      resolvedTarget = targetUser.username;
+    }
+
+    // Generate a short, readable code from the title, guaranteed unique.
+    const base = title
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 10) || 'NOOB';
+    let code = `${base}${Math.round(pct)}`;
+    let guard = 0;
+    while (coupons.some((c) => c.code === code) && guard < 20) {
+      code = `${base}${Math.round(pct)}${Math.floor(10 + Math.random() * 90)}`;
+      guard++;
+    }
+
+    const termsList: string[] = (terms || '')
+      .split('\n')
+      .map((t: string) => t.trim())
+      .filter((t: string) => t.length > 0);
+
+    const newCoupon = {
+      id: `cpn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      code,
+      title: title.trim(),
+      discountPercent: Math.round(pct),
+      terms: termsList,
+      targetUsername: resolvedTarget,
+      createdBy: active.username,
+      createdAt: new Date().toISOString(),
+      active: true
+    };
+    coupons.unshift(newCoupon);
+
+    res.status(201).json({ success: true, coupon: sanitizeCoupon(newCoupon) });
+  });
+
+  // Retire a coupon — admin only.
+  app.delete('/api/coupons/:id', (req, res) => {
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Only the NOOB admin account can manage coupons.' });
+    }
+    const coupon = coupons.find((c) => c.id === req.params.id);
+    if (!coupon) return res.status(404).json({ error: 'Coupon not found.' });
+    coupon.active = false;
+    res.json({ success: true });
+  });
+
+  // Validate a typed-in code against what this user is eligible for — used
+  // by the "Type coupon code here" box and by checkout flows that apply a
+  // coupon's discount server-side.
+  app.post('/api/coupons/redeem', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const coupon = findEligibleCoupon(req.body?.code, active.username);
+    if (!coupon) {
+      return res.status(404).json({ error: 'That coupon code is invalid, expired, or not available for your account.' });
+    }
+    res.json({ success: true, coupon: sanitizeCoupon(coupon) });
+  });
+
+  // ==========================================
+  // --- NOOB PRO UPGRADE (one-time points purchase, coupon-eligible) ---
+  // ==========================================
+  const PRO_TIER_PRICES: Record<string, number> = {
+    starter: 50000,
+    plus: 75000,
+    pro: 100000,
+    elite: 125000,
+    ultimate: 150000
+  };
+  const PRO_YEARLY_DISCOUNT = 0.17;
+
+  app.post('/api/users/upgrade-pro', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in to upgrade.' });
+
+    const { tierId, billing, couponCode } = req.body;
+    const basePrice = PRO_TIER_PRICES[tierId];
+    if (!basePrice) return res.status(400).json({ error: 'Unknown Pro tier.' });
+
+    const index = users.findIndex((u) => u.id === active.id);
+    if (index === -1) return res.status(404).json({ error: 'User account not found.' });
+
+    let price = billing === 'yearly' ? Math.round(basePrice * 12 * (1 - PRO_YEARLY_DISCOUNT)) : basePrice;
+    const coupon = findEligibleCoupon(couponCode, users[index].username);
+    if (coupon) {
+      price = Math.max(0, Math.round(price * (1 - coupon.discountPercent / 100)));
+    }
+
+    if ((users[index].noobPoints || 0) < price) {
+      return res.status(400).json({
+        error: `Insufficient NOOB Points. You have ${users[index].noobPoints || 0} points, but ${price.toLocaleString()} points are required.`
+      });
+    }
+
+    users[index].noobPoints -= price;
+    users[index].proTier = tierId;
+    users[index].proBilling = billing;
+    recordTransaction(
+      users[index],
+      -price,
+      coupon
+        ? `NOOB Pro (${tierId}, ${billing}) — ${coupon.discountPercent}% off: ${coupon.code}`
+        : `NOOB Pro (${tierId}, ${billing})`
+    );
+
+    res.json({ success: true, user: sanitizeUser(users[index]) });
   });
 
   // All Users directory (for search, follow, explore & game invites)

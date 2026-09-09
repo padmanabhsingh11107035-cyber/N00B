@@ -14,11 +14,13 @@ import {
   CheckCircle2,
   Lock,
   ChevronRight,
-  Info
+  Info,
+  Ticket
 } from 'lucide-react';
 import { User } from '../../types';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import confetti from 'canvas-confetti';
+import { CouponsModal } from './CouponsModal';
 
 interface AccountsStatisticsModalProps {
   currentUser: User;
@@ -45,6 +47,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
   onUserUpdated
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'badges' | 'history'>('overview');
+  const [showCoupons, setShowCoupons] = useState(false);
   const exactPoints = currentUser.noobPoints ?? 150;
   const gamesWon = currentUser.gamesWonCount ?? 0;
   const gamesPlayed = currentUser.gamesPlayedCount ?? 0;
@@ -242,6 +245,25 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </div>
           </div>
         </div>
+
+        {/* My Coupons */}
+        <button
+          onClick={() => setShowCoupons(true)}
+          className="w-full p-3 rounded-2xl bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/30 flex items-center justify-between transition-colors cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
+              <Ticket className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <span className="text-xs font-bold text-white block group-hover:text-blue-300 transition-colors">
+                My Coupons
+              </span>
+              <span className="text-[10px] text-zinc-400 block">Discounts for NOOB Pro &amp; verification</span>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-blue-400 transition-colors" />
+        </button>
 
         {/* Sub-tab Navigation */}
         <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
@@ -448,6 +470,8 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
           </button>
         </div>
       </div>
+
+      {showCoupons && <CouponsModal currentUser={currentUser} onClose={() => setShowCoupons(false)} />}
     </div>
   );
 };

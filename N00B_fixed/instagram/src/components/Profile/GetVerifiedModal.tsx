@@ -16,7 +16,13 @@ import {
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { safeJsonStringify } from '../../utils/safeJson';
+import { redeemCouponCode } from '../../services/api';
 import confetti from 'canvas-confetti';
+
+const POINTS_PRICE: Record<'points_perm' | 'points_month', number> = {
+  points_perm: 100000000,
+  points_month: 50000
+};
 
 interface GetVerifiedModalProps {
   isOpen: boolean;
@@ -39,10 +45,38 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
   
   const [password, setPassword] = useState('');
   const [couponCode, setCouponCode] = useState('');
-  
+
+  // Wallet discount coupon — separate from the hidden VIP bypass code above,
+  // this just reduces the points price on the two points-based plans.
+  const [discountInput, setDiscountInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; percent: number; title: string } | null>(null);
+  const [discountMsg, setDiscountMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [verifiedUserResult, setVerifiedUserResult] = useState<User | null>(null);
+
+  const handleApplyDiscount = async () => {
+    if (!discountInput.trim()) return;
+    setCheckingDiscount(true);
+    setDiscountMsg(null);
+    const res = await redeemCouponCode(discountInput.trim());
+    setCheckingDiscount(false);
+    if (res.success && res.coupon) {
+      setAppliedDiscount({ code: res.coupon.code, percent: res.coupon.discountPercent, title: res.coupon.title });
+      setDiscountMsg({ type: 'success', text: `${res.coupon.discountPercent}% off applied!` });
+    } else {
+      setDiscountMsg({ type: 'error', text: res.error || 'Invalid coupon code.' });
+    }
+  };
+
+  const priceFor = (option: VerificationOption) => {
+    if (option === 'coupon') return null;
+    const base = POINTS_PRICE[option];
+    if (!appliedDiscount) return base;
+    return Math.max(0, Math.round(base * (1 - appliedDiscount.percent / 100)));
+  };
 
   if (!isOpen) return null;
 
@@ -86,7 +120,8 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
         body: safeJsonStringify({
           password: password.trim(),
           method: serverMethod,
-          couponCode: couponCode.trim()
+          couponCode: couponCode.trim(),
+          discountCouponCode: appliedDiscount?.code
         })
       });
 
@@ -118,6 +153,9 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
         setStep('select_plan');
         setPassword('');
         setCouponCode('');
+        setAppliedDiscount(null);
+        setDiscountInput('');
+        setDiscountMsg(null);
       }, 2500);
     } catch (err: any) {
       setErrorMsg(err.message || 'An error occurred during verification.');
@@ -325,10 +363,68 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                   <span className="text-[10px] text-zinc-400 block">Verified Badge for @{currentUser.username}</span>
                 </div>
               </div>
-              <span className="text-xs font-black text-[#00FF66]">
-                FREE
-              </span>
+              {selectedOption === 'coupon' ? (
+                <span className="text-xs font-black text-[#00FF66]">FREE</span>
+              ) : (
+                <div className="text-right">
+                  {appliedDiscount && (
+                    <span className="text-[10px] text-zinc-500 line-through block">
+                      {POINTS_PRICE[selectedOption].toLocaleString()}
+                    </span>
+                  )}
+                  <span className="text-xs font-black text-[#00FF66]">
+                    {priceFor(selectedOption)?.toLocaleString()} pts
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Wallet discount coupon — reduces the points price above */}
+            {(selectedOption === 'points_perm' || selectedOption === 'points_month') && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-300 block">Have a discount coupon?</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code..."
+                    value={discountInput}
+                    onChange={(e) => {
+                      setDiscountInput(e.target.value);
+                      setDiscountMsg(null);
+                    }}
+                    disabled={!!appliedDiscount}
+                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#00FF66] font-mono disabled:opacity-60"
+                  />
+                  {appliedDiscount ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedDiscount(null);
+                        setDiscountInput('');
+                        setDiscountMsg(null);
+                      }}
+                      className="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-bold cursor-pointer hover:bg-zinc-700"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleApplyDiscount}
+                      disabled={!discountInput.trim() || checkingDiscount}
+                      className="px-3 py-2 rounded-xl bg-zinc-800 text-white text-xs font-bold cursor-pointer hover:bg-zinc-700 disabled:opacity-50"
+                    >
+                      {checkingDiscount ? '...' : 'Apply'}
+                    </button>
+                  )}
+                </div>
+                {discountMsg && (
+                  <p className={`text-[10px] ${discountMsg.type === 'success' ? 'text-[#00FF66]' : 'text-rose-400'}`}>
+                    {discountMsg.text}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Coupon Code Input if coupon selected */}
             {selectedOption === 'coupon' && (

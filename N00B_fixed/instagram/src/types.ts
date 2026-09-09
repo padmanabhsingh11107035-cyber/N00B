@@ -47,6 +47,8 @@ export interface User {
   crossProfiles?: string[];
   isVerified: boolean;
   verificationTier?: 'standard' | 'plus' | 'premium' | 'max';
+  proTier?: string;
+  proBilling?: 'monthly' | 'yearly';
   followersCount: number;
   followingCount: number;
   postsCount: number;

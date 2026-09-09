@@ -730,6 +730,75 @@ export async function sendGameInvite(
   return await res.json();
 }
 
+// --- Discount Coupons (Wallet > My Coupons) ---
+
+export interface Coupon {
+  id: string;
+  code: string;
+  title: string;
+  discountPercent: number;
+  terms: string[];
+  targetUsername: string | null;
+  createdAt: string;
+  active: boolean;
+}
+
+export async function fetchMyCoupons(manage = false): Promise<Coupon[]> {
+  const res = await fetch(`${API_BASE}/coupons${manage ? '?manage=1' : ''}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  return data.coupons || [];
+}
+
+export async function createCoupon(payload: {
+  title: string;
+  discountPercent: number;
+  terms: string;
+  targetUsername?: string;
+}): Promise<{ success: boolean; coupon?: Coupon; error?: string }> {
+  const res = await fetch(`${API_BASE}/coupons`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, coupon: data.coupon, error: data.error };
+}
+
+export async function deleteCoupon(id: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/coupons/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, error: data.error };
+}
+
+export async function redeemCouponCode(code: string): Promise<{ success: boolean; coupon?: Coupon; error?: string }> {
+  const res = await fetch(`${API_BASE}/coupons/redeem`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ code })
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, coupon: data.coupon, error: data.error };
+}
+
+export async function upgradeProTier(payload: {
+  tierId: string;
+  billing: 'monthly' | 'yearly';
+  couponCode?: string;
+}): Promise<{ success: boolean; user?: User; error?: string }> {
+  const res = await fetch(`${API_BASE}/users/upgrade-pro`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, user: data.user, error: data.error };
+}
+
 // Legacy Games
 export async function fetchLeaderboard(gameId?: string): Promise<GameLeaderboardEntry[]> {
   const data = await fetchGameLeaderboard();

@@ -1768,6 +1768,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <ProFeaturesModal
           currentUser={currentUser}
           onClose={() => setShowProFeaturesModal(false)}
+          onUserUpdated={onUserUpdated}
         />
       )}
     </div>

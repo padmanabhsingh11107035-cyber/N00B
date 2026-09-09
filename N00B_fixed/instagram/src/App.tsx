@@ -70,6 +70,7 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('feed');
+  const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
@@ -817,6 +818,7 @@ export default function App() {
               currentUser={currentUser}
               pendingChatUser={pendingChatUser}
               onPendingChatUserHandled={() => setPendingChatUser(null)}
+              onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
               onPlayGame={(gameId, challengerUsername, roomCode) => {
                 const matched = ALL_50_MINI_GAMES.find(
                   (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
@@ -962,6 +964,7 @@ export default function App() {
         onSelectTab={handleSelectNavTab}
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
+        hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile}
       />
 
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap) */}

@@ -8,6 +8,9 @@ interface FloatingNavBarProps {
   onSelectTab: (tab: NavTab) => void;
   userAvatar: string;
   unreadChatCount?: number;
+  // Hide the bar on phone-width screens while an active chat conversation
+  // fills the screen; it stays available on the chat list and on md+ split view.
+  hideOnMobile?: boolean;
 }
 
 interface NavButtonProps {
@@ -49,12 +52,15 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   activeTab,
   onSelectTab,
   userAvatar,
-  unreadChatCount = 0
+  unreadChatCount = 0,
+  hideOnMobile = false
 }) => {
   return (
     <nav
       id="floating-bottom-nav"
-      className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[96%] max-w-[480px] pointer-events-auto xl:hidden"
+      className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[96%] max-w-[480px] pointer-events-auto xl:hidden ${
+        hideOnMobile ? 'max-md:hidden' : ''
+      }`}
     >
       <div className="liquid-glass rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1">
         {/* 1. Feed */}

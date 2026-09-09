@@ -184,6 +184,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
   const [reportDetails, setReportDetails] = useState('');
   const [isReporting, setIsReporting] = useState(false);
@@ -307,10 +308,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // than just copying the current page URL, which is always the same generic
   // app URL since there's no per-profile routing. App.tsx reads this param on
   // load and opens the matching profile once the viewer is logged in.
-  const handleShareProfile = (username: string) => {
+  const handleShareProfile = async (username: string) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?profile=${encodeURIComponent(username)}`;
-    navigator.clipboard?.writeText(shareUrl);
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Fallback for browsers/embedded contexts that block the async Clipboard API
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        // Nothing more we can do; the confetti + "Copied" state below still
+        // fire so the click always visibly acknowledges the tap either way.
+      }
+      document.body.removeChild(textarea);
+    }
     confetti({ particleCount: 20, spread: 40 });
+    setShareLinkCopied(true);
+    setTimeout(() => setShareLinkCopied(false), 2000);
   };
 
   const handleToggleFollowTargetUser = async () => {
@@ -907,10 +929,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <>
                 <button
                   onClick={() => handleShareProfile(targetUser.username)}
-                  className="flex-1 py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className={`flex-1 py-2 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
+                    shareLinkCopied
+                      ? 'bg-[#00FF66]/15 border-[#00FF66]/40 text-[#00FF66]'
+                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white'
+                  }`}
                   title="Share Profile Link"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share Profile
+                  {shareLinkCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> Link Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share Profile
+                    </>
+                  )}
                 </button>
               </>
             ) : (
@@ -954,10 +988,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                     <button
                       onClick={() => handleShareProfile(targetUser.username)}
-                      className="py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm"
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm ${
+                        shareLinkCopied
+                          ? 'bg-[#00FF66]/15 border-[#00FF66]/40 text-[#00FF66]'
+                          : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white'
+                      }`}
                       title="Share Profile Link"
                     >
-                      <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                      {shareLinkCopied ? (
+                        <Check className="w-3.5 h-3.5" />
+                      ) : (
+                        <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                      )}
                     </button>
                   </>
                 )}
@@ -1487,6 +1529,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onClose={() => setShowEditProfileModal(false)}
           onProfileUpdated={handleProfileUpdated}
+        />
+      )}
+
+      {showBlockedAccountsModal && (
+        <BlockedAccountsModal
+          currentUser={currentUser}
+          allUsers={allUsers}
+          onClose={() => setShowBlockedAccountsModal(false)}
+          onUserUpdated={onUserUpdated}
         />
       )}
 

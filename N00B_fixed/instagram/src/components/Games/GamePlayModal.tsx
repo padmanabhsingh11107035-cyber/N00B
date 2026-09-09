@@ -54,6 +54,13 @@ interface GamePlayModalProps {
 type PlayMode = 'select_mode' | 'matchmaking' | 'play_bot' | 'play_friend' | 'play_match' | 'pass_play_handoff' | 'game_over';
 type RoundResult = 'win' | 'tie' | 'loss';
 
+// Shared-board games manage their own multi-player turn loop internally and
+// report ONE direct result for the logged-in user (index 0) — unlike the
+// relay-style "each human plays the same solo challenge" scoring the other
+// 50 games use for Pass and Play, so they must never be routed through
+// finishPassPlayRound regardless of which mode launched them.
+const BOARD_GAME_IDS = ['ludo_classic', 'snakes_ladders', 'monopoly_noob'];
+
 export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   game,
   currentUser,
@@ -81,6 +88,16 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     initialRoomCode || `NOOB-${game.id.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
   );
   const [copiedLink, setCopiedLink] = useState(false);
+
+  const isBoardGame = BOARD_GAME_IDS.includes(game.id);
+  const boardGameMaxPlayers = game.id === 'snakes_ladders' ? 8 : 4;
+  // Board games ask "how many total players" before inviting, then require
+  // sending that many minus one (yourself) requests via chat — tracked here
+  // so the chosen total carries into the actual board once it starts.
+  const [boardPlayerCount, setBoardPlayerCount] = useState<number | undefined>(undefined);
+  const [boardInviteStep, setBoardInviteStep] = useState<'count' | 'invite'>('count');
+  const [boardInviteCount, setBoardInviteCount] = useState(isBoardGame ? Math.min(4, boardGameMaxPlayers) : 2);
+  const [invitedFriendIds, setInvitedFriendIds] = useState<Set<string>>(new Set());
 
   // Active Game State (Tic Tac Toe / Clicker / Math / Drone / RPS)
   const [gameState, setGameState] = useState<any>({});
@@ -236,7 +253,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Dispatches to the right finish handler depending on mode — every game
   // engine's onGameOver wires here instead of calling finishGame directly.
   const handleGameOver = (result: RoundResult) => {
-    if (isPassAndPlay) finishPassPlayRound(result);
+    if (isPassAndPlay && !BOARD_GAME_IDS.includes(game.id)) finishPassPlayRound(result);
     else finishGame(result);
   };
 
@@ -393,6 +410,26 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     }
   };
 
+  // Board games need several invites (one per open seat), not just one — this
+  // sends an additional chat invite and tracks it separately from the
+  // single-friend flow the other games use.
+  const handleSendBoardInvite = async (friend: User) => {
+    setInvitedFriendIds((prev) => new Set(prev).add(friend.id));
+    try {
+      await sendGameInvite(friend.id, game.id, game.title, generatedRoomCode);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const seatsNeeded = Math.max(0, boardInviteCount - 1);
+
+  const openPlayFriend = () => {
+    setBoardInviteStep('count');
+    setInvitedFriendIds(new Set());
+    setCurrentMode('play_friend');
+  };
+
   // Copy Match Link
   const handleCopyLink = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -510,7 +547,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
                 {/* Option 3: Play with Friend */}
                 <button
-                  onClick={() => setCurrentMode('play_friend')}
+                  onClick={openPlayFriend}
                   className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-cyan-500/50 flex items-center justify-between transition-all group cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5">
@@ -628,7 +665,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
                   {/* Option C: Invite Friend */}
                   <button
-                    onClick={() => setCurrentMode('play_friend')}
+                    onClick={openPlayFriend}
                     className="w-full p-3 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 transition-all cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4" />
@@ -639,8 +676,147 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             </div>
           )}
 
+          {/* 3a. PLAY WITH FRIEND — board games: ask total player count first,
+              then send one invite per open seat (not just one friend) */}
+          {currentMode === 'play_friend' && isBoardGame && (
+            <div className="space-y-4">
+              {boardInviteStep === 'count' ? (
+                <>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Play {game.title} with Friends</h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">How many total players, including you?</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap justify-center py-2">
+                    {Array.from({ length: boardGameMaxPlayers - 1 }, (_, i) => i + 2).map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setBoardInviteCount(n)}
+                        className={`w-10 h-10 rounded-xl font-bold text-sm cursor-pointer transition-all ${
+                          boardInviteCount === n ? 'bg-[#00FF66] text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setInvitedFriendIds(new Set());
+                      setBoardInviteStep('invite');
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90"
+                  >
+                    Next — Invite {seatsNeeded} Friend{seatsNeeded === 1 ? '' : 's'}
+                  </button>
+                  <button
+                    onClick={() => setCurrentMode('select_mode')}
+                    className="w-full py-2.5 rounded-xl bg-zinc-900 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Back to Modes
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">
+                      Invite {seatsNeeded} Friend{seatsNeeded === 1 ? '' : 's'} to {game.title}
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Sends a request to each friend in Direct Chat. Any seat you don't fill starts with a bot.
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                    <span className="text-[11px] text-zinc-400 font-semibold">Requests Sent</span>
+                    <span className="text-xs font-bold text-[#00FF66]">
+                      {invitedFriendIds.size} / {seatsNeeded}
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search registered friends..."
+                      value={friendSearchQuery}
+                      onChange={(e) => setFriendSearchQuery(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                    />
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {filteredFriends.length === 0 ? (
+                      <p className="text-xs text-zinc-500 text-center py-4">No users found matching query.</p>
+                    ) : (
+                      filteredFriends.map((friend) => {
+                        const alreadyInvited = invitedFriendIds.has(friend.id);
+                        return (
+                          <div
+                            key={friend.id}
+                            className="p-2.5 rounded-2xl bg-zinc-900/70 border border-zinc-800 flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={friend.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                                alt={friend.username}
+                                className="w-8 h-8 rounded-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div>
+                                <span className="text-xs font-bold text-white block">{friend.displayName}</span>
+                                <span className="text-[10px] text-zinc-400 block">@{friend.username}</span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleSendBoardInvite(friend)}
+                              disabled={alreadyInvited}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                alreadyInvited
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-[#00FF66] hover:bg-[#00FF66]/90 text-black shadow-sm'
+                              }`}
+                            >
+                              {alreadyInvited ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Sent!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Send Request</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setBoardPlayerCount(boardInviteCount);
+                      startBotGameNow();
+                    }}
+                    className="w-full py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer hover:bg-[#00FF66]/90"
+                  >
+                    Start Game{invitedFriendIds.size < seatsNeeded ? ' (Bots Fill Remaining Seats)' : ''}
+                  </button>
+                  <button
+                    onClick={() => setBoardInviteStep('count')}
+                    className="w-full py-2 rounded-xl bg-zinc-900 text-xs font-semibold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Back
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* 3. PLAY WITH FRIEND (Search list + Send Request + Copy Link) */}
-          {currentMode === 'play_friend' && (
+          {currentMode === 'play_friend' && !isBoardGame && (
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Play {game.title} with a Friend</h3>
@@ -789,11 +965,29 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} />
               )}
 
-              {game.id === 'snakes_ladders' && <SnakesAndLaddersGame onGameOver={handleGameOver} />}
+              {game.id === 'snakes_ladders' && (
+                <SnakesAndLaddersGame
+                  onGameOver={handleGameOver}
+                  entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
+                  initialPlayerCount={boardPlayerCount}
+                />
+              )}
 
-              {game.id === 'ludo_classic' && <LudoGame onGameOver={handleGameOver} />}
+              {game.id === 'ludo_classic' && (
+                <LudoGame
+                  onGameOver={handleGameOver}
+                  entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
+                  initialPlayerCount={boardPlayerCount}
+                />
+              )}
 
-              {game.id === 'monopoly_noob' && <MonopolyGame onGameOver={handleGameOver} />}
+              {game.id === 'monopoly_noob' && (
+                <MonopolyGame
+                  onGameOver={handleGameOver}
+                  entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
+                  initialPlayerCount={boardPlayerCount}
+                />
+              )}
 
               {(game.id === 'rps' || game.id === 'rps_extreme') && (
                 <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} />

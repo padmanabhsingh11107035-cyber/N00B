@@ -251,10 +251,10 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     };
   }, []);
 
-  // Soft Indian Accent Text-To-Speech (TTS) Narrator (Used in Voice Call)
+  // Soft Indian-accented FEMALE TTS narrator (used in the voice call)
   const speakText = (text: string, msgId?: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    
+
     window.speechSynthesis.cancel();
     if (!voiceEnabled) return;
 
@@ -265,28 +265,38 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       .trim();
 
     const utterance = new SpeechSynthesisUtterance(cleanSpeech);
-    // Soft, gentle Indian conversational cadence
+    // Soft, gentle conversational cadence
     utterance.rate = 0.94;
-    utterance.pitch = 1.04;
+    utterance.pitch = 1.08;
     utterance.volume = 0.88;
-    
-    const voices = window.speechSynthesis.getVoices();
-    // Prioritize Indian English voices (en-IN or Indian name signatures)
-    const indianVoice = voices.find(
-      (v) => (v.lang === 'en-IN' || v.lang.startsWith('hi') || v.lang.startsWith('en_IN')) ||
-             v.name.toLowerCase().includes('india') ||
-             v.name.toLowerCase().includes('hindi') ||
-             v.name.toLowerCase().includes('heera') ||
-             v.name.toLowerCase().includes('ravi') ||
-             v.name.toLowerCase().includes('veena') ||
-             v.name.toLowerCase().includes('lekha') ||
-             v.name.toLowerCase().includes('neerja') ||
-             v.name.toLowerCase().includes('prabhat') ||
-             v.name.toLowerCase().includes('kavya')
-    ) || voices.find((v) => v.lang.startsWith('en'));
 
-    if (indianVoice) {
-      utterance.voice = indianVoice;
+    const voices = window.speechSynthesis.getVoices();
+    const isIndian = (v: SpeechSynthesisVoice) =>
+      v.lang === 'en-IN' || v.lang.startsWith('hi') || v.name.toLowerCase().includes('india') || v.name.toLowerCase().includes('hindi');
+    // Only unambiguous female names/markers — "Ravi" and "Prabhat" (both
+    // common male Indian names) were previously in this list by mistake,
+    // which could silently pick a male voice.
+    const FEMALE_NAMES = [
+      'heera', 'veena', 'lekha', 'neerja', 'kavya', 'samantha', 'victoria', 'karen', 'moira', 'tessa',
+      'fiona', 'susan', 'zira', 'aria', 'jenny', 'salli', 'joanna', 'kendra', 'kimberly', 'ivy', 'zoe',
+      'emma', 'amy', 'nicole', 'female'
+    ];
+    const isFemale = (v: SpeechSynthesisVoice) => {
+      const n = v.name.toLowerCase();
+      return FEMALE_NAMES.some((name) => n.includes(name));
+    };
+    const isMale = (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('male') && !isFemale(v);
+
+    const englishVoices = voices.filter((v) => v.lang.startsWith('en') || isIndian(v));
+    const chosenVoice =
+      englishVoices.find((v) => isIndian(v) && isFemale(v) && !isMale(v)) ||
+      englishVoices.find((v) => isFemale(v) && !isMale(v)) ||
+      englishVoices.find((v) => isIndian(v) && !isMale(v)) ||
+      englishVoices.find((v) => !isMale(v)) ||
+      englishVoices[0];
+
+    if (chosenVoice) {
+      utterance.voice = chosenVoice;
     }
 
     utterance.onstart = () => {

@@ -3,6 +3,11 @@ import { Bot, User as UserIcon, Dices, Landmark } from 'lucide-react';
 
 interface MonopolyGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
+  // 'bot' (default): obviously just you vs bots — no per-slot toggle shown.
+  // 'pass_play': multiple humans sharing this device — slots default to
+  // human and can be toggled to bot for a mixed group.
+  entryMode?: 'bot' | 'pass_play';
+  initialPlayerCount?: number;
 }
 
 const PLAYER_COLORS = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b'];
@@ -68,10 +73,13 @@ const SPECIAL_STYLE: Record<string, { icon: string; color: string }> = {
   go_to_jail: { icon: '🚔', color: '#dc2626' }
 };
 
-export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver }) => {
+export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount }) => {
   const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
-  const [numPlayers, setNumPlayers] = useState(2);
-  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(['human', 'bot']);
+  const [numPlayers, setNumPlayers] = useState(initialPlayerCount || 2);
+  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
+    const n = initialPlayerCount || 2;
+    return Array.from({ length: n }, (_, i) => (i === 0 ? 'human' : entryMode === 'pass_play' ? 'human' : 'bot'));
+  });
   const [cash, setCash] = useState<number[]>([]);
   const [positions, setPositions] = useState<number[]>([]);
   const [owned, setOwned] = useState<Record<number, number>>({}); // squareIndex -> playerIndex
@@ -89,7 +97,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver }) => {
     setNumPlayers(n);
     setPlayerTypes((prev) => {
       const next = [...prev];
-      while (next.length < n) next.push('bot');
+      while (next.length < n) next.push(entryMode === 'pass_play' ? 'human' : 'bot');
       return next.slice(0, n).map((t, i) => (i === 0 ? 'human' : t));
     });
   };
@@ -298,6 +306,10 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver }) => {
               </span>
               {i === 0 ? (
                 <span className="text-[10px] text-zinc-500 font-semibold">Human</span>
+              ) : entryMode === 'bot' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 flex items-center gap-1">
+                  <Bot className="w-3 h-3" /> Bot
+                </span>
               ) : (
                 <button
                   onClick={() =>

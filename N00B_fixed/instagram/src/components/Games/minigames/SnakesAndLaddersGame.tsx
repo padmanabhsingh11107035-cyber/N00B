@@ -3,9 +3,18 @@ import { Bot, User as UserIcon, Dices } from 'lucide-react';
 
 interface SnakesAndLaddersGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
+  // 'bot' (default): obviously just you vs bots — no per-slot toggle shown.
+  // 'pass_play': multiple humans sharing this device — slots default to
+  // human and can be toggled to bot for a mixed group.
+  entryMode?: 'bot' | 'pass_play';
+  initialPlayerCount?: number;
 }
 
 const PLAYER_COLORS = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b', '#a78bfa', '#f43f5e', '#2dd4bf', '#fb923c'];
+
+// Colorful checkered palette for the board cells, matching a classic
+// printed Snakes & Ladders board rather than a flat gray grid.
+const CELL_PALETTE = ['#f97316', '#3b82f6', '#eab308', '#ec4899', '#22c55e', '#a855f7', '#f43f5e', '#06b6d4'];
 
 // Classic-style snakes (head -> tail) and ladders (bottom -> top).
 const SNAKES: Record<number, number> = { 98: 78, 95: 56, 93: 73, 87: 24, 64: 60, 62: 19, 56: 53, 49: 11, 47: 26, 16: 6 };
@@ -19,10 +28,28 @@ function getGridCellNumber(row: number, col: number): number {
   return rowFromBottom * 10 + colInRow + 1;
 }
 
-export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({ onGameOver }) => {
+// Inverse of getGridCellNumber: cell number (1-100) -> [row, col].
+function numberToRowCol(num: number): [number, number] {
+  const idx = num - 1;
+  const rowFromBottom = Math.floor(idx / 10);
+  const posInRow = idx % 10;
+  const isEvenRow = rowFromBottom % 2 === 0;
+  const col = isEvenRow ? posInRow : 9 - posInRow;
+  const row = 9 - rowFromBottom;
+  return [row, col];
+}
+
+export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
+  onGameOver,
+  entryMode = 'bot',
+  initialPlayerCount
+}) => {
   const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
-  const [numPlayers, setNumPlayers] = useState(2);
-  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(['human', 'bot']);
+  const [numPlayers, setNumPlayers] = useState(initialPlayerCount || 2);
+  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
+    const n = initialPlayerCount || 2;
+    return Array.from({ length: n }, (_, i) => (i === 0 ? 'human' : entryMode === 'pass_play' ? 'human' : 'bot'));
+  });
   const [positions, setPositions] = useState<number[]>([]);
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [diceValue, setDiceValue] = useState<number | null>(null);
@@ -35,7 +62,7 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({ onGa
     setNumPlayers(n);
     setPlayerTypes((prev) => {
       const next = [...prev];
-      while (next.length < n) next.push('bot');
+      while (next.length < n) next.push(entryMode === 'pass_play' ? 'human' : 'bot');
       return next.slice(0, n).map((t, i) => (i === 0 ? 'human' : t));
     });
   };
@@ -142,6 +169,10 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({ onGa
               </span>
               {i === 0 ? (
                 <span className="text-[10px] text-zinc-500 font-semibold">Human</span>
+              ) : entryMode === 'bot' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 flex items-center gap-1">
+                  <Bot className="w-3 h-3" /> Bot
+                </span>
               ) : (
                 <button
                   onClick={() =>
@@ -167,6 +198,16 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({ onGa
     );
   }
 
+  // --- Board rendering: colorful checkered 10x10 grid with snake/ladder
+  // line art overlaid, matching a classic printed board. ---
+  const size = 320;
+  const pad = 6;
+  const cell = (size - pad * 2) / 10;
+  const cellCenter = (num: number) => {
+    const [row, col] = numberToRowCol(num);
+    return { x: pad + col * cell + cell / 2, y: pad + row * cell + cell / 2 };
+  };
+
   return (
     <div className="w-full flex flex-col items-center gap-3 p-2">
       {/* Player chips */}
@@ -186,33 +227,140 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({ onGa
       </div>
 
       {/* Board */}
-      <div className="grid grid-cols-10 gap-0.5 w-full max-w-[300px] aspect-square bg-zinc-950 p-1.5 rounded-xl border border-zinc-800">
-        {Array.from({ length: 10 }).map((_, row) =>
-          Array.from({ length: 10 }).map((_, col) => {
-            const num = getGridCellNumber(row, col);
-            const tokensHere = positions.map((p, i) => (p === num ? i : -1)).filter((i) => i !== -1);
-            const isSnake = !!SNAKES[num];
-            const isLadder = !!LADDERS[num];
-            return (
-              <div
-                key={`${row}-${col}`}
-                className={`relative flex items-center justify-center text-[7px] font-bold rounded-sm ${
-                  isSnake ? 'bg-rose-900/60 text-rose-300' : isLadder ? 'bg-emerald-900/60 text-emerald-300' : 'bg-zinc-800/80 text-zinc-500'
-                }`}
-              >
-                {num}
-                {tokensHere.length > 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center gap-0.5 flex-wrap">
-                    {tokensHere.map((i) => (
-                      <span key={i} className="w-2 h-2 rounded-full border border-black" style={{ backgroundColor: PLAYER_COLORS[i] }} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[320px] rounded-xl border border-zinc-800">
+        <rect x="0" y="0" width={size} height={size} fill="#0a0a0a" />
+
+        {/* Colorful checkered cells */}
+        {Array.from({ length: 100 }).map((_, i) => {
+          const num = i + 1;
+          const [row, col] = numberToRowCol(num);
+          const color = CELL_PALETTE[(row * 7 + col * 3) % CELL_PALETTE.length];
+          return (
+            <rect
+              key={num}
+              x={pad + col * cell}
+              y={pad + row * cell}
+              width={cell}
+              height={cell}
+              fill={color}
+              fillOpacity="0.85"
+              stroke="#0a0a0a"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        {/* Ladders: two rails + rungs from base to top */}
+        {Object.entries(LADDERS).map(([fromStr, to]) => {
+          const from = Number(fromStr);
+          const a = cellCenter(from);
+          const b = cellCenter(to);
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = (-dy / len) * 4;
+          const ny = (dx / len) * 4;
+          const rungCount = 5;
+          return (
+            <g key={`ladder-${from}`}>
+              <line x1={a.x - nx} y1={a.y - ny} x2={b.x - nx} y2={b.y - ny} stroke="#d4d4d8" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1={a.x + nx} y1={a.y + ny} x2={b.x + nx} y2={b.y + ny} stroke="#d4d4d8" strokeWidth="2.5" strokeLinecap="round" />
+              {Array.from({ length: rungCount }).map((_, r) => {
+                const t = (r + 1) / (rungCount + 1);
+                const rx = a.x + dx * t;
+                const ry = a.y + dy * t;
+                return (
+                  <line
+                    key={r}
+                    x1={rx - nx}
+                    y1={ry - ny}
+                    x2={rx + nx}
+                    y2={ry + ny}
+                    stroke="#a1a1aa"
+                    strokeWidth="2"
+                  />
+                );
+              })}
+            </g>
+          );
+        })}
+
+        {/* Snakes: curved body from head (higher number) to tail (lower number), with eyes */}
+        {Object.entries(SNAKES).map(([fromStr, to]) => {
+          const from = Number(fromStr); // head
+          const head = cellCenter(from);
+          const tail = cellCenter(to);
+          const mx = (head.x + tail.x) / 2;
+          const my = (head.y + tail.y) / 2;
+          const dx = tail.x - head.x;
+          const dy = tail.y - head.y;
+          const len = Math.hypot(dx, dy) || 1;
+          // Perpendicular offset for the control point gives the snake a curve
+          const curveX = mx + (-dy / len) * 22;
+          const curveY = my + (dx / len) * 22;
+          return (
+            <g key={`snake-${from}`}>
+              <path
+                d={`M ${head.x} ${head.y} Q ${curveX} ${curveY} ${tail.x} ${tail.y}`}
+                fill="none"
+                stroke="#15803d"
+                strokeWidth="5"
+                strokeLinecap="round"
+              />
+              <path
+                d={`M ${head.x} ${head.y} Q ${curveX} ${curveY} ${tail.x} ${tail.y}`}
+                fill="none"
+                stroke="#4ade80"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeDasharray="1 5"
+              />
+              <circle cx={head.x} cy={head.y} r="6" fill="#15803d" stroke="#0a0a0a" strokeWidth="1" />
+              <circle cx={head.x - 1.5} cy={head.y - 1.5} r="1.1" fill="#fff" />
+              <circle cx={head.x + 1.5} cy={head.y - 1.5} r="1.1" fill="#fff" />
+            </g>
+          );
+        })}
+
+        {/* Cell numbers */}
+        {Array.from({ length: 100 }).map((_, i) => {
+          const num = i + 1;
+          const { x, y } = cellCenter(num);
+          return (
+            <text
+              key={`n-${num}`}
+              x={x}
+              y={pad + numberToRowCol(num)[0] * cell + 8}
+              fontSize="6"
+              fill="#00000099"
+              textAnchor="middle"
+              fontWeight="bold"
+            >
+              {num}
+            </text>
+          );
+        })}
+
+        {/* Tokens */}
+        {positions.map((pos, i) => {
+          if (pos <= 0) return null;
+          const { x, y } = cellCenter(pos);
+          const sameHere = positions.map((p, idx) => (p === pos ? idx : -1)).filter((idx) => idx !== -1);
+          const slot = sameHere.indexOf(i);
+          const offset = sameHere.length > 1 ? (slot - (sameHere.length - 1) / 2) * 6 : 0;
+          return (
+            <circle
+              key={i}
+              cx={x + offset}
+              cy={y + 4}
+              r="5.5"
+              fill={PLAYER_COLORS[i]}
+              stroke="#000"
+              strokeWidth="1.2"
+            />
+          );
+        })}
+      </svg>
 
       <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
 

@@ -3,17 +3,29 @@ import { Bot, User as UserIcon, Dices } from 'lucide-react';
 
 interface LudoGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
+  // 'bot' (default): obviously just you vs bots — no per-slot toggle shown.
+  // 'pass_play': multiple humans sharing this device — slots default to
+  // human and can be toggled to bot for a mixed group.
+  entryMode?: 'bot' | 'pass_play';
+  initialPlayerCount?: number;
 }
 
-const PLAYER_COLORS = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b', '#a78bfa', '#f43f5e', '#2dd4bf', '#fb923c'];
+// Classic Ludo palette — blue / green / yellow / red corners, matching the
+// real board rather than the app's neon theme (per request: board gets
+// colors, app chrome stays as-is).
+const PLAYER_COLORS = ['#2563eb', '#16a34a', '#eab308', '#dc2626'];
 const ARM_LENGTH = 8; // shared-path cells per player, kept short for quick mobile games
 const HOME_STRETCH = 4;
 const TOKENS_PER_PLAYER = 4;
+const MAX_PLAYERS = 4;
 
-export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
+export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount }) => {
   const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
-  const [numPlayers, setNumPlayers] = useState(4);
-  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(['human', 'bot', 'bot', 'bot']);
+  const [numPlayers, setNumPlayers] = useState(Math.min(initialPlayerCount || MAX_PLAYERS, MAX_PLAYERS));
+  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
+    const n = Math.min(initialPlayerCount || MAX_PLAYERS, MAX_PLAYERS);
+    return Array.from({ length: n }, (_, i) => (i === 0 ? 'human' : entryMode === 'pass_play' ? 'human' : 'bot'));
+  });
   // tokens[player][tokenIndex] = progress. 0 = in yard.
   const [tokens, setTokens] = useState<number[][]>([]);
   const [currentPlayer, setCurrentPlayer] = useState(0);
@@ -30,7 +42,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
     setNumPlayers(n);
     setPlayerTypes((prev) => {
       const next = [...prev];
-      while (next.length < n) next.push('bot');
+      while (next.length < n) next.push(entryMode === 'pass_play' ? 'human' : 'bot');
       return next.slice(0, n).map((t, i) => (i === 0 ? 'human' : t));
     });
   };
@@ -154,7 +166,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
       <div className="w-full flex flex-col items-center gap-4 p-3">
         <span className="text-xs font-black text-white uppercase tracking-wider">How many players?</span>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+          {[2, 3, 4].map((n) => (
             <button
               key={n}
               onClick={() => updatePlayerCount(n)}
@@ -175,6 +187,10 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
               </span>
               {i === 0 ? (
                 <span className="text-[10px] text-zinc-500 font-semibold">Human</span>
+              ) : entryMode === 'bot' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 flex items-center gap-1">
+                  <Bot className="w-3 h-3" /> Bot
+                </span>
               ) : (
                 <button
                   onClick={() =>
@@ -199,27 +215,43 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
     );
   }
 
-  // --- Board rendering: square-tile radial track + colored yards, styled to
-  // read as "Ludo" (yard panels with 4 token slots, a colored home lane per
-  // player, a pie-sliced center) rather than a bare dotted ring, while still
-  // scaling cleanly from 2 to 8 players. ---
+  // --- Board rendering: classic square Ludo layout — 4 colored corner
+  // yards, a square path ring, colored home lanes, and a 4-wedge center
+  // home, instead of the previous abstract radial ring. ---
   const size = 320;
   const center = size / 2;
-  const ringRadius = 118;
-  const yardRadius = 152;
-  const homeStretchOuter = 104;
-  const homeStretchInner = 44;
+  const ringHalf = 118;
+  const yardOffset = 152;
+  const homeStretchOuterT = 0.72; // fraction of the way from ring toward center where the lane starts
+  const homeStretchInnerT = 0.2; // fraction of the way from ring toward center where the lane ends
   const hubRadius = 42;
 
-  const cellArc = (2 * Math.PI * ringRadius) / pathLength;
+  const cellArc = (8 * ringHalf) / pathLength;
   const cellSize = Math.max(7, Math.min(15, cellArc * 0.8));
 
-  const cellPos = (index: number, radius: number) => {
-    const angle = (index / pathLength) * 2 * Math.PI - Math.PI / 2;
-    return { x: center + radius * Math.cos(angle), y: center + radius * Math.sin(angle) };
+  // Walks the perimeter of a square of half-size `half` centered on `center`,
+  // starting at the top-left corner and going clockwise. t is a fraction [0,1).
+  const squarePos = (t: number, half: number) => {
+    const perim = 8 * half;
+    let d = ((t % 1) + 1) % 1;
+    d *= perim;
+    if (d < 2 * half) return { x: center - half + d, y: center - half };
+    d -= 2 * half;
+    if (d < 2 * half) return { x: center + half, y: center - half + d };
+    d -= 2 * half;
+    if (d < 2 * half) return { x: center + half - d, y: center + half };
+    d -= 2 * half;
+    return { x: center - half, y: center + half - d };
   };
 
-  const entryAngleOf = (playerIdx: number) => (playerIdx * ARM_LENGTH / pathLength) * 2 * Math.PI - Math.PI / 2;
+  const cellPos = (index: number) => squarePos(index / pathLength, ringHalf);
+  // Angular direction (from board center) toward each player's yard/hub
+  // wedge. Perimeter fraction and angular fraction aren't the same for a
+  // square, so this is computed directly to land on actual corners when
+  // numPlayers === 4 (players evenly split the 4 corners), and evenly
+  // spaced directions otherwise.
+  const entryAngleOf = (playerIdx: number) =>
+    -Math.PI / 2 - Math.PI / numPlayers + playerIdx * ((2 * Math.PI) / numPlayers);
 
   const yardSlotOffsets: [number, number][] = [
     [-11, 4],
@@ -247,7 +279,16 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
 
       <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[320px]">
         {/* Board backdrop */}
-        <circle cx={center} cy={center} r={yardRadius + 30} fill="#0a0a0a" stroke="#27272a" strokeWidth="1" />
+        <rect
+          x={center - yardOffset - 28}
+          y={center - yardOffset - 28}
+          width={(yardOffset + 28) * 2}
+          height={(yardOffset + 28) * 2}
+          rx="18"
+          fill="#f8fafc"
+          stroke="#cbd5e1"
+          strokeWidth="2"
+        />
 
         {/* Center hub: pie wedge per player, pointing down each player's home lane */}
         {Array.from({ length: numPlayers }).map((_, p) => {
@@ -262,27 +303,25 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
               key={p}
               d={`M ${center} ${center} L ${x1} ${y1} A ${hubRadius} ${hubRadius} 0 0 1 ${x2} ${y2} Z`}
               fill={PLAYER_COLORS[p]}
-              fillOpacity="0.85"
-              stroke="#0a0a0a"
-              strokeWidth="1.5"
+              stroke="#f8fafc"
+              strokeWidth="2"
             />
           );
         })}
-        <circle cx={center} cy={center} r={hubRadius * 0.42} fill="#0a0a0a" stroke="#3f3f46" strokeWidth="1" />
+        <circle cx={center} cy={center} r={hubRadius * 0.42} fill="#1c1c1f" stroke="#3f3f46" strokeWidth="1" />
         <text x={center} y={center + 3} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="900">
           HOME
         </text>
 
         {/* Home stretch lane: a strip of colored squares per player, ring to hub */}
         {Array.from({ length: numPlayers }).map((_, p) => {
-          const angle = entryAngleOf(p);
+          const entry = cellPos(p * ARM_LENGTH);
           return (
             <g key={p}>
               {Array.from({ length: HOME_STRETCH }).map((_, s) => {
-                const t = (s + 0.5) / HOME_STRETCH;
-                const radius = homeStretchOuter - t * (homeStretchOuter - homeStretchInner);
-                const x = center + radius * Math.cos(angle);
-                const y = center + radius * Math.sin(angle);
+                const t = homeStretchOuterT - (s / (HOME_STRETCH - 1)) * (homeStretchOuterT - homeStretchInnerT);
+                const x = entry.x + (center - entry.x) * (1 - t);
+                const y = entry.y + (center - entry.y) * (1 - t);
                 return (
                   <rect
                     key={s}
@@ -292,8 +331,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
                     height={cellSize}
                     rx="1.5"
                     fill={PLAYER_COLORS[p]}
-                    fillOpacity="0.55"
-                    stroke={PLAYER_COLORS[p]}
+                    stroke="#f8fafc"
                     strokeWidth="0.75"
                   />
                 );
@@ -302,10 +340,11 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
           );
         })}
 
-        {/* Shared ring path: square tiles, gold star tile marks each player's safe entry cell */}
+        {/* Shared ring path: checkered squares, gold star tile marks each player's safe entry cell */}
         {Array.from({ length: pathLength }).map((_, i) => {
-          const { x, y } = cellPos(i, ringRadius);
+          const { x, y } = cellPos(i);
           const isSafe = i % ARM_LENGTH === 0;
+          const checker = Math.floor(i / 2) % 2 === 0;
           return (
             <rect
               key={i}
@@ -314,9 +353,8 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
               width={cellSize}
               height={cellSize}
               rx="1.5"
-              fill={isSafe ? '#fbbf24' : '#1c1c1f'}
-              fillOpacity={isSafe ? 0.9 : 1}
-              stroke="#3f3f46"
+              fill={isSafe ? '#fbbf24' : checker ? '#e2e8f0' : '#ffffff'}
+              stroke="#cbd5e1"
               strokeWidth="0.6"
             />
           );
@@ -325,21 +363,22 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
         {/* Yard panels: colored rounded-square base holding a 2x2 grid of token slots */}
         {Array.from({ length: numPlayers }).map((_, p) => {
           const angle = entryAngleOf(p);
-          const yx = center + yardRadius * Math.cos(angle);
-          const yy = center + yardRadius * Math.sin(angle);
+          const yx = center + yardOffset * Math.cos(angle);
+          const yy = center + yardOffset * Math.sin(angle);
           return (
             <g key={p}>
               <rect
-                x={yx - 26}
-                y={yy - 26}
-                width="52"
-                height="52"
-                rx="10"
-                fill={`${PLAYER_COLORS[p]}26`}
+                x={yx - 30}
+                y={yy - 30}
+                width="60"
+                height="60"
+                rx="12"
+                fill={PLAYER_COLORS[p]}
+                fillOpacity="0.18"
                 stroke={PLAYER_COLORS[p]}
-                strokeWidth={currentPlayer === p && winner === null ? 2.5 : 1.5}
+                strokeWidth={currentPlayer === p && winner === null ? 3 : 1.5}
               />
-              <text x={yx} y={yy - 14} fontSize="7.5" fill={PLAYER_COLORS[p]} textAnchor="middle" fontWeight="900">
+              <text x={yx} y={yy - 16} fontSize="8" fill={PLAYER_COLORS[p]} textAnchor="middle" fontWeight="900">
                 {p === 0 ? 'YOU' : `P${p + 1}`}
               </text>
               {yardSlotOffsets.map(([dx, dy], slotIdx) => {
@@ -349,10 +388,10 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
                     key={slotIdx}
                     cx={yx + dx}
                     cy={yy + dy}
-                    r="6"
-                    fill={hasToken ? PLAYER_COLORS[p] : '#00000055'}
+                    r="6.5"
+                    fill={hasToken ? PLAYER_COLORS[p] : '#ffffff'}
                     stroke={PLAYER_COLORS[p]}
-                    strokeWidth={hasToken ? 1.4 : 0.75}
+                    strokeWidth={hasToken ? 1.4 : 1}
                     strokeOpacity={hasToken ? 1 : 0.5}
                   />
                 );
@@ -368,18 +407,19 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver }) => {
             let x: number;
             let y: number;
             if (progress <= pathLength) {
-              ({ x, y } = cellPos(absoluteCell(p, progress), ringRadius));
+              ({ x, y } = cellPos(absoluteCell(p, progress)));
             } else {
-              const stretchT = (progress - pathLength - 0.5) / HOME_STRETCH;
-              const radius = homeStretchOuter - stretchT * (homeStretchOuter - homeStretchInner);
-              const angle = entryAngleOf(p);
-              x = center + radius * Math.cos(angle);
-              y = center + radius * Math.sin(angle);
+              const entry = cellPos(p * ARM_LENGTH);
+              const stretchT =
+                homeStretchOuterT -
+                ((progress - pathLength - 1) / (HOME_STRETCH - 1)) * (homeStretchOuterT - homeStretchInnerT);
+              x = entry.x + (center - entry.x) * (1 - stretchT);
+              y = entry.y + (center - entry.y) * (1 - stretchT);
             }
             return (
               <g key={`${p}-${t}`}>
-                <circle cx={x} cy={y} r="7" fill={PLAYER_COLORS[p]} stroke="#000" strokeWidth="1.3" />
-                <circle cx={x - 2} cy={y - 2} r="2.2" fill="#ffffff" fillOpacity="0.55" />
+                <circle cx={x} cy={y} r="7.5" fill={PLAYER_COLORS[p]} stroke="#1c1c1f" strokeWidth="1.3" />
+                <circle cx={x - 2} cy={y - 2} r="2.2" fill="#ffffff" fillOpacity="0.65" />
               </g>
             );
           })

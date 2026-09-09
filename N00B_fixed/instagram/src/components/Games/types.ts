@@ -20,14 +20,14 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     id: 'ludo_classic',
     title: 'Ludo',
     category: 'social',
-    description: 'Roll the dice, race your 4 tokens home, and send opponents back to start. 2-8 players, board adapts to your table size.',
+    description: 'Roll the dice, race your 4 tokens home, and send opponents back to start. Classic 2-4 player board.',
     bannerBg: 'from-[#7c2d12] to-[#1c0a03]',
     badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
     pointsReward: 100,
     difficulty: 'Easy',
     players: 'Solo / Friend',
     iconType: 'ludo',
-    tags: ['Classic', 'Dice', '2-8 Players']
+    tags: ['Classic', 'Dice', '2-4 Players']
   },
   {
     id: 'snakes_ladders',

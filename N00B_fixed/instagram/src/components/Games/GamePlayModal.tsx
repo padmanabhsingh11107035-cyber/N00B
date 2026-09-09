@@ -114,7 +114,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   }, [currentMode]);
 
   // Start Bot Game setup
-  const handleStartBotGame = () => {
+  const startBotGameNow = () => {
     setIsPassAndPlay(false);
     setCurrentMode('play_bot');
     setGameResult(null);
@@ -158,6 +158,17 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   };
 
   const shuffleArray = (arr: number[]) => [...arr].sort(() => Math.random() - 0.5);
+
+  // Chess vs bot carries real stakes (win big / lose everything) — show a
+  // clear heads-up before every match instead of jumping straight in.
+  const [showChessStakesConfirm, setShowChessStakesConfirm] = useState(false);
+  const handleStartBotGame = () => {
+    if (game.id === 'chess_blitz') {
+      setShowChessStakesConfirm(true);
+      return;
+    }
+    startBotGameNow();
+  };
 
   // Begin a brand new Pass and Play match (from the mode-select screen)
   const handleStartPassAndPlay = () => {
@@ -900,6 +911,46 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Chess High-Stakes Confirmation */}
+      {showChessStakesConfirm && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-zinc-950 border border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center mx-auto text-2xl">
+              ♟️
+            </div>
+            <h3 className="text-base font-black text-white">High-Stakes Chess Match</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              You're about to play a genuinely strong chess bot. This match is high risk, high reward:
+            </p>
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-left flex items-center gap-2.5">
+              <span className="text-lg">🏆</span>
+              <span className="text-xs font-bold text-emerald-300">If you WIN: +50,000,000 NOOB Points</span>
+            </div>
+            <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-left flex items-center gap-2.5">
+              <span className="text-lg">💀</span>
+              <span className="text-xs font-bold text-rose-300">If you LOSE: Your entire balance resets to 0</span>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowChessStakesConfirm(false)}
+                className="flex-1 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowChessStakesConfirm(false);
+                  startBotGameNow();
+                }}
+                className="flex-1 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors cursor-pointer"
+              >
+                I'm Ready, Play
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

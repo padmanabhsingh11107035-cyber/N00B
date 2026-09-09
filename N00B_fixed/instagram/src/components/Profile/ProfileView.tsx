@@ -882,22 +882,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* 4. Symmetrical Stats Numbers Box */}
-          <div className="grid grid-cols-3 divide-x divide-zinc-800 bg-zinc-900/90 border border-zinc-800/80 rounded-2xl py-3.5 px-6 w-full max-w-md shadow-inner">
-            <div className="text-center px-2">
+          <div className="grid grid-cols-3 divide-x divide-zinc-800 bg-zinc-900/90 border border-zinc-800/80 rounded-2xl py-3.5 px-1 sm:px-6 w-full max-w-md shadow-inner">
+            <div className="text-center px-1 sm:px-2 min-w-0">
               <span className="text-lg sm:text-xl font-black text-white block leading-tight">{displayedPosts.length}</span>
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Posts</span>
+              <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Posts</span>
             </div>
-            <div className="text-center px-2">
+            <div className="text-center px-1 sm:px-2 min-w-0">
               <span className="text-lg sm:text-xl font-black text-white block leading-tight">
                 {(targetUser.followersCount || 0).toLocaleString()}
               </span>
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Followers</span>
+              <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Followers</span>
             </div>
-            <div className="text-center px-2">
+            <div className="text-center px-1 sm:px-2 min-w-0">
               <span className="text-lg sm:text-xl font-black text-white block leading-tight">
                 {(targetUser.followingCount || 0).toLocaleString()}
               </span>
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Following</span>
+              <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Following</span>
             </div>
           </div>
 

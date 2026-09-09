@@ -487,8 +487,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 1. Organized Profile Header */}
       <div className="relative bg-zinc-950 border border-zinc-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl mb-6 space-y-6">
-        {/* Three-dots menu button only (top-right corner) */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20" ref={menuRef}>
+        {/* Three-dots menu button only (top-right corner). Fixed width/height here
+            keeps the trigger pinned in place — without it, this absolutely-positioned
+            wrapper shrink-to-fits around its widest child, so once the w-72 dropdown
+            below mounts as a child, the wrapper (and the button inside it) jumps left. */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-9 h-9" ref={menuRef}>
           <button
             onClick={() => setShowThreeDotsMenu(!showThreeDotsMenu)}
             className={`liquid-glass p-2 rounded-xl transition-all cursor-pointer ${

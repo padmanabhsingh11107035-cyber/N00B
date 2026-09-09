@@ -624,7 +624,7 @@ export async function addPostToCollection(collectionId: string, postId: string) 
 // Media Upload via Backblaze B2 (S3-compatible) with invisible client-side compression
 export async function uploadMediaFile(
   file: File,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' = 'posts'
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'gifs' = 'posts'
 ): Promise<{ success: boolean; objectKey: string; url: string }> {
   // Invisibly compress images/videos to reduce latency and bandwidth
   const optimizedFile = await compressMedia(file);
@@ -783,6 +783,45 @@ export async function redeemCouponCode(code: string): Promise<{ success: boolean
   });
   const data = await res.json();
   return { success: res.ok && data.success, coupon: data.coupon, error: data.error };
+}
+
+// --- Personal GIF Gallery (Chat > GIFs > My GIFs) ---
+// Every read/write here is scoped server-side to the logged-in user; no
+// other account can ever see or use GIFs uploaded to someone else's gallery.
+
+export interface MyGif {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export async function fetchMyGifs(): Promise<MyGif[]> {
+  const res = await fetch(`${API_BASE}/gifs`, { headers: getAuthHeaders() });
+  const data = await res.json();
+  return data.gifs || [];
+}
+
+export async function uploadCustomGif(file: File, title?: string): Promise<{ success: boolean; error?: string }> {
+  const uploadResult = await uploadMediaFile(file, 'gifs');
+  if (!uploadResult.success) {
+    return { success: false, error: 'Failed to upload GIF.' };
+  }
+  const res = await fetch(`${API_BASE}/gifs`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ objectKey: uploadResult.objectKey, title })
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, error: data.error };
+}
+
+export async function deleteCustomGif(id: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/gifs/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, error: data.error };
 }
 
 export async function upgradeProTier(payload: {

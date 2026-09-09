@@ -172,7 +172,11 @@ import {
   translateMessage,
   updateChatSettings,
   fetchUsers,
-  createChat
+  createChat,
+  fetchMyGifs,
+  uploadCustomGif,
+  deleteCustomGif,
+  MyGif
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -256,6 +260,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers'>('emojis');
+  const [myGifs, setMyGifs] = useState<MyGif[]>([]);
+  const [isUploadingGif, setIsUploadingGif] = useState(false);
+  const [gifUploadError, setGifUploadError] = useState<string | null>(null);
+  const gifFileInputRef = useRef<HTMLInputElement>(null);
   const [scheduledTime, setScheduledTime] = useState('');
   const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
   
@@ -283,6 +291,48 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const timer = setTimeout(() => setChatBlockedNotice(''), 4000);
     return () => clearTimeout(timer);
   }, [chatBlockedNotice]);
+
+  // Load this user's private GIF gallery the moment they open the GIFs tab
+  useEffect(() => {
+    if (showEmojiPicker && activePickerTab === 'gifs') {
+      fetchMyGifs().then(setMyGifs).catch(() => {});
+    }
+  }, [showEmojiPicker, activePickerTab]);
+
+  const handleUploadGif = async (file: File) => {
+    if (!file.type.includes('gif')) {
+      setGifUploadError('Only .gif files can be added to your gallery.');
+      setTimeout(() => setGifUploadError(null), 3000);
+      return;
+    }
+    setIsUploadingGif(true);
+    setGifUploadError(null);
+    try {
+      const result = await uploadCustomGif(file, file.name.replace(/\.gif$/i, ''));
+      if (result.success) {
+        const refreshed = await fetchMyGifs();
+        setMyGifs(refreshed);
+      } else {
+        setGifUploadError(result.error || 'Failed to add GIF.');
+        setTimeout(() => setGifUploadError(null), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setGifUploadError('Failed to add GIF.');
+      setTimeout(() => setGifUploadError(null), 3000);
+    } finally {
+      setIsUploadingGif(false);
+    }
+  };
+
+  const handleDeleteMyGif = async (id: string) => {
+    setMyGifs((prev) => prev.filter((g) => g.id !== id));
+    try {
+      await deleteCustomGif(id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Close menus on click outside
   useEffect(() => {
@@ -1763,24 +1813,105 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   )}
 
                   {activePickerTab === 'gifs' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {CURATED_GIFS.map((gif) => (
-                        <button
-                          key={gif.id}
-                          type="button"
-                          onClick={() => handleSendGif(gif.url)}
-                          className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all cursor-pointer text-left"
-                        >
-                          <img
-                            src={gif.url}
-                            alt={gif.title}
-                            className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
-                            {gif.title}
+                    <div className="space-y-3">
+                      <input
+                        ref={gifFileInputRef}
+                        type="file"
+                        accept=".gif,image/gif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleUploadGif(file);
+                          e.target.value = '';
+                        }}
+                      />
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                            My GIFs · Only you can see these
                           </span>
-                        </button>
-                      ))}
+                          <button
+                            type="button"
+                            onClick={() => gifFileInputRef.current?.click()}
+                            disabled={isUploadingGif}
+                            className="flex items-center gap-1 text-[10px] font-bold text-[#00FF66] hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" /> {isUploadingGif ? 'Adding...' : 'Add GIF'}
+                          </button>
+                        </div>
+
+                        {gifUploadError && (
+                          <p className="text-[10px] text-rose-400 font-semibold mb-1.5">{gifUploadError}</p>
+                        )}
+
+                        {myGifs.length === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => gifFileInputRef.current?.click()}
+                            className="w-full py-3 rounded-xl border border-dashed border-zinc-700 hover:border-[#00FF66]/60 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                          >
+                            Upload a .gif to keep it in your own private gallery
+                          </button>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            {myGifs.map((gif) => (
+                              <div
+                                key={gif.id}
+                                className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendGif(gif.url)}
+                                  className="block w-full cursor-pointer text-left"
+                                >
+                                  <img
+                                    src={gif.url}
+                                    alt={gif.title}
+                                    className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
+                                  />
+                                  <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
+                                    {gif.title}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMyGif(gif.id)}
+                                  title="Remove from my gallery"
+                                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                          Community GIFs
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {CURATED_GIFS.map((gif) => (
+                            <button
+                              key={gif.id}
+                              type="button"
+                              onClick={() => handleSendGif(gif.url)}
+                              className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all cursor-pointer text-left"
+                            >
+                              <img
+                                src={gif.url}
+                                alt={gif.title}
+                                className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
+                                {gif.title}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
 

@@ -181,6 +181,10 @@ async function startServer() {
   // either global (targetUsername unset) or aimed at one specific user, and
   // is visible in that user's Wallet > My Coupons page immediately.
   let coupons: any[] = [];
+  // Custom GIFs a user has uploaded to their own personal GIF gallery in
+  // chat — strictly private: only ever returned to the uploader, never to
+  // any other user (see GET /api/gifs).
+  let customGifs: any[] = [];
 
   // Initial community music tracks (featuring Dhurandhar movie soundtrack)
   let musicTracks: any[] = [
@@ -293,7 +297,7 @@ async function startServer() {
     'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
     'notifications', 'chats', 'messages', 'collections', 'gameScores',
     'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks',
-    'coupons'
+    'coupons', 'customGifs'
   ] as const;
 
   if (isDbConnected()) {
@@ -320,6 +324,7 @@ async function startServer() {
     if (loaded.reelHistory) reelHistory = loaded.reelHistory;
     if (loaded.musicTracks) musicTracks = loaded.musicTracks;
     if (loaded.coupons) coupons = loaded.coupons;
+    if (loaded.customGifs) customGifs = loaded.customGifs;
 
     console.log('MongoDB: restored persisted app state');
   }
@@ -349,6 +354,7 @@ async function startServer() {
       saveCollection('reelHistory', reelHistory),
       saveCollection('musicTracks', musicTracks),
       saveCollection('coupons', coupons),
+      saveCollection('customGifs', customGifs),
     ]);
   }
 
@@ -443,7 +449,7 @@ async function startServer() {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers';
+      const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'gifs';
       const result = await uploadMediaToB2(
         req.file.buffer,
         folder,
@@ -934,6 +940,64 @@ async function startServer() {
       return res.status(404).json({ error: 'That coupon code is invalid, expired, or not available for your account.' });
     }
     res.json({ success: true, coupon: sanitizeCoupon(coupon) });
+  });
+
+  // ==========================================
+  // --- PERSONAL GIF GALLERY (Chat > GIFs > My GIFs) ---
+  // A user can upload their own GIFs into chat. Strictly private: every
+  // read is filtered to the logged-in user's own uploads, so nobody else's
+  // gallery — or that a given GIF even exists — is ever visible to them.
+  // ==========================================
+
+  app.get('/api/gifs', async (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const mine = customGifs.filter((g) => g.userId === active.id);
+    const withUrls = await Promise.all(
+      mine
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map(async (g) => ({
+          id: g.id,
+          title: g.title || 'My GIF',
+          url: await signMediaKey(g.objectKey)
+        }))
+    );
+    res.json({ gifs: withUrls });
+  });
+
+  app.post('/api/gifs', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const { objectKey, title } = req.body;
+    if (!objectKey || !objectKey.trim()) {
+      return res.status(400).json({ error: 'No uploaded GIF reference provided.' });
+    }
+
+    const newGif = {
+      id: `gif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      userId: active.id,
+      objectKey: objectKey.trim(),
+      title: (title || '').trim() || 'My GIF',
+      createdAt: new Date().toISOString()
+    };
+    customGifs.push(newGif);
+
+    res.status(201).json({ success: true, gif: { id: newGif.id, title: newGif.title } });
+  });
+
+  app.delete('/api/gifs/:id', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const gif = customGifs.find((g) => g.id === req.params.id);
+    if (!gif) return res.status(404).json({ error: 'GIF not found.' });
+    if (gif.userId !== active.id) {
+      return res.status(403).json({ error: 'You can only delete GIFs from your own gallery.' });
+    }
+    customGifs = customGifs.filter((g) => g.id !== req.params.id);
+    res.json({ success: true });
   });
 
   // ==========================================

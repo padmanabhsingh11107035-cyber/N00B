@@ -40,7 +40,7 @@ export function getB2Client(): { client: S3Client | null; bucket: string; isConf
  */
 export async function uploadMediaToB2(
   fileBuffer: Buffer,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers',
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'gifs',
   originalFilename: string,
   contentType: string
 ): Promise<{ objectKey: string; presignedUrl: string }> {

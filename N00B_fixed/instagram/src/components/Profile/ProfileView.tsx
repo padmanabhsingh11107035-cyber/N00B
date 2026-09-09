@@ -469,10 +469,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20" ref={menuRef}>
           <button
             onClick={() => setShowThreeDotsMenu(!showThreeDotsMenu)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+            className={`liquid-glass p-2 rounded-xl transition-all cursor-pointer ${
               showThreeDotsMenu
-                ? 'bg-[#00FF66] text-black border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.4)]'
-                : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border-zinc-800'
+                ? 'liquid-glass-btn-active text-[#00FF66]'
+                : 'text-zinc-300 hover:text-white'
             }`}
             title="Options & Settings"
             aria-label="Options"
@@ -482,7 +482,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* Dropdown Menu */}
           {showThreeDotsMenu && (
-            <div className="liquid-glass absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] rounded-2xl p-2 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-[80vh] overflow-y-auto">
+            <div className="liquid-glass absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] rounded-2xl p-2 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-[80vh] overflow-y-auto overscroll-contain">
               {/* Universal: Theme Toggle */}
               <button
                 onClick={() => {

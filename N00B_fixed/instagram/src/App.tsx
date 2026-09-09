@@ -63,7 +63,6 @@ import { CustomerSupportModal } from './components/Support/CustomerSupportModal'
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { GamePlayModal } from './components/Games/GamePlayModal';
-import { Headphones, Bot } from 'lucide-react';
 import { initPushNotifications } from './services/pushNotifications';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
@@ -703,7 +702,11 @@ export default function App() {
               className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold text-white bg-gradient-to-r from-violet-900/50 via-indigo-900/50 to-cyan-900/40 border border-indigo-500/30 hover:border-cyan-400/60 shadow-lg shadow-indigo-500/10 transition-all cursor-pointer group"
             >
               <div className="flex items-center gap-3.5">
-                <Headphones className="w-4 h-4 text-cyan-400 group-hover:rotate-12 transition-transform" />
+                <img
+                  src="/noob-support-logo.png"
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover group-hover:rotate-12 transition-transform"
+                />
                 <span className="bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent">AI Customer Support</span>
               </div>
               <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
@@ -975,7 +978,11 @@ export default function App() {
           title="Open NOOB AI Assistant"
         >
           <div className="relative">
-            <Headphones className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
+            <img
+              src="/noob-support-logo.png"
+              alt=""
+              className="w-6 h-6 rounded-full object-cover group-hover:rotate-12 transition-transform"
+            />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#00FF66] rounded-full ring-2 ring-black animate-pulse" />
           </div>
           <span className="hidden sm:inline font-bold tracking-wide">NOOB AI Support</span>

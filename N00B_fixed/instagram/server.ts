@@ -2909,8 +2909,13 @@ COMPLETE PLATFORM CAPABILITIES:
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    // index: false — index.html must never be cached (it's what points the
+    // browser at the current content-hashed JS/CSS bundle); the hashed
+    // asset files themselves are safe to cache aggressively since a new
+    // build always gets new filenames.
+    app.use(express.static(distPath, { index: false }));
     app.get('*', (req, res) => {
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

@@ -494,7 +494,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-9 h-9" ref={menuRef}>
           <button
             onClick={() => setShowThreeDotsMenu(!showThreeDotsMenu)}
-            className={`liquid-glass p-2 rounded-xl transition-all cursor-pointer ${
+            className={`liquid-glass relative p-2 rounded-xl transition-all cursor-pointer ${
               showThreeDotsMenu
                 ? 'liquid-glass-btn-active text-[#00FF66]'
                 : 'text-zinc-300 hover:text-white'

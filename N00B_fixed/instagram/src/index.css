@@ -174,7 +174,14 @@
    slow drifting sheen, used by the bottom nav bar.
    ============================================ */
 .liquid-glass {
-  position: relative;
+  /* No position here on purpose: this un-layered rule beats any Tailwind
+     `absolute`/`relative` utility in the cascade regardless of class order
+     (Tailwind v4 utilities live in a lower-priority @layer), so forcing a
+     value here previously broke every element that needed position:absolute
+     (e.g. the dropdown menu silently became position:relative and rendered
+     in normal flow instead of anchored to its trigger). Each usage must set
+     its own `relative`/`absolute` utility instead.
+  */
   background: linear-gradient(
     165deg,
     rgba(255, 255, 255, 0.2) 0%,

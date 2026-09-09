@@ -62,7 +62,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         hideOnMobile ? 'max-md:hidden' : ''
       }`}
     >
-      <div className="liquid-glass rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1">
+      <div className="liquid-glass relative rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1">
         {/* 1. Feed */}
         <NavButton
           id="nav-item-feed"

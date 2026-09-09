@@ -86,6 +86,12 @@ export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 
   if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://') || keyOrUrl.startsWith('data:')) {
     return keyOrUrl;
   }
+  // A leading slash means this is already a resolvable local/static path
+  // (e.g. the default "/noob-logo.svg.jpeg" avatar), not a B2 object key —
+  // real upload keys are always "folder/filename", never slash-prefixed.
+  if (keyOrUrl.startsWith('/')) {
+    return keyOrUrl;
+  }
 
   const { client, bucket, isConfigured } = getB2Client();
   if (!isConfigured || !client) {

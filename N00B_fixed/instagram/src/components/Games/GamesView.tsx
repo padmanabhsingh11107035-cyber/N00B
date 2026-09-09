@@ -104,14 +104,14 @@ export const GamesView: React.FC<GamesViewProps> = ({
     }
   };
 
-  const handlePointsUpdated = (earned: number, totalPoints: number) => {
+  const handlePointsUpdated = (_earned: number, totalPoints: number, won?: boolean) => {
     setUserPoints(totalPoints);
     if (onUserUpdated && currentUser) {
       onUserUpdated({
         ...currentUser,
         noobPoints: totalPoints,
         gamesPlayedCount: (currentUser.gamesPlayedCount || 0) + 1,
-        gamesWonCount: earned === 100 ? (currentUser.gamesWonCount || 0) + 1 : currentUser.gamesWonCount
+        gamesWonCount: won ? (currentUser.gamesWonCount || 0) + 1 : currentUser.gamesWonCount
       });
     }
     loadLeaderboardData();

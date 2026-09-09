@@ -1069,10 +1069,8 @@ export default function App() {
           initialChallenger={gameToPlay.challenger}
           initialRoomCode={gameToPlay.roomCode}
           onClose={() => setGameToPlay(null)}
-          onPointsUpdated={(pointsEarned) => {
-            setCurrentUser((prev) =>
-              prev ? { ...prev, noobPoints: (prev.noobPoints || 0) + pointsEarned } : prev
-            );
+          onPointsUpdated={(_pointsEarned, totalPoints) => {
+            setCurrentUser((prev) => (prev ? { ...prev, noobPoints: totalPoints } : prev));
           }}
         />
       )}

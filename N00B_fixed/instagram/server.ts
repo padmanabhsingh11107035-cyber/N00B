@@ -2070,7 +2070,7 @@ User message: ${userText}`
 
   // Record a match outcome: win = +100 NOOBs, tie = +50 NOOBs, loss = 0 NOOBs
   app.post('/api/games/record-match', (req, res) => {
-    const { gameId, gameTitle, result, opponentName } = req.body;
+    const { gameId, gameTitle, result, opponentName, vsBot } = req.body;
     // result: 'win' | 'tie' | 'loss'
     const active = getActiveUser(req);
     const author = active || {
@@ -2080,8 +2080,21 @@ User message: ${userText}`
       noobPoints: 0
     };
 
+    // Chess Blitz vs a bot carries real stakes: the client only ever *displays*
+    // this outcome, so the actual balance change must be computed here too —
+    // otherwise a loss never really wipes the wallet server-side.
+    const isChessHighStakes = gameId === 'chess_blitz' && !!vsBot;
+
     let earnedPoints = 0;
-    if (result === 'win') {
+    if (isChessHighStakes) {
+      if (result === 'win') {
+        earnedPoints = 50000000;
+      } else if (result === 'loss') {
+        earnedPoints = -(active ? active.noobPoints || 0 : 0);
+      } else {
+        earnedPoints = 50;
+      }
+    } else if (result === 'win') {
       earnedPoints = 100;
     } else if (result === 'tie') {
       earnedPoints = 50;
@@ -2090,7 +2103,7 @@ User message: ${userText}`
     }
 
     if (active) {
-      active.noobPoints = (active.noobPoints || 0) + earnedPoints;
+      active.noobPoints = Math.max(0, (active.noobPoints || 0) + earnedPoints);
       active.gamesPlayedCount = (active.gamesPlayedCount || 0) + 1;
       if (earnedPoints > 0) {
         recordTransaction(
@@ -2098,6 +2111,8 @@ User message: ${userText}`
           earnedPoints,
           `${result === 'win' ? 'Won' : 'Tied'} ${gameTitle || 'mini-game'} match`
         );
+      } else if (earnedPoints < 0) {
+        recordTransaction(active, earnedPoints, `Lost ${gameTitle || 'Chess Blitz'} — balance wiped`);
       }
       if (result === 'win') {
         active.gamesWonCount = (active.gamesWonCount || 0) + 1;

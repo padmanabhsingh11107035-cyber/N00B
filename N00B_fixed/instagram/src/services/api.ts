@@ -699,7 +699,8 @@ export async function recordGameMatch(
   gameId: string,
   gameTitle: string,
   result: 'win' | 'tie' | 'loss',
-  opponentName?: string
+  opponentName?: string,
+  vsBot?: boolean
 ): Promise<{
   success: boolean;
   earnedPoints: number;
@@ -710,7 +711,7 @@ export async function recordGameMatch(
   const res = await fetch(`${API_BASE}/games/record-match`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: safeJsonStringify({ gameId, gameTitle, result, opponentName })
+    body: safeJsonStringify({ gameId, gameTitle, result, opponentName, vsBot })
   });
   return await res.json();
 }

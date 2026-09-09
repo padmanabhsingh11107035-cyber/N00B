@@ -48,7 +48,7 @@ interface GamePlayModalProps {
   initialChallenger?: string;
   initialRoomCode?: string;
   onClose: () => void;
-  onPointsUpdated: (pointsEarned: number, totalPoints: number) => void;
+  onPointsUpdated: (pointsEarned: number, totalPoints: number, won?: boolean) => void;
 }
 
 type PlayMode = 'select_mode' | 'matchmaking' | 'play_bot' | 'play_friend' | 'play_match' | 'pass_play_handoff' | 'game_over';
@@ -220,13 +220,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setPointsEarned(earned);
 
     try {
-      const res = await recordGameMatch(game.id, game.title, overall, 'Player 2 (Pass & Play)');
+      const res = await recordGameMatch(game.id, game.title, overall, 'Player 2 (Pass & Play)', false);
       if (res.success) {
-        onPointsUpdated(earned, res.totalNoobPoints);
+        onPointsUpdated(earned, res.totalNoobPoints, overall === 'win');
       }
     } catch (err) {
       console.error(err);
-      onPointsUpdated(earned, (currentUser.noobPoints || 0) + earned);
+      onPointsUpdated(earned, (currentUser.noobPoints || 0) + earned, overall === 'win');
     } finally {
       setIsSubmitting(false);
       setCurrentMode('game_over');
@@ -273,13 +273,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setPointsEarned(earned);
 
     try {
-      const res = await recordGameMatch(game.id, game.title, result, opponentName);
+      const res = await recordGameMatch(game.id, game.title, result, opponentName, true);
       if (res.success) {
-        onPointsUpdated(earned, res.totalNoobPoints);
+        onPointsUpdated(earned, res.totalNoobPoints, result === 'win');
       }
     } catch (err) {
       console.error(err);
-      onPointsUpdated(earned, (currentUser.noobPoints || 0) + earned);
+      onPointsUpdated(earned, (currentUser.noobPoints || 0) + earned, result === 'win');
     } finally {
       setIsSubmitting(false);
       setCurrentMode('game_over');

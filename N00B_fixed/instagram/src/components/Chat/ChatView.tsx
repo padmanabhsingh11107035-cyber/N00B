@@ -274,6 +274,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onPlayGame, pen
       if (currentActiveId) {
         const latestMsgs = await fetchMessages(currentActiveId);
         setMessages((prev) => {
+          // A message send appends an optimistic `temp_`-id entry immediately,
+          // then swaps it for the real one once the POST resolves. If this
+          // poll's GET was already in flight when that happened, latestMsgs
+          // won't have the new message yet — never let it erase a send that's
+          // still pending its own optimistic-to-real swap.
+          const pendingLocal = prev.filter((m) => m.id.startsWith('temp_'));
+          if (pendingLocal.length > 0) {
+            return [...latestMsgs, ...pendingLocal];
+          }
           if (
             latestMsgs.length !== prev.length ||
             (latestMsgs.length > 0 && latestMsgs[latestMsgs.length - 1].id !== prev[prev.length - 1]?.id)

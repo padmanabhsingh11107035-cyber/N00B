@@ -49,6 +49,8 @@ export interface User {
   verificationTier?: 'standard' | 'plus' | 'premium' | 'max';
   proTier?: string;
   proBilling?: 'monthly' | 'yearly';
+  proAutoRenew?: boolean;
+  proRenewsAt?: string;
   followersCount: number;
   followingCount: number;
   postsCount: number;

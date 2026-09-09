@@ -309,7 +309,7 @@ export interface Message {
   text: string;
   translatedText?: string;
   mediaUrl?: string;
-  mediaType?: 'image' | 'video' | 'audio' | 'code' | 'game_invite';
+  mediaType?: 'image' | 'video' | 'audio' | 'code' | 'game_invite' | 'sticker';
   audioDuration?: string;
   createdAt: string;
   isEdited?: boolean;

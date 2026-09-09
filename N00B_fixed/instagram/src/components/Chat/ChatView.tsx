@@ -52,16 +52,52 @@ import { ChatConversation, Message, User } from '../../types';
 
 const EMOJI_CATEGORIES = [
   {
+    title: 'Smileys & Faces',
+    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪']
+  },
+  {
     title: 'Reactions & Hype',
-    emojis: ['🔥', '😂', '❤️', '😍', '👏', '🎉', '💯', '✨', '⚡', '😎', '🙌', '💀']
+    emojis: ['🔥', '❤️', '👏', '🎉', '💯', '✨', '⚡', '😎', '🙌', '💀', '😭', '🥹', '😳', '🤯', '😱', '🥵', '🥶', '😴', '🤢', '🤡', '👻', '💩', '🫠', '🫡']
+  },
+  {
+    title: 'Gestures & Hands',
+    emojis: ['👍', '👎', '👌', '🤌', '🤙', '👋', '🤝', '🙏', '💪', '✌️', '🤞', '🫶', '👊', '✊', '🤛', '🤜', '👉', '👈', '☝️', '👆', '👇', '✋', '🤚', '🖖']
+  },
+  {
+    title: 'Love & Hearts',
+    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '😻', '💑', '💏', '😽', '🥰']
   },
   {
     title: 'Gaming & Victory',
-    emojis: ['🎮', '🕹️', '👑', '🏆', '👾', '🎯', '🥇', '⚔️', '🛡️', '🎲', '🚀', '💣']
+    emojis: ['🎮', '🕹️', '👑', '🏆', '👾', '🎯', '🥇', '🥈', '🥉', '⚔️', '🛡️', '🎲', '🚀', '💣', '🃏', '🎰', '🧩', '🏅', '♟️', '🎳', '🕹️', '🎱', '🎮', '🏹']
   },
   {
-    title: 'Faces & Mood',
-    emojis: ['😀', '🤣', '🤩', '🥳', '🤔', '👀', '🤙', '💪', '🤝', '✌️', '🫡', '🤯']
+    title: 'Celebration & Party',
+    emojis: ['🎉', '🎊', '🥳', '🎈', '🎁', '🎂', '🍾', '🥂', '🎆', '🎇', '✨', '🪅', '🎀', '🏆', '🎗️', '🪩', '🎐', '🧨', '🎫', '🎟️', '🪄', '🎭', '🎪', '🎠']
+  },
+  {
+    title: 'Animals & Nature',
+    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🦄', '🐝', '🦋', '🐢', '🐍', '🦖']
+  },
+  {
+    title: 'Food & Drink',
+    emojis: ['🍏', '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍒', '🍑', '🍕', '🍔', '🍟', '🌭', '🍿', '🍩', '🍪', '🎂', '🍰', '🧁', '🍫', '🍬', '🍭', '☕']
+  },
+  {
+    title: 'Activities & Sports',
+    emojis: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🥊', '🥋', '⛳', '🏹', '🎣', '🤺', '🏄', '🏊', '🚴', '🧗', '🏆', '🥇', '🎽', '🛹']
+  },
+  {
+    title: 'Travel & Places',
+    emojis: ['✈️', '🚗', '🚕', '🚀', '🛸', '🚁', '⛵', '🚤', '🏝️', '🏔️', '🗽', '🗼', '🏰', '🎡', '🎢', '🌋', '🏕️', '🛣️', '🚦', '⛽', '🧳', '🗺️', '🚂', '🚢']
+  },
+  {
+    title: 'Objects & Tech',
+    emojis: ['💻', '📱', '⌚', '🎧', '📷', '🎥', '💡', '🔋', '🔌', '💾', '🖥️', '🖱️', '⌨️', '📺', '📡', '💰', '💎', '🔑', '🔒', '📌', '📎', '🔗', '🎁', '🧸']
+  },
+  {
+    title: 'Symbols & Weather',
+    emojis: ['✅', '❌', '⚠️', '❓', '❗', '💤', '💧', '☀️', '🌤️', '⛅', '🌧️', '⛈️', '🌈', '❄️', '☃️', '🌙', '⭐', '🌟', '💫', '☄️', '🌊', '🔥', '💥', '♻️']
   }
 ];
 
@@ -71,7 +107,18 @@ const CURATED_GIFS = [
   { id: 'g3', title: 'Mind Blown', url: 'https://i.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
   { id: 'g4', title: 'High Five', url: 'https://i.giphy.com/media/3oEjHV0z8S7WM4MwnK/giphy.gif' },
   { id: 'g5', title: 'Popcorn Time', url: 'https://i.giphy.com/media/gl0mkIZOW6Nwc/giphy.gif' },
-  { id: 'g6', title: 'Celebration Cheers', url: 'https://i.giphy.com/media/BPJmthQ3YRwD6QqcVD/giphy.gif' }
+  { id: 'g6', title: 'Celebration Cheers', url: 'https://i.giphy.com/media/BPJmthQ3YRwD6QqcVD/giphy.gif' },
+  { id: 'g7', title: 'Office Celebration', url: 'https://i.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif' },
+  { id: 'g8', title: 'Big Laugh', url: 'https://i.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif' },
+  { id: 'g9', title: 'Suspicious Look', url: 'https://i.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif' },
+  { id: 'g10', title: 'Congratulations', url: 'https://i.giphy.com/media/xT0xezQGU5xCDJuCPe/giphy.gif' },
+  { id: 'g11', title: 'Uh Oh', url: 'https://i.giphy.com/media/3o6Zt6ML6BklcajjsA/giphy.gif' },
+  { id: 'g12', title: 'Trophy Win', url: 'https://i.giphy.com/media/26u4cqiYI30juCOGY/giphy.gif' },
+  { id: 'g13', title: 'Whoo-Hoo!', url: 'https://i.giphy.com/media/xT5LMHxhOfscxPfIfm/giphy.gif' },
+  { id: 'g14', title: 'Brilliant!', url: 'https://i.giphy.com/media/26BRBKqUiq586bRVm/giphy.gif' },
+  { id: 'g15', title: 'Aw, Sad', url: 'https://i.giphy.com/media/l0HlBO7eyXzSZkJri/giphy.gif' },
+  { id: 'g16', title: 'Arcade Bots', url: 'https://i.giphy.com/media/xUPGcguWZHRC2HyBRS/giphy.gif' },
+  { id: 'g17', title: 'Cosmic Mind Blown', url: 'https://i.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif' }
 ];
 
 const CURATED_STICKERS = [
@@ -82,7 +129,39 @@ const CURATED_STICKERS = [
   { id: 's5', label: '100 Point', emoji: '💯' },
   { id: 's6', label: 'Rocket Win', emoji: '🚀' },
   { id: 's7', label: 'Bullseye', emoji: '🎯' },
-  { id: 's8', label: 'Champion', emoji: '⭐' }
+  { id: 's8', label: 'Champion', emoji: '⭐' },
+  { id: 's9', label: 'Big Laugh', emoji: '🤣' },
+  { id: 's10', label: 'Sending Love', emoji: '😍' },
+  { id: 's11', label: 'Heart', emoji: '❤️' },
+  { id: 's12', label: 'Clapping', emoji: '👏' },
+  { id: 's13', label: 'Thumbs Up', emoji: '👍' },
+  { id: 's14', label: 'Fist Bump', emoji: '👊' },
+  { id: 's15', label: 'Praying', emoji: '🙏' },
+  { id: 's16', label: 'Mind Blown', emoji: '🤯' },
+  { id: 's17', label: 'Cool Shades', emoji: '😎' },
+  { id: 's18', label: 'Party Popper', emoji: '🎉' },
+  { id: 's19', label: 'Birthday Cake', emoji: '🎂' },
+  { id: 's20', label: 'Balloons', emoji: '🎈' },
+  { id: 's21', label: 'Gift', emoji: '🎁' },
+  { id: 's22', label: 'Trophy', emoji: '🏆' },
+  { id: 's23', label: 'Medal', emoji: '🥇' },
+  { id: 's24', label: 'Skull', emoji: '💀' },
+  { id: 's25', label: 'Crying Laughing', emoji: '😂' },
+  { id: 's26', label: 'Sobbing', emoji: '😭' },
+  { id: 's27', label: 'Shocked', emoji: '😱' },
+  { id: 's28', label: 'Ghost', emoji: '👻' },
+  { id: 's29', label: 'Angry', emoji: '😡' },
+  { id: 's30', label: 'Sleepy', emoji: '😴' },
+  { id: 's31', label: 'Pizza Time', emoji: '🍕' },
+  { id: 's32', label: 'Cheers', emoji: '🥂' },
+  { id: 's33', label: 'Puppy', emoji: '🐶' },
+  { id: 's34', label: 'Kitty', emoji: '🐱' },
+  { id: 's35', label: 'Unicorn', emoji: '🦄' },
+  { id: 's36', label: 'Rainbow', emoji: '🌈' },
+  { id: 's37', label: 'Lightning', emoji: '⚡' },
+  { id: 's38', label: 'Sparkles', emoji: '✨' },
+  { id: 's39', label: 'Explosion', emoji: '💥' },
+  { id: 's40', label: 'Handshake', emoji: '🤝' }
 ];
 import {
   fetchChats,
@@ -575,7 +654,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  const handleSendSticker = async (stickerEmoji: string, label: string) => {
+  const handleSendSticker = async (stickerEmoji: string) => {
     if (!activeChat) return;
     setShowEmojiPicker(false);
     const optimisticMsg: Message = {
@@ -585,7 +664,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
       senderUsername: currentUser.username,
       senderDisplayName: currentUser.displayName,
       senderAvatar: currentUser.avatar,
-      text: `${stickerEmoji} ${label}`,
+      text: stickerEmoji,
+      mediaType: 'sticker',
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isEdited: false,
       status: 'delivered'
@@ -597,10 +677,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
         senderUsername: currentUser.username,
         senderDisplayName: currentUser.displayName,
         senderAvatar: currentUser.avatar,
-        text: `${stickerEmoji} ${label}`
+        text: stickerEmoji,
+        mediaType: 'sticker'
       });
       setMessages((prev) => {
-        const next = prev.map((m) => (m.id === optimisticMsg.id ? { ...response, status: 'delivered' } : m));
+        const next = prev.map((m) =>
+          m.id === optimisticMsg.id ? { ...response, mediaType: 'sticker', status: 'delivered' } : m
+        );
         localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
         return next;
       });
@@ -1372,6 +1455,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               const senderAvatar = m.senderAvatar || senderUser?.avatar || '/noob-logo.svg.jpeg';
               const senderName = m.senderDisplayName || senderUser?.displayName || m.senderUsername || senderUser?.username || 'NOOB Member';
               const senderVerified = !!(m.senderIsVerified || senderUser?.isVerified);
+              const isSticker = m.mediaType === 'sticker';
 
               return (
                 <div
@@ -1393,13 +1477,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   )}
 
                   <div
-                    className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-xs relative ${
-                      isMine
-                        ? 'text-white border shadow-md'
-                        : 'bg-zinc-900 text-zinc-200 border border-zinc-800'
-                    }`}
+                    className={
+                      isSticker
+                        ? 'max-w-[62%] relative'
+                        : `max-w-[82%] px-3.5 py-2.5 rounded-2xl text-xs relative ${
+                            isMine
+                              ? 'text-white border shadow-md'
+                              : 'bg-zinc-900 text-zinc-200 border border-zinc-800'
+                          }`
+                    }
                     style={
-                      isMine
+                      !isSticker && isMine
                         ? {
                             backgroundColor: `${activeChat?.themeColor || globalChatTheme || '#00FF66'}26`,
                             borderColor: activeChat?.themeColor || globalChatTheme || '#00FF66',
@@ -1516,6 +1604,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </button>
                         </div>
                       </div>
+                    ) : isSticker && m.text ? (
+                      <p className="text-7xl leading-none">{m.text}</p>
                     ) : m.text ? (
                       <p className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
                     ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite ? (
@@ -1700,7 +1790,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <button
                           key={stk.id}
                           type="button"
-                          onClick={() => handleSendSticker(stk.emoji, stk.label)}
+                          onClick={() => handleSendSticker(stk.emoji)}
                           className="flex flex-col items-center justify-center p-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-[#00FF66]/50 transition-all cursor-pointer group"
                         >
                           <span className="text-3xl group-hover:scale-110 transition-transform">

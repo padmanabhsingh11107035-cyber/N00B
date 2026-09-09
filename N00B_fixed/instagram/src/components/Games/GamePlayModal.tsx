@@ -18,7 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { MiniGameMeta } from './types';
-import { GameBannerArtwork } from './GameIcons';
+import { GamePosterCarousel } from './GamePosterCarousel';
 import { User } from '../../types';
 import { recordGameMatch, sendGameInvite } from '../../services/api';
 import confetti from 'canvas-confetti';
@@ -432,10 +432,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           {/* 1. SELECT MODE VIEW */}
           {currentMode === 'select_mode' && (
             <div className="space-y-4">
-              {/* Game Artwork Preview */}
-              <div className="rounded-2xl overflow-hidden border border-zinc-800 shadow-inner">
-                <GameBannerArtwork id={game.id} className="w-full h-32" />
-              </div>
+              {/* Game Artwork Preview: auto-advancing, swipeable poster carousel */}
+              <GamePosterCarousel game={game} />
 
               <div className="text-center px-2">
                 <p className="text-xs text-zinc-300">{game.description}</p>

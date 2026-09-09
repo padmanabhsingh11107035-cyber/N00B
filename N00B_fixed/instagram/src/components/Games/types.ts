@@ -673,5 +673,46 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     players: '1v1 Online',
     iconType: 'hand_spock',
     tags: ['Extended', 'Spock', 'Strategy']
+  },
+
+  // --- BOARD GAME CLASSICS ---
+  {
+    id: 'ludo_classic',
+    title: 'Ludo',
+    category: 'social',
+    description: 'Roll the dice, race your 4 tokens home, and send opponents back to start. 2-8 players, board adapts to your table size.',
+    bannerBg: 'from-[#7c2d12] to-[#1c0a03]',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    pointsReward: 100,
+    difficulty: 'Easy',
+    players: 'Solo / Friend',
+    iconType: 'ludo',
+    tags: ['Classic', 'Dice', '2-8 Players']
+  },
+  {
+    id: 'snakes_ladders',
+    title: 'Snakes & Ladders',
+    category: 'social',
+    description: 'Climb ladders, dodge snakes, and race to square 100 first. 2-8 players on one board.',
+    bannerBg: 'from-[#14532d] to-[#052e16]',
+    badgeColor: 'bg-green-500/20 text-green-300 border-green-500/30',
+    pointsReward: 100,
+    difficulty: 'Easy',
+    players: 'Solo / Friend',
+    iconType: 'snakes_ladders',
+    tags: ['Classic', 'Dice', '2-8 Players']
+  },
+  {
+    id: 'monopoly_noob',
+    title: 'Monopoly',
+    category: 'social',
+    description: 'Buy properties, collect rent, dodge bankruptcy. The classic property trading game, 2-4 players.',
+    bannerBg: 'from-[#1e3a8a] to-[#020617]',
+    badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    pointsReward: 100,
+    difficulty: 'Hard',
+    players: 'Solo / Friend',
+    iconType: 'monopoly',
+    tags: ['Classic', 'Strategy', '2-4 Players']
   }
 ];

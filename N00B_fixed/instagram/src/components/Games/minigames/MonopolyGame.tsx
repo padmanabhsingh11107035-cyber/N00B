@@ -1,0 +1,401 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Bot, User as UserIcon, Dices, Landmark } from 'lucide-react';
+
+interface MonopolyGameProps {
+  onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
+}
+
+const PLAYER_COLORS = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b'];
+const START_CASH = 1500;
+
+type SquareType = 'go' | 'property' | 'chance' | 'jail' | 'free_parking' | 'go_to_jail';
+interface Square {
+  type: SquareType;
+  name: string;
+  price?: number;
+  rent?: number;
+  color?: string;
+}
+
+// Simplified 20-square board (real Monopoly's 40, halved for a quick mobile match)
+const BOARD: Square[] = [
+  { type: 'go', name: 'GO' },
+  { type: 'property', name: 'Baltic Ave', price: 100, rent: 15, color: '#78350f' },
+  { type: 'property', name: 'Vermont Ave', price: 120, rent: 18, color: '#78350f' },
+  { type: 'chance', name: 'Chance' },
+  { type: 'property', name: 'Oriental Ave', price: 140, rent: 20, color: '#0ea5e9' },
+  { type: 'jail', name: 'Jail (Visiting)' },
+  { type: 'property', name: 'Vermont St', price: 160, rent: 22, color: '#0ea5e9' },
+  { type: 'property', name: 'Marvin Gdns', price: 180, rent: 26, color: '#a855f7' },
+  { type: 'chance', name: 'Chance' },
+  { type: 'property', name: 'Ventnor Ave', price: 200, rent: 30, color: '#a855f7' },
+  { type: 'free_parking', name: 'Free Parking' },
+  { type: 'property', name: 'Atlantic Ave', price: 220, rent: 34, color: '#f97316' },
+  { type: 'property', name: 'Illinois Ave', price: 240, rent: 38, color: '#f97316' },
+  { type: 'chance', name: 'Chance' },
+  { type: 'property', name: 'Kentucky Ave', price: 260, rent: 42, color: '#ef4444' },
+  { type: 'go_to_jail', name: 'Go To Jail' },
+  { type: 'property', name: 'Pacific Ave', price: 280, rent: 46, color: '#ef4444' },
+  { type: 'property', name: 'Park Place', price: 320, rent: 55, color: '#1d4ed8' },
+  { type: 'chance', name: 'Chance' },
+  { type: 'property', name: 'Boardwalk', price: 400, rent: 70, color: '#1d4ed8' }
+];
+
+const CHANCE_CARDS = [
+  { text: 'Bank error in your favor! Collect $50.', amount: 50 },
+  { text: 'You inherited $100.', amount: 100 },
+  { text: 'Pay a $40 speeding fine.', amount: -40 },
+  { text: 'School fees due. Pay $50.', amount: -50 },
+  { text: 'Your investment paid off! Collect $75.', amount: 75 },
+  { text: 'Pay for repairs: $60.', amount: -60 }
+];
+
+// Grid positions for the 20 squares around a hollow 6x6 grid
+const GRID_POS: [number, number][] = [
+  [5, 5], [5, 4], [5, 3], [5, 2], [5, 1], [5, 0],
+  [4, 0], [3, 0], [2, 0], [1, 0], [0, 0],
+  [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+  [1, 5], [2, 5], [3, 5], [4, 5]
+];
+
+export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver }) => {
+  const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
+  const [numPlayers, setNumPlayers] = useState(2);
+  const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(['human', 'bot']);
+  const [cash, setCash] = useState<number[]>([]);
+  const [positions, setPositions] = useState<number[]>([]);
+  const [owned, setOwned] = useState<Record<number, number>>({}); // squareIndex -> playerIndex
+  const [bankrupt, setBankrupt] = useState<boolean[]>([]);
+  const [inJail, setInJail] = useState<number[]>([]); // turns remaining in jail per player
+  const [currentPlayer, setCurrentPlayer] = useState(0);
+  const [diceValue, setDiceValue] = useState<number | null>(null);
+  const [isRolling, setIsRolling] = useState(false);
+  const [log, setLog] = useState('');
+  const [pendingBuy, setPendingBuy] = useState<number | null>(null);
+  const [winner, setWinner] = useState<number | null>(null);
+  const hasReported = useRef(false);
+
+  const updatePlayerCount = (n: number) => {
+    setNumPlayers(n);
+    setPlayerTypes((prev) => {
+      const next = [...prev];
+      while (next.length < n) next.push('bot');
+      return next.slice(0, n).map((t, i) => (i === 0 ? 'human' : t));
+    });
+  };
+
+  const startGame = () => {
+    setCash(Array(numPlayers).fill(START_CASH));
+    setPositions(Array(numPlayers).fill(0));
+    setOwned({});
+    setBankrupt(Array(numPlayers).fill(false));
+    setInJail(Array(numPlayers).fill(0));
+    setCurrentPlayer(0);
+    setWinner(null);
+    setLog('Player 1, roll the dice!');
+    hasReported.current = false;
+    setPhase('playing');
+  };
+
+  const nextActivePlayer = (from: number, bankruptArr: boolean[] = bankrupt) => {
+    let next = (from + 1) % numPlayers;
+    let guard = 0;
+    while (bankruptArr[next] && guard < numPlayers) {
+      next = (next + 1) % numPlayers;
+      guard++;
+    }
+    return next;
+  };
+
+  // Resolves bankruptcy/win from a resulting cash array, otherwise clears the
+  // dice and moves to the next player. Called explicitly at the end of every
+  // turn path (roll, buy, pass, jail) so the turn always advances — no reliance
+  // on a watcher effect keyed on state that may not change on a given turn.
+  const checkBankruptcyThenAdvance = (cashArr: number[]) => {
+    const newBankrupt = bankrupt.map((b, i) => b || cashArr[i] < 0);
+    setBankrupt(newBankrupt);
+    const activeCount = newBankrupt.filter((b) => !b).length;
+    if (activeCount <= 1) {
+      const lastStanding = newBankrupt.findIndex((b) => !b);
+      setWinner(lastStanding === -1 ? 0 : lastStanding);
+      return;
+    }
+    if (newBankrupt[0]) {
+      setWinner(nextActivePlayer(0, newBankrupt));
+      return;
+    }
+    setDiceValue(null);
+    setPendingBuy(null);
+    setCurrentPlayer((prev) => nextActivePlayer(prev, newBankrupt));
+  };
+
+  const applyLanding = (
+    playerIdx: number,
+    squareIdx: number,
+    currentCash: number[],
+    currentOwned: Record<number, number>
+  ) => {
+    const square = BOARD[squareIdx];
+    const nextCash = [...currentCash];
+    const nextOwned = { ...currentOwned };
+    let log = '';
+    let needsBuyDecision = false;
+    let jailOverride = false;
+
+    if (square.type === 'property') {
+      const ownerIdx = nextOwned[squareIdx];
+      if (ownerIdx === undefined) {
+        if (playerIdx === 0) {
+          needsBuyDecision = true;
+          log = `Landed on ${square.name} ($${square.price}) — buy it?`;
+        } else if (nextCash[playerIdx] - (square.price || 0) >= 100) {
+          nextOwned[squareIdx] = playerIdx;
+          nextCash[playerIdx] -= square.price || 0;
+          log = `Player ${playerIdx + 1} bought ${square.name}.`;
+        } else {
+          log = `Player ${playerIdx + 1} landed on ${square.name} but passed.`;
+        }
+      } else if (ownerIdx !== playerIdx) {
+        const rent = square.rent || 0;
+        nextCash[playerIdx] -= rent;
+        nextCash[ownerIdx] += rent;
+        log = `Player ${playerIdx + 1} paid $${rent} rent to Player ${ownerIdx + 1} for ${square.name}.`;
+      } else {
+        log = `Player ${playerIdx + 1} landed on their own property.`;
+      }
+    } else if (square.type === 'chance') {
+      const card = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+      nextCash[playerIdx] += card.amount;
+      log = `Player ${playerIdx + 1}: ${card.text}`;
+    } else if (square.type === 'go_to_jail') {
+      jailOverride = true;
+      log = `Player ${playerIdx + 1} was sent to jail!`;
+    } else if (square.type === 'go') {
+      log = `Player ${playerIdx + 1} landed on GO.`;
+    } else {
+      log = `Player ${playerIdx + 1} landed on ${square.name}.`;
+    }
+
+    return { cash: nextCash, owned: nextOwned, log, needsBuyDecision, jailOverride };
+  };
+
+  const rollDice = () => {
+    if (isRolling || winner !== null || pendingBuy !== null) return;
+
+    if (inJail[currentPlayer] > 0) {
+      const newInJail = [...inJail];
+      newInJail[currentPlayer] -= 1;
+      setInJail(newInJail);
+      setLog(`Player ${currentPlayer + 1} is in jail (${newInJail[currentPlayer]} turn(s) left).`);
+      setTimeout(() => checkBankruptcyThenAdvance(cash), 800);
+      return;
+    }
+
+    setIsRolling(true);
+    setTimeout(() => {
+      const roll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
+      setDiceValue(roll);
+
+      const newPos = (positions[currentPlayer] + roll) % BOARD.length;
+      const passedGo = newPos < positions[currentPlayer];
+      const cashAfterGo = [...cash];
+      if (passedGo) cashAfterGo[currentPlayer] += 200;
+
+      const newPositions = [...positions];
+      newPositions[currentPlayer] = newPos;
+
+      const result = applyLanding(currentPlayer, newPos, cashAfterGo, owned);
+
+      let finalPositions = newPositions;
+      let finalInJail = inJail;
+      if (result.jailOverride) {
+        finalPositions = [...newPositions];
+        finalPositions[currentPlayer] = 5;
+        finalInJail = [...inJail];
+        finalInJail[currentPlayer] = 2;
+      }
+
+      setPositions(finalPositions);
+      setCash(result.cash);
+      setOwned(result.owned);
+      setInJail(finalInJail);
+      setLog(result.log);
+      setIsRolling(false);
+
+      if (result.needsBuyDecision) {
+        setPendingBuy(newPos);
+        return;
+      }
+      setTimeout(() => checkBankruptcyThenAdvance(result.cash), 900);
+    }, 500);
+  };
+
+  useEffect(() => {
+    if (playerTypes[currentPlayer] === 'bot' && diceValue === null && !isRolling && winner === null && phase === 'playing') {
+      const timer = setTimeout(() => rollDice(), 700);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPlayer, phase, winner]);
+
+  useEffect(() => {
+    if (winner !== null && !hasReported.current) {
+      hasReported.current = true;
+      const userWon = winner === 0;
+      setTimeout(() => onGameOver(userWon ? 'win' : 'loss', userWon ? 100 : 0), 1200);
+    }
+  }, [winner, onGameOver]);
+
+  const buyCurrentProperty = () => {
+    if (pendingBuy === null) return;
+    const square = BOARD[pendingBuy];
+    const newCash = [...cash];
+    newCash[0] -= square.price || 0;
+    setCash(newCash);
+    setOwned((o) => ({ ...o, [pendingBuy]: 0 }));
+    setLog(`You bought ${square.name}!`);
+    setTimeout(() => checkBankruptcyThenAdvance(newCash), 400);
+  };
+
+  const skipBuy = () => {
+    setLog(`You passed on ${BOARD[pendingBuy!].name}.`);
+    setTimeout(() => checkBankruptcyThenAdvance(cash), 400);
+  };
+
+  if (phase === 'setup') {
+    return (
+      <div className="w-full flex flex-col items-center gap-4 p-3">
+        <span className="text-xs font-black text-white uppercase tracking-wider">How many players?</span>
+        <div className="flex items-center gap-2 justify-center">
+          {[2, 3, 4].map((n) => (
+            <button
+              key={n}
+              onClick={() => updatePlayerCount(n)}
+              className={`w-9 h-9 rounded-xl font-bold text-sm cursor-pointer transition-all ${
+                numPlayers === n ? 'bg-[#00FF66] text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className="w-full space-y-1.5">
+          {playerTypes.map((type, i) => (
+            <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800">
+              <span className="text-xs font-bold flex items-center gap-1.5" style={{ color: PLAYER_COLORS[i] }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PLAYER_COLORS[i] }} />
+                {i === 0 ? 'You' : `Player ${i + 1}`}
+              </span>
+              {i === 0 ? (
+                <span className="text-[10px] text-zinc-500 font-semibold">Human</span>
+              ) : (
+                <button
+                  onClick={() =>
+                    setPlayerTypes((prev) => prev.map((t, idx) => (idx === i ? (t === 'bot' ? 'human' : 'bot') : t)))
+                  }
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 hover:bg-zinc-700 cursor-pointer flex items-center gap-1"
+                >
+                  {type === 'bot' ? <Bot className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
+                  {type === 'bot' ? 'Bot' : 'Pass & Play'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-zinc-500 text-center leading-relaxed">
+          Simplified rules: 20-square board, no trading/houses/mortgages. Buy properties, collect rent, avoid bankruptcy.
+        </p>
+        <button
+          onClick={startGame}
+          className="w-full py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer hover:bg-[#00FF66]/90"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full flex flex-col items-center gap-3 p-2">
+      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+        {cash.map((c, i) => (
+          <div
+            key={i}
+            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border ${
+              currentPlayer === i && winner === null ? 'border-white' : 'border-transparent opacity-60'
+            } ${bankrupt[i] ? 'line-through opacity-30' : ''}`}
+            style={{ backgroundColor: `${PLAYER_COLORS[i]}22`, color: PLAYER_COLORS[i] }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PLAYER_COLORS[i] }} />
+            {i === 0 ? 'You' : `P${i + 1}`}: ${c}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-6 grid-rows-6 gap-0.5 w-full max-w-[320px] aspect-square bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+        {Array.from({ length: 36 }).map((_, cellIdx) => {
+          const row = Math.floor(cellIdx / 6);
+          const col = cellIdx % 6;
+          const boardIdx = GRID_POS.findIndex(([r, c]) => r === row && c === col);
+          if (boardIdx === -1) {
+            return cellIdx === 14 ? (
+              <div key={cellIdx} className="col-span-1 row-span-1 flex items-center justify-center">
+                <Landmark className="w-5 h-5 text-zinc-700" />
+              </div>
+            ) : (
+              <div key={cellIdx} />
+            );
+          }
+          const square = BOARD[boardIdx];
+          const ownerIdx = owned[boardIdx];
+          const tokensHere = positions.map((p, i) => (p === boardIdx ? i : -1)).filter((i) => i !== -1);
+          return (
+            <div
+              key={cellIdx}
+              className="relative flex flex-col items-center justify-center text-[5px] font-bold rounded-sm p-0.5 text-center leading-none"
+              style={{
+                backgroundColor: ownerIdx !== undefined ? `${PLAYER_COLORS[ownerIdx]}33` : square.color ? `${square.color}33` : '#27272a'
+              }}
+            >
+              <span className="text-zinc-300 line-clamp-2">{square.name}</span>
+              {square.price && <span className="text-zinc-500">${square.price}</span>}
+              {tokensHere.length > 0 && (
+                <div className="absolute -bottom-0.5 flex gap-0.5">
+                  {tokensHere.map((i) => (
+                    <span key={i} className="w-1.5 h-1.5 rounded-full border border-black" style={{ backgroundColor: PLAYER_COLORS[i] }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
+
+      {winner !== null ? (
+        <p className="text-sm font-black text-white animate-bounce">
+          {winner === 0 ? '🎉 You Win!' : `Player ${winner + 1} Wins!`}
+        </p>
+      ) : pendingBuy !== null ? (
+        <div className="flex gap-2">
+          <button onClick={buyCurrentProperty} className="px-4 py-2 rounded-xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer">
+            Buy ${BOARD[pendingBuy].price}
+          </button>
+          <button onClick={skipBuy} className="px-4 py-2 rounded-xl bg-zinc-800 text-white font-bold text-xs cursor-pointer">
+            Pass
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={rollDice}
+          disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
+          className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <Dices className="w-4 h-4" />
+          {playerTypes[currentPlayer] === 'bot' ? `Player ${currentPlayer + 1} is rolling...` : diceValue !== null ? `Rolled ${diceValue}` : 'Roll Dice'}
+        </button>
+      )}
+    </div>
+  );
+};

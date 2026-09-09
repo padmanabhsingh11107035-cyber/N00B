@@ -211,6 +211,62 @@ function DrawingInside() {
   );
 }
 
+function LudoInside() {
+  const colors = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b'];
+  return (
+    <div className={`${cardBase} bg-gradient-to-br from-orange-800 to-zinc-950`}>
+      <div className="relative w-24 h-24 rounded-full border-2 border-zinc-700 bg-black/30">
+        {colors.map((c, i) => {
+          const angle = (i / 4) * 2 * Math.PI - Math.PI / 2;
+          const x = 48 + 40 * Math.cos(angle);
+          const y = 48 + 40 * Math.sin(angle);
+          return <span key={i} className="absolute w-3 h-3 rounded-full" style={{ left: x, top: y, backgroundColor: c }} />;
+        })}
+        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-white">HOME</span>
+      </div>
+      <span className="text-[9px] font-black text-orange-300 uppercase tracking-wider">Inside the Game</span>
+    </div>
+  );
+}
+
+function SnakesLaddersInside() {
+  return (
+    <div className={`${cardBase} bg-gradient-to-br from-green-800 to-zinc-950`}>
+      <div className="grid grid-cols-6 gap-1 p-2 bg-black/40 rounded-xl border border-green-500/30">
+        {Array.from({ length: 18 }).map((_, i) => (
+          <div
+            key={i}
+            className={`w-3.5 h-3.5 rounded-sm flex items-center justify-center text-[6px] ${
+              i === 4 ? 'bg-rose-600' : i === 9 ? 'bg-emerald-500' : 'bg-zinc-700'
+            }`}
+          >
+            {i === 4 ? '🐍' : i === 9 ? '🪜' : ''}
+          </div>
+        ))}
+      </div>
+      <span className="text-[9px] font-black text-green-300 uppercase tracking-wider">Inside the Game</span>
+    </div>
+  );
+}
+
+function MonopolyInside() {
+  return (
+    <div className={`${cardBase} bg-gradient-to-br from-blue-900 to-zinc-950`}>
+      <div className="flex items-center gap-1.5">
+        <div className="w-12 h-9 rounded-md bg-red-800/60 border border-red-500/40 flex flex-col items-center justify-center">
+          <span className="text-[6px] text-white font-bold">Boardwalk</span>
+          <span className="text-[7px] text-amber-300 font-black">$400</span>
+        </div>
+        <div className="w-12 h-9 rounded-md bg-blue-800/60 border border-blue-500/40 flex flex-col items-center justify-center">
+          <span className="text-[6px] text-white font-bold">Park Place</span>
+          <span className="text-[7px] text-amber-300 font-black">$320</span>
+        </div>
+      </div>
+      <span className="text-[9px] font-black text-blue-300 uppercase tracking-wider">Inside the Game</span>
+    </div>
+  );
+}
+
 function GenericInside({ game }: { game: MiniGameMeta }) {
   return (
     <div className={`${cardBase} ${game.bannerBg}`}>
@@ -249,5 +305,8 @@ export function renderInsideGamePreview(game: MiniGameMeta): React.ReactNode {
   if (id === 'color_rush' || id === 'bubble_blitz' || id === 'laser_matrix') return <ColorInside />;
   if (id === 'word_guess' || id === 'wordle' || id === 'code_breaker') return <WordInside />;
   if (id === 'scribble_art' || id === 'doodle_rush') return <DrawingInside />;
+  if (id === 'ludo_classic') return <LudoInside />;
+  if (id === 'snakes_ladders') return <SnakesLaddersInside />;
+  if (id === 'monopoly_noob') return <MonopolyInside />;
   return <GenericInside game={game} />;
 }

@@ -37,6 +37,9 @@ import { WordleGuessGame } from './minigames/WordleGuessGame';
 import { GenericArcadeGame } from './minigames/GenericArcadeGame';
 import { ScribbleGame } from './minigames/ScribbleGame';
 import { ChessGame } from './minigames/ChessGame';
+import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
+import { LudoGame } from './minigames/LudoGame';
+import { MonopolyGame } from './minigames/MonopolyGame';
 
 interface GamePlayModalProps {
   game: MiniGameMeta;
@@ -786,6 +789,12 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} />
               )}
 
+              {game.id === 'snakes_ladders' && <SnakesAndLaddersGame onGameOver={handleGameOver} />}
+
+              {game.id === 'ludo_classic' && <LudoGame onGameOver={handleGameOver} />}
+
+              {game.id === 'monopoly_noob' && <MonopolyGame onGameOver={handleGameOver} />}
+
               {(game.id === 'rps' || game.id === 'rps_extreme') && (
                 <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} />
               )}
@@ -827,6 +836,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'cyber_snake', 'snake', 'pac_grid',
                 'tictactoe',
                 'chess_blitz',
+                'snakes_ladders',
+                'ludo_classic',
+                'monopoly_noob',
                 'rps', 'rps_extreme',
                 'speed_math', 'mental_calc', 'trivia_quest',
                 'memory_match', 'emoji_match', 'cyber_memory',

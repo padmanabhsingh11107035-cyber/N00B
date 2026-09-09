@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Trophy, Sparkles, Target, Crown } from 'lucide-react';
+import { Trophy, Sparkles, Target, Crown, Radio } from 'lucide-react';
 import { MiniGameMeta } from './types';
 import { GameBannerArtwork } from './GameIcons';
+import { renderInsideGamePreview } from './GameInsidePreviews';
 
 interface GamePosterCarouselProps {
   game: MiniGameMeta;
@@ -49,6 +50,19 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
       <div className="flex items-center gap-1.5 mt-1 text-[9px] font-bold text-zinc-300">
         <Sparkles className="w-3 h-3" />
         <span>{game.difficulty} difficulty • {game.players}</span>
+      </div>
+    </div>,
+
+    // Slide 4: a peek at the actual game board/UI, matching the real engine
+    <div key="inside" className="relative">
+      {renderInsideGamePreview(game)}
+    </div>,
+
+    // Slide 5: the game's art again, framed as "live action" for variety
+    <div key="live" className="relative">
+      <GameBannerArtwork id={game.id} className="w-full h-40" />
+      <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-600 border border-rose-300 text-[9px] font-black text-white z-30 animate-pulse">
+        <Radio className="w-2.5 h-2.5" /> LIVE
       </div>
     </div>
   ];

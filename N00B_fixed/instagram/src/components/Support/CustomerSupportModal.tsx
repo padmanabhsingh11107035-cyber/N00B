@@ -729,7 +729,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         <header className="p-4 sm:p-5 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-11 h-11 rounded-2xl overflow-hidden shadow-lg shadow-[#00FF66]/20">
+              <div className="w-11 h-11 rounded-2xl overflow-hidden">
                 <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#00FF66] border-2 border-black rounded-full animate-pulse" />
@@ -983,7 +983,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   >
                     {m.sender === 'bot' ? (
                       <div className="relative shrink-0">
-                        <div className="w-8 h-8 rounded-2xl overflow-hidden shadow-md shadow-[#00FF66]/20">
+                        <div className="w-8 h-8 rounded-2xl overflow-hidden">
                           <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
                         </div>
                         {currentlySpeakingMsgId === m.id && (
@@ -1455,8 +1455,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
           <div className="flex-1 flex flex-col items-center justify-center max-w-2xl w-full mx-auto my-auto space-y-4 px-2 min-h-0">
             {/* Center Avatar with dynamic pulse ripples */}
             <div className="relative my-2">
-              <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden shadow-2xl transition-transform ${
-                isSpeaking || isListening ? 'scale-105 shadow-cyan-500/40' : 'scale-100 shadow-cyan-500/10'
+              <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden transition-transform ${
+                isSpeaking || isListening ? 'scale-105' : 'scale-100'
               }`}>
                 <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
               </div>

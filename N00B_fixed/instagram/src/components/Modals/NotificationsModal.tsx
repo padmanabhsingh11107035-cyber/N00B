@@ -294,7 +294,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
                           <div className="text-xs text-zinc-300 leading-relaxed">
                             <span className="font-bold text-white hover:text-[#00FF66] transition-colors cursor-pointer mr-1">
-                              @{notif.senderUsername || notif.actorUsername}
+                              {notif.senderDisplayName || notif.actorDisplayName || notif.senderUsername || notif.actorUsername}
                             </span>
                             <span>{notif.message || notif.text}</span>
                           </div>

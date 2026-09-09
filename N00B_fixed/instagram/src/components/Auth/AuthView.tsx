@@ -165,8 +165,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   // Sign up form state
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('🇮🇳 India (+91)'); // Default India with number, name & flag
   const [mobileNumber, setMobileNumber] = useState('');
@@ -197,28 +196,43 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     setUserCaptchaInput('');
   };
 
-  // Generate dynamic smart User ID suggestions ONLY after the user enters their name
+  // Bumped by the "Shuffle" button to force fresh random suggestions without
+  // requiring the name to change.
+  const [suggestionSeed, setSuggestionSeed] = useState(0);
+
+  // Generate varied, partly-randomized User ID suggestions from the entered
+  // name — a mix of plain, underscored, and alphanumeric styles — regenerated
+  // either when the name changes or the user asks for a fresh batch.
   const dynamicSuggestions = useMemo(() => {
-    const cleanFirst = firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const cleanLast = lastName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    if (!cleanFirst || cleanFirst.length < 2) {
+    const words = fullName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(Boolean);
+    const first = words[0] || '';
+    const rest = words.slice(1).join('');
+
+    if (!first || first.length < 2) {
       return [];
     }
 
-    const rand1 = Math.floor(10 + Math.random() * 89);
-    const rand2 = Math.floor(100 + Math.random() * 899);
+    const rand = (min: number, max: number) => Math.floor(min + Math.random() * (max - min + 1));
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    const randomLetters = (n: number) => Array.from({ length: n }, () => letters[rand(0, 25)]).join('');
 
-    const list = [
-      `${cleanFirst}_noob`,
-      cleanLast ? `${cleanFirst}_${cleanLast}` : `${cleanFirst}_vibe`,
-      `${cleanFirst}${rand1}`,
-      cleanLast ? `${cleanFirst}.${cleanLast}` : `${cleanFirst}_x_${rand1}`,
-      `the_${cleanFirst}_${rand2}`
+    const candidates = [
+      `${first}${rand(10, 99)}`,
+      `${first}_${rand(100, 999)}`,
+      rest ? `${first}.${rest}` : `${first}_noob`,
+      rest ? `${first}${rest[0]}${rand(10, 99)}` : `${first}${randomLetters(2)}${rand(1, 9)}`,
+      `the_${first}${rand(1, 999)}`,
+      rest ? `${first[0]}${rest}${rand(1, 99)}` : `real_${first}${rand(100, 999)}`
     ];
 
-    return Array.from(new Set(list));
-  }, [firstName, lastName]);
+    return Array.from(new Set(candidates)).slice(0, 6);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullName, suggestionSeed]);
 
   // File upload ref for custom image
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -259,8 +273,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       return;
     }
 
-    if (!firstName.trim()) {
-      setErrorMessage('Please enter your First Name.');
+    if (!fullName.trim()) {
+      setErrorMessage('Please enter your name.');
       return;
     }
     if (!email.trim()) {
@@ -299,9 +313,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       setLoading(true);
       const avatarUrl = customAvatarUrl.trim() || selectedAvatar;
       const res = await signupUser({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        displayName: lastName.trim() ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim(),
+        firstName: fullName.trim(),
+        displayName: fullName.trim(),
         username: cleanUsername,
         email: email.trim(),
         countryCode,
@@ -367,8 +380,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const handleQuickDemo = (type: AccountType) => {
     const randomNum = Math.floor(100 + Math.random() * 900);
     const uname = type === 'business' ? `noob_brand_${randomNum}` : type === 'private' ? `secret_vibe_${randomNum}` : `cool_noob_${randomNum}`;
-    setFirstName(type === 'business' ? 'Apex' : type === 'private' ? 'Rohan' : 'Aarav');
-    setLastName(type === 'business' ? 'Studio' : type === 'private' ? 'Sharma' : 'Verma');
+    setFullName(type === 'business' ? 'Apex Studio' : type === 'private' ? 'Rohan Sharma' : 'Aarav Verma');
     setEmail(`${uname}@noob.social`);
     setUserId(uname);
     setCountryCode('🇮🇳 India (+91)');
@@ -561,37 +573,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 autoComplete="off"
               />
 
-              {/* Row 1: First Name & Last Name (Optional) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">
-                    First Name <span className="text-cyan-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="e.g. Aarav"
-                    className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-zinc-300">
-                      Last Name
-                    </label>
-                    <span className="text-[10px] text-zinc-500 font-medium">Optional</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="e.g. Sharma (optional)"
-                    className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
-                  />
-                </div>
+              {/* Row 1: Name */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">
+                  Name <span className="text-cyan-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Aarav Verma"
+                  className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                />
               </div>
 
               {/* Dynamic User ID suggestions - ONLY AFTER user enters name */}
@@ -600,9 +594,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-cyan-300 font-bold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin-slow" />
-                      Suggested User IDs for {firstName}:
+                      Suggested User IDs:
                     </span>
-                    <span className="text-[10px] text-zinc-400">Tap to select</span>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestionSeed((s) => s + 1)}
+                      className="text-[10px] text-cyan-300 hover:text-cyan-200 font-bold cursor-pointer flex items-center gap-1"
+                    >
+                      🔀 Shuffle
+                    </button>
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {dynamicSuggestions.map((suggestedId) => (

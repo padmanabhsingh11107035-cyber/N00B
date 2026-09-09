@@ -38,7 +38,7 @@ export async function fetchHealth(): Promise<{ status: string; usersCount?: numb
 // --- AUTHENTICATION API ---
 export async function signupUser(payload: {
   firstName: string;
-  lastName: string;
+  lastName?: string;
   username: string;
   displayName?: string;
   email: string;

@@ -116,6 +116,7 @@ async function startServer() {
       id: 'notif_welcome',
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
+      senderDisplayName: 'NOOB',
       senderAvatar: '/noob-logo.svg.jpeg',
       senderIsVerified: true,
       targetUserId: 'all',
@@ -484,10 +485,7 @@ async function startServer() {
     } = req.body;
 
     if (!firstName || !firstName.trim()) {
-      return res.status(400).json({ error: 'First Name is required' });
-    }
-    if (!lastName || !lastName.trim()) {
-      return res.status(400).json({ error: 'Last Name is required' });
+      return res.status(400).json({ error: 'Please enter your name' });
     }
     if (!email || !email.trim()) {
       return res.status(400).json({ error: 'Email address is required' });
@@ -515,7 +513,8 @@ async function startServer() {
       return res.status(409).json({ error: 'User ID is already taken. Please choose another.' });
     }
 
-    const computedDisplayName = displayName?.trim() || `${firstName.trim()} ${lastName.trim()}`;
+    const computedDisplayName =
+      displayName?.trim() || (lastName?.trim() ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim());
     const chosenAccountType: 'public' | 'private' | 'business' =
       accountType === 'private' || accountType === 'business' ? accountType : 'public';
 
@@ -531,7 +530,7 @@ async function startServer() {
       id: `u_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       username: cleanUsername,
       firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      lastName: (lastName || '').trim(),
       displayName: computedDisplayName,
       email: email.trim().toLowerCase(),
       countryCode: countryCode || '+91 (IN)',
@@ -2727,6 +2726,7 @@ COMPLETE PLATFORM CAPABILITIES:
       id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
+      senderDisplayName: 'NOOB',
       senderAvatar: '/noob-logo.svg.jpeg',
       senderIsVerified: true,
       targetUserId: target.id,
@@ -2776,6 +2776,7 @@ COMPLETE PLATFORM CAPABILITIES:
       id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
+      senderDisplayName: 'NOOB',
       senderAvatar: '/noob-logo.svg.jpeg',
       senderIsVerified: true,
       targetUserId,

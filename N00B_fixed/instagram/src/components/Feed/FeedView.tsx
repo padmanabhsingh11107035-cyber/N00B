@@ -218,47 +218,46 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       </div>
       {/* 1. Minimalist Top Header */}
-      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-sm">
-        {/* Brand Wordmark & Feed Switcher */}
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex items-center gap-1 cursor-pointer select-none shrink-0">
-            <h1 className="text-lg font-black italic tracking-tighter text-white">
-              NOOB
-            </h1>
-          </div>
+      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-sm relative">
+        {/* Brand Wordmark */}
+        <div className="flex items-center gap-1 cursor-pointer select-none shrink-0">
+          <h1 className="text-lg font-black italic tracking-tighter text-white">
+            NOOB
+          </h1>
+        </div>
 
-          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] shrink-0">
-            <button
-              onClick={() => setActiveFeedFilter('foryou')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
-                activeFeedFilter === 'foryou'
-                  ? 'bg-rose-600 text-white shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              For You
-            </button>
-            <button
-              onClick={() => setActiveFeedFilter('following')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
-                activeFeedFilter === 'following'
-                  ? 'bg-rose-600 text-white shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Following
-            </button>
-            <button
-              onClick={() => setActiveFeedFilter('favorites')}
-              className={`px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer hidden sm:inline ${
-                activeFeedFilter === 'favorites'
-                  ? 'bg-rose-600 text-white shadow-sm font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Starred
-            </button>
-          </div>
+        {/* Feed Switcher — centered in the header regardless of the logo/icons widths on either side */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] shrink-0">
+          <button
+            onClick={() => setActiveFeedFilter('foryou')}
+            className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+              activeFeedFilter === 'foryou'
+                ? 'bg-rose-600 text-white shadow-sm font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            For You
+          </button>
+          <button
+            onClick={() => setActiveFeedFilter('following')}
+            className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+              activeFeedFilter === 'following'
+                ? 'bg-rose-600 text-white shadow-sm font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            Following
+          </button>
+          <button
+            onClick={() => setActiveFeedFilter('favorites')}
+            className={`px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer hidden sm:inline ${
+              activeFeedFilter === 'favorites'
+                ? 'bg-rose-600 text-white shadow-sm font-bold'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            Starred
+          </button>
         </div>
 
         {/* Action Icons (Notification Bar, Refresh, Chat) */}

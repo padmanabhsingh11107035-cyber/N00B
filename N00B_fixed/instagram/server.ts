@@ -438,7 +438,8 @@ async function startServer() {
       serverTime: new Date().toISOString(),
       usersCount: users.length,
       b2Storage: getB2Client().isConfigured ? 'connected' : 'ready',
-      mongoStorage: getDbStatusLabel()
+      mongoStorage: getDbStatusLabel(),
+      aiService: process.env.GEMINI_API_KEY ? (getAIClient() ? 'configured' : 'init failed') : 'missing GEMINI_API_KEY'
     });
   });
 

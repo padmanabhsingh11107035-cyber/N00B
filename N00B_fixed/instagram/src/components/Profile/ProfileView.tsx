@@ -47,7 +47,8 @@ import {
   UserPlus,
   UserCheck,
   MessageSquare,
-  X
+  X,
+  Calculator as CalculatorIcon
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
 import {
@@ -77,6 +78,7 @@ import { AdminControlModal } from '../Modals/AdminControlModal';
 import { AccountsStatisticsModal } from './AccountsStatisticsModal';
 import { ProFeaturesModal } from './ProFeaturesModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
+import { CalculatorPage } from './CalculatorPage';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -183,6 +185,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showAccountsStatisticsModal, setShowAccountsStatisticsModal] = useState(false);
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
+  const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
@@ -591,6 +594,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         NOOB Points, transactions &amp; badges
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option: Calculator */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowCalculatorPage(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <CalculatorIcon className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-emerald-400 transition-colors">
+                        Calculator
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        A quick, distraction-free calculator
                       </span>
                     </div>
                   </button>
@@ -1543,6 +1567,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onUserUpdated={onUserUpdated}
         />
       )}
+
+      {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
 
       {/* 9. Settings & Privacy Master Modal */}
       {showSettingsModal && (

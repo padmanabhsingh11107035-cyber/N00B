@@ -699,15 +699,15 @@ export default function App() {
 
             <button
               onClick={() => setShowCustomerSupportModal(true)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold text-white bg-gradient-to-r from-violet-900/50 via-indigo-900/50 to-cyan-900/40 border border-indigo-500/30 hover:border-cyan-400/60 shadow-lg shadow-indigo-500/10 transition-all cursor-pointer group"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer group"
             >
               <div className="flex items-center gap-3.5">
                 <img
                   src="/noob-support-logo.png"
                   alt=""
-                  className="w-5 h-5 rounded-full object-cover group-hover:rotate-12 transition-transform"
+                  className="w-5 h-5 object-contain group-hover:rotate-12 transition-transform"
                 />
-                <span className="bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent">AI Customer Support</span>
+                <span>AI Customer Support</span>
               </div>
               <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
             </button>
@@ -974,18 +974,15 @@ export default function App() {
       {activeTab !== 'chat' && (
         <button
           onClick={() => setShowCustomerSupportModal(true)}
-          className="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 p-3.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-400 hover:scale-105 text-white font-black text-xs shadow-[0_0_25px_rgba(99,102,241,0.5)] border border-white/20 transition-all cursor-pointer flex items-center gap-2 group"
+          className="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-14 h-14 hover:scale-105 transition-all cursor-pointer group"
           title="Open NOOB AI Assistant"
         >
-          <div className="relative">
-            <img
-              src="/noob-support-logo.png"
-              alt=""
-              className="w-6 h-6 rounded-full object-cover group-hover:rotate-12 transition-transform"
-            />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#00FF66] rounded-full ring-2 ring-black animate-pulse" />
-          </div>
-          <span className="hidden sm:inline font-bold tracking-wide">NOOB AI Support</span>
+          <img
+            src="/noob-support-logo.png"
+            alt="NOOB AI Support"
+            className="w-full h-full object-contain group-hover:rotate-12 transition-transform drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+          />
+          <span className="absolute top-0 right-0 w-3 h-3 bg-[#00FF66] rounded-full ring-2 ring-black animate-pulse" />
         </button>
       )}
 

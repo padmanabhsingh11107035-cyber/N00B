@@ -624,7 +624,7 @@ export async function addPostToCollection(collectionId: string, postId: string) 
 // Media Upload via Backblaze B2 (S3-compatible) with invisible client-side compression
 export async function uploadMediaFile(
   file: File,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'gifs' = 'posts'
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' = 'posts'
 ): Promise<{ success: boolean; objectKey: string; url: string }> {
   // Invisibly compress images/videos to reduce latency and bandwidth
   const optimizedFile = await compressMedia(file);
@@ -785,38 +785,44 @@ export async function redeemCouponCode(code: string): Promise<{ success: boolean
   return { success: res.ok && data.success, coupon: data.coupon, error: data.error };
 }
 
-// --- Personal GIF Gallery (Chat > GIFs > My GIFs) ---
-// Every read/write here is scoped server-side to the logged-in user; no
-// other account can ever see or use GIFs uploaded to someone else's gallery.
+// --- Personal Sticker Gallery (Chat > Stickers > My Stickers) ---
+// Turns any photo into a sticker. Every read/write here is scoped
+// server-side to the logged-in user; no other account can ever see or use
+// stickers made from someone else's gallery.
 
-export interface MyGif {
+export interface MyCustomSticker {
   id: string;
   title: string;
   url: string;
 }
 
-export async function fetchMyGifs(): Promise<MyGif[]> {
-  const res = await fetch(`${API_BASE}/gifs`, { headers: getAuthHeaders() });
+export async function fetchMyStickers(): Promise<MyCustomSticker[]> {
+  const res = await fetch(`${API_BASE}/stickers`, { headers: getAuthHeaders() });
   const data = await res.json();
-  return data.gifs || [];
+  return data.stickers || [];
 }
 
-export async function uploadCustomGif(file: File, title?: string): Promise<{ success: boolean; error?: string }> {
-  const uploadResult = await uploadMediaFile(file, 'gifs');
+export async function uploadCustomSticker(file: File, title?: string): Promise<{ success: boolean; error?: string }> {
+  const uploadResult = await uploadMediaFile(file, 'stickers');
   if (!uploadResult.success) {
-    return { success: false, error: 'Failed to upload GIF.' };
+    return { success: false, error: 'Failed to upload sticker.' };
   }
-  const res = await fetch(`${API_BASE}/gifs`, {
+  // Without B2 credentials configured (e.g. local dev), uploadMediaFile falls back
+  // to a data: URI that only exists in this one response — store that directly
+  // instead of a short object key that would resolve to nothing on the next
+  // fetch. signMediaKey already passes a data: URI through unchanged either way.
+  const reference = uploadResult.url?.startsWith('data:') ? uploadResult.url : uploadResult.objectKey;
+  const res = await fetch(`${API_BASE}/stickers`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: safeJsonStringify({ objectKey: uploadResult.objectKey, title })
+    body: safeJsonStringify({ objectKey: reference, title })
   });
   const data = await res.json();
   return { success: res.ok && data.success, error: data.error };
 }
 
-export async function deleteCustomGif(id: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${API_BASE}/gifs/${id}`, {
+export async function deleteCustomSticker(id: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/stickers/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
   });

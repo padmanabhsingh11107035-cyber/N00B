@@ -181,10 +181,10 @@ async function startServer() {
   // either global (targetUsername unset) or aimed at one specific user, and
   // is visible in that user's Wallet > My Coupons page immediately.
   let coupons: any[] = [];
-  // Custom GIFs a user has uploaded to their own personal GIF gallery in
-  // chat — strictly private: only ever returned to the uploader, never to
-  // any other user (see GET /api/gifs).
-  let customGifs: any[] = [];
+  // Custom stickers a user has made from their own photos for their personal
+  // sticker gallery in chat — strictly private: only ever returned to the
+  // uploader, never to any other user (see GET /api/stickers).
+  let customStickers: any[] = [];
 
   // Initial community music tracks (featuring Dhurandhar movie soundtrack)
   let musicTracks: any[] = [
@@ -297,7 +297,7 @@ async function startServer() {
     'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
     'notifications', 'chats', 'messages', 'collections', 'gameScores',
     'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks',
-    'coupons', 'customGifs'
+    'coupons', 'customStickers'
   ] as const;
 
   if (isDbConnected()) {
@@ -324,7 +324,7 @@ async function startServer() {
     if (loaded.reelHistory) reelHistory = loaded.reelHistory;
     if (loaded.musicTracks) musicTracks = loaded.musicTracks;
     if (loaded.coupons) coupons = loaded.coupons;
-    if (loaded.customGifs) customGifs = loaded.customGifs;
+    if (loaded.customStickers) customStickers = loaded.customStickers;
 
     console.log('MongoDB: restored persisted app state');
   }
@@ -354,7 +354,7 @@ async function startServer() {
       saveCollection('reelHistory', reelHistory),
       saveCollection('musicTracks', musicTracks),
       saveCollection('coupons', coupons),
-      saveCollection('customGifs', customGifs),
+      saveCollection('customStickers', customStickers),
     ]);
   }
 
@@ -449,7 +449,7 @@ async function startServer() {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'gifs';
+      const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers';
       const result = await uploadMediaToB2(
         req.file.buffer,
         folder,
@@ -943,60 +943,61 @@ async function startServer() {
   });
 
   // ==========================================
-  // --- PERSONAL GIF GALLERY (Chat > GIFs > My GIFs) ---
-  // A user can upload their own GIFs into chat. Strictly private: every
-  // read is filtered to the logged-in user's own uploads, so nobody else's
-  // gallery — or that a given GIF even exists — is ever visible to them.
+  // --- PERSONAL STICKER GALLERY (Chat > Stickers > My Stickers) ---
+  // A user can turn any photo into a sticker for their own chat use.
+  // Strictly private: every read is filtered to the logged-in user's own
+  // uploads, so nobody else's gallery — or that a given sticker even
+  // exists — is ever visible to them.
   // ==========================================
 
-  app.get('/api/gifs', async (req, res) => {
+  app.get('/api/stickers', async (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
 
-    const mine = customGifs.filter((g) => g.userId === active.id);
+    const mine = customStickers.filter((s) => s.userId === active.id);
     const withUrls = await Promise.all(
       mine
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map(async (g) => ({
-          id: g.id,
-          title: g.title || 'My GIF',
-          url: await signMediaKey(g.objectKey)
+        .map(async (s) => ({
+          id: s.id,
+          title: s.title || 'My Sticker',
+          url: await signMediaKey(s.objectKey)
         }))
     );
-    res.json({ gifs: withUrls });
+    res.json({ stickers: withUrls });
   });
 
-  app.post('/api/gifs', (req, res) => {
+  app.post('/api/stickers', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
 
     const { objectKey, title } = req.body;
     if (!objectKey || !objectKey.trim()) {
-      return res.status(400).json({ error: 'No uploaded GIF reference provided.' });
+      return res.status(400).json({ error: 'No uploaded sticker reference provided.' });
     }
 
-    const newGif = {
-      id: `gif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    const newSticker = {
+      id: `stk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       userId: active.id,
       objectKey: objectKey.trim(),
-      title: (title || '').trim() || 'My GIF',
+      title: (title || '').trim() || 'My Sticker',
       createdAt: new Date().toISOString()
     };
-    customGifs.push(newGif);
+    customStickers.push(newSticker);
 
-    res.status(201).json({ success: true, gif: { id: newGif.id, title: newGif.title } });
+    res.status(201).json({ success: true, sticker: { id: newSticker.id, title: newSticker.title } });
   });
 
-  app.delete('/api/gifs/:id', (req, res) => {
+  app.delete('/api/stickers/:id', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
 
-    const gif = customGifs.find((g) => g.id === req.params.id);
-    if (!gif) return res.status(404).json({ error: 'GIF not found.' });
-    if (gif.userId !== active.id) {
-      return res.status(403).json({ error: 'You can only delete GIFs from your own gallery.' });
+    const sticker = customStickers.find((s) => s.id === req.params.id);
+    if (!sticker) return res.status(404).json({ error: 'Sticker not found.' });
+    if (sticker.userId !== active.id) {
+      return res.status(403).json({ error: 'You can only delete stickers from your own gallery.' });
     }
-    customGifs = customGifs.filter((g) => g.id !== req.params.id);
+    customStickers = customStickers.filter((s) => s.id !== req.params.id);
     res.json({ success: true });
   });
 

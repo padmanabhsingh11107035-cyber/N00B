@@ -173,10 +173,10 @@ import {
   updateChatSettings,
   fetchUsers,
   createChat,
-  fetchMyGifs,
-  uploadCustomGif,
-  deleteCustomGif,
-  MyGif
+  fetchMyStickers,
+  uploadCustomSticker,
+  deleteCustomSticker,
+  MyCustomSticker
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -260,10 +260,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers'>('emojis');
-  const [myGifs, setMyGifs] = useState<MyGif[]>([]);
-  const [isUploadingGif, setIsUploadingGif] = useState(false);
-  const [gifUploadError, setGifUploadError] = useState<string | null>(null);
-  const gifFileInputRef = useRef<HTMLInputElement>(null);
+  const [myStickers, setMyStickers] = useState<MyCustomSticker[]>([]);
+  const [isUploadingSticker, setIsUploadingSticker] = useState(false);
+  const [stickerUploadError, setStickerUploadError] = useState<string | null>(null);
+  const stickerFileInputRef = useRef<HTMLInputElement>(null);
   const [scheduledTime, setScheduledTime] = useState('');
   const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
   
@@ -292,43 +292,43 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => clearTimeout(timer);
   }, [chatBlockedNotice]);
 
-  // Load this user's private GIF gallery the moment they open the GIFs tab
+  // Load this user's private sticker gallery the moment they open the Stickers tab
   useEffect(() => {
-    if (showEmojiPicker && activePickerTab === 'gifs') {
-      fetchMyGifs().then(setMyGifs).catch(() => {});
+    if (showEmojiPicker && activePickerTab === 'stickers') {
+      fetchMyStickers().then(setMyStickers).catch(() => {});
     }
   }, [showEmojiPicker, activePickerTab]);
 
-  const handleUploadGif = async (file: File) => {
-    if (!file.type.includes('gif')) {
-      setGifUploadError('Only .gif files can be added to your gallery.');
-      setTimeout(() => setGifUploadError(null), 3000);
+  const handleUploadSticker = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setStickerUploadError('Please choose a photo to turn into a sticker.');
+      setTimeout(() => setStickerUploadError(null), 3000);
       return;
     }
-    setIsUploadingGif(true);
-    setGifUploadError(null);
+    setIsUploadingSticker(true);
+    setStickerUploadError(null);
     try {
-      const result = await uploadCustomGif(file, file.name.replace(/\.gif$/i, ''));
+      const result = await uploadCustomSticker(file, file.name.replace(/\.[^/.]+$/, ''));
       if (result.success) {
-        const refreshed = await fetchMyGifs();
-        setMyGifs(refreshed);
+        const refreshed = await fetchMyStickers();
+        setMyStickers(refreshed);
       } else {
-        setGifUploadError(result.error || 'Failed to add GIF.');
-        setTimeout(() => setGifUploadError(null), 3000);
+        setStickerUploadError(result.error || 'Failed to create sticker.');
+        setTimeout(() => setStickerUploadError(null), 3000);
       }
     } catch (err) {
       console.error(err);
-      setGifUploadError('Failed to add GIF.');
-      setTimeout(() => setGifUploadError(null), 3000);
+      setStickerUploadError('Failed to create sticker.');
+      setTimeout(() => setStickerUploadError(null), 3000);
     } finally {
-      setIsUploadingGif(false);
+      setIsUploadingSticker(false);
     }
   };
 
-  const handleDeleteMyGif = async (id: string) => {
-    setMyGifs((prev) => prev.filter((g) => g.id !== id));
+  const handleDeleteMyCustomSticker = async (id: string) => {
+    setMyStickers((prev) => prev.filter((s) => s.id !== id));
     try {
-      await deleteCustomGif(id);
+      await deleteCustomSticker(id);
     } catch (err) {
       console.error(err);
     }
@@ -733,6 +733,48 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setMessages((prev) => {
         const next = prev.map((m) =>
           m.id === optimisticMsg.id ? { ...response, mediaType: 'sticker', status: 'delivered' } : m
+        );
+        localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        return next;
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendCustomSticker = async (stickerUrl: string) => {
+    if (!activeChat) return;
+    setShowEmojiPicker(false);
+    const optimisticMsg: Message = {
+      id: `temp_${Date.now()}`,
+      chatId: activeChat.id,
+      senderId: currentUser.id,
+      senderUsername: currentUser.username,
+      senderDisplayName: currentUser.displayName,
+      senderAvatar: currentUser.avatar,
+      text: '',
+      mediaUrl: stickerUrl,
+      mediaType: 'sticker',
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isEdited: false,
+      status: 'delivered'
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    try {
+      const response = await sendMessage(activeChat.id, {
+        senderId: currentUser.id,
+        senderUsername: currentUser.username,
+        senderDisplayName: currentUser.displayName,
+        senderAvatar: currentUser.avatar,
+        text: '',
+        mediaUrl: stickerUrl,
+        mediaType: 'sticker'
+      });
+      setMessages((prev) => {
+        const next = prev.map((m) =>
+          m.id === optimisticMsg.id
+            ? { ...response, mediaUrl: response?.mediaUrl || stickerUrl, mediaType: 'sticker', status: 'delivered' }
+            : m
         );
         localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
         return next;
@@ -1602,8 +1644,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
-                    {/* Media / GIF / Video Display */}
-                    {m.mediaUrl && (
+                    {/* Media / GIF / Video Display (stickers render separately, chrome-free, below) */}
+                    {m.mediaUrl && !isSticker && (
                       <div className="mb-2 rounded-xl overflow-hidden min-h-[100px] max-w-xs sm:max-w-sm bg-black/40 border border-white/10 shadow-md">
                         {m.mediaType === 'video' ? (
                           <video
@@ -1654,6 +1696,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </button>
                         </div>
                       </div>
+                    ) : isSticker && m.mediaUrl ? (
+                      <img
+                        src={m.mediaUrl}
+                        alt="Sticker"
+                        className="w-36 h-36 object-contain"
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                      />
                     ) : isSticker && m.text ? (
                       <p className="text-7xl leading-none">{m.text}</p>
                     ) : m.text ? (
@@ -1813,15 +1863,37 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   )}
 
                   {activePickerTab === 'gifs' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {CURATED_GIFS.map((gif) => (
+                        <button
+                          key={gif.id}
+                          type="button"
+                          onClick={() => handleSendGif(gif.url)}
+                          className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all cursor-pointer text-left"
+                        >
+                          <img
+                            src={gif.url}
+                            alt={gif.title}
+                            className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
+                            {gif.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {activePickerTab === 'stickers' && (
                     <div className="space-y-3">
                       <input
-                        ref={gifFileInputRef}
+                        ref={stickerFileInputRef}
                         type="file"
-                        accept=".gif,image/gif"
+                        accept="image/*"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file) handleUploadGif(file);
+                          if (file) handleUploadSticker(file);
                           e.target.value = '';
                         }}
                       />
@@ -1829,54 +1901,51 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                            My GIFs · Only you can see these
+                            My Stickers · Only you can see these
                           </span>
                           <button
                             type="button"
-                            onClick={() => gifFileInputRef.current?.click()}
-                            disabled={isUploadingGif}
+                            onClick={() => stickerFileInputRef.current?.click()}
+                            disabled={isUploadingSticker}
                             className="flex items-center gap-1 text-[10px] font-bold text-[#00FF66] hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
                           >
-                            <Plus className="w-3 h-3" /> {isUploadingGif ? 'Adding...' : 'Add GIF'}
+                            <Plus className="w-3 h-3" /> {isUploadingSticker ? 'Creating...' : 'Add Sticker'}
                           </button>
                         </div>
 
-                        {gifUploadError && (
-                          <p className="text-[10px] text-rose-400 font-semibold mb-1.5">{gifUploadError}</p>
+                        {stickerUploadError && (
+                          <p className="text-[10px] text-rose-400 font-semibold mb-1.5">{stickerUploadError}</p>
                         )}
 
-                        {myGifs.length === 0 ? (
+                        {myStickers.length === 0 ? (
                           <button
                             type="button"
-                            onClick={() => gifFileInputRef.current?.click()}
+                            onClick={() => stickerFileInputRef.current?.click()}
                             className="w-full py-3 rounded-xl border border-dashed border-zinc-700 hover:border-[#00FF66]/60 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                           >
-                            Upload a .gif to keep it in your own private gallery
+                            Turn any photo into a sticker, kept in your own private gallery
                           </button>
                         ) : (
-                          <div className="grid grid-cols-2 gap-2">
-                            {myGifs.map((gif) => (
+                          <div className="grid grid-cols-4 gap-2">
+                            {myStickers.map((stk) => (
                               <div
-                                key={gif.id}
-                                className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all"
+                                key={stk.id}
+                                className="group relative rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#00FF66]/50 transition-all"
                               >
                                 <button
                                   type="button"
-                                  onClick={() => handleSendGif(gif.url)}
-                                  className="block w-full cursor-pointer text-left"
+                                  onClick={() => handleSendCustomSticker(stk.url)}
+                                  className="flex items-center justify-center w-full aspect-square p-1.5 cursor-pointer"
                                 >
                                   <img
-                                    src={gif.url}
-                                    alt={gif.title}
-                                    className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
+                                    src={stk.url}
+                                    alt={stk.title}
+                                    className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform"
                                   />
-                                  <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
-                                    {gif.title}
-                                  </span>
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteMyGif(gif.id)}
+                                  onClick={() => handleDeleteMyCustomSticker(stk.id)}
                                   title="Remove from my gallery"
                                   className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                 >
@@ -1890,48 +1959,26 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                       <div>
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
-                          Community GIFs
+                          Community Stickers
                         </span>
-                        <div className="grid grid-cols-2 gap-2">
-                          {CURATED_GIFS.map((gif) => (
+                        <div className="grid grid-cols-4 gap-2">
+                          {CURATED_STICKERS.map((stk) => (
                             <button
-                              key={gif.id}
+                              key={stk.id}
                               type="button"
-                              onClick={() => handleSendGif(gif.url)}
-                              className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all cursor-pointer text-left"
+                              onClick={() => handleSendSticker(stk.emoji)}
+                              className="flex flex-col items-center justify-center p-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-[#00FF66]/50 transition-all cursor-pointer group"
                             >
-                              <img
-                                src={gif.url}
-                                alt={gif.title}
-                                className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
-                              />
-                              <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
-                                {gif.title}
+                              <span className="text-3xl group-hover:scale-110 transition-transform">
+                                {stk.emoji}
+                              </span>
+                              <span className="text-[9px] font-bold text-zinc-400 group-hover:text-white mt-1 text-center truncate max-w-full">
+                                {stk.label}
                               </span>
                             </button>
                           ))}
                         </div>
                       </div>
-                    </div>
-                  )}
-
-                  {activePickerTab === 'stickers' && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {CURATED_STICKERS.map((stk) => (
-                        <button
-                          key={stk.id}
-                          type="button"
-                          onClick={() => handleSendSticker(stk.emoji)}
-                          className="flex flex-col items-center justify-center p-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-[#00FF66]/50 transition-all cursor-pointer group"
-                        >
-                          <span className="text-3xl group-hover:scale-110 transition-transform">
-                            {stk.emoji}
-                          </span>
-                          <span className="text-[9px] font-bold text-zinc-400 group-hover:text-white mt-1 text-center truncate max-w-full">
-                            {stk.label}
-                          </span>
-                        </button>
-                      ))}
                     </div>
                   )}
                 </div>

@@ -79,6 +79,7 @@ import { AccountsStatisticsModal } from './AccountsStatisticsModal';
 import { ProFeaturesModal } from './ProFeaturesModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { CalculatorPage } from './CalculatorPage';
+import { FollowUsModal } from './FollowUsModal';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -186,6 +187,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
+  const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
@@ -615,6 +617,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         A quick, distraction-free calculator
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option: Follow Us On */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowFollowUsModal(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Instagram className="w-4 h-4 text-pink-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-pink-400 transition-colors">
+                        Follow Us On
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        Instagram &amp; YouTube
                       </span>
                     </div>
                   </button>
@@ -1569,6 +1592,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
+
+      {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}
 
       {/* 9. Settings & Privacy Master Modal */}
       {showSettingsModal && (

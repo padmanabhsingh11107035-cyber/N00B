@@ -156,7 +156,7 @@ async function startServer() {
       id: 'c_global_lounge',
       name: '🌐 NOOB Global Lounge',
       avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80',
-      participants: users.map(sanitizeUser),
+      participants: users.map(sanitizePublicUser),
       creatorId: 'u_admin',
       adminIds: ['u_admin'],
       isGroup: true,
@@ -298,11 +298,24 @@ async function startServer() {
     });
   }
 
-  // Helper to sanitize user object (remove password)
+  // Helper to sanitize user object (remove password). Use only for a
+  // response that belongs to the user themselves (login/signup, /users/me,
+  // profile update, admin dashboards) — it still includes mobileNumber,
+  // countryCode and email, which those contexts legitimately need back.
   function sanitizeUser(u: any) {
     if (!u) return null;
     const { password, ...safeUser } = u;
     return safeUser;
+  }
+
+  // Sanitize a user for display to OTHER users (directories, search, chat
+  // participant lists, follow suggestions, etc.) — strips password plus
+  // every contact-detail field (mobileNumber, countryCode, email) so no
+  // client can harvest another account's phone number or email address.
+  function sanitizePublicUser(u: any) {
+    if (!u) return null;
+    const { password, mobileNumber, countryCode, email, ...publicUser } = u;
+    return publicUser;
   }
 
   // Records a NOOB Points change (earn or spend) on a user, for the Wallet
@@ -361,7 +374,7 @@ async function startServer() {
       status: 'ok',
       serverTime: new Date().toISOString(),
       usersCount: users.length,
-      b2Storage: getB2Client().isConfigured ? 'connected' : 'ready',
+      b2Storage: getB2Client().isConfigured ? 'connected' : 'not configured (falling back to inline data URIs)',
       mongoStorage: getDbStatusLabel(),
       aiService: process.env.GROQ_API_KEY ? 'configured' : 'missing GROQ_API_KEY'
     });
@@ -978,8 +991,18 @@ async function startServer() {
   // All Users directory (for search, follow, explore & game invites)
   app.get('/api/users', (req, res) => {
     const active = getActiveUser(req);
-    const sanitized = users.map(u => ({
-      ...sanitizeUser(u),
+    const search = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const matching = search
+      ? users.filter(u =>
+          u.username?.toLowerCase().includes(search) ||
+          u.displayName?.toLowerCase().includes(search) ||
+          u.bio?.toLowerCase().includes(search)
+        )
+      : users;
+
+    const sanitized = matching.map(u => ({
+      ...sanitizePublicUser(u),
       isFollowing: active?.followingIds?.includes(u.id) || false
     }));
     res.json({ users: sanitized });
@@ -1581,7 +1604,7 @@ async function startServer() {
         id: 'c_global_lounge',
         name: '🌐 NOOB Global Lounge',
         avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80',
-        participants: users.map(sanitizeUser),
+        participants: users.map(sanitizePublicUser),
         creatorId: 'u_noob_admin',
         adminIds: ['u_noob_admin'],
         isGroup: true,
@@ -1604,7 +1627,7 @@ async function startServer() {
       };
       chats.unshift(globalChat);
     } else {
-      globalChat.participants = users.map(sanitizeUser);
+      globalChat.participants = users.map(sanitizePublicUser);
     }
 
     res.json({ chats });
@@ -1617,10 +1640,10 @@ async function startServer() {
 
     const resolvedParticipants = users
       .filter(u => participantIds?.includes(u.id))
-      .map(sanitizeUser);
+      .map(sanitizePublicUser);
 
     if (active && !resolvedParticipants.some(p => p.id === active.id)) {
-      resolvedParticipants.push(sanitizeUser(active));
+      resolvedParticipants.push(sanitizePublicUser(active));
     }
 
     // A 1:1 chat needs two distinct, resolved participants. If the other
@@ -1782,7 +1805,7 @@ async function startServer() {
     }
 
     const usersToAdd = users.filter(u => userIds.includes(u.id) && !chat.participants.some((p: any) => p.id === u.id));
-    chat.participants.push(...usersToAdd.map(sanitizeUser));
+    chat.participants.push(...usersToAdd.map(sanitizePublicUser));
 
     res.json({ success: true, chat, participants: chat.participants });
   });
@@ -2246,7 +2269,11 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     if (!chat) {
       chat = {
         id: `c_${Date.now()}`,
-        participants: [targetUser, sanitizeUser(active)],
+        // targetUser came straight from the users array — it must be
+        // sanitized before landing in a chat object that other endpoints
+        // (GET /api/chats) return as-is, or it would leak their password
+        // hash and contact details to whoever fetches this chat.
+        participants: [sanitizePublicUser(targetUser), sanitizePublicUser(active)],
         isGroup: false,
         unreadCount: 1,
         isPinned: false,

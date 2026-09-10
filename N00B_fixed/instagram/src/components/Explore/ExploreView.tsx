@@ -28,8 +28,16 @@ import {
   Loader2
 } from 'lucide-react';
 import { Post, Reel, User } from '../../types';
-import { fetchUsers, toggleFollowUser } from '../../services/api';
+import { fetchUsers } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+
+interface ToggleFollowResult {
+  success: boolean;
+  isFollowing: boolean;
+  isFollowRequested?: boolean;
+  followersCount: number;
+  message?: string;
+}
 
 interface ExploreViewProps {
   currentUser?: User | null;
@@ -39,7 +47,9 @@ interface ExploreViewProps {
   onSelectReel: (reel: Reel) => void;
   onStartChat?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
-  onToggleFollowUser?: (userId: string) => void;
+  // Owns the actual follow/unfollow API call and syncs app-wide user state —
+  // ExploreView must not call the API itself, only reflect the result here.
+  onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
 }
 
 const CATEGORIES = ['All', 'Humor', 'Gaming', 'Music', 'Art & Design', 'Vibes', 'Tech', 'Lifestyle'];
@@ -119,12 +129,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     }, 600);
   };
 
-  // Handle follow / follow-request toggle
+  // Handle follow / follow-request toggle — the actual API call lives in
+  // onToggleFollowUser (App.tsx), which also syncs app-wide user state;
+  // this just reflects the result back into this view's own local list.
   const handleToggleFollow = async (userId: string) => {
     try {
       setFollowLoadingId(userId);
-      const res = await toggleFollowUser(userId);
-      if (res.success) {
+      const res = await onToggleFollowUser?.(userId);
+      if (res && res.success) {
         setUsersList((prev) =>
           prev.map((u) =>
             u.id === userId
@@ -137,7 +149,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               : u
           )
         );
-        onToggleFollowUser?.(userId);
       }
     } catch (err) {
       console.error('Follow error:', err);

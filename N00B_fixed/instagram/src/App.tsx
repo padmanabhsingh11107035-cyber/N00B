@@ -40,7 +40,8 @@ import {
   logoutUser,
   deleteMyAccount,
   fetchAppNotifications,
-  clearAllNotifications
+  clearAllNotifications,
+  markNotificationsAsRead
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
@@ -419,6 +420,10 @@ export default function App() {
     setShowNotificationsModal(true);
     setUnreadNotificationCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    // Persist "read" server-side too — otherwise this resets back to
+    // unread on the very next login/page load, since the server never
+    // actually remembered which notifications had been seen.
+    markNotificationsAsRead().catch((err) => console.error('Failed to mark notifications as read:', err));
   };
 
   const handleClearAllNotifications = async () => {

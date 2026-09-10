@@ -958,6 +958,14 @@ export async function fetchAppNotifications(): Promise<{ notifications: import('
   return await res.json();
 }
 
+export async function markNotificationsAsRead(): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/notifications/mark-read`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  return await res.json();
+}
+
 export async function clearAllNotifications(): Promise<{ success: boolean }> {
   const res = await fetch(`${API_BASE}/notifications/clear`, {
     method: 'POST',

@@ -3022,16 +3022,44 @@ COMPLETE PLATFORM CAPABILITIES:
   app.get('/api/notifications', (req, res) => {
     const active = getActiveUser(req);
     if (!active) {
-      return res.json({ notifications: notifications.filter(n => n.targetUserId === 'all') });
+      return res.json({ notifications: notifications.filter(n => n.targetUserId === 'all').map(n => ({ ...n, isRead: true })) });
     }
 
-    const userNotifs = notifications.filter(
-      n =>
-        (n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase()) &&
-        !n.clearedByUserIds?.includes(active.id)
-    );
+    const userNotifs = notifications
+      .filter(
+        n =>
+          (n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase()) &&
+          !n.clearedByUserIds?.includes(active.id)
+      )
+      // isRead is per-user and must be persisted server-side (readByUserIds),
+      // not just flipped in local browser state — otherwise it silently
+      // resets back to "unread" on every fresh login/page load, since the
+      // server never actually remembered which notifications you'd seen.
+      .map(n => ({ ...n, isRead: !!n.readByUserIds?.includes(active.id) }));
 
     res.json({ notifications: userNotifs });
+  });
+
+  // Marks every currently-visible notification as read for this user —
+  // called when they open the notifications panel. Does NOT clear/delete
+  // them (that's a separate, explicit action), so they stay visible but
+  // stop counting toward the unread badge on future logins.
+  app.post('/api/notifications/mark-read', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    notifications.forEach(n => {
+      const isVisibleToUser =
+        n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase();
+      if (isVisibleToUser) {
+        n.readByUserIds = n.readByUserIds || [];
+        if (!n.readByUserIds.includes(active.id)) {
+          n.readByUserIds.push(active.id);
+        }
+      }
+    });
+
+    res.json({ success: true });
   });
 
   // Permanently dismiss all of the active user's currently-visible notifications.

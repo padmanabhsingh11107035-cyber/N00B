@@ -985,6 +985,53 @@ async function startServer() {
     res.json({ users: sanitized });
   });
 
+  // Compares phone numbers by their last 10 digits so formatting differences
+  // (spacing, dashes, +country-code prefixes) between a device's contact book
+  // and a signup number don't prevent an otherwise-identical match.
+  function normalizePhoneForMatch(raw: string | undefined | null): string {
+    return (raw || '').replace(/\D/g, '').slice(-10);
+  }
+
+  // Find Friends from Contacts (native app only — the client only calls this
+  // after the user grants contacts permission on their device). Matches the
+  // device's phone numbers against signup numbers server-side and returns
+  // only safe public profile fields; phone numbers themselves are never
+  // echoed back to the client.
+  app.post('/api/users/match-contacts', (req, res) => {
+    const active = getActiveUser(req);
+    const { phoneNumbers } = req.body;
+
+    if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
+      return res.json({ users: [] });
+    }
+
+    const normalizedInput = new Set(
+      phoneNumbers.map(normalizePhoneForMatch).filter((n) => n.length >= 7)
+    );
+
+    const matched = users.filter((u) => {
+      if (active && u.id === active.id) return false;
+      const userPhone = normalizePhoneForMatch(u.mobileNumber);
+      return userPhone.length >= 7 && normalizedInput.has(userPhone);
+    });
+
+    res.json({
+      users: matched.map((u) => ({
+        id: u.id,
+        username: u.username,
+        displayName: u.displayName,
+        avatar: u.avatar,
+        bio: u.bio,
+        isVerified: u.isVerified,
+        accountType: u.accountType,
+        isBusiness: u.isBusiness,
+        followersCount: u.followersCount || 0,
+        followingCount: u.followingCount || 0,
+        isFollowing: active?.followingIds?.includes(u.id) || false
+      }))
+    });
+  });
+
   // Follow / Unfollow User (supports /follow and /toggle-follow)
   const handleToggleFollow = (req: any, res: any) => {
     const targetUserId = req.params.id;

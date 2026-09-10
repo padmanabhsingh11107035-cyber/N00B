@@ -63,7 +63,9 @@ import { CustomerSupportModal } from './components/Support/CustomerSupportModal'
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { GamePlayModal } from './components/Games/GamePlayModal';
+import { FindFriendsModal } from './components/Modals/FindFriendsModal';
 import { initPushNotifications } from './services/pushNotifications';
+import { Capacitor } from '@capacitor/core';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -108,6 +110,7 @@ export default function App() {
     roomCode?: string;
   } | null>(null);
   const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
+  const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -168,6 +171,17 @@ export default function App() {
     if (currentUser) {
       initPushNotifications();
     }
+  }, [currentUser?.id]);
+
+  // Prompt for contacts access (to suggest friends already on NOOB) once per
+  // install, and only on the native app — there is no contacts permission to
+  // request on the website, so this must never fire there.
+  useEffect(() => {
+    if (!currentUser || !Capacitor.isNativePlatform()) return;
+    if (localStorage.getItem('noob_find_friends_prompted')) return;
+
+    localStorage.setItem('noob_find_friends_prompted', '1');
+    setShowFindFriendsModal(true);
   }, [currentUser?.id]);
 
   const loadInitialData = async () => {
@@ -994,6 +1008,16 @@ export default function App() {
           onClose={() => setShowCustomerSupportModal(false)}
           onOpenTerms={() => setShowTermsModal(true)}
           onOpenPrivacy={() => setShowPrivacyModal(true)}
+        />
+      )}
+
+      {/* 0.5 Find Friends from Contacts (native app only, shown once per install) */}
+      {showFindFriendsModal && currentUser && (
+        <FindFriendsModal
+          currentUser={currentUser}
+          registeredUsers={registeredUsers}
+          onClose={() => setShowFindFriendsModal(false)}
+          onToggleFollowUser={handleToggleFollowUser}
         />
       )}
 

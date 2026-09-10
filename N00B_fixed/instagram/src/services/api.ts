@@ -139,6 +139,19 @@ export async function fetchUsers(search?: string): Promise<User[]> {
   return data.users || [];
 }
 
+// Matches a device's contact phone numbers against registered users
+// server-side (native app "Find Friends" flow) — the numbers themselves are
+// never sent back, only public profile fields for any matches found.
+export async function matchContacts(phoneNumbers: string[]): Promise<User[]> {
+  const res = await fetch(`${API_BASE}/users/match-contacts`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ phoneNumbers })
+  });
+  const data = await res.json();
+  return data.users || [];
+}
+
 export async function toggleFollowUser(userId: string): Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean; followersCount: number; message?: string }> {
   const res = await fetch(`${API_BASE}/users/${userId}/toggle-follow`, {
     method: 'POST',

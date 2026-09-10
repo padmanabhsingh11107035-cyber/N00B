@@ -237,6 +237,13 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       </div>
 
       {/* Track List Grid */}
+      {filteredTracks.length === 0 ? (
+        <div className="py-16 text-center bg-zinc-950 rounded-3xl border border-zinc-800 space-y-2">
+          <Music className="w-8 h-8 text-zinc-600 mx-auto" />
+          <p className="text-sm font-bold text-white">No tracks yet</p>
+          <p className="text-xs text-zinc-500">Be the first to upload one to the Community Music Hub.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filteredTracks.map((track) => {
           const isSelected = currentPlayingTrack?.id === track.id;
@@ -297,6 +304,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
           );
         })}
       </div>
+      )}
 
       {/* Upload Track Modal */}
       {showUploadModal && (

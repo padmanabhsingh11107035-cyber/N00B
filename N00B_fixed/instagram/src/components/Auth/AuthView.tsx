@@ -169,6 +169,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('🇮🇳 India (+91)'); // Default India with number, name & flag
   const [mobileNumber, setMobileNumber] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('Prefer not to say');
   const [password, setPassword] = useState('');
   const [userId, setUserId] = useState('');
@@ -286,6 +287,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       return;
     }
 
+    if (!dateOfBirth) {
+      setErrorMessage('Please enter your date of birth.');
+      return;
+    }
+    const birthDate = new Date(dateOfBirth);
+    if (Number.isNaN(birthDate.getTime()) || birthDate > new Date()) {
+      setErrorMessage('Please enter a valid date of birth.');
+      return;
+    }
+    const ageInYears = (Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageInYears < 13) {
+      setErrorMessage('You must be at least 13 years old to create a NOOB account.');
+      return;
+    }
+
     const cleanUsername = userId.trim().toLowerCase().replace(/[^a-z0-9_.]/g, '');
     if (!cleanUsername || cleanUsername.length < 3) {
       setErrorMessage('User ID must be at least 3 alphanumeric characters.');
@@ -319,6 +335,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         email: email.trim(),
         countryCode,
         mobileNumber: mobileNumber.trim(),
+        dateOfBirth,
         gender,
         password,
         avatar: avatarUrl,
@@ -721,6 +738,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Row 5.5: Date of Birth (must be 13+ to create an account) */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">
+                  Date of Birth <span className="text-cyan-400">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  max={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all [color-scheme:dark]"
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">You must be at least 13 years old to use NOOB.</p>
               </div>
 
               {/* Row 6: Password */}

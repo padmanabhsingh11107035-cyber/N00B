@@ -44,6 +44,7 @@ export async function signupUser(payload: {
   email: string;
   countryCode?: string;
   mobileNumber?: string;
+  dateOfBirth?: string;
   gender?: string;
   password: string;
   avatar?: string;
@@ -92,13 +93,20 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   return await res.json();
 }
 
-export async function deleteAllUsers(): Promise<{ success: boolean; message: string }> {
-  localStorage.removeItem('ig_user_id');
-  const res = await fetch(`${API_BASE}/auth/delete-all-users`, {
+// Self-service account deletion (Google Play requires this: a logged-in
+// user must be able to permanently delete their own account and content
+// without needing an admin). Requires the account password to confirm.
+export async function deleteMyAccount(password: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/users/me`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ password })
   });
-  return await res.json();
+  const data = await res.json();
+  if (data.success) {
+    localStorage.removeItem('ig_user_id');
+  }
+  return data;
 }
 
 export async function fetchCurrentUser(): Promise<User | null> {

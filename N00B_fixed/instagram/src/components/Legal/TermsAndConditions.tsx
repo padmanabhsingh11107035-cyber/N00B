@@ -52,6 +52,10 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
               first name, last name, user ID handle, email, country, mobile number, and password (at least 8 characters).
               You are solely responsible for maintaining the confidentiality of your credentials.
             </p>
+            <p>
+              <strong className="text-white">You must be at least 13 years old</strong> to create a NOOB account. By
+              registering, you confirm that you meet this minimum age requirement.
+            </p>
           </section>
 
           <section className="space-y-2">
@@ -68,6 +72,11 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
               <li>Impersonation, deceptive identity theft, or automated spam bots.</li>
               <li>Posting unlawful, harmful, sexually explicit, or infringing media content.</li>
             </ul>
+            <p>
+              You can report and block any account that violates these standards directly from their profile's "..."
+              menu, or by contacting AI Customer Support. Reported accounts are reviewed by our Trust &amp; Safety
+              team, and violations may result in content removal, suspension, or a permanent ban.
+            </p>
           </section>
 
           <section className="space-y-2">

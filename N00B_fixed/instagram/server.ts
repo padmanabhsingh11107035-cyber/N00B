@@ -314,8 +314,36 @@ async function startServer() {
   // client can harvest another account's phone number or email address.
   function sanitizePublicUser(u: any) {
     if (!u) return null;
-    const { password, mobileNumber, countryCode, email, ...publicUser } = u;
+    const { password, mobileNumber, countryCode, email, dateOfBirth, ...publicUser } = u;
     return publicUser;
+  }
+
+  // Permanently removes an account and everything it authored — shared by
+  // the admin "delete user" tool and the self-service account-deletion
+  // endpoint required by Google Play (any app that lets people sign up must
+  // also let them permanently delete their own account and content).
+  function deleteAccountAndContent(target: any) {
+    posts.filter(p => p.userId === target.id).forEach(p => delete comments[p.id]);
+    posts = posts.filter(p => p.userId !== target.id);
+    reels.filter(r => r.userId === target.id).forEach(r => delete comments[r.id]);
+    reels = reels.filter(r => r.userId !== target.id);
+    stories = stories.filter(s => s.userId !== target.id);
+    customStickers = customStickers.filter(s => s.userId !== target.id);
+    musicTracks = musicTracks.filter(t => t.uploaderId !== target.id);
+    Object.keys(comments).forEach(contentId => {
+      comments[contentId] = comments[contentId].filter((c: any) => c.userId !== target.id);
+    });
+
+    // Detach them from other accounts' follow graphs and chats
+    users.forEach(u => {
+      if (u.followingIds) u.followingIds = u.followingIds.filter((id: string) => id !== target.id);
+      if (u.blockedUserIds) u.blockedUserIds = u.blockedUserIds.filter((id: string) => id !== target.id);
+    });
+    chats.forEach(c => {
+      c.participants = c.participants.filter((p: any) => p.id !== target.id);
+    });
+
+    users = users.filter(u => u.id !== target.id);
   }
 
   // Records a NOOB Points change (earn or spend) on a user, for the Wallet
@@ -416,6 +444,7 @@ async function startServer() {
       email,
       countryCode,
       mobileNumber,
+      dateOfBirth,
       gender,
       password,
       avatar,
@@ -437,14 +466,29 @@ async function startServer() {
     if (!username || !username.trim()) {
       return res.status(400).json({ error: 'User ID / Username is required' });
     }
-    if (!password || password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
     if (!bio || !bio.trim()) {
       return res.status(400).json({ error: 'Bio is compulsory. Please write a short bio about yourself.' });
     }
     if (!agreedToTerms) {
       return res.status(400).json({ error: "You must agree to NOOB's general terms and privacy policy" });
+    }
+
+    // Google Play requires a minimum-age check for any app allowing account
+    // creation — validated server-side too since the client check alone
+    // can be bypassed by calling this endpoint directly.
+    if (!dateOfBirth) {
+      return res.status(400).json({ error: 'Date of birth is required' });
+    }
+    const birthDate = new Date(dateOfBirth);
+    if (Number.isNaN(birthDate.getTime()) || birthDate > new Date()) {
+      return res.status(400).json({ error: 'Please enter a valid date of birth' });
+    }
+    const ageInYears = (Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageInYears < 13) {
+      return res.status(400).json({ error: 'You must be at least 13 years old to create a NOOB account' });
     }
 
     const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_.]/g, '');
@@ -479,6 +523,7 @@ async function startServer() {
       email: email.trim().toLowerCase(),
       countryCode: countryCode || '+91 (IN)',
       mobileNumber: (mobileNumber || '').trim(),
+      dateOfBirth,
       gender: gender || 'Prefer not to say',
       password,
       avatar: avatar || '/noob-logo.svg.jpeg',
@@ -555,20 +600,6 @@ async function startServer() {
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
-  app.delete('/api/auth/delete-all-users', (req, res) => {
-    users = [];
-    posts = [];
-    comments = {};
-    stories = [];
-    reels = [];
-    chats = [];
-    messages = {};
-    collections = [];
-    gameScores = [];
-    highlights = [];
-    currentSessionUserId = null;
-    res.json({ success: true, message: 'All users and data have been reset.' });
-  });
 
   // Current user & profile
   app.get('/api/users/me', async (req, res) => {
@@ -592,6 +623,31 @@ async function startServer() {
     } else {
       res.status(404).json({ error: 'User not found' });
     }
+  });
+
+  // Self-service account deletion (Google Play requires that any app
+  // allowing account creation also let a user permanently delete their own
+  // account and content, without needing an admin). Password-gated so a
+  // hijacked session can't be used to nuke the account silently.
+  app.delete('/api/users/me', (req, res) => {
+    const activeUser = getActiveUser(req);
+    if (!activeUser) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { password } = req.body;
+    if (!password || (activeUser.password && activeUser.password !== password)) {
+      return res.status(401).json({ error: 'Incorrect password. Please re-enter your password to confirm deletion.' });
+    }
+
+    if (activeUser.id === 'u_noob_admin' || activeUser.username.toLowerCase() === 'noob') {
+      return res.status(400).json({ error: 'The primary NOOB administrator account cannot be deleted this way.' });
+    }
+
+    deleteAccountAndContent(activeUser);
+    if (currentSessionUserId === activeUser.id) currentSessionUserId = null;
+
+    res.json({ success: true, message: 'Your account and all associated content have been permanently deleted.' });
   });
 
   // Full detailed profile update
@@ -738,10 +794,11 @@ async function startServer() {
         -requiredPoints,
         discountCoupon ? `Monthly verification badge (${discountCoupon.discountPercent}% off: ${discountCoupon.code})` : 'Monthly verification badge'
       );
-    } else if (method === 'direct_vip' || method === 'upi' || method === 'card' || method === 'crypto') {
-      // Direct VIP checkout authorized via password & mock gateway
-      users[index].vipPaymentRef = `PAY_NOOB_${Date.now()}`;
     } else {
+      // Real-money methods (card/UPI/crypto) are intentionally not offered:
+      // Google Play requires any real-money purchase of in-app digital
+      // features to go through Google Play Billing, not a custom checkout —
+      // verification here only ever costs the in-app NOOB Points currency.
       return res.status(400).json({ error: 'Invalid verification method specified.' });
     }
 
@@ -2633,7 +2690,7 @@ AUTHORITATIVE PRIVACY POLICY KNOWLEDGE BASE:
    - Access and export their personal data.
    - Edit or update their profile at any time in Edit Profile.
    - Switch account visibility to 'Private' (only approved followers see content).
-   - Request permanent deletion of their account and all associated media.
+   - Permanently delete their own account and all associated media at any time, without contacting support, via Profile → Settings → Danger Zone → Delete My Account Permanently (requires password confirmation; cannot be undone).
 
 COMPLETE PLATFORM CAPABILITIES:
 1. SMART MEDIA UPLOAD & AUTOMATED MIME-TYPE ANALYZER:
@@ -2648,7 +2705,7 @@ COMPLETE PLATFORM CAPABILITIES:
 5. DIRECT CHAT & VANISH MODE:
    - Real-time text messaging, voice audio notes, vanishing disappearing photos/videos, and inline 1v1 multiplayer game challenges.
 6. CUSTOMER SUPPORT & CALL US:
-   - Instant AI Support Chat, 24/7 Phone Hotline, interactive Voice Call assistant, and formal ticket submission.`;
+   - Instant AI Support Chat (this conversation), an in-app AI Voice Call (uses your device microphone/speaker for a live spoken conversation with the AI — this is NOT a real telephone number and there is no external phone hotline), and formal ticket submission. Never tell a user to dial a phone number — none exists.`;
 
     // Fast response detection for common greetings & core topics (< 15ms)
     const lower = message.toLowerCase().trim();
@@ -2705,12 +2762,31 @@ COMPLETE PLATFORM CAPABILITIES:
             }
           }
 
+          // File a real report record — this used to only be narrated in the
+          // AI's reply text with nothing actually persisted, so a harassment
+          // report "filed" through this chat was never visible to admins.
+          const safetyReport = {
+            id: `rep_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            reporterId: activeUser?.id || 'anonymous',
+            reporterUsername: activeUser?.username || 'Anonymous',
+            reporterName: activeUser?.displayName || activeUser?.username || 'Anonymous',
+            targetUserId: targetUser.id,
+            targetUsername: targetUser.username,
+            targetDisplayName: targetUser.displayName || targetUser.username,
+            targetAvatar: targetUser.avatar || '/noob-logo.svg.jpeg',
+            reason: 'Cyber Bullying & Harassment',
+            details: `Filed via AI Customer Support: "${message}"`,
+            status: 'pending_review',
+            createdAt: new Date().toISOString()
+          };
+          reports.unshift(safetyReport);
+
           return res.json({
             success: true,
             action: 'USER_BLOCKED_AND_REPORTED',
             reportedUserId: targetUser.id,
             reportedUsername: targetUser.username,
-            reply: `🛡️ **Safety Action Completed for ${activeUser.displayName || activeUser.username}:**\n\n• **Report Filed:** Official Cyberbullying & Harassment report #REP-${Date.now().toString().slice(-6)} has been created against **@${targetUser.username}** (User ID: \`${targetUser.id}\`). Our trust & safety team is reviewing their account immediately.\n• **User Blocked:** **@${targetUser.username}** has been instantly **BLOCKED** from your account. They can no longer see your profile, send you direct messages, or interact with your posts and reels.\n\nYour mental well-being and safety on NOOB are our top priority. We have zero tolerance for harassment! 💪`,
+            reply: `🛡️ **Safety Action Completed for ${activeUser.displayName || activeUser.username}:**\n\n• **Report Filed:** Cyberbullying & Harassment report #REP-${safetyReport.id.slice(-8).toUpperCase()} has been created against **@${targetUser.username}** (User ID: \`${targetUser.id}\`). Our trust & safety team will review their account.\n• **User Blocked:** **@${targetUser.username}** has been instantly **BLOCKED** from your account. They can no longer see your profile, send you direct messages, or interact with your posts and reels.\n\nYour mental well-being and safety on NOOB are our top priority. We have zero tolerance for harassment! 💪`,
             model: 'instant-knowledge-engine',
             user: { username: activeUser.username, displayName: activeUser.displayName, gender: activeUser.gender }
           });
@@ -2804,25 +2880,7 @@ COMPLETE PLATFORM CAPABILITIES:
       return res.status(400).json({ error: 'The primary NOOB administrator account cannot be deleted.' });
     }
 
-    // Remove everything this account authored
-    posts.filter(p => p.userId === target.id).forEach(p => delete comments[p.id]);
-    posts = posts.filter(p => p.userId !== target.id);
-    reels = reels.filter(r => r.userId !== target.id);
-    stories = stories.filter(s => s.userId !== target.id);
-    Object.keys(comments).forEach(postId => {
-      comments[postId] = comments[postId].filter((c: any) => c.userId !== target.id);
-    });
-
-    // Detach them from other accounts' follow graphs and chats
-    users.forEach(u => {
-      if (u.followingIds) u.followingIds = u.followingIds.filter((id: string) => id !== target.id);
-      if (u.blockedUserIds) u.blockedUserIds = u.blockedUserIds.filter((id: string) => id !== target.id);
-    });
-    chats.forEach(c => {
-      c.participants = c.participants.filter((p: any) => p.id !== target.id);
-    });
-
-    users = users.filter(u => u.id !== target.id);
+    deleteAccountAndContent(target);
 
     res.json({
       success: true,

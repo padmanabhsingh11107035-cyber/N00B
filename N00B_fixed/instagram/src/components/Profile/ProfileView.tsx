@@ -48,6 +48,8 @@ import {
   UserCheck,
   MessageSquare,
   X,
+  Loader2,
+  AlertCircle,
   Calculator as CalculatorIcon
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
@@ -61,6 +63,7 @@ import {
   declineFollowRequest,
   blockUser,
   unblockUser,
+  submitSafetyReport,
   toggleFollowUser
 } from '../../services/api';
 import confetti from 'canvas-confetti';
@@ -80,6 +83,7 @@ import { ProFeaturesModal } from './ProFeaturesModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
+import { DeleteAccountModal } from './DeleteAccountModal';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -91,7 +95,7 @@ interface ProfileViewProps {
   onUpdateBio: (newBio: string) => void;
   onOpenProfessionalDashboard: () => void;
   onLogout?: () => void;
-  onDeleteAllUsers?: () => void;
+  onDeleteMyAccount?: (password: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   onUserUpdated?: (user: User) => void;
   onToggleFollowUser?: (userId: string) => void;
   onBlockUser?: (userId: string) => void;
@@ -112,7 +116,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onUpdateBio,
   onOpenProfessionalDashboard,
   onLogout,
-  onDeleteAllUsers,
+  onDeleteMyAccount,
   onUserUpdated,
   onToggleFollowUser,
   onBlockUser,
@@ -136,6 +140,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showFullscreenAvatar, setShowFullscreenAvatar] = useState(false);
   const [showThreeDotsMenu, setShowThreeDotsMenu] = useState(false);
   const [showAdminControlModal, setShowAdminControlModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
   // Settings Modal States
   const [accountTypeSetting, setAccountTypeSetting] = useState<AccountType>(currentUser.accountType || 'public');
@@ -194,6 +199,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [reportDetails, setReportDetails] = useState('');
   const [isReporting, setIsReporting] = useState(false);
   const [reportSuccessNotice, setReportSuccessNotice] = useState(false);
+  const [reportError, setReportError] = useState('');
 
   // Target User (Either currentUser or viewingUser)
   const targetUser: User = viewingUser || currentUser;
@@ -387,17 +393,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleSubmitReport = async () => {
     if (!reportReason) return;
     setIsReporting(true);
+    setReportError('');
     try {
-      if (onReportUser) {
-        await onReportUser(targetUser.id, reportReason, reportDetails);
-      } else {
-        await fetch('/api/reports', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.id },
-          body: JSON.stringify({ reportedUserId: targetUser.id, reason: reportReason, details: reportDetails })
-        });
-      }
+      const res = onReportUser
+        ? await onReportUser(targetUser.id, reportReason, reportDetails)
+        : await submitSafetyReport(targetUser.id, reportReason, reportDetails);
+
       setIsReporting(false);
+
+      if (res && (res as any).success === false) {
+        setReportError((res as any).error || 'Failed to submit report. Please try again.');
+        return;
+      }
+
       setReportSuccessNotice(true);
       setTimeout(() => {
         setReportSuccessNotice(false);
@@ -407,6 +415,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     } catch (err) {
       console.error(err);
       setIsReporting(false);
+      setReportError('Failed to submit report. Please check your connection and try again.');
     }
   };
 
@@ -1736,6 +1745,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             </div>
 
+            {/* Danger Zone */}
+            {onDeleteMyAccount && (
+              <div className="pt-3 border-t border-zinc-800 space-y-2">
+                <span className="text-xs font-bold text-red-400 block">Danger Zone</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettingsModal(false);
+                    setShowDeleteAccountModal(true);
+                  }}
+                  className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-red-500/10 text-red-400 rounded-xl border border-zinc-800 hover:border-red-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete My Account Permanently
+                </button>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
               <button
@@ -1781,6 +1807,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {showDeleteAccountModal && onDeleteMyAccount && (
+        <DeleteAccountModal
+          username={currentUser.username}
+          onClose={() => setShowDeleteAccountModal(false)}
+          onDeleteMyAccount={onDeleteMyAccount}
+        />
       )}
 
       {/* 10. Legal & Support Modals */}
@@ -1857,6 +1891,99 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onClose={() => setShowAdminControlModal(false)}
         />
+      )}
+
+      {/* 14.5 Report User Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                  <Flag className="w-4.5 h-4.5 text-amber-400" />
+                </div>
+                <h2 className="text-base font-bold text-white tracking-tight">Report @{targetUser.username}</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportError('');
+                }}
+                className="text-zinc-400 hover:text-white p-1.5 rounded-full hover:bg-zinc-900 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {reportSuccessNotice ? (
+              <div className="py-6 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-[#00FF66] mx-auto" />
+                <p className="text-sm font-bold text-white">Report submitted</p>
+                <p className="text-xs text-zinc-400">Our Trust &amp; Safety team will review this account.</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300 block">Reason</label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option>Cyber Bullying & Harassment</option>
+                    <option>Spam or Fake Account</option>
+                    <option>Hate Speech</option>
+                    <option>Inappropriate or Explicit Content</option>
+                    <option>Impersonation</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300 block">Additional details (optional)</label>
+                  <textarea
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    rows={3}
+                    placeholder="Anything else that would help us review this..."
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 resize-none"
+                  />
+                </div>
+
+                {reportError && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{reportError}</span>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-zinc-500">
+                  Reporting @{targetUser.username} will also block them from interacting with your account.
+                </p>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      setShowReportModal(false);
+                      setReportError('');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-bold text-zinc-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitReport}
+                    disabled={isReporting}
+                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isReporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Flag className="w-3.5 h-3.5" />}
+                    {isReporting ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* 15. Wallet Modal (previously imported but never rendered) */}

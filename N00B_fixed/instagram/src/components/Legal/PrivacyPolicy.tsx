@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Lock, Eye, ArrowLeft, X, Database, Bell, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Lock, Eye, ArrowLeft, X, Database, Bell, CheckCircle2, Trash2, Users } from 'lucide-react';
 
 interface PrivacyPolicyProps {
   onClose: () => void;
@@ -17,7 +17,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
             </div>
             <div>
               <h2 className="text-lg font-black text-white">NOOB Privacy Policy</h2>
-              <p className="text-xs text-zinc-400">Last Updated: August 2026 • Privacy First</p>
+              <p className="text-xs text-zinc-400">Last Updated: September 2026 • Privacy First</p>
             </div>
           </div>
           <button
@@ -52,6 +52,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
               <li><strong className="text-white">Account Details:</strong> First name, last name, user ID handle, email, country, and mobile contact number.</li>
               <li><strong className="text-white">Profile Data:</strong> Avatar image, bio tagline, status notes, and customizable preferences.</li>
               <li><strong className="text-white">User-Created Content:</strong> Posts, stories, reels, captions, comments, and direct messages you post.</li>
+              <li><strong className="text-white">Device Contacts (native app only, opt-in):</strong> If you choose to use "Find Friends," the app reads your phone's contact numbers on-device and sends them to our server once to check for matching NOOB accounts. We never store your contact list — matching happens in real time, and no phone number that isn't already yours or another NOOB member's is ever saved or shared.</li>
             </ul>
           </section>
 
@@ -82,12 +83,39 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Bell className="w-4 h-4 text-[#00FF66]" />
-              4. User Controls & Deletion Rights
+              <Users className="w-4 h-4 text-[#00FF66]" />
+              4. Sharing & Third Parties
             </h3>
             <p>
-              You have full rights to inspect, edit, or wipe your account and all associated posts, reels, and stories at any time
-              through your profile settings or the 1-click database reset option.
+              We do not sell your personal data. Uploaded media (photos, videos, audio) is stored with our cloud
+              storage provider (Backblaze B2) solely to serve it back to the app. Our AI Customer Support feature
+              sends only the text of your support question to our AI provider (Groq) to generate a reply — it never
+              receives your password, email, or phone number.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#00FF66]" />
+              5. Your Controls
+            </h3>
+            <p>
+              You can inspect or export a copy of your profile data at any time from Profile → Settings → Export Data.
+              You can edit your profile, bio, and privacy preferences at any time from Profile → Settings.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Trash2 className="w-4 h-4 text-[#00FF66]" />
+              6. Deleting Your Account
+            </h3>
+            <p>
+              You can permanently delete your NOOB account at any time, without contacting support, from
+              <strong className="text-white"> Profile → Settings → Danger Zone → Delete My Account Permanently</strong>.
+              This requires your password to confirm and immediately and permanently removes your account, profile,
+              posts, reels, stories, comments, messages, and uploaded media, and detaches you from other users'
+              followers/following lists. This action cannot be undone and is not recoverable.
             </p>
           </section>
         </div>

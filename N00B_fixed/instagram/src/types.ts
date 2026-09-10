@@ -19,6 +19,7 @@ export interface User {
   email?: string;
   countryCode?: string;
   mobileNumber?: string;
+  dateOfBirth?: string;
   avatar: string;
   bio: string;
   accountType: AccountType;

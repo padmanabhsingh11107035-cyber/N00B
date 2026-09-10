@@ -38,7 +38,7 @@ import {
   updateUserBio,
   updateUserStatusNote,
   logoutUser,
-  deleteAllUsers,
+  deleteMyAccount,
   fetchAppNotifications,
   clearAllNotifications
 } from './services/api';
@@ -555,18 +555,16 @@ export default function App() {
     }
   };
 
-  const handleDeleteAllUsers = async () => {
-    try {
-      await deleteAllUsers();
-    } catch (err) {
-      console.error('Delete all users error:', err);
-    } finally {
+  // Self-service account deletion — permanently deletes only the calling
+  // user's own account (Google Play requires this for any app with account
+  // creation). Returns the server result so the Settings UI can show an
+  // error inline instead of silently logging out on a wrong password.
+  const handleDeleteMyAccount = async (password: string) => {
+    const res = await deleteMyAccount(password);
+    if (res.success) {
       setCurrentUser(null);
-      setPosts([]);
-      setStories([]);
-      setReels([]);
-      setRegisteredUsers([]);
     }
+    return res;
   };
 
   if (loading) {
@@ -879,7 +877,7 @@ export default function App() {
             onUpdateBio={handleUpdateBio}
             onOpenProfessionalDashboard={() => setShowProfessionalDashboardModal(true)}
             onLogout={handleLogout}
-            onDeleteAllUsers={handleDeleteAllUsers}
+            onDeleteMyAccount={handleDeleteMyAccount}
             onUserUpdated={(u) => setCurrentUser(u)}
             onToggleFollowUser={handleToggleFollowUser}
             onBackToMyProfile={() => setViewingProfileUser(null)}

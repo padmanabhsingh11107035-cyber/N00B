@@ -10,10 +10,12 @@ interface LudoGameProps {
   initialPlayerCount?: number;
 }
 
-// Classic Ludo palette — blue / green / yellow / red corners, matching the
+// Classic Ludo palette — red / green / yellow / blue corners, matching the
 // real board rather than the app's neon theme (per request: board gets
-// colors, app chrome stays as-is).
-const PLAYER_COLORS = ['#2563eb', '#16a34a', '#eab308', '#dc2626'];
+// colors, app chrome stays as-is). Order matches the fixed board quadrants
+// below: Red = top-left, Green = top-right, Yellow = bottom-right, Blue =
+// bottom-left, same as a real Ludo board regardless of player count.
+const PLAYER_COLORS = ['#dc2626', '#16a34a', '#eab308', '#2563eb'];
 const ARM_LENGTH = 8; // shared-path cells per player, kept short for quick mobile games
 const HOME_STRETCH = 4;
 const TOKENS_PER_PLAYER = 4;
@@ -215,49 +217,88 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
     );
   }
 
-  // --- Board rendering: classic square Ludo layout — 4 colored corner
-  // yards, a square path ring, colored home lanes, and a 4-wedge center
-  // home, instead of the previous abstract radial ring. ---
-  const size = 320;
+  // --- Board rendering: real 15x15-grid classic Ludo layout — 4 big
+  // colored corner yards each holding a 2x2 dot grid, a tiled cross-shaped
+  // path ring with star-marked start cells, straight colored home-stretch
+  // lanes, and a 4-triangle diamond hub, matching a real Ludo board instead
+  // of an abstract ring. Player order/colors are fixed to real quadrants
+  // (Red TL, Green TR, Yellow BR, Blue BL) regardless of numPlayers, so 2-3
+  // player games still sit on real corners rather than re-splitting evenly.
+  const size = 340;
   const center = size / 2;
-  const ringHalf = 118;
-  const yardOffset = 152;
-  const homeStretchOuterT = 0.72; // fraction of the way from ring toward center where the lane starts
-  const homeStretchInnerT = 0.2; // fraction of the way from ring toward center where the lane ends
-  const hubRadius = 42;
+  const half = 150; // distance from board center to its outer edge
+  const armHalf = half * 0.2; // half-width of each 3-cell-wide arm (= 1.5 of the 15x15 grid's cells)
+  const cellPx = (half - armHalf) / 6; // one grid cell in px (each yard/arm is 6 cells deep)
 
-  const cellArc = (8 * ringHalf) / pathLength;
-  const cellSize = Math.max(7, Math.min(15, cellArc * 0.8));
+  // 12-vertex outline of the plus/cross shape, clockwise, starting at the
+  // point where Red's own arm meets the outer edge (see below).
+  const crossVertices: [number, number][] = [
+    [-half, -armHalf], [-armHalf, -armHalf], [-armHalf, -half],
+    [armHalf, -half], [armHalf, -armHalf], [half, -armHalf],
+    [half, armHalf], [armHalf, armHalf], [armHalf, half],
+    [-armHalf, half], [-armHalf, armHalf], [-half, armHalf]
+  ];
+  const crossDist: number[] = [];
+  {
+    let total = 0;
+    for (let i = 0; i < crossVertices.length; i++) {
+      const [x1, y1] = crossVertices[i];
+      const [x2, y2] = crossVertices[(i + 1) % crossVertices.length];
+      total += Math.hypot(x2 - x1, y2 - y1);
+      crossDist.push(total);
+    }
+  }
+  const crossTotal = crossDist[crossDist.length - 1];
 
-  // Walks the perimeter of a square of half-size `half` centered on `center`,
-  // starting at the top-left corner and going clockwise. t is a fraction [0,1).
-  const squarePos = (t: number, half: number) => {
-    const perim = 8 * half;
-    let d = ((t % 1) + 1) % 1;
-    d *= perim;
-    if (d < 2 * half) return { x: center - half + d, y: center - half };
-    d -= 2 * half;
-    if (d < 2 * half) return { x: center + half, y: center - half + d };
-    d -= 2 * half;
-    if (d < 2 * half) return { x: center + half - d, y: center + half };
-    d -= 2 * half;
-    return { x: center - half, y: center + half - d };
+  // Continuous position along the 12-vertex outline for t in [0,1). At
+  // t = p/4 this lands exactly on the corner where player p's own arm meets
+  // the board edge — t=0 Red, 0.25 Green, 0.5 Yellow, 0.75 Blue — and moving
+  // forward from there always heads toward the hub first, matching a real
+  // board's clockwise flow.
+  const crossPos = (t: number) => {
+    const target = (((t % 1) + 1) % 1) * crossTotal;
+    for (let i = 0; i < crossVertices.length; i++) {
+      const segStart = i === 0 ? 0 : crossDist[i - 1];
+      const segEnd = crossDist[i];
+      if (target <= segEnd || i === crossVertices.length - 1) {
+        const segLen = segEnd - segStart || 1;
+        const localT = (target - segStart) / segLen;
+        const [x1, y1] = crossVertices[i];
+        const [x2, y2] = crossVertices[(i + 1) % crossVertices.length];
+        return { x: center + x1 + (x2 - x1) * localT, y: center + y1 + (y2 - y1) * localT };
+      }
+    }
+    return { x: center, y: center };
   };
 
-  const cellPos = (index: number) => squarePos(index / pathLength, ringHalf);
-  // Angular direction (from board center) toward each player's yard/hub
-  // wedge. Perimeter fraction and angular fraction aren't the same for a
-  // square, so this is computed directly to land on actual corners when
-  // numPlayers === 4 (players evenly split the 4 corners), and evenly
-  // spaced directions otherwise.
-  const entryAngleOf = (playerIdx: number) =>
-    -Math.PI / 2 - Math.PI / numPlayers + playerIdx * ((2 * Math.PI) / numPlayers);
+  const cellPos = (index: number) => crossPos(index / pathLength);
+
+  // Fixed quadrant per player index, independent of numPlayers.
+  const YARD_SIGN: [number, number][] = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  // Outward direction (away from hub) along each player's own home-stretch arm.
+  const HOME_AXIS: [number, number][] = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+
+  const yardCenter = (p: number) => {
+    const [sx, sy] = YARD_SIGN[p];
+    const mid = (half + armHalf) / 2;
+    return { x: center + sx * mid, y: center + sy * mid };
+  };
+
+  // s=0 is the cell closest to the shared ring, s=HOME_STRETCH-1 is closest
+  // to the hub — matching increasing token progress toward home.
+  const homeStretchPos = (p: number, s: number) => {
+    const [ax, ay] = HOME_AXIS[p];
+    const outerDist = half - cellPx * 1.5;
+    const innerDist = armHalf - cellPx * 0.3;
+    const dist = outerDist + (innerDist - outerDist) * (s / (HOME_STRETCH - 1));
+    return { x: center + ax * dist, y: center + ay * dist };
+  };
 
   const yardSlotOffsets: [number, number][] = [
-    [-11, 4],
-    [11, 4],
-    [-11, 22],
-    [11, 22]
+    [-cellPx * 1.1, -cellPx * 1.1],
+    [cellPx * 1.1, -cellPx * 1.1],
+    [-cellPx * 1.1, cellPx * 1.1],
+    [cellPx * 1.1, cellPx * 1.1]
   ];
 
   return (
@@ -277,122 +318,50 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[320px]">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[340px]">
         {/* Board backdrop */}
         <rect
-          x={center - yardOffset - 28}
-          y={center - yardOffset - 28}
-          width={(yardOffset + 28) * 2}
-          height={(yardOffset + 28) * 2}
-          rx="18"
+          x={center - half - 10}
+          y={center - half - 10}
+          width={(half + 10) * 2}
+          height={(half + 10) * 2}
+          rx="16"
           fill="#f8fafc"
           stroke="#cbd5e1"
           strokeWidth="2"
         />
 
-        {/* Center hub: pie wedge per player, pointing down each player's home lane */}
-        {Array.from({ length: numPlayers }).map((_, p) => {
-          const angle = entryAngleOf(p);
-          const half = Math.PI / numPlayers;
-          const x1 = center + hubRadius * Math.cos(angle - half);
-          const y1 = center + hubRadius * Math.sin(angle - half);
-          const x2 = center + hubRadius * Math.cos(angle + half);
-          const y2 = center + hubRadius * Math.sin(angle + half);
+        {/* 4 big colored corner yards, each with a white inset panel + 2x2 dot grid */}
+        {[0, 1, 2, 3].map((p) => {
+          const [sx, sy] = YARD_SIGN[p];
+          const yardSize = half - armHalf;
+          const x0 = center + (sx < 0 ? -half : armHalf);
+          const y0 = center + (sy < 0 ? -half : armHalf);
+          const yc = yardCenter(p);
+          const panelSize = yardSize * 0.66;
+          const isActive = p < numPlayers;
           return (
-            <path
-              key={p}
-              d={`M ${center} ${center} L ${x1} ${y1} A ${hubRadius} ${hubRadius} 0 0 1 ${x2} ${y2} Z`}
-              fill={PLAYER_COLORS[p]}
-              stroke="#f8fafc"
-              strokeWidth="2"
-            />
-          );
-        })}
-        <circle cx={center} cy={center} r={hubRadius * 0.42} fill="#1c1c1f" stroke="#3f3f46" strokeWidth="1" />
-        <text x={center} y={center + 3} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="900">
-          HOME
-        </text>
-
-        {/* Home stretch lane: a strip of colored squares per player, ring to hub */}
-        {Array.from({ length: numPlayers }).map((_, p) => {
-          const entry = cellPos(p * ARM_LENGTH);
-          return (
-            <g key={p}>
-              {Array.from({ length: HOME_STRETCH }).map((_, s) => {
-                const t = homeStretchOuterT - (s / (HOME_STRETCH - 1)) * (homeStretchOuterT - homeStretchInnerT);
-                const x = entry.x + (center - entry.x) * (1 - t);
-                const y = entry.y + (center - entry.y) * (1 - t);
-                return (
-                  <rect
-                    key={s}
-                    x={x - cellSize / 2}
-                    y={y - cellSize / 2}
-                    width={cellSize}
-                    height={cellSize}
-                    rx="1.5"
-                    fill={PLAYER_COLORS[p]}
-                    stroke="#f8fafc"
-                    strokeWidth="0.75"
-                  />
-                );
-              })}
-            </g>
-          );
-        })}
-
-        {/* Shared ring path: checkered squares, gold star tile marks each player's safe entry cell */}
-        {Array.from({ length: pathLength }).map((_, i) => {
-          const { x, y } = cellPos(i);
-          const isSafe = i % ARM_LENGTH === 0;
-          const checker = Math.floor(i / 2) % 2 === 0;
-          return (
-            <rect
-              key={i}
-              x={x - cellSize / 2}
-              y={y - cellSize / 2}
-              width={cellSize}
-              height={cellSize}
-              rx="1.5"
-              fill={isSafe ? '#fbbf24' : checker ? '#e2e8f0' : '#ffffff'}
-              stroke="#cbd5e1"
-              strokeWidth="0.6"
-            />
-          );
-        })}
-
-        {/* Yard panels: colored rounded-square base holding a 2x2 grid of token slots */}
-        {Array.from({ length: numPlayers }).map((_, p) => {
-          const angle = entryAngleOf(p);
-          const yx = center + yardOffset * Math.cos(angle);
-          const yy = center + yardOffset * Math.sin(angle);
-          return (
-            <g key={p}>
+            <g key={p} opacity={isActive ? 1 : 0.3}>
+              <rect x={x0} y={y0} width={yardSize} height={yardSize} fill={PLAYER_COLORS[p]} />
               <rect
-                x={yx - 30}
-                y={yy - 30}
-                width="60"
-                height="60"
-                rx="12"
-                fill={PLAYER_COLORS[p]}
-                fillOpacity="0.18"
-                stroke={PLAYER_COLORS[p]}
-                strokeWidth={currentPlayer === p && winner === null ? 3 : 1.5}
+                x={yc.x - panelSize / 2}
+                y={yc.y - panelSize / 2}
+                width={panelSize}
+                height={panelSize}
+                rx={panelSize * 0.16}
+                fill="#ffffff"
               />
-              <text x={yx} y={yy - 16} fontSize="8" fill={PLAYER_COLORS[p]} textAnchor="middle" fontWeight="900">
-                {p === 0 ? 'YOU' : `P${p + 1}`}
-              </text>
               {yardSlotOffsets.map(([dx, dy], slotIdx) => {
-                const hasToken = tokens[p]?.[slotIdx] === 0;
+                const hasToken = isActive && tokens[p]?.[slotIdx] === 0;
                 return (
                   <circle
                     key={slotIdx}
-                    cx={yx + dx}
-                    cy={yy + dy}
-                    r="6.5"
-                    fill={hasToken ? PLAYER_COLORS[p] : '#ffffff'}
+                    cx={yc.x + dx}
+                    cy={yc.y + dy}
+                    r={cellPx * 0.6}
+                    fill={hasToken ? PLAYER_COLORS[p] : 'none'}
                     stroke={PLAYER_COLORS[p]}
-                    strokeWidth={hasToken ? 1.4 : 1}
-                    strokeOpacity={hasToken ? 1 : 0.5}
+                    strokeWidth={hasToken ? cellPx * 0.16 : cellPx * 0.24}
                   />
                 );
               })}
@@ -400,26 +369,97 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
           );
         })}
 
-        {/* Tokens currently on the shared ring or home stretch */}
+        {/* Cross-shaped path ring: tiled squares, each player's start cell shown
+            in their color with a star, like a real board's marked entry tile */}
+        {Array.from({ length: pathLength }).map((_, i) => {
+          const { x, y } = cellPos(i);
+          const startPlayer = [0, 1, 2, 3]
+            .filter((p) => p < numPlayers)
+            .find((p) => p * ARM_LENGTH === i);
+          const checker = Math.floor(i / 2) % 2 === 0;
+          return (
+            <g key={i}>
+              <rect
+                x={x - (cellPx * 0.92) / 2}
+                y={y - (cellPx * 0.92) / 2}
+                width={cellPx * 0.92}
+                height={cellPx * 0.92}
+                fill={startPlayer !== undefined ? PLAYER_COLORS[startPlayer] : checker ? '#e2e8f0' : '#ffffff'}
+                stroke="#cbd5e1"
+                strokeWidth="0.6"
+              />
+              {startPlayer !== undefined && (
+                <text x={x} y={y + cellPx * 0.22} fontSize={cellPx * 0.7} textAnchor="middle" fill="#fff">
+                  ★
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Home-stretch lanes: a straight run of colored squares from the ring to the hub */}
+        {[0, 1, 2, 3].map((p) => (
+          <g key={p} opacity={p < numPlayers ? 1 : 0.3}>
+            {Array.from({ length: HOME_STRETCH }).map((_, s) => {
+              const pos = homeStretchPos(p, s);
+              return (
+                <rect
+                  key={s}
+                  x={pos.x - (cellPx * 0.92) / 2}
+                  y={pos.y - (cellPx * 0.92) / 2}
+                  width={cellPx * 0.92}
+                  height={cellPx * 0.92}
+                  fill={PLAYER_COLORS[p]}
+                  stroke="#f8fafc"
+                  strokeWidth="0.75"
+                />
+              );
+            })}
+          </g>
+        ))}
+
+        {/* Center hub: a diamond of 4 triangles meeting at the middle, each
+            colored to the player whose home stretch enters from that side */}
+        {(() => {
+          const corners: [number, number][] = [
+            [center - armHalf, center - armHalf],
+            [center + armHalf, center - armHalf],
+            [center + armHalf, center + armHalf],
+            [center - armHalf, center + armHalf]
+          ];
+          // Red points left, Green points up, Yellow points right, Blue points
+          // down — matching HOME_AXIS above.
+          const triCornerPairs: [[number, number], [number, number]][] = [
+            [corners[0], corners[3]],
+            [corners[0], corners[1]],
+            [corners[1], corners[2]],
+            [corners[3], corners[2]]
+          ];
+          return triCornerPairs.map(([a, b], p) => (
+            <path
+              key={p}
+              d={`M ${center} ${center} L ${a[0]} ${a[1]} L ${b[0]} ${b[1]} Z`}
+              fill={PLAYER_COLORS[p]}
+              stroke="#f8fafc"
+              strokeWidth="1.5"
+              opacity={p < numPlayers ? 1 : 0.3}
+            />
+          ));
+        })()}
+
+        {/* Tokens currently on the shared ring or home stretch (yard tokens
+            already show as filled dots in the yard panel above) */}
         {tokens.map((toks, p) =>
           toks.map((progress, t) => {
-            if (progress === 0 || progress === finishProgress) return null; // shown via yard slot / home counter
-            let x: number;
-            let y: number;
-            if (progress <= pathLength) {
-              ({ x, y } = cellPos(absoluteCell(p, progress)));
-            } else {
-              const entry = cellPos(p * ARM_LENGTH);
-              const stretchT =
-                homeStretchOuterT -
-                ((progress - pathLength - 1) / (HOME_STRETCH - 1)) * (homeStretchOuterT - homeStretchInnerT);
-              x = entry.x + (center - entry.x) * (1 - stretchT);
-              y = entry.y + (center - entry.y) * (1 - stretchT);
-            }
+            if (progress === 0 || progress === finishProgress) return null;
+            const pos =
+              progress <= pathLength
+                ? cellPos(absoluteCell(p, progress))
+                : homeStretchPos(p, progress - pathLength - 1);
             return (
               <g key={`${p}-${t}`}>
-                <circle cx={x} cy={y} r="7.5" fill={PLAYER_COLORS[p]} stroke="#1c1c1f" strokeWidth="1.3" />
-                <circle cx={x - 2} cy={y - 2} r="2.2" fill="#ffffff" fillOpacity="0.65" />
+                <circle cx={pos.x} cy={pos.y} r={cellPx * 0.4} fill={PLAYER_COLORS[p]} stroke="#1c1c1f" strokeWidth="1.2" />
+                <circle cx={pos.x - cellPx * 0.12} cy={pos.y - cellPx * 0.12} r={cellPx * 0.12} fill="#ffffff" fillOpacity="0.65" />
               </g>
             );
           })

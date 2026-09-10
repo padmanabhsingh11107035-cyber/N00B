@@ -1505,6 +1505,104 @@ async function startServer() {
     res.json({ success: true, isLiked: !isLiked, likesCount: reel.likesCount });
   });
 
+  // Save / Unsave Reel (mirrors POST /api/posts/:id/save)
+  app.post('/api/reels/:id/save', (req, res) => {
+    const reelId = req.params.id;
+    const active = getActiveUser(req);
+    const reel = reels.find(r => r.id === reelId);
+    if (!reel) return res.status(404).json({ error: 'Reel not found' });
+
+    reel.savedBy = reel.savedBy || [];
+    const isSaved = reel.savedBy.includes(active?.id);
+
+    if (isSaved) {
+      reel.savedBy = reel.savedBy.filter((id: string) => id !== active?.id);
+      reel.savesCount = Math.max(0, (reel.savesCount || 0) - 1);
+    } else {
+      reel.savedBy.push(active?.id);
+      reel.savesCount = (reel.savesCount || 0) + 1;
+    }
+
+    res.json({ success: true, isSaved: !isSaved, savesCount: reel.savesCount });
+  });
+
+  // Reel Comments (reuses the same `comments` store as posts — keyed by
+  // content id, and reel ids ("r_...") never collide with post ids ("p_..."))
+  app.get('/api/reels/:id/comments', (req, res) => {
+    const reelId = req.params.id;
+    res.json({ comments: comments[reelId] || [] });
+  });
+
+  app.post('/api/reels/:id/comments', (req, res) => {
+    const reelId = req.params.id;
+    const active = getActiveUser(req);
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Comment text cannot be empty' });
+    }
+
+    const newComment = {
+      id: `c_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      postId: reelId,
+      userId: active?.id || 'u_anon',
+      username: active?.username || 'user',
+      userAvatar: active?.avatar || '/noob-logo.svg.jpeg',
+      isVerified: !!active?.isVerified,
+      text: text.trim(),
+      likesCount: 0,
+      isLiked: false,
+      isPinned: false,
+      createdAt: 'Just now'
+    };
+
+    if (!comments[reelId]) comments[reelId] = [];
+    comments[reelId].unshift(newComment);
+
+    const reel = reels.find(r => r.id === reelId);
+    if (reel) reel.commentsCount = (reel.commentsCount || 0) + 1;
+    if (active) {
+      active.noobPoints = (active.noobPoints || 0) + 5;
+      recordTransaction(active, 5, 'Commented on a reel');
+    }
+
+    res.status(201).json({ success: true, comment: newComment });
+  });
+
+  // Record a reel view into the shared watch-history log (most-recent-first,
+  // de-duplicated so re-watching bumps a reel back to the top instead of
+  // listing it twice) and bump its view counter.
+  app.post('/api/reels/:id/history', (req, res) => {
+    const reelId = req.params.id;
+    const reel = reels.find(r => r.id === reelId);
+    if (!reel) return res.status(404).json({ error: 'Reel not found' });
+
+    reel.viewsCount = (reel.viewsCount || 0) + 1;
+    reelHistory = reelHistory.filter(id => id !== reelId);
+    reelHistory.unshift(reelId);
+    if (reelHistory.length > 100) reelHistory.length = 100;
+
+    res.json({ success: true, viewsCount: reel.viewsCount });
+  });
+
+  app.get('/api/reels/history', async (req, res) => {
+    const active = getActiveUser(req);
+    const historyReels = reelHistory
+      .map(id => reels.find(r => r.id === id))
+      .filter(Boolean);
+
+    const mapped = await Promise.all(
+      historyReels.map(async r => ({
+        ...r,
+        videoUrl: await signMediaKey(r.videoUrl),
+        thumbnailUrl: await signMediaKey(r.thumbnailUrl),
+        userAvatar: await signMediaKey(r.userAvatar),
+        isLiked: r.likedBy?.includes(active?.id) || false,
+        isSaved: r.savedBy?.includes(active?.id) || false
+      }))
+    );
+    res.json({ reels: mapped });
+  });
+
   // Delete Reel
   app.delete('/api/reels/:id', (req, res) => {
     const reelId = req.params.id;

@@ -17,15 +17,30 @@ import {
   Film
 } from 'lucide-react';
 import { Reel, User } from '../../types';
-import { toggleLikeReel, recordReelView } from '../../services/api';
+import {
+  toggleLikeReel,
+  toggleSaveReel,
+  recordReelView,
+  fetchReelComments,
+  addReelComment
+} from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import confetti from 'canvas-confetti';
+
+interface ToggleFollowResult {
+  success: boolean;
+  isFollowing: boolean;
+  isFollowRequested?: boolean;
+  followersCount: number;
+  message?: string;
+}
 
 interface ReelsViewProps {
   reels: Reel[];
   currentUser: User;
   onNavigateToChat: () => void;
   initialReelId?: string;
+  onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
 }
 
 // Fisher-Yates shuffle — used to randomize reel order and to reshuffle
@@ -40,7 +55,13 @@ function shuffleReels<T>(arr: T[]): T[] {
   return shuffled;
 }
 
-export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavigateToChat, initialReelId }) => {
+export const ReelsView: React.FC<ReelsViewProps> = ({
+  reels,
+  currentUser,
+  onNavigateToChat,
+  initialReelId,
+  onToggleFollowUser
+}) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -57,8 +78,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
   });
   const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
   const [localReels, setLocalReels] = useState<Reel[]>(reels);
+  const [reelComments, setReelComments] = useState<any[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [commentInput, setCommentInput] = useState('');
+  const [isPostingComment, setIsPostingComment] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const nextVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (initialReelId) {
@@ -74,12 +100,52 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
   }, [reels, initialReelId]);
 
   const currentReel = localReels[currentIndex] || localReels[0];
+  const nextReel = localReels[currentIndex + 1];
+  const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
 
   useEffect(() => {
     if (currentReel) {
       recordReelView(currentReel.id).catch(console.error);
     }
+    // Always start a freshly-shown reel playing, matching TikTok/Reels-style
+    // auto-advance — otherwise a reel paused via tap would carry that paused
+    // state into the next one, which reads as "the next reel is stuck."
+    setIsPlaying(true);
   }, [currentIndex, currentReel]);
+
+  // Actually drive the <video> element from isPlaying — previously this
+  // state only existed for the pause icon overlay and never touched
+  // playback, so tapping to pause did nothing.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPlaying) {
+      video.play().catch(() => {
+        // Autoplay can be blocked before the first user gesture — ignore,
+        // the next tap on the player will retry via this same effect.
+      });
+    } else {
+      video.pause();
+    }
+  }, [isPlaying, currentReel?.id]);
+
+  // Load real comments for the currently-open reel instead of showing
+  // static placeholder text.
+  useEffect(() => {
+    if (!showComments || !currentReel) return;
+    let cancelled = false;
+    setIsLoadingComments(true);
+    fetchReelComments(currentReel.id)
+      .then((list) => {
+        if (!cancelled) setReelComments(list);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingComments(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showComments, currentReel]);
 
   const handleToggleLike = async () => {
     if (!currentReel) return;
@@ -102,6 +168,50 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
     setShowHeartAnim(true);
     confetti({ particleCount: 30, spread: 60, origin: { y: 0.6 } });
     setTimeout(() => setShowHeartAnim(false), 800);
+  };
+
+  const handleToggleSave = async () => {
+    if (!currentReel) return;
+    try {
+      const res = await toggleSaveReel(currentReel.id);
+      setLocalReels(
+        localReels.map((r) =>
+          r.id === currentReel.id ? { ...r, isSaved: res.isSaved, savesCount: res.savesCount } : r
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleFollowCreator = async () => {
+    if (!currentReel || !onToggleFollowUser) return;
+    try {
+      await onToggleFollowUser(currentReel.userId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!currentReel || !commentInput.trim() || isPostingComment) return;
+    try {
+      setIsPostingComment(true);
+      const comment = await addReelComment(currentReel.id, commentInput.trim());
+      if (comment) {
+        setReelComments((prev) => [comment, ...prev]);
+        setLocalReels(
+          localReels.map((r) =>
+            r.id === currentReel.id ? { ...r, commentsCount: (r.commentsCount || 0) + 1 } : r
+          )
+        );
+        setCommentInput('');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsPostingComment(false);
+    }
   };
 
   const handleNextReel = () => {
@@ -203,8 +313,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
         onWheel={handleWheel}
       >
         <video
+          key={currentReel.id}
           ref={videoRef}
-          src={currentReel.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'}
+          src={currentReel.videoUrl}
           loop
           autoPlay
           playsInline
@@ -215,10 +326,34 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
           className="w-full h-full object-cover"
         />
 
+        {/* Hidden preload of the next reel in the deck so swiping to it
+            doesn't stall while the browser starts fetching/decoding cold */}
+        {nextReel && (
+          <video
+            key={`preload-${nextReel.id}`}
+            ref={nextVideoRef}
+            src={nextReel.videoUrl}
+            muted
+            playsInline
+            preload="auto"
+            className="absolute w-px h-px opacity-0 pointer-events-none"
+            aria-hidden="true"
+          />
+        )}
+
         {/* Double-tap heart animation */}
         {showHeartAnim && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
             <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
+          </div>
+        )}
+
+        {/* Paused-state indicator — tap feedback for the play/pause toggle */}
+        {!isPlaying && !showHeartAnim && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+            <div className="p-5 rounded-full bg-black/40 backdrop-blur-sm">
+              <div className="w-0 h-0 border-y-[14px] border-y-transparent border-l-[22px] border-l-white ml-1" />
+            </div>
           </div>
         )}
 
@@ -314,23 +449,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
               )}
             </div>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLocalReels(
-                  localReels.map((r) =>
-                    r.id === currentReel.id ? { ...r, isFollowing: !r.isFollowing } : r
-                  )
-                );
-              }}
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
-                currentReel.isFollowing
-                  ? 'bg-black/50 border-neutral-700 text-gray-300'
-                  : 'bg-[#00FF66] border-[#00FF66] text-black'
-              }`}
-            >
-              {currentReel.isFollowing ? 'Following' : 'Follow'}
-            </button>
+            {currentReel.userId !== currentUser.id && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleFollowCreator();
+                }}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
+                  isFollowingCreator
+                    ? 'bg-black/50 border-neutral-700 text-gray-300'
+                    : 'bg-[#00FF66] border-[#00FF66] text-black'
+                }`}
+              >
+                {isFollowingCreator ? 'Following' : 'Follow'}
+              </button>
+            )}
           </div>
 
           {/* Caption */}
@@ -436,11 +569,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setLocalReels(
-                localReels.map((r) =>
-                  r.id === currentReel.id ? { ...r, isSaved: !r.isSaved } : r
-                )
-              );
+              handleToggleSave();
             }}
             className="flex flex-col items-center gap-1 group cursor-pointer"
           >
@@ -551,20 +680,47 @@ export const ReelsView: React.FC<ReelsViewProps> = ({ reels, currentUser, onNavi
 
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && (
-        <div className="absolute inset-x-0 bottom-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60%] flex flex-col animate-in slide-in-from-bottom duration-200">
+        <div
+          className="absolute inset-x-0 bottom-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60%] flex flex-col animate-in slide-in-from-bottom duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
             <h4 className="text-xs font-bold text-white">Reel Comments</h4>
-            <button onClick={() => setShowComments(false)} className="text-gray-400 hover:text-white">
+            <button onClick={() => setShowComments(false)} className="text-gray-400 hover:text-white cursor-pointer">
               ✕
             </button>
           </div>
           <div className="flex-1 overflow-y-auto py-3 space-y-2 text-xs text-gray-300">
-            <div className="p-2 bg-neutral-900 rounded-lg">
-              <span className="font-bold text-[#00FF66]">@elena_robotics:</span> That circuit frequency is insane!
-            </div>
-            <div className="p-2 bg-neutral-900 rounded-lg">
-              <span className="font-bold text-[#00E5FF]">@kai_cad_craft:</span> 10,000 FPS capture looks so clean.
-            </div>
+            {isLoadingComments ? (
+              <p className="text-center text-gray-500 py-6">Loading comments...</p>
+            ) : reelComments.length === 0 ? (
+              <p className="text-center text-gray-500 py-6">No comments yet. Be the first to comment!</p>
+            ) : (
+              reelComments.map((c) => (
+                <div key={c.id} className="p-2 bg-neutral-900 rounded-lg">
+                  <span className="font-bold text-[#00FF66]">@{c.username}:</span> {c.text}
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex items-center gap-2 pt-2 border-t border-neutral-800">
+            <input
+              type="text"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handlePostComment();
+              }}
+              placeholder="Add a comment..."
+              className="flex-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
+            />
+            <button
+              onClick={handlePostComment}
+              disabled={!commentInput.trim() || isPostingComment}
+              className="px-3 py-2 rounded-full bg-[#00FF66] text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Post
+            </button>
           </div>
         </div>
       )}

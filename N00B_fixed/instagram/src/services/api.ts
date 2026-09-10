@@ -349,6 +349,33 @@ export async function toggleLikeReel(reelId: string): Promise<{ isLiked: boolean
   return await res.json();
 }
 
+export async function toggleSaveReel(reelId: string): Promise<{ isSaved: boolean; savesCount: number }> {
+  const res = await fetch(`${API_BASE}/reels/${reelId}/save`, { method: 'POST', headers: getAuthHeaders() });
+  return await res.json();
+}
+
+export async function fetchReelComments(reelId: string) {
+  try {
+    const res = await fetch(`${API_BASE}/reels/${reelId}/comments`, { headers: getAuthHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.comments) ? data.comments : [];
+  } catch (err) {
+    console.error('Error fetching reel comments:', err);
+    return [];
+  }
+}
+
+export async function addReelComment(reelId: string, text: string) {
+  const res = await fetch(`${API_BASE}/reels/${reelId}/comments`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ text })
+  });
+  const data = await res.json();
+  return data.comment;
+}
+
 export async function recordReelView(reelId: string) {
   const res = await fetch(`${API_BASE}/reels/${reelId}/history`, { method: 'POST', headers: getAuthHeaders() });
   return await res.json();

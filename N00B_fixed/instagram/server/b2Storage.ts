@@ -50,11 +50,18 @@ export async function uploadMediaToB2(
   const objectKey = `${folder}/${Date.now()}-${randomSuffix}.${fileExt}`;
 
   if (!isConfigured || !client) {
-    // If running in development sandbox where B2 credentials are being configured,
-    // generate a data URI or local simulated media key to prevent failure
+    // Without real B2 credentials there is no key to hand back — a short
+    // "posts/169...-abcd.jpg"-shaped string would look valid but resolve to
+    // nothing, silently breaking anything that persists objectKey instead of
+    // presignedUrl (several upload flows prefer objectKey, since that's the
+    // right choice once B2 IS configured — a stored key can be re-signed
+    // forever, while a presigned URL expires in an hour). So in this
+    // fallback, objectKey IS the data URI: whichever field a caller saves,
+    // it's the same self-contained, always-resolvable value, and
+    // signMediaKey already returns a "data:" string unchanged.
     const dataUri = `data:${contentType};base64,${fileBuffer.toString('base64')}`;
     return {
-      objectKey,
+      objectKey: dataUri,
       presignedUrl: dataUri
     };
   }

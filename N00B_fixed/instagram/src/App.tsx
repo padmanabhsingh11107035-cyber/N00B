@@ -826,6 +826,7 @@ export default function App() {
               currentUser={currentUser}
               onNavigateToChat={() => setActiveTab('chat')}
               initialReelId={selectedReelId}
+              onToggleFollowUser={handleToggleFollowUser}
             />
           </div>
         )}

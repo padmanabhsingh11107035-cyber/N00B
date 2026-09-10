@@ -481,8 +481,8 @@ async function startServer() {
     if (!username || !username.trim()) {
       return res.status(400).json({ error: 'User ID / Username is required' });
     }
-    if (!password || password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
     }
     if (!bio || !bio.trim()) {
       return res.status(400).json({ error: 'Bio is compulsory. Please write a short bio about yourself.' });

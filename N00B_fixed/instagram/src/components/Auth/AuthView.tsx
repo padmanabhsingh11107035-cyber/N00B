@@ -282,8 +282,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       setErrorMessage('Please enter your Email address.');
       return;
     }
-    if (!password || password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters.');
+    if (!password) {
+      setErrorMessage('Please enter a password.');
       return;
     }
 
@@ -762,9 +762,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                   <label className="text-xs font-bold text-zinc-300">
                     Password <span className="text-cyan-400">*</span>
                   </label>
-                  <span className="text-[11px] text-zinc-400 font-medium">
-                    at least 8 characters
-                  </span>
                 </div>
                 <div className="relative">
                   <input

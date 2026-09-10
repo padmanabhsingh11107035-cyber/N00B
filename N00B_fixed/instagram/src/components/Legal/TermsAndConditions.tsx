@@ -49,7 +49,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
             </h3>
             <p>
               To access NOOB, you must provide accurate, current, and truthful registration information including your
-              first name, last name, user ID handle, email, country, mobile number, and password (at least 8 characters).
+              first name, last name, user ID handle, email, country, mobile number, and password.
               You are solely responsible for maintaining the confidentiality of your credentials.
             </p>
             <p>

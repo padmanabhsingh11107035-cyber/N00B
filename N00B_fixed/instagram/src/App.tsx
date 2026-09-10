@@ -731,7 +731,7 @@ export default function App() {
         <div className="bg-zinc-900/60 hover:bg-zinc-900/90 border border-white/5 p-3 rounded-2xl transition-all shadow-lg">
           <div className="flex items-center gap-3">
             <div
-              onClick={() => setActiveTab('profile')}
+              onClick={() => handleSelectNavTab('profile')}
               className="relative cursor-pointer"
             >
               <img
@@ -743,7 +743,7 @@ export default function App() {
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black" />
             </div>
             <div
-              onClick={() => setActiveTab('profile')}
+              onClick={() => handleSelectNavTab('profile')}
               className="min-w-0 flex-1 cursor-pointer"
             >
               <div className="flex items-center gap-1">

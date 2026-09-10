@@ -49,8 +49,13 @@ jobs:
         env:
           # The native app has no backend of its own — every relative
           # /api call gets rewritten to this URL at build time (see
-          # src/main.tsx). Change this if the Railway URL ever changes.
-          VITE_API_BASE: https://n00b-production.up.railway.app/api
+          # src/main.tsx). Reads from the repo's Actions "variables" (not
+          # secrets — it's just a public URL) so switching backends (e.g.
+          # a future custom domain) is a Settings edit, not a code change:
+          # Settings → Secrets and variables → Actions → Variables tab →
+          # add BACKEND_API_BASE. Falls back to the current Railway URL
+          # until that variable is set.
+          VITE_API_BASE: ${{ vars.BACKEND_API_BASE || 'https://n00b-production.up.railway.app/api' }}
 
       - name: Add Android platform
         run: npx cap add android

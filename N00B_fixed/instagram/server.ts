@@ -92,6 +92,21 @@ async function startServer() {
 
   await connectDB();
 
+  // A one-glance checklist of which backend services are actually wired up,
+  // printed on every boot so it's obvious in the Railway deploy logs what
+  // still needs a real credential — no need to go hunting through code.
+  console.log('--- NOOB Backend Configuration ---');
+  console.log(
+    `  Database (MongoDB):  ${isDbConnected() ? '✅ connected (data persists across restarts)' : '⚠️  not configured — set MONGODB_URI (data is lost on every restart/redeploy)'}`
+  );
+  console.log(
+    `  Media Storage (B2):  ${getB2Client().isConfigured ? '✅ connected' : '⚠️  not configured — set B2_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_NAME (uploads fall back to inline base64, which doesn\'t scale)'}`
+  );
+  console.log(
+    `  AI Support (Groq):   ${process.env.GROQ_API_KEY ? '✅ key present' : '⚠️  not configured — set GROQ_API_KEY (AI chat/voice call will use the fallback reply)'}`
+  );
+  console.log('-----------------------------------');
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 

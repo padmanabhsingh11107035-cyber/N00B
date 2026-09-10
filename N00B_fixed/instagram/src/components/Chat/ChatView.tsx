@@ -508,9 +508,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
       return;
     }
     setChatBlockedNotice('');
-    // Check if chat already exists
+    // Check if a chat already exists — must include the target user AND the
+    // viewer themselves, or a stale/cached conversations list could match a
+    // chat between two other people and drop the viewer straight into it.
     const existing = conversations.find(
-      (c) => !c.isGroup && c.participants.some((p) => p.id === user.id)
+      (c) =>
+        !c.isGroup &&
+        c.participants.some((p) => p.id === user.id) &&
+        c.participants.some((p) => p.id === currentUser.id)
     );
     if (existing) {
       setActiveChatId(existing.id);

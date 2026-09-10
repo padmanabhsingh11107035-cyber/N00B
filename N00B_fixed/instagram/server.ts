@@ -1767,6 +1767,8 @@ async function startServer() {
 
   // --- DIRECT MESSAGES & CHAT ---
   app.get('/api/chats', (req, res) => {
+    const active = getActiveUser(req);
+
     // Ensure global lounge is always present and updated with all users
     let globalChat = chats.find(c => c.id === 'c_global_lounge');
     if (!globalChat) {
@@ -1800,7 +1802,15 @@ async function startServer() {
       globalChat.participants = users.map(sanitizePublicUser);
     }
 
-    res.json({ chats });
+    // Only ever return chats the requester is actually part of — this used
+    // to return every private 1:1 chat in the system to every user, which
+    // leaked who was talking to whom and, combined with a client-side bug,
+    // could drop a user straight into a stranger's private conversation.
+    const visibleChats = active
+      ? chats.filter(c => c.isGlobalDefault || c.participants.some((p: any) => p.id === active.id))
+      : chats.filter(c => c.isGlobalDefault);
+
+    res.json({ chats: visibleChats });
   });
 
   // Create new 1-on-1 or Group Chat
@@ -2130,40 +2140,49 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   app.get('/api/chats/:id/messages', (req, res) => {
     const chatId = req.params.id;
+    const active = getActiveUser(req);
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    // A chat's messages must never be readable by someone who isn't in it —
+    // this endpoint previously returned any chat's full message history to
+    // anyone who had (or guessed) its id, with no membership check at all.
+    const isMember = chat.isGlobalDefault || (active && chat.participants.some((p: any) => p.id === active.id));
+    if (!isMember) {
+      return res.status(403).json({ error: 'You are not a participant in this chat.' });
+    }
+
     res.json({ messages: messages[chatId] || [] });
   });
 
   app.post('/api/chats/:id/messages', async (req, res) => {
     const chatId = req.params.id;
     const active = getActiveUser(req);
-    const {
-      text,
-      mediaUrl,
-      mediaType,
-      scheduledAt,
-      sharedTrack,
-      gameInvite,
-      senderId,
-      senderUsername,
-      senderDisplayName,
-      senderAvatar
-    } = req.body;
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
 
-    const effectiveSenderId = senderId || active?.id || 'u_noob_admin';
-    const senderUserObj = users.find(u => u.id === effectiveSenderId) || active;
-    const finalSenderUsername = senderUsername || senderUserObj?.username || active?.username || 'NOOB';
-    const finalSenderDisplayName = senderDisplayName || senderUserObj?.displayName || senderUserObj?.username || active?.displayName || 'NOOB';
-    const finalSenderAvatar = senderAvatar || senderUserObj?.avatar || active?.avatar || '/noob-logo.svg.jpeg';
-    const finalSenderVerified = !!(senderUserObj?.isVerified ?? active?.isVerified);
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    // Only an actual participant may post into a chat — and the sender
+    // identity is always the authenticated user, never a client-supplied
+    // senderId/senderUsername/etc. Both of these used to be trusted from the
+    // request body, which meant anyone could post into a chat they weren't
+    // in, or impersonate any other user by just naming a different sender.
+    const isMember = chat.isGlobalDefault || chat.participants.some((p: any) => p.id === active.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'You are not a participant in this chat.' });
+    }
+
+    const { text, mediaUrl, mediaType, scheduledAt, sharedTrack, gameInvite } = req.body;
 
     const newMsg = {
       id: `m_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       chatId,
-      senderId: effectiveSenderId,
-      senderUsername: finalSenderUsername,
-      senderDisplayName: finalSenderDisplayName,
-      senderAvatar: finalSenderAvatar,
-      senderIsVerified: finalSenderVerified,
+      senderId: active.id,
+      senderUsername: active.username,
+      senderDisplayName: active.displayName || active.username,
+      senderAvatar: active.avatar || '/noob-logo.svg.jpeg',
+      senderIsVerified: !!active.isVerified,
       text: text || '',
       mediaUrl: mediaUrl || undefined,
       mediaType: mediaType || (mediaUrl ? 'image' : gameInvite ? 'game_invite' : 'text'),
@@ -2179,10 +2198,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     messages[chatId].push(newMsg);
 
     // Update conversation last message
-    const chat = chats.find(c => c.id === chatId);
-    if (chat) {
-      chat.lastMessage = newMsg;
-    }
+    chat.lastMessage = newMsg;
 
     // Auto-reply if AI conversation
     let aiResponseMsg: any = null;

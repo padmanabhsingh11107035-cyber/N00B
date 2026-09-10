@@ -266,6 +266,20 @@ body.light .liquid-glass {
   background: linear-gradient(180deg, rgba(0, 255, 102, 0.38) 0%, rgba(0, 255, 102, 0.1) 100%);
 }
 
+/* Dice-roll tumble — a quick rock-and-scale wiggle while the face value
+   cycles rapidly underneath, used by board games with a physical die. */
+@keyframes dice-tumble {
+  0% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(-18deg) scale(1.05); }
+  40% { transform: rotate(14deg) scale(0.95); }
+  60% { transform: rotate(-10deg) scale(1.05); }
+  80% { transform: rotate(8deg) scale(0.97); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+.dice-rolling {
+  animation: dice-tumble 0.4s ease-in-out infinite;
+}
+
 /* ============================================
    Chat wallpaper — a subtle repeating doodle
    pattern (chat bubbles, hearts, notes, stars…)

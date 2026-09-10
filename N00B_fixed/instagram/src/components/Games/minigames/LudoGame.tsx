@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bot, User as UserIcon, Dices } from 'lucide-react';
+import { Bot, User as UserIcon } from 'lucide-react';
+import { AnimatedDice } from '../AnimatedDice';
 
 interface LudoGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -35,6 +36,10 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
   const [isRolling, setIsRolling] = useState(false);
   const [winner, setWinner] = useState<number | null>(null);
   const [log, setLog] = useState('');
+  // When a human rolls with 2+ legal tokens to move, we stop and let them
+  // tap which one instead of auto-picking — options holds the tokenIndexes
+  // they can legally choose from for this roll.
+  const [pendingChoice, setPendingChoice] = useState<{ roll: number; options: number[] } | null>(null);
   const hasReported = useRef(false);
 
   const pathLength = numPlayers * ARM_LENGTH;
@@ -64,12 +69,21 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
     return (entry + progress - 1 + pathLength) % pathLength;
   };
 
-  const moveToken = (playerIdx: number, tokenIdx: number, roll: number) => {
+  // Returns the freshly-updated tokens array synchronously (the updater
+  // function passed to setState runs immediately even though the resulting
+  // re-render is deferred), so callers can check for a win right away
+  // instead of needing a separate effect keyed off state that may not have
+  // committed yet.
+  const moveToken = (playerIdx: number, tokenIdx: number, roll: number): number[][] => {
+    let result = tokens;
     setTokens((prev) => {
       const next = prev.map((arr) => [...arr]);
       const current = next[playerIdx][tokenIdx];
       let target = current === 0 ? (roll === 6 ? 1 : 0) : current + roll;
-      if (target > finishProgress) return prev; // overshoot, illegal move
+      if (target > finishProgress) {
+        result = prev; // overshoot, illegal move
+        return prev;
+      }
       next[playerIdx][tokenIdx] = target;
 
       // Capture check: only while on the shared ring (not yard, not home stretch)
@@ -88,12 +102,29 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
           }
         }
       }
+      result = next;
       return next;
     });
+    return result;
   };
 
-  // Pick a movable token automatically: prefer advancing the furthest token,
-  // otherwise bring a new one out on a 6.
+  // Every legal token a player could move with this roll — an on-board
+  // token that wouldn't overshoot home, or a yard token on a 6.
+  const getMovableOptions = (playerIdx: number, roll: number): number[] => {
+    const arr = tokens[playerIdx];
+    const options = arr
+      .map((p, i) => ({ i, p }))
+      .filter(({ p }) => p > 0 && p + roll <= finishProgress)
+      .map(({ i }) => i);
+    if (roll === 6) {
+      const inYard = arr.findIndex((p) => p === 0);
+      if (inYard !== -1) options.push(inYard);
+    }
+    return options;
+  };
+
+  // Bot auto-pick: prefer advancing the furthest token, otherwise bring a
+  // new one out on a 6.
   const pickMovableToken = (playerIdx: number, roll: number): number | null => {
     const arr = tokens[playerIdx];
     const onBoard = arr
@@ -108,44 +139,65 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
     return null;
   };
 
+  // Applies the result of a resolved move (or a no-op roll) — checks for an
+  // immediate win, otherwise passes the turn after a short pause (skipped on
+  // a 6, which grants another roll).
+  const applyRollResult = (playerIdx: number, roll: number, tokenIdx: number | null) => {
+    const updated = tokenIdx !== null ? moveToken(playerIdx, tokenIdx, roll) : tokens;
+    if (updated[playerIdx]?.every((p) => p === finishProgress)) {
+      setWinner(playerIdx);
+      return;
+    }
+    const rolledSix = roll === 6;
+    setTimeout(() => {
+      setDiceValue(null);
+      if (!rolledSix) setCurrentPlayer((prev) => (prev + 1) % numPlayers);
+    }, 800);
+  };
+
   const rollDice = () => {
-    if (isRolling || winner !== null) return;
+    if (isRolling || winner !== null || pendingChoice || diceValue !== null) return;
     setIsRolling(true);
     setTimeout(() => {
       const roll = Math.floor(Math.random() * 6) + 1;
-      setDiceValue(roll);
-      const tokenIdx = pickMovableToken(currentPlayer, roll);
-      if (tokenIdx === null) {
-        setLog(`Player ${currentPlayer + 1} rolled ${roll} — no valid move.`);
-      } else {
-        moveToken(currentPlayer, tokenIdx, roll);
-        setLog(`Player ${currentPlayer + 1} rolled ${roll} and advanced a token.`);
-      }
       setIsRolling(false);
-    }, 500);
+      setDiceValue(roll);
+
+      if (playerTypes[currentPlayer] === 'bot') {
+        const tokenIdx = pickMovableToken(currentPlayer, roll);
+        setLog(
+          tokenIdx === null
+            ? `Player ${currentPlayer + 1} rolled ${roll} — no valid move.`
+            : `Player ${currentPlayer + 1} rolled ${roll} and advanced a token.`
+        );
+        applyRollResult(currentPlayer, roll, tokenIdx);
+      } else {
+        const options = getMovableOptions(currentPlayer, roll);
+        if (options.length === 0) {
+          setLog(`You rolled ${roll} — no valid move.`);
+          applyRollResult(currentPlayer, roll, null);
+        } else if (options.length === 1) {
+          setLog(`You rolled ${roll} and advanced a token.`);
+          applyRollResult(currentPlayer, roll, options[0]);
+        } else {
+          setLog(`You rolled ${roll} — tap a token to move it.`);
+          setPendingChoice({ roll, options });
+        }
+      }
+    }, 700);
   };
 
-  // Runs once per roll (whether or not it moved a token) to check for a win
-  // and advance the turn. Keyed on diceValue rather than tokens, since a
-  // "no valid move" roll leaves tokens unchanged but must still pass the turn.
-  useEffect(() => {
-    if (phase !== 'playing' || diceValue === null || isRolling || tokens.length === 0) return;
-    const allHome = tokens[currentPlayer]?.every((p) => p === finishProgress);
-    if (allHome && winner === null) {
-      setWinner(currentPlayer);
-      return;
-    }
-    const rolledSix = diceValue === 6;
-    const timer = setTimeout(() => {
-      setDiceValue(null);
-      if (!rolledSix) {
-        setCurrentPlayer((prev) => (prev + 1) % numPlayers);
-      }
-    }, 800);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diceValue]);
+  const handleChooseToken = (tokenIdx: number) => {
+    if (!pendingChoice || !pendingChoice.options.includes(tokenIdx) || playerTypes[currentPlayer] !== 'human') return;
+    const { roll } = pendingChoice;
+    setPendingChoice(null);
+    setLog(`You moved a token ${roll} step${roll === 1 ? '' : 's'}.`);
+    applyRollResult(currentPlayer, roll, tokenIdx);
+  };
 
+  // Depends on diceValue too — not just currentPlayer — so a bot rolling a
+  // 6 (same player goes again, currentPlayer never changes) still schedules
+  // its next roll once diceValue resets to null, instead of going silent.
   useEffect(() => {
     if (phase !== 'playing' || winner !== null) return;
     if (playerTypes[currentPlayer] === 'bot' && diceValue === null && !isRolling) {
@@ -153,7 +205,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPlayer, phase, winner]);
+  }, [currentPlayer, phase, winner, diceValue, isRolling]);
 
   useEffect(() => {
     if (winner !== null && !hasReported.current) {
@@ -353,15 +405,19 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
               />
               {yardSlotOffsets.map(([dx, dy], slotIdx) => {
                 const hasToken = isActive && tokens[p]?.[slotIdx] === 0;
+                const isChoosable = p === currentPlayer && hasToken && !!pendingChoice?.options.includes(slotIdx);
                 return (
                   <circle
                     key={slotIdx}
                     cx={yc.x + dx}
                     cy={yc.y + dy}
-                    r={cellPx * 0.6}
+                    r={cellPx * (isChoosable ? 0.68 : 0.6)}
                     fill={hasToken ? PLAYER_COLORS[p] : 'none'}
-                    stroke={PLAYER_COLORS[p]}
+                    stroke={isChoosable ? '#ffffff' : PLAYER_COLORS[p]}
                     strokeWidth={hasToken ? cellPx * 0.16 : cellPx * 0.24}
+                    className={isChoosable ? 'animate-pulse cursor-pointer' : undefined}
+                    style={isChoosable ? { filter: 'drop-shadow(0 0 4px #fff)' } : undefined}
+                    onClick={isChoosable ? () => handleChooseToken(slotIdx) : undefined}
                   />
                 );
               })}
@@ -456,9 +512,22 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
               progress <= pathLength
                 ? cellPos(absoluteCell(p, progress))
                 : homeStretchPos(p, progress - pathLength - 1);
+            const isChoosable = p === currentPlayer && !!pendingChoice?.options.includes(t);
             return (
-              <g key={`${p}-${t}`}>
-                <circle cx={pos.x} cy={pos.y} r={cellPx * 0.4} fill={PLAYER_COLORS[p]} stroke="#1c1c1f" strokeWidth="1.2" />
+              <g
+                key={`${p}-${t}`}
+                className={isChoosable ? 'animate-pulse cursor-pointer' : undefined}
+                style={isChoosable ? { filter: 'drop-shadow(0 0 5px #fff)' } : undefined}
+                onClick={isChoosable ? () => handleChooseToken(t) : undefined}
+              >
+                <circle
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={cellPx * (isChoosable ? 0.48 : 0.4)}
+                  fill={PLAYER_COLORS[p]}
+                  stroke={isChoosable ? '#ffffff' : '#1c1c1f'}
+                  strokeWidth={isChoosable ? 2 : 1.2}
+                />
                 <circle cx={pos.x - cellPx * 0.12} cy={pos.y - cellPx * 0.12} r={cellPx * 0.12} fill="#ffffff" fillOpacity="0.65" />
               </g>
             );
@@ -469,18 +538,22 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
       <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
 
       {winner === null ? (
-        <button
-          onClick={rollDice}
-          disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
-          className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Dices className="w-4 h-4" />
-          {playerTypes[currentPlayer] === 'bot'
-            ? `Player ${currentPlayer + 1} is rolling...`
-            : diceValue !== null
-            ? `Rolled ${diceValue}${diceValue === 6 ? ' — roll again!' : ''}`
-            : 'Roll Dice'}
-        </button>
+        <div className="flex items-center gap-3">
+          <AnimatedDice value={diceValue} isRolling={isRolling} size={40} />
+          <button
+            onClick={rollDice}
+            disabled={isRolling || playerTypes[currentPlayer] === 'bot' || !!pendingChoice}
+            className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {playerTypes[currentPlayer] === 'bot'
+              ? `Player ${currentPlayer + 1} is rolling...`
+              : pendingChoice
+              ? 'Tap a highlighted token above'
+              : diceValue !== null
+              ? `Rolled ${diceValue}${diceValue === 6 ? ' — roll again!' : ''}`
+              : 'Roll Dice'}
+          </button>
+        </div>
       ) : (
         <p className="text-sm font-black text-white animate-bounce">
           {winner === 0 ? '🎉 You Win!' : `Player ${winner + 1} Wins!`}

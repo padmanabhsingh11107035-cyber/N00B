@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bot, User as UserIcon, Dices } from 'lucide-react';
+import { Bot, User as UserIcon } from 'lucide-react';
+import { AnimatedDice } from '../AnimatedDice';
 
 interface SnakesAndLaddersGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -105,7 +106,7 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
       });
 
       setIsRolling(false);
-    }, 500);
+    }, 700);
   };
 
   // Resolve win / advance turn after a dice roll lands
@@ -365,18 +366,20 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
       <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
 
       {winner === null ? (
-        <button
-          onClick={rollDice}
-          disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
-          className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Dices className="w-4 h-4" />
-          {playerTypes[currentPlayer] === 'bot'
-            ? `Player ${currentPlayer + 1} is rolling...`
-            : diceValue !== null
-            ? `Rolled ${diceValue}`
-            : 'Roll Dice'}
-        </button>
+        <div className="flex items-center gap-3">
+          <AnimatedDice value={diceValue} isRolling={isRolling} size={40} />
+          <button
+            onClick={rollDice}
+            disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
+            className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {playerTypes[currentPlayer] === 'bot'
+              ? `Player ${currentPlayer + 1} is rolling...`
+              : diceValue !== null
+              ? `Rolled ${diceValue}`
+              : 'Roll Dice'}
+          </button>
+        </div>
       ) : (
         <p className="text-sm font-black text-white animate-bounce">
           {winner === 0 ? '🎉 You Win!' : `Player ${winner + 1} Wins!`}

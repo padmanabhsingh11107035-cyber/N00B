@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bot, User as UserIcon, Dices, Landmark } from 'lucide-react';
+import { Bot, User as UserIcon, Landmark } from 'lucide-react';
+import { AnimatedDice } from '../AnimatedDice';
 
 interface MonopolyGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -87,6 +88,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
   const [inJail, setInJail] = useState<number[]>([]); // turns remaining in jail per player
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [diceValue, setDiceValue] = useState<number | null>(null);
+  const [diceFaces, setDiceFaces] = useState<[number, number] | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [log, setLog] = useState('');
   const [pendingBuy, setPendingBuy] = useState<number | null>(null);
@@ -211,7 +213,10 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
 
     setIsRolling(true);
     setTimeout(() => {
-      const roll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
+      const die1 = Math.floor(Math.random() * 6) + 1;
+      const die2 = Math.floor(Math.random() * 6) + 1;
+      const roll = die1 + die2;
+      setDiceFaces([die1, die2]);
       setDiceValue(roll);
 
       const newPos = (positions[currentPlayer] + roll) % BOARD.length;
@@ -245,7 +250,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         return;
       }
       setTimeout(() => checkBankruptcyThenAdvance(result.cash), 900);
-    }, 500);
+    }, 700);
   };
 
   useEffect(() => {
@@ -363,10 +368,11 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
           <Landmark className="w-6 h-6 text-amber-400/80" />
           <span className="text-[13px] sm:text-sm font-black tracking-wider text-white">MONOPOLY</span>
           <span className="text-[9px] text-zinc-500 font-semibold">NOOB Edition</span>
-          {diceValue !== null && (
-            <span className="mt-1 px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-[11px] font-black text-[#00FF66]">
-              🎲 {diceValue}
-            </span>
+          {(diceFaces || isRolling) && (
+            <div className="mt-1 flex items-center gap-1">
+              <AnimatedDice value={diceFaces?.[0] ?? null} isRolling={isRolling} size={20} />
+              <AnimatedDice value={diceFaces?.[1] ?? null} isRolling={isRolling} size={20} />
+            </div>
           )}
         </div>
 
@@ -428,14 +434,19 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
           </button>
         </div>
       ) : (
-        <button
-          onClick={rollDice}
-          disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
-          className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Dices className="w-4 h-4" />
-          {playerTypes[currentPlayer] === 'bot' ? `Player ${currentPlayer + 1} is rolling...` : diceValue !== null ? `Rolled ${diceValue}` : 'Roll Dice'}
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <AnimatedDice value={diceFaces?.[0] ?? null} isRolling={isRolling} size={36} />
+            <AnimatedDice value={diceFaces?.[1] ?? null} isRolling={isRolling} size={36} />
+          </div>
+          <button
+            onClick={rollDice}
+            disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
+            className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {playerTypes[currentPlayer] === 'bot' ? `Player ${currentPlayer + 1} is rolling...` : diceValue !== null ? `Rolled ${diceValue}` : 'Roll Dice'}
+          </button>
+        </div>
       )}
     </div>
   );

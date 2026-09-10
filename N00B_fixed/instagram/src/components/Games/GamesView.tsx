@@ -201,20 +201,8 @@ export const GamesView: React.FC<GamesViewProps> = ({
           </div>
         </div>
 
-        {/* Current Points Badge & Actions */}
+        {/* Actions — balance now lives only on the Wallet page */}
         <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-2xl bg-zinc-900 border border-[#00FF66]/30 flex items-center gap-2.5 shadow-lg">
-            <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-xs">
-              ⚡
-            </div>
-            <div>
-              <span className="text-[10px] text-zinc-400 block font-medium">Balance</span>
-              <span className="text-sm font-black text-white flex items-center gap-1">
-                {formatNoobPoints(userPoints)} <span className="text-[#00FF66] text-xs font-extrabold">noobs</span>
-              </span>
-            </div>
-          </div>
-
           <button
             onClick={() => setActiveTab(activeTab === 'games' ? 'leaderboard' : 'games')}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md ${

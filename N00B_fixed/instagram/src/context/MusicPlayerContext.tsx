@@ -15,6 +15,7 @@ interface MusicPlayerContextType {
   prevTrack: () => void;
   toggleMute: () => void;
   refreshTracks: () => Promise<void>;
+  seekTo: (percentage: number) => void;
 }
 
 const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(undefined);
@@ -109,6 +110,14 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  const seekTo = (percentage: number) => {
+    const audio = audioRef.current;
+    if (audio && isFinite(audio.duration) && audio.duration > 0) {
+      audio.currentTime = (percentage / 100) * audio.duration;
+      setProgress(percentage);
+    }
+  };
+
   return (
     <MusicPlayerContext.Provider
       value={{
@@ -123,7 +132,8 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         nextTrack,
         prevTrack,
         toggleMute,
-        refreshTracks: loadTracks
+        refreshTracks: loadTracks,
+        seekTo
       }}
     >
       {children}

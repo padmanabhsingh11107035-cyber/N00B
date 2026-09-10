@@ -34,7 +34,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     isMuted,
     togglePlay,
     toggleMute,
-    refreshTracks
+    refreshTracks,
+    seekTo
   } = useMusicPlayer();
 
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -44,10 +45,10 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   // Upload Form
   const [titleInput, setTitleInput] = useState('');
   const [artistInput, setArtistInput] = useState(currentUser.displayName || currentUser.username);
-  const [genreInput, setGenreInput] = useState('Lo-Fi');
-  const [coverUrlInput, setCoverUrlInput] = useState('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500');
-  const [audioUrlInput, setAudioUrlInput] = useState('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-  const [detectedDuration, setDetectedDuration] = useState('2:45');
+  const [genreInput, setGenreInput] = useState('');
+  const [coverUrlInput, setCoverUrlInput] = useState('');
+  const [audioUrlInput, setAudioUrlInput] = useState('');
+  const [detectedDuration, setDetectedDuration] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
   const coverFileRef = useRef<HTMLInputElement>(null);
@@ -85,11 +86,10 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
 
   const handleCreateTrack = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titleInput.trim()) return;
+    if (!titleInput.trim() || !genreInput || !audioUrlInput || !coverUrlInput) return;
 
     try {
       setIsUploading(true);
-      // Ensure duration is auto-calculated if URL changed
       const finalDuration = detectedDuration || (await getAudioDuration(audioUrlInput));
 
       await uploadMusicTrack({
@@ -104,6 +104,10 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       await refreshTracks();
       setShowUploadModal(false);
       setTitleInput('');
+      setGenreInput('');
+      setCoverUrlInput('');
+      setAudioUrlInput('');
+      setDetectedDuration('');
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
     } catch (err) {
       console.error(err);
@@ -128,20 +132,13 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       {/* Music Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(236,72,153,0.3)]">
-            <Music className="w-6 h-6 text-white stroke-[2.5]" />
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.35)]"
+            style={{ background: 'conic-gradient(from 180deg, #00FF66, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #00FF66)' }}
+          >
+            <Disc3 className="w-6 h-6 text-white stroke-[2.5] animate-spin-slow" />
           </div>
-          <div>
-            <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              Community Music Hub
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold border border-pink-500/30">
-                Continuous Playback
-              </span>
-            </h1>
-            <p className="text-xs text-zinc-400">
-              Discover, listen, and attach beats to your posts, stories, and reels
-            </p>
-          </div>
+          <h1 className="text-xl font-black text-white tracking-tight">NOOB Music</h1>
         </div>
 
         <button
@@ -196,13 +193,20 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-[#00FF66] to-cyan-400 h-full transition-all duration-150"
-              style={{ width: `${audioProgress}%` }}
-            />
-          </div>
+          {/* Scrubbable Progress Bar */}
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.1}
+            value={Number.isFinite(audioProgress) ? audioProgress : 0}
+            onChange={(e) => seekTo(Number(e.target.value))}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[#00FF66]"
+            style={{
+              background: `linear-gradient(to right, #00FF66 ${audioProgress}%, #3f3f46 ${audioProgress}%)`
+            }}
+            aria-label="Seek track position"
+          />
         </div>
       )}
 
@@ -339,17 +343,15 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1">Genre</label>
                 <select
+                  required
                   value={genreInput}
                   onChange={(e) => setGenreInput(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
                 >
-                  <option value="Synthwave">Synthwave</option>
-                  <option value="Lo-Fi">Lo-Fi</option>
-                  <option value="Hip Hop">Hip Hop</option>
-                  <option value="EDM">EDM</option>
-                  <option value="Phonk">Phonk</option>
-                  <option value="Cyberpunk">Cyberpunk</option>
-                  <option value="Ambient">Ambient</option>
+                  <option value="" disabled>Select a genre…</option>
+                  {genres.filter((g) => g !== 'all').map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
                 </select>
               </div>
 
@@ -358,18 +360,26 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 <button
                   type="button"
                   onClick={() => coverFileRef.current?.click()}
-                  className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                    coverUrlInput
+                      ? 'bg-pink-500/10 border-pink-500/40 text-pink-300'
+                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300'
+                  }`}
                 >
-                  <Upload className="w-3 h-3 text-pink-400" /> Cover Art
+                  {coverUrlInput ? <Check className="w-3 h-3 text-pink-400" /> : <Upload className="w-3 h-3 text-pink-400" />} Cover Art
                 </button>
                 <input ref={coverFileRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
 
                 <button
                   type="button"
                   onClick={() => audioFileRef.current?.click()}
-                  className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-bold text-zinc-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                    audioUrlInput
+                      ? 'bg-[#00FF66]/10 border-[#00FF66]/40 text-[#00FF66]'
+                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300'
+                  }`}
                 >
-                  <Upload className="w-3 h-3 text-[#00FF66]" /> Audio File
+                  {audioUrlInput ? <Check className="w-3 h-3 text-[#00FF66]" /> : <Upload className="w-3 h-3 text-[#00FF66]" />} Audio File
                 </button>
                 <input ref={audioFileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.wma" onChange={handleAudioUpload} className="hidden" />
               </div>
@@ -381,7 +391,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                   Auto-detected Length:
                 </span>
                 <span className="font-mono font-bold text-[#00FF66] bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
-                  {detectedDuration}
+                  {detectedDuration || 'Upload audio…'}
                 </span>
               </div>
 
@@ -395,8 +405,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploading}
-                  className="px-5 py-2 rounded-xl bg-[#00FF66] text-black font-extrabold text-xs shadow-md cursor-pointer"
+                  disabled={isUploading || !titleInput.trim() || !genreInput || !audioUrlInput || !coverUrlInput}
+                  className="px-5 py-2 rounded-xl bg-[#00FF66] text-black font-extrabold text-xs shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isUploading ? 'Publishing...' : 'Publish Track'}
                 </button>

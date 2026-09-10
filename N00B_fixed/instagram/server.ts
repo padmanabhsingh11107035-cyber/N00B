@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
 import {
   CURRENT_USER,
   MOCK_USERS,
@@ -20,24 +19,49 @@ import {
 import { uploadMediaToB2, signMediaKey, getB2Client } from './server/b2Storage';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 
-// Lazy initialized Gemini client
-let aiClient: GoogleGenAI | null = null;
-function getAIClient() {
-  if (!aiClient && process.env.GEMINI_API_KEY) {
+// AI Support runs on Groq's free API (an OpenAI-compatible chat completions
+// endpoint) rather than Gemini — it needs no billing account, just a free
+// API key from console.groq.com. Falls back from a large model to a
+// smaller/faster one on error (rate limit, high demand, etc).
+const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+
+async function queryGroq(systemPrompt: string, userMessage: string): Promise<string | null> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+
+  for (const model of GROQ_MODELS) {
     try {
-      aiClient = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build'
-          }
-        }
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: 0.7
+        })
       });
-    } catch (e) {
-      console.warn('Gemini client init error:', e);
+
+      if (!res.ok) {
+        console.warn(`Groq API error with ${model}: ${res.status} ${await res.text()}`);
+        continue;
+      }
+
+      const data: any = await res.json();
+      const reply = data?.choices?.[0]?.message?.content?.trim();
+      if (reply) return reply;
+    } catch (err: any) {
+      // Network error or high-demand failure on this model — the loop
+      // automatically tries the next fallback model.
+      console.warn(`Groq API query error with ${model}:`, err?.message || err);
     }
   }
-  return aiClient;
+  return null;
 }
 
 // Configure multer memory storage for handling file uploads (images, videos, audio)
@@ -339,7 +363,7 @@ async function startServer() {
       usersCount: users.length,
       b2Storage: getB2Client().isConfigured ? 'connected' : 'ready',
       mongoStorage: getDbStatusLabel(),
-      aiService: process.env.GEMINI_API_KEY ? (getAIClient() ? 'configured' : 'init failed') : 'missing GEMINI_API_KEY'
+      aiService: process.env.GROQ_API_KEY ? 'configured' : 'missing GROQ_API_KEY'
     });
   });
 
@@ -1847,28 +1871,19 @@ async function startServer() {
       return `Here is your full account & activity summary, ${registeredName}:\n\n• Registered Name: ${userStats.registeredName} (@${userStats.username})\n• Account Verification: ${userStats.isVerified ? '✅ Blue Verified Checkmark' : '⚪ Standard Member'}\n• NOOB Points: ${userStats.noobPoints.toLocaleString()} Points\n• Mini-Games Record: ${userStats.gamesWon} Wins / ${userStats.gamesPlayed} Matches Played\n• Publications: ${userStats.postsCount} Posts Published\n• Community Reach: ${userStats.followersCount} Followers / ${userStats.followingCount} Following\n\nYou're doing wonderfully on NOOB, ${registeredName}! Let me know if you need anything else!`;
     }
 
-    // 4. Fallback to Gemini AI model if available, or rich assistant logic
-    const ai = getAIClient();
-    if (ai) {
-      try {
-        const aiRes = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: `You are the NOOB Platform AI Assistant.
+    // 4. Fallback to the Groq AI model if available, or rich assistant logic
+    const groqReply = await queryGroq(
+      `You are the NOOB Platform AI Assistant.
 User's registered name: "${registeredName}".
 User's username: "@${userStats.username}".
 User's activities: ${userStats.postsCount} posts, ${userStats.noobPoints} points, ${userStats.gamesWon} game wins, verified: ${userStats.isVerified}.
 Always address the user warmly using their registered name ("${registeredName}").
 Answer their query clearly, concisely, and helpfully.
 If they thank you, always say welcome and praise their activities.
-If they mention cyberbullying or harassment, ask for the user ID to report and block them.
-
-User message: ${userText}`
-        });
-        if (aiRes.text) return aiRes.text;
-      } catch (err) {
-        console.warn('Gemini chat fallback error:', err);
-      }
-    }
+If they mention cyberbullying or harassment, ask for the user ID to report and block them.`,
+      userText
+    );
+    if (groqReply) return groqReply;
 
     return `Hello ${registeredName}! I am here to assist you with anything on NOOB — from exploring reels, uploading music, competing in the 50 mini-games (${userStats.noobPoints.toLocaleString()} NOOB points!), to managing your profile and keeping you protected against cyber bullying. How can I help you right now?`;
   }
@@ -2557,45 +2572,25 @@ COMPLETE PLATFORM CAPABILITIES:
 
     // Everything else (Terms, Privacy, games, media routing, music, highlights,
     // account settings, support contact, DMs/Vanish, and anything else) is answered
-    // by Gemini below, which has the full knowledge base and an explicit instruction
+    // by Groq below, which has the full knowledge base and an explicit instruction
     // to answer only the specific question asked instead of dumping a category summary.
 
-    // Try Gemini API for open-ended questions with multi-model fallback for high demand/503 tolerance
-    const client = getAIClient();
-    if (client) {
-      const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
-      for (const modelName of candidateModels) {
-        try {
-          const response = await client.models.generateContent({
-            model: modelName,
-            contents: message,
-            config: {
-              systemInstruction: systemPrompt,
-              temperature: 0.7,
-            }
-          });
-
-          const reply = response.text?.trim();
-          if (reply) {
-            return res.json({
-              success: true,
-              reply,
-              model: modelName,
-              user: {
-                username: activeUser.username,
-                displayName: activeUser.displayName,
-                gender: activeUser.gender
-              }
-            });
-          }
-        } catch (geminiError: any) {
-          // If 503 (high demand) or 429 occurs on the primary model, loop automatically tries the next fallback model
-          console.warn(`Gemini API query error with ${modelName}:`, geminiError?.message || geminiError);
+    // Try the Groq API for open-ended questions with multi-model fallback for high demand/rate-limit tolerance
+    const groqReply = await queryGroq(systemPrompt, message);
+    if (groqReply) {
+      return res.json({
+        success: true,
+        reply: groqReply,
+        model: 'groq',
+        user: {
+          username: activeUser.username,
+          displayName: activeUser.displayName,
+          gender: activeUser.gender
         }
-      }
+      });
     }
 
-    // Final instant fallback (Gemini unavailable)
+    // Final instant fallback (Groq unavailable)
     let fallbackReply = `Sorry @${activeUser.username}, I'm having trouble reaching the AI service right now. Please try again in a moment, or use the Call Us tab for a live callback.`;
 
     res.json({

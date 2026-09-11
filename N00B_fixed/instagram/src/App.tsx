@@ -890,6 +890,7 @@ export default function App() {
               setPendingChatUser(targetUser);
               setActiveTab('chat');
             }}
+            onNavigateToUserProfile={handleNavigateToUserProfile}
           />
         )}
       </main>

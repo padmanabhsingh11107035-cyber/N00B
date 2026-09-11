@@ -18,7 +18,8 @@ import {
   Trash2,
   Volume2,
   BellOff,
-  BellRing
+  BellRing,
+  Coins
 } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
 
@@ -108,6 +109,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Gamepad2 className="w-3.5 h-3.5 text-yellow-400" />;
       case 'music_share':
         return <Music className="w-3.5 h-3.5 text-pink-400" />;
+      case 'points_transfer':
+        return <Coins className="w-3.5 h-3.5 text-amber-400" />;
       default:
         return <Sparkles className="w-3.5 h-3.5 text-[#00FF66]" />;
     }

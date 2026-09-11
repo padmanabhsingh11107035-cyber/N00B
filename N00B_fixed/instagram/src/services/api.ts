@@ -899,6 +899,20 @@ export async function upgradeProTier(payload: {
   return { success: res.ok && data.success, user: data.user, error: data.error };
 }
 
+export async function transferNoobPoints(payload: {
+  recipientId: string;
+  amount: number;
+  note?: string;
+}): Promise<{ success: boolean; user?: User; message?: string; error?: string }> {
+  const res = await fetch(`${API_BASE}/wallet/transfer`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, user: data.user, message: data.message, error: data.error };
+}
+
 // Legacy Games
 export async function fetchLeaderboard(gameId?: string): Promise<GameLeaderboardEntry[]> {
   const data = await fetchGameLeaderboard();

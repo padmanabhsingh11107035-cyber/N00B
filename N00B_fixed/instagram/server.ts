@@ -1064,6 +1064,70 @@ async function startServer() {
     res.json({ success: true, user: sanitizeUser(users[index]) });
   });
 
+  // Peer-to-peer NOOB Points transfer — the sender's balance moves
+  // immediately (both sides recorded via recordTransaction) so the wallet
+  // reflects it on the very next read, no polling delay.
+  app.post('/api/wallet/transfer', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in to send points.' });
+
+    const { recipientId, amount, note } = req.body;
+    const transferAmount = Math.floor(Number(amount));
+
+    if (!recipientId) {
+      return res.status(400).json({ error: 'Choose someone to send points to.' });
+    }
+    if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
+      return res.status(400).json({ error: 'Enter a valid whole number of points to send.' });
+    }
+    if (recipientId === active.id) {
+      return res.status(400).json({ error: 'You cannot send points to yourself.' });
+    }
+
+    const senderIndex = users.findIndex(u => u.id === active.id);
+    const recipientIndex = users.findIndex(u => u.id === recipientId);
+    if (senderIndex === -1) return res.status(404).json({ error: 'Your account was not found.' });
+    if (recipientIndex === -1) return res.status(404).json({ error: 'Recipient account not found.' });
+
+    const sender = users[senderIndex];
+    const recipient = users[recipientIndex];
+
+    if ((sender.noobPoints || 0) < transferAmount) {
+      return res.status(400).json({
+        error: `Insufficient NOOB Points. You have ${(sender.noobPoints || 0).toLocaleString()} points.`
+      });
+    }
+
+    const cleanNote = typeof note === 'string' ? note.trim().slice(0, 140) : '';
+
+    sender.noobPoints = (sender.noobPoints || 0) - transferAmount;
+    recipient.noobPoints = (recipient.noobPoints || 0) + transferAmount;
+
+    recordTransaction(sender, -transferAmount, `Sent to @${recipient.username}${cleanNote ? ': ' + cleanNote : ''}`);
+    recordTransaction(recipient, transferAmount, `Received from @${sender.username}${cleanNote ? ': ' + cleanNote : ''}`);
+
+    notifications.unshift({
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      senderId: sender.id,
+      senderUsername: sender.username,
+      senderDisplayName: sender.displayName,
+      senderAvatar: sender.avatar,
+      senderIsVerified: !!sender.isVerified,
+      targetUserId: recipient.id,
+      targetUsername: recipient.username,
+      title: '💰 NOOB Points Received',
+      message: `@${sender.username} sent you ${transferAmount.toLocaleString()} NOOB Points${cleanNote ? ': "' + cleanNote + '"' : '.'}`,
+      type: 'points_transfer',
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `Sent ${transferAmount.toLocaleString()} points to @${recipient.username}.`,
+      user: sanitizeUser(sender)
+    });
+  });
+
   // All Users directory (for search, follow, explore & game invites)
   app.get('/api/users', async (req, res) => {
     const active = getActiveUser(req);

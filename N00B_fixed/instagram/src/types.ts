@@ -101,6 +101,7 @@ export type NotificationType =
   | 'mention'
   | 'music_share'
   | 'game_challenge'
+  | 'points_transfer'
   | 'system';
 
 export interface AppNotification {

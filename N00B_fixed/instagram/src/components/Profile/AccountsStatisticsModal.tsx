@@ -15,15 +15,18 @@ import {
   Lock,
   ChevronRight,
   Info,
-  Ticket
+  Ticket,
+  Send
 } from 'lucide-react';
 import { User } from '../../types';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import confetti from 'canvas-confetti';
 import { CouponsModal } from './CouponsModal';
+import { SendPointsPage } from './SendPointsPage';
 
 interface AccountsStatisticsModalProps {
   currentUser: User;
+  allUsers?: User[];
   onClose: () => void;
   onUserUpdated?: (user: User) => void;
 }
@@ -43,11 +46,13 @@ interface BadgeItem {
 
 export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = ({
   currentUser,
+  allUsers = [],
   onClose,
   onUserUpdated
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'badges' | 'history'>('overview');
   const [showCoupons, setShowCoupons] = useState(false);
+  const [showSendPoints, setShowSendPoints] = useState(false);
   const exactPoints = currentUser.noobPoints ?? 150;
   const gamesWon = currentUser.gamesWonCount ?? 0;
   const gamesPlayed = currentUser.gamesPlayedCount ?? 0;
@@ -245,6 +250,25 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </div>
           </div>
         </div>
+
+        {/* Send / Gift Points */}
+        <button
+          onClick={() => setShowSendPoints(true)}
+          className="w-full p-3 rounded-2xl bg-[#00FF66]/10 hover:bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-between transition-colors cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/40 flex items-center justify-center text-[#00FF66] shrink-0">
+              <Send className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <span className="text-xs font-bold text-white block group-hover:text-[#00FF66] transition-colors">
+                Send / Gift Points
+              </span>
+              <span className="text-[10px] text-zinc-400 block">Transfer NOOB Points to another user</span>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF66] transition-colors" />
+        </button>
 
         {/* My Coupons */}
         <button
@@ -472,6 +496,15 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
       </div>
 
       {showCoupons && <CouponsModal currentUser={currentUser} onClose={() => setShowCoupons(false)} />}
+
+      {showSendPoints && (
+        <SendPointsPage
+          currentUser={currentUser}
+          allUsers={allUsers}
+          onClose={() => setShowSendPoints(false)}
+          onUserUpdated={onUserUpdated}
+        />
+      )}
     </div>
   );
 };

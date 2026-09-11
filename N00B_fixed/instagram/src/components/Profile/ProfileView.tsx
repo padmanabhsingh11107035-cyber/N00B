@@ -84,6 +84,7 @@ import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
+import { FollowListPage } from './FollowListPage';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -104,6 +105,7 @@ interface ProfileViewProps {
   onDeleteReel?: (reelId: string) => void;
   onBackToMyProfile?: () => void;
   onNavigateToChatWithUser?: (user: User) => void;
+  onNavigateToUserProfile?: (user: User) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -124,7 +126,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeletePost,
   onDeleteReel,
   onBackToMyProfile,
-  onNavigateToChatWithUser
+  onNavigateToChatWithUser,
+  onNavigateToUserProfile
 }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved' | 'liked' | 'archive'>('posts');
   const [collections, setCollections] = useState<SavedCollection[]>([]);
@@ -193,6 +196,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
+  const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
@@ -968,18 +972,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-lg sm:text-xl font-black text-white block leading-tight">{displayedPosts.length}</span>
               <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Posts</span>
             </div>
-            <div className="text-center px-1 sm:px-2 min-w-0">
+            <button
+              onClick={() => setFollowListTab('followers')}
+              className="text-center px-1 sm:px-2 min-w-0 cursor-pointer"
+            >
               <span className="text-lg sm:text-xl font-black text-white block leading-tight">
                 {(targetUser.followersCount || 0).toLocaleString()}
               </span>
               <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Followers</span>
-            </div>
-            <div className="text-center px-1 sm:px-2 min-w-0">
+            </button>
+            <button
+              onClick={() => setFollowListTab('following')}
+              className="text-center px-1 sm:px-2 min-w-0 cursor-pointer"
+            >
               <span className="text-lg sm:text-xl font-black text-white block leading-tight">
                 {(targetUser.followingCount || 0).toLocaleString()}
               </span>
               <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Following</span>
-            </div>
+            </button>
           </div>
 
           {/* 5. Primary Action Buttons (Edit / Share vs Follow / Message / Unblock) */}
@@ -1604,6 +1614,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}
 
+      {followListTab && (
+        <FollowListPage
+          currentUser={currentUser}
+          targetUser={targetUser}
+          allUsers={allUsers}
+          initialTab={followListTab}
+          onClose={() => setFollowListTab(null)}
+          onToggleFollowUser={onToggleFollowUser}
+          onNavigateToUserProfile={(u) => {
+            setFollowListTab(null);
+            onNavigateToUserProfile?.(u);
+          }}
+        />
+      )}
+
       {/* 9. Settings & Privacy Master Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -1990,6 +2015,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showAccountsStatisticsModal && (
         <AccountsStatisticsModal
           currentUser={currentUser}
+          allUsers={allUsers}
           onClose={() => setShowAccountsStatisticsModal(false)}
           onUserUpdated={onUserUpdated}
         />

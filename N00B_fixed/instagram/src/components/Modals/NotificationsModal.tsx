@@ -19,9 +19,11 @@ import {
   Volume2,
   BellOff,
   BellRing,
-  Coins
+  Coins,
+  Gift
 } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
+import { formatRelativeTime } from '../../utils/formatTime';
 
 export interface NotificationSettingsState {
   masterEnabled: boolean;
@@ -44,6 +46,7 @@ interface NotificationsModalProps {
   onClearAll: () => void;
   onSimulateNotification: (type?: NotificationType) => void;
   onNavigateToUser?: (username: string) => void;
+  onOpenScratchCard?: (scratchCardId: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -56,7 +59,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onDeclineFollowRequest,
   onClearAll,
   onSimulateNotification,
-  onNavigateToUser
+  onNavigateToUser,
+  onOpenScratchCard
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'settings'>('all');
   const [filterType, setFilterType] = useState<string>('all');
@@ -111,6 +115,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Music className="w-3.5 h-3.5 text-pink-400" />;
       case 'points_transfer':
         return <Coins className="w-3.5 h-3.5 text-amber-400" />;
+      case 'birthday_wish':
+      case 'birthday_follower_alert':
+        return <Gift className="w-3.5 h-3.5 text-pink-400" />;
       default:
         return <Sparkles className="w-3.5 h-3.5 text-[#00FF66]" />;
     }
@@ -309,7 +316,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           )}
 
                           <span className="text-[10px] text-zinc-500 font-medium block mt-1">
-                            {notif.time}
+                            {formatRelativeTime(notif.createdAt)}
                           </span>
 
                           {/* Action Buttons for Follow Request Received */}
@@ -340,6 +347,15 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             <div className="mt-1.5 text-[11px] text-zinc-500 font-medium">
                               Request dismissed
                             </div>
+                          )}
+
+                          {notif.type === 'birthday_wish' && notif.scratchCardId && (
+                            <button
+                              onClick={() => onOpenScratchCard?.(notif.scratchCardId!)}
+                              className="mt-2 px-3.5 py-1.5 bg-gradient-to-r from-pink-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-black text-xs font-black rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm w-fit"
+                            >
+                              <Gift className="w-3.5 h-3.5" /> Scratch to Reveal 🎁
+                            </button>
                           )}
                         </div>
                       </div>
@@ -431,7 +447,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 {/* 4. Games & Leaderboard */}
                 <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
                   <div>
-                    <span className="text-xs font-bold text-white block">50 Mini-Games &amp; Leaderboards</span>
+                    <span className="text-xs font-bold text-white block">Mini-Games &amp; Leaderboards</span>
                     <span className="text-[11px] text-zinc-500">Rank promotions and arcade challenge invites</span>
                   </div>
                   <input

@@ -11,7 +11,8 @@ import {
   AppSettings,
   ProfessionalInsights,
   StoryHighlight,
-  StatusNote
+  StatusNote,
+  ShopItem
 } from '../types';
 import { compressMedia } from '../utils/mediaCompressor';
 import { safeJsonStringify } from '../utils/safeJson';
@@ -938,6 +939,33 @@ export async function transferNoobPoints(payload: {
   });
   const data = await res.json();
   return { success: res.ok && data.success, user: data.user, message: data.message, error: data.error };
+}
+
+export async function fetchShopCatalog(): Promise<{ catalog: ShopItem[]; ownedItemIds: string[] }> {
+  const res = await fetch(`${API_BASE}/shop/catalog`, { headers: getAuthHeaders() });
+  const data = await res.json();
+  return { catalog: data.catalog || [], ownedItemIds: data.ownedItemIds || [] };
+}
+
+export async function purchaseShopItem(itemId: string): Promise<{ success: boolean; item?: ShopItem; user?: User; error?: string }> {
+  const res = await fetch(`${API_BASE}/shop/purchase`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ itemId })
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, item: data.item, user: data.user, error: data.error };
+}
+
+export async function revealScratchCard(
+  scratchCardId: string
+): Promise<{ success: boolean; gift?: { type: string; value: number | string; label: string }; user?: User; alreadyRevealed?: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/scratch-cards/${scratchCardId}/reveal`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, gift: data.gift, user: data.user, alreadyRevealed: data.alreadyRevealed, error: data.error };
 }
 
 // Legacy Games

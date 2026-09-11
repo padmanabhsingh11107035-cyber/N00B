@@ -989,59 +989,61 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 />
               )}
 
-              {(game.id === 'rps' || game.id === 'rps_extreme') && (
+              {game.id === 'rps' && (
                 <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} />
               )}
 
-              {(game.id === 'speed_math' || game.id === 'mental_calc' || game.id === 'trivia_quest') && (
+              {game.id === 'speed_math' && (
                 <SpeedMathGame onGameOver={handleGameOver} targetScore={6} />
               )}
 
-              {(game.id === 'memory_match' || game.id === 'emoji_match' || game.id === 'cyber_memory') && (
+              {game.id === 'memory_match' && (
                 <MemoryMatchGame onGameOver={handleGameOver} />
               )}
 
-              {(game.id === 'reaction_tap' || game.id === 'laser_dodge' || game.id === 'ninja_tap' || game.id === 'speed_reflex') && (
+              {game.id === 'reaction_tap' && (
                 <ReactionTapGame onGameOver={handleGameOver} />
               )}
 
-              {(game.id === 'brick_breaker' || game.id === 'pinball_pulse' || game.id === 'neon_pong') && (
+              {game.id === 'brick_breaker' && (
                 <BrickBreakerGame onGameOver={handleGameOver} />
               )}
 
-              {(game.id === 'cyber_drone' || game.id === 'pixel_runner' || game.id === 'galaxy_shooter' || game.id === 'astro_jump') && (
+              {game.id === 'cyber_drone' && (
                 <CyberDroneGame onGameOver={handleGameOver} targetScore={5} />
               )}
 
-              {(game.id === 'color_rush' || game.id === 'bubble_blitz' || game.id === 'laser_matrix') && (
+              {game.id === 'bubble_blitz' && (
                 <ColorRushGame onGameOver={handleGameOver} targetScore={8} />
               )}
 
-              {(game.id === 'word_guess' || game.id === 'wordle' || game.id === 'code_breaker') && (
+              {game.id === 'wordle_quest' && (
                 <WordleGuessGame onGameOver={handleGameOver} />
               )}
 
-              {(game.id === 'scribble_art' || game.id === 'doodle_rush') && (
+              {game.id === 'scribble' && (
                 <ScribbleGame onFinishGame={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
               )}
 
-              {/* Universal Rich Arcade Engine for any other game in catalog */}
+              {/* Every catalog id above maps to a dedicated game; this generic
+                  engine is kept only as a safety net for an unrecognized id
+                  and should never actually be reached in normal use. */}
               {![
-                'cyber_snake', 'snake', 'pac_grid',
+                'cyber_snake',
                 'tictactoe',
                 'chess_blitz',
                 'snakes_ladders',
                 'ludo_classic',
                 'monopoly_noob',
-                'rps', 'rps_extreme',
-                'speed_math', 'mental_calc', 'trivia_quest',
-                'memory_match', 'emoji_match', 'cyber_memory',
-                'reaction_tap', 'laser_dodge', 'ninja_tap', 'speed_reflex',
-                'brick_breaker', 'pinball_pulse', 'neon_pong',
-                'cyber_drone', 'pixel_runner', 'galaxy_shooter', 'astro_jump',
-                'color_rush', 'bubble_blitz', 'laser_matrix',
-                'word_guess', 'wordle', 'code_breaker',
-                'scribble_art', 'doodle_rush'
+                'rps',
+                'speed_math',
+                'memory_match',
+                'reaction_tap',
+                'brick_breaker',
+                'cyber_drone',
+                'bubble_blitz',
+                'wordle_quest',
+                'scribble'
               ].includes(game.id) && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}

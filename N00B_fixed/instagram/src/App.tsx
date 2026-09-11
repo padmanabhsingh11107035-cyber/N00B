@@ -57,6 +57,7 @@ import { CreateStoryModal } from './components/Stories/CreateStoryModal';
 import { PostCreationModal } from './components/PostCreation/PostCreationModal';
 import { ProfessionalDashboardModal } from './components/Modals/ProfessionalDashboardModal';
 import { NotificationsModal, NotificationSettingsState } from './components/Modals/NotificationsModal';
+import { ScratchCardModal } from './components/Modals/ScratchCardModal';
 import { StatusNoteModal } from './components/Modals/StatusNoteModal';
 import { AuthView } from './components/Auth/AuthView';
 import { TermsAndConditions } from './components/Legal/TermsAndConditions';
@@ -95,6 +96,7 @@ export default function App() {
 
   // Active Modals & Selected items
   const [activeStoryViewerIndex, setActiveStoryViewerIndex] = useState<number | null>(null);
+  const [activeScratchCardId, setActiveScratchCardId] = useState<string | null>(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [showProfessionalDashboardModal, setShowProfessionalDashboardModal] = useState(false);
@@ -693,7 +695,7 @@ export default function App() {
               }`}
             >
               <Gamepad2 className={`w-4 h-4 ${activeTab === 'games' ? 'stroke-[#00FF66]' : 'stroke-current'}`} />
-              <span>50 Mini-Games</span>
+              <span>Mini-Games</span>
             </button>
 
             <button
@@ -842,6 +844,7 @@ export default function App() {
               pendingChatUser={pendingChatUser}
               onPendingChatUserHandled={() => setPendingChatUser(null)}
               onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
+              onUserUpdated={(u) => setCurrentUser(u)}
               onPlayGame={(gameId, challengerUsername, roomCode) => {
                 const matched = ALL_50_MINI_GAMES.find(
                   (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
@@ -1078,6 +1081,15 @@ export default function App() {
           onClearAll={handleClearAllNotifications}
           onSimulateNotification={handleSimulateNotification}
           onClose={() => setShowNotificationsModal(false)}
+          onOpenScratchCard={(id) => setActiveScratchCardId(id)}
+        />
+      )}
+
+      {activeScratchCardId && (
+        <ScratchCardModal
+          scratchCardId={activeScratchCardId}
+          onClose={() => setActiveScratchCardId(null)}
+          onUserUpdated={(u) => setCurrentUser(u)}
         />
       )}
 

@@ -57,6 +57,7 @@ export interface User {
   postsCount: number;
   noobPoints?: number;
   noobTransactions?: NoobTransaction[];
+  purchasedItemIds?: string[];
   gamesWonCount?: number;
   gamesPlayedCount?: number;
   isAi?: boolean;
@@ -102,6 +103,8 @@ export type NotificationType =
   | 'music_share'
   | 'game_challenge'
   | 'points_transfer'
+  | 'birthday_wish'
+  | 'birthday_follower_alert'
   | 'system';
 
 export interface AppNotification {
@@ -127,6 +130,7 @@ export interface AppNotification {
   createdAt?: string;
   isRead?: boolean;
   actionStatus?: 'pending' | 'accepted' | 'declined';
+  scratchCardId?: string;
 }
 
 export interface MusicTrack {
@@ -166,6 +170,15 @@ export interface NoobTransaction {
   reason: string;
   timestamp: string;
   balanceAfter: number;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  type: 'sticker' | 'gif' | 'emoji';
+  content: string;
+  price: number;
+  category: string;
 }
 
 export interface PostSlide {

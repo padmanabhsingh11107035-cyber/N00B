@@ -142,7 +142,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         <NavButton
           id="nav-item-games"
           label="Games"
-          title="50 Mini-Games Arena"
+          title="Mini-Games Arena"
           active={activeTab === 'games'}
           onClick={() => onSelectTab('games')}
         >

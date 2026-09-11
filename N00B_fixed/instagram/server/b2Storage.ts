@@ -138,3 +138,31 @@ export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 
     return keyOrUrl;
   }
 }
+
+/**
+ * Permanently deletes an object from B2 given its stored key OR a
+ * presigned URL pointing at it (the key is pulled out of the URL path the
+ * same way signMediaKey does). Used for content whose media should not
+ * outlive it — expired stories, deleted posts/reels. Never throws: a
+ * cleanup pass calling this in a loop shouldn't die because one object
+ * was already gone or B2 isn't configured.
+ */
+export async function deleteMediaFromB2(keyOrUrl?: string | null): Promise<void> {
+  if (!keyOrUrl || keyOrUrl.startsWith('data:') || keyOrUrl.startsWith('/')) return;
+
+  const { client, bucket, endpoint, isConfigured } = getB2Client();
+  if (!isConfigured || !client) return;
+
+  let key = keyOrUrl;
+  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+    if (!keyOrUrl.startsWith(`${endpoint}/${bucket}/`)) return; // not our bucket
+    key = decodeURIComponent(keyOrUrl.slice(`${endpoint}/${bucket}/`.length).split('?')[0]);
+  }
+  if (!key) return;
+
+  try {
+    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+  } catch (err) {
+    console.error(`Failed to delete B2 object "${key}":`, err);
+  }
+}

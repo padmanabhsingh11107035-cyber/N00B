@@ -16,7 +16,7 @@ import {
   MOCK_HIGHLIGHTS,
   INITIAL_SETTINGS
 } from './src/data/mockData';
-import { uploadMediaToB2, signMediaKey, getB2Client } from './server/b2Storage';
+import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2 } from './server/b2Storage';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 
 // AI Support runs on Groq's free API (an OpenAI-compatible chat completions
@@ -229,6 +229,11 @@ async function startServer() {
   // uploads are wired up to storage, via POST /api/music/tracks.
   let musicTracks: any[] = [];
 
+  // Birthday scratch cards — each is a sealed surprise gift generated the
+  // day a user's birthday hits, revealed (and only then actually applied
+  // to their account) when they scratch it from their notification.
+  let scratchCards: any[] = [];
+
   // --- MongoDB persistence ---
   // If MONGODB_URI is configured, replace the mock seed data above with whatever
   // was last saved, so state survives server restarts / Railway redeploys.
@@ -236,7 +241,7 @@ async function startServer() {
     'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
     'notifications', 'chats', 'messages', 'collections', 'gameScores',
     'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks',
-    'coupons', 'customStickers'
+    'coupons', 'customStickers', 'scratchCards'
   ] as const;
 
   if (isDbConnected()) {
@@ -264,6 +269,7 @@ async function startServer() {
     if (loaded.musicTracks) musicTracks = loaded.musicTracks;
     if (loaded.coupons) coupons = loaded.coupons;
     if (loaded.customStickers) customStickers = loaded.customStickers;
+    if (loaded.scratchCards) scratchCards = loaded.scratchCards;
 
     console.log('MongoDB: restored persisted app state');
   }
@@ -294,6 +300,7 @@ async function startServer() {
       saveCollection('musicTracks', musicTracks),
       saveCollection('coupons', coupons),
       saveCollection('customStickers', customStickers),
+      saveCollection('scratchCards', scratchCards),
     ]);
   }
 
@@ -304,6 +311,29 @@ async function startServer() {
       persistStateNow().catch(err => console.error('MongoDB persist failed:', err));
     }, 3000);
   }
+
+  // Stories are meant to actually vanish after 24 hours — GET /api/stories
+  // already hides expired ones from the feed, but until now the story
+  // (and its media in B2) just sat there forever, since nothing ever
+  // removed it from the array or persisted storage. This deletes only the
+  // expired story itself; the author's posts/reels are untouched — those
+  // are only ever removed when the author deletes them.
+  async function cleanupExpiredStories() {
+    const now = Date.now();
+    const expired = stories.filter(s => s.expiresAt && new Date(s.expiresAt).getTime() < now);
+    if (expired.length === 0) return;
+
+    stories = stories.filter(s => !(s.expiresAt && new Date(s.expiresAt).getTime() < now));
+    schedulePersist();
+
+    await Promise.all(
+      expired.map(s => deleteMediaFromB2(s.mediaUrl).catch(() => {}))
+    );
+  }
+  cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
+  setInterval(() => {
+    cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
+  }, 15 * 60 * 1000);
 
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, async () => {
@@ -1023,6 +1053,218 @@ async function startServer() {
     }
     customStickers = customStickers.filter((s) => s.id !== req.params.id);
     res.json({ success: true });
+  });
+
+  // ==========================================
+  // --- PREMIUM STICKER / EMOJI SHOP (bought with NOOB Points) ---
+  // ==========================================
+  const SHOP_CATALOG = [
+    // --- Reaction Packs (1,000 - 2,000 pts) ---
+    { id: 'shop_fire_king', name: 'Fire King', type: 'sticker', content: '🔥👑', price: 1000, category: 'Reactions' },
+    { id: 'shop_gg_ez', name: 'GG EZ', type: 'sticker', content: '🎮🏆', price: 1000, category: 'Reactions' },
+    { id: 'shop_mind_blown_gold', name: 'Golden Mind Blown', type: 'sticker', content: '🤯✨', price: 1200, category: 'Reactions' },
+    { id: 'shop_savage_laugh', name: 'Savage Laugh', type: 'sticker', content: '😹🔥', price: 1200, category: 'Reactions' },
+    { id: 'shop_heart_eyes_royal', name: 'Royal Heart Eyes', type: 'sticker', content: '😍👑', price: 1500, category: 'Reactions' },
+    { id: 'shop_shadow_wink', name: 'Shadow Wink', type: 'sticker', content: '😏🖤', price: 1500, category: 'Reactions' },
+    { id: 'shop_cool_swag', name: 'Ultra Swag', type: 'sticker', content: '😎💫', price: 1800, category: 'Reactions' },
+    { id: 'shop_clap_gold', name: 'Golden Applause', type: 'sticker', content: '👏🏅', price: 2000, category: 'Reactions' },
+
+    // --- Animated-Style GIF Packs (2,500 - 5,000 pts) ---
+    { id: 'shop_gif_confetti_rain', name: 'Confetti Rain', type: 'gif', content: '🎊🎉🎊', price: 2500, category: 'GIF Packs' },
+    { id: 'shop_gif_neon_pulse', name: 'Neon Pulse', type: 'gif', content: '💚⚡💚', price: 2800, category: 'GIF Packs' },
+    { id: 'shop_gif_fireworks', name: 'Fireworks Show', type: 'gif', content: '🎆🎇🎆', price: 3200, category: 'GIF Packs' },
+    { id: 'shop_gif_money_rain', name: 'Money Rain', type: 'gif', content: '💸💰💸', price: 3500, category: 'GIF Packs' },
+    { id: 'shop_gif_disco_ball', name: 'Disco Night', type: 'gif', content: '🪩✨🪩', price: 3800, category: 'GIF Packs' },
+    { id: 'shop_gif_flame_trail', name: 'Flame Trail', type: 'gif', content: '🔥💨🔥', price: 4000, category: 'GIF Packs' },
+    { id: 'shop_gif_galaxy_spin', name: 'Galaxy Spin', type: 'gif', content: '🌌🌀🌌', price: 4500, category: 'GIF Packs' },
+    { id: 'shop_gif_trophy_shine', name: 'Trophy Shine', type: 'gif', content: '🏆✨🏆', price: 5000, category: 'GIF Packs' },
+
+    // --- Legendary Emoji Packs (6,000 - 10,000 pts) ---
+    { id: 'shop_legend_crown_diamond', name: 'Legendary Crown', type: 'emoji', content: '👑💎', price: 6000, category: 'Legendary' },
+    { id: 'shop_legend_dragon', name: "Dragon's Roar", type: 'emoji', content: '🐉🔥', price: 6500, category: 'Legendary' },
+    { id: 'shop_legend_phoenix', name: 'Rising Phoenix', type: 'emoji', content: '🦅🔥', price: 7000, category: 'Legendary' },
+    { id: 'shop_legend_lightning_god', name: 'Storm God', type: 'emoji', content: '⚡👁️', price: 7500, category: 'Legendary' },
+    { id: 'shop_legend_galaxy_king', name: 'Galaxy King', type: 'emoji', content: '👑🌌', price: 8000, category: 'Legendary' },
+    { id: 'shop_legend_diamond_hands', name: 'Diamond Hands', type: 'emoji', content: '💎🙌', price: 8500, category: 'Legendary' },
+    { id: 'shop_legend_infinity', name: 'Infinity Champion', type: 'emoji', content: '♾️🏆', price: 9000, category: 'Legendary' },
+    { id: 'shop_legend_noob_god', name: 'NOOB God Mode', type: 'emoji', content: '👑⚡👑', price: 10000, category: 'Legendary' }
+  ];
+
+  app.get('/api/shop/catalog', (req, res) => {
+    const active = getActiveUser(req);
+    res.json({
+      catalog: SHOP_CATALOG,
+      ownedItemIds: active?.purchasedItemIds || []
+    });
+  });
+
+  app.post('/api/shop/purchase', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in to buy items.' });
+
+    const { itemId } = req.body;
+    const item = SHOP_CATALOG.find(i => i.id === itemId);
+    if (!item) return res.status(404).json({ error: 'Item not found.' });
+
+    const index = users.findIndex(u => u.id === active.id);
+    if (index === -1) return res.status(404).json({ error: 'Your account was not found.' });
+    const user = users[index];
+
+    user.purchasedItemIds = user.purchasedItemIds || [];
+    if (user.purchasedItemIds.includes(itemId)) {
+      return res.status(400).json({ error: 'You already own this item.' });
+    }
+
+    if ((user.noobPoints || 0) < item.price) {
+      return res.status(400).json({
+        error: `Insufficient NOOB Points. You have ${(user.noobPoints || 0).toLocaleString()}, but ${item.name} costs ${item.price.toLocaleString()}.`
+      });
+    }
+
+    user.noobPoints = (user.noobPoints || 0) - item.price;
+    user.purchasedItemIds.push(itemId);
+    recordTransaction(user, -item.price, `Bought "${item.name}" from the Sticker Shop`);
+
+    res.json({ success: true, item, user: sanitizeUser(user) });
+  });
+
+  // ==========================================
+  // --- BIRTHDAY SCRATCH-CARD GIFTS ---
+  // ==========================================
+  // 100 possible surprise gifts. Nothing about this pool is ever exposed to
+  // users ahead of time — they only ever see "you got a birthday gift,
+  // scratch to reveal", never a menu of what's possible.
+  const BIRTHDAY_GIFT_POOL: Array<{ type: 'points' | 'shop_item' | 'coupon'; value: number | string; label: string }> = [];
+  for (let amount = 100; amount <= 7000; amount += 100) {
+    BIRTHDAY_GIFT_POOL.push({ type: 'points', value: amount, label: `${amount.toLocaleString()} NOOB Points` });
+  }
+  for (const item of SHOP_CATALOG) {
+    BIRTHDAY_GIFT_POOL.push({ type: 'shop_item', value: item.id, label: item.name });
+  }
+  for (const pct of [10, 20, 30, 40, 50]) {
+    BIRTHDAY_GIFT_POOL.push({ type: 'coupon', value: pct, label: `${pct}% Off NOOB Pro / Verification` });
+  }
+  BIRTHDAY_GIFT_POOL.push({ type: 'points', value: 100000, label: '🎉 JACKPOT — 100,000 NOOB Points' });
+
+  function pickBirthdayGift() {
+    return BIRTHDAY_GIFT_POOL[Math.floor(Math.random() * BIRTHDAY_GIFT_POOL.length)];
+  }
+
+  // Runs periodically; only actually wishes a given user once per calendar
+  // year even though the check itself fires many times a day.
+  function checkBirthdays() {
+    const today = new Date();
+    for (const user of users) {
+      if (!user.dateOfBirth) continue;
+      const dob = new Date(user.dateOfBirth);
+      if (isNaN(dob.getTime())) continue;
+      if (dob.getMonth() !== today.getMonth() || dob.getDate() !== today.getDate()) continue;
+      if (user.lastBirthdayWishedYear === today.getFullYear()) continue;
+
+      user.lastBirthdayWishedYear = today.getFullYear();
+
+      const gift = pickBirthdayGift();
+      const scratchCard = {
+        id: `scratch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        userId: user.id,
+        gift,
+        isRevealed: false,
+        createdAt: new Date().toISOString()
+      };
+      scratchCards.push(scratchCard);
+
+      notifications.unshift({
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        senderId: 'u_noob_admin',
+        senderUsername: 'NOOB',
+        senderDisplayName: 'NOOB',
+        senderAvatar: '/noob-logo.svg.jpeg',
+        senderIsVerified: true,
+        targetUserId: user.id,
+        targetUsername: user.username,
+        title: '🎂 Happy Birthday!',
+        message: `Happy Birthday, @${user.username}! We've got a scratch card gift waiting for you — tap to scratch and reveal your surprise.`,
+        type: 'birthday_wish',
+        scratchCardId: scratchCard.id,
+        createdAt: new Date().toISOString()
+      });
+
+      // Followers only — people this user follows don't get told, matching
+      // "only followers, not following".
+      const followerIds = users.filter(u => u.followingIds?.includes(user.id)).map(u => u.id);
+      for (const followerId of followerIds) {
+        const follower = users.find(u => u.id === followerId);
+        notifications.unshift({
+          id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          senderId: user.id,
+          senderUsername: user.username,
+          senderDisplayName: user.displayName || user.username,
+          senderAvatar: user.avatar || '/noob-logo.svg.jpeg',
+          senderIsVerified: !!user.isVerified,
+          targetUserId: followerId,
+          targetUsername: follower?.username,
+          title: '🎈 Birthday Alert',
+          message: `It's @${user.username}'s birthday today! Send them a message to wish them well.`,
+          type: 'birthday_follower_alert',
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+    schedulePersist();
+  }
+  checkBirthdays();
+  setInterval(checkBirthdays, 60 * 60 * 1000);
+
+  app.post('/api/scratch-cards/:id/reveal', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const card = scratchCards.find(c => c.id === req.params.id);
+    if (!card) return res.status(404).json({ error: 'Scratch card not found.' });
+    if (card.userId !== active.id) {
+      return res.status(403).json({ error: 'This scratch card is not yours.' });
+    }
+
+    if (card.isRevealed) {
+      return res.json({ success: true, gift: card.gift, alreadyRevealed: true });
+    }
+
+    const index = users.findIndex(u => u.id === active.id);
+    const user = users[index];
+    const gift = card.gift;
+
+    if (gift.type === 'points') {
+      user.noobPoints = (user.noobPoints || 0) + Number(gift.value);
+      recordTransaction(user, Number(gift.value), `🎂 Birthday gift: ${gift.label}`);
+    } else if (gift.type === 'shop_item') {
+      user.purchasedItemIds = user.purchasedItemIds || [];
+      if (!user.purchasedItemIds.includes(gift.value)) {
+        user.purchasedItemIds.push(gift.value);
+      } else {
+        // Already owned — convert to a points equivalent instead of wasting the gift.
+        const fallbackPoints = 2000;
+        user.noobPoints = (user.noobPoints || 0) + fallbackPoints;
+        recordTransaction(user, fallbackPoints, `🎂 Birthday gift (already owned "${gift.label}", converted to points)`);
+      }
+    } else if (gift.type === 'coupon') {
+      const code = `BDAY${Math.round(Number(gift.value))}${Math.floor(100 + Math.random() * 900)}`;
+      coupons.unshift({
+        id: `cpn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        code,
+        title: `Birthday Gift: ${gift.label}`,
+        discountPercent: Number(gift.value),
+        terms: ['One-time use', 'Valid on NOOB Pro or verification purchase'],
+        targetUsername: user.username,
+        createdBy: 'NOOB Birthday Gift',
+        createdAt: new Date().toISOString(),
+        active: true
+      });
+    }
+
+    card.isRevealed = true;
+    card.revealedAt = new Date().toISOString();
+
+    res.json({ success: true, gift, user: sanitizeUser(user) });
   });
 
   // ==========================================
@@ -1889,7 +2131,34 @@ async function startServer() {
       ? chats.filter(c => c.isGlobalDefault || c.participants.some((p: any) => p.id === active.id))
       : chats.filter(c => c.isGlobalDefault);
 
-    res.json({ chats: visibleChats });
+    // Real per-user unread counts (used to just sit at a permanent 0/1) —
+    // count messages from anyone else sent after this user last opened
+    // this specific chat.
+    const withUnread = visibleChats.map(c => {
+      if (!active) return { ...c, unreadCount: 0 };
+      const lastReadAt = c.lastReadAt?.[active.id];
+      const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
+      const unreadCount = (messages[c.id] || []).filter((m: any) => {
+        if (m.senderId === active.id) return false;
+        const sentTime = new Date(m.createdAt).getTime();
+        return isNaN(sentTime) || sentTime > lastReadTime;
+      }).length;
+      return { ...c, unreadCount };
+    });
+
+    // Pinned/global chats stay put; everything else sorts by whichever
+    // chat had the most recent activity, so a new message brings its chat
+    // straight to the top instead of leaving it wherever it was created.
+    const pinned = withUnread.filter(c => c.isGlobalDefault || c.isPinned);
+    const rest = withUnread
+      .filter(c => !c.isGlobalDefault && !c.isPinned)
+      .sort((a, b) => {
+        const aTime = new Date(a.lastMessage?.createdAt || a.createdAt || 0).getTime();
+        const bTime = new Date(b.lastMessage?.createdAt || b.createdAt || 0).getTime();
+        return (isNaN(bTime) ? 0 : bTime) - (isNaN(aTime) ? 0 : aTime);
+      });
+
+    res.json({ chats: [...pinned, ...rest] });
   });
 
   // Create new 1-on-1 or Group Chat
@@ -2231,6 +2500,24 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       return res.status(403).json({ error: 'You are not a participant in this chat.' });
     }
 
+    // The blue double-tick means "the recipient actually opened this chat",
+    // not "the message merely exists" — so the read flip happens here, the
+    // one place we know someone besides the sender is genuinely looking at
+    // these messages, rather than at creation time. lastReadAt separately
+    // drives the unread-count badge on the chat list.
+    if (active) {
+      let changed = false;
+      for (const m of messages[chatId] || []) {
+        if (m.senderId !== active.id && m.status !== 'read') {
+          m.status = 'read';
+          changed = true;
+        }
+      }
+      if (!chat.lastReadAt) chat.lastReadAt = {};
+      chat.lastReadAt[active.id] = new Date().toISOString();
+      if (changed) schedulePersist();
+    }
+
     res.json({ messages: messages[chatId] || [] });
   });
 
@@ -2267,9 +2554,12 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       mediaType: mediaType || (mediaUrl ? 'image' : gameInvite ? 'game_invite' : 'text'),
       sharedTrack,
       gameInvite,
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
-      status: 'read',
+      // Only becomes 'read' once the recipient actually opens this chat
+      // (see GET /api/chats/:id/messages) — it used to start as 'read'
+      // immediately, so the blue tick showed before anyone had seen it.
+      status: 'sent',
       reactions: []
     };
 
@@ -2290,7 +2580,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
         chatId,
         senderId: 'u_noob_ai',
         text: aiReplyText,
-        createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAt: new Date().toISOString(),
         isEdited: false,
         reactions: []
       };
@@ -2352,7 +2642,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       chatId,
       senderId: 'system',
       text: '🏁 This chat session has been concluded. Please leave a rating & review about your experience below!',
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
       reactions: []
     };
@@ -2395,7 +2685,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       chatId,
       senderId: 'system',
       text: `⭐ Rating Submitted: ${'★'.repeat(reviewObj.rating)}${'☆'.repeat(5 - reviewObj.rating)} (${reviewObj.rating}/5 stars). Thank you for your feedback!`,
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
       reactions: []
     };
@@ -2529,8 +2819,12 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     const targetUser = users.find(u => u.id === targetUserId);
     if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
 
-    // Find or create chat with this user
-    let chat = chats.find(c => c.participants.some(p => p.id === targetUserId));
+    // Find or create the 1:1 chat between these two specific people — must
+    // check both sides, or this could match some other chat that just
+    // happens to include the target and drop the invite into it instead.
+    let chat = chats.find(
+      c => !c.isGroup && c.participants.some(p => p.id === targetUserId) && c.participants.some(p => p.id === active.id)
+    );
     if (!chat) {
       chat = {
         id: `c_${Date.now()}`,
@@ -2546,7 +2840,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
         themeColor: '#00FF66',
         vanishMode: false,
         readReceiptsEnabled: true,
-        createdAt: 'Just now'
+        createdAt: new Date().toISOString()
       };
       chats.unshift(chat);
     }
@@ -2555,7 +2849,14 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       id: `m_invite_${Date.now()}`,
       chatId: chat.id,
       senderId: active.id,
-      text: `🎮 Game Challenge: Let's play ${gameTitle}! Click below to accept and play against me.`,
+      senderUsername: active.username,
+      senderDisplayName: active.displayName || active.username,
+      senderAvatar: active.avatar || '/noob-logo.svg.jpeg',
+      senderIsVerified: !!active.isVerified,
+      // The gameInvite card below already shows the title, challenger, and
+      // a CTA button — repeating all of that as a text line too used to
+      // make the bubble look duplicated/misaligned.
+      text: '',
       mediaType: 'game_invite',
       gameInvite: {
         gameId,
@@ -2564,7 +2865,9 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
         fromAvatar: active.avatar,
         roomCode: roomCode || `room_${gameId}_${Date.now()}`
       },
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      status: 'sent',
+      reactions: [],
+      createdAt: new Date().toISOString()
     };
 
     if (!messages[chat.id]) messages[chat.id] = [];

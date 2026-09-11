@@ -144,7 +144,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       {
         id: 'welcome_init',
         sender: 'bot',
-        text: `${greetingTone} I am your official NOOB AI Support Assistant. I have instant, complete knowledge of all 50 mini-games, leaderboard scoring, continuous background music, automated feed/reels routing, and our full Terms & Conditions & Privacy Policy. How can I help you today?`,
+        text: `${greetingTone} I am your official NOOB AI Support Assistant. I have instant, complete knowledge of all our mini-games, leaderboard scoring, continuous background music, automated feed/reels routing, and our full Terms & Conditions & Privacy Policy. How can I help you today?`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ];
@@ -535,7 +535,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const fallbackMsg: ChatMessage = {
         id: `msg_bot_${Date.now()}`,
         sender: 'bot',
-        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with 50 mini-games (+100 win / +50 tie points), continuous background music playback, story highlights, automated feed/reels media sorting, and our full Terms & Conditions & Privacy Policy!`,
+        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with our mini-games (+100 win / +50 tie points), continuous background music playback, story highlights, automated feed/reels media sorting, and our full Terms & Conditions & Privacy Policy!`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -624,7 +624,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const history = callTranscript.map((t) => ({ sender: t.sender === 'ai' ? 'bot' : 'user', text: t.text }));
       const response = await askAiSupportAssistant(cleanQuery, history);
 
-      const aiReply = response?.reply || `For @${currentUser.username}: Our 50 mini-games grant +100 points for wins and +50 points for ties, your media is encrypted and automatically routed by format, and your privacy is 100% protected. What else can I solve for you?`;
+      const aiReply = response?.reply || `For @${currentUser.username}: Our mini-games grant +100 points for wins and +50 points for ties, your media is encrypted and automatically routed by format, and your privacy is 100% protected. What else can I solve for you?`;
       
       const aiEntry = {
         sender: 'ai' as const,
@@ -714,7 +714,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     },
     {
       q: 'How do I earn NOOB points & climb the Leaderboard?',
-      a: 'Play any of our 50 Mini-Games! Winning an arcade match awards +100 NOOB points, and tying awards +50 NOOB points. Your rank updates in real-time on the Global Leaderboard.'
+      a: 'Play any of our Mini-Games! Winning an arcade match awards +100 NOOB points, and tying awards +50 NOOB points. Your rank updates in real-time on the Global Leaderboard.'
     },
     {
       q: 'How does background music work?',
@@ -951,7 +951,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuickPrompt('How do 50 mini-games point scoring work?')}
+                  onClick={() => handleQuickPrompt('How does mini-games point scoring work?')}
                   className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                 >
                   🎮 Mini-Games (+100 Win)
@@ -1068,7 +1068,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Ask about Terms, Privacy, 50 Mini-Games, Music Hub..."
+                    placeholder="Ask about Terms, Privacy, Mini-Games, Music Hub..."
                     className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#00FF66] rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors pr-10"
                   />
                   <button

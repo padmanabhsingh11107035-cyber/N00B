@@ -48,7 +48,7 @@ import {
   Filter,
   Smile
 } from 'lucide-react';
-import { ChatConversation, Message, User } from '../../types';
+import { ChatConversation, Message, User, ShopItem } from '../../types';
 
 const EMOJI_CATEGORIES = [
   {
@@ -176,12 +176,15 @@ import {
   fetchMyStickers,
   uploadCustomSticker,
   deleteCustomSticker,
-  MyCustomSticker
+  MyCustomSticker,
+  fetchShopCatalog,
+  purchaseShopItem
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
 import { safeJsonStringify } from '../../utils/safeJson';
+import { formatClockTime } from '../../utils/formatTime';
 import confetti from 'canvas-confetti';
 
 interface ChatViewProps {
@@ -190,6 +193,7 @@ interface ChatViewProps {
   pendingChatUser?: User | null;
   onPendingChatUserHandled?: () => void;
   onMobileViewChange?: (view: 'list' | 'chat') => void;
+  onUserUpdated?: (user: User) => void;
 }
 
 type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
@@ -235,7 +239,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onPlayGame,
   pendingChatUser,
   onPendingChatUserHandled,
-  onMobileViewChange
+  onMobileViewChange,
+  onUserUpdated
 }) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -259,10 +264,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   });
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers'>('emojis');
+  const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers' | 'premium'>('emojis');
   const [myStickers, setMyStickers] = useState<MyCustomSticker[]>([]);
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
   const [stickerUploadError, setStickerUploadError] = useState<string | null>(null);
+  const [shopCatalog, setShopCatalog] = useState<ShopItem[]>([]);
+  const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
+  const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
+  const [shopError, setShopError] = useState<string | null>(null);
   const stickerFileInputRef = useRef<HTMLInputElement>(null);
   const [scheduledTime, setScheduledTime] = useState('');
   const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
@@ -298,6 +307,41 @@ export const ChatView: React.FC<ChatViewProps> = ({
       fetchMyStickers().then(setMyStickers).catch(() => {});
     }
   }, [showEmojiPicker, activePickerTab]);
+
+  useEffect(() => {
+    if (showEmojiPicker && activePickerTab === 'premium') {
+      fetchShopCatalog()
+        .then(({ catalog, ownedItemIds: owned }) => {
+          setShopCatalog(catalog);
+          setOwnedItemIds(owned);
+        })
+        .catch(() => {});
+    }
+  }, [showEmojiPicker, activePickerTab]);
+
+  const handlePurchaseItem = async (item: ShopItem) => {
+    setPurchasingItemId(item.id);
+    setShopError(null);
+    try {
+      const res = await purchaseShopItem(item.id);
+      if (res.success && res.user) {
+        setOwnedItemIds((prev) => [...prev, item.id]);
+        onUserUpdated?.(res.user);
+      } else {
+        setShopError(res.error || 'Could not complete purchase.');
+      }
+    } catch (err) {
+      console.error(err);
+      setShopError('Could not complete purchase.');
+    } finally {
+      setPurchasingItemId(null);
+    }
+  };
+
+  const handleSendShopItem = (item: ShopItem) => {
+    if (!ownedItemIds.includes(item.id)) return;
+    handleSendSticker(item.content);
+  };
 
   const handleUploadSticker = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -599,7 +643,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       senderDisplayName: currentUser.displayName,
       senderAvatar: currentUser.avatar,
       text: textToSend,
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
       status: 'delivered',
       scheduledAt: scheduledTime || undefined
@@ -663,7 +707,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       text: '',
       mediaUrl: gifUrl,
       mediaType: 'image',
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
       status: 'delivered'
     };
@@ -721,7 +765,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       senderAvatar: currentUser.avatar,
       text: stickerEmoji,
       mediaType: 'sticker',
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
       status: 'delivered'
     };
@@ -760,7 +804,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       text: '',
       mediaUrl: stickerUrl,
       mediaType: 'sticker',
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString(),
       isEdited: false,
       status: 'delivered'
     };
@@ -1172,7 +1216,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
 
                       <span className="text-[11px] text-zinc-500 shrink-0 font-medium">
-                        {c.lastMessage?.createdAt || 'Active'}
+                        {c.lastMessage?.createdAt ? formatClockTime(c.lastMessage.createdAt) : 'Active'}
                       </span>
                     </div>
 
@@ -1728,7 +1772,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     {/* Timestamp & Double Check Status */}
                     <div className="flex items-center justify-end gap-1.5 mt-1 text-[10px] text-zinc-400">
-                      <span>{m.createdAt}</span>
+                      <span>{formatClockTime(m.createdAt)}</span>
                       {m.isEdited && <span className="italic">(edited)</span>}
 
                       {/* Double Check Tick Icons for Outgoing Messages */}
@@ -1796,7 +1840,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               >
                 {/* Tab selector */}
                 <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3">
-                  <div className="flex items-center gap-1.5 bg-zinc-900/90 p-1 rounded-xl">
+                  <div className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-xl overflow-x-auto no-scrollbar">
                     <button
                       type="button"
                       onClick={() => setActivePickerTab('emojis')}
@@ -1829,6 +1873,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       }`}
                     >
                       Stickers 🎨
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePickerTab('premium')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        activePickerTab === 'premium'
+                          ? 'bg-[#00FF66] text-black shadow-sm'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Premium 💎
                     </button>
                   </div>
 
@@ -1984,6 +2039,67 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           ))}
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {activePickerTab === 'premium' && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between px-0.5">
+                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Your balance
+                        </span>
+                        <span className="text-xs font-black text-white">
+                          {(currentUser.noobPoints || 0).toLocaleString()} pts
+                        </span>
+                      </div>
+
+                      {shopError && (
+                        <p className="text-[10px] text-rose-400 font-semibold bg-rose-950/30 border border-rose-900/40 rounded-lg p-1.5">
+                          {shopError}
+                        </p>
+                      )}
+
+                      {['Reactions', 'GIF Packs', 'Legendary'].map((category) => (
+                        <div key={category}>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                            {category}
+                          </span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {shopCatalog
+                              .filter((item) => item.category === category)
+                              .map((item) => {
+                                const owned = ownedItemIds.includes(item.id);
+                                const isPurchasing = purchasingItemId === item.id;
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => (owned ? handleSendShopItem(item) : handlePurchaseItem(item))}
+                                    disabled={isPurchasing}
+                                    className={`relative flex flex-col items-center justify-center p-2 rounded-2xl border transition-all cursor-pointer group disabled:opacity-50 ${
+                                      owned
+                                        ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 hover:border-[#00FF66]/50'
+                                        : 'bg-zinc-900/60 border-zinc-800/80 hover:border-amber-500/50'
+                                    }`}
+                                    title={owned ? `Send ${item.name}` : `Buy for ${item.price.toLocaleString()} pts`}
+                                  >
+                                    <span className={`text-2xl transition-transform ${owned ? 'group-hover:scale-110' : 'opacity-50 grayscale'}`}>
+                                      {item.content}
+                                    </span>
+                                    <span className="text-[8px] font-bold text-zinc-400 group-hover:text-white mt-1 text-center truncate max-w-full">
+                                      {item.name}
+                                    </span>
+                                    {!owned && (
+                                      <span className="text-[8px] font-black text-amber-400 mt-0.5">
+                                        {isPurchasing ? '...' : `${item.price.toLocaleString()} pts`}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

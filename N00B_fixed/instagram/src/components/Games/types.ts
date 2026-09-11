@@ -14,6 +14,12 @@ export interface MiniGameMeta {
   tags: string[];
 }
 
+// Every entry here has its own dedicated gameplay implementation in
+// GamePlayModal — no two of these play the same way. A much longer list
+// used to exist, but most of it silently routed to one shared generic
+// "tap the orb" placeholder under different names/themes, which is why
+// games felt repeated. Add a new entry here only alongside a real,
+// distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
   // --- BOARD GAME CLASSICS (shown first) ---
   {
@@ -55,7 +61,21 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     iconType: 'monopoly',
     tags: ['Classic', 'Strategy', '2-4 Players']
   },
-  // --- ARCADE (1-10) ---
+  {
+    id: 'chess_blitz',
+    title: 'Chess Blitz 3-Min',
+    category: 'brain',
+    description: 'High-stakes chess vs a genuinely strong bot: win for +50,000,000 NOOBs, but lose vs the bot and your entire balance resets to 0. Play a friend instead for no risk.',
+    bannerBg: 'from-[#27272a] to-[#09090b]',
+    badgeColor: 'bg-zinc-400/20 text-zinc-200 border-zinc-400/30',
+    pointsReward: 50000000,
+    difficulty: 'Hard',
+    players: 'vs Bot',
+    iconType: 'chess',
+    tags: ['Chess', 'High Stakes', 'Grandmaster']
+  },
+
+  // --- ARCADE ---
   {
     id: 'cyber_snake',
     title: 'Cyber Snake',
@@ -96,45 +116,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     tags: ['Breakout', 'Retro', 'Classic']
   },
   {
-    id: 'pixel_runner',
-    title: 'Pixel Runner',
-    category: 'arcade',
-    description: 'Jump, duck, and dash across high-speed rooftop obstacles.',
-    bannerBg: 'from-[#61361e] to-[#3b2011]',
-    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    pointsReward: 100,
-    difficulty: 'Hard',
-    players: '1v1 Online',
-    iconType: 'runner',
-    tags: ['Endless', 'Speed', 'Jump']
-  },
-  {
-    id: 'galaxy_shooter',
-    title: 'Galaxy Star Shooter',
-    category: 'arcade',
-    description: 'Command a space fighter and blast incoming alien armada waves.',
-    bannerBg: 'from-[#1b263b] to-[#0d1b2a]',
-    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'spaceship',
-    tags: ['Space', 'Shooter', 'Sci-Fi']
-  },
-  {
-    id: 'pinball_pulse',
-    title: 'Pinball Pulse',
-    category: 'arcade',
-    description: 'Flick the flippers, trigger score bumpers, and rack up combos.',
-    bannerBg: 'from-[#581c87] to-[#3b0764]',
-    badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'pinball',
-    tags: ['Arcade', 'Physics', 'Score']
-  },
-  {
     id: 'bubble_blitz',
     title: 'Bubble Pop Blitz',
     category: 'arcade',
@@ -147,47 +128,8 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     iconType: 'bubble',
     tags: ['Aim', 'Colors', 'Match']
   },
-  {
-    id: 'pac_grid',
-    title: 'Pac Maze Dash',
-    category: 'arcade',
-    description: 'Chomp neon dots, outsmart chasing ghosts, and grab power fruit.',
-    bannerBg: 'from-[#854d0e] to-[#422006]',
-    badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'pacman',
-    tags: ['Maze', 'Retro', 'Classic']
-  },
-  {
-    id: 'astro_jump',
-    title: 'Astro Jump Orbit',
-    category: 'arcade',
-    description: 'Bounce higher and higher across floating cosmic launch pads.',
-    bannerBg: 'from-[#047857] to-[#064e3b]',
-    badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'rocket',
-    tags: ['Bounce', 'Vertical', 'Fun']
-  },
-  {
-    id: 'laser_dodge',
-    title: 'Laser Matrix Dodge',
-    category: 'arcade',
-    description: 'Dodge pulsating laser beams and survive the intense matrix grid.',
-    bannerBg: 'from-[#991b1b] to-[#450a0a]',
-    badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-    pointsReward: 100,
-    difficulty: 'Hard',
-    players: '1v1 Online',
-    iconType: 'laser',
-    tags: ['Dodge', 'Laser', 'Reflex']
-  },
 
-  // --- PUZZLE & MATCH (11-20) ---
+  // --- PUZZLE & MATCH ---
   {
     id: 'tictactoe',
     title: 'Tic Tac Toe Pro',
@@ -200,19 +142,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     players: '1v1 Online',
     iconType: 'tictactoe',
     tags: ['Classic', 'Strategy', 'Quick']
-  },
-  {
-    id: 'game_2048',
-    title: '2048 Neon Pulse',
-    category: 'puzzle',
-    description: 'Slide, combine numbers, and merge tiles to reach the 2048 block.',
-    bannerBg: 'from-[#5a243a] to-[#361321]',
-    badgeColor: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'grid2048',
-    tags: ['Numbers', 'Puzzle', 'Addictive']
   },
   {
     id: 'memory_match',
@@ -228,98 +157,20 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     tags: ['Memory', 'Cards', 'Focus']
   },
   {
-    id: 'color_flood',
-    title: 'Color Flood Fill',
+    id: 'wordle_quest',
+    title: '5-Letter Wordle',
     category: 'puzzle',
-    description: 'Flood the entire game board with a single unified color in minimum steps.',
-    bannerBg: 'from-[#155e75] to-[#083344]',
-    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'paint',
-    tags: ['Color', 'Logic', 'Strategy']
-  },
-  {
-    id: 'block_stacker',
-    title: 'Tower Block Stacker',
-    category: 'puzzle',
-    description: 'Drop and align moving 3D geometric slabs to build the tallest skyscraper.',
-    bannerBg: 'from-[#1e293b] to-[#0f172a]',
-    badgeColor: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    description: 'Guess the secret 5-letter word in 6 tries with color clues.',
+    bannerBg: 'from-[#14532d] to-[#052e16]',
+    badgeColor: 'bg-green-600/20 text-green-300 border-green-500/30',
     pointsReward: 100,
     difficulty: 'Medium',
     players: '1v1 Online',
-    iconType: 'stack',
-    tags: ['Timing', 'Tower', 'Stack']
-  },
-  {
-    id: 'connect_four',
-    title: 'Connect 4 Neon',
-    category: 'puzzle',
-    description: 'Drop your chips and connect 4 in a row horizontally, vertically, or diagonally.',
-    bannerBg: 'from-[#1e3a8a] to-[#172554]',
-    badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'connect4',
-    tags: ['Strategy', 'Turn-Based', 'Duel']
-  },
-  {
-    id: 'sliding_15',
-    title: 'Sliding 15 Puzzle',
-    category: 'puzzle',
-    description: 'Slide numbered wooden tiles into numerical 1 to 15 order.',
-    bannerBg: 'from-[#713f12] to-[#361e08]',
-    badgeColor: 'bg-yellow-600/20 text-yellow-400 border-yellow-500/30',
-    pointsReward: 100,
-    difficulty: 'Hard',
-    players: 'vs Bot',
-    iconType: 'numbers',
-    tags: ['Numbers', 'Slider', 'Brain']
-  },
-  {
-    id: 'sudoku_speed',
-    title: 'Sudoku Speed Mini',
-    category: 'puzzle',
-    description: 'Fill 4x4 and 6x6 quick sudoku grids without repeating numbers.',
-    bannerBg: 'from-[#3730a3] to-[#1e1b4b]',
-    badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'sudoku',
-    tags: ['Math', 'Logic', 'Numbers']
-  },
-  {
-    id: 'word_scramble',
-    title: 'Word Scramble Duel',
-    category: 'puzzle',
-    description: 'Unscramble letters to find hidden vocabulary words faster than opponent.',
-    bannerBg: 'from-[#831843] to-[#500724]',
-    badgeColor: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'letters',
-    tags: ['Words', 'Letters', 'Speed']
-  },
-  {
-    id: 'pipe_connect',
-    title: 'Cyber Pipe Master',
-    category: 'puzzle',
-    description: 'Rotate pipe segments to route data flow from server to mainframe.',
-    bannerBg: 'from-[#065f46] to-[#022c22]',
-    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'pipes',
-    tags: ['Rotation', 'Plumber', 'Connect']
+    iconType: 'wordle',
+    tags: ['Wordle', 'Vocab', 'Puzzle']
   },
 
-  // --- REFLEX & ACTION (21-30) ---
+  // --- REFLEX & ACTION ---
   {
     id: 'rps',
     title: 'Rock Paper Scissors',
@@ -346,112 +197,8 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     iconType: 'stopwatch',
     tags: ['Reaction', 'Milliseconds', 'Speed']
   },
-  {
-    id: 'whack_noob',
-    title: 'Whack A Noob',
-    category: 'reflex',
-    description: 'Smash mischievous noobs popping out of holes before they retreat.',
-    bannerBg: 'from-[#9a3412] to-[#431407]',
-    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'vs Bot',
-    iconType: 'hammer',
-    tags: ['Whack', 'Moles', 'Action']
-  },
-  {
-    id: 'rhythm_tap',
-    title: 'Beat Symphony Tap',
-    category: 'reflex',
-    description: 'Tap descending musical rhythm tiles perfectly to the soundtrack tempo.',
-    bannerBg: 'from-[#6b21a8] to-[#3b0764]',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'music_beat',
-    tags: ['Music', 'Rhythm', 'Tiles']
-  },
-  {
-    id: 'target_sniper',
-    title: 'Target Bullseye Sniper',
-    category: 'reflex',
-    description: 'Click bullseye targets appearing across the shooting gallery.',
-    bannerBg: 'from-[#1e293b] to-[#020617]',
-    badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'target',
-    tags: ['Shooting', 'Aim', 'Clicker']
-  },
-  {
-    id: 'catch_falling',
-    title: 'Cosmic Gem Catcher',
-    category: 'reflex',
-    description: 'Move your basket to catch falling diamond gems and avoid exploding bombs.',
-    bannerBg: 'from-[#0e7490] to-[#164e63]',
-    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'vs Bot',
-    iconType: 'gem',
-    tags: ['Catch', 'Gems', 'Action']
-  },
-  {
-    id: 'arrow_rush',
-    title: 'Arrow Key Sprint',
-    category: 'reflex',
-    description: 'Press arrows corresponding to the incoming direction markers.',
-    bannerBg: 'from-[#14532d] to-[#052e16]',
-    badgeColor: 'bg-green-500/20 text-green-300 border-green-500/30',
-    pointsReward: 100,
-    difficulty: 'Hard',
-    players: '1v1 Online',
-    iconType: 'arrows',
-    tags: ['Dance', 'Keys', 'Reflex']
-  },
-  {
-    id: 'finger_duel',
-    title: 'Rapid Tap Tap Duel',
-    category: 'reflex',
-    description: 'Tap as fast as humanly possible for 10 seconds to dominate the meter.',
-    bannerBg: 'from-[#86198f] to-[#4a044e]',
-    badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'tap_hand',
-    tags: ['Tapping', 'Speed', 'PVP']
-  },
-  {
-    id: 'knife_throw',
-    title: 'Knife Hit Wheel',
-    category: 'reflex',
-    description: 'Throw knives into a rotating wooden log without hitting existing blades.',
-    bannerBg: 'from-[#7c2d12] to-[#431407]',
-    badgeColor: 'bg-orange-600/20 text-orange-400 border-orange-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'knife',
-    tags: ['Throw', 'Timing', 'Blade']
-  },
-  {
-    id: 'falling_meteor',
-    title: 'Meteor Rain Dodge',
-    category: 'reflex',
-    description: 'Steer your astronaut across a stormy alien landscape dodging meteors.',
-    bannerBg: 'from-[#451a03] to-[#1c0800]',
-    badgeColor: 'bg-amber-600/20 text-amber-400 border-amber-500/30',
-    pointsReward: 100,
-    difficulty: 'Hard',
-    players: '1v1 Online',
-    iconType: 'meteor',
-    tags: ['Meteor', 'Dodge', 'Survive']
-  },
 
-  // --- BRAIN & STRATEGY (31-40) ---
+  // --- BRAIN & STRATEGY ---
   {
     id: 'scribble',
     title: 'Scribble & Guess',
@@ -477,241 +224,5 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     players: '1v1 Online',
     iconType: 'calculator',
     tags: ['Math', 'Timer', 'Brain']
-  },
-  {
-    id: 'trivia_master',
-    title: 'NOOB Trivia Arena',
-    category: 'brain',
-    description: 'Answer pop culture, gaming, anime, and science trivia questions.',
-    bannerBg: 'from-[#1e1b4b] to-[#0f172a]',
-    badgeColor: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'brain',
-    tags: ['Quiz', 'Knowledge', 'Trivia']
-  },
-  {
-    id: 'chess_blitz',
-    title: 'Chess Blitz 3-Min',
-    category: 'brain',
-    description: 'High-stakes chess vs a genuinely strong bot: win for +50,000,000 NOOBs, but lose vs the bot and your entire balance resets to 0. Play a friend instead for no risk.',
-    bannerBg: 'from-[#27272a] to-[#09090b]',
-    badgeColor: 'bg-zinc-400/20 text-zinc-200 border-zinc-400/30',
-    pointsReward: 50000000,
-    difficulty: 'Hard',
-    players: 'vs Bot',
-    iconType: 'chess',
-    tags: ['Chess', 'High Stakes', 'Grandmaster']
-  },
-  {
-    id: 'card_high_low',
-    title: 'Card High or Low',
-    category: 'brain',
-    description: 'Predict whether the next face-down card is higher or lower.',
-    bannerBg: 'from-[#881337] to-[#4c0519]',
-    badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'vs Bot',
-    iconType: 'playing_cards',
-    tags: ['Cards', 'Probability', 'Casino']
-  },
-  {
-    id: 'color_stroop',
-    title: 'Color Brain Switch',
-    category: 'brain',
-    description: 'Match the font color vs. the written word (Stroop cognitive test).',
-    bannerBg: 'from-[#047857] to-[#064e3b]',
-    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    pointsReward: 100,
-    difficulty: 'Hard',
-    players: '1v1 Online',
-    iconType: 'color_wheel',
-    tags: ['Stroop', 'Cognitive', 'Focus']
-  },
-  {
-    id: 'wordle_quest',
-    title: '5-Letter Wordle',
-    category: 'brain',
-    description: 'Guess the secret 5-letter word in 6 tries with color clues.',
-    bannerBg: 'from-[#14532d] to-[#052e16]',
-    badgeColor: 'bg-green-600/20 text-green-300 border-green-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'wordle',
-    tags: ['Wordle', 'Vocab', 'Puzzle']
-  },
-  {
-    id: 'memory_path',
-    title: 'Cyber Memory Path',
-    category: 'brain',
-    description: 'Watch the flashing tile sequence and repeat it step-by-step.',
-    bannerBg: 'from-[#312e81] to-[#1e1b4b]',
-    badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'sequence',
-    tags: ['Simon', 'Pattern', 'Memory']
-  },
-  {
-    id: 'maze_escape',
-    title: 'Neon Maze Escape',
-    category: 'brain',
-    description: 'Navigate through complex procedural labyrinths before the exit locks.',
-    bannerBg: 'from-[#155e75] to-[#0e3b43]',
-    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'maze',
-    tags: ['Labyrinth', 'Path', 'Escape']
-  },
-  {
-    id: 'minesweeper_safe',
-    title: 'Cyber Minesweeper',
-    category: 'brain',
-    description: 'Flag hidden quantum bombs and clear the safe neon grid cells.',
-    bannerBg: 'from-[#374151] to-[#111827]',
-    badgeColor: 'bg-gray-400/20 text-gray-200 border-gray-400/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: 'vs Bot',
-    iconType: 'bomb',
-    tags: ['Mines', 'Logic', 'Classic']
-  },
-
-  // --- SOCIAL & PARTY (41-50) ---
-  {
-    id: 'dice_royale',
-    title: 'Dice Roll Royale',
-    category: 'social',
-    description: 'Roll lucky glowing 3D dice and gamble for high-multiplier combos.',
-    bannerBg: 'from-[#9a3412] to-[#431407]',
-    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'dice',
-    tags: ['Dice', 'Party', 'Luck']
-  },
-  {
-    id: 'spin_wheel',
-    title: 'Fortune Spin Wheel',
-    category: 'social',
-    description: 'Spin the prize roulette wheel to score jackpot rewards and trophies.',
-    bannerBg: 'from-[#581c87] to-[#2e1065]',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'wheel',
-    tags: ['Wheel', 'Fortune', 'Spin']
-  },
-  {
-    id: 'coin_flip_pro',
-    title: 'Coin Flip 3D Duel',
-    category: 'social',
-    description: 'Call Heads or Tails in dramatic slow-motion 3D coin flips.',
-    bannerBg: 'from-[#854d0e] to-[#422006]',
-    badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'coin',
-    tags: ['Coin', 'Toss', 'HeadsTails']
-  },
-  {
-    id: 'truth_or_dare',
-    title: 'Truth or Dare Lounge',
-    category: 'social',
-    description: 'Spin the bottle with connected friends for wild truths and fun dares.',
-    bannerBg: 'from-[#9d174d] to-[#500724]',
-    badgeColor: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'Solo / Friend',
-    iconType: 'bottle',
-    tags: ['Party', 'Friends', 'Fun']
-  },
-  {
-    id: 'bomb_pass',
-    title: 'Hot Bomb Pass',
-    category: 'social',
-    description: 'Answer fast and pass the ticking cyber bomb before it explodes!',
-    bannerBg: 'from-[#b91c1c] to-[#450a0a]',
-    badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'ticking_bomb',
-    tags: ['Timer', 'Pass', 'Party']
-  },
-  {
-    id: 'emoji_charades',
-    title: 'Emoji Movie Charades',
-    category: 'social',
-    description: 'Guess the famous movie, anime, or video game title from 3 emojis.',
-    bannerBg: 'from-[#0369a1] to-[#075985]',
-    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'emoji_face',
-    tags: ['Emoji', 'Movies', 'Guess']
-  },
-  {
-    id: 'rapid_fire_qa',
-    title: 'Rapid Fire Q&A Duel',
-    category: 'social',
-    description: 'Pick "This or That" choices and see if you match your friend’s mind.',
-    bannerBg: 'from-[#0f766e] to-[#134e4a]',
-    badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'Solo / Friend',
-    iconType: 'dialogue',
-    tags: ['Match', 'Friendship', 'Q&A']
-  },
-  {
-    id: 'reaction_duel_split',
-    title: 'Split Screen Duel',
-    category: 'social',
-    description: '2 players on one device screen tapping their half when prompted.',
-    bannerBg: 'from-[#1e1b4b] to-[#172554]',
-    badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'Solo / Friend',
-    iconType: 'split_screen',
-    tags: ['2Players', 'Local', 'Duel']
-  },
-  {
-    id: 'drawing_telephone',
-    title: 'Drawing Duel Canvas',
-    category: 'social',
-    description: 'Free-form collaborative sketch pad to draw artwork with friends.',
-    bannerBg: 'from-[#581c87] to-[#3b0764]',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    pointsReward: 100,
-    difficulty: 'Easy',
-    players: 'Solo / Friend',
-    iconType: 'palette',
-    tags: ['Canvas', 'Draw', 'Co-op']
-  },
-  {
-    id: 'rps_extreme',
-    title: 'RPS Extreme 5-Elements',
-    category: 'social',
-    description: 'Rock, Paper, Scissors, Lizard, Spock! The extended tactical battle.',
-    bannerBg: 'from-[#164e63] to-[#082f49]',
-    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-    pointsReward: 100,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'hand_spock',
-    tags: ['Extended', 'Spock', 'Strategy']
   }
 ];

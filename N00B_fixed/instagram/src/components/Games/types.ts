@@ -9,7 +9,7 @@ export interface MiniGameMeta {
   badgeColor: string;
   pointsReward: number; // 100 on win, 50 on tie, 0 on loss
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  players: '1v1 Online' | 'vs Bot' | 'Solo / Friend';
+  players: '1v1 Online' | 'vs Bot' | 'Solo / Friend' | 'Solo';
   iconType: string;
   tags: string[];
 }
@@ -196,6 +196,19 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     players: '1v1 Online',
     iconType: 'stopwatch',
     tags: ['Reaction', 'Milliseconds', 'Speed']
+  },
+  {
+    id: 'subway_run',
+    title: 'NOOB Rail Runner',
+    category: 'arcade',
+    description: 'Dodge oncoming trains, jump barriers, and slide under low bridges on an endless Indian railway track. Earn 10 NOOB Points for every second you survive.',
+    bannerBg: 'from-[#b45309] to-[#1c1917]',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    pointsReward: 10,
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'train_runner',
+    tags: ['Endless', 'Runner', 'Solo']
   },
 
   // --- BRAIN & STRATEGY ---

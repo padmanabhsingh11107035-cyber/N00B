@@ -2997,6 +2997,54 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     });
   });
 
+  // Survival-style games (e.g. the endless runner) don't have a win/tie/loss
+  // outcome — they pay out 10 NOOB Points per second survived instead. A
+  // separate endpoint keeps that math out of the win/tie/loss-shaped
+  // record-match handler above. Capped at 1 hour of claimed survival per
+  // run since, like every other mini-game score in this app, the result is
+  // client-reported with no server-side replay validation.
+  app.post('/api/games/survival-score', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const { gameId, gameTitle, survivalSeconds } = req.body;
+    const seconds = Math.floor(Number(survivalSeconds));
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return res.status(400).json({ error: 'Invalid survival time.' });
+    }
+    const cappedSeconds = Math.min(seconds, 3600);
+    const earnedPoints = cappedSeconds * 10;
+
+    const index = users.findIndex(u => u.id === active.id);
+    if (index === -1) return res.status(404).json({ error: 'Your account was not found.' });
+    const user = users[index];
+
+    user.noobPoints = (user.noobPoints || 0) + earnedPoints;
+    user.gamesPlayedCount = (user.gamesPlayedCount || 0) + 1;
+    recordTransaction(user, earnedPoints, `${gameTitle || gameId}: survived ${cappedSeconds}s`);
+
+    gameScores.unshift({
+      id: `gs_${Date.now()}`,
+      gameId,
+      gameTitle: gameTitle || gameId,
+      username: user.username,
+      userAvatar: user.avatar,
+      score: earnedPoints,
+      noobsPoints: earnedPoints,
+      result: 'win',
+      opponent: 'Solo',
+      date: 'Just now'
+    });
+
+    res.status(201).json({
+      success: true,
+      earnedPoints,
+      survivalSeconds: cappedSeconds,
+      totalNoobPoints: user.noobPoints,
+      user: sanitizeUser(user)
+    });
+  });
+
   // Settings & Insights
   app.get('/api/settings', (req, res) => {
     res.json({ settings });

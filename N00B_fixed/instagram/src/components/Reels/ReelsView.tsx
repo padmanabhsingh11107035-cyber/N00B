@@ -85,6 +85,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialReelId) {
@@ -121,8 +122,18 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     if (!video) return;
     if (isPlaying) {
       video.play().catch(() => {
-        // Autoplay can be blocked before the first user gesture — ignore,
-        // the next tap on the player will retry via this same effect.
+        // Browsers block autoplay WITH SOUND until the page has had a real
+        // user gesture — the very first reel someone sees can hit this
+        // before they've tapped anything, and used to just sit there
+        // frozen on a black frame forever (isPlaying said "true" but the
+        // element never actually started). Retry muted, which every
+        // browser allows unconditionally, so the reel always visibly
+        // plays; the volume button still lets them unmute by hand.
+        if (!video.muted) {
+          video.muted = true;
+          setIsMuted(true);
+          video.play().catch(() => {});
+        }
       });
     } else {
       video.pause();
@@ -258,6 +269,29 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     touchStartY.current = e.touches[0].clientY;
   };
 
+  // Without this, the browser's own native scroll/rubber-band-bounce runs
+  // at the same time as the swipe gesture, so the page visibly drags and
+  // wobbles with your finger before the touchend below decides whether to
+  // snap to the next/prev reel — the "loose, moves when I swipe" feel.
+  // Blocking every touchmove here means the ONLY way to move between
+  // reels is the deliberate snap below, never a free-scrolling page.
+  //
+  // React registers onTouchMove as a passive listener (preventDefault
+  // inside it is silently ignored, with a console warning), so this has
+  // to be a real addEventListener with passive:false — the touch-action
+  // CSS on the player is a second line of defense, but Android WebView
+  // versions vary in how reliably they honor it alone.
+  useEffect(() => {
+    const el = playerRef.current;
+    if (!el) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (anyModalOpen) return;
+      e.preventDefault();
+    };
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, [anyModalOpen]);
+
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (anyModalOpen || touchStartY.current === null) return;
     const deltaY = touchStartY.current - e.changedTouches[0].clientY;
@@ -305,7 +339,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     >
       {/* 1. Main Vertical Video Player */}
       <div
-        className="relative w-full h-full flex items-center justify-center cursor-pointer"
+        ref={playerRef}
+        className="relative w-full h-full flex items-center justify-center cursor-pointer touch-none overscroll-none"
         onClick={() => setIsPlaying(!isPlaying)}
         onDoubleClick={handleDoubleTap}
         onTouchStart={handleTouchStart}

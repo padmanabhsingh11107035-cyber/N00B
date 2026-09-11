@@ -799,6 +799,26 @@ export async function recordGameMatch(
   return await res.json();
 }
 
+export async function submitSurvivalScore(
+  gameId: string,
+  gameTitle: string,
+  survivalSeconds: number
+): Promise<{
+  success: boolean;
+  earnedPoints: number;
+  survivalSeconds: number;
+  totalNoobPoints: number;
+  user?: User;
+  error?: string;
+}> {
+  const res = await fetch(`${API_BASE}/games/survival-score`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ gameId, gameTitle, survivalSeconds })
+  });
+  return await res.json();
+}
+
 export async function sendGameInvite(
   targetUserId: string,
   gameId: string,

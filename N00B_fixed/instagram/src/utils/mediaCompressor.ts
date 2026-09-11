@@ -111,8 +111,19 @@ async function compressVideoOnAndroid(file: File): Promise<File> {
   video.src = objectUrl;
   video.muted = true;
   video.playsInline = true;
+  // Off-DOM <video>/<canvas> elements decode and render unreliably on real
+  // mobile browsers (frames can arrive late, blank, or not at all) even
+  // though it can look fine in a desktop test — captureStream() needs
+  // these actually attached and composited, just kept invisible.
+  video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
+  document.body.appendChild(video);
 
-  const cleanup = () => URL.revokeObjectURL(objectUrl);
+  let canvas: HTMLCanvasElement | null = null;
+  const cleanup = () => {
+    URL.revokeObjectURL(objectUrl);
+    video.remove();
+    canvas?.remove();
+  };
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -133,9 +144,11 @@ async function compressVideoOnAndroid(file: File): Promise<File> {
     const width = Math.round(video.videoWidth * scale / 2) * 2;
     const height = Math.round(video.videoHeight * scale / 2) * 2;
 
-    const canvas = document.createElement('canvas');
+    canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
+    canvas.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+    document.body.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     if (!ctx || typeof (canvas as any).captureStream !== 'function' || typeof MediaRecorder === 'undefined') {
       cleanup();
@@ -215,7 +228,13 @@ export async function compressVideo(file: File): Promise<File> {
   if (file.size < 2 * 1024 * 1024 || !isAndroid()) {
     return file;
   }
-  return compressVideoOnAndroid(file);
+  // Belt-and-suspenders on top of compressVideoOnAndroid's own internal
+  // timeouts: whatever happens in there, a real reel upload must never be
+  // stuck waiting on compression for more than two minutes.
+  return Promise.race([
+    compressVideoOnAndroid(file),
+    new Promise<File>((resolve) => setTimeout(() => resolve(file), 120_000))
+  ]);
 }
 
 /**

@@ -476,6 +476,27 @@ export const GameBannerArtwork: React.FC<GameIconProps> = ({ id, className = 'w-
         '🪙 FLIP'
       );
 
+    // NOOB Rail Runner
+    case 'subway_run':
+      return renderCartoonFrame(
+        'bg-gradient-to-br from-orange-500 via-amber-700 to-stone-950',
+        <div className="flex items-center gap-2">
+          <div className="w-14 h-14 rounded-2xl bg-blue-600 border-2 border-black flex items-center justify-center text-2xl shadow-[3px_3px_0px_#000] transform -rotate-3">
+            🚆
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-8 h-8 rounded-full bg-orange-400 border-2 border-black flex items-center justify-center text-sm shadow-[2px_2px_0px_#000]">
+              🏃
+            </div>
+            <div className="flex gap-0.5">
+              <div className="w-3 h-1.5 bg-white border border-black rounded-sm" />
+              <div className="w-3 h-1.5 bg-green-600 border border-black rounded-sm" />
+            </div>
+          </div>
+        </div>,
+        '🚆 RAIL RUN'
+      );
+
     // Default Uniform 2D Cartoon-Style Graphic for All Other Mini-Games (31-50)
     default: {
       const cartoonIcons: Record<string, { icon: string; name: string; bg: string }> = {

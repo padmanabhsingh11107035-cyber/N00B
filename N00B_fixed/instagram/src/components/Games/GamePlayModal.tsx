@@ -20,7 +20,7 @@ import {
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
 import { User } from '../../types';
-import { recordGameMatch, sendGameInvite } from '../../services/api';
+import { recordGameMatch, sendGameInvite, submitSurvivalScore } from '../../services/api';
 import confetti from 'canvas-confetti';
 
 // Modular Dedicated Mini-Game Engines
@@ -40,6 +40,7 @@ import { ChessGame } from './minigames/ChessGame';
 import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
 import { LudoGame } from './minigames/LudoGame';
 import { MonopolyGame } from './minigames/MonopolyGame';
+import { SubwayRunnerGame } from './minigames/SubwayRunnerGame';
 
 interface GamePlayModalProps {
   game: MiniGameMeta;
@@ -61,6 +62,11 @@ type RoundResult = 'win' | 'tie' | 'loss';
 // finishPassPlayRound regardless of which mode launched them.
 const BOARD_GAME_IDS = ['ludo_classic', 'snakes_ladders', 'monopoly_noob'];
 
+// Solo-only games with no opponent concept at all — no bot, no friend
+// challenge, no pass-and-play. These skip the mode-select screen entirely
+// and drop straight into gameplay.
+const SOLO_ONLY_GAME_IDS = ['subway_run'];
+
 export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   game,
   currentUser,
@@ -71,7 +77,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   onPointsUpdated
 }) => {
   const [currentMode, setCurrentMode] = useState<PlayMode>(
-    initialChallenger ? 'play_bot' : 'select_mode'
+    initialChallenger || SOLO_ONLY_GAME_IDS.includes(game.id) ? 'play_bot' : 'select_mode'
   );
   const [opponentChallenger] = useState<string | undefined>(initialChallenger);
   const [matchmakingTimeLeft, setMatchmakingTimeLeft] = useState(30);
@@ -103,6 +109,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const [gameState, setGameState] = useState<any>({});
   const [gameResult, setGameResult] = useState<'win' | 'tie' | 'loss' | null>(null);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [survivalSeconds, setSurvivalSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Pass and Play: two humans take turns on this device, each attempting the
@@ -303,6 +310,32 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     }
   };
 
+  // Survival games (no win/tie/loss, no opponent) pay out 10 NOOB Points
+  // per second survived via a dedicated endpoint instead of finishGame's
+  // fixed win/tie/loss amounts.
+  const finishSurvivalGame = async (seconds: number) => {
+    setIsSubmitting(true);
+    setGameResult('win');
+    setSurvivalSeconds(seconds);
+    const estimatedEarned = seconds * 10;
+    setPointsEarned(estimatedEarned);
+
+    try {
+      const res = await submitSurvivalScore(game.id, game.title, seconds);
+      if (res.success) {
+        setPointsEarned(res.earnedPoints);
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        onPointsUpdated(res.earnedPoints, res.totalNoobPoints, true);
+      }
+    } catch (err) {
+      console.error(err);
+      onPointsUpdated(estimatedEarned, (currentUser.noobPoints || 0) + estimatedEarned, true);
+    } finally {
+      setIsSubmitting(false);
+      setCurrentMode('game_over');
+    }
+  };
+
   // Tic Tac Toe Move
   const handleTicTacToeClick = (index: number) => {
     if (!gameState.board || gameState.board[index] || !gameState.isPlayerTurn || gameState.winner) return;
@@ -461,11 +494,17 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white leading-tight">{game.title}</h2>
               <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
-                <span>•</span>
-                <span className="text-zinc-400">
-                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '50 NOOBs on Tie'}
-                </span>
+                {game.id === 'subway_run' ? (
+                  <span className="text-amber-400 font-semibold">10 NOOBs per second survived</span>
+                ) : (
+                  <>
+                    <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
+                    <span>•</span>
+                    <span className="text-zinc-400">
+                      {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '50 NOOBs on Tie'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1025,6 +1064,10 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <ScribbleGame onFinishGame={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
               )}
 
+              {game.id === 'subway_run' && (
+                <SubwayRunnerGame onSurvivalEnd={finishSurvivalGame} onExit={onClose} />
+              )}
+
               {/* Every catalog id above maps to a dedicated game; this generic
                   engine is kept only as a safety net for an unrecognized id
                   and should never actually be reached in normal use. */}
@@ -1043,7 +1086,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'cyber_drone',
                 'bubble_blitz',
                 'wordle_quest',
-                'scribble'
+                'scribble',
+                'subway_run'
               ].includes(game.id) && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}
@@ -1056,10 +1100,14 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {gameResult === 'win' ? (
                 <div className="space-y-3">
                   <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center mx-auto text-3xl shadow-[0_0_25px_rgba(251,191,36,0.3)] animate-bounce">
-                    🏆
+                    {game.id === 'subway_run' ? '🚆' : '🏆'}
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    {isPassAndPlay ? 'Player 1 Wins!' : 'Victory! You Won!'}
+                    {game.id === 'subway_run'
+                      ? `Run Complete! Survived ${survivalSeconds}s`
+                      : isPassAndPlay
+                      ? 'Player 1 Wins!'
+                      : 'Victory! You Won!'}
                   </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-sm">
                     <Sparkles className="w-4 h-4" />

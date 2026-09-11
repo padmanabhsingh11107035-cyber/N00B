@@ -408,7 +408,7 @@ export async function deleteReel(reelId: string): Promise<boolean> {
 export async function fetchChats(): Promise<ChatConversation[]> {
   const res = await fetch(`${API_BASE}/chats`, { headers: getAuthHeaders() });
   const data = await res.json();
-  return data.chats;
+  return data.chats || [];
 }
 
 export async function createChat(payload: {
@@ -424,6 +424,9 @@ export async function createChat(payload: {
     body: safeJsonStringify(payload)
   });
   const data = await res.json();
+  if (!res.ok || !data.chat) {
+    throw new Error(data.error || 'Failed to create chat');
+  }
   return data.chat;
 }
 
@@ -438,8 +441,9 @@ export async function deleteChat(chatId: string): Promise<boolean> {
 
 export async function fetchMessages(chatId: string): Promise<Message[]> {
   const res = await fetch(`${API_BASE}/chats/${chatId}/messages`, { headers: getAuthHeaders() });
+  if (!res.ok) return [];
   const data = await res.json();
-  return data.messages;
+  return data.messages || [];
 }
 
 export async function sendMessage(chatId: string, payload: Partial<Message>): Promise<Message & { aiResponse?: Message }> {
@@ -449,6 +453,9 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
     body: safeJsonStringify(payload)
   });
   const data = await res.json();
+  if (!res.ok || !data.message) {
+    throw new Error(data.error || 'Failed to send message');
+  }
   if (data.aiResponse) {
     return { ...data.message, aiResponse: data.aiResponse };
   }

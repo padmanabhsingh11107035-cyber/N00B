@@ -48,6 +48,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const [genreInput, setGenreInput] = useState('');
   const [coverUrlInput, setCoverUrlInput] = useState('');
   const [audioUrlInput, setAudioUrlInput] = useState('');
+  const [coverObjectKey, setCoverObjectKey] = useState('');
+  const [audioObjectKey, setAudioObjectKey] = useState('');
   const [detectedDuration, setDetectedDuration] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -60,6 +62,9 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       try {
         const res = await uploadMediaFile(file, 'posts');
         if (res.url) setCoverUrlInput(res.url);
+        // The presigned URL expires in an hour — persist the durable object
+        // key instead so the server can re-sign it on every future load.
+        setCoverObjectKey(res.objectKey || '');
       } catch (err) {
         console.error(err);
       }
@@ -78,6 +83,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
         if (res.url) {
           setAudioUrlInput(res.url);
         }
+        setAudioObjectKey(res.objectKey || '');
       } catch (err) {
         console.error(err);
       }
@@ -97,8 +103,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
         artist: artistInput.trim(),
         genre: genreInput,
         duration: finalDuration,
-        coverUrl: coverUrlInput,
-        audioUrl: audioUrlInput
+        coverUrl: coverObjectKey || coverUrlInput,
+        audioUrl: audioObjectKey || audioUrlInput
       });
 
       await refreshTracks();
@@ -107,6 +113,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       setGenreInput('');
       setCoverUrlInput('');
       setAudioUrlInput('');
+      setCoverObjectKey('');
+      setAudioObjectKey('');
       setDetectedDuration('');
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
     } catch (err) {

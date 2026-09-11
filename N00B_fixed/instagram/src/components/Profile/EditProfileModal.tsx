@@ -40,6 +40,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [username, setUsername] = useState(currentUser.username || '');
   const [bio, setBio] = useState(currentUser.bio || '');
   const [avatar, setAvatar] = useState(currentUser.avatar || '');
+  const [avatarObjectKey, setAvatarObjectKey] = useState('');
   const [website, setWebsite] = useState(currentUser.website || '');
   const [city, setCity] = useState(currentUser.city || '');
   const [countryCode, setCountryCode] = useState(currentUser.countryCode || '🇮🇳 India (+91)');
@@ -84,9 +85,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       if (res.url) {
         setAvatar(res.url);
       }
+      // The presigned URL above expires in an hour — persist the durable
+      // object key instead so the server can re-sign it on every future load.
+      setAvatarObjectKey(res.objectKey || '');
     } catch (err: any) {
       console.error('Avatar upload failed:', err);
-      // Fallback local reader
+      // Fallback local reader — the data URI is self-contained, so clear any
+      // object key left over from a previous successful upload.
+      setAvatarObjectKey('');
       const reader = new FileReader();
       reader.onload = (evt) => {
         if (evt.target?.result) setAvatar(evt.target.result as string);
@@ -131,7 +137,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         lastName: lastName.trim(),
         username: username.toLowerCase().trim().replace(/[^a-z0-9_.]/g, ''),
         bio: bio.trim(),
-        avatar: avatar.trim(),
+        avatar: (avatarObjectKey || avatar).trim(),
         website: website.trim(),
         city: city.trim(),
         countryCode,

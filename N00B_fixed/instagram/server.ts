@@ -619,13 +619,17 @@ async function startServer() {
   // Current user & profile
   app.get('/api/users/me', async (req, res) => {
     const activeUser = getActiveUser(req);
-    if (activeUser && activeUser.avatar) {
-      activeUser.avatar = await signMediaKey(activeUser.avatar);
+    if (!activeUser) {
+      return res.json({ user: null });
     }
-    res.json({ user: sanitizeUser(activeUser) });
+    // Sign into a fresh response copy rather than the stored user object —
+    // overwriting activeUser.avatar in place would permanently replace a
+    // durable B2 object key with a one-hour presigned URL, so any future
+    // sign attempt just passes the (by-then-expired) URL through unchanged.
+    res.json({ user: { ...sanitizeUser(activeUser), avatar: await signMediaKey(activeUser.avatar) } });
   });
 
-  app.put('/api/users/me', (req, res) => {
+  app.put('/api/users/me', async (req, res) => {
     const activeUser = getActiveUser(req);
     if (!activeUser) {
       return res.status(401).json({ error: 'Not authenticated' });
@@ -634,7 +638,7 @@ async function startServer() {
     const index = users.findIndex(u => u.id === activeUser.id);
     if (index !== -1) {
       users[index] = { ...users[index], ...updated };
-      res.json({ success: true, user: sanitizeUser(users[index]) });
+      res.json({ success: true, user: { ...sanitizeUser(users[index]), avatar: await signMediaKey(users[index].avatar) } });
     } else {
       res.status(404).json({ error: 'User not found' });
     }
@@ -1061,7 +1065,7 @@ async function startServer() {
   });
 
   // All Users directory (for search, follow, explore & game invites)
-  app.get('/api/users', (req, res) => {
+  app.get('/api/users', async (req, res) => {
     const active = getActiveUser(req);
     const search = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';
 
@@ -1073,10 +1077,11 @@ async function startServer() {
         )
       : users;
 
-    const sanitized = matching.map(u => ({
+    const sanitized = await Promise.all(matching.map(async (u) => ({
       ...sanitizePublicUser(u),
+      avatar: await signMediaKey(u.avatar),
       isFollowing: active?.followingIds?.includes(u.id) || false
-    }));
+    })));
     res.json({ users: sanitized });
   });
 

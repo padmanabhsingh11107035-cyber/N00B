@@ -10,6 +10,7 @@ interface CreateStoryModalProps {
 
 export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedImageObjectKey, setSelectedImageObjectKey] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
@@ -30,6 +31,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
       const res = await uploadMediaFile(file, 'stories');
       if (res.url) {
         setSelectedImage(res.url);
+        // The presigned URL expires in an hour — persist the durable object
+        // key instead so the server can re-sign it for as long as the story lasts.
+        setSelectedImageObjectKey(res.objectKey || '');
       } else {
         setUploadError('Upload failed. Please try again.');
       }
@@ -63,7 +67,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
     }
 
     onSubmitStory({
-      mediaUrl: selectedImage,
+      mediaUrl: selectedImageObjectKey || selectedImage,
       mediaType: 'image',
       filter,
       isCloseFriendsOnly: isCloseFriends,

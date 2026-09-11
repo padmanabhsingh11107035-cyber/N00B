@@ -1,6 +1,27 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+// AWS SigV4 stamps the current time into every signed URL, so calling
+// getSignedUrl again for the exact same object produces a different query
+// string each time — which means the browser can never cache that video/
+// image across repeat requests (e.g. every reel-feed refetch), even though
+// the underlying file never changed. Reusing the same signed URL for a
+// while fixes that: only re-sign once the cached one is close to expiring.
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+function getCachedSignedUrl(key: string): string | null {
+  const cached = signedUrlCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
+  return null;
+}
+
+function setCachedSignedUrl(key: string, url: string, expiresInSeconds: number) {
+  // Stop reusing a bit before the real expiry so an in-flight download
+  // never gets cut off by the URL going stale mid-transfer.
+  const safetyMarginMs = Math.min(5 * 60 * 1000, (expiresInSeconds * 1000) / 4);
+  signedUrlCache.set(key, { url, expiresAt: Date.now() + expiresInSeconds * 1000 - safetyMarginMs });
+}
+
 // Backblaze B2 S3-Compatible Client Helper
 // Strictly follows security rule: NO hardcoded keys or fallback secrets.
 export function getB2Client(): { client: S3Client | null; bucket: string; endpoint: string; isConfigured: boolean } {
@@ -126,13 +147,18 @@ export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 
     return keyOrUrl;
   }
 
+  const cached = getCachedSignedUrl(keyOrUrl);
+  if (cached) return cached;
+
   try {
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: keyOrUrl
     });
 
-    return await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+    const signed = await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+    setCachedSignedUrl(keyOrUrl, signed, expiresInSeconds);
+    return signed;
   } catch (err) {
     console.error(`Failed to generate presigned URL for key "${keyOrUrl}":`, err);
     return keyOrUrl;

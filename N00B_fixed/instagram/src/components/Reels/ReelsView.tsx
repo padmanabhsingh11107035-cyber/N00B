@@ -65,6 +65,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(true);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showAlgorithmModal, setShowAlgorithmModal] = useState(false);
@@ -112,6 +113,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     // auto-advance — otherwise a reel paused via tap would carry that paused
     // state into the next one, which reads as "the next reel is stuck."
     setIsPlaying(true);
+    // A brand new <video> element mounts for each reel (key={currentReel.id}),
+    // so its buffering state must reset too — otherwise a spinner from the
+    // previous reel could stay hidden/shown incorrectly for this one.
+    setIsVideoBuffering(true);
   }, [currentIndex, currentReel]);
 
   // Actually drive the <video> element from isPlaying — previously this
@@ -320,7 +325,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   if (!currentReel || localReels.length === 0) {
     return (
-      <div className="w-full h-[70vh] flex flex-col items-center justify-center text-center px-4">
+      <div className="fixed inset-0 z-30 bg-black flex flex-col items-center justify-center text-center px-4 pb-20">
         <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-[#00FF66]">
           <Film className="w-8 h-8" />
         </div>
@@ -333,10 +338,16 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   }
 
   return (
-    <div
-      id="reels-page-container"
-      className="relative w-full h-[calc(100vh-60px)] max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
-    >
+    // `fixed inset-0` anchors to the true viewport regardless of where this
+    // component happens to sit in the page's normal flow — a height like
+    // `calc(100vh-80px)` on a normally-flowing element only avoids the
+    // floating bottom nav if that element starts at y=0, which it doesn't
+    // here, so it still overlapped the nav until this switched to `fixed`.
+    <div className="fixed inset-0 z-30 bg-black flex items-center justify-center pb-20">
+      <div
+        id="reels-page-container"
+        className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
+      >
       {/* 1. Main Vertical Video Player */}
       <div
         ref={playerRef}
@@ -354,12 +365,25 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           loop
           autoPlay
           playsInline
+          preload="auto"
           muted={isMuted}
           onError={(e) => {
             console.warn('Video failed to load source:', e);
+            setIsVideoBuffering(false);
           }}
+          onWaiting={() => setIsVideoBuffering(true)}
+          onPlaying={() => setIsVideoBuffering(false)}
+          onCanPlay={() => setIsVideoBuffering(false)}
           className="w-full h-full object-cover"
         />
+
+        {/* Buffering spinner — without this, a slow-loading video just looks
+            frozen on a black frame, which reads as broken rather than loading. */}
+        {isVideoBuffering && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <div className="w-10 h-10 rounded-full border-[3px] border-white/20 border-t-white animate-spin" />
+          </div>
+        )}
 
         {/* Hidden preload of the next reel in the deck so swiping to it
             doesn't stall while the browser starts fetching/decoding cold */}
@@ -759,6 +783,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

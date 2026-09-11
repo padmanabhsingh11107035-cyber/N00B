@@ -571,8 +571,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const existing = conversations.find(
       (c) =>
         !c.isGroup &&
-        c.participants.some((p) => p.id === user.id) &&
-        c.participants.some((p) => p.id === currentUser.id)
+        c.participants?.some((p) => p.id === user.id) &&
+        c.participants?.some((p) => p.id === currentUser.id)
     );
     if (existing) {
       setActiveChatId(existing.id);
@@ -960,7 +960,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   // Synthesize contacts for friends who don't have an active conversation yet
   const friendsWithoutConversation = myFriends.filter(
-    (friend) => !conversations.some((c) => !c.isGroup && c.participants.some((p) => p.id === friend.id))
+    (friend) => !conversations.some((c) => !c.isGroup && c.participants?.some((p) => p.id === friend.id))
   );
 
   // Unified items list:
@@ -968,7 +968,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // 2. Direct conversations with friends
   const visibleConversations = conversations.filter((c) => {
     if (c.isGroup) return true;
-    const partner = c.participants.find((p) => p.id !== currentUser.id);
+    const partner = c.participants?.find((p) => p.id !== currentUser.id);
     if (!partner) return true;
     return isUserFriend(partner) || myFriends.some((f) => f.id === partner.id);
   });
@@ -996,8 +996,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (!queryClean) return true;
     const name = c.isGroup
       ? c.name || 'Group Chat'
-      : c.customNickname || c.participants[0]?.displayName || c.participants[0]?.username || '';
-    const username = c.participants[0]?.username || '';
+      : c.customNickname || c.participants?.[0]?.displayName || c.participants?.[0]?.username || '';
+    const username = c.participants?.[0]?.username || '';
     const lastMsgText = c.lastMessage?.text || '';
     return (
       name.toLowerCase().includes(queryClean) ||
@@ -1195,8 +1195,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {/* Active & Pinned Chats with explicit 'chat' and 'group' tags */}
             {finalFilteredConversations.map((c) => {
               const partner =
-                c.participants.find((p) => p.id !== currentUser.id) ||
-                c.participants[0] ||
+                c.participants?.find((p) => p.id !== currentUser.id) ||
+                c.participants?.[0] ||
                 currentUser;
               const displayName = c.isGroup
                 ? c.name || 'Group Chat'
@@ -1463,7 +1463,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   <div className="text-[11px] text-zinc-400 flex items-center gap-2">
                     {activeChat?.isGroup ? (
                       <span className="text-purple-300 font-medium flex items-center gap-1">
-                        <Users className="w-3 h-3" /> {activeChat.participants.length} members • Tap for
+                        <Users className="w-3 h-3" /> {(activeChat.participants || []).length} members • Tap for
                         Info
                       </span>
                     ) : (
@@ -1514,7 +1514,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <Info className="w-4 h-4 text-purple-400" /> Group Info &amp; Admins
                         </span>
                         <span className="text-[10px] text-purple-300 bg-purple-500/20 px-1.5 py-0.5 rounded font-bold">
-                          {activeChat.participants.length}
+                          {(activeChat.participants || []).length}
                         </span>
                       </button>
                     )}

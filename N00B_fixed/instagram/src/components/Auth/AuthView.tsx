@@ -28,12 +28,14 @@ import {
   Flame,
   Zap,
   Star,
-  HelpCircle
+  HelpCircle,
+  CalendarDays
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
 import { loginUser, signupUser } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
+import { BirthdayWheelPicker } from './BirthdayWheelPicker';
 import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
 import confetti from 'canvas-confetti';
@@ -148,7 +150,7 @@ const PRESET_2D_AVATARS = [
     category: '2D Nature',
     label: 'Fuji Sunset',
     gender: 'unisex' as const,
-    url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=400&auto=format&fit=crop&q=80'
+    url: 'https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=400&auto=format&fit=crop&q=80'
   },
   {
     id: 'n2',
@@ -226,6 +228,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   // Legal Modals
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
 
   // Sign up form state
   const [fullName, setFullName] = useState('');
@@ -836,14 +839,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                   Date of Birth <span className="text-cyan-400">*</span>
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  max={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                  className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all [color-scheme:dark]"
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowBirthdayPicker(true)}
+                  className="w-full flex items-center justify-between bg-[#141418] text-sm px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all cursor-pointer text-left"
+                >
+                  <span className={dateOfBirth ? 'text-white font-medium' : 'text-zinc-500'}>
+                    {dateOfBirth
+                      ? new Date(dateOfBirth).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+                      : 'Select your date of birth'}
+                  </span>
+                  <CalendarDays className="w-4 h-4 text-cyan-400 shrink-0" />
+                </button>
                 <p className="text-[10px] text-zinc-500 mt-1">You must be at least 13 years old to use NOOB.</p>
               </div>
 
@@ -992,7 +999,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                       }`}
                       title={`${av.label} (${av.category})`}
                     >
-                      <img src={av.url} alt={av.label} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img
+                        src={av.url}
+                        alt={av.label}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (!img.dataset.hasFailed) {
+                            img.dataset.hasFailed = 'true';
+                            img.src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${av.id}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+                          }
+                        }}
+                      />
                     </button>
                   ))}
 
@@ -1289,6 +1308,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       )}
       {showPrivacyModal && (
         <PrivacyPolicy onClose={() => setShowPrivacyModal(false)} />
+      )}
+
+      {showBirthdayPicker && (
+        <BirthdayWheelPicker
+          value={dateOfBirth}
+          maxDate={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000)}
+          onClose={() => setShowBirthdayPicker(false)}
+          onConfirm={(iso) => {
+            setDateOfBirth(iso);
+            setShowBirthdayPicker(false);
+          }}
+        />
       )}
     </div>
   );

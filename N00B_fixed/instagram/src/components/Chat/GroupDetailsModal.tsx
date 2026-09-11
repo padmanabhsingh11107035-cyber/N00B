@@ -59,7 +59,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
   const isAdmin = isCreator || chat.adminIds?.includes(currentUser.id) || false;
 
   // Filter friends available to add who aren't already in the group
-  const currentParticipantIds = chat.participants.map((p) => p.id);
+  const currentParticipantIds = (chat.participants || []).map((p) => p.id);
   const availableFriendsToAdd = allUsers.filter((u) => {
     if (u.id === currentUser.id || currentParticipantIds.includes(u.id) || u.isAi) return false;
     const isFriend = u.isFollowing || currentUser.followingIds?.includes(u.id) || u.followers?.includes?.(currentUser.id);
@@ -202,7 +202,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     }
   };
 
-  const filteredMembers = chat.participants.filter((p) => {
+  const filteredMembers = (chat.participants || []).filter((p) => {
     const q = memberSearch.toLowerCase();
     return (
       p.username.toLowerCase().includes(q) ||
@@ -327,7 +327,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
-                    <span>{chat.participants.length} members</span>
+                    <span>{(chat.participants || []).length} members</span>
                     <span>•</span>
                     <span className="flex items-center gap-1 text-purple-300 font-semibold">
                       <Shield className="w-3 h-3" /> {chat.adminIds?.length || 1} Admins
@@ -344,7 +344,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-purple-400" />
-              Members ({chat.participants.length})
+              Members ({(chat.participants || []).length})
             </span>
 
             {isAdmin && (

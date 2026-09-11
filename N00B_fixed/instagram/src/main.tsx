@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
 
 // The app's `/api/...` calls are written as relative paths, which only
@@ -29,8 +30,10 @@ if (nativeApiBase) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MusicPlayerProvider>
-      <App />
-    </MusicPlayerProvider>
+    <ErrorBoundary>
+      <MusicPlayerProvider>
+        <App />
+      </MusicPlayerProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

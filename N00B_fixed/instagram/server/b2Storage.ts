@@ -3,7 +3,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Backblaze B2 S3-Compatible Client Helper
 // Strictly follows security rule: NO hardcoded keys or fallback secrets.
-export function getB2Client(): { client: S3Client | null; bucket: string; isConfigured: boolean } {
+export function getB2Client(): { client: S3Client | null; bucket: string; endpoint: string; isConfigured: boolean } {
   const keyId = process.env.B2_KEY_ID;
   const applicationKey = process.env.B2_APPLICATION_KEY;
   const bucketName = process.env.B2_BUCKET_NAME || 'noob-learning-media';
@@ -13,6 +13,7 @@ export function getB2Client(): { client: S3Client | null; bucket: string; isConf
     return {
       client: null,
       bucket: bucketName,
+      endpoint,
       isConfigured: false
     };
   }
@@ -30,6 +31,7 @@ export function getB2Client(): { client: S3Client | null; bucket: string; isConf
   return {
     client,
     bucket: bucketName,
+    endpoint,
     isConfigured: true
   };
 }
@@ -90,7 +92,26 @@ export async function uploadMediaToB2(
  */
 export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 3600): Promise<string> {
   if (!keyOrUrl) return '';
-  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://') || keyOrUrl.startsWith('data:')) {
+  if (keyOrUrl.startsWith('data:')) return keyOrUrl;
+
+  const { client, bucket, endpoint, isConfigured } = getB2Client();
+
+  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+    // Some avatars/stories/tracks were saved (before object keys were
+    // persisted separately) with an already-signed, one-hour presigned URL
+    // baked in as the stored value — once that hour passes the image just
+    // breaks forever, because the real object key was never kept anywhere
+    // else. The object key is still sitting right there in the URL's path
+    // (a presigned GET URL is "<endpoint>/<bucket>/<key>?X-Amz-..."), so if
+    // this URL points at our own bucket, pull the key back out and re-sign
+    // it fresh instead of returning the stale signature unchanged.
+    if (isConfigured && client && keyOrUrl.startsWith(`${endpoint}/${bucket}/`)) {
+      const pathAndQuery = keyOrUrl.slice(`${endpoint}/${bucket}/`.length);
+      const staleKey = decodeURIComponent(pathAndQuery.split('?')[0]);
+      if (staleKey) {
+        return signMediaKey(staleKey, expiresInSeconds);
+      }
+    }
     return keyOrUrl;
   }
   // A leading slash means this is already a resolvable local/static path
@@ -100,7 +121,6 @@ export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 
     return keyOrUrl;
   }
 
-  const { client, bucket, isConfigured } = getB2Client();
   if (!isConfigured || !client) {
     // If not configured, return key or placeholder
     return keyOrUrl;

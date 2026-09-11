@@ -93,7 +93,12 @@ export async function uploadMediaToB2(
     Bucket: bucket,
     Key: objectKey,
     Body: fileBuffer,
-    ContentType: contentType
+    ContentType: contentType,
+    // Objects are immutable (each upload gets a fresh, unique key), so once a
+    // browser has fetched a given presigned URL it can keep reusing its own
+    // cached copy for as long as that URL stays valid, instead of re-hitting
+    // B2 (and burning a Class B download transaction) on every page reload.
+    CacheControl: 'public, max-age=3300, immutable'
   });
 
   await client.send(command);

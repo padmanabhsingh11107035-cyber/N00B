@@ -32,6 +32,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     isPlaying,
     progress: audioProgress,
     isMuted,
+    playbackError,
     togglePlay,
     toggleMute,
     refreshTracks,
@@ -215,6 +216,12 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             }}
             aria-label="Seek track position"
           />
+
+          {playbackError && (
+            <p className="text-[11px] text-rose-400 font-semibold text-center bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-1.5">
+              {playbackError}
+            </p>
+          )}
         </div>
       )}
 
@@ -389,7 +396,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 >
                   {audioUrlInput ? <Check className="w-3 h-3 text-[#00FF66]" /> : <Upload className="w-3 h-3 text-[#00FF66]" />} Audio File
                 </button>
-                <input ref={audioFileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.wma" onChange={handleAudioUpload} className="hidden" />
+                <input ref={audioFileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" onChange={handleAudioUpload} className="hidden" />
               </div>
 
               {/* Auto Duration Status */}

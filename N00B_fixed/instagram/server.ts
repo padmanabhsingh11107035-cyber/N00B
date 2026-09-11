@@ -501,11 +501,31 @@ async function startServer() {
   // bucket, or a deliberately malformed "image" crafted to blow up in
   // whatever tries to decode it) is rejected before it ever reaches B2.
   const ALLOWED_MEDIA_MIME_PREFIXES = ['image/', 'video/', 'audio/'];
+  // These formats pass the image/video/audio prefix check above but can't
+  // actually be decoded by any web browser's <img>/<audio> element — they
+  // used to upload successfully and then just render as a broken image or
+  // silently fail to play, with nothing telling the user why. HEIC/HEIF is
+  // the iPhone camera's default photo format; WMA has no browser decoder
+  // at all.
+  const BLOCKED_MEDIA_MIME_TYPES = ['image/heic', 'image/heif', 'audio/x-ms-wma'];
+  const BLOCKED_MEDIA_EXTENSIONS = ['heic', 'heif', 'wma'];
 
   app.post('/api/upload/media', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const ext = (req.file.originalname.split('.').pop() || '').toLowerCase();
+      if (
+        BLOCKED_MEDIA_MIME_TYPES.includes(req.file.mimetype.toLowerCase()) ||
+        BLOCKED_MEDIA_EXTENSIONS.includes(ext)
+      ) {
+        return res.status(400).json({
+          error: ext === 'wma'
+            ? 'WMA audio isn\'t supported by web browsers. Please upload MP3, WAV, or M4A instead.'
+            : 'HEIC/HEIF photos aren\'t supported by web browsers. On iPhone: Settings > Camera > Formats > select "Most Compatible" to save new photos as JPEG, or use "Options" when picking a photo to convert it first.'
+        });
       }
 
       if (!ALLOWED_MEDIA_MIME_PREFIXES.some(prefix => req.file!.mimetype.startsWith(prefix))) {

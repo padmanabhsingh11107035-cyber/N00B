@@ -8,6 +8,7 @@ interface MusicPlayerContextType {
   isPlaying: boolean;
   progress: number;
   isMuted: boolean;
+  playbackError: string | null;
   togglePlay: (track?: MusicTrack) => void;
   playTrack: (track: MusicTrack) => void;
   pauseTrack: () => void;
@@ -26,6 +27,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -46,6 +48,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const playTrack = (track: MusicTrack) => {
+    setPlaybackError(null);
     setCurrentTrack(track);
     setIsPlaying(true);
     setTimeout(() => {
@@ -53,6 +56,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         audioRef.current.play().catch((err) => {
           console.warn('Playback prevented:', err);
           setIsPlaying(false);
+          setPlaybackError(`Couldn't play "${track.title}". Your browser may not support this audio format.`);
         });
       }
     }, 50);
@@ -73,10 +77,12 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (isPlaying) {
         pauseTrack();
       } else {
+        setPlaybackError(null);
         setIsPlaying(true);
         audioRef.current?.play().catch((err) => {
           console.warn('Playback error:', err);
           setIsPlaying(false);
+          setPlaybackError(`Couldn't play "${target.title}". Your browser may not support this audio format.`);
         });
       }
     } else {
@@ -126,6 +132,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         isPlaying,
         progress,
         isMuted,
+        playbackError,
         togglePlay,
         playTrack,
         pauseTrack,
@@ -148,6 +155,12 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           onError={(e) => {
             console.warn('Audio playback error:', e);
             setIsPlaying(false);
+            const mediaError = (e.target as HTMLAudioElement).error;
+            const message =
+              mediaError?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+                ? `Couldn't play "${currentTrack.title}". This audio file's format isn't supported by your browser.`
+                : `Couldn't play "${currentTrack.title}". The track may have expired — try refreshing.`;
+            setPlaybackError(message);
           }}
           muted={isMuted}
           preload="none"

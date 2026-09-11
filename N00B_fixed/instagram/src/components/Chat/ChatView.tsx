@@ -46,7 +46,8 @@ import {
   MessageCircle,
   SquarePen,
   Filter,
-  Smile
+  Smile,
+  Reply
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 
@@ -194,7 +195,11 @@ interface ChatViewProps {
   onPendingChatUserHandled?: () => void;
   onMobileViewChange?: (view: 'list' | 'chat') => void;
   onUserUpdated?: (user: User) => void;
+  onNavigateToProfile?: (user: User) => void;
 }
+
+// Swipe-left-to-reply threshold (mobile), matching WhatsApp's gesture feel.
+const SWIPE_REPLY_THRESHOLD = 56;
 
 type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
 
@@ -240,7 +245,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   pendingChatUser,
   onPendingChatUserHandled,
   onMobileViewChange,
-  onUserUpdated
+  onUserUpdated,
+  onNavigateToProfile
 }) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -265,6 +271,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers' | 'premium'>('emojis');
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
+  const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
+  const swipeTrackingRef = useRef<{ id: string; startX: number; startY: number; locked: boolean } | null>(null);
   const [myStickers, setMyStickers] = useState<MyCustomSticker[]>([]);
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
   const [stickerUploadError, setStickerUploadError] = useState<string | null>(null);
@@ -340,7 +349,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleSendShopItem = (item: ShopItem) => {
     if (!ownedItemIds.includes(item.id)) return;
-    handleSendSticker(item.content);
+    if (item.assetUrl) {
+      handleSendCustomSticker(item.assetUrl);
+    } else {
+      handleSendSticker(item.content);
+    }
   };
 
   const handleUploadSticker = async (file: File) => {
@@ -631,8 +644,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (!inputText.trim() || !activeChat) return;
 
     const textToSend = inputText.trim();
+    const replyToSend = replyingToMessage
+      ? { messageId: replyingToMessage.id, senderUsername: replyingToMessage.senderUsername, textPreview: replyingToMessage.text?.slice(0, 120) || '' }
+      : undefined;
     setInputText('');
     setScheduledTime('');
+    setReplyingToMessage(null);
 
     // Ultra-fast instant optimistic message with delivered state
     const optimisticMsg: Message = {
@@ -643,6 +660,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       senderDisplayName: currentUser.displayName,
       senderAvatar: currentUser.avatar,
       text: textToSend,
+      replyTo: replyToSend,
       createdAt: new Date().toISOString(),
       isEdited: false,
       status: 'delivered',
@@ -658,6 +676,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         senderDisplayName: currentUser.displayName,
         senderAvatar: currentUser.avatar,
         text: textToSend,
+        replyTo: replyToSend,
         scheduledAt: scheduledTime || undefined
       });
 
@@ -867,6 +886,44 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setMessages(messages.filter((m) => m.id !== msgId));
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Mobile swipe-to-reply: swiping a bubble left past SWIPE_REPLY_THRESHOLD
+  // opens the WhatsApp-style reply composer for that message. Horizontal-only
+  // drags never fight the vertical message-list scroll, since the list has
+  // no horizontal overflow for the browser to pan in the first place.
+  const handleBubbleTouchStart = (e: React.TouchEvent, msgId: string) => {
+    swipeTrackingRef.current = {
+      id: msgId,
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      locked: false
+    };
+  };
+  const handleBubbleTouchMove = (e: React.TouchEvent, msg: Message) => {
+    const t = swipeTrackingRef.current;
+    if (!t || t.id !== msg.id) return;
+    const dx = e.touches[0].clientX - t.startX;
+    const dy = e.touches[0].clientY - t.startY;
+    if (!t.locked) {
+      if (Math.abs(dy) > Math.abs(dx)) return; // vertical scroll gesture, ignore
+      t.locked = true;
+    }
+    const clamped = Math.max(-90, Math.min(0, dx));
+    setSwipeOffsets((prev) => ({ ...prev, [msg.id]: clamped }));
+  };
+  const handleBubbleTouchEnd = (msg: Message) => {
+    const t = swipeTrackingRef.current;
+    const offset = swipeOffsets[msg.id] || 0;
+    swipeTrackingRef.current = null;
+    setSwipeOffsets((prev) => {
+      const next = { ...prev };
+      delete next[msg.id];
+      return next;
+    });
+    if (t && t.id === msg.id && offset <= -SWIPE_REPLY_THRESHOLD) {
+      setReplyingToMessage(msg);
     }
   };
 
@@ -1339,9 +1396,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 onClick={() => {
                   if (activeChat?.isGroup) {
                     setShowGroupDetails(true);
+                  } else {
+                    const otherUser = activeChat?.participants.find((p) => p.id !== currentUser.id);
+                    if (otherUser && onNavigateToProfile) onNavigateToProfile(otherUser);
                   }
                 }}
-                title={activeChat?.isGroup ? 'Click to view group details & members' : undefined}
+                title={activeChat?.isGroup ? 'Click to view group details & members' : 'View profile'}
               >
                 <div className="relative shrink-0">
                   {activeChat?.isGroup ? (
@@ -1598,11 +1658,31 @@ export const ChatView: React.FC<ChatViewProps> = ({
               const senderVerified = !!(m.senderIsVerified || senderUser?.isVerified);
               const isSticker = m.mediaType === 'sticker';
 
+              const swipeOffset = swipeOffsets[m.id] || 0;
+
               return (
                 <div
                   key={m.id}
-                  className={`flex flex-col group ${isMine ? 'items-end' : 'items-start'}`}
+                  className={`relative flex flex-col group ${isMine ? 'items-end' : 'items-start'}`}
                 >
+                  {swipeOffset < -8 && (
+                    <div
+                      className="absolute inset-y-0 right-0 flex items-center pr-1 text-[#00FF66] pointer-events-none"
+                      style={{ opacity: Math.min(1, -swipeOffset / SWIPE_REPLY_THRESHOLD) }}
+                    >
+                      <Reply className="w-4 h-4" />
+                    </div>
+                  )}
+                  <div
+                    className={`flex flex-col w-full ${isMine ? 'items-end' : 'items-start'}`}
+                    style={{
+                      transform: swipeOffset ? `translateX(${swipeOffset}px)` : undefined,
+                      transition: swipeOffset ? 'none' : 'transform 0.2s ease'
+                    }}
+                    onTouchStart={(e) => handleBubbleTouchStart(e, m.id)}
+                    onTouchMove={(e) => handleBubbleTouchMove(e, m)}
+                    onTouchEnd={() => handleBubbleTouchEnd(m)}
+                  >
                   {/* In Group Chats: Show sender name for incoming messages */}
                   {activeChat?.isGroup && !isMine && (
                     <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-zinc-400 font-semibold">
@@ -1637,6 +1717,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         : undefined
                     }
                   >
+                    {/* Quoted reply preview */}
+                    {m.replyTo && (
+                      <div className="mb-1.5 pl-2 border-l-2 border-[#00FF66]/70 bg-black/30 rounded-md py-1 px-2">
+                        <span className="text-[10px] font-bold text-[#00FF66] block">
+                          {m.replyTo.senderUsername ? `@${m.replyTo.senderUsername}` : 'Original message'}
+                        </span>
+                        <span className="text-[10px] text-zinc-400 truncate block">
+                          {m.replyTo.textPreview || 'Attachment'}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Shared Music track */}
                     {m.sharedTrack && (
                       <div className="mb-2 p-2 bg-black/60 rounded-xl flex items-center gap-2 border border-zinc-700">
@@ -1796,6 +1888,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   {/* Message Action Bar on Hover */}
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-1 text-[11px] text-zinc-400">
                     <button
+                      onClick={() => setReplyingToMessage(m)}
+                      className="hover:text-white p-1 rounded"
+                      title="Reply"
+                    >
+                      <Reply className="w-3 h-3" />
+                    </button>
+                    <button
                       onClick={() => handleTranslate(m.id)}
                       className="hover:text-white p-1 rounded"
                       title="Translate"
@@ -1824,6 +1923,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </button>
                     )}
                   </div>
+                  </div>
                 </div>
               );
             })}
@@ -1832,6 +1932,28 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Bottom Message Input Bar */}
           <div className="p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/90 shrink-0 relative">
+            {/* Replying-to preview, WhatsApp-style */}
+            {replyingToMessage && (
+              <div className="flex items-center gap-2 mb-2 pl-3 pr-2 py-1.5 rounded-xl bg-zinc-800/80 border-l-4 border-[#00FF66]">
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-[#00FF66] block">
+                    Replying to {replyingToMessage.senderId === currentUser.id ? 'yourself' : `@${replyingToMessage.senderUsername || 'them'}`}
+                  </span>
+                  <span className="text-[11px] text-zinc-400 truncate block">
+                    {replyingToMessage.text || (replyingToMessage.mediaType === 'sticker' ? 'Sticker' : 'Attachment')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReplyingToMessage(null)}
+                  className="p-1 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white cursor-pointer shrink-0"
+                  title="Cancel reply"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Emojis, GIFs & Stickers Picker Popover */}
             {showEmojiPicker && (
               <div
@@ -2083,9 +2205,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                     }`}
                                     title={owned ? `Send ${item.name}` : `Buy for ${item.price.toLocaleString()} pts`}
                                   >
-                                    <span className={`text-2xl transition-transform ${owned ? 'group-hover:scale-110' : 'opacity-50 grayscale'}`}>
-                                      {item.content}
-                                    </span>
+                                    {item.assetUrl ? (
+                                      <img
+                                        src={item.assetUrl}
+                                        alt={item.name}
+                                        className={`w-9 h-9 object-contain rounded-lg transition-transform ${owned ? 'group-hover:scale-110' : 'opacity-50 grayscale'}`}
+                                        loading="lazy"
+                                      />
+                                    ) : (
+                                      <span className={`text-2xl transition-transform ${owned ? 'group-hover:scale-110' : 'opacity-50 grayscale'}`}>
+                                        {item.content}
+                                      </span>
+                                    )}
                                     <span className="text-[8px] font-bold text-zinc-400 group-hover:text-white mt-1 text-center truncate max-w-full">
                                       {item.name}
                                     </span>

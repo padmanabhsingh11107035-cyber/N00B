@@ -52,60 +52,123 @@ const generateCaptchaCode = (): string => {
   return result;
 };
 
-// Curated 2D Cartoon and 2D Nature avatars
+// Curated 2D Cartoon and 2D Nature avatars. `gender` drives which ones show
+// in the picker for a given selected gender ('unisex' always shows).
 const PRESET_2D_AVATARS = [
+  // --- Male-presenting ---
   {
-    id: 'c1',
+    id: 'm1',
     category: '2D Cartoon',
     label: 'Anime Guy',
+    gender: 'male' as const,
     url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80'
   },
   {
-    id: 'c2',
+    id: 'm2',
     category: '2D Cartoon',
     label: 'Felix',
+    gender: 'male' as const,
     url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix&backgroundColor=b6e3f4,c0aede,d1d4f9'
   },
   {
-    id: 'c3',
+    id: 'm3',
+    category: '2D Cartoon',
+    label: 'Liam Cool',
+    gender: 'male' as const,
+    url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam&backgroundColor=b6e3f4'
+  },
+  {
+    id: 'm4',
+    category: '2D Cartoon',
+    label: 'Arjun Bold',
+    gender: 'male' as const,
+    url: 'https://api.dicebear.com/7.x/personas/svg?seed=Arjun&backgroundColor=c0aede'
+  },
+  {
+    id: 'm5',
+    category: '2D Cartoon',
+    label: 'Kai Warrior',
+    gender: 'male' as const,
+    url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Kai&backgroundColor=b6e3f4'
+  },
+  // --- Female-presenting ---
+  {
+    id: 'f1',
     category: '2D Cartoon',
     label: 'Aria Girl',
+    gender: 'female' as const,
     url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Aria&backgroundColor=ffd5dc,d1d4f9'
   },
   {
-    id: 'c4',
+    id: 'f2',
+    category: '2D Cartoon',
+    label: 'Priya Rose',
+    gender: 'female' as const,
+    url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Priya&backgroundColor=ffd5dc'
+  },
+  {
+    id: 'f3',
+    category: '2D Cartoon',
+    label: 'Zara Chic',
+    gender: 'female' as const,
+    url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zara&backgroundColor=ffdfbf'
+  },
+  {
+    id: 'f4',
+    category: '2D Cartoon',
+    label: 'Maya Bloom',
+    gender: 'female' as const,
+    url: 'https://api.dicebear.com/7.x/personas/svg?seed=Maya&backgroundColor=ffd5dc'
+  },
+  {
+    id: 'f5',
+    category: '2D Cartoon',
+    label: 'Ivy Belle',
+    gender: 'female' as const,
+    url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ivy&backgroundColor=ffd5dc'
+  },
+  // --- Unisex characters ---
+  {
+    id: 'u1',
     category: '2D Cartoon',
     label: 'Cute Bot',
+    gender: 'unisex' as const,
     url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sparky&backgroundColor=ffdfbf,ffd5dc'
   },
   {
-    id: 'c5',
+    id: 'u2',
     category: '2D Cartoon',
     label: 'Pixel Pro',
+    gender: 'unisex' as const,
     url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=GamerNoob'
   },
+  // --- Nature scenes (not people, always shown) ---
   {
     id: 'n1',
     category: '2D Nature',
     label: 'Fuji Sunset',
+    gender: 'unisex' as const,
     url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=400&auto=format&fit=crop&q=80'
   },
   {
     id: 'n2',
     category: '2D Nature',
     label: 'Botanical Leaf',
+    gender: 'unisex' as const,
     url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&auto=format&fit=crop&q=80'
   },
   {
     id: 'n3',
     category: '2D Nature',
     label: 'Cherry Blossom',
+    gender: 'unisex' as const,
     url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&auto=format&fit=crop&q=80'
   },
   {
     id: 'n4',
     category: '2D Nature',
     label: 'Aurora Night',
+    gender: 'unisex' as const,
     url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&auto=format&fit=crop&q=80'
   }
 ];
@@ -191,6 +254,34 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   useEffect(() => {
     setCaptchaCode(generateCaptchaCode());
   }, [mode]);
+
+  // If the picked avatar no longer matches the chosen gender's filtered
+  // tray (e.g. a male avatar was selected before switching gender to
+  // Female), fall back to the first avatar that's still visible instead of
+  // leaving a hidden, stale selection.
+  useEffect(() => {
+    if (customAvatarUrl) return;
+    const stillVisible = PRESET_2D_AVATARS.some(
+      (av) =>
+        av.url === selectedAvatar &&
+        (gender === 'Male'
+          ? av.gender === 'male' || av.gender === 'unisex'
+          : gender === 'Female'
+          ? av.gender === 'female' || av.gender === 'unisex'
+          : true)
+    );
+    if (!stillVisible) {
+      const firstMatch = PRESET_2D_AVATARS.find((av) =>
+        gender === 'Male'
+          ? av.gender === 'male' || av.gender === 'unisex'
+          : gender === 'Female'
+          ? av.gender === 'female' || av.gender === 'unisex'
+          : true
+      );
+      if (firstMatch) setSelectedAvatar(firstMatch.url);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gender]);
 
   const handleRefreshCaptcha = () => {
     setCaptchaCode(generateCaptchaCode());
@@ -854,7 +945,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <span>Avatar Selection</span>
+                    <span>Profile</span>
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-normal">2D Art</span>
                   </label>
                   <button
@@ -883,7 +974,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                     </div>
                   )}
 
-                  {PRESET_2D_AVATARS.map((av) => (
+                  {PRESET_2D_AVATARS.filter((av) =>
+                    gender === 'Male'
+                      ? av.gender === 'male' || av.gender === 'unisex'
+                      : gender === 'Female'
+                      ? av.gender === 'female' || av.gender === 'unisex'
+                      : true
+                  ).map((av) => (
                     <button
                       key={av.id}
                       type="button"

@@ -177,6 +177,7 @@ export interface ShopItem {
   name: string;
   type: 'sticker' | 'gif' | 'emoji';
   content: string;
+  assetUrl?: string;
   price: number;
   category: string;
 }
@@ -339,6 +340,11 @@ export interface Message {
     fromUsername: string;
     fromAvatar: string;
     roomCode: string;
+  };
+  replyTo?: {
+    messageId: string;
+    senderUsername?: string;
+    textPreview: string;
   };
   status?: 'sent' | 'delivered' | 'read';
   scheduledAt?: string;

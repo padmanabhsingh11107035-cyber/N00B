@@ -335,6 +335,48 @@ async function startServer() {
     cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
   }, 15 * 60 * 1000);
 
+  // One-time self-heal for messages/chats created before createdAt was
+  // standardized to ISO strings (e.g. the old 'Just now' / toLocaleTimeString
+  // seed and creation code). An unparseable createdAt broke unread-message
+  // counting (see the /api/chats unread filter) by making a message look
+  // permanently "new" no matter how many times its chat was opened. Every
+  // dynamic id in this codebase is `prefix_<epoch-ms>[...]`, so the real
+  // creation time can usually be recovered straight from the id.
+  function healLegacyTimestamp(rawId: string | undefined): string {
+    const match = rawId?.match(/(\d{13})/);
+    if (match) {
+      const recovered = new Date(Number(match[1]));
+      if (!isNaN(recovered.getTime())) return recovered.toISOString();
+    }
+    return '2020-01-01T00:00:00.000Z';
+  }
+  function healLegacyTimestamps() {
+    let healedCount = 0;
+    for (const chatId of Object.keys(messages)) {
+      for (const m of messages[chatId] || []) {
+        if (isNaN(new Date(m.createdAt).getTime())) {
+          m.createdAt = healLegacyTimestamp(m.id);
+          healedCount++;
+        }
+      }
+    }
+    for (const c of chats) {
+      if (c.lastMessage && isNaN(new Date(c.lastMessage.createdAt).getTime())) {
+        c.lastMessage.createdAt = healLegacyTimestamp(c.lastMessage.id);
+        healedCount++;
+      }
+      if (c.createdAt && isNaN(new Date(c.createdAt).getTime())) {
+        c.createdAt = healLegacyTimestamp(c.id);
+        healedCount++;
+      }
+    }
+    if (healedCount > 0) {
+      console.log(`Self-healed ${healedCount} legacy (pre-ISO) timestamps`);
+      schedulePersist();
+    }
+  }
+  healLegacyTimestamps();
+
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, async () => {
       if (persistTimer) clearTimeout(persistTimer);
@@ -1069,15 +1111,18 @@ async function startServer() {
     { id: 'shop_cool_swag', name: 'Ultra Swag', type: 'sticker', content: '😎💫', price: 1800, category: 'Reactions' },
     { id: 'shop_clap_gold', name: 'Golden Applause', type: 'sticker', content: '👏🏅', price: 2000, category: 'Reactions' },
 
-    // --- Animated-Style GIF Packs (2,500 - 5,000 pts) ---
-    { id: 'shop_gif_confetti_rain', name: 'Confetti Rain', type: 'gif', content: '🎊🎉🎊', price: 2500, category: 'GIF Packs' },
-    { id: 'shop_gif_neon_pulse', name: 'Neon Pulse', type: 'gif', content: '💚⚡💚', price: 2800, category: 'GIF Packs' },
-    { id: 'shop_gif_fireworks', name: 'Fireworks Show', type: 'gif', content: '🎆🎇🎆', price: 3200, category: 'GIF Packs' },
-    { id: 'shop_gif_money_rain', name: 'Money Rain', type: 'gif', content: '💸💰💸', price: 3500, category: 'GIF Packs' },
-    { id: 'shop_gif_disco_ball', name: 'Disco Night', type: 'gif', content: '🪩✨🪩', price: 3800, category: 'GIF Packs' },
-    { id: 'shop_gif_flame_trail', name: 'Flame Trail', type: 'gif', content: '🔥💨🔥', price: 4000, category: 'GIF Packs' },
-    { id: 'shop_gif_galaxy_spin', name: 'Galaxy Spin', type: 'gif', content: '🌌🌀🌌', price: 4500, category: 'GIF Packs' },
-    { id: 'shop_gif_trophy_shine', name: 'Trophy Shine', type: 'gif', content: '🏆✨🏆', price: 5000, category: 'GIF Packs' },
+    // --- Animated-Style GIF Packs (2,500 - 5,000 pts) --- these carry a real
+    // animated assetUrl (reusing the same already-proven Giphy CDN URLs the
+    // free GIF tab uses) so they actually move in chat instead of just being
+    // another static emoji combo.
+    { id: 'shop_gif_confetti_rain', name: 'Confetti Rain', type: 'gif', content: '🎊🎉🎊', assetUrl: 'https://i.giphy.com/media/BPJmthQ3YRwD6QqcVD/giphy.gif', price: 2500, category: 'GIF Packs' },
+    { id: 'shop_gif_neon_pulse', name: 'Neon Pulse', type: 'gif', content: '💚⚡💚', assetUrl: 'https://i.giphy.com/media/xUPGcguWZHRC2HyBRS/giphy.gif', price: 2800, category: 'GIF Packs' },
+    { id: 'shop_gif_fireworks', name: 'Fireworks Show', type: 'gif', content: '🎆🎇🎆', assetUrl: 'https://i.giphy.com/media/xT5LMHxhOfscxPfIfm/giphy.gif', price: 3200, category: 'GIF Packs' },
+    { id: 'shop_gif_money_rain', name: 'Money Rain', type: 'gif', content: '💸💰💸', assetUrl: 'https://i.giphy.com/media/xT0xezQGU5xCDJuCPe/giphy.gif', price: 3500, category: 'GIF Packs' },
+    { id: 'shop_gif_disco_ball', name: 'Disco Night', type: 'gif', content: '🪩✨🪩', assetUrl: 'https://i.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif', price: 3800, category: 'GIF Packs' },
+    { id: 'shop_gif_flame_trail', name: 'Flame Trail', type: 'gif', content: '🔥💨🔥', assetUrl: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif', price: 4000, category: 'GIF Packs' },
+    { id: 'shop_gif_galaxy_spin', name: 'Galaxy Spin', type: 'gif', content: '🌌🌀🌌', assetUrl: 'https://i.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif', price: 4500, category: 'GIF Packs' },
+    { id: 'shop_gif_trophy_shine', name: 'Trophy Shine', type: 'gif', content: '🏆✨🏆', assetUrl: 'https://i.giphy.com/media/26u4cqiYI30juCOGY/giphy.gif', price: 5000, category: 'GIF Packs' },
 
     // --- Legendary Emoji Packs (6,000 - 10,000 pts) ---
     { id: 'shop_legend_crown_diamond', name: 'Legendary Crown', type: 'emoji', content: '👑💎', price: 6000, category: 'Legendary' },
@@ -2141,7 +2186,11 @@ async function startServer() {
       const unreadCount = (messages[c.id] || []).filter((m: any) => {
         if (m.senderId === active.id) return false;
         const sentTime = new Date(m.createdAt).getTime();
-        return isNaN(sentTime) || sentTime > lastReadTime;
+        // An unparseable createdAt must NOT count as unread — that used to
+        // make legacy (pre-ISO-timestamp) messages permanently "new" no
+        // matter how many times the chat was opened, since a NaN comparison
+        // is always false and the old code treated that as "still unread".
+        return !isNaN(sentTime) && sentTime > lastReadTime;
       }).length;
       return { ...c, unreadCount };
     });
@@ -2539,7 +2588,22 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       return res.status(403).json({ error: 'You are not a participant in this chat.' });
     }
 
-    const { text, mediaUrl, mediaType, scheduledAt, sharedTrack, gameInvite } = req.body;
+    const { text, mediaUrl, mediaType, scheduledAt, sharedTrack, gameInvite, replyTo } = req.body;
+
+    // Only the messageId is trusted from the client — the quoted sender/text
+    // preview is always rebuilt here from the real stored message, so a
+    // reply can't be used to inject fake quoted content from someone else.
+    let resolvedReplyTo: { messageId: string; senderUsername?: string; textPreview: string } | undefined;
+    if (replyTo?.messageId) {
+      const original = (messages[chatId] || []).find(m => m.id === replyTo.messageId);
+      if (original) {
+        resolvedReplyTo = {
+          messageId: original.id,
+          senderUsername: original.senderUsername,
+          textPreview: original.text ? original.text.slice(0, 120) : (original.mediaType === 'sticker' ? 'Sticker' : original.mediaUrl ? 'Attachment' : '')
+        };
+      }
+    }
 
     const newMsg = {
       id: `m_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -2554,6 +2618,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       mediaType: mediaType || (mediaUrl ? 'image' : gameInvite ? 'game_invite' : 'text'),
       sharedTrack,
       gameInvite,
+      replyTo: resolvedReplyTo,
       createdAt: new Date().toISOString(),
       isEdited: false,
       // Only becomes 'read' once the recipient actually opens this chat

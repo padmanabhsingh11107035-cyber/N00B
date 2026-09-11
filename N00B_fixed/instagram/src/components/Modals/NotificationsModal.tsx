@@ -44,7 +44,6 @@ interface NotificationsModalProps {
   onAcceptFollowRequest: (notifId: string, actorUsername: string) => void;
   onDeclineFollowRequest: (notifId: string, actorUsername: string) => void;
   onClearAll: () => void;
-  onSimulateNotification: (type?: NotificationType) => void;
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
 }
@@ -58,7 +57,6 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onAcceptFollowRequest,
   onDeclineFollowRequest,
   onClearAll,
-  onSimulateNotification,
   onNavigateToUser,
   onOpenScratchCard
 }) => {
@@ -257,12 +255,6 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   <p className="text-xs text-zinc-500 max-w-xs mx-auto">
                     When someone follows you, accepts your request, or likes your post, you'll see it here instantly.
                   </p>
-                  <button
-                    onClick={() => onSimulateNotification('new_follower')}
-                    className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#00FF66]" /> Send Test Follower Notification
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -470,43 +462,6 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, musicHub: e.target.checked })}
                     className="w-4 h-4 accent-[#00FF66] rounded cursor-pointer"
                   />
-                </div>
-              </div>
-
-              {/* Live Test Trigger Section */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-zinc-900 to-zinc-900 border border-purple-500/30 space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  <h4 className="text-xs font-bold text-white">Simulate Live Incoming Alerts</h4>
-                </div>
-                <p className="text-[11px] text-zinc-400">
-                  Test the real-time notification count badges and alerts by triggering mock events:
-                </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    onClick={() => onSimulateNotification('follow_request_received')}
-                    className="p-2 rounded-xl bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/40 text-[11px] text-purple-200 font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <UserPlus className="w-3 h-3 text-purple-400" /> Follow Request
-                  </button>
-                  <button
-                    onClick={() => onSimulateNotification('follow_request_accepted')}
-                    className="p-2 rounded-xl bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-500/40 text-[11px] text-emerald-200 font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <UserCheck className="w-3 h-3 text-[#00FF66]" /> Request Accepted
-                  </button>
-                  <button
-                    onClick={() => onSimulateNotification('new_follower')}
-                    className="p-2 rounded-xl bg-cyan-900/40 hover:bg-cyan-900/60 border border-cyan-500/40 text-[11px] text-cyan-200 font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <UserPlus className="w-3 h-3 text-cyan-400" /> New Follower
-                  </button>
-                  <button
-                    onClick={() => onSimulateNotification('post_like')}
-                    className="p-2 rounded-xl bg-rose-900/40 hover:bg-rose-900/60 border border-rose-500/40 text-[11px] text-rose-200 font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Heart className="w-3 h-3 text-rose-400" /> Post Liked
-                  </button>
                 </div>
               </div>
             </div>

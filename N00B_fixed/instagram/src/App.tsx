@@ -17,7 +17,7 @@ import {
   UserCheck,
   UserPlus
 } from 'lucide-react';
-import { Post, Reel, Story, User, StatusNote, AppNotification, NotificationType } from './types';
+import { Post, Reel, Story, User, StatusNote, AppNotification } from './types';
 import {
   fetchCurrentUser,
   fetchPosts,
@@ -472,63 +472,6 @@ export default function App() {
     );
   };
 
-  const handleSimulateNotification = (type: NotificationType = 'new_follower') => {
-    const randomUsers = [
-      {
-        username: 'nova_star',
-        name: 'Nova Star',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
-      },
-      {
-        username: 'pixel_coder',
-        name: 'Pixel Coder',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80'
-      },
-      {
-        username: 'synth_wave',
-        name: 'Synth Wave',
-        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=80'
-      },
-      {
-        username: 'alex_gamer',
-        name: 'Alex V.',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&auto=format&fit=crop&q=80'
-      }
-    ];
-    const picked = randomUsers[Math.floor(Math.random() * randomUsers.length)];
-    let text = 'started following you.';
-    let actionStatus: 'pending' | undefined = undefined;
-    if (type === 'follow_request_received') {
-      text = 'requested to follow you.';
-      actionStatus = 'pending';
-    } else if (type === 'follow_request_accepted') {
-      text = 'accepted your follow request.';
-    } else if (type === 'post_like') {
-      text = 'liked your recent CAD project post.';
-    } else if (type === 'post_comment') {
-      text = 'commented: "Awesome 3D rendering!"';
-    } else if (type === 'music_share') {
-      text = 'shared a new audio track with you.';
-    }
-
-    const newNotif: AppNotification = {
-      id: `notif_${Date.now()}`,
-      type,
-      actorId: picked.username,
-      actorUsername: picked.username,
-      actorDisplayName: picked.name,
-      actorAvatar: picked.avatar,
-      text,
-      time: 'Just now',
-      timestamp: Date.now(),
-      isRead: false,
-      actionStatus
-    };
-
-    setNotifications((prev) => [newNotif, ...prev]);
-    setUnreadNotificationCount((prev) => prev + 1);
-  };
-
   const handleSelectNavTab = (tab: NavTab) => {
     if (tab === 'post') {
       setShowPostCreationModal(true);
@@ -845,6 +788,7 @@ export default function App() {
               onPendingChatUserHandled={() => setPendingChatUser(null)}
               onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
               onUserUpdated={(u) => setCurrentUser(u)}
+              onNavigateToProfile={handleNavigateToUserProfile}
               onPlayGame={(gameId, challengerUsername, roomCode) => {
                 const matched = ALL_50_MINI_GAMES.find(
                   (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
@@ -1079,7 +1023,6 @@ export default function App() {
           onAcceptFollowRequest={handleAcceptFollowRequest}
           onDeclineFollowRequest={handleDeclineFollowRequest}
           onClearAll={handleClearAllNotifications}
-          onSimulateNotification={handleSimulateNotification}
           onClose={() => setShowNotificationsModal(false)}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}
         />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Heart,
   MessageCircle,
@@ -94,6 +94,45 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handlePrevSlide = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (currentSlideIndex > 0) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    }
+  };
+
+  // Swipe-to-navigate the carousel on touch devices — tracked entirely in a
+  // ref (not state) so a drag never re-renders anything until the gesture
+  // actually ends and the slide index changes just once. The axis is locked
+  // on first move so a horizontal swipe claims the gesture (stopping it from
+  // reaching FeedView's own vertical pull-to-refresh handler above it),
+  // while a vertical drag is left alone to fall through to that handler.
+  const SWIPE_THRESHOLD = 40;
+  const carouselTouchRef = useRef<{ startX: number; startY: number; horizontal: boolean | null } | null>(null);
+
+  const handleCarouselTouchStart = (e: React.TouchEvent) => {
+    carouselTouchRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      horizontal: null
+    };
+  };
+  const handleCarouselTouchMove = (e: React.TouchEvent) => {
+    const t = carouselTouchRef.current;
+    if (!t) return;
+    const dx = e.touches[0].clientX - t.startX;
+    const dy = e.touches[0].clientY - t.startY;
+    if (t.horizontal === null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      t.horizontal = Math.abs(dx) > Math.abs(dy);
+    }
+    if (t.horizontal) e.stopPropagation();
+  };
+  const handleCarouselTouchEnd = (e: React.TouchEvent) => {
+    const t = carouselTouchRef.current;
+    carouselTouchRef.current = null;
+    if (!t || !t.horizontal || !post.slides) return;
+    const dx = e.changedTouches[0].clientX - t.startX;
+    if (dx <= -SWIPE_THRESHOLD && currentSlideIndex < post.slides.length - 1) {
+      setCurrentSlideIndex(currentSlideIndex + 1);
+    } else if (dx >= SWIPE_THRESHOLD && currentSlideIndex > 0) {
       setCurrentSlideIndex(currentSlideIndex - 1);
     }
   };
@@ -274,6 +313,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         <div
           className="relative w-full aspect-[4/5] bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
           onDoubleClick={handleDoubleTap}
+          onTouchStart={post.slides && post.slides.length > 1 ? handleCarouselTouchStart : undefined}
+          onTouchMove={post.slides && post.slides.length > 1 ? handleCarouselTouchMove : undefined}
+          onTouchEnd={post.slides && post.slides.length > 1 ? handleCarouselTouchEnd : undefined}
         >
           <img
             src={currentSlide.mediaUrl}
@@ -469,7 +511,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* Like Counts */}
         {!post.isLikeCountHidden && (
           <div className="mt-2 text-xs font-bold text-white tracking-tight">
-            {post.likesCount.toLocaleString()} likes
+            {post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'}
           </div>
         )}
 
@@ -540,7 +582,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             className="mt-2 text-xs text-zinc-400 hover:text-zinc-200 block text-left cursor-pointer"
           >
             {post.commentsCount > 0
-              ? `View all ${post.commentsCount} comments`
+              ? `View all ${post.commentsCount} ${post.commentsCount === 1 ? 'comment' : 'comments'}`
               : 'Add a comment...'}
           </button>
         )}

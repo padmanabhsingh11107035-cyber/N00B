@@ -272,7 +272,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers' | 'premium'>('emojis');
   const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
-  const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
   const swipeTrackingRef = useRef<{ id: string; startX: number; startY: number; locked: boolean } | null>(null);
   const [myStickers, setMyStickers] = useState<MyCustomSticker[]>([]);
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
@@ -893,6 +892,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // opens the WhatsApp-style reply composer for that message. Horizontal-only
   // drags never fight the vertical message-list scroll, since the list has
   // no horizontal overflow for the browser to pan in the first place.
+  //
+  // The drag itself is driven straight against the DOM (via refs), not
+  // React state — updating a piece of state on every touchmove used to
+  // re-render every visible message bubble on every tick of every swipe,
+  // which is exactly the kind of per-frame setState that shows up as jank
+  // on a real phone. React only gets involved once, at the end of the
+  // gesture, to actually open the reply composer.
   const handleBubbleTouchStart = (e: React.TouchEvent, msgId: string) => {
     swipeTrackingRef.current = {
       id: msgId,
@@ -900,6 +906,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       startY: e.touches[0].clientY,
       locked: false
     };
+    (e.currentTarget as HTMLElement).style.transition = 'none';
   };
   const handleBubbleTouchMove = (e: React.TouchEvent, msg: Message) => {
     const t = swipeTrackingRef.current;
@@ -911,18 +918,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
       t.locked = true;
     }
     const clamped = Math.max(-90, Math.min(0, dx));
-    setSwipeOffsets((prev) => ({ ...prev, [msg.id]: clamped }));
+    const row = e.currentTarget as HTMLElement;
+    row.style.transform = clamped ? `translateX(${clamped}px)` : '';
+    const icon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
+    if (icon) icon.style.opacity = String(Math.min(1, -clamped / SWIPE_REPLY_THRESHOLD));
   };
-  const handleBubbleTouchEnd = (msg: Message) => {
+  const handleBubbleTouchEnd = (e: React.TouchEvent, msg: Message) => {
     const t = swipeTrackingRef.current;
-    const offset = swipeOffsets[msg.id] || 0;
     swipeTrackingRef.current = null;
-    setSwipeOffsets((prev) => {
-      const next = { ...prev };
-      delete next[msg.id];
-      return next;
-    });
-    if (t && t.id === msg.id && offset <= -SWIPE_REPLY_THRESHOLD) {
+    const row = e.currentTarget as HTMLElement;
+    row.style.transition = 'transform 0.2s ease';
+    row.style.transform = '';
+    const icon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
+    if (icon) icon.style.opacity = '0';
+    if (!t || t.id !== msg.id) return;
+    const dx = e.changedTouches[0].clientX - t.startX;
+    if (t.locked && dx <= -SWIPE_REPLY_THRESHOLD) {
       setReplyingToMessage(msg);
     }
   };
@@ -1658,30 +1669,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
               const senderVerified = !!(m.senderIsVerified || senderUser?.isVerified);
               const isSticker = m.mediaType === 'sticker';
 
-              const swipeOffset = swipeOffsets[m.id] || 0;
-
               return (
                 <div
                   key={m.id}
                   className={`relative flex flex-col group ${isMine ? 'items-end' : 'items-start'}`}
                 >
-                  {swipeOffset < -8 && (
-                    <div
-                      className="absolute inset-y-0 right-0 flex items-center pr-1 text-[#00FF66] pointer-events-none"
-                      style={{ opacity: Math.min(1, -swipeOffset / SWIPE_REPLY_THRESHOLD) }}
-                    >
-                      <Reply className="w-4 h-4" />
-                    </div>
-                  )}
+                  <div
+                    className="swipe-reply-icon absolute inset-y-0 right-0 flex items-center pr-1 text-[#00FF66] pointer-events-none"
+                    style={{ opacity: 0 }}
+                  >
+                    <Reply className="w-4 h-4" />
+                  </div>
                   <div
                     className={`flex flex-col w-full ${isMine ? 'items-end' : 'items-start'}`}
-                    style={{
-                      transform: swipeOffset ? `translateX(${swipeOffset}px)` : undefined,
-                      transition: swipeOffset ? 'none' : 'transform 0.2s ease'
-                    }}
                     onTouchStart={(e) => handleBubbleTouchStart(e, m.id)}
                     onTouchMove={(e) => handleBubbleTouchMove(e, m)}
-                    onTouchEnd={() => handleBubbleTouchEnd(m)}
+                    onTouchEnd={(e) => handleBubbleTouchEnd(e, m)}
                   >
                   {/* In Group Chats: Show sender name for incoming messages */}
                   {activeChat?.isGroup && !isMine && (
@@ -1801,6 +1804,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             className="w-full max-h-72 min-h-[100px] rounded-xl object-contain bg-black/30"
                             referrerPolicy="no-referrer"
                             loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               const img = e.currentTarget;
                               if (!img.dataset.hasFailed) {
@@ -1844,6 +1848,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         className="w-36 h-36 object-contain"
                         referrerPolicy="no-referrer"
                         loading="lazy"
+                        decoding="async"
                       />
                     ) : isSticker && m.text ? (
                       <p className="text-7xl leading-none">{m.text}</p>

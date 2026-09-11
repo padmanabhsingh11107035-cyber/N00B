@@ -18,8 +18,35 @@ import { safeJsonStringify } from '../utils/safeJson';
 
 const API_BASE = '/api';
 
+// The logged-in user id is cached in memory after its first read so that
+// logging into a DIFFERENT account in another browser tab — which shares
+// this same localStorage — can never silently hijack an already-open
+// tab's identity mid-session (every request in that tab would otherwise
+// start acting as whichever account most recently logged in anywhere in
+// the browser: someone else's likes/saves, messages, even posts). Only an
+// explicit login/logout inside THIS tab changes who we act as. A fresh
+// tab or reload still correctly picks up whichever account is currently
+// stored, which is the intended "stay logged in" behavior.
+let cachedUserId: string | null | undefined = undefined;
+
+function getSessionUserId(): string | null {
+  if (cachedUserId === undefined) {
+    cachedUserId = localStorage.getItem('ig_user_id');
+  }
+  return cachedUserId;
+}
+
+export function setSessionUserId(userId: string | null): void {
+  cachedUserId = userId;
+  if (userId) {
+    localStorage.setItem('ig_user_id', userId);
+  } else {
+    localStorage.removeItem('ig_user_id');
+  }
+}
+
 function getAuthHeaders(): HeadersInit {
-  const userId = localStorage.getItem('ig_user_id') || '';
+  const userId = getSessionUserId() || '';
   return {
     'Content-Type': 'application/json',
     ...(userId ? { 'x-user-id': userId } : {})
@@ -63,7 +90,7 @@ export async function signupUser(payload: {
   });
   const data = await res.json();
   if (data.user && data.user.id) {
-    localStorage.setItem('ig_user_id', data.user.id);
+    setSessionUserId(data.user.id);
   }
   return data;
 }
@@ -79,13 +106,13 @@ export async function loginUser(payload: {
   });
   const data = await res.json();
   if (data.user && data.user.id) {
-    localStorage.setItem('ig_user_id', data.user.id);
+    setSessionUserId(data.user.id);
   }
   return data;
 }
 
 export async function logoutUser(): Promise<{ success: boolean }> {
-  localStorage.removeItem('ig_user_id');
+  setSessionUserId(null);
   const res = await fetch(`${API_BASE}/auth/logout`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
@@ -104,7 +131,7 @@ export async function deleteMyAccount(password: string): Promise<{ success: bool
   });
   const data = await res.json();
   if (data.success) {
-    localStorage.removeItem('ig_user_id');
+    setSessionUserId(null);
   }
   return data;
 }
@@ -687,7 +714,7 @@ export async function uploadMediaFile(
   formData.append('file', optimizedFile);
   formData.append('folder', folder);
 
-  const userId = localStorage.getItem('ig_user_id') || '';
+  const userId = getSessionUserId() || '';
   const res = await fetch(`${API_BASE}/upload/media`, {
     method: 'POST',
     headers: {

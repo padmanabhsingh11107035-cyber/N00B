@@ -39,6 +39,7 @@ import {
   updateUserStatusNote,
   logoutUser,
   deleteMyAccount,
+  setSessionUserId,
   fetchAppNotifications,
   clearAllNotifications,
   markNotificationsAsRead
@@ -542,7 +543,7 @@ export default function App() {
 
   const handleAuthSuccess = (user: User) => {
     if (user && user.id) {
-      localStorage.setItem('ig_user_id', user.id);
+      setSessionUserId(user.id);
     }
     setCurrentUser(user);
     loadInitialData();
@@ -550,12 +551,12 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem('ig_user_id');
+      setSessionUserId(null);
       await logoutUser();
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
-      localStorage.removeItem('ig_user_id');
+      setSessionUserId(null);
       setCurrentUser(null);
     }
   };

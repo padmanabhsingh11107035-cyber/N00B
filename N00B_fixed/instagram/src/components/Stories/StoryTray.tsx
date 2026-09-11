@@ -110,11 +110,11 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
         </div>
 
         {/* Active Stories from Following */}
-        {uniqueStories.map((story, index) => (
+        {uniqueStories.map((story) => (
           <button
             key={story.id}
             id={`story-item-${story.id}`}
-            onClick={() => onOpenStoryViewer(index)}
+            onClick={() => onOpenStoryViewer(stories.findIndex((s) => s.id === story.id))}
             className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
             title={`View ${story.username}'s Story`}
           >

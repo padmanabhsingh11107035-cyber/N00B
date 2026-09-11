@@ -424,10 +424,20 @@ async function startServer() {
   });
 
   // --- MEDIA UPLOAD (BACKBLAZE B2 S3 INTEGRATION) ---
+  // Only real, playable media may be stored — anything else (a renamed
+  // .zip/.exe, an HTML file that could serve as stored XSS off our own
+  // bucket, or a deliberately malformed "image" crafted to blow up in
+  // whatever tries to decode it) is rejected before it ever reaches B2.
+  const ALLOWED_MEDIA_MIME_PREFIXES = ['image/', 'video/', 'audio/'];
+
   app.post('/api/upload/media', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      if (!ALLOWED_MEDIA_MIME_PREFIXES.some(prefix => req.file!.mimetype.startsWith(prefix))) {
+        return res.status(400).json({ error: 'Only image, video, and audio files can be uploaded.' });
       }
 
       const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers';
@@ -3238,6 +3248,21 @@ COMPLETE PLATFORM CAPABILITIES:
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Catches multer's upload errors (oversized file, rejected field) so
+  // they come back as a clean JSON error instead of Express's default
+  // HTML error page.
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err?.name === 'MulterError') {
+      const message =
+        err.code === 'LIMIT_FILE_SIZE'
+          ? 'File is too large. The maximum upload size is 50MB.'
+          : 'Upload failed: ' + err.message;
+      return res.status(400).json({ error: message });
+    }
+    console.error('Unhandled server error:', err);
+    res.status(500).json({ error: 'Something went wrong on our end. Please try again.' });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`NOOB Social & Mini-Games Server running on http://0.0.0.0:${PORT}`);

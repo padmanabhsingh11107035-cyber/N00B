@@ -78,6 +78,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     if (!commentText.trim()) return;
     onAddComment(story.id, commentText.trim());
     setCommentText('');
+    setIsPaused(false);
+    (document.activeElement as HTMLElement | null)?.blur();
     confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } });
   };
 
@@ -343,6 +345,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               placeholder={`Reply to ${story.username}...`}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
+              onFocus={() => setIsPaused(true)}
+              onBlur={() => setIsPaused(false)}
               className="w-full bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none"
             />
             {commentText.trim() && (

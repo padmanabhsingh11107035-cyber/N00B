@@ -88,15 +88,134 @@ export async function compressImage(
   });
 }
 
+const isAndroid = () => /android/i.test(navigator.userAgent);
+
 /**
- * Validates and optimizes video files for web playback.
+ * Re-encodes a video to a lower resolution/bitrate entirely in the browser
+ * by playing it, drawing each frame onto a canvas at a reduced size, and
+ * recording that canvas (plus the original audio track) with MediaRecorder.
+ *
+ * The only output MediaRecorder can reliably produce across browsers is
+ * WebM, which iPhone/Safari cannot play — so this only ever runs on
+ * Android, where the browser and every other user's browser (Chrome-based)
+ * can play WebM back fine. iOS uploads are left uncompressed rather than
+ * risk producing a video no one on an iPhone can open.
+ *
+ * Any failure at any stage (unsupported API, decode error, timeout) falls
+ * back to the original file untouched — this must never block a real
+ * upload just because compression didn't work out.
+ */
+async function compressVideoOnAndroid(file: File): Promise<File> {
+  const objectUrl = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.src = objectUrl;
+  video.muted = true;
+  video.playsInline = true;
+
+  const cleanup = () => URL.revokeObjectURL(objectUrl);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('Could not read video metadata'));
+      setTimeout(() => reject(new Error('Video metadata timed out')), 8000);
+    });
+
+    // Short clips are already small; long ones would take just as long to
+    // re-encode in real time as they run, which isn't worth the wait.
+    if (video.duration > 90 || !isFinite(video.duration)) {
+      cleanup();
+      return file;
+    }
+
+    const MAX_HEIGHT = 720;
+    const scale = video.videoHeight > MAX_HEIGHT ? MAX_HEIGHT / video.videoHeight : 1;
+    const width = Math.round(video.videoWidth * scale / 2) * 2;
+    const height = Math.round(video.videoHeight * scale / 2) * 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx || typeof (canvas as any).captureStream !== 'function' || typeof MediaRecorder === 'undefined') {
+      cleanup();
+      return file;
+    }
+
+    const canvasStream = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(30);
+    const sourceStream = (video as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
+    const audioTracks = sourceStream?.getAudioTracks() || [];
+    const outputStream = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+
+    const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+      .find((type) => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) {
+      cleanup();
+      return file;
+    }
+
+    // ~1.6 Mbps at 720p keeps the picture visually clean while landing far
+    // below typical phone-camera bitrates (often 8-20+ Mbps).
+    const recorder = new MediaRecorder(outputStream, { mimeType, videoBitsPerSecond: 1_600_000 });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    const recordingDone = new Promise<Blob>((resolve, reject) => {
+      recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+      recorder.onerror = () => reject(new Error('Recording failed'));
+    });
+
+    let rafId = 0;
+    const drawFrame = () => {
+      ctx.drawImage(video, 0, 0, width, height);
+      rafId = requestAnimationFrame(drawFrame);
+    };
+
+    recorder.start();
+    video.currentTime = 0;
+    await video.play();
+    drawFrame();
+
+    await new Promise<void>((resolve, reject) => {
+      video.onended = () => resolve();
+      video.onerror = () => reject(new Error('Playback failed during compression'));
+      // Safety net in case 'ended' never fires for any reason.
+      setTimeout(resolve, (video.duration + 5) * 1000);
+    });
+
+    cancelAnimationFrame(rafId);
+    recorder.stop();
+    const blob = await recordingDone;
+    cleanup();
+
+    if (blob.size === 0 || blob.size >= file.size) {
+      return file;
+    }
+
+    const cleanFileName = file.name.replace(/\.[^/.]+$/, '') + '.webm';
+    return new File([blob], cleanFileName, { type: 'video/webm', lastModified: Date.now() });
+  } catch (err) {
+    console.warn('Video compression fallback (using original file):', err);
+    cleanup();
+    return file;
+  }
+}
+
+/**
+ * Optimizes video files for upload. Only Android gets real re-encoding
+ * (see compressVideoOnAndroid for why) — everyone else's video is left
+ * exactly as recorded.
  */
 export async function compressVideo(file: File): Promise<File> {
-  // If it's a video, ensure proper mime type and return
   if (!file.type.startsWith('video/')) {
     return file;
   }
-  return file;
+  if (file.size < 2 * 1024 * 1024 || !isAndroid()) {
+    return file;
+  }
+  return compressVideoOnAndroid(file);
 }
 
 /**

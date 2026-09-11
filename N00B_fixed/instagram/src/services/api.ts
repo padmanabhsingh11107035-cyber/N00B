@@ -29,7 +29,6 @@ const API_BASE = '/api';
 // tab or reload still correctly picks up whichever account is currently
 // stored, which is the intended "stay logged in" behavior.
 let cachedUserId: string | null | undefined = undefined;
-let cachedSessionToken: string | null | undefined = undefined;
 
 function getSessionUserId(): string | null {
   if (cachedUserId === undefined) {
@@ -47,36 +46,11 @@ export function setSessionUserId(userId: string | null): void {
   }
 }
 
-function getSessionToken(): string | null {
-  if (cachedSessionToken === undefined) {
-    cachedSessionToken = localStorage.getItem('ig_session_token');
-  }
-  return cachedSessionToken;
-}
-
-// The server used to authenticate every request purely off the `x-user-id`
-// value below — a client-supplied id with no proof behind it, so anyone
-// who knew or guessed another user's id (visible in almost every API
-// response) could act as them completely. Requests are now authenticated
-// with this random, unguessable token instead, issued at login/signup and
-// verified server-side; `x-user-id` is no longer trusted for identity at
-// all and is kept only as a debugging convenience in request logs.
-export function setSessionToken(token: string | null): void {
-  cachedSessionToken = token;
-  if (token) {
-    localStorage.setItem('ig_session_token', token);
-  } else {
-    localStorage.removeItem('ig_session_token');
-  }
-}
-
 function getAuthHeaders(): HeadersInit {
   const userId = getSessionUserId() || '';
-  const token = getSessionToken() || '';
   return {
     'Content-Type': 'application/json',
-    ...(userId ? { 'x-user-id': userId } : {}),
-    ...(token ? { 'x-session-token': token } : {})
+    ...(userId ? { 'x-user-id': userId } : {})
   };
 }
 
@@ -90,11 +64,6 @@ export async function fetchHealth(): Promise<{ status: string; usersCount?: numb
 }
 
 // --- AUTHENTICATION API ---
-export async function fetchCaptchaChallenge(): Promise<{ challengeId: string; image: string }> {
-  const res = await fetch(`${API_BASE}/auth/captcha`);
-  return await res.json();
-}
-
 export async function signupUser(payload: {
   firstName: string;
   lastName?: string;
@@ -114,8 +83,6 @@ export async function signupUser(payload: {
   businessPhone?: string;
   businessAddress?: string;
   agreedToTerms: boolean;
-  challengeId: string;
-  captchaAnswer: string;
 }): Promise<{ success: boolean; user?: User; error?: string }> {
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: 'POST',
@@ -125,7 +92,6 @@ export async function signupUser(payload: {
   const data = await res.json();
   if (data.user && data.user.id) {
     setSessionUserId(data.user.id);
-    setSessionToken(data.sessionToken || null);
   }
   return data;
 }
@@ -142,21 +108,16 @@ export async function loginUser(payload: {
   const data = await res.json();
   if (data.user && data.user.id) {
     setSessionUserId(data.user.id);
-    setSessionToken(data.sessionToken || null);
   }
   return data;
 }
 
 export async function logoutUser(): Promise<{ success: boolean }> {
-  // Send the current token along so the server can revoke it — logging
-  // out should actually invalidate the session, not just forget it locally
-  // while it stays usable by anyone who captured it beforehand.
+  setSessionUserId(null);
   const res = await fetch(`${API_BASE}/auth/logout`, {
     method: 'POST',
-    headers: getAuthHeaders()
+    headers: { 'Content-Type': 'application/json' }
   });
-  setSessionUserId(null);
-  setSessionToken(null);
   return await res.json();
 }
 
@@ -172,7 +133,6 @@ export async function deleteMyAccount(password: string): Promise<{ success: bool
   const data = await res.json();
   if (data.success) {
     setSessionUserId(null);
-    setSessionToken(null);
   }
   return data;
 }

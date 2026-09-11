@@ -22,7 +22,7 @@ const TIERS: ProTier[] = [
     id: 'starter',
     name: 'Starter',
     monthlyPrice: 50000,
-    perks: ['Pro badge on profile', 'Free access to the entire Premium sticker & GIF shop', 'Priority in search results'],
+    perks: ['Pro badge on profile', 'Ad-free browsing', 'Priority in search results'],
   },
   {
     id: 'plus',

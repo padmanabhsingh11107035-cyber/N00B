@@ -12,9 +12,7 @@ import {
   X,
   Loader2,
   RefreshCw,
-  Trash2,
-  Phone,
-  Copy
+  Trash2
 } from 'lucide-react';
 import { User } from '../../types';
 import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction } from '../../services/api';
@@ -26,7 +24,7 @@ interface AdminControlModalProps {
 }
 
 export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUser, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'reports' | 'notify' | 'phones'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'reports' | 'notify'>('users');
   const [usersList, setUsersList] = useState<User[]>([]);
   const [reportsList, setReportsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,11 +191,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     (u) =>
       u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.mobileNumber?.toLowerCase().includes(searchQuery.toLowerCase())
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const usersWithPhone = filteredUsers.filter((u) => u.mobileNumber && u.mobileNumber.trim());
 
   const suspendedCount = usersList.filter((u) => u.isSuspended).length;
 
@@ -309,17 +304,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             }`}
           >
             <Bell className="w-4 h-4" /> Custom Notification
-          </button>
-
-          <button
-            onClick={() => setActiveTab('phones')}
-            className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'phones'
-                ? 'border-cyan-400 text-cyan-400'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Phone className="w-4 h-4" /> Phone Numbers ({usersWithPhone.length})
           </button>
         </div>
 
@@ -561,7 +545,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               )}
             </div>
-          ) : activeTab === 'notify' ? (
+          ) : (
             /* Custom Notification Dispatch Form */
             <form onSubmit={handleSendNotification} className="space-y-4">
               <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
@@ -647,79 +631,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 )}
               </button>
             </form>
-          ) : (
-            /* Phone Numbers Directory — visible only inside this
-               admin-gated modal, never returned by any user-facing
-               endpoint. */
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by @username, name, or phone number..."
-                    className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-cyan-400"
-                  />
-                </div>
-                <button
-                  onClick={loadUsers}
-                  className="p-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl border border-zinc-800 cursor-pointer"
-                  title="Refresh"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-
-              {loading ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-2 text-zinc-400">
-                  <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
-                  <span className="text-xs">Loading accounts database...</span>
-                </div>
-              ) : usersWithPhone.length === 0 ? (
-                <div className="py-10 text-center text-zinc-500 text-xs">
-                  {searchQuery ? `No matching accounts have a phone number on file.` : 'No accounts have a phone number on file.'}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {usersWithPhone.map((user) => (
-                    <div
-                      key={user.id}
-                      className="p-3 rounded-2xl border bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={user.avatar || '/noob-logo.svg.jpeg'}
-                          alt={user.username}
-                          className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-white truncate">@{user.username}</span>
-                            {user.isVerified && <VerifiedBadge size="sm" />}
-                          </div>
-                          <span className="text-[11px] text-zinc-500 truncate block">{user.displayName}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-mono font-bold text-cyan-300">
-                          {user.countryCode ? `${user.countryCode.split(' ')[0]} ` : ''}{user.mobileNumber}
-                        </span>
-                        <button
-                          onClick={() => navigator.clipboard?.writeText(user.mobileNumber || '')}
-                          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer"
-                          title="Copy number"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           )}
         </div>
 

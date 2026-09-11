@@ -1,6 +1,4 @@
 import express from 'express';
-import helmet from 'helmet';
-import crypto from 'crypto';
 import path from 'path';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
@@ -91,35 +89,6 @@ function checkRateLimit(ip: string, limit: number = 60, windowMs: number = 60000
 async function startServer() {
   const app = express();
   const PORT = 3000;
-  // Railway puts exactly one reverse proxy in front of this process — trust
-  // only that one hop's X-Forwarded-For entry for req.ip, rather than
-  // reading the raw header directly (which an attacker could otherwise set
-  // to any value they like to dodge IP-based rate limiting below).
-  app.set('trust proxy', 1);
-
-  // Baseline security headers: clickjacking protection (frameguard), MIME-
-  // sniffing protection, HSTS, etc. CSP is left off for now rather than
-  // shipped half-tested the night before a security review — this app
-  // loads images/media/styles inline and from several external domains
-  // (Unsplash, Giphy, Dicebear, Backblaze B2, the Groq API), and a
-  // default-strict CSP would very likely break some of that in ways there
-  // isn't time to fully verify before tomorrow. A tightened, tested CSP is
-  // the natural next step after the test.
-  app.use(helmet({ contentSecurityPolicy: false }));
-
-  // Allow-list for sanitizePublicUser (defined further below, alongside
-  // sanitizeUser) — declared up here since it's already needed while
-  // building the seed data (e.g. the global lounge's initial participants).
-  const PUBLIC_USER_FIELDS = [
-    'id', 'username', 'displayName', 'firstName', 'lastName', 'avatar', 'bio',
-    'accountType', 'website', 'city', 'gender', 'pronouns', 'socialLinks',
-    'interests', 'externalLinks', 'customLinks', 'businessCategory',
-    'isVerified', 'verificationTier', 'proTier',
-    'followersCount', 'followingCount', 'postsCount',
-    'noobPoints', 'gamesWonCount', 'gamesPlayedCount',
-    'isAi', 'isBusiness', 'isFollowing', 'isFollower', 'isFollowRequested',
-    'isCloseFriend', 'isRestricted', 'isBlocked', 'highlights', 'statusNote'
-  ] as const;
 
   await connectDB();
 
@@ -150,12 +119,7 @@ async function startServer() {
       firstName: 'NOOB',
       lastName: 'Admin',
       email: 'admin@noob.app',
-      // Only used for a brand-new, never-before-persisted database — real,
-      // already-running deployments get their stored admin password
-      // rotated at boot instead (see the ADMIN_SEED_PASSWORD check below),
-      // since changing this literal alone would do nothing for an account
-      // that already exists in MongoDB with the old hardcoded value.
-      password: process.env.ADMIN_SEED_PASSWORD || crypto.randomBytes(12).toString('base64url'),
+      password: '12345678',
       avatar: '/noob-logo.svg.jpeg',
       bio: '⚡ Official Administrator & Platform Overseer of NOOB. Connect, stream, compete and explore.',
       accountType: 'public',
@@ -252,44 +216,6 @@ async function startServer() {
   let chatReviews: any[] = [];
   let settings = { ...INITIAL_SETTINGS };
   let reelHistory: string[] = [];
-
-  // Signup captcha — previously generated AND verified entirely client-side
-  // (the correct code sat in React state, compared in the browser), so it
-  // gave zero real bot protection: calling POST /api/auth/signup directly
-  // never had to solve anything. The challenge is now generated here,
-  // rendered as an image rather than plain styled text (so scraping the
-  // page's DOM text no longer hands over the answer), and verified against
-  // this server-side record — one-time use, short expiry.
-  const captchaChallenges: Record<string, { code: string; expiresAt: number }> = {};
-  const CAPTCHA_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // no 0/O/1/I/L ambiguity
-  const CAPTCHA_COLORS = ['#22d3ee', '#00FF66', '#818cf8', '#facc15', '#c084fc', '#fb7185'];
-
-  function generateCaptchaSvg(code: string): string {
-    const width = 200;
-    const height = 70;
-    let noise = '';
-    for (let i = 0; i < 6; i++) {
-      const x1 = Math.random() * width, y1 = Math.random() * height;
-      const x2 = Math.random() * width, y2 = Math.random() * height;
-      noise += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>`;
-    }
-    for (let i = 0; i < 25; i++) {
-      const cx = Math.random() * width, cy = Math.random() * height;
-      noise += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(Math.random() * 1.5 + 0.5).toFixed(1)}" fill="rgba(255,255,255,0.2)"/>`;
-    }
-    const charWidth = width / (code.length + 1);
-    let glyphs = '';
-    for (let i = 0; i < code.length; i++) {
-      const x = charWidth * (i + 1);
-      const y = height / 2 + (Math.random() * 16 - 8);
-      const rotation = Math.random() * 50 - 25;
-      const size = 26 + Math.random() * 8;
-      const color = CAPTCHA_COLORS[Math.floor(Math.random() * CAPTCHA_COLORS.length)];
-      glyphs += `<text x="0" y="0" transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rotation.toFixed(1)})" font-family="monospace" font-weight="900" font-size="${size.toFixed(1)}" fill="${color}" text-anchor="middle" dominant-baseline="middle">${code[i]}</text>`;
-    }
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="#0a0a0f"/>${noise}${glyphs}</svg>`;
-  }
-
   // Discount coupons — only the NOOB admin account can create these. Each is
   // either global (targetUsername unset) or aimed at one specific user, and
   // is visible in that user's Wallet > My Coupons page immediately.
@@ -308,12 +234,6 @@ async function startServer() {
   // to their account) when they scratch it from their notification.
   let scratchCards: any[] = [];
 
-  // Session tokens: random, unguessable token -> user id, issued at
-  // login/signup and required on every authenticated request (see
-  // getActiveUser above). Persisted so a Railway redeploy doesn't silently
-  // log everyone out.
-  let sessionTokens: Record<string, string> = {};
-
   // --- MongoDB persistence ---
   // If MONGODB_URI is configured, replace the mock seed data above with whatever
   // was last saved, so state survives server restarts / Railway redeploys.
@@ -321,7 +241,6 @@ async function startServer() {
     'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
     'notifications', 'chats', 'messages', 'collections', 'gameScores',
     'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks',
-    'sessionTokens',
     'coupons', 'customStickers', 'scratchCards'
   ] as const;
 
@@ -351,31 +270,8 @@ async function startServer() {
     if (loaded.coupons) coupons = loaded.coupons;
     if (loaded.customStickers) customStickers = loaded.customStickers;
     if (loaded.scratchCards) scratchCards = loaded.scratchCards;
-    if (loaded.sessionTokens) sessionTokens = loaded.sessionTokens;
 
     console.log('MongoDB: restored persisted app state');
-  }
-
-  // The admin account used to ship with a hardcoded, publicly-committed
-  // password ('12345678') — anyone who ever saw this repo could log in as
-  // the platform administrator. Changing the seed literal above only
-  // affects a brand-new database; an already-running deployment's admin
-  // user already has that value persisted in MongoDB, so it's rotated here
-  // instead, once, at boot. Set ADMIN_SEED_PASSWORD to choose the new
-  // password yourself; otherwise a random one is generated and printed to
-  // this log ONCE — copy it now, it is not stored anywhere in plain text.
-  {
-    const admin = users.find(u => u.id === 'u_noob_admin');
-    const stillDefault = admin && (admin.password === '12345678' || verifyPassword('12345678', admin.password));
-    if (admin && stillDefault) {
-      const newPassword = process.env.ADMIN_SEED_PASSWORD || crypto.randomBytes(12).toString('base64url');
-      admin.password = hashPassword(newPassword);
-      schedulePersist();
-      console.log('⚠️  SECURITY: the NOOB admin account still had its default password — it has been rotated.');
-      if (!process.env.ADMIN_SEED_PASSWORD) {
-        console.log(`⚠️  New admin password (copy this now, it will not be shown again): ${newPassword}`);
-      }
-    }
   }
 
   // Debounced full-state save: any non-GET request schedules a save a few
@@ -405,7 +301,6 @@ async function startServer() {
       saveCollection('coupons', coupons),
       saveCollection('customStickers', customStickers),
       saveCollection('scratchCards', scratchCards),
-      saveCollection('sessionTokens', sessionTokens),
     ]);
   }
 
@@ -501,25 +396,12 @@ async function startServer() {
   }
 
   // Sanitize a user for display to OTHER users (directories, search, chat
-  // participant lists, follow suggestions, etc.). This used to be a
-  // deny-list (strip password + a few contact fields, keep everything
-  // else) — every NEW private field added to the user record since then
-  // (businessEmail/businessPhone real contact info, noobTransactions wallet
-  // history, blockedUserIds, pushTokens, privacySettings, isSuspended/
-  // suspendedReason...) leaked to every other user by default because
-  // nobody remembered to also add it here. An allow-list can't leak a field
-  // that isn't explicitly named safe, regardless of what gets added later.
-  // (PUBLIC_USER_FIELDS itself is declared near the top of startServer,
-  // above the seed data — this function is already called while building
-  // it, e.g. the global lounge's initial participants list.)
+  // participant lists, follow suggestions, etc.) — strips password plus
+  // every contact-detail field (mobileNumber, countryCode, email) so no
+  // client can harvest another account's phone number or email address.
   function sanitizePublicUser(u: any) {
     if (!u) return null;
-    const publicUser: Record<string, any> = {};
-    for (const field of PUBLIC_USER_FIELDS) {
-      if (Object.prototype.hasOwnProperty.call(u, field)) {
-        publicUser[field] = u[field];
-      }
-    }
+    const { password, mobileNumber, countryCode, email, dateOfBirth, ...publicUser } = u;
     return publicUser;
   }
 
@@ -582,57 +464,13 @@ async function startServer() {
     ) || null;
   }
 
-  // Identity used to be trusted straight off an `x-user-id` header the
-  // CLIENT supplied — meaning anyone who knew or guessed another user's id
-  // (visible in almost every API response: post authors, chat participants,
-  // follower lists...) could impersonate them completely, with zero proof
-  // of actually being logged in as that account. Every request is now
-  // authenticated against a real, unguessable session token issued at
-  // login/signup and looked up server-side; a request with no token, or an
-  // unrecognized one, is simply unauthenticated.
   function getActiveUser(req: express.Request) {
-    const token = req.headers['x-session-token'] as string;
-    if (token) {
-      const userId = sessionTokens[token];
-      if (userId) {
-        const found = users.find(u => u.id === userId);
-        if (found) return found;
-      }
+    const headerUserId = req.headers['x-user-id'] as string;
+    if (headerUserId) {
+      const found = users.find(u => u.id === headerUserId);
+      if (found) return found;
     }
     return null;
-  }
-
-  function issueSessionToken(userId: string): string {
-    const token = crypto.randomBytes(32).toString('hex');
-    sessionTokens[token] = userId;
-    return token;
-  }
-
-  // Passwords used to be stored and compared as plain text — anyone who
-  // ever got read access to the database (a backup, a misconfigured
-  // export, a lesser bug) would have every user's real password in the
-  // clear, including for whatever OTHER accounts they reuse it on. New
-  // passwords are salted+hashed with scrypt; verifyPassword still accepts
-  // a pre-existing plain-text password so already-registered accounts keep
-  // working, and transparently upgrades it to a hash right after that
-  // login succeeds (see /api/auth/login) — no forced password reset needed.
-  function hashPassword(password: string): string {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-    return `scrypt:${salt}:${hash}`;
-  }
-
-  function verifyPassword(password: string, stored: string | undefined): boolean {
-    if (!stored) return false;
-    if (stored.startsWith('scrypt:')) {
-      const [, salt, hash] = stored.split(':');
-      if (!salt || !hash) return false;
-      const candidate = crypto.scryptSync(password, salt, 64);
-      const expected = Buffer.from(hash, 'hex');
-      return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
-    }
-    // Legacy plain-text password from before hashing existed.
-    return stored === password;
   }
 
   // Schedule a debounced state save after every mutating request finishes
@@ -662,31 +500,15 @@ async function startServer() {
   // .zip/.exe, an HTML file that could serve as stored XSS off our own
   // bucket, or a deliberately malformed "image" crafted to blow up in
   // whatever tries to decode it) is rejected before it ever reaches B2.
-  // svg+xml is deliberately excluded even though it matches "image/" — an
-  // SVG can carry a <script>, which would be stored, self-XSS-hostable
-  // content once served back from a presigned URL.
   const ALLOWED_MEDIA_MIME_PREFIXES = ['image/', 'video/', 'audio/'];
-  const BLOCKED_MEDIA_MIME_TYPES = ['image/svg+xml'];
 
   app.post('/api/upload/media', upload.single('file'), async (req, res) => {
     try {
-      // Unauthenticated uploads used to be accepted outright — an anonymous
-      // attacker could fill the B2 bucket with unlimited 50MB files at will,
-      // running up storage/bandwidth cost with nothing to trace it to.
-      const active = getActiveUser(req);
-      if (!active) return res.status(401).json({ error: 'Please log in to upload media.' });
-      if (!checkRateLimit(`upload:${req.ip}`, 30, 60000)) {
-        return res.status(429).json({ error: 'Too many uploads. Please slow down.' });
-      }
-
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      if (
-        BLOCKED_MEDIA_MIME_TYPES.includes(req.file.mimetype) ||
-        !ALLOWED_MEDIA_MIME_PREFIXES.some(prefix => req.file!.mimetype.startsWith(prefix))
-      ) {
+      if (!ALLOWED_MEDIA_MIME_PREFIXES.some(prefix => req.file!.mimetype.startsWith(prefix))) {
         return res.status(400).json({ error: 'Only image, video, and audio files can be uploaded.' });
       }
 
@@ -705,54 +527,12 @@ async function startServer() {
       });
     } catch (err: any) {
       console.error('Media upload error:', err);
-      res.status(500).json({ error: 'Failed to upload media to cloud storage' });
+      res.status(500).json({ error: 'Failed to upload media to cloud storage', details: err?.message });
     }
   });
 
   // --- AUTHENTICATION ROUTES ---
-  app.get('/api/auth/captcha', (req, res) => {
-    if (!checkRateLimit(`captcha:${req.ip}`, 20, 60000)) {
-      return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
-    }
-    let code = '';
-    for (let i = 0; i < 5; i++) {
-      code += CAPTCHA_CHARS.charAt(Math.floor(Math.random() * CAPTCHA_CHARS.length));
-    }
-    const challengeId = crypto.randomBytes(16).toString('hex');
-    captchaChallenges[challengeId] = { code, expiresAt: Date.now() + 5 * 60 * 1000 };
-
-    // Sweep old challenges occasionally so this doesn't grow unbounded from
-    // people who load the signup form and never finish it.
-    if (Math.random() < 0.05) {
-      const now = Date.now();
-      for (const id of Object.keys(captchaChallenges)) {
-        if (captchaChallenges[id].expiresAt < now) delete captchaChallenges[id];
-      }
-    }
-
-    const svg = generateCaptchaSvg(code);
-    res.json({ challengeId, image: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}` });
-  });
-
   app.post('/api/auth/signup', (req, res) => {
-    if (!checkRateLimit(`signup:${req.ip}`, 8, 60000)) {
-      return res.status(429).json({ error: 'Too many signup attempts. Please wait a minute and try again.' });
-    }
-
-    const { challengeId, captchaAnswer } = req.body;
-    const challenge = challengeId ? captchaChallenges[challengeId] : null;
-    // Consumed immediately (one-time use) regardless of outcome, so a
-    // captured challenge can't be brute-forced with repeated guesses.
-    if (challengeId) delete captchaChallenges[challengeId];
-    if (
-      !challenge ||
-      challenge.expiresAt < Date.now() ||
-      !captchaAnswer ||
-      String(captchaAnswer).trim().toUpperCase() !== challenge.code
-    ) {
-      return res.status(400).json({ error: 'Captcha verification failed. Please try again.' });
-    }
-
     const {
       firstName,
       lastName,
@@ -842,7 +622,7 @@ async function startServer() {
       mobileNumber: (mobileNumber || '').trim(),
       dateOfBirth,
       gender: gender || 'Prefer not to say',
-      password: hashPassword(password),
+      password,
       avatar: avatar || '/noob-logo.svg.jpeg',
       bio: bio?.trim() || '🎉 Here for fun, laughs & connecting with cool people!',
       accountType: chosenAccountType,
@@ -876,18 +656,11 @@ async function startServer() {
 
     users.push(newUser);
     currentSessionUserId = newUser.id;
-    const sessionToken = issueSessionToken(newUser.id);
 
-    res.status(201).json({ success: true, user: sanitizeUser(newUser), sessionToken });
+    res.status(201).json({ success: true, user: sanitizeUser(newUser) });
   });
 
   app.post('/api/auth/login', (req, res) => {
-    // Login attempts are the classic brute-force target — cap them
-    // per-IP independently of every other endpoint's limit.
-    if (!checkRateLimit(`login:${req.ip}`, 10, 60000)) {
-      return res.status(429).json({ error: 'Too many login attempts. Please wait a minute and try again.' });
-    }
-
     const { identifier, password } = req.body;
 
     if (!identifier || !password) {
@@ -900,19 +673,13 @@ async function startServer() {
       (u.email && u.email.toLowerCase() === cleanIdentifier)
     );
 
-    // Same generic message whether the account doesn't exist or the
-    // password is wrong — distinguishing the two lets an attacker use this
-    // endpoint to enumerate which usernames/emails are registered.
-    const invalidCredentials = () => res.status(401).json({ error: 'Invalid username/email or password.' });
+    if (!user) {
+      // Auto-register convenience or clear message
+      return res.status(401).json({ error: 'Account not found. Please click "Create Account" below.' });
+    }
 
-    if (!user) return invalidCredentials();
-    if (!verifyPassword(password, user.password)) return invalidCredentials();
-
-    // Transparently upgrade a legacy plain-text password to a hash now
-    // that we know it's correct — no forced reset needed for old accounts.
-    if (user.password && !user.password.startsWith('scrypt:')) {
-      user.password = hashPassword(password);
-      schedulePersist();
+    if (user.password && user.password !== password) {
+      return res.status(401).json({ error: 'Incorrect password. Please check your credentials.' });
     }
 
     if (user.isSuspended) {
@@ -922,13 +689,10 @@ async function startServer() {
     }
 
     currentSessionUserId = user.id;
-    const sessionToken = issueSessionToken(user.id);
-    res.json({ success: true, user: sanitizeUser(user), sessionToken });
+    res.json({ success: true, user: sanitizeUser(user) });
   });
 
   app.post('/api/auth/logout', (req, res) => {
-    const token = req.headers['x-session-token'] as string;
-    if (token) delete sessionTokens[token];
     currentSessionUserId = null;
     res.json({ success: true, message: 'Logged out successfully' });
   });
@@ -947,30 +711,15 @@ async function startServer() {
     res.json({ user: { ...sanitizeUser(activeUser), avatar: await signMediaKey(activeUser.avatar) } });
   });
 
-  // Only these fields are ever legitimately self-editable through this
-  // generic endpoint (bio/status-note/account-type/privacy settings) — it
-  // used to spread the ENTIRE request body onto the stored user record,
-  // which meant any logged-in user could hand themselves admin rights,
-  // unlimited NOOB points, permanent verification, or a different
-  // password/username just by including those fields in the request.
-  const SELF_EDITABLE_USER_FIELDS = [
-    'bio', 'statusNote', 'accountType', 'isBusiness', 'businessCategory', 'privacySettings'
-  ] as const;
-
   app.put('/api/users/me', async (req, res) => {
     const activeUser = getActiveUser(req);
     if (!activeUser) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    const safeUpdate: Record<string, any> = {};
-    for (const field of SELF_EDITABLE_USER_FIELDS) {
-      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-        safeUpdate[field] = req.body[field];
-      }
-    }
+    const updated = req.body;
     const index = users.findIndex(u => u.id === activeUser.id);
     if (index !== -1) {
-      users[index] = { ...users[index], ...safeUpdate };
+      users[index] = { ...users[index], ...updated };
       res.json({ success: true, user: { ...sanitizeUser(users[index]), avatar: await signMediaKey(users[index].avatar) } });
     } else {
       res.status(404).json({ error: 'User not found' });
@@ -986,12 +735,9 @@ async function startServer() {
     if (!activeUser) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    if (!checkRateLimit(`pwcheck:${req.ip}`, 10, 60000)) {
-      return res.status(429).json({ error: 'Too many attempts. Please wait a minute and try again.' });
-    }
 
     const { password } = req.body;
-    if (!password || !verifyPassword(password, activeUser.password)) {
+    if (!password || (activeUser.password && activeUser.password !== password)) {
       return res.status(401).json({ error: 'Incorrect password. Please re-enter your password to confirm deletion.' });
     }
 
@@ -1094,9 +840,6 @@ async function startServer() {
   app.post('/api/users/verify', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in to verify your account.' });
-    if (!checkRateLimit(`pwcheck:${req.ip}`, 10, 60000)) {
-      return res.status(429).json({ error: 'Too many attempts. Please wait a minute and try again.' });
-    }
 
     const { password, method, couponCode, discountCouponCode } = req.body;
     if (!password) {
@@ -1109,7 +852,7 @@ async function startServer() {
     }
 
     // Verify account password
-    if (!verifyPassword(password.trim(), users[index].password)) {
+    if (users[index].password && users[index].password !== password.trim()) {
       return res.status(401).json({ error: 'Invalid password. Please check your credentials.' });
     }
 
@@ -1122,12 +865,8 @@ async function startServer() {
 
     // Check method
     if (method === 'coupon') {
-      // Was a hardcoded literal committed to source — anyone who ever saw
-      // this repo (or its git history) had a permanent free-verification
-      // bypass. Now sourced from an env var that only you know, and the
-      // feature is simply unavailable (fails closed) if it isn't set.
-      const validCoupon = process.env.VIP_VERIFICATION_COUPON;
-      if (!validCoupon || !couponCode || couponCode.trim() !== validCoupon) {
+      const validCoupon = 'noob_4t95uirowejhfhiyr75u8432iwju';
+      if (!couponCode || couponCode.trim() !== validCoupon) {
         return res.status(400).json({ error: 'Invalid or expired verification coupon code.' });
       }
     } else if (method === 'points_permanent') {
@@ -1398,13 +1137,10 @@ async function startServer() {
 
   app.get('/api/shop/catalog', (req, res) => {
     const active = getActiveUser(req);
-    // A real, working NOOB Pro perk: any active Pro tier unlocks the whole
-    // premium sticker/GIF shop for free, on top of whatever was
-    // individually purchased with points.
-    const ownedItemIds = active?.proTier
-      ? SHOP_CATALOG.map(i => i.id)
-      : active?.purchasedItemIds || [];
-    res.json({ catalog: SHOP_CATALOG, ownedItemIds });
+    res.json({
+      catalog: SHOP_CATALOG,
+      ownedItemIds: active?.purchasedItemIds || []
+    });
   });
 
   app.post('/api/shop/purchase', (req, res) => {
@@ -1593,20 +1329,8 @@ async function startServer() {
     if (!active) return res.status(401).json({ error: 'Please log in to upgrade.' });
 
     const { tierId, billing, couponCode } = req.body;
-    // A plain `PRO_TIER_PRICES[tierId]` index lookup resolves inherited
-    // Object.prototype members (tierId: "constructor"/"toString"/etc.) to a
-    // truthy function, which used to sail past the `!basePrice` check
-    // below and then compute price as NaN — and `noobPoints < NaN` is
-    // always false, so the "insufficient points" guard never fired either.
-    // Net effect: a free Pro upgrade that also corrupted the buyer's
-    // balance to NaN. hasOwnProperty + a finite-number check closes both.
-    if (typeof tierId !== 'string' || !Object.prototype.hasOwnProperty.call(PRO_TIER_PRICES, tierId)) {
-      return res.status(400).json({ error: 'Unknown Pro tier.' });
-    }
     const basePrice = PRO_TIER_PRICES[tierId];
-    if (!Number.isFinite(basePrice) || basePrice <= 0) {
-      return res.status(400).json({ error: 'Unknown Pro tier.' });
-    }
+    if (!basePrice) return res.status(400).json({ error: 'Unknown Pro tier.' });
 
     const index = users.findIndex((u) => u.id === active.id);
     if (index === -1) return res.status(404).json({ error: 'User account not found.' });
@@ -1820,13 +1544,13 @@ async function startServer() {
   });
 
   app.post('/api/posts', (req, res) => {
-    // Used to fall back to a fake, verified-looking author identity for an
-    // unauthenticated request — meaning anyone could publish posts to
-    // everyone's feed, attributed to a "verified" account, without ever
-    // logging in.
     const active = getActiveUser(req);
-    if (!active) return res.status(401).json({ error: 'Please log in to post.' });
-    const author = active;
+    const author = active || {
+      id: 'u_1',
+      username: 'alex_cyber',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      isVerified: true
+    };
 
     const { slides, caption, category, hashtags, audioTrack, webLink } = req.body;
 
@@ -1945,42 +1669,26 @@ async function startServer() {
     res.json({ posts: mapped });
   });
 
-  // These three toggle endpoints used to have no auth check at all — any
-  // request with a post id could archive/lock-comments/hide-like-count on
-  // ANY user's post. Same owner-or-admin rule as delete, above.
-  function requirePostOwnership(req: express.Request, res: express.Response, postId: string) {
-    const post = posts.find(p => p.id === postId);
-    if (!post) {
-      res.status(404).json({ error: 'Post not found' });
-      return null;
-    }
-    const active = getActiveUser(req);
-    const isOwner = active && (active.id === post.userId || active.username === post.username);
-    const isMasterAdmin = active && (active.isAdmin || active.username?.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
-    if (!isOwner && !isMasterAdmin) {
-      res.status(403).json({ error: 'You can only manage your own posts.' });
-      return null;
-    }
-    return post;
-  }
-
   app.post('/api/posts/:id/archive', (req, res) => {
-    const post = requirePostOwnership(req, res, req.params.id);
-    if (!post) return;
+    const postId = req.params.id;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
     post.isArchived = !post.isArchived;
     res.json({ success: true, isArchived: post.isArchived });
   });
 
   app.post('/api/posts/:id/toggle-comments', (req, res) => {
-    const post = requirePostOwnership(req, res, req.params.id);
-    if (!post) return;
+    const postId = req.params.id;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
     post.isCommentsDisabled = !post.isCommentsDisabled;
     res.json({ success: true, isCommentsDisabled: post.isCommentsDisabled });
   });
 
   app.post('/api/posts/:id/toggle-like-count', (req, res) => {
-    const post = requirePostOwnership(req, res, req.params.id);
-    if (!post) return;
+    const postId = req.params.id;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
     post.isLikeCountHidden = !post.isLikeCountHidden;
     res.json({ success: true, isLikeCountHidden: post.isLikeCountHidden });
   });
@@ -2053,41 +1761,28 @@ async function startServer() {
     res.status(201).json({ success: true, comment: newComment });
   });
 
-  // A comment may be deleted by whoever wrote it, by the post's owner
-  // (moderating their own post), or the NOOB admin — previously anyone
-  // could delete anyone's comment on anyone's post with no check at all.
   app.delete('/api/posts/:id/comments/:commentId', (req, res) => {
     const { id: postId, commentId } = req.params;
-    const active = getActiveUser(req);
-    if (!active) return res.status(401).json({ error: 'Please log in.' });
-    const post = posts.find(p => p.id === postId);
-    const comment = comments[postId]?.find((c: any) => c.id === commentId);
-    if (!comment) return res.status(404).json({ error: 'Comment not found' });
-
-    const isCommentAuthor = active.id === comment.userId || active.username === comment.username;
-    const isPostOwner = !!post && (active.id === post.userId || active.username === post.username);
-    const isMasterAdmin = active.isAdmin || active.username?.toLowerCase() === 'noob' || active.id === 'u_noob_admin';
-    if (!isCommentAuthor && !isPostOwner && !isMasterAdmin) {
-      return res.status(403).json({ error: 'You can only delete your own comments.' });
+    if (comments[postId]) {
+      comments[postId] = comments[postId].filter((c: any) => c.id !== commentId);
     }
-
-    comments[postId] = comments[postId].filter((c: any) => c.id !== commentId);
+    const post = posts.find(p => p.id === postId);
     if (post) {
       post.commentsCount = Math.max(0, (post.commentsCount || 0) - 1);
     }
     res.json({ success: true });
   });
 
-  // Pinning is a post-owner (or admin) privilege, same as on Instagram —
-  // not something any random visitor should be able to do to your post.
   app.post('/api/posts/:id/comments/:commentId/pin', (req, res) => {
-    const post = requirePostOwnership(req, res, req.params.id);
-    if (!post) return;
-    const { commentId } = req.params;
-    const c = comments[post.id]?.find((item: any) => item.id === commentId);
-    if (!c) return res.status(404).json({ error: 'Comment not found' });
-    c.isPinned = !c.isPinned;
-    res.json({ success: true, isPinned: c.isPinned });
+    const { id: postId, commentId } = req.params;
+    if (comments[postId]) {
+      const c = comments[postId].find((item: any) => item.id === commentId);
+      if (c) {
+        c.isPinned = !c.isPinned;
+        return res.json({ success: true, isPinned: c.isPinned });
+      }
+    }
+    res.json({ success: true, isPinned: false });
   });
 
   // Collections endpoints
@@ -2140,8 +1835,12 @@ async function startServer() {
 
   app.post('/api/stories', (req, res) => {
     const active = getActiveUser(req);
-    if (!active) return res.status(401).json({ error: 'Please log in to post a story.' });
-    const author = active;
+    const author = active || {
+      id: 'u_1',
+      username: 'alex_cyber',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      isVerified: true
+    };
 
     const { mediaUrl, mediaType, stickers, isCloseFriendsOnly } = req.body;
 
@@ -2184,8 +1883,12 @@ async function startServer() {
 
   app.post('/api/reels', (req, res) => {
     const active = getActiveUser(req);
-    if (!active) return res.status(401).json({ error: 'Please log in to post a reel.' });
-    const author = active;
+    const author = active || {
+      id: 'u_1',
+      username: 'alex_cyber',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      isVerified: true
+    };
 
     const { videoUrl, thumbnailUrl, caption, audioTrack, hashtags } = req.body;
 
@@ -2374,8 +2077,11 @@ async function startServer() {
 
   app.post('/api/music/tracks', (req, res) => {
     const active = getActiveUser(req);
-    if (!active) return res.status(401).json({ error: 'Please log in to upload a track.' });
-    const author = active;
+    const author = active || {
+      id: 'u_1',
+      username: 'dj_noob',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'
+    };
 
     const { title, artist, genre, audioUrl, coverUrl, duration } = req.body;
 
@@ -2682,49 +2388,28 @@ async function startServer() {
   });
 
   // Toggle Pin Chat
-  // Every one of these per-chat endpoints used to skip auth entirely — any
-  // request with a chat id (predictable `c_<timestamp>` strings, easy to
-  // enumerate) could pin/mute/reconfigure/delete/end ANY chat, including
-  // ones the requester was never a participant in.
-  function requireChatMembership(req: express.Request, res: express.Response, chatId: string) {
-    const active = getActiveUser(req);
-    if (!active) {
-      res.status(401).json({ error: 'Please log in.' });
-      return null;
-    }
-    const chat = chats.find(c => c.id === chatId);
-    if (!chat) {
-      res.status(404).json({ error: 'Chat not found' });
-      return null;
-    }
-    const isMember = chat.isGlobalDefault || chat.participants?.some((p: any) => p.id === active.id);
-    if (!isMember) {
-      res.status(403).json({ error: 'You are not a participant in this chat.' });
-      return null;
-    }
-    return { active, chat };
-  }
-
   app.post('/api/chats/:id/pin', (req, res) => {
-    const ctx = requireChatMembership(req, res, req.params.id);
-    if (!ctx) return;
-    ctx.chat.isPinned = !ctx.chat.isPinned;
-    res.json({ success: true, isPinned: ctx.chat.isPinned });
+    const chatId = req.params.id;
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    chat.isPinned = !chat.isPinned;
+    res.json({ success: true, isPinned: chat.isPinned });
   });
 
   // Toggle Mute Chat
   app.post('/api/chats/:id/mute', (req, res) => {
-    const ctx = requireChatMembership(req, res, req.params.id);
-    if (!ctx) return;
-    ctx.chat.isMuted = !ctx.chat.isMuted;
-    res.json({ success: true, isMuted: ctx.chat.isMuted });
+    const chatId = req.params.id;
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    chat.isMuted = !chat.isMuted;
+    res.json({ success: true, isMuted: chat.isMuted });
   });
 
   // Update per-chat settings: theme color, vanish mode, read receipts, nickname
   app.put('/api/chats/:id/settings', (req, res) => {
-    const ctx = requireChatMembership(req, res, req.params.id);
-    if (!ctx) return;
-    const chat = ctx.chat;
+    const chatId = req.params.id;
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
     const { themeColor, vanishMode, readReceiptsEnabled, nickname } = req.body;
     if (themeColor !== undefined) chat.themeColor = themeColor;
@@ -3010,10 +2695,9 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // End Chat Session endpoint
   app.post('/api/chats/:id/end', (req, res) => {
-    const ctx = requireChatMembership(req, res, req.params.id);
-    if (!ctx) return;
-    const chatId = ctx.chat.id;
-    const chat = ctx.chat;
+    const chatId = req.params.id;
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
     chat.isEnded = true;
     chat.endedAt = new Date().toISOString();
@@ -3041,11 +2725,12 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // Submit Chat Rating & Review endpoint
   app.post('/api/chats/:id/review', (req, res) => {
-    const ctx = requireChatMembership(req, res, req.params.id);
-    if (!ctx) return;
-    const { active, chat } = ctx;
-    const chatId = chat.id;
+    const chatId = req.params.id;
+    const active = getActiveUser(req);
     const { rating, feedback } = req.body;
+
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
 
     const reviewObj = {
       id: `rev_${Date.now()}`,
@@ -3083,15 +2768,14 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // Delete Chat Conversation
   app.delete('/api/chats/:id', (req, res) => {
-    const ctx = requireChatMembership(req, res, req.params.id);
-    if (!ctx) return;
-    if (ctx.chat.isGlobalDefault) {
-      return res.status(400).json({ error: 'The global lounge cannot be deleted.' });
+    const chatId = req.params.id;
+    const idx = chats.findIndex(c => c.id === chatId);
+    if (idx !== -1) {
+      chats.splice(idx, 1);
+      delete messages[chatId];
+      return res.json({ success: true, message: 'Chat conversation deleted successfully' });
     }
-    const idx = chats.findIndex(c => c.id === ctx.chat.id);
-    chats.splice(idx, 1);
-    delete messages[ctx.chat.id];
-    res.json({ success: true, message: 'Chat conversation deleted successfully' });
+    res.status(404).json({ error: 'Chat not found' });
   });
 
   // Block User endpoint
@@ -3305,9 +2989,6 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // Record a match outcome: win = +100 NOOBs, tie = +50 NOOBs, loss = 0 NOOBs
   app.post('/api/games/record-match', (req, res) => {
-    if (!checkRateLimit(`match:${req.ip}`, 20, 60000)) {
-      return res.status(429).json({ error: 'Too many match results submitted. Please slow down.' });
-    }
     const { gameId, gameTitle, result, opponentName, vsBot } = req.body;
     // result: 'win' | 'tie' | 'loss'
     const active = getActiveUser(req);
@@ -3326,14 +3007,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     let earnedPoints = 0;
     if (isChessHighStakes) {
       if (result === 'win') {
-        // The result is entirely client-reported (no server-side chess
-        // engine here to verify it), so a 50,000,000-point payout could
-        // otherwise be claimed on repeat in a loop and mint the entire
-        // economy in seconds. Paying it out only once per account turns
-        // that into a one-time jackpot instead of an infinite exploit;
-        // every win after the first still counts as a real, smaller win.
-        earnedPoints = active && !active.hasWonChessJackpot ? 50000000 : 500;
-        if (active) active.hasWonChessJackpot = true;
+        earnedPoints = 50000000;
       } else if (result === 'loss') {
         earnedPoints = -(active ? active.noobPoints || 0 : 0);
       } else {
@@ -3397,9 +3071,6 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   app.post('/api/games/survival-score', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
-    if (!checkRateLimit(`survival:${req.ip}`, 20, 60000)) {
-      return res.status(429).json({ error: 'Too many results submitted. Please slow down.' });
-    }
 
     const { gameId, gameTitle, survivalSeconds } = req.body;
     const seconds = Math.floor(Number(survivalSeconds));
@@ -3445,14 +3116,6 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   });
 
   app.put('/api/settings', (req, res) => {
-    // This is global, app-wide configuration shared by every user — not a
-    // per-user preference — so it was never meant to be reachable by just
-    // any logged-in (or, until now, not even logged-in) request.
-    const active = getActiveUser(req);
-    const isMasterAdmin = active && (active.isAdmin || active.username?.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
-    if (!isMasterAdmin) {
-      return res.status(403).json({ error: 'Admin access required.' });
-    }
     settings = { ...settings, ...req.body };
     res.json({ success: true, settings });
   });
@@ -3485,7 +3148,8 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // --- AI CUSTOMER SUPPORT ASSISTANT (Voice & Context Enabled) ---
   app.post('/api/support/ai-chat', async (req, res) => {
-    if (!checkRateLimit(`aichat:${req.ip}`, 40, 60000)) {
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    if (!checkRateLimit(clientIp, 40, 60000)) {
       return res.status(429).json({
         error: 'Too many requests. Bot attack protection is active. Please wait a moment before sending another query.'
       });

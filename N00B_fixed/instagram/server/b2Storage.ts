@@ -68,13 +68,7 @@ export async function uploadMediaToB2(
   contentType: string
 ): Promise<{ objectKey: string; presignedUrl: string }> {
   const { client, bucket, isConfigured } = getB2Client();
-  // A raw split-on-'.' extension can still contain a '/' (e.g. a filename
-  // of "x.png/../../evil"), letting an uploader inject extra path segments
-  // into the B2 key and write outside the intended folder. Extensions are
-  // only ever a handful of letters/digits in practice, so anything else
-  // falls back to a safe default instead.
-  const rawExt = originalFilename.split('.').pop() || 'dat';
-  const fileExt = /^[a-z0-9]{1,8}$/i.test(rawExt) ? rawExt : 'dat';
+  const fileExt = originalFilename.split('.').pop() || 'dat';
   const randomSuffix = Math.random().toString(36).substring(2, 9);
   const objectKey = `${folder}/${Date.now()}-${randomSuffix}.${fileExt}`;
 

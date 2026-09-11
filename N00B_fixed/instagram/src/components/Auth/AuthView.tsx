@@ -32,7 +32,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, fetchCaptchaChallenge } from '../../services/api';
+import { loginUser, signupUser } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -43,6 +43,16 @@ import confetti from 'canvas-confetti';
 interface AuthViewProps {
   onAuthSuccess: (user: User) => void;
 }
+
+// Generate random 5-character captcha code
+const generateCaptchaCode = (): string => {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let result = '';
+  for (let i = 0; i < 5; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
 
 // Curated 2D Cartoon and 2D Nature avatars. `gender` drives which ones show
 // in the picker for a given selected gender ('unisex' always shows).
@@ -239,30 +249,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   // Honeypot field for bot attack proofing (invisible to humans, bots will fill it)
   const [honeypotValue, setHoneypotValue] = useState('');
 
-  // Captcha state (random captcha only while creating account). The
-  // challenge and correct answer live server-side now — previously both
-  // were generated AND checked entirely in the browser, so the "verify"
-  // step never actually stopped anything calling the signup API directly.
-  const [captchaChallengeId, setCaptchaChallengeId] = useState<string>('');
-  const [captchaImage, setCaptchaImage] = useState<string>('');
+  // Captcha state (random captcha only while creating account)
+  const [captchaCode, setCaptchaCode] = useState<string>('');
   const [userCaptchaInput, setUserCaptchaInput] = useState<string>('');
 
-  const loadCaptcha = async () => {
-    try {
-      const { challengeId, image } = await fetchCaptchaChallenge();
-      setCaptchaChallengeId(challengeId);
-      setCaptchaImage(image);
-    } catch {
-      setCaptchaChallengeId('');
-      setCaptchaImage('');
-    }
-    setUserCaptchaInput('');
-  };
-
-  // Fetch a fresh captcha on mount or when mode changes to signup
+  // Generate captcha on mount or when mode changes to signup
   useEffect(() => {
-    if (mode === 'signup') loadCaptcha();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setCaptchaCode(generateCaptchaCode());
   }, [mode]);
 
   // If the picked avatar no longer matches the chosen gender's filtered
@@ -294,7 +287,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   }, [gender]);
 
   const handleRefreshCaptcha = () => {
-    loadCaptcha();
+    setCaptchaCode(generateCaptchaCode());
+    setUserCaptchaInput('');
   };
 
   // Bumped by the "Shuffle" button to force fresh random suggestions without
@@ -413,10 +407,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       return;
     }
 
-    // The real check happens server-side on submit (see signupUser below) —
-    // this is just making sure something was typed before bothering to ask.
-    if (!userCaptchaInput.trim() || !captchaChallengeId) {
-      setErrorMessage('Please enter the captcha code.');
+    // Verify Captcha (case-insensitive)
+    if (!userCaptchaInput.trim() || userCaptchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
+      setErrorMessage('Security Captcha does not match. Please enter the correct 5-character code.');
+      handleRefreshCaptcha();
       return;
     }
 
@@ -444,9 +438,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         businessCategory: accountType === 'business' ? businessCategory : undefined,
         businessEmail: accountType === 'business' ? email.trim() : undefined,
         businessPhone: accountType === 'business' ? mobileNumber.trim() : undefined,
-        agreedToTerms: true,
-        challengeId: captchaChallengeId,
-        captchaAnswer: userCaptchaInput.trim()
+        agreedToTerms: true
       });
 
       if (res.success && res.user) {
@@ -454,13 +446,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         onAuthSuccess(res.user);
       } else {
         setErrorMessage(res.error || 'Account creation failed. User ID may already exist.');
-        // The challenge is single-use server-side either way, so this
-        // request already burned it — fetch a fresh one for the retry.
-        loadCaptcha();
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Error communicating with server.');
-      loadCaptcha();
     } finally {
       setLoading(false);
     }
@@ -1068,7 +1056,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-[#00FF66]" />
-                    <span>Enter Captcha</span>
+                    <span>Bot Defense Verification</span>
                     <span className="text-cyan-400">*</span>
                   </label>
                   <button
@@ -1084,14 +1072,27 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <div className="flex items-center gap-3">
                   <div
                     onClick={handleRefreshCaptcha}
-                    className="relative rounded-xl border border-zinc-700/80 select-none cursor-pointer flex items-center justify-center shadow-inner overflow-hidden min-w-[150px] h-[52px] bg-zinc-950"
+                    className="relative px-4 py-2.5 bg-zinc-950 rounded-xl border border-zinc-700/80 select-none cursor-pointer flex items-center justify-center tracking-[0.35em] font-mono text-lg font-black shadow-inner overflow-hidden min-w-[130px]"
                     title="Click to refresh captcha"
                   >
-                    {captchaImage ? (
-                      <img src={captchaImage} alt="Captcha challenge" className="w-full h-full object-contain" draggable={false} />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 text-zinc-600 animate-spin" />
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-[#00FF66]/10 pointer-events-none" />
+                    <div className="absolute inset-x-0 top-1/2 h-[1px] bg-white/20 -rotate-6 pointer-events-none" />
+                    <div className="absolute inset-x-0 top-1/3 h-[1px] bg-cyan-400/20 rotate-3 pointer-events-none" />
+
+                    <div className="flex items-center gap-1 relative z-10">
+                      {captchaCode.split('').map((char, index) => {
+                        const rotations = ['-rotate-6', 'rotate-3', '-rotate-3', 'rotate-6', '-rotate-12'];
+                        const colors = ['text-cyan-400', 'text-[#00FF66]', 'text-indigo-400', 'text-yellow-400', 'text-purple-400'];
+                        return (
+                          <span
+                            key={index}
+                            className={`inline-block ${rotations[index % rotations.length]} ${colors[index % colors.length]} drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]`}
+                          >
+                            {char}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="flex-1">

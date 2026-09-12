@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Copy, Check, Ticket, Plus, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Ticket, Plus, X, Trash2, BadgeCheck } from 'lucide-react';
 import { User } from '../../types';
 import { Coupon, fetchMyCoupons, createCoupon, deleteCoupon, redeemCouponCode } from '../../services/api';
 
@@ -159,14 +159,29 @@ const CouponCard: React.FC<{
   isAdmin: boolean;
   onDelete: () => void;
 }> = ({ coupon, expanded, onToggle, onCopy, copied, isAdmin, onDelete }) => {
+  const isVerification = coupon.type === 'verification';
+
   return (
-    <div className="rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
+    <div className={`rounded-2xl bg-zinc-900 border overflow-hidden ${isVerification ? 'border-blue-500/40' : 'border-zinc-800'}`}>
       <div className="p-4 flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#00FF66]/20 to-emerald-600/10 border border-[#00FF66]/30 flex items-center justify-center text-[#00FF66] font-black text-xs shrink-0">
-          {coupon.discountPercent}%
+        <div
+          className={`w-11 h-11 rounded-xl border flex items-center justify-center font-black text-xs shrink-0 ${
+            isVerification
+              ? 'bg-gradient-to-br from-blue-500/20 to-cyan-600/10 border-blue-500/30 text-blue-400'
+              : 'bg-gradient-to-br from-[#00FF66]/20 to-emerald-600/10 border-[#00FF66]/30 text-[#00FF66]'
+          }`}
+        >
+          {isVerification ? <BadgeCheck className="w-5 h-5" /> : `${coupon.discountPercent}%`}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-white truncate">{coupon.title}</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-bold text-white truncate">{coupon.title}</h3>
+            {isVerification && (
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 font-bold uppercase border border-blue-500/30 shrink-0">
+                Verification
+              </span>
+            )}
+          </div>
           <p className="text-xs text-zinc-400 mt-0.5">
             Use code <span className="font-bold text-white tracking-wide">{coupon.code}</span>
           </p>
@@ -217,6 +232,7 @@ const CouponCard: React.FC<{
 };
 
 const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }> = ({ onClose, onCreated }) => {
+  const [couponType, setCouponType] = useState<'discount' | 'verification'>('discount');
   const [title, setTitle] = useState('');
   const [discountPercent, setDiscountPercent] = useState('10');
   const [terms, setTerms] = useState('');
@@ -224,6 +240,15 @@ const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }
   const [targetUsername, setTargetUsername] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // A verification coupon grants the badge outright, not a discount, and
+  // must always be tied to one specific account — a global "free
+  // verification for everyone" coupon would hand out fake-verified badges
+  // at scale.
+  const isVerification = couponType === 'verification';
+  useEffect(() => {
+    if (isVerification) setTargetMode('specific');
+  }, [isVerification]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,12 +258,12 @@ const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }
       return;
     }
     const pct = Number(discountPercent);
-    if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+    if (!isVerification && (!Number.isFinite(pct) || pct <= 0 || pct > 100)) {
       setError('Enter a discount between 1 and 100.');
       return;
     }
-    if (targetMode === 'specific' && !targetUsername.trim()) {
-      setError('Enter the username to target.');
+    if ((targetMode === 'specific' || isVerification) && !targetUsername.trim()) {
+      setError(isVerification ? 'A verification coupon must target one specific user.' : 'Enter the username to target.');
       return;
     }
 
@@ -247,7 +272,8 @@ const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }
       title: title.trim(),
       discountPercent: pct,
       terms,
-      targetUsername: targetMode === 'specific' ? targetUsername.trim() : undefined
+      targetUsername: targetMode === 'specific' || isVerification ? targetUsername.trim() : undefined,
+      type: couponType
     });
     setSubmitting(false);
     if (res.success) onCreated();
@@ -272,26 +298,57 @@ const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }
         </div>
 
         <div className="space-y-1.5">
+          <label className="text-xs font-bold text-zinc-300 block">Coupon Type</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCouponType('discount')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                couponType === 'discount' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+              }`}
+            >
+              Discount Coupon
+            </button>
+            <button
+              type="button"
+              onClick={() => setCouponType('verification')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center justify-center gap-1.5 ${
+                couponType === 'verification' ? 'bg-blue-500 text-white' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+              }`}
+            >
+              <BadgeCheck className="w-3.5 h-3.5" /> Verification Badge
+            </button>
+          </div>
+          {isVerification && (
+            <p className="text-[11px] text-blue-400/80">
+              Grants the verified checkmark to one account for free, one-time use. It won't work as a discount anywhere else.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
           <label className="text-xs font-bold text-zinc-300 block">Title</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Flat 20% Off NOOB Pro"
+            placeholder={isVerification ? 'e.g. Free Verification for @friend' : 'e.g. Flat 20% Off NOOB Pro'}
             className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-zinc-300 block">Discount (%)</label>
-          <input
-            type="number"
-            min="1"
-            max="100"
-            value={discountPercent}
-            onChange={(e) => setDiscountPercent(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
-          />
-        </div>
+        {!isVerification && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-300 block">Discount (%)</label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+            />
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-zinc-300 block">
@@ -308,27 +365,33 @@ const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-zinc-300 block">Applies To</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setTargetMode('all')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
-                targetMode === 'all' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
-              }`}
-            >
-              All Users
-            </button>
-            <button
-              type="button"
-              onClick={() => setTargetMode('specific')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
-                targetMode === 'specific' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
-              }`}
-            >
-              Specific User
-            </button>
-          </div>
-          {targetMode === 'specific' && (
+          {isVerification ? (
+            <p className="text-[11px] text-zinc-500">
+              Verification coupons always target one specific user — enter their username below.
+            </p>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTargetMode('all')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  targetMode === 'all' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+                }`}
+              >
+                All Users
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetMode('specific')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  targetMode === 'specific' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+                }`}
+              >
+                Specific User
+              </button>
+            </div>
+          )}
+          {(targetMode === 'specific' || isVerification) && (
             <input
               value={targetUsername}
               onChange={(e) => setTargetUsername(e.target.value)}

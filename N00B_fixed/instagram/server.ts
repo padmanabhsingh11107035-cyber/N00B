@@ -471,6 +471,7 @@ async function startServer() {
     return coupons.find(
       (c) =>
         c.active &&
+        c.type !== 'verification' &&
         c.code === normalized &&
         (!c.targetUsername || c.targetUsername.toLowerCase() === (username || '').toLowerCase())
     ) || null;
@@ -915,9 +916,23 @@ async function startServer() {
       discountCoupon ? Math.max(0, Math.round(points * (1 - discountCoupon.discountPercent / 100))) : points;
 
     // Check method
+    let redeemedVerificationCoupon: any = null;
     if (method === 'coupon') {
-      const validCoupon = 'noob_4t95uirowejhfhiyr75u8432iwju';
-      if (!couponCode || couponCode.trim() !== validCoupon) {
+      // Previously a single hardcoded string shared by every account — one
+      // leak of that literal (source access, a screenshot, anything) meant
+      // free verification for anyone, forever, with no way to revoke it.
+      // Verification coupons are now admin-issued per account, one-time use,
+      // and looked up the same way as any other coupon.
+      const normalized = (couponCode || '').trim().toUpperCase();
+      redeemedVerificationCoupon = coupons.find(
+        (c) =>
+          c.active &&
+          c.type === 'verification' &&
+          c.code === normalized &&
+          c.targetUsername &&
+          c.targetUsername.toLowerCase() === active.username.toLowerCase()
+      );
+      if (!redeemedVerificationCoupon) {
         return res.status(400).json({ error: 'Invalid or expired verification coupon code.' });
       }
     } else if (method === 'points_permanent') {
@@ -954,6 +969,12 @@ async function startServer() {
       return res.status(400).json({ error: 'Invalid verification method specified.' });
     }
 
+    // A verification coupon is one-time use — consume it the moment it's
+    // successfully redeemed so it can't be reused later.
+    if (redeemedVerificationCoupon) {
+      redeemedVerificationCoupon.active = false;
+    }
+
     // Mark as verified
     users[index].isVerified = true;
     users[index].verificationTier = 'premium';
@@ -976,6 +997,7 @@ async function startServer() {
     id: c.id,
     code: c.code,
     title: c.title,
+    type: c.type || 'discount',
     discountPercent: c.discountPercent,
     terms: c.terms,
     targetUsername: c.targetUsername || null,
@@ -1010,13 +1032,28 @@ async function startServer() {
       return res.status(403).json({ error: 'Only the NOOB admin account can create coupons.' });
     }
 
-    const { title, discountPercent, terms, targetUsername } = req.body;
+    const { title, discountPercent, terms, targetUsername, type } = req.body;
+    const couponType = type === 'verification' ? 'verification' : 'discount';
+
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'A coupon title is required.' });
     }
-    const pct = Number(discountPercent);
-    if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
-      return res.status(400).json({ error: 'Discount must be a percentage between 1 and 100.' });
+
+    // A verification coupon grants the badge outright rather than a % off
+    // something else, and — unlike a discount coupon — must always be tied
+    // to one specific account. A global "free verification for everyone"
+    // coupon would be a standing invitation to hand out fake-verified
+    // badges at scale.
+    if (couponType === 'verification' && (!targetUsername || !targetUsername.trim())) {
+      return res.status(400).json({ error: 'A verification coupon must target one specific user.' });
+    }
+
+    let pct = 100;
+    if (couponType === 'discount') {
+      pct = Number(discountPercent);
+      if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+        return res.status(400).json({ error: 'Discount must be a percentage between 1 and 100.' });
+      }
     }
 
     let resolvedTarget: string | undefined;
@@ -1034,10 +1071,11 @@ async function startServer() {
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
       .slice(0, 10) || 'NOOB';
-    let code = `${base}${Math.round(pct)}`;
+    const suffix = couponType === 'verification' ? 'VERIFY' : String(Math.round(pct));
+    let code = `${base}${suffix}`;
     let guard = 0;
     while (coupons.some((c) => c.code === code) && guard < 20) {
-      code = `${base}${Math.round(pct)}${Math.floor(10 + Math.random() * 90)}`;
+      code = `${base}${suffix}${Math.floor(10 + Math.random() * 90)}`;
       guard++;
     }
 
@@ -1050,6 +1088,7 @@ async function startServer() {
       id: `cpn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       code,
       title: title.trim(),
+      type: couponType,
       discountPercent: Math.round(pct),
       terms: termsList,
       targetUsername: resolvedTarget,

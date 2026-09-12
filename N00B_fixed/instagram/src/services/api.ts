@@ -913,6 +913,7 @@ export interface Coupon {
   id: string;
   code: string;
   title: string;
+  type: 'discount' | 'verification';
   discountPercent: number;
   terms: string[];
   targetUsername: string | null;
@@ -933,6 +934,7 @@ export async function createCoupon(payload: {
   discountPercent: number;
   terms: string;
   targetUsername?: string;
+  type?: 'discount' | 'verification';
 }): Promise<{ success: boolean; coupon?: Coupon; error?: string }> {
   const res = await fetch(`${API_BASE}/coupons`, {
     method: 'POST',

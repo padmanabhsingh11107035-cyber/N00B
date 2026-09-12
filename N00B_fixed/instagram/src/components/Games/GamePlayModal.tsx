@@ -20,7 +20,18 @@ import {
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
 import { User } from '../../types';
-import { recordGameMatch, sendGameInvite, submitSurvivalScore } from '../../services/api';
+import {
+  recordGameMatch,
+  sendGameInvite,
+  submitSurvivalScore,
+  joinGameRoom,
+  getGameRoom,
+  submitGameRoomResult,
+  joinMatchmaking,
+  getMatchmakingStatus,
+  cancelMatchmaking,
+  GameRoom
+} from '../../services/api';
 import confetti from 'canvas-confetti';
 
 // Modular Dedicated Mini-Game Engines
@@ -77,11 +88,31 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   onPointsUpdated
 }) => {
   const [currentMode, setCurrentMode] = useState<PlayMode>(
-    initialChallenger || SOLO_ONLY_GAME_IDS.includes(game.id) ? 'play_bot' : 'select_mode'
+    initialRoomCode && !BOARD_GAME_IDS.includes(game.id)
+      ? 'play_match'
+      : initialChallenger || SOLO_ONLY_GAME_IDS.includes(game.id)
+      ? 'play_bot'
+      : 'select_mode'
   );
   const [opponentChallenger] = useState<string | undefined>(initialChallenger);
   const [matchmakingTimeLeft, setMatchmakingTimeLeft] = useState(30);
   const [matchmakingFailed, setMatchmakingFailed] = useState(false);
+
+  // A real head-to-head match: two different users each play their own
+  // round of the exact same game (identical to solo vs-bot play — no
+  // per-game code changes needed) and the server compares the two results
+  // once both are in. `roomCode` is shared between both sides via the chat
+  // invite or the matchmaking pairing.
+  type OnlineMatchPhase = 'joining' | 'waiting_opponent_join' | 'in_progress' | 'waiting_opponent_result';
+  const [onlineMatch, setOnlineMatch] = useState<{
+    roomCode: string;
+    phase: OnlineMatchPhase;
+    opponent?: { username: string; displayName: string; avatar: string };
+  } | null>(
+    initialRoomCode && !BOARD_GAME_IDS.includes(game.id) ? { roomCode: initialRoomCode, phase: 'joining' } : null
+  );
+  const matchmakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const matchmakingCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<User | null>(() => {
     if (initialChallenger) {
       return allUsers.find((u) => u.username === initialChallenger) || null;
@@ -119,29 +150,203 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const [passPlayStage, setPassPlayStage] = useState<'p1' | 'p2'>('p1');
   const [passPlayP1Result, setPassPlayP1Result] = useState<RoundResult | null>(null);
 
-  // Matchmaking 30s timer
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (currentMode === 'matchmaking') {
-      setMatchmakingTimeLeft(30);
-      setMatchmakingFailed(false);
+  const clearMatchmakingTimers = () => {
+    if (matchmakingPollRef.current) clearInterval(matchmakingPollRef.current);
+    if (matchmakingCountdownRef.current) clearInterval(matchmakingCountdownRef.current);
+    matchmakingPollRef.current = null;
+    matchmakingCountdownRef.current = null;
+  };
+  useEffect(() => clearMatchmakingTimers, []);
 
-      timer = setInterval(() => {
-        setMatchmakingTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setMatchmakingFailed(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+  // A match was found (either instantly on join, or picked up mid-poll) —
+  // stop searching and drop straight into the actual game.
+  const enterOnlineMatch = (room: GameRoom) => {
+    clearMatchmakingTimers();
+    const opponent = room.players.find((p) => p.userId !== currentUser.id);
+    startBotGameNow();
+    setOnlineMatch({
+      roomCode: room.code,
+      phase: 'in_progress',
+      opponent: opponent ? { username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined
+    });
+  };
+
+  // Real matchmaking: ask the server to pair us with anyone else waiting
+  // for the same game. If nobody's waiting yet, join the queue and poll —
+  // this used to be a client-side timer with no server call at all, so it
+  // could never actually find anyone.
+  const startMatchmaking = async () => {
+    setMatchmakingFailed(false);
+    setMatchmakingTimeLeft(30);
+    setCurrentMode('matchmaking');
+
+    try {
+      const res = await joinMatchmaking(game.id, game.title);
+      if (res.matched && res.room) {
+        enterOnlineMatch(res.room);
+        return;
+      }
+    } catch (err) {
+      console.error(err);
     }
-    return () => clearInterval(timer);
-  }, [currentMode]);
+
+    matchmakingCountdownRef.current = setInterval(() => {
+      setMatchmakingTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearMatchmakingTimers();
+          cancelMatchmaking().catch(() => {});
+          setMatchmakingFailed(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    matchmakingPollRef.current = setInterval(async () => {
+      try {
+        const statusRes = await getMatchmakingStatus();
+        if (statusRes.matched && statusRes.room) {
+          enterOnlineMatch(statusRes.room);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 2000);
+  };
+
+  const handleCancelMatchmaking = () => {
+    clearMatchmakingTimers();
+    cancelMatchmaking().catch(() => {});
+    setCurrentMode('select_mode');
+  };
+
+  // Receiving side of a friend invite: join the room the inviter already
+  // created. Their room is normally already 'ready' to receive us since
+  // they joined it the moment they sent the invite.
+  useEffect(() => {
+    if (!onlineMatch || onlineMatch.phase !== 'joining') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await joinGameRoom(onlineMatch.roomCode, game.id, game.title);
+        if (cancelled) return;
+        if (res.success && res.room) {
+          if (res.room.status === 'ready') {
+            enterOnlineMatch(res.room);
+          } else {
+            // We ended up first in this room (e.g. a stale/expired invite) —
+            // nothing to play against yet.
+            setOnlineMatch({ roomCode: onlineMatch.roomCode, phase: 'waiting_opponent_join' });
+          }
+        } else {
+          setOnlineMatch(null);
+          setCurrentMode('select_mode');
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setOnlineMatch(null);
+          setCurrentMode('select_mode');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlineMatch?.phase]);
+
+  // Sending side of a friend invite (and the receiving side's fallback
+  // above): poll the shared room until the other person joins.
+  useEffect(() => {
+    if (!onlineMatch || onlineMatch.phase !== 'waiting_opponent_join') return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await getGameRoom(onlineMatch.roomCode);
+        if (res.success && res.room && res.room.status !== 'waiting') {
+          clearInterval(interval);
+          enterOnlineMatch(res.room);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlineMatch?.phase, onlineMatch?.roomCode]);
+
+  // Once we've submitted our own result, poll until the opponent has
+  // submitted theirs too so the head-to-head outcome can be shown.
+  useEffect(() => {
+    if (!onlineMatch || onlineMatch.phase !== 'waiting_opponent_result') return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await getGameRoom(onlineMatch.roomCode);
+        if (res.success && res.room && res.room.status === 'finished') {
+          clearInterval(interval);
+          finalizeOnlineMatch(res.room);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlineMatch?.phase, onlineMatch?.roomCode]);
+
+  const finalizeOnlineMatch = (room: GameRoom) => {
+    const myOutcome = room.outcome?.results[currentUser.id] || 'tie';
+    const myPoints = room.outcome?.points[currentUser.id] || 0;
+    const opponentPlayer = room.players.find((p) => p.userId !== currentUser.id);
+
+    setGameResult(myOutcome);
+    setPointsEarned(myPoints);
+    setOnlineMatch((prev) =>
+      prev
+        ? {
+            ...prev,
+            opponent: opponentPlayer
+              ? { username: opponentPlayer.username, displayName: opponentPlayer.displayName, avatar: opponentPlayer.avatar }
+              : prev.opponent
+          }
+        : prev
+    );
+    if (myOutcome === 'win') confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+    onPointsUpdated(myPoints, (currentUser.noobPoints || 0) + myPoints, myOutcome === 'win');
+    setIsSubmitting(false);
+    setCurrentMode('game_over');
+  };
+
+  const finishOnlineMatch = async (result: RoundResult) => {
+    if (!onlineMatch) return;
+    setIsSubmitting(true);
+    try {
+      const res = await submitGameRoomResult(onlineMatch.roomCode, result);
+      if (res.success && res.room) {
+        if (res.room.status === 'finished' && res.room.outcome) {
+          finalizeOnlineMatch(res.room);
+        } else {
+          setOnlineMatch({ ...onlineMatch, phase: 'waiting_opponent_result' });
+          setCurrentMode('play_match');
+          setIsSubmitting(false);
+        }
+      } else {
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+    }
+  };
 
   // Start Bot Game setup
   const startBotGameNow = () => {
+    // A genuinely fresh solo/bot round is never a continuation of a
+    // finished match — clear it so a later completion doesn't try to
+    // resubmit into an already-finished room. enterOnlineMatch() calls this
+    // first and then sets the real onlineMatch right after, so that still
+    // ends up correct for an actual match entry.
+    setOnlineMatch(null);
     setIsPassAndPlay(false);
     setCurrentMode('play_bot');
     setGameResult(null);
@@ -260,7 +465,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Dispatches to the right finish handler depending on mode — every game
   // engine's onGameOver wires here instead of calling finishGame directly.
   const handleGameOver = (result: RoundResult) => {
-    if (isPassAndPlay && !BOARD_GAME_IDS.includes(game.id)) finishPassPlayRound(result);
+    if (onlineMatch) finishOnlineMatch(result);
+    else if (isPassAndPlay && !BOARD_GAME_IDS.includes(game.id)) finishPassPlayRound(result);
     else finishGame(result);
   };
 
@@ -437,6 +643,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     try {
       await sendGameInvite(friend.id, game.id, game.title, generatedRoomCode);
       setInviteSent(true);
+      // Join our own room as player 1 and start waiting for them to accept
+      // it from the chat invite — this is the actual connection that was
+      // previously missing entirely (the invite used to just be a chat
+      // message with no real link between the two sides).
+      const res = await joinGameRoom(generatedRoomCode, game.id, game.title);
+      if (res.success && res.room) {
+        setOnlineMatch({ roomCode: generatedRoomCode, phase: 'waiting_opponent_join' });
+        setCurrentMode('play_match');
+      }
     } catch (err) {
       console.error(err);
       setInviteSent(true);
@@ -544,7 +759,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
                 {/* Option 1: Play with Available Users */}
                 <button
-                  onClick={() => setCurrentMode('matchmaking')}
+                  onClick={startMatchmaking}
                   className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-[#00FF66]/50 flex items-center justify-between transition-all group cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5">
@@ -659,7 +874,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   </div>
 
                   <button
-                    onClick={() => setCurrentMode('select_mode')}
+                    onClick={handleCancelMatchmaking}
                     className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
                   >
                     Cancel Search
@@ -682,10 +897,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     {/* Option A: Search Again */}
                     <button
-                      onClick={() => {
-                        setMatchmakingFailed(false);
-                        setMatchmakingTimeLeft(30);
-                      }}
+                      onClick={startMatchmaking}
                       className="p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#00FF66]/50 flex items-center justify-center gap-2 text-xs font-bold text-white hover:text-[#00FF66] transition-all cursor-pointer"
                     >
                       <RotateCcw className="w-4 h-4" />
@@ -960,6 +1172,53 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             </div>
           )}
 
+          {/* REAL 2-PLAYER MATCH: waiting for the opponent to join, or
+              waiting for them to finish their round, once we've finished ours */}
+          {currentMode === 'play_match' && (
+            <div className="py-8 flex flex-col items-center text-center space-y-5">
+              <div className="relative w-24 h-24 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-cyan-400/20 animate-ping" />
+                <div className="w-16 h-16 rounded-full bg-cyan-500/10 border-2 border-cyan-400 flex items-center justify-center">
+                  <Users className="w-7 h-7 text-cyan-400" />
+                </div>
+              </div>
+
+              {onlineMatch?.phase === 'waiting_opponent_result' ? (
+                <div>
+                  <h3 className="text-base font-bold text-white">You're Done — Waiting on the Other Player</h3>
+                  <p className="text-xs text-zinc-400 mt-1 max-w-xs">
+                    {onlineMatch.opponent
+                      ? `Waiting for @${onlineMatch.opponent.username} to finish their round of ${game.title}...`
+                      : `Waiting for your opponent to finish their round of ${game.title}...`}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="text-base font-bold text-white">Waiting for Your Opponent to Join</h3>
+                  <p className="text-xs text-zinc-400 mt-1 max-w-xs">
+                    {selectedFriend
+                      ? `@${selectedFriend.username} needs to accept your challenge from Direct Chat.`
+                      : 'Share your room code or wait for them to accept the invite.'}
+                  </p>
+                  <div className="mt-3 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 inline-block">
+                    <span className="text-[10px] text-zinc-500 block">Room Code</span>
+                    <span className="text-xs font-mono font-bold text-cyan-400">{onlineMatch?.roomCode}</span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setOnlineMatch(null);
+                  setCurrentMode('select_mode');
+                }}
+                className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
           {/* PASS AND PLAY HANDOFF (between Round 1 and Round 2) */}
           {currentMode === 'pass_play_handoff' && (
             <div className="py-8 flex flex-col items-center text-center space-y-5">
@@ -1105,6 +1364,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <h3 className="text-xl font-black text-white">
                     {game.id === 'subway_run'
                       ? `Run Complete! Survived ${survivalSeconds}s`
+                      : onlineMatch?.opponent
+                      ? `You Beat @${onlineMatch.opponent.username}!`
                       : isPassAndPlay
                       ? 'Player 1 Wins!'
                       : 'Victory! You Won!'}
@@ -1120,7 +1381,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                     🤝
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    {isPassAndPlay ? "It's a Tie!" : "Well Played! It's a Tie!"}
+                    {onlineMatch?.opponent
+                      ? `You and @${onlineMatch.opponent.username} Tied!`
+                      : isPassAndPlay
+                      ? "It's a Tie!"
+                      : "Well Played! It's a Tie!"}
                   </h3>
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-300 font-extrabold text-sm">
                     <Sparkles className="w-4 h-4" />
@@ -1133,7 +1398,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                     💥
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    {isPassAndPlay
+                    {onlineMatch?.opponent
+                      ? `@${onlineMatch.opponent.username} Won This One`
+                      : isPassAndPlay
                       ? 'Player 2 Wins!'
                       : game.id === 'chess_blitz'
                       ? 'Checkmated! Your Balance Is Wiped.'

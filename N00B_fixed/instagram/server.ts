@@ -211,6 +211,14 @@ async function startServer() {
   };
   let collections: any[] = [...MOCK_COLLECTIONS];
   let gameScores: any[] = [...MOCK_GAME_SCORES];
+  // Real-time-ish multiplayer: two players independently play the same
+  // game (identical to their solo vs-bot round — no per-game code changes
+  // needed) and this compares the two results once both are in. Ephemeral
+  // and short-lived by nature (a match is over in minutes), so these are
+  // never persisted — a server restart mid-match just means that one match
+  // is lost, same as any other in-memory session state.
+  let gameRooms: any[] = [];
+  let matchmakingQueue: any[] = [];
   let highlights: any[] = [...MOCK_HIGHLIGHTS];
   let reports: any[] = [];
   let chatReviews: any[] = [];
@@ -3220,6 +3228,232 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       currentUserPoints: active?.noobPoints || 0,
       currentUserRank: fullRank || 1
     });
+  });
+
+  const ROOM_MAX_AGE_MS = 30 * 60 * 1000;
+  function cleanupStaleRooms() {
+    const cutoff = Date.now() - ROOM_MAX_AGE_MS;
+    gameRooms = gameRooms.filter(r => new Date(r.createdAt).getTime() > cutoff);
+    const queueCutoff = Date.now() - 60000;
+    matchmakingQueue = matchmakingQueue.filter(q => new Date(q.joinedAt).getTime() > queueCutoff);
+  }
+
+  const ROOM_RESULT_RANK: Record<string, number> = { loss: 0, tie: 1, win: 2 };
+
+  function publicRoomView(room: any) {
+    return {
+      code: room.code,
+      gameId: room.gameId,
+      gameTitle: room.gameTitle,
+      status: room.status,
+      players: room.players.map((p: any) => ({ userId: p.userId, username: p.username, displayName: p.displayName, avatar: p.avatar })),
+      resultsSubmittedBy: Object.keys(room.results || {}),
+      outcome: room.outcome || null
+    };
+  }
+
+  // Join (or create) a match room by its code. Used both by "Play with a
+  // Friend" (the invite sender creates it, the recipient joins the same
+  // code from the chat invite) and by matchmaking (the pairing below
+  // creates one directly for both strangers at once).
+  app.post('/api/games/rooms/join', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (!checkRateLimit(`game-room-join:${req.ip}`, 60, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+    cleanupStaleRooms();
+
+    const { code, gameId, gameTitle } = req.body;
+    if (!code || !gameId) return res.status(400).json({ error: 'Room code and gameId are required.' });
+
+    let room = gameRooms.find(r => r.code === code);
+    const playerInfo = { userId: active.id, username: active.username, displayName: active.displayName || active.username, avatar: active.avatar || '/noob-logo.svg.jpeg' };
+
+    if (!room) {
+      room = {
+        code,
+        gameId,
+        gameTitle: gameTitle || gameId,
+        players: [playerInfo],
+        status: 'waiting',
+        results: {},
+        createdAt: new Date().toISOString()
+      };
+      gameRooms.push(room);
+      return res.status(201).json({ success: true, room: publicRoomView(room) });
+    }
+
+    const alreadyIn = room.players.some((p: any) => p.userId === active.id);
+    if (alreadyIn) {
+      return res.json({ success: true, room: publicRoomView(room) });
+    }
+
+    if (room.players.length >= 2) {
+      return res.status(409).json({ error: 'This match is already full.' });
+    }
+
+    room.players.push(playerInfo);
+    room.status = 'ready';
+    res.json({ success: true, room: publicRoomView(room) });
+  });
+
+  app.get('/api/games/rooms/:code', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const room = gameRooms.find(r => r.code === req.params.code);
+    if (!room) return res.status(404).json({ error: 'Match not found or has expired.' });
+    if (!room.players.some((p: any) => p.userId === active.id)) {
+      return res.status(403).json({ error: 'You are not part of this match.' });
+    }
+
+    res.json({ success: true, room: publicRoomView(room) });
+  });
+
+  // Submit this player's own result (identical to how a solo vs-bot round
+  // ends) into the shared room. Once both players have submitted, whoever
+  // did better (win > tie > loss) wins the match — same points as a solo
+  // win/tie/loss, so head-to-head play carries no extra payout to exploit.
+  app.post('/api/games/rooms/:code/result', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (!checkRateLimit(`game-room-result:${req.ip}`, 30, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+
+    const room = gameRooms.find(r => r.code === req.params.code);
+    if (!room) return res.status(404).json({ error: 'Match not found or has expired.' });
+    if (!room.players.some((p: any) => p.userId === active.id)) {
+      return res.status(403).json({ error: 'You are not part of this match.' });
+    }
+
+    const { result } = req.body;
+    if (!Object.prototype.hasOwnProperty.call(ROOM_RESULT_RANK, result)) {
+      return res.status(400).json({ error: 'Invalid result.' });
+    }
+
+    room.results = room.results || {};
+    if (!room.results[active.id]) {
+      room.results[active.id] = result;
+    }
+
+    const submittedIds = Object.keys(room.results);
+    if (room.status !== 'finished' && submittedIds.length >= 2 && room.players.length === 2) {
+      const [p1, p2] = room.players;
+      const r1 = room.results[p1.userId];
+      const r2 = room.results[p2.userId];
+      const rank1 = ROOM_RESULT_RANK[r1];
+      const rank2 = ROOM_RESULT_RANK[r2];
+
+      const outcomes: Record<string, 'win' | 'tie' | 'loss'> =
+        rank1 === rank2
+          ? { [p1.userId]: 'tie', [p2.userId]: 'tie' }
+          : rank1 > rank2
+          ? { [p1.userId]: 'win', [p2.userId]: 'loss' }
+          : { [p1.userId]: 'loss', [p2.userId]: 'win' };
+
+      for (const p of room.players) {
+        const user = users.find(u => u.id === p.userId);
+        if (!user) continue;
+        const outcome = outcomes[p.userId];
+        const earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
+        user.noobPoints = (user.noobPoints || 0) + earned;
+        user.gamesPlayedCount = (user.gamesPlayedCount || 0) + 1;
+        if (outcome === 'win') user.gamesWonCount = (user.gamesWonCount || 0) + 1;
+        if (earned > 0) {
+          const opponent = room.players.find((o: any) => o.userId !== p.userId);
+          recordTransaction(user, earned, `${outcome === 'win' ? 'Won' : 'Tied'} ${room.gameTitle} vs @${opponent?.username || 'opponent'}`);
+        }
+        gameScores.unshift({
+          id: `gs_${Date.now()}_${p.userId.slice(-4)}`,
+          gameId: room.gameId,
+          gameTitle: room.gameTitle,
+          username: p.username,
+          userAvatar: p.avatar,
+          score: earned,
+          noobsPoints: earned,
+          result: outcome,
+          opponent: room.players.find((o: any) => o.userId !== p.userId)?.username || 'Opponent',
+          date: 'Just now'
+        });
+      }
+
+      room.status = 'finished';
+      // `outcomes` here is the head-to-head result (who won the MATCH) —
+      // deliberately not `room.results`, which is each player's own solo
+      // round result (e.g. both could report "loss" against the bot and
+      // still tie the match against each other).
+      room.outcome = { results: outcomes, points: Object.fromEntries(room.players.map((p: any) => [p.userId, outcomes[p.userId] === 'win' ? 100 : outcomes[p.userId] === 'tie' ? 50 : 0])) };
+    }
+
+    res.json({ success: true, room: publicRoomView(room), yourTotalPoints: active.noobPoints || 0 });
+  });
+
+  // Matchmaking: pairs the first two people waiting for the same game into
+  // a room automatically. Replaces what used to be a client-side-only
+  // countdown timer that never actually looked for anyone.
+  app.post('/api/games/matchmaking/join', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (!checkRateLimit(`matchmaking-join:${req.ip}`, 30, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+    cleanupStaleRooms();
+
+    const { gameId, gameTitle } = req.body;
+    if (!gameId) return res.status(400).json({ error: 'gameId is required.' });
+
+    // Only ever wait for one thing at a time.
+    matchmakingQueue = matchmakingQueue.filter(q => q.userId !== active.id);
+
+    const waitingOpponent = matchmakingQueue.find(q => q.gameId === gameId && q.userId !== active.id && !q.matchedRoomCode);
+    if (waitingOpponent) {
+      const code = `MM-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
+      const opponentUser = users.find(u => u.id === waitingOpponent.userId);
+      const room = {
+        code,
+        gameId,
+        gameTitle: gameTitle || gameId,
+        players: [
+          { userId: waitingOpponent.userId, username: waitingOpponent.username, displayName: opponentUser?.displayName || waitingOpponent.username, avatar: opponentUser?.avatar || '/noob-logo.svg.jpeg' },
+          { userId: active.id, username: active.username, displayName: active.displayName || active.username, avatar: active.avatar || '/noob-logo.svg.jpeg' }
+        ],
+        status: 'ready',
+        results: {},
+        createdAt: new Date().toISOString()
+      };
+      gameRooms.push(room);
+      waitingOpponent.matchedRoomCode = code;
+
+      return res.json({ success: true, matched: true, room: publicRoomView(room) });
+    }
+
+    matchmakingQueue.push({ userId: active.id, username: active.username, gameId, joinedAt: new Date().toISOString(), matchedRoomCode: null });
+    res.json({ success: true, matched: false });
+  });
+
+  app.get('/api/games/matchmaking/status', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const entry = matchmakingQueue.find(q => q.userId === active.id);
+    if (!entry) return res.json({ success: true, matched: false });
+
+    if (entry.matchedRoomCode) {
+      const room = gameRooms.find(r => r.code === entry.matchedRoomCode);
+      matchmakingQueue = matchmakingQueue.filter(q => q.userId !== active.id);
+      if (room) return res.json({ success: true, matched: true, room: publicRoomView(room) });
+    }
+
+    res.json({ success: true, matched: false });
+  });
+
+  app.post('/api/games/matchmaking/cancel', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    matchmakingQueue = matchmakingQueue.filter(q => q.userId !== active.id);
+    res.json({ success: true });
   });
 
   // Record a match outcome: win = +100 NOOBs, tie = +50 NOOBs, loss = 0 NOOBs

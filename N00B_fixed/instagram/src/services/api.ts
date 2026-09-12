@@ -833,6 +833,80 @@ export async function sendGameInvite(
   return await res.json();
 }
 
+// --- Real 2-player matches (friend invite rooms + random matchmaking) ---
+
+export interface GameRoomPlayer {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+}
+
+export interface GameRoom {
+  code: string;
+  gameId: string;
+  gameTitle: string;
+  status: 'waiting' | 'ready' | 'finished';
+  players: GameRoomPlayer[];
+  resultsSubmittedBy: string[];
+  outcome: { results: Record<string, 'win' | 'tie' | 'loss'>; points: Record<string, number> } | null;
+}
+
+export async function joinGameRoom(
+  code: string,
+  gameId: string,
+  gameTitle: string
+): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  const res = await fetch(`${API_BASE}/games/rooms/join`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ code, gameId, gameTitle })
+  });
+  return await res.json();
+}
+
+export async function getGameRoom(code: string): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  const res = await fetch(`${API_BASE}/games/rooms/${code}`, { headers: getAuthHeaders() });
+  return await res.json();
+}
+
+export async function submitGameRoomResult(
+  code: string,
+  result: 'win' | 'tie' | 'loss'
+): Promise<{ success: boolean; room?: GameRoom; yourTotalPoints?: number; error?: string }> {
+  const res = await fetch(`${API_BASE}/games/rooms/${code}/result`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ result })
+  });
+  return await res.json();
+}
+
+export async function joinMatchmaking(
+  gameId: string,
+  gameTitle: string
+): Promise<{ success: boolean; matched: boolean; room?: GameRoom; error?: string }> {
+  const res = await fetch(`${API_BASE}/games/matchmaking/join`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ gameId, gameTitle })
+  });
+  return await res.json();
+}
+
+export async function getMatchmakingStatus(): Promise<{ success: boolean; matched: boolean; room?: GameRoom }> {
+  const res = await fetch(`${API_BASE}/games/matchmaking/status`, { headers: getAuthHeaders() });
+  return await res.json();
+}
+
+export async function cancelMatchmaking(): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/games/matchmaking/cancel`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  return await res.json();
+}
+
 // --- Discount Coupons (Wallet > My Coupons) ---
 
 export interface Coupon {

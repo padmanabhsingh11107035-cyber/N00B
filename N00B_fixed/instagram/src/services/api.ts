@@ -334,6 +334,17 @@ export async function fetchPostLikers(postId: string): Promise<{ users: User[] }
   return await res.json();
 }
 
+export async function recordPostView(postId: string) {
+  const res = await fetch(`${API_BASE}/posts/${postId}/view`, { method: 'POST', headers: getAuthHeaders() });
+  return await res.json();
+}
+
+// Owner-only — the server 403s this for anyone but the post's own author.
+export async function fetchPostViewers(postId: string): Promise<{ users: User[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/posts/${postId}/viewers`, { headers: getAuthHeaders() });
+  return await res.json();
+}
+
 export async function toggleSavePost(postId: string): Promise<{ isSaved: boolean; savesCount: number }> {
   const res = await fetch(`${API_BASE}/posts/${postId}/save`, { method: 'POST' });
   return await res.json();

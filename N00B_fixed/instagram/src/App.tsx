@@ -79,6 +79,15 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('feed');
+  // Tracks the tab the user was on immediately before the current one, so
+  // the Reels page's back arrow can return them to wherever they actually
+  // came from (feed, explore, profile, etc.) instead of a hardcoded tab.
+  const activeTabRef = useRef<NavTab>('feed');
+  const previousTabRef = useRef<NavTab>('feed');
+  useEffect(() => {
+    previousTabRef.current = activeTabRef.current;
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
   const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -288,6 +297,10 @@ export default function App() {
   const handleNavigateToReel = (reelId: string) => {
     setSelectedReelId(reelId);
     setActiveTab('reels');
+  };
+
+  const handleReelsGoBack = () => {
+    setActiveTab(previousTabRef.current);
   };
 
   const handleNavigateToPost = (postId: string) => {
@@ -892,6 +905,7 @@ export default function App() {
               onNavigateToChat={() => setActiveTab('chat')}
               initialReelId={selectedReelId}
               onToggleFollowUser={handleToggleFollowUser}
+              onGoBack={handleReelsGoBack}
             />
           </div>
         )}

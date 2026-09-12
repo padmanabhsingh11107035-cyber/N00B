@@ -484,10 +484,27 @@ async function startServer() {
       comments[contentId] = comments[contentId].filter((c: any) => c.userId !== target.id);
     });
 
-    // Detach them from other accounts' follow graphs and chats
+    // Detach them from other accounts' follow graphs and chats. Every
+    // account that was following the deleted user loses one follow — both
+    // the raw list AND the numeric counter, since followersCount/
+    // followingCount are stored counters incremented/decremented on
+    // follow/unfollow, not derived from array length, so trimming the
+    // array alone leaves every affected profile's count permanently
+    // inflated by however many people they followed who later got deleted.
     users.forEach(u => {
-      if (u.followingIds) u.followingIds = u.followingIds.filter((id: string) => id !== target.id);
+      if (u.followingIds?.includes(target.id)) {
+        u.followingIds = u.followingIds.filter((id: string) => id !== target.id);
+        u.followingCount = Math.max(0, (u.followingCount || 0) - 1);
+      }
       if (u.blockedUserIds) u.blockedUserIds = u.blockedUserIds.filter((id: string) => id !== target.id);
+    });
+    // Symmetric cleanup the other direction: everyone the deleted user was
+    // following loses one follower.
+    (target.followingIds || []).forEach((followedId: string) => {
+      const followedUser = users.find(u => u.id === followedId);
+      if (followedUser) {
+        followedUser.followersCount = Math.max(0, (followedUser.followersCount || 0) - 1);
+      }
     });
     chats.forEach(c => {
       c.participants = c.participants.filter((p: any) => p.id !== target.id);
@@ -2040,6 +2057,35 @@ async function startServer() {
       return res.status(403).json({ error: 'You cannot view this post.' });
     }
     res.json({ users: await resolveUserList(post.likedBy || []) });
+  });
+
+  // Record that the active user has seen this post — idempotent per user,
+  // same as the reel/story view trackers. The client fires this once a
+  // post has actually scrolled into view (not just been fetched as part
+  // of the feed list), since simply appearing in an API response isn't
+  // the same as someone having looked at it.
+  app.post('/api/posts/:id/view', (req, res) => {
+    const post = posts.find(p => p.id === req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const active = getActiveUser(req);
+    if (active && active.id !== post.userId) {
+      post.viewedBy = post.viewedBy || [];
+      if (!post.viewedBy.includes(active.id)) {
+        post.viewedBy.push(active.id);
+      }
+    }
+    res.json({ success: true, viewsCount: (post.viewedBy || []).length });
+  });
+
+  // Who viewed this post — owner-only, same convention as reels/stories.
+  app.get('/api/posts/:id/viewers', async (req, res) => {
+    const post = posts.find(p => p.id === req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const active = getActiveUser(req);
+    if (!active || active.id !== post.userId) {
+      return res.status(403).json({ error: 'Only the post owner can see who viewed it.' });
+    }
+    res.json({ users: await resolveUserList(post.viewedBy || []) });
   });
 
   app.post('/api/posts/:id/save', (req, res) => {

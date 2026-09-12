@@ -15,7 +15,9 @@ import {
   Share2,
   Check,
   Film,
-  Eye
+  Eye,
+  MoreVertical,
+  ArrowLeft
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import {
@@ -45,6 +47,7 @@ interface ReelsViewProps {
   onNavigateToChat: () => void;
   initialReelId?: string;
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
+  onGoBack?: () => void;
 }
 
 // Fisher-Yates shuffle — used to randomize reel order and to reshuffle
@@ -64,7 +67,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   currentUser,
   onNavigateToChat,
   initialReelId,
-  onToggleFollowUser
+  onToggleFollowUser,
+  onGoBack
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -74,8 +78,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [showAlgorithmModal, setShowAlgorithmModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [showLikesSheet, setShowLikesSheet] = useState(false);
-  const [showViewersSheet, setShowViewersSheet] = useState(false);
+  const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
+  const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
   const [algorithmWeights, setAlgorithmWeights] = useState({
     robotics: 85,
     code: 90,
@@ -93,6 +97,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  // Set true only when the browser itself rejected unmuted autoplay (not
+  // when the user deliberately tapped the volume icon) — lets the
+  // first-interaction listener below know it's safe to switch sound back
+  // on automatically, without ever overriding a real manual mute.
+  const wasAutoMutedRef = useRef(false);
 
   useEffect(() => {
     if (initialReelId) {
@@ -139,9 +148,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         // frozen on a black frame forever (isPlaying said "true" but the
         // element never actually started). Retry muted, which every
         // browser allows unconditionally, so the reel always visibly
-        // plays; the volume button still lets them unmute by hand.
+        // plays. Tracked as "auto-muted" (not a real user choice) so the
+        // very next tap/key/touch anywhere can switch sound back on by
+        // itself — reels should default to audio-on, not require someone
+        // to find and tap the volume icon every time they open the page.
         if (!video.muted) {
           video.muted = true;
+          wasAutoMutedRef.current = true;
           setIsMuted(true);
           video.play().catch(() => {});
         }
@@ -150,6 +163,34 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       video.pause();
     }
   }, [isPlaying, currentReel?.id]);
+
+  // The moment the browser registers ANY real user gesture, it will allow
+  // unmuted playback — so retry with sound on right then, instead of
+  // leaving the reel silently muted until someone notices and taps the
+  // volume icon themselves.
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (!wasAutoMutedRef.current) return;
+      wasAutoMutedRef.current = false;
+      setIsMuted(false);
+      const video = videoRef.current;
+      if (video) {
+        video.muted = false;
+        video.play().catch(() => {
+          // Still blocked for some reason — fall back to muted again
+          // rather than leaving playback stalled.
+          wasAutoMutedRef.current = true;
+          video.muted = true;
+          setIsMuted(true);
+        });
+      }
+    };
+    const events: (keyof DocumentEventMap)[] = ['pointerdown', 'touchstart', 'keydown'];
+    events.forEach((evt) => document.addEventListener(evt, unlockAudio));
+    return () => {
+      events.forEach((evt) => document.removeEventListener(evt, unlockAudio));
+    };
+  }, []);
 
   // Load real comments for the currently-open reel instead of showing
   // static placeholder text.
@@ -264,7 +305,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
   const touchStartY = useRef<number | null>(null);
   const isNavLockedRef = useRef(false);
-  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal || showLikesSheet || showViewersSheet;
+  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal || showLikesViewsSheet;
 
   const navigateWithCooldown = (direction: 'next' | 'prev') => {
     if (isNavLockedRef.current) return;
@@ -368,6 +409,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           key={currentReel.id}
           ref={videoRef}
           src={currentReel.videoUrl}
+          poster={currentReel.thumbnailUrl}
           loop
           autoPlay
           playsInline
@@ -425,6 +467,18 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         {/* Top Control Bar */}
         <div className="absolute top-3 inset-x-3 z-30 flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-2">
+            {onGoBack && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGoBack();
+                }}
+                className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
+                title="Go back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
             <span className="text-sm font-extrabold text-white tracking-tight drop-shadow-md">
               Reels
             </span>
@@ -471,6 +525,19 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+
+            {/* More options: Likes & Views (Views tab only shows for the reel's own owner) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLikesViewsInitialTab('likes');
+                setShowLikesViewsSheet(true);
+              }}
+              className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
+              title="Likes & Views"
+            >
+              <MoreVertical className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -594,7 +661,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (currentReel.likesCount > 0) setShowLikesSheet(true);
+                if (currentReel.likesCount > 0) {
+                  setLikesViewsInitialTab('likes');
+                  setShowLikesViewsSheet(true);
+                }
               }}
               className="text-[10px] font-bold text-white drop-shadow cursor-pointer hover:underline disabled:hover:no-underline"
               disabled={currentReel.likesCount === 0}
@@ -608,7 +678,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setShowViewersSheet(true);
+                setLikesViewsInitialTab('views');
+                setShowLikesViewsSheet(true);
               }}
               className="flex flex-col items-center gap-1 group cursor-pointer"
             >
@@ -813,19 +884,16 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         </div>
       )}
 
-      {showLikesSheet && (
+      {showLikesViewsSheet && (
         <LikesViewsSheet
-          title="Liked by"
-          fetchUsers={() => fetchReelLikers(currentReel.id)}
-          onClose={() => setShowLikesSheet(false)}
-        />
-      )}
-
-      {showViewersSheet && (
-        <LikesViewsSheet
-          title="Viewed by"
-          fetchUsers={() => fetchReelViewers(currentReel.id)}
-          onClose={() => setShowViewersSheet(false)}
+          likes={{ label: 'Likes', fetchUsers: () => fetchReelLikers(currentReel.id) }}
+          views={
+            currentReel.userId === currentUser.id
+              ? { label: 'Views', fetchUsers: () => fetchReelViewers(currentReel.id) }
+              : undefined
+          }
+          initialTab={likesViewsInitialTab}
+          onClose={() => setShowLikesViewsSheet(false)}
         />
       )}
       </div>

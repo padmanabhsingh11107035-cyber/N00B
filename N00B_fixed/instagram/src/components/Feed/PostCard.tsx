@@ -23,7 +23,7 @@ import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
-import { fetchPostLikers } from '../../services/api';
+import { fetchPostLikers, fetchPostViewers, recordPostView } from '../../services/api';
 
 interface PostCardProps {
   post: Post;
@@ -91,6 +91,33 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
     });
   }, [post.slides]);
+
+  // Record a view once this post has genuinely scrolled into view (not
+  // merely been fetched as part of the feed list) — matches the same
+  // "actually seen it" trigger reels/stories already use, via
+  // IntersectionObserver rather than a click, since a feed post has no
+  // separate "opened" moment. Fires at most once per mount.
+  const articleRef = useRef<HTMLElement>(null);
+  const hasRecordedViewRef = useRef(false);
+  useEffect(() => {
+    if (isOwner) return; // no point recording your own view of your own post
+    const el = articleRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (hasRecordedViewRef.current) return;
+        if (entries[0]?.isIntersecting) {
+          hasRecordedViewRef.current = true;
+          recordPostView(post.id).catch(() => {});
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.id]);
 
   const handleDoubleTap = () => {
     if (!post.isLiked) {
@@ -174,6 +201,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <article
+      ref={articleRef}
       id={`post-card-${post.id}`}
       className="w-full bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden mb-4 shadow-xl backdrop-blur-sm transition-all"
     >
@@ -273,6 +301,15 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <EyeOff className="w-4 h-4" /> Hide Advertisement
                 </button>
               )}
+              <button
+                onClick={() => {
+                  setShowLikesSheet(true);
+                  setShowOptionsMenu(false);
+                }}
+                className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+              >
+                <Heart className="w-4 h-4 text-red-400" /> Likes{isOwner ? ' & Views' : ''}
+              </button>
               {isOwner && (
                 <>
                   <button
@@ -627,8 +664,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
       {showLikesSheet && (
         <LikesViewsSheet
-          title="Liked by"
-          fetchUsers={() => fetchPostLikers(post.id)}
+          likes={{ label: 'Likes', fetchUsers: () => fetchPostLikers(post.id) }}
+          views={isOwner ? { label: 'Views', fetchUsers: () => fetchPostViewers(post.id) } : undefined}
           onClose={() => setShowLikesSheet(false)}
         />
       )}

@@ -1,11 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Loader2, Heart, Eye } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from './VerifiedBadge';
 
-interface LikesViewsSheetProps {
-  title: string; // e.g. "Liked by" / "Viewed by"
+interface ListSource {
+  label: string; // e.g. "Likes" / "Views"
   fetchUsers: () => Promise<{ users?: User[]; error?: string }>;
+}
+
+interface LikesViewsSheetProps {
+  // At least one of these must be given. When both are given, the sheet
+  // shows a Likes/Views tab switcher at the top; with only one, it just
+  // shows that single list under its own label.
+  likes?: ListSource;
+  views?: ListSource;
+  initialTab?: 'likes' | 'views';
   onClose: () => void;
   onNavigateToUser?: (user: User) => void;
 }
@@ -18,8 +28,19 @@ const DRAG_DISMISS_THRESHOLD = 90;
 // Shared bottom sheet for "who liked this" / "who viewed this" on a post,
 // reel, or story — fixed at 75% of the viewport height, drag-to-dismiss
 // from the handle/header (the list itself scrolls normally), matching the
-// same slide-up entrance as the Comments sheet.
-export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({ title, fetchUsers, onClose, onNavigateToUser }) => {
+// same slide-up entrance as the Comments sheet. Callers control which
+// tab(s) exist (e.g. reels/stories only pass `views` to the non-owner).
+export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
+  likes,
+  views,
+  initialTab,
+  onClose,
+  onNavigateToUser
+}) => {
+  const hasBothTabs = !!likes && !!views;
+  const [activeTab, setActiveTab] = useState<'likes' | 'views'>(initialTab || (likes ? 'likes' : 'views'));
+  const activeSource = activeTab === 'likes' ? likes : views;
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +51,13 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({ title, fetchUs
   const dragStartYRef = useRef(0);
 
   useEffect(() => {
+    if (!activeSource) return;
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
-        const res = await fetchUsers();
+        const res = await activeSource.fetchUsers();
         if (cancelled) return;
         if (res.users) {
           setUsers(res.users);
@@ -50,7 +74,7 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({ title, fetchUs
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeTab]);
 
   const handleDragStart = (e: React.TouchEvent) => {
     draggingRef.current = true;
@@ -73,7 +97,13 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({ title, fetchUs
     }
   };
 
-  return (
+  // Portalled straight to document.body: PostCard/ReelsView/StoryViewerModal
+  // all render this inside ancestors that use backdrop-blur/filter classes,
+  // and per spec a `filter`/`backdrop-filter` on ANY ancestor becomes the
+  // containing block for `position: fixed` descendants — without the
+  // portal this "fullscreen" sheet gets trapped inside that ancestor's own
+  // (much smaller) box instead of covering the viewport.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
@@ -102,9 +132,31 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({ title, fetchUs
           onTouchEnd={handleDragEnd}
           className="flex items-center justify-between px-4 pb-3 border-b border-neutral-800 shrink-0"
         >
-          <h3 className="text-sm font-bold text-white tracking-tight">
-            {title} {!loading && !error && <span className="text-xs text-gray-400 font-normal">({users.length})</span>}
-          </h3>
+          {hasBothTabs ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setActiveTab('likes')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                  activeTab === 'likes' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5" /> {likes!.label}
+              </button>
+              <button
+                onClick={() => setActiveTab('views')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                  activeTab === 'views' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" /> {views!.label}
+              </button>
+            </div>
+          ) : (
+            <h3 className="text-sm font-bold text-white tracking-tight">
+              {activeSource?.label}{' '}
+              {!loading && !error && <span className="text-xs text-gray-400 font-normal">({users.length})</span>}
+            </h3>
+          )}
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer"
@@ -149,6 +201,7 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({ title, fetchUs
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

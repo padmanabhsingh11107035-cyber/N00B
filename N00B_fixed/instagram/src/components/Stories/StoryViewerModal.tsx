@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, fetchStoryViewers } from '../../services/api';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -195,6 +195,18 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
+            {isOwnStory && (
+              <button
+                onClick={() => {
+                  setIsPaused(true);
+                  setShowViewersSheet(true);
+                }}
+                className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white"
+                title="Seen By"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -400,8 +412,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
         {showViewersSheet && (
           <LikesViewsSheet
-            title="Seen by"
-            fetchUsers={() => fetchStoryViewers(story.id)}
+            views={{ label: 'Seen By', fetchUsers: () => fetchStoryViewers(story.id) }}
             onClose={() => {
               setShowViewersSheet(false);
               setIsPaused(false);

@@ -438,10 +438,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
     loadChats();
     loadAllUsers();
 
-    // Cross-device real-time synchronization polling (every 2s for super fast message delivery)
+    // Cross-device real-time synchronization polling. Was 2s — every tick
+    // re-fetches and re-signs every visible chat's full participant list
+    // (including the Global Lounge's 50+ members), which adds up in server
+    // load over a long session; 5s is still fast enough to feel live.
     const interval = setInterval(() => {
       syncLiveChatData();
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);

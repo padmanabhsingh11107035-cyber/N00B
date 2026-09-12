@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Users, Check, Sparkles, Upload, Image, Shield, Search, UserCheck } from 'lucide-react';
 import { User, ChatConversation } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
-import { createGroupChat } from '../../services/api';
+import { createGroupChat, uploadMediaFile } from '../../services/api';
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -76,20 +76,13 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     try {
       setIsUploading(true);
       setErrorMsg('');
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'avatars');
-
-      const res = await fetch('/api/upload/media', {
-        method: 'POST',
-        headers: {
-          'x-user-id': currentUser.id
-        },
-        body: formData
-      });
-
-      const data = await res.json();
-      if (res.ok && data.url) {
+      // Routes through the same invisible client-side compression every
+      // other upload in the app uses (uploadMediaFile), instead of sending
+      // the raw camera-resolution file straight to B2 — this was one of a
+      // few upload paths that bypassed it, needlessly inflating storage and
+      // per-view download bandwidth.
+      const data = await uploadMediaFile(file, 'avatars');
+      if (data.success && data.url) {
         setAvatarUrl(data.url);
       } else {
         // Fallback to client reader

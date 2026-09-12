@@ -348,6 +348,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [forgotUsername, setForgotUsername] = useState('');
   const [forgotMobileNumber, setForgotMobileNumber] = useState('');
   const [forgotDateOfBirth, setForgotDateOfBirth] = useState('');
+  const [showForgotBirthdayPicker, setShowForgotBirthdayPicker] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
@@ -1460,13 +1461,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">Date of Birth</label>
-                <input
-                  type="date"
-                  required
-                  value={forgotDateOfBirth}
-                  onChange={(e) => setForgotDateOfBirth(e.target.value)}
-                  className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all [color-scheme:dark]"
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowForgotBirthdayPicker(true)}
+                  className="w-full flex items-center justify-between bg-black/40 text-sm px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all cursor-pointer text-left"
+                >
+                  <span className={forgotDateOfBirth ? 'text-white font-medium' : 'text-zinc-500'}>
+                    {forgotDateOfBirth
+                      ? new Date(forgotDateOfBirth).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+                      : 'Select your date of birth'}
+                  </span>
+                  <CalendarDays className="w-4 h-4 text-cyan-400 shrink-0" />
+                </button>
               </div>
 
               <div>
@@ -1491,6 +1497,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             </form>
           </div>
         </div>
+      )}
+
+      {showForgotBirthdayPicker && (
+        <BirthdayWheelPicker
+          value={forgotDateOfBirth}
+          maxDate={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000)}
+          minDate={new Date(Date.now() - 82 * 365.25 * 24 * 60 * 60 * 1000)}
+          onClose={() => setShowForgotBirthdayPicker(false)}
+          onConfirm={(iso) => {
+            setForgotDateOfBirth(iso);
+            setShowForgotBirthdayPicker(false);
+          }}
+        />
       )}
     </div>
   );

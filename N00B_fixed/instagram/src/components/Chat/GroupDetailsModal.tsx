@@ -19,7 +19,8 @@ import {
   updateGroupDetails,
   manageGroupAdmin,
   removeGroupMember,
-  addGroupMembers
+  addGroupMembers,
+  uploadMediaFile
 } from '../../services/api';
 
 interface GroupDetailsModalProps {
@@ -73,18 +74,11 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     try {
       setIsUploading(true);
       setErrorMsg('');
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'avatars');
-
-      const res = await fetch('/api/upload/media', {
-        method: 'POST',
-        headers: { 'x-user-id': currentUser.id },
-        body: formData
-      });
-
-      const data = await res.json();
-      if (res.ok && data.url) {
+      // Routes through the same invisible client-side compression every
+      // other upload in the app uses, instead of sending the raw
+      // camera-resolution file straight to B2.
+      const data = await uploadMediaFile(file, 'avatars');
+      if (data.success && data.url) {
         setAvatarUrl(data.url);
       } else {
         const reader = new FileReader();

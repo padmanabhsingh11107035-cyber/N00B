@@ -14,8 +14,11 @@ export async function compressImage(
     return file;
   }
 
-  // If SVG or GIF, preserve vector / animation
-  if (file.type.includes('svg') || file.type.includes('gif')) {
+  // If SVG, GIF, or WebP, preserve vector / animation — canvas drawImage()
+  // only ever captures a single static frame, so running an animated GIF or
+  // animated WebP (e.g. a Live Profile Picture) through this would silently
+  // flatten it to one frame.
+  if (file.type.includes('svg') || file.type.includes('gif') || file.type.includes('webp')) {
     return file;
   }
 

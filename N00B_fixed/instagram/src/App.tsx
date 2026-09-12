@@ -241,7 +241,7 @@ export default function App() {
       } catch (err) {
         console.error(err);
       }
-    }, 8000);
+    }, 20000);
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 

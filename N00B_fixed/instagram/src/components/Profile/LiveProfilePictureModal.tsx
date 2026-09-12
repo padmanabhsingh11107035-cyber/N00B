@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Zap, Upload, Check, Loader2, Sparkles } from 'lucide-react';
 import { User } from '../../types';
-import { fetchLiveAvatarPresets, applyLiveAvatar, LiveAvatarPreset } from '../../services/api';
+import { fetchLiveAvatarPresets, applyLiveAvatar, uploadMediaFile, LiveAvatarPreset } from '../../services/api';
 
 interface LiveProfilePictureModalProps {
   currentUser: User;
@@ -72,18 +72,14 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
 
     try {
       setIsUploading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'avatars');
-
-      const uploadRes = await fetch('/api/upload/media', {
-        method: 'POST',
-        headers: { 'x-user-id': currentUser.id },
-        body: formData
-      });
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok || !uploadData.url) {
-        setError(uploadData.error || 'Upload failed. Please try again.');
+      // Routes through the same invisible client-side compression every
+      // other upload uses — it already leaves GIF/WebP untouched (a static
+      // re-encode would flatten the animation), so this is safe for an
+      // animated live avatar while still compressing a plain photo someone
+      // uploads by mistake.
+      const uploadData = await uploadMediaFile(file, 'avatars');
+      if (!uploadData.success || !uploadData.url) {
+        setError('Upload failed. Please try again.');
         return;
       }
 

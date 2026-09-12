@@ -473,6 +473,20 @@ async function startServer() {
     return null;
   }
 
+  // Privacy: a private account's content should only be visible to the
+  // author themself or accounts they follow / are followed by — everyone
+  // else (including logged-out visitors) must not see it, whether that's
+  // a story, a post, or a reel.
+  function isAuthorVisibleTo(authorId: string, active: ReturnType<typeof getActiveUser>): boolean {
+    if (active?.id === authorId) return true;
+    const author = users.find(u => u.id === authorId);
+    if (!author || author.accountType !== 'private') return true;
+    if (!active) return false;
+    const isFollowing = active.followingIds?.includes(author.id);
+    const isFollower = author.followingIds?.includes(active.id);
+    return !!(isFollowing || isFollower);
+  }
+
   // Schedule a debounced state save after every mutating request finishes
   app.use((req, res, next) => {
     res.on('finish', () => {
@@ -1543,8 +1557,9 @@ async function startServer() {
   // --- POSTS ROUTES ---
   app.get('/api/posts', async (req, res) => {
     const active = getActiveUser(req);
+    const visible = posts.filter(p => isAuthorVisibleTo(p.userId, active));
     const mapped = await Promise.all(
-      posts.map(async (p) => {
+      visible.map(async (p) => {
         const signedSlides = await Promise.all(
           p.slides.map(async (s: any) => ({
             ...s,
@@ -1831,16 +1846,7 @@ async function startServer() {
     const visible = stories.filter(s => {
       // Auto-expire after 24 hours
       if (s.expiresAt && new Date(s.expiresAt).getTime() < now) return false;
-
-      // Privacy: public accounts are visible to everyone; private accounts
-      // only to the author themself or accounts they follow / are followed by.
-      if (s.userId === active?.id) return true;
-      const author = users.find(u => u.id === s.userId);
-      if (!author || author.accountType !== 'private') return true;
-      if (!active) return false;
-      const isFollowing = active.followingIds?.includes(author.id);
-      const isFollower = author.followingIds?.includes(active.id);
-      return !!(isFollowing || isFollower);
+      return isAuthorVisibleTo(s.userId, active);
     });
 
     const mapped = await Promise.all(
@@ -1888,8 +1894,9 @@ async function startServer() {
   // --- REELS ROUTES ---
   app.get('/api/reels', async (req, res) => {
     const active = getActiveUser(req);
+    const visible = reels.filter(r => isAuthorVisibleTo(r.userId, active));
     const mapped = await Promise.all(
-      reels.map(async r => ({
+      visible.map(async r => ({
         ...r,
         videoUrl: await signMediaKey(r.videoUrl),
         thumbnailUrl: await signMediaKey(r.thumbnailUrl),

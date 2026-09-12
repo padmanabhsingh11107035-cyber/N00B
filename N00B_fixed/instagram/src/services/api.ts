@@ -150,6 +150,26 @@ export async function fetchCurrentUser(): Promise<User | null> {
   }
 }
 
+// Used only to poll whether a session is still valid (e.g. to detect a
+// suspension mid-session). Unlike fetchCurrentUser, this must NEVER collapse
+// "the server said you're logged out" (200 + user: null — the only case
+// that's actually true) together with "the request didn't work" (a network
+// blip, a 502/503 during a deploy, a timeout) — those are transient and must
+// not be treated as a suspension, or a routine deploy hiccup logs everyone
+// out with a scary "your account was suspended" message.
+export async function checkSessionStatus(): Promise<'valid' | 'invalid' | 'unknown'> {
+  try {
+    const res = await fetch(`${API_BASE}/users/me`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return 'unknown';
+    const data = await res.json();
+    return data.user ? 'valid' : 'invalid';
+  } catch (err) {
+    return 'unknown';
+  }
+}
+
 export async function updateCurrentUser(userData: Partial<User>): Promise<User> {
   const res = await fetch(`${API_BASE}/users/me`, {
     method: 'PUT',

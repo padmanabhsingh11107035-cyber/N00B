@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Home,
   Compass,
@@ -15,11 +15,13 @@ import {
   LogOut,
   Users,
   UserCheck,
-  UserPlus
+  UserPlus,
+  Plus
 } from 'lucide-react';
 import { Post, Reel, Story, User, StatusNote, AppNotification } from './types';
 import {
   fetchCurrentUser,
+  checkSessionStatus,
   fetchPosts,
   fetchStories,
   fetchReels,
@@ -183,21 +185,34 @@ export default function App() {
 
   // Suspending an account only stops it dead on its NEXT request — there's
   // no push channel to end an already-open session instantly. Polling
-  // /api/users/me (which the server now returns null for once suspended)
+  // /api/users/me (which the server now returns 200+null once suspended)
   // is what makes that show up as "logged out" within moments instead of
   // only on the next full page reload.
+  //
+  // checkSessionStatus distinguishes "the server said you're logged out"
+  // from "the request didn't work" (a network blip, a 502/503 during a
+  // deploy, a timeout) — collapsing those together was a real bug: any
+  // routine deploy hiccup landing on this poll logged the user out with a
+  // scary "your account was suspended" message even though nothing had
+  // actually happened to their account. `unknown` is now ignored outright,
+  // and even a real `invalid` needs to repeat on the very next poll before
+  // acting, so one fluky response can't end a session by itself.
+  const consecutiveInvalidRef = useRef(0);
   useEffect(() => {
     if (!currentUser) return;
+    consecutiveInvalidRef.current = 0;
     const interval = setInterval(async () => {
-      try {
-        const freshUser = await fetchCurrentUser();
-        if (!freshUser) {
-          setSessionEndedNotice('Your account has been suspended by the NOOB administrator. You will not be able to log back in until it is restored.');
-          setSessionUserId(null);
-          setCurrentUser(null);
-        }
-      } catch (err) {
-        console.error('Session check failed:', err);
+      const status = await checkSessionStatus();
+      if (status === 'unknown') return;
+      if (status === 'valid') {
+        consecutiveInvalidRef.current = 0;
+        return;
+      }
+      consecutiveInvalidRef.current += 1;
+      if (consecutiveInvalidRef.current >= 2) {
+        setSessionEndedNotice('Your account has been suspended by the NOOB administrator. You will not be able to log back in until it is restored.');
+        setSessionUserId(null);
+        setCurrentUser(null);
       }
     }, 30000);
     return () => clearInterval(interval);
@@ -634,6 +649,14 @@ export default function App() {
             >
               <Film className={`w-4 h-4 ${activeTab === 'reels' ? 'stroke-red-500' : 'stroke-current'}`} />
               <span>Reels & Videos</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectNavTab('post')}
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-[#00FF66] hover:bg-[#00FF66]/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(0,255,102,0.25)]"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Create</span>
             </button>
 
             <button

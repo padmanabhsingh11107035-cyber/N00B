@@ -92,15 +92,17 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
             <button
               id="create-story-btn"
               onClick={onOpenCreateStory}
-              className="w-14 h-14 rounded-full p-[2px] bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center justify-center cursor-pointer relative"
+              className="w-16 h-16 rounded-full p-[2px] bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center justify-center cursor-pointer relative"
               title="Add to Story"
             >
-              <img
-                src={currentUser.avatar || '/noob-logo.svg.jpeg'}
-                alt="My Story"
-                className="w-full h-full rounded-full object-cover"
-                referrerPolicy="no-referrer"
-              />
+              <div className="w-full h-full rounded-full p-[2px] bg-black">
+                <img
+                  src={currentUser.avatar || '/noob-logo.svg.jpeg'}
+                  alt="My Story"
+                  className="w-full h-full rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
               <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#00FF66] text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm">
                 <Plus className="w-3 h-3 stroke-[3]" />
               </div>
@@ -119,7 +121,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
             title={`View ${story.username}'s Story`}
           >
             <div
-              className={`w-14 h-14 rounded-full p-[2px] transition-transform duration-200 group-hover:scale-105 ${
+              className={`w-16 h-16 rounded-full p-[2px] transition-transform duration-200 group-hover:scale-105 ${
                 story.isCloseFriendsOnly
                   ? 'bg-gradient-to-tr from-[#00FF66] via-emerald-400 to-green-300 shadow-[0_0_10px_rgba(0,255,102,0.3)]'
                   : 'bg-gradient-to-tr from-rose-500 via-amber-400 via-emerald-400 via-sky-500 to-purple-600 shadow-[0_0_10px_rgba(236,72,153,0.3)]'

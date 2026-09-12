@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Heart,
   MessageCircle,
@@ -72,6 +72,22 @@ export const PostCard: React.FC<PostCardProps> = ({
         avatar: post.collabUserAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
       }
     : null;
+
+  // Only the current slide's <img> is ever mounted, so switching slides used
+  // to mean a fresh network fetch on every arrow click, with the old image
+  // stuck on screen until it landed — feeling "stuck"/slow on anything but a
+  // fast connection. Warming the browser's image cache for every slide as
+  // soon as the post renders means later clicks just paint an already-loaded
+  // image instantly.
+  useEffect(() => {
+    if (!post.slides || post.slides.length <= 1) return;
+    post.slides.forEach((slide) => {
+      if (slide.mediaUrl && slide.mediaType !== 'video') {
+        const img = new Image();
+        img.src = slide.mediaUrl;
+      }
+    });
+  }, [post.slides]);
 
   const handleDoubleTap = () => {
     if (!post.isLiked) {

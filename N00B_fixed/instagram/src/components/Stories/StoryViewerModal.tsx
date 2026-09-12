@@ -328,7 +328,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         {/* Existing Story Comments Overlay List */}
         {story.comments && story.comments.length > 0 && (
           <div className="absolute bottom-16 inset-x-3 z-30 max-h-24 overflow-y-auto space-y-1 pr-2 no-scrollbar">
-            {story.comments.map((c) => (
+            {story.comments.filter(Boolean).map((c) => (
               <div key={c.id} className="bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-gray-200 flex items-center gap-2">
                 <span className="font-bold text-[#00FF66]">@{c.username}:</span>
                 <span className="truncate">{c.text}</span>

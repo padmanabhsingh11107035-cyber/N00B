@@ -118,6 +118,7 @@ export default function App() {
   } | null>(null);
   const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
+  const [sessionEndedNotice, setSessionEndedNotice] = useState<string | null>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -178,6 +179,28 @@ export default function App() {
     if (currentUser) {
       initPushNotifications();
     }
+  }, [currentUser?.id]);
+
+  // Suspending an account only stops it dead on its NEXT request — there's
+  // no push channel to end an already-open session instantly. Polling
+  // /api/users/me (which the server now returns null for once suspended)
+  // is what makes that show up as "logged out" within moments instead of
+  // only on the next full page reload.
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(async () => {
+      try {
+        const freshUser = await fetchCurrentUser();
+        if (!freshUser) {
+          setSessionEndedNotice('Your account has been suspended by the NOOB administrator. You will not be able to log back in until it is restored.');
+          setSessionUserId(null);
+          setCurrentUser(null);
+        }
+      } catch (err) {
+        console.error('Session check failed:', err);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
   }, [currentUser?.id]);
 
   // Prompt for contacts access (to suggest friends already on NOOB) once per
@@ -359,6 +382,11 @@ export default function App() {
   const handleAddStoryComment = async (storyId: string, text: string) => {
     try {
       const newComment = await addCommentToStory(storyId, text);
+      // A malformed/failed response must never be pushed into the list —
+      // a single undefined/null entry there crashes the whole app the next
+      // time this story's comments render (this is exactly what used to
+      // happen when the server endpoint didn't exist yet).
+      if (!newComment || !newComment.id) return;
       setStories((prev) =>
         prev.map((s) =>
           s.id === storyId ? { ...s, comments: [...(s.comments || []), newComment] } : s
@@ -547,7 +575,7 @@ export default function App() {
 
   // If no user is logged in, present the main Login / Sign Up Page
   if (!currentUser) {
-    return <AuthView onAuthSuccess={handleAuthSuccess} />;
+    return <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} />;
   }
 
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
@@ -845,6 +873,7 @@ export default function App() {
             currentUser={currentUser}
             allUsers={registeredUsers}
             onUserUpdated={(u) => setCurrentUser(u)}
+            onNavigateToUserProfile={handleNavigateToUserProfile}
           />
         )}
 

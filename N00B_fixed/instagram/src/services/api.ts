@@ -1096,6 +1096,18 @@ export async function suspendUserAccount(payload: {
   return await res.json();
 }
 
+export async function adjustUserPoints(
+  targetUserId: string,
+  payload: { setTo?: number; delta?: number; reason?: string }
+): Promise<{ success: boolean; message?: string; user?: User; error?: string }> {
+  const res = await fetch(`${API_BASE}/admin/users/${targetUserId}/adjust-points`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  return await res.json();
+}
+
 export async function registerPushToken(token: string): Promise<{ success: boolean }> {
   const res = await fetch(`${API_BASE}/users/push-token`, {
     method: 'POST',

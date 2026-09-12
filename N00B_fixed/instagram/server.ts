@@ -472,7 +472,12 @@ async function startServer() {
     const headerUserId = req.headers['x-user-id'] as string;
     if (headerUserId) {
       const found = users.find(u => u.id === headerUserId);
-      if (found) return found;
+      // A suspended account must stop working the moment it's suspended,
+      // not just be blocked from a fresh login — treating it as logged out
+      // here means every endpoint that requires auth (posting, following,
+      // GET /api/users/me, etc.) immediately starts rejecting it too,
+      // without having to add a suspension check to each one individually.
+      if (found && !found.isSuspended) return found;
     }
     return null;
   }
@@ -1367,8 +1372,19 @@ async function startServer() {
     if (!active) return res.status(401).json({ error: 'Please log in to upgrade.' });
 
     const { tierId, billing, couponCode } = req.body;
+    // A plain-object index lookup with an attacker-chosen key resolves
+    // inherited Object.prototype members too — tierId: "constructor" or
+    // "toString" would return a function, which is truthy (so the "unknown
+    // tier" check below never caught it) and then corrupts noobPoints to
+    // NaN once arithmetic is done against it. Only accept a key that's
+    // actually one of this object's own, real price entries.
+    if (typeof tierId !== 'string' || !Object.prototype.hasOwnProperty.call(PRO_TIER_PRICES, tierId)) {
+      return res.status(400).json({ error: 'Unknown Pro tier.' });
+    }
     const basePrice = PRO_TIER_PRICES[tierId];
-    if (!basePrice) return res.status(400).json({ error: 'Unknown Pro tier.' });
+    if (!Number.isFinite(basePrice) || basePrice <= 0) {
+      return res.status(400).json({ error: 'Unknown Pro tier.' });
+    }
 
     const index = users.findIndex((u) => u.id === active.id);
     if (index === -1) return res.status(404).json({ error: 'User account not found.' });
@@ -2020,6 +2036,35 @@ async function startServer() {
 
     stories.unshift(newStory);
     res.status(201).json({ success: true, story: newStory });
+  });
+
+  // The client has called this since it was built, but the route never
+  // existed — every comment attempt hit the catch-all 404 and the response
+  // (no `comment` field) got pushed into the story's comments array as
+  // `undefined` anyway, which then crashed the whole app the moment that
+  // story's comment list rendered (`undefined.id`).
+  app.post('/api/stories/:id/comment', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in to comment.' });
+
+    const story = stories.find(s => s.id === req.params.id);
+    if (!story) return res.status(404).json({ error: 'Story not found or has expired.' });
+
+    const text = (req.body.text || '').trim();
+    if (!text) return res.status(400).json({ error: 'Comment cannot be empty.' });
+
+    const comment = {
+      id: `sc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      username: active.username,
+      userAvatar: active.avatar || '/noob-logo.svg.jpeg',
+      text: text.slice(0, 500),
+      createdAt: new Date().toISOString()
+    };
+
+    story.comments = story.comments || [];
+    story.comments.push(comment);
+
+    res.status(201).json({ success: true, comment });
   });
 
   // --- REELS ROUTES ---
@@ -3126,7 +3171,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   });
 
   // --- 50 MINI-GAMES, LEADERBOARD & NOOB POINTS ---
-  app.get('/api/games/leaderboard', (req, res) => {
+  app.get('/api/games/leaderboard', async (req, res) => {
     // Collect all points
     const playerMap: Record<string, any> = {};
 
@@ -3150,23 +3195,39 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       }
     });
 
-    const leaderboard = Object.values(playerMap)
-      .sort((a, b) => b.noobPoints - a.noobPoints)
-      .map((p, idx) => ({
-        rank: idx + 1,
-        ...p
-      }));
+    const leaderboard = await Promise.all(
+      Object.values(playerMap)
+        .sort((a, b) => b.noobPoints - a.noobPoints)
+        .slice(0, 10)
+        .map(async (p, idx) => ({
+          rank: idx + 1,
+          ...p,
+          // Every other listing (GET /api/users, posts, reels...) signs a
+          // stored B2 object key into a real URL before sending it to the
+          // client — this endpoint was handing back the raw key instead,
+          // which the browser can't load, so every leaderboard avatar
+          // rendered as a broken image.
+          avatar: await signMediaKey(p.avatar)
+        }))
+    );
 
     const active = getActiveUser(req);
+    const fullRank = Object.values(playerMap)
+      .sort((a, b) => b.noobPoints - a.noobPoints)
+      .findIndex(p => p.username === active?.username) + 1;
     res.json({
-      leaderboard: leaderboard.slice(0, 10),
+      leaderboard,
       currentUserPoints: active?.noobPoints || 0,
-      currentUserRank: leaderboard.findIndex(p => p.username === active?.username) + 1 || 1
+      currentUserRank: fullRank || 1
     });
   });
 
   // Record a match outcome: win = +100 NOOBs, tie = +50 NOOBs, loss = 0 NOOBs
   app.post('/api/games/record-match', (req, res) => {
+    if (!checkRateLimit(`record-match:${req.ip}`, 20, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+
     const { gameId, gameTitle, result, opponentName, vsBot } = req.body;
     // result: 'win' | 'tie' | 'loss'
     const active = getActiveUser(req);
@@ -3185,7 +3246,17 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     let earnedPoints = 0;
     if (isChessHighStakes) {
       if (result === 'win') {
-        earnedPoints = 50000000;
+        // The jackpot is a one-time new-player reward, not a repeatable
+        // faucet — this used to pay out in full on every single reported
+        // win with no cap, which is how one account reached 148M+ points
+        // by just replaying the same "I won" request. Every win after the
+        // first pays a normal, modest amount instead.
+        if (active && !active.hasWonChessJackpot) {
+          earnedPoints = 50000000;
+          active.hasWonChessJackpot = true;
+        } else {
+          earnedPoints = 500;
+        }
       } else if (result === 'loss') {
         earnedPoints = -(active ? active.noobPoints || 0 : 0);
       } else {
@@ -3247,6 +3318,9 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   // run since, like every other mini-game score in this app, the result is
   // client-reported with no server-side replay validation.
   app.post('/api/games/survival-score', (req, res) => {
+    if (!checkRateLimit(`survival-score:${req.ip}`, 20, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
 
@@ -3639,6 +3713,52 @@ COMPLETE PLATFORM CAPABILITIES:
       message: `Account @${target.username} has been ${suspend ? 'suspended' : 'unsuspended'} successfully.`,
       user: sanitizeUser(target)
     });
+  });
+
+  // Admin: forcibly set or adjust a user's NOOB Points balance — the
+  // cleanup tool for exploited/duped balances (e.g. a game-payout bug
+  // someone abused), since there was previously no way to correct a
+  // balance without editing the database directly.
+  app.post('/api/admin/users/:id/adjust-points', (req, res) => {
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Access denied. Only the NOOB administrator can adjust point balances.' });
+    }
+
+    const target = users.find(u => u.id === req.params.id);
+    if (!target) return res.status(404).json({ error: 'Target account not found.' });
+
+    const { setTo, delta, reason } = req.body;
+    const before = target.noobPoints || 0;
+    let after: number;
+    if (Number.isFinite(setTo)) {
+      after = Math.max(0, Math.round(setTo));
+    } else if (Number.isFinite(delta)) {
+      after = Math.max(0, Math.round(before + delta));
+    } else {
+      return res.status(400).json({ error: 'Provide either setTo or delta as a finite number.' });
+    }
+
+    target.noobPoints = after;
+    recordTransaction(target, after - before, reason?.trim() || `Balance corrected by NOOB Admin (${before.toLocaleString()} → ${after.toLocaleString()})`);
+
+    notifications.unshift({
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      senderId: 'u_noob_admin',
+      senderUsername: 'NOOB',
+      senderDisplayName: 'NOOB',
+      senderAvatar: '/noob-logo.svg.jpeg',
+      senderIsVerified: true,
+      targetUserId: target.id,
+      targetUsername: target.username,
+      title: '⚠️ Balance Adjusted',
+      message: `Your NOOB Points balance was adjusted by an administrator: ${before.toLocaleString()} → ${after.toLocaleString()}.`,
+      type: 'admin_direct',
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({ success: true, message: `@${target.username}'s balance updated to ${after.toLocaleString()} points.`, user: sanitizeUser(target) });
   });
 
   // Admin: Send custom notification (Broadcast to ALL or specific user)

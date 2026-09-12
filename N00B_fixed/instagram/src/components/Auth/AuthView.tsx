@@ -42,6 +42,9 @@ import confetti from 'canvas-confetti';
 
 interface AuthViewProps {
   onAuthSuccess: (user: User) => void;
+  // Shown once, e.g. when a session was force-ended (account suspended)
+  // rather than the user choosing to log out themselves.
+  notice?: string;
 }
 
 // Generate random 5-character captcha code
@@ -219,10 +222,10 @@ const BUSINESS_CATEGORIES = [
   'Local Business & Cafe'
 ];
 
-export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
+export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => {
   const [mode, setMode] = useState<'signup' | 'login'>('login');
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(notice || null);
   const [showPassword, setShowPassword] = useState(false);
 
   // Legal Modals

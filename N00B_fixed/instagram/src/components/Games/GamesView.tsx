@@ -29,6 +29,7 @@ interface GamesViewProps {
   currentUser: User;
   allUsers: User[];
   onUserUpdated?: (user: User) => void;
+  onNavigateToUserProfile?: (user: User) => void;
 }
 
 // Formats noob points: if exceeding 1000, shows 1k, 1.1k, 1.2k, etc.
@@ -48,7 +49,8 @@ export const formatNoobPoints = (points: number): string => {
 export const GamesView: React.FC<GamesViewProps> = ({
   currentUser,
   allUsers,
-  onUserUpdated
+  onUserUpdated,
+  onNavigateToUserProfile
 }) => {
   const [activeTab, setActiveTab] = useState<'games' | 'leaderboard'>('games');
   const [selectedCategory, setSelectedCategory] = useState<GameCategory>('all');
@@ -365,10 +367,19 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 <span className="text-xs text-zinc-400">No rankings yet — be the first to play!</span>
               </div>
             ) : (
-              leaderboard.slice(0, 10).map((player, idx) => (
+              leaderboard.slice(0, 10).map((player, idx) => {
+              const fullUser = allUsers.find(
+                (u) => (player.userId && u.id === player.userId) || u.username === player.username
+              );
+              return (
               <div
                 key={player.userId || player.username || idx}
+                onClick={() => {
+                  if (fullUser && onNavigateToUserProfile) onNavigateToUserProfile(fullUser);
+                }}
                 className={`p-3 rounded-2xl flex items-center justify-between gap-3 transition-colors ${
+                  fullUser && onNavigateToUserProfile ? 'cursor-pointer' : ''
+                } ${
                   player.username === currentUser.username
                     ? 'bg-[#00FF66]/10 border border-[#00FF66]/30'
                     : 'bg-zinc-900/60 border border-zinc-800/80 hover:bg-zinc-900'
@@ -412,7 +423,8 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   <span className="text-[9px] text-zinc-500 block">Score</span>
                 </div>
               </div>
-              ))
+              );
+              })
             )}
           </div>
         </div>

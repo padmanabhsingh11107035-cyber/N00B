@@ -12,10 +12,11 @@ import {
   X,
   Loader2,
   RefreshCw,
-  Trash2
+  Trash2,
+  Coins
 } from 'lucide-react';
 import { User } from '../../types';
-import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction } from '../../services/api';
+import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
 interface AdminControlModalProps {
@@ -46,6 +47,11 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
   // Delete-account confirmation state
   const [selectedUserForDelete, setSelectedUserForDelete] = useState<User | null>(null);
+
+  // Points-adjustment modal state
+  const [selectedUserForPoints, setSelectedUserForPoints] = useState<User | null>(null);
+  const [pointsInput, setPointsInput] = useState('');
+  const [pointsReason, setPointsReason] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -140,6 +146,26 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         await loadUsers();
       } else {
         setStatusMessage({ text: res.error || 'Failed to delete account.', type: 'error' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleAdjustPoints = async (targetUser: User, setTo: number) => {
+    try {
+      setActionLoading(targetUser.id);
+      const res = await adjustUserPoints(targetUser.id, { setTo, reason: pointsReason.trim() || undefined });
+      if (res.success) {
+        setStatusMessage({ text: res.message || `@${targetUser.username}'s balance updated.`, type: 'success' });
+        setSelectedUserForPoints(null);
+        setPointsInput('');
+        setPointsReason('');
+        await loadUsers();
+      } else {
+        setStatusMessage({ text: res.error || 'Failed to adjust balance.', type: 'error' });
       }
     } catch (err: any) {
       setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
@@ -380,7 +406,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                               )}
                             </div>
                             <span className="text-[11px] text-zinc-400 block truncate">
-                              {user.displayName || user.email || 'NOOB Member'} • {user.followersCount || 0} followers
+                              {user.displayName || user.email || 'NOOB Member'} • {user.followersCount || 0} followers • {(user.noobPoints || 0).toLocaleString()} noobs
                             </span>
                             {isSuspended && user.suspendedReason && (
                               <span className="text-[10px] text-red-400/80 block truncate">
@@ -392,6 +418,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
                         {/* Action buttons */}
                         <div className="shrink-0 flex items-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              setSelectedUserForPoints(user);
+                              setPointsInput(String(user.noobPoints || 0));
+                              setPointsReason('');
+                            }}
+                            disabled={actionLoading === user.id}
+                            title="Set this account's NOOB Points balance"
+                            className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Coins className="w-3.5 h-3.5" />
+                            Points
+                          </button>
                           {isSelf ? (
                             <span className="text-[11px] text-zinc-500 font-bold px-3 py-1.5">Immune</span>
                           ) : (
@@ -679,6 +718,68 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black shadow-lg cursor-pointer"
               >
                 Confirm Suspension
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Points-adjustment sub-modal */}
+      {selectedUserForPoints && (
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-zinc-950 border border-amber-500/50 rounded-3xl p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-amber-400">
+              <Coins className="w-6 h-6" />
+              <h3 className="text-base font-black text-white">Adjust @{selectedUserForPoints.username}'s Points</h3>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Current balance: <span className="text-white font-bold">{(selectedUserForPoints.noobPoints || 0).toLocaleString()} noobs</span>.
+              Set a new balance below — use this to correct a duped/exploited amount.
+            </p>
+
+            <div>
+              <label className="text-xs text-zinc-300 font-bold block mb-1">New Balance</label>
+              <input
+                type="number"
+                min={0}
+                value={pointsInput}
+                onChange={(e) => setPointsInput(e.target.value)}
+                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-300 font-bold block mb-1">Reason (optional)</label>
+              <input
+                type="text"
+                value={pointsReason}
+                onChange={(e) => setPointsReason(e.target.value)}
+                placeholder="e.g. Corrected an exploited game-payout bug"
+                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={() => setSelectedUserForPoints(null)}
+                className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const parsed = Number(pointsInput);
+                  if (!Number.isFinite(parsed) || parsed < 0) {
+                    setStatusMessage({ text: 'Enter a valid, non-negative number.', type: 'error' });
+                    return;
+                  }
+                  handleAdjustPoints(selectedUserForPoints, parsed);
+                }}
+                disabled={actionLoading === selectedUserForPoints.id}
+                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded-xl text-xs font-black shadow-lg cursor-pointer"
+              >
+                {actionLoading === selectedUserForPoints.id ? 'Updating...' : 'Update Balance'}
               </button>
             </div>
           </div>

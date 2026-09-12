@@ -8,15 +8,62 @@ interface ChessGameProps {
   vsBot?: boolean;
 }
 
-// Unicode's "white" chess characters (U+2654-2659) are drawn as hollow
-// outline glyphs by convention — meant to be black ink on white paper, not
-// an actually-solid piece. Using them for the white side renders as a thin
-// outline no matter what CSS color is applied. Both sides use the "black"
-// (solid-filled) code points instead, and the actual piece color is done
-// entirely via CSS fill/stroke below, so both render as clean solid pieces.
-const PIECE_UNICODE: Record<string, string> = {
-  wp: '♟', wn: '♞', wb: '♝', wr: '♜', wq: '♛', wk: '♚',
-  bp: '♟', bn: '♞', bb: '♝', br: '♜', bq: '♛', bk: '♚'
+// Hand-drawn piece silhouettes, one small set of SVG primitives per piece
+// type (viewBox "0 0 45 45"), shared by both colors — actual color is
+// applied purely via fill/stroke on the wrapping <g> where these render.
+// Font-based Unicode chess glyphs varied wildly in clarity across
+// browsers/OSes, and some (the knight especially) barely read as their
+// piece at a glance — these real shapes read clearly and consistently
+// everywhere, and were checked visually before being wired in here.
+const PIECE_SVG: Record<string, React.ReactNode> = {
+  p: (
+    <>
+      <circle cx="22.5" cy="12" r="6.5" />
+      <path d="M17 21 L28 21 L32.5 34 L12.5 34 Z" />
+      <rect x="10" y="34" width="25" height="5" rx="1.5" />
+    </>
+  ),
+  r: (
+    <>
+      <path d="M9 36 L9 15 L12 15 L12 10 L17 10 L17 13 L21 13 L21 10 L24 10 L24 13 L28 13 L28 10 L33 10 L33 15 L36 15 L36 36 Z" />
+      <rect x="9" y="36" width="27" height="4" rx="1" />
+    </>
+  ),
+  b: (
+    <>
+      <circle cx="22.5" cy="8" r="2.5" />
+      <path d="M22.5 12 C15 16 13 24 15 30 C11 32 10 34 10 36 L35 36 C35 34 34 32 30 30 C32 24 30 16 22.5 12 Z" />
+      <ellipse cx="22.5" cy="21" rx="7" ry="1.6" transform="rotate(-25 22.5 21)" />
+      <rect x="9" y="36" width="27" height="4" rx="1" />
+    </>
+  ),
+  n: (
+    <>
+      <path d="M11 36 L11 29 C9.5 27 8 25 5 22 L10 19 C10.5 16.5 11 13 14 9 L16 4 L20 9 C24 10 27 12.5 29 16 C31.5 19 32.5 22 32 24 C34 25.5 35 28 35 32 L35 36 Z" />
+      {/* Eye/mouth must read as the OPPOSITE of the piece's own color no
+          matter which color the piece is — currentColor here picks up the
+          `color` set on the wrapping <g> at render time, independent of the
+          body's fill/stroke above. */}
+      <circle cx="13" cy="17" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M6.5 23 L9 24.5" fill="none" stroke="currentColor" strokeWidth={1} />
+    </>
+  ),
+  q: (
+    <>
+      <circle cx="9" cy="10" r="2.3" /><circle cx="17" cy="7" r="2.3" /><circle cx="22.5" cy="6" r="2.3" /><circle cx="28" cy="7" r="2.3" /><circle cx="36" cy="10" r="2.3" />
+      <path d="M9 12 L36 12 L33 26 C34 28 34.5 30 34 32 C32 34 30 30 22.5 30 C15 30 13 34 11 32 C10.5 30 11 28 12 26 Z" />
+      <path d="M11 32 L34 32 L34 36 L11 36 Z" />
+      <rect x="9" y="36" width="27" height="4" rx="1" />
+    </>
+  ),
+  k: (
+    <>
+      <path d="M22.5 4 L22.5 12 M18.5 8 L26.5 8" fill="none" strokeWidth={2.5} />
+      <path d="M12 16 L33 16 L30 28 C32 30 32.5 32 32 34 C29 36 27 32 22.5 32 C18 32 16 36 13 34 C12.5 32 13 30 15 28 Z" />
+      <path d="M11 34 L34 34 L34 36 L11 36 Z" />
+      <rect x="9" y="36" width="27" height="4" rx="1" />
+    </>
+  )
 };
 
 const PIECE_VALUES: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
@@ -214,13 +261,12 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
             const isDark = (files.indexOf(file) + rank) % 2 === 0;
             const isSelected = selectedSquare === square;
             const isLegalTarget = legalDestinations.includes(square);
-            const key = PIECE_UNICODE[piece ? `${piece.color}${piece.type}` : ''];
 
             return (
               <button
                 key={square}
                 onClick={() => handleSquareClick(square)}
-                className={`relative flex items-center justify-center aspect-square text-3xl sm:text-4xl cursor-pointer ${
+                className={`relative flex items-center justify-center aspect-square cursor-pointer ${
                   isDark ? 'bg-black' : 'bg-white'
                 } ${isSelected ? 'ring-2 ring-inset ring-[#00FF66]' : ''}`}
               >
@@ -229,15 +275,23 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
                   // square, so its own color alone isn't enough contrast — a
                   // black piece would vanish entirely on a black square
                   // without a light outline (and likewise white-on-white).
-                  <span
+                  <svg
+                    viewBox="0 0 45 45"
+                    className="w-[75%] h-[75%]"
                     style={{
-                      fontFamily: '"Noto Sans Symbols 2", sans-serif',
-                      WebkitTextStroke: piece.color === 'w' ? '1.5px black' : '1.5px white',
-                      color: piece.color === 'w' ? '#ffffff' : '#000000'
+                      fill: piece.color === 'w' ? '#ffffff' : '#101010',
+                      stroke: piece.color === 'w' ? '#000000' : '#ffffff',
+                      strokeWidth: 1.5,
+                      strokeLinejoin: 'round'
                     }}
                   >
-                    {key}
-                  </span>
+                    {/* `color` here only feeds the knight's eye/mouth via
+                        currentColor — it never touches the body's own
+                        fill/stroke, which come from the <svg> above. */}
+                    <g style={{ color: piece.color === 'w' ? '#000000' : '#ffffff' }}>
+                      {PIECE_SVG[piece.type]}
+                    </g>
+                  </svg>
                 )}
                 {isLegalTarget && (
                   <span className={`absolute w-3 h-3 rounded-full ${piece ? 'ring-2 ring-[#00FF66] w-full h-full rounded-none' : 'bg-[#00FF66]/70'}`} />

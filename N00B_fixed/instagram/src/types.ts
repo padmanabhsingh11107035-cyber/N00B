@@ -105,6 +105,7 @@ export type NotificationType =
   | 'points_transfer'
   | 'birthday_wish'
   | 'birthday_follower_alert'
+  | 'new_message'
   | 'system';
 
 export interface AppNotification {
@@ -131,6 +132,7 @@ export interface AppNotification {
   isRead?: boolean;
   actionStatus?: 'pending' | 'accepted' | 'declined';
   scratchCardId?: string;
+  chatId?: string;
 }
 
 export interface MusicTrack {

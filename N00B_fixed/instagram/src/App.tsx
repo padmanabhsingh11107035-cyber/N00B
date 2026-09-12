@@ -113,6 +113,7 @@ export default function App() {
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);
   const [viewingProfileUser, setViewingProfileUser] = useState<User | null>(null);
   const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
+  const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [gameToPlay, setGameToPlay] = useState<{
     game: MiniGameMeta;
     challenger?: string;
@@ -215,6 +216,26 @@ export default function App() {
         setCurrentUser(null);
       }
     }, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
+
+  // Notifications used to only refresh on cold load, login, or a manual
+  // pull-to-refresh — a new one (e.g. someone's DM) wouldn't show up on the
+  // bell/badge until the next of those happened. Poll like the session
+  // check above, just faster, so it feels live while the app is open.
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(async () => {
+      try {
+        const notifRes = await fetchAppNotifications();
+        if (notifRes && Array.isArray(notifRes.notifications)) {
+          setNotifications(notifRes.notifications);
+          setUnreadNotificationCount(notifRes.notifications.filter((n: any) => !n.isRead).length);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 8000);
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 
@@ -870,6 +891,8 @@ export default function App() {
                 currentUser={currentUser}
                 pendingChatUser={pendingChatUser}
                 onPendingChatUserHandled={() => setPendingChatUser(null)}
+                pendingChatId={pendingChatId}
+                onPendingChatIdHandled={() => setPendingChatId(null)}
                 onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
                 onUserUpdated={(u) => setCurrentUser(u)}
                 onNavigateToProfile={handleNavigateToUserProfile}
@@ -1111,6 +1134,11 @@ export default function App() {
           onClearAll={handleClearAllNotifications}
           onClose={() => setShowNotificationsModal(false)}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}
+          onOpenChat={(chatId) => {
+            setPendingChatId(chatId);
+            setActiveTab('chat');
+            setShowNotificationsModal(false);
+          }}
         />
       )}
 

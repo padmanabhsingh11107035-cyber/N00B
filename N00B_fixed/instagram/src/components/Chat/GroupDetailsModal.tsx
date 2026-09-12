@@ -205,7 +205,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
   const filteredMembers = (chat.participants || []).filter((p) => {
     const q = memberSearch.toLowerCase();
     return (
-      p.username.toLowerCase().includes(q) ||
+      (p.username && p.username.toLowerCase().includes(q)) ||
       (p.displayName && p.displayName.toLowerCase().includes(q))
     );
   });

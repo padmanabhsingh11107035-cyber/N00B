@@ -46,6 +46,7 @@ interface NotificationsModalProps {
   onClearAll: () => void;
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
+  onOpenChat?: (chatId: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -58,7 +59,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onDeclineFollowRequest,
   onClearAll,
   onNavigateToUser,
-  onOpenScratchCard
+  onOpenScratchCard,
+  onOpenChat
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'settings'>('all');
   const [filterType, setFilterType] = useState<string>('all');
@@ -113,6 +115,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Music className="w-3.5 h-3.5 text-pink-400" />;
       case 'points_transfer':
         return <Coins className="w-3.5 h-3.5 text-amber-400" />;
+      case 'new_message':
+        return <MessageCircle className="w-3.5 h-3.5 text-[#00E5FF]" />;
       case 'birthday_wish':
       case 'birthday_follower_alert':
         return <Gift className="w-3.5 h-3.5 text-pink-400" />;
@@ -261,7 +265,19 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   {filteredNotifications.map((notif) => (
                     <div
                       key={notif.id}
+                      onClick={() => {
+                        if (notif.type === 'new_message' && notif.chatId) {
+                          onOpenChat?.(notif.chatId);
+                        } else {
+                          const username = notif.senderUsername || notif.actorUsername;
+                          if (username) onNavigateToUser?.(username);
+                        }
+                      }}
                       className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                        (notif.type === 'new_message' && notif.chatId) || notif.senderUsername || notif.actorUsername
+                          ? 'cursor-pointer'
+                          : ''
+                      } ${
                         !notif.isRead
                           ? 'bg-zinc-900/90 border-[#00FF66]/30 shadow-sm'
                           : 'bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700'
@@ -315,13 +331,19 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           {notif.type === 'follow_request_received' && notif.actionStatus === 'pending' && (
                             <div className="flex items-center gap-2 mt-2">
                               <button
-                                onClick={() => notif.actorId && onAcceptFollowRequest(notif.id, notif.actorId)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  notif.actorId && onAcceptFollowRequest(notif.id, notif.actorId);
+                                }}
                                 className="px-3 py-1 bg-[#00FF66] hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
                               >
                                 <Check className="w-3.5 h-3.5" /> Accept
                               </button>
                               <button
-                                onClick={() => notif.actorId && onDeclineFollowRequest(notif.id, notif.actorId)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  notif.actorId && onDeclineFollowRequest(notif.id, notif.actorId);
+                                }}
                                 className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                               >
                                 Delete
@@ -343,7 +365,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
                           {notif.type === 'birthday_wish' && notif.scratchCardId && (
                             <button
-                              onClick={() => onOpenScratchCard?.(notif.scratchCardId!)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenScratchCard?.(notif.scratchCardId!);
+                              }}
                               className="mt-2 px-3.5 py-1.5 bg-gradient-to-r from-pink-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-black text-xs font-black rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm w-fit"
                             >
                               <Gift className="w-3.5 h-3.5" /> Scratch to Reveal 🎁

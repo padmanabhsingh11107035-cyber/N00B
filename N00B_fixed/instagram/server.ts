@@ -417,6 +417,24 @@ async function startServer() {
     return publicUser;
   }
 
+  // A chat/group's `participants` array is a snapshot taken once, at
+  // creation or whenever someone was added — it's never touched again, so
+  // anyone who later changes their avatar/display name keeps showing the
+  // stale (or, worse, since it was never signed either, a permanently
+  // broken) version to everyone they already share a chat with. Re-resolve
+  // every participant against the live `users` table — and sign the
+  // avatar, same as every other avatar in the app — right before returning
+  // chats, instead of trusting the frozen copy.
+  async function refreshParticipants(participants: any[]) {
+    return Promise.all(
+      (participants || []).map(async (p: any) => {
+        const live = users.find(u => u.id === p.id);
+        if (!live) return p;
+        return { ...sanitizePublicUser(live), avatar: await signMediaKey(live.avatar) };
+      })
+    );
+  }
+
   // Permanently removes an account and everything it authored — shared by
   // the admin "delete user" tool and the self-service account-deletion
   // endpoint required by Google Play (any app that lets people sign up must
@@ -2450,6 +2468,9 @@ async function startServer() {
       };
       chats.unshift(globalChat);
     } else {
+      // Keeps membership current (every registered user); avatars/names
+      // still get freshened and signed for everyone below, same as any
+      // other chat.
       globalChat.participants = users.map(sanitizePublicUser);
     }
 
@@ -2472,8 +2493,9 @@ async function startServer() {
       const signedLastMessage = c.lastMessage?.mediaUrl
         ? { ...c.lastMessage, mediaUrl: await signMediaKey(c.lastMessage.mediaUrl) }
         : c.lastMessage;
+      const freshParticipants = await refreshParticipants(c.participants);
 
-      if (!active) return { ...c, lastMessage: signedLastMessage, unreadCount: 0 };
+      if (!active) return { ...c, participants: freshParticipants, lastMessage: signedLastMessage, unreadCount: 0 };
       const lastReadAt = c.lastReadAt?.[active.id];
       const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
       const unreadCount = (messages[c.id] || []).filter((m: any) => {
@@ -2485,7 +2507,7 @@ async function startServer() {
         // is always false and the old code treated that as "still unread".
         return !isNaN(sentTime) && sentTime > lastReadTime;
       }).length;
-      return { ...c, lastMessage: signedLastMessage, unreadCount };
+      return { ...c, participants: freshParticipants, lastMessage: signedLastMessage, unreadCount };
     }));
 
     // Pinned/global chats stay put; everything else sorts by whichever
@@ -2938,6 +2960,32 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
     // Update conversation last message
     chat.lastMessage = newMsg;
+
+    // Notify the other side of a 1:1 DM so it shows up on the Notifications
+    // page, not just as an unread badge on the Chat tab. Deliberately
+    // skipped for groups — one notification per member per message would
+    // flood a large group (the Global Lounge alone has every registered
+    // user in it) every time anyone sent anything.
+    if (!chat.isGroup && text) {
+      const recipient = chat.participants.find((p: any) => p.id !== active.id);
+      if (recipient) {
+        notifications.unshift({
+          id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          senderId: active.id,
+          senderUsername: active.username,
+          senderDisplayName: active.displayName || active.username,
+          senderAvatar: active.avatar,
+          senderIsVerified: !!active.isVerified,
+          targetUserId: recipient.id,
+          targetUsername: recipient.username,
+          title: '💬 New Message',
+          message: `@${active.username}: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`,
+          type: 'new_message',
+          chatId: chat.id,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
 
     // Auto-reply if AI conversation
     let aiResponseMsg: any = null;

@@ -184,7 +184,7 @@ import {
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
-import { safeJsonStringify } from '../../utils/safeJson';
+import { safeJsonStringify, safeLocalStorageSet } from '../../utils/safeJson';
 import { formatClockTime } from '../../utils/formatTime';
 import confetti from 'canvas-confetti';
 
@@ -193,6 +193,10 @@ interface ChatViewProps {
   onPlayGame?: (gameId: string, challengerUsername: string, roomCode?: string) => void;
   pendingChatUser?: User | null;
   onPendingChatUserHandled?: () => void;
+  // Opens an existing chat directly by id (e.g. from a "new message"
+  // notification) instead of resolving/creating one from a target user.
+  pendingChatId?: string | null;
+  onPendingChatIdHandled?: () => void;
   onMobileViewChange?: (view: 'list' | 'chat') => void;
   onUserUpdated?: (user: User) => void;
   onNavigateToProfile?: (user: User) => void;
@@ -244,6 +248,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onPlayGame,
   pendingChatUser,
   onPendingChatUserHandled,
+  pendingChatId,
+  onPendingChatIdHandled,
   onMobileViewChange,
   onUserUpdated,
   onNavigateToProfile
@@ -461,10 +467,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
         (c: any) =>
           !c.isAi &&
           c.id !== 'c_ai_assistant' &&
-          !c.participants?.some((p: any) => p.isAi || p.username === 'noob_ai')
+          // Only ever exclude a chat by its OWN server-set isAi flag — matching
+          // on a participant's username here used to also match any ordinary
+          // human who happened to register "noob_ai", which silently hid that
+          // chat (including the everyone-included Global Lounge) for every
+          // single member, app-wide.
+          !c.participants?.some((p: any) => p.isAi)
       );
       setConversations(realChats);
-      localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+      safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
 
       if (realChats.length > 0 && !activeChatIdRef.current) {
         setActiveChatId(realChats[0].id);
@@ -491,10 +502,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
         (c: any) =>
           !c.isAi &&
           c.id !== 'c_ai_assistant' &&
-          !c.participants?.some((p: any) => p.isAi || p.username === 'noob_ai')
+          // Only ever exclude a chat by its OWN server-set isAi flag — matching
+          // on a participant's username here used to also match any ordinary
+          // human who happened to register "noob_ai", which silently hid that
+          // chat (including the everyone-included Global Lounge) for every
+          // single member, app-wide.
+          !c.participants?.some((p: any) => p.isAi)
       );
       setConversations(realChats);
-      localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+      safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
 
       const currentActiveId = activeChatIdRef.current;
       if (currentActiveId) {
@@ -535,7 +551,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       const data = await fetchMessages(chatId);
       setMessages(data);
-      localStorage.setItem(`${CACHE_KEY_MSGS}_${chatId}`, safeJsonStringify(data));
+      safeLocalStorageSet(`${CACHE_KEY_MSGS}_${chatId}`, safeJsonStringify(data));
     } catch (err) {
       console.error(err);
     }
@@ -557,16 +573,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
     isUserFriend(u) || (allUsers.length <= 4 && u.id !== currentUser.id && !u.isAi);
 
   const handleStartChatWithUser = async (user: User) => {
-    // Private chats are limited to users with a follow relationship in
-    // either direction (matches the "Connected Friends" list rules).
-    if (!canStartChatWith(user)) {
-      setChatBlockedNotice(`You can only message @${user.username} if you follow them or they follow you.`);
-      return;
-    }
-    setChatBlockedNotice('');
     // Check if a chat already exists — must include the target user AND the
     // viewer themselves, or a stale/cached conversations list could match a
     // chat between two other people and drop the viewer straight into it.
+    // This runs BEFORE the follow-relationship gate below: if a chat is
+    // already there (e.g. reopening it from a "new message" notification),
+    // always let the viewer back into it, even if the two aren't (or are no
+    // longer) mutual follows — that gate only matters for starting a
+    // genuinely NEW chat.
     const existing = conversations.find(
       (c) =>
         !c.isGroup &&
@@ -579,6 +593,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setSearchQuery('');
       return;
     }
+
+    // Private chats are limited to users with a follow relationship in
+    // either direction (matches the "Connected Friends" list rules).
+    if (!canStartChatWith(user)) {
+      setChatBlockedNotice(`You can only message @${user.username} if you follow them or they follow you.`);
+      return;
+    }
+    setChatBlockedNotice('');
 
     // Guard against duplicate chats: a repeated call for the same user
     // (double-tapping "Message", or the pendingChatUser effect re-firing)
@@ -595,7 +617,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setConversations((prev) => {
         if (prev.some((c) => c.id === newChat.id)) return prev;
         const updated = [newChat, ...prev];
-        localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(updated));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(updated));
         return updated;
       });
       setActiveChatId(newChat.id);
@@ -617,6 +639,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
       onPendingChatUserHandled?.();
     }
   }, [pendingChatUser, allUsers]);
+
+  // Opens a chat by id handed off from elsewhere (e.g. tapping a "new
+  // message" notification) once the conversation list has loaded.
+  useEffect(() => {
+    if (pendingChatId && conversations.some((c) => c.id === pendingChatId)) {
+      setActiveChatId(pendingChatId);
+      setMobileView('chat');
+      onPendingChatIdHandled?.();
+    }
+  }, [pendingChatId, conversations]);
 
   const handleTogglePin = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -682,7 +714,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       // Replace optimistic message with saved server response
       setMessages((prev) => {
         const next = prev.map((m) => (m.id === optimisticMsg.id ? { ...response, status: 'delivered' } : m));
-        localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
         return next;
       });
 
@@ -693,7 +725,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...c, lastMessage: { ...response, status: 'delivered' } }
             : c
         );
-        localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(next));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
         return next;
       });
 
@@ -746,7 +778,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...response, mediaUrl: response?.mediaUrl || gifUrl, mediaType: 'image', status: 'delivered' }
             : m
         );
-        localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
         return next;
       });
       setConversations((prev) => {
@@ -763,7 +795,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               }
             : c
         );
-        localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(next));
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
         return next;
       });
     } catch (err) {
@@ -801,7 +833,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         const next = prev.map((m) =>
           m.id === optimisticMsg.id ? { ...response, mediaType: 'sticker', status: 'delivered' } : m
         );
-        localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
         return next;
       });
     } catch (err) {
@@ -843,7 +875,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             ? { ...response, mediaUrl: response?.mediaUrl || stickerUrl, mediaType: 'sticker', status: 'delivered' }
             : m
         );
-        localStorage.setItem(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
         return next;
       });
     } catch (err) {
@@ -940,13 +972,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleUpdateTheme = async (hex: string) => {
     setGlobalChatTheme(hex);
-    localStorage.setItem('noob_chat_theme', hex);
+    safeLocalStorageSet('noob_chat_theme', hex);
 
     const updated = conversations.map((c) =>
       !activeChat || c.id === activeChat.id ? { ...c, themeColor: hex } : c
     );
     setConversations(updated);
-    localStorage.setItem(CACHE_KEY_CHATS, safeJsonStringify(updated));
+    safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(updated));
 
     if (activeChat) {
       try {

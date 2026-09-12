@@ -8,8 +8,14 @@ interface ChessGameProps {
   vsBot?: boolean;
 }
 
+// Unicode's "white" chess characters (U+2654-2659) are drawn as hollow
+// outline glyphs by convention — meant to be black ink on white paper, not
+// an actually-solid piece. Using them for the white side renders as a thin
+// outline no matter what CSS color is applied. Both sides use the "black"
+// (solid-filled) code points instead, and the actual piece color is done
+// entirely via CSS fill/stroke below, so both render as clean solid pieces.
 const PIECE_UNICODE: Record<string, string> = {
-  wp: '♙', wn: '♘', wb: '♗', wr: '♖', wq: '♕', wk: '♔',
+  wp: '♟', wn: '♞', wb: '♝', wr: '♜', wq: '♛', wk: '♚',
   bp: '♟', bn: '♞', bb: '♝', br: '♜', bq: '♛', bk: '♚'
 };
 
@@ -214,12 +220,22 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
               <button
                 key={square}
                 onClick={() => handleSquareClick(square)}
-                className={`relative flex items-center justify-center aspect-square text-2xl sm:text-3xl cursor-pointer ${
-                  isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+                className={`relative flex items-center justify-center aspect-square text-3xl sm:text-4xl cursor-pointer ${
+                  isDark ? 'bg-black' : 'bg-white'
                 } ${isSelected ? 'ring-2 ring-inset ring-[#00FF66]' : ''}`}
               >
                 {piece && (
-                  <span className={piece.color === 'w' ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' : 'text-black'}>
+                  // A piece needs to read clearly on BOTH a black and a white
+                  // square, so its own color alone isn't enough contrast — a
+                  // black piece would vanish entirely on a black square
+                  // without a light outline (and likewise white-on-white).
+                  <span
+                    style={{
+                      fontFamily: '"Noto Sans Symbols 2", sans-serif',
+                      WebkitTextStroke: piece.color === 'w' ? '1.5px black' : '1.5px white',
+                      color: piece.color === 'w' ? '#ffffff' : '#000000'
+                    }}
+                  >
                     {key}
                   </span>
                 )}

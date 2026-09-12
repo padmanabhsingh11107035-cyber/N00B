@@ -3279,6 +3279,65 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   const ROOM_RESULT_RANK: Record<string, number> = { loss: 0, tie: 1, win: 2 };
 
+  // Games with a true live-synced shared board: the two matched players
+  // move on the SAME board in real time instead of each playing their own
+  // round against a bot and having the results compared afterward.
+  const SYNCED_GAME_IDS = ['tictactoe'];
+
+  const TIC_TAC_TOE_LINES = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+  ];
+  function ticTacToeWinner(board: any[]): 'X' | 'O' | 'Tie' | null {
+    for (const [a, b, c] of TIC_TAC_TOE_LINES) {
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+    }
+    if (board.every((cell: any) => cell !== null)) return 'Tie';
+    return null;
+  }
+
+  function initSyncedBoardIfNeeded(room: any) {
+    if (SYNCED_GAME_IDS.includes(room.gameId) && room.players.length === 2 && !room.board) {
+      room.board = Array(9).fill(null);
+      room.turn = room.players[0].userId;
+    }
+  }
+
+  // Awards points/records the match once a head-to-head outcome is known,
+  // shared by both the async "compare submitted results" flow and the
+  // live-synced-board flow so points/history stay identical either way.
+  function finalizeRoomOutcome(room: any, outcomes: Record<string, 'win' | 'tie' | 'loss'>) {
+    for (const p of room.players) {
+      const user = users.find(u => u.id === p.userId);
+      if (!user) continue;
+      const outcome = outcomes[p.userId];
+      const earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
+      user.noobPoints = (user.noobPoints || 0) + earned;
+      user.gamesPlayedCount = (user.gamesPlayedCount || 0) + 1;
+      if (outcome === 'win') user.gamesWonCount = (user.gamesWonCount || 0) + 1;
+      if (earned > 0) {
+        const opponent = room.players.find((o: any) => o.userId !== p.userId);
+        recordTransaction(user, earned, `${outcome === 'win' ? 'Won' : 'Tied'} ${room.gameTitle} vs @${opponent?.username || 'opponent'}`);
+      }
+      gameScores.unshift({
+        id: `gs_${Date.now()}_${p.userId.slice(-4)}`,
+        gameId: room.gameId,
+        gameTitle: room.gameTitle,
+        username: p.username,
+        userAvatar: p.avatar,
+        score: earned,
+        noobsPoints: earned,
+        result: outcome,
+        opponent: room.players.find((o: any) => o.userId !== p.userId)?.username || 'Opponent',
+        date: 'Just now'
+      });
+    }
+
+    room.status = 'finished';
+    room.outcome = { results: outcomes, points: Object.fromEntries(room.players.map((p: any) => [p.userId, outcomes[p.userId] === 'win' ? 100 : outcomes[p.userId] === 'tie' ? 50 : 0])) };
+  }
+
   function publicRoomView(room: any) {
     return {
       code: room.code,
@@ -3287,7 +3346,9 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       status: room.status,
       players: room.players.map((p: any) => ({ userId: p.userId, username: p.username, displayName: p.displayName, avatar: p.avatar })),
       resultsSubmittedBy: Object.keys(room.results || {}),
-      outcome: room.outcome || null
+      outcome: room.outcome || null,
+      board: room.board || null,
+      turn: room.turn || null
     };
   }
 
@@ -3334,6 +3395,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
     room.players.push(playerInfo);
     room.status = 'ready';
+    initSyncedBoardIfNeeded(room);
     res.json({ success: true, room: publicRoomView(room) });
   });
 
@@ -3366,6 +3428,9 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     if (!room.players.some((p: any) => p.userId === active.id)) {
       return res.status(403).json({ error: 'You are not part of this match.' });
     }
+    if (SYNCED_GAME_IDS.includes(room.gameId)) {
+      return res.status(400).json({ error: 'This game uses live moves — submit via the move endpoint instead.' });
+    }
 
     const { result } = req.body;
     if (!Object.prototype.hasOwnProperty.call(ROOM_RESULT_RANK, result)) {
@@ -3385,6 +3450,10 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       const rank1 = ROOM_RESULT_RANK[r1];
       const rank2 = ROOM_RESULT_RANK[r2];
 
+      // `outcomes` here is the head-to-head result (who won the MATCH) —
+      // deliberately not `room.results`, which is each player's own solo
+      // round result (e.g. both could report "loss" against the bot and
+      // still tie the match against each other).
       const outcomes: Record<string, 'win' | 'tie' | 'loss'> =
         rank1 === rank2
           ? { [p1.userId]: 'tie', [p2.userId]: 'tie' }
@@ -3392,38 +3461,57 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
           ? { [p1.userId]: 'win', [p2.userId]: 'loss' }
           : { [p1.userId]: 'loss', [p2.userId]: 'win' };
 
-      for (const p of room.players) {
-        const user = users.find(u => u.id === p.userId);
-        if (!user) continue;
-        const outcome = outcomes[p.userId];
-        const earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
-        user.noobPoints = (user.noobPoints || 0) + earned;
-        user.gamesPlayedCount = (user.gamesPlayedCount || 0) + 1;
-        if (outcome === 'win') user.gamesWonCount = (user.gamesWonCount || 0) + 1;
-        if (earned > 0) {
-          const opponent = room.players.find((o: any) => o.userId !== p.userId);
-          recordTransaction(user, earned, `${outcome === 'win' ? 'Won' : 'Tied'} ${room.gameTitle} vs @${opponent?.username || 'opponent'}`);
-        }
-        gameScores.unshift({
-          id: `gs_${Date.now()}_${p.userId.slice(-4)}`,
-          gameId: room.gameId,
-          gameTitle: room.gameTitle,
-          username: p.username,
-          userAvatar: p.avatar,
-          score: earned,
-          noobsPoints: earned,
-          result: outcome,
-          opponent: room.players.find((o: any) => o.userId !== p.userId)?.username || 'Opponent',
-          date: 'Just now'
-        });
-      }
+      finalizeRoomOutcome(room, outcomes);
+    }
 
-      room.status = 'finished';
-      // `outcomes` here is the head-to-head result (who won the MATCH) —
-      // deliberately not `room.results`, which is each player's own solo
-      // round result (e.g. both could report "loss" against the bot and
-      // still tie the match against each other).
-      room.outcome = { results: outcomes, points: Object.fromEntries(room.players.map((p: any) => [p.userId, outcomes[p.userId] === 'win' ? 100 : outcomes[p.userId] === 'tie' ? 50 : 0])) };
+    res.json({ success: true, room: publicRoomView(room), yourTotalPoints: active.noobPoints || 0 });
+  });
+
+  // Submit one move into a live-synced shared board (currently Tic Tac
+  // Toe): the server is authoritative on turns and win detection so the
+  // two matched players are actually playing against EACH OTHER, not each
+  // playing their own round against a bot.
+  app.post('/api/games/rooms/:code/move', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (!checkRateLimit(`game-room-move:${req.ip}`, 120, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+
+    const room = gameRooms.find(r => r.code === req.params.code);
+    if (!room) return res.status(404).json({ error: 'Match not found or has expired.' });
+    if (!SYNCED_GAME_IDS.includes(room.gameId)) {
+      return res.status(400).json({ error: 'This game does not support live sync.' });
+    }
+    const playerIndex = room.players.findIndex((p: any) => p.userId === active.id);
+    if (playerIndex === -1) return res.status(403).json({ error: 'You are not part of this match.' });
+    if (room.players.length < 2) return res.status(409).json({ error: 'Waiting for an opponent to join.' });
+    if (room.status === 'finished') return res.status(409).json({ error: 'This match has already ended.' });
+
+    initSyncedBoardIfNeeded(room);
+
+    const { index } = req.body;
+    if (typeof index !== 'number' || !Number.isInteger(index) || index < 0 || index > 8) {
+      return res.status(400).json({ error: 'Invalid move.' });
+    }
+    if (room.turn !== active.id) return res.status(409).json({ error: "It's not your turn." });
+    if (room.board[index]) return res.status(409).json({ error: 'That cell is already taken.' });
+
+    const symbol = playerIndex === 0 ? 'X' : 'O';
+    room.board[index] = symbol;
+
+    const winSymbol = ticTacToeWinner(room.board);
+    if (winSymbol) {
+      const [p1, p2] = room.players;
+      const outcomes: Record<string, 'win' | 'tie' | 'loss'> =
+        winSymbol === 'Tie'
+          ? { [p1.userId]: 'tie', [p2.userId]: 'tie' }
+          : winSymbol === 'X'
+          ? { [p1.userId]: 'win', [p2.userId]: 'loss' }
+          : { [p1.userId]: 'loss', [p2.userId]: 'win' };
+      finalizeRoomOutcome(room, outcomes);
+    } else {
+      room.turn = room.players[playerIndex === 0 ? 1 : 0].userId;
     }
 
     res.json({ success: true, room: publicRoomView(room), yourTotalPoints: active.noobPoints || 0 });
@@ -3462,6 +3550,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
         results: {},
         createdAt: new Date().toISOString()
       };
+      initSyncedBoardIfNeeded(room);
       gameRooms.push(room);
       waitingOpponent.matchedRoomCode = code;
 
@@ -4085,23 +4174,46 @@ COMPLETE PLATFORM CAPABILITIES:
   });
 
   // Get notifications for current user
-  app.get('/api/notifications', (req, res) => {
+  // A notification's senderAvatar/actorAvatar was saved once, at the moment
+  // it was created, as whatever the sender's avatar field held then — a raw
+  // B2 object key for anyone with an uploaded profile picture, not a real
+  // URL. Every other listing (posts, leaderboard, chat...) re-signs this on
+  // every read instead; notifications never did, so any notification from a
+  // user with a custom avatar rendered as a broken image forever.
+  app.get('/api/notifications', async (req, res) => {
     const active = getActiveUser(req);
     if (!active) {
-      return res.json({ notifications: notifications.filter(n => n.targetUserId === 'all').map(n => ({ ...n, isRead: true })) });
+      const publicNotifs = await Promise.all(
+        notifications
+          .filter(n => n.targetUserId === 'all')
+          .map(async n => ({
+            ...n,
+            isRead: true,
+            senderAvatar: n.senderAvatar ? await signMediaKey(n.senderAvatar) : n.senderAvatar,
+            actorAvatar: n.actorAvatar ? await signMediaKey(n.actorAvatar) : n.actorAvatar
+          }))
+      );
+      return res.json({ notifications: publicNotifs });
     }
 
-    const userNotifs = notifications
-      .filter(
-        n =>
-          (n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase()) &&
-          !n.clearedByUserIds?.includes(active.id)
-      )
-      // isRead is per-user and must be persisted server-side (readByUserIds),
-      // not just flipped in local browser state — otherwise it silently
-      // resets back to "unread" on every fresh login/page load, since the
-      // server never actually remembered which notifications you'd seen.
-      .map(n => ({ ...n, isRead: !!n.readByUserIds?.includes(active.id) }));
+    const userNotifs = await Promise.all(
+      notifications
+        .filter(
+          n =>
+            (n.targetUserId === 'all' || n.targetUserId === active.id || n.targetUsername?.toLowerCase() === active.username?.toLowerCase()) &&
+            !n.clearedByUserIds?.includes(active.id)
+        )
+        // isRead is per-user and must be persisted server-side (readByUserIds),
+        // not just flipped in local browser state — otherwise it silently
+        // resets back to "unread" on every fresh login/page load, since the
+        // server never actually remembered which notifications you'd seen.
+        .map(async n => ({
+          ...n,
+          isRead: !!n.readByUserIds?.includes(active.id),
+          senderAvatar: n.senderAvatar ? await signMediaKey(n.senderAvatar) : n.senderAvatar,
+          actorAvatar: n.actorAvatar ? await signMediaKey(n.actorAvatar) : n.actorAvatar
+        }))
+    );
 
     res.json({ notifications: userNotifs });
   });

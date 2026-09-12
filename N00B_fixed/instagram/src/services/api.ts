@@ -870,6 +870,11 @@ export interface GameRoom {
   players: GameRoomPlayer[];
   resultsSubmittedBy: string[];
   outcome: { results: Record<string, 'win' | 'tie' | 'loss'>; points: Record<string, number> } | null;
+  // Present only for games with true live-synced play (currently Tic Tac
+  // Toe) — the two players move on this same shared board instead of each
+  // playing their own round against a bot.
+  board?: ('X' | 'O' | null)[] | null;
+  turn?: string | null;
 }
 
 export async function joinGameRoom(
@@ -898,6 +903,21 @@ export async function submitGameRoomResult(
     method: 'POST',
     headers: getAuthHeaders(),
     body: safeJsonStringify({ result })
+  });
+  return await res.json();
+}
+
+// Submit one live move into a synced-board match (currently Tic Tac Toe) —
+// the server is authoritative on turn order and win detection, and returns
+// the updated shared board for both players to poll/render.
+export async function submitGameRoomMove(
+  code: string,
+  index: number
+): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  const res = await fetch(`${API_BASE}/games/rooms/${code}/move`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ index })
   });
   return await res.json();
 }

@@ -27,6 +27,7 @@ import {
   joinGameRoom,
   getGameRoom,
   submitGameRoomResult,
+  submitGameRoomMove,
   joinMatchmaking,
   getMatchmakingStatus,
   cancelMatchmaking,
@@ -73,6 +74,11 @@ type RoundResult = 'win' | 'tie' | 'loss';
 // finishPassPlayRound regardless of which mode launched them.
 const BOARD_GAME_IDS = ['ludo_classic', 'snakes_ladders', 'monopoly_noob'];
 
+// Games with a true live-synced shared board: the two matched players
+// actually move on the SAME board in real time against each other, instead
+// of each playing their own round against a bot and comparing results.
+const SYNCED_GAME_IDS = ['tictactoe'];
+
 // Solo-only games with no opponent concept at all — no bot, no friend
 // challenge, no pass-and-play. These skip the mode-select screen entirely
 // and drop straight into gameplay.
@@ -108,6 +114,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     roomCode: string;
     phase: OnlineMatchPhase;
     opponent?: { username: string; displayName: string; avatar: string };
+    // Only set for SYNCED_GAME_IDS — which symbol this player is on the
+    // shared board (room.players[0] is always 'X').
+    mySymbol?: 'X' | 'O';
   } | null>(
     initialRoomCode && !BOARD_GAME_IDS.includes(game.id) ? { roomCode: initialRoomCode, phase: 'joining' } : null
   );
@@ -163,6 +172,29 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const enterOnlineMatch = (room: GameRoom) => {
     clearMatchmakingTimers();
     const opponent = room.players.find((p) => p.userId !== currentUser.id);
+
+    if (SYNCED_GAME_IDS.includes(game.id)) {
+      // Real head-to-head: both players move on the SAME server-held board,
+      // so drop straight into it instead of starting a solo round vs a bot.
+      const myIndex = room.players.findIndex((p) => p.userId === currentUser.id);
+      setOnlineMatch(null);
+      setIsPassAndPlay(false);
+      setGameResult(null);
+      setPointsEarned(0);
+      setGameState({
+        board: room.board || Array(9).fill(null),
+        turn: room.turn || room.players[0]?.userId
+      });
+      setCurrentMode('play_bot');
+      setOnlineMatch({
+        roomCode: room.code,
+        phase: 'in_progress',
+        opponent: opponent ? { username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined,
+        mySymbol: myIndex === 0 ? 'X' : 'O'
+      });
+      return;
+    }
+
     startBotGameNow();
     setOnlineMatch({
       roomCode: room.code,
@@ -293,6 +325,29 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode]);
+
+  // Live-synced board (currently Tic Tac Toe): while it's in progress, poll
+  // for the opponent's moves and for the match ending, since only the
+  // player who makes the winning move learns the outcome directly.
+  useEffect(() => {
+    if (!onlineMatch || onlineMatch.phase !== 'in_progress' || !SYNCED_GAME_IDS.includes(game.id)) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await getGameRoom(onlineMatch.roomCode);
+        if (!res.success || !res.room) return;
+        if (res.room.status === 'finished' && res.room.outcome) {
+          clearInterval(interval);
+          finalizeOnlineMatch(res.room);
+        } else if (res.room.board) {
+          setGameState((prev: any) => ({ ...prev, board: res.room!.board, turn: res.room!.turn }));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 1200);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlineMatch?.phase, onlineMatch?.roomCode, game.id]);
 
   const finalizeOnlineMatch = (room: GameRoom) => {
     const myOutcome = room.outcome?.results[currentUser.id] || 'tie';
@@ -542,56 +597,30 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     }
   };
 
-  // Tic Tac Toe Move
-  const handleTicTacToeClick = (index: number) => {
-    if (!gameState.board || gameState.board[index] || !gameState.isPlayerTurn || gameState.winner) return;
+  // Live-synced Tic Tac Toe move: the server is authoritative on turns and
+  // win detection, so this just submits the tapped cell and reflects
+  // whatever board/turn/outcome comes back.
+  const handleOnlineTicTacToeMove = async (index: number) => {
+    if (!onlineMatch || isSubmitting) return;
+    if (!gameState.board || gameState.board[index] || gameState.turn !== currentUser.id) return;
 
-    const newBoard = [...gameState.board];
-    newBoard[index] = 'X';
-
-    // Check if player won
-    if (checkTicTacToeWinner(newBoard, 'X')) {
-      setGameState({ ...gameState, board: newBoard, winner: 'X' });
-      finishGame('win');
-      return;
-    }
-
-    // Check tie
-    if (newBoard.every((cell) => cell !== null)) {
-      setGameState({ ...gameState, board: newBoard, winner: 'Tie' });
-      finishGame('tie');
-      return;
-    }
-
-    // Bot move
-    setGameState({ ...gameState, board: newBoard, isPlayerTurn: false });
-
-    setTimeout(() => {
-      const emptyIndices = newBoard.map((v, i) => (v === null ? i : null)).filter((v) => v !== null) as number[];
-      if (emptyIndices.length > 0) {
-        const botIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-        newBoard[botIndex] = 'O';
-
-        if (checkTicTacToeWinner(newBoard, 'O')) {
-          setGameState({ ...gameState, board: newBoard, winner: 'O', isPlayerTurn: true });
-          finishGame('loss');
-        } else if (newBoard.every((cell) => cell !== null)) {
-          setGameState({ ...gameState, board: newBoard, winner: 'Tie', isPlayerTurn: true });
-          finishGame('tie');
+    setIsSubmitting(true);
+    try {
+      const res = await submitGameRoomMove(onlineMatch.roomCode, index);
+      if (res.success && res.room) {
+        if (res.room.status === 'finished' && res.room.outcome) {
+          finalizeOnlineMatch(res.room);
         } else {
-          setGameState({ ...gameState, board: newBoard, isPlayerTurn: true });
+          setGameState((prev: any) => ({ ...prev, board: res.room!.board, turn: res.room!.turn }));
+          setIsSubmitting(false);
         }
+      } else {
+        setIsSubmitting(false);
       }
-    }, 500);
-  };
-
-  const checkTicTacToeWinner = (b: (string | null)[], player: string) => {
-    const lines = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6]
-    ];
-    return lines.some(([x, y, z]) => b[x] === player && b[y] === player && b[z] === player);
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+    }
   };
 
   // Rock Paper Scissors Move
@@ -1255,7 +1284,48 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} />
               )}
 
-              {game.id === 'tictactoe' && (
+              {game.id === 'tictactoe' && onlineMatch && (
+                <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
+                  <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
+                    <div className={`flex items-center gap-1.5 text-xs font-bold ${gameState.turn === currentUser.id ? 'text-[#00FF66]' : 'text-zinc-500'}`}>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>You ({onlineMatch.mySymbol})</span>
+                    </div>
+                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">VS</span>
+                    <div className={`flex items-center gap-1.5 text-xs font-bold ${gameState.turn !== currentUser.id ? 'text-pink-400' : 'text-zinc-500'}`}>
+                      <Users className="w-3.5 h-3.5" />
+                      <span>@{onlineMatch.opponent?.username || 'Opponent'} ({onlineMatch.mySymbol === 'X' ? 'O' : 'X'})</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2.5 p-3 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-xl w-64 h-64 sm:w-72 sm:h-72">
+                    {(gameState.board || Array(9).fill(null)).map((cell: string | null, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleOnlineTicTacToeMove(idx)}
+                        disabled={!!cell || gameState.turn !== currentUser.id || isSubmitting}
+                        className={`rounded-xl flex items-center justify-center font-black text-3xl transition-all cursor-pointer ${
+                          cell === 'X'
+                            ? 'bg-zinc-900 text-[#00FF66] border border-[#00FF66]/30'
+                            : cell === 'O'
+                            ? 'bg-zinc-900 text-pink-400 border border-pink-500/30'
+                            : 'bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800/60 text-zinc-600'
+                        }`}
+                      >
+                        {cell}
+                      </button>
+                    ))}
+                  </div>
+
+                  <p className="mt-4 text-xs text-zinc-400">
+                    {gameState.turn === currentUser.id
+                      ? '👉 Your turn'
+                      : `⏳ Waiting for @${onlineMatch.opponent?.username || 'opponent'}...`}
+                  </p>
+                </div>
+              )}
+
+              {game.id === 'tictactoe' && !onlineMatch && (
                 <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} />
               )}
 

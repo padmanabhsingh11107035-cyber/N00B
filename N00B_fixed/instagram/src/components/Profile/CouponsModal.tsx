@@ -6,12 +6,13 @@ import { Coupon, fetchMyCoupons, createCoupon, deleteCoupon, redeemCouponCode } 
 interface CouponsModalProps {
   currentUser: User;
   onClose: () => void;
+  allUsers?: User[];
 }
 
 const isMasterAdmin = (user: User) =>
   !!user.isAdmin || user.username.toLowerCase() === 'noob' || user.id === 'u_noob_admin';
 
-export const CouponsModal: React.FC<CouponsModalProps> = ({ currentUser, onClose }) => {
+export const CouponsModal: React.FC<CouponsModalProps> = ({ currentUser, onClose, allUsers = [] }) => {
   const admin = isMasterAdmin(currentUser);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +140,8 @@ export const CouponsModal: React.FC<CouponsModalProps> = ({ currentUser, onClose
 
       {showCreate && (
         <CreateCouponModal
+          allUsers={allUsers}
+          currentUserId={currentUser.id}
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             setShowCreate(false);
@@ -231,15 +234,29 @@ const CouponCard: React.FC<{
   );
 };
 
-const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }> = ({ onClose, onCreated }) => {
+const CreateCouponModal: React.FC<{
+  onClose: () => void;
+  onCreated: () => void;
+  allUsers: User[];
+  currentUserId: string;
+}> = ({ onClose, onCreated, allUsers, currentUserId }) => {
   const [couponType, setCouponType] = useState<'discount' | 'verification'>('discount');
   const [title, setTitle] = useState('');
   const [discountPercent, setDiscountPercent] = useState('10');
   const [terms, setTerms] = useState('');
   const [targetMode, setTargetMode] = useState<'all' | 'specific'>('all');
   const [targetUsername, setTargetUsername] = useState('');
+  const [showUserPicker, setShowUserPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const selectableUsers = allUsers.filter((u) => u.id !== currentUserId);
+  const filteredPickerUsers = selectableUsers.filter(
+    (u) =>
+      !targetUsername.trim() ||
+      u.username.toLowerCase().includes(targetUsername.trim().toLowerCase()) ||
+      u.displayName?.toLowerCase().includes(targetUsername.trim().toLowerCase())
+  );
 
   // A verification coupon grants the badge outright, not a discount, and
   // must always be tied to one specific account — a global "free
@@ -392,12 +409,46 @@ const CreateCouponModal: React.FC<{ onClose: () => void; onCreated: () => void }
             </div>
           )}
           {(targetMode === 'specific' || isVerification) && (
-            <input
-              value={targetUsername}
-              onChange={(e) => setTargetUsername(e.target.value)}
-              placeholder="@username"
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66] mt-1.5"
-            />
+            <div className="relative mt-1.5">
+              <input
+                value={targetUsername}
+                onChange={(e) => {
+                  setTargetUsername(e.target.value);
+                  setShowUserPicker(true);
+                }}
+                onFocus={() => setShowUserPicker(true)}
+                onBlur={() => setTimeout(() => setShowUserPicker(false), 150)}
+                placeholder="Search or type a username..."
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+              />
+              {showUserPicker && filteredPickerUsers.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl">
+                  {filteredPickerUsers.slice(0, 30).map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setTargetUsername(u.username);
+                        setShowUserPicker(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-zinc-800 text-left cursor-pointer"
+                    >
+                      <img
+                        src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                        alt={u.username}
+                        className="w-6 h-6 rounded-full object-cover shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-white block truncate">{u.displayName || u.username}</span>
+                        <span className="text-[10px] text-zinc-500 block truncate">@{u.username}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

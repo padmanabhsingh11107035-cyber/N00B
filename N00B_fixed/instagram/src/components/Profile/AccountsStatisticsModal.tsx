@@ -495,7 +495,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
         </div>
       </div>
 
-      {showCoupons && <CouponsModal currentUser={currentUser} onClose={() => setShowCoupons(false)} />}
+      {showCoupons && <CouponsModal currentUser={currentUser} allUsers={allUsers} onClose={() => setShowCoupons(false)} />}
 
       {showSendPoints && (
         <SendPointsPage

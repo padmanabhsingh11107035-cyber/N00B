@@ -401,7 +401,11 @@ async function startServer() {
   // client can harvest another account's phone number or email address.
   function sanitizePublicUser(u: any) {
     if (!u) return null;
-    const { password, mobileNumber, countryCode, email, dateOfBirth, ...publicUser } = u;
+    // followRequests names every private-account requester (with avatar/
+    // display name) and pendingSentRequests reveals which private accounts
+    // THIS user has asked to follow — both are private to the account
+    // owner, not for every other viewer of their profile/directory entry.
+    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ...publicUser } = u;
     return publicUser;
   }
 
@@ -1475,7 +1479,8 @@ async function startServer() {
     const sanitized = await Promise.all(matching.map(async (u) => ({
       ...sanitizePublicUser(u),
       avatar: await signMediaKey(u.avatar),
-      isFollowing: active?.followingIds?.includes(u.id) || false
+      isFollowing: active?.followingIds?.includes(u.id) || false,
+      isFollowRequested: active?.pendingSentRequests?.includes(u.id) || false
     })));
     res.json({ users: sanitized });
   });
@@ -1527,32 +1532,158 @@ async function startServer() {
     });
   });
 
-  // Follow / Unfollow User (supports /follow and /toggle-follow)
+  // Follow / Unfollow User (supports /follow and /toggle-follow). A private
+  // account can't be followed directly — this queues a request the target
+  // has to accept (see the /follow-requests endpoints below) instead of
+  // creating the relationship immediately.
   const handleToggleFollow = (req: any, res: any) => {
     const targetUserId = req.params.id;
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Unauthorized' });
+    if (targetUserId === active.id) return res.status(400).json({ error: "You can't follow yourself." });
 
     active.followingIds = active.followingIds || [];
+    active.pendingSentRequests = active.pendingSentRequests || [];
     const isFollowing = active.followingIds.includes(targetUserId);
 
     const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
     if (isFollowing) {
       active.followingIds = active.followingIds.filter((id: string) => id !== targetUserId);
       active.followingCount = Math.max(0, (active.followingCount || 0) - 1);
-      if (targetUser) targetUser.followersCount = Math.max(0, (targetUser.followersCount || 0) - 1);
-      res.json({ success: true, isFollowing: false, followersCount: targetUser?.followersCount || 0 });
-    } else {
-      active.followingIds.push(targetUserId);
-      active.followingCount = (active.followingCount || 0) + 1;
-      if (targetUser) targetUser.followersCount = (targetUser.followersCount || 0) + 1;
-      res.json({ success: true, isFollowing: true, followersCount: targetUser?.followersCount || 1 });
+      targetUser.followersCount = Math.max(0, (targetUser.followersCount || 0) - 1);
+      return res.json({ success: true, isFollowing: false, isFollowRequested: false, followersCount: targetUser.followersCount });
     }
+
+    // Clicking again while a request is pending cancels it.
+    if (active.pendingSentRequests.includes(targetUserId)) {
+      active.pendingSentRequests = active.pendingSentRequests.filter((id: string) => id !== targetUserId);
+      targetUser.followRequests = (targetUser.followRequests || []).filter((r: any) => r.userId !== active.id);
+      // Otherwise the target's notification list keeps showing a live
+      // Accept/Delete pair for a request that no longer exists — clicking
+      // Accept on it would 404 since there's nothing left to approve.
+      notifications = notifications.filter(
+        (n: any) => !(n.type === 'follow_request_received' && n.targetUserId === targetUser.id && n.actorId === active.id && n.actionStatus === 'pending')
+      );
+      return res.json({ success: true, isFollowing: false, isFollowRequested: false, followersCount: targetUser.followersCount || 0 });
+    }
+
+    if (targetUser.accountType === 'private') {
+      targetUser.followRequests = targetUser.followRequests || [];
+      if (!targetUser.followRequests.some((r: any) => r.userId === active.id)) {
+        targetUser.followRequests.push({
+          userId: active.id,
+          username: active.username,
+          displayName: active.displayName || active.username,
+          avatar: active.avatar || '/noob-logo.svg.jpeg',
+          requestedAt: new Date().toISOString()
+        });
+      }
+      if (!active.pendingSentRequests.includes(targetUserId)) {
+        active.pendingSentRequests.push(targetUserId);
+      }
+
+      notifications.unshift({
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        type: 'follow_request_received',
+        actorId: active.id,
+        actorUsername: active.username,
+        actorDisplayName: active.displayName || active.username,
+        actorAvatar: active.avatar || '/noob-logo.svg.jpeg',
+        senderId: active.id,
+        senderUsername: active.username,
+        senderDisplayName: active.displayName || active.username,
+        senderAvatar: active.avatar || '/noob-logo.svg.jpeg',
+        senderIsVerified: !!active.isVerified,
+        targetUserId: targetUser.id,
+        targetUsername: targetUser.username,
+        message: 'wants to follow you.',
+        actionStatus: 'pending',
+        createdAt: new Date().toISOString()
+      });
+
+      return res.json({ success: true, isFollowing: false, isFollowRequested: true, followersCount: targetUser.followersCount || 0 });
+    }
+
+    active.followingIds.push(targetUserId);
+    active.followingCount = (active.followingCount || 0) + 1;
+    targetUser.followersCount = (targetUser.followersCount || 0) + 1;
+    res.json({ success: true, isFollowing: true, isFollowRequested: false, followersCount: targetUser.followersCount });
   };
 
   app.post('/api/users/:id/follow', handleToggleFollow);
   app.post('/api/users/:id/toggle-follow', handleToggleFollow);
+
+  // Accept / decline an incoming follow request on a private account.
+  app.post('/api/users/follow-requests/:requesterId/accept', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Unauthorized' });
+
+    const requesterId = req.params.requesterId;
+    active.followRequests = active.followRequests || [];
+    if (!active.followRequests.some((r: any) => r.userId === requesterId)) {
+      return res.status(404).json({ error: 'No pending request from this user.' });
+    }
+
+    const requester = users.find(u => u.id === requesterId);
+    active.followRequests = active.followRequests.filter((r: any) => r.userId !== requesterId);
+
+    if (requester) {
+      requester.pendingSentRequests = (requester.pendingSentRequests || []).filter((id: string) => id !== active.id);
+      requester.followingIds = requester.followingIds || [];
+      if (!requester.followingIds.includes(active.id)) {
+        requester.followingIds.push(active.id);
+        requester.followingCount = (requester.followingCount || 0) + 1;
+      }
+      active.followersCount = (active.followersCount || 0) + 1;
+
+      const originalNotif = notifications.find(
+        (n: any) => n.type === 'follow_request_received' && n.targetUserId === active.id && n.actorId === requesterId && n.actionStatus === 'pending'
+      );
+      if (originalNotif) originalNotif.actionStatus = 'accepted';
+
+      notifications.unshift({
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        type: 'follow_request_accepted',
+        actorId: active.id,
+        actorUsername: active.username,
+        actorDisplayName: active.displayName || active.username,
+        actorAvatar: active.avatar || '/noob-logo.svg.jpeg',
+        senderId: active.id,
+        senderUsername: active.username,
+        senderDisplayName: active.displayName || active.username,
+        senderAvatar: active.avatar || '/noob-logo.svg.jpeg',
+        senderIsVerified: !!active.isVerified,
+        targetUserId: requester.id,
+        targetUsername: requester.username,
+        message: 'accepted your follow request.',
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    res.json({ success: true, followersCount: active.followersCount || 0, followRequests: active.followRequests });
+  });
+
+  app.post('/api/users/follow-requests/:requesterId/decline', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Unauthorized' });
+
+    const requesterId = req.params.requesterId;
+    active.followRequests = (active.followRequests || []).filter((r: any) => r.userId !== requesterId);
+
+    const requester = users.find(u => u.id === requesterId);
+    if (requester) {
+      requester.pendingSentRequests = (requester.pendingSentRequests || []).filter((id: string) => id !== active.id);
+    }
+
+    const originalNotif = notifications.find(
+      (n: any) => n.type === 'follow_request_received' && n.targetUserId === active.id && n.actorId === requesterId && n.actionStatus === 'pending'
+    );
+    if (originalNotif) originalNotif.actionStatus = 'declined';
+
+    res.json({ success: true, followRequests: active.followRequests });
+  });
 
   // --- POSTS ROUTES ---
   app.get('/api/posts', async (req, res) => {
@@ -2159,7 +2290,7 @@ async function startServer() {
   });
 
   // --- DIRECT MESSAGES & CHAT ---
-  app.get('/api/chats', (req, res) => {
+  app.get('/api/chats', async (req, res) => {
     const active = getActiveUser(req);
 
     // Ensure global lounge is always present and updated with all users
@@ -2206,8 +2337,16 @@ async function startServer() {
     // Real per-user unread counts (used to just sit at a permanent 0/1) —
     // count messages from anyone else sent after this user last opened
     // this specific chat.
-    const withUnread = visibleChats.map(c => {
-      if (!active) return { ...c, unreadCount: 0 };
+    const withUnread = await Promise.all(visibleChats.map(async c => {
+      // A sticker/photo lastMessage can carry a stale one-hour B2 presigned
+      // URL (see the same fix for message bodies in GET /api/chats/:id/messages)
+      // — re-sign into a copy so the chat list preview doesn't show a broken
+      // image forever once that URL expires.
+      const signedLastMessage = c.lastMessage?.mediaUrl
+        ? { ...c.lastMessage, mediaUrl: await signMediaKey(c.lastMessage.mediaUrl) }
+        : c.lastMessage;
+
+      if (!active) return { ...c, lastMessage: signedLastMessage, unreadCount: 0 };
       const lastReadAt = c.lastReadAt?.[active.id];
       const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
       const unreadCount = (messages[c.id] || []).filter((m: any) => {
@@ -2219,8 +2358,8 @@ async function startServer() {
         // is always false and the old code treated that as "still unread".
         return !isNaN(sentTime) && sentTime > lastReadTime;
       }).length;
-      return { ...c, unreadCount };
-    });
+      return { ...c, lastMessage: signedLastMessage, unreadCount };
+    }));
 
     // Pinned/global chats stay put; everything else sorts by whichever
     // chat had the most recent activity, so a new message brings its chat
@@ -2562,7 +2701,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     return `Hello ${registeredName}! I am here to assist you with anything on NOOB — from exploring reels, uploading music, competing in the 50 mini-games (${userStats.noobPoints.toLocaleString()} NOOB points!), to managing your profile and keeping you protected against cyber bullying. How can I help you right now?`;
   }
 
-  app.get('/api/chats/:id/messages', (req, res) => {
+  app.get('/api/chats/:id/messages', async (req, res) => {
     const chatId = req.params.id;
     const active = getActiveUser(req);
     const chat = chats.find(c => c.id === chatId);
@@ -2594,7 +2733,19 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       if (changed) schedulePersist();
     }
 
-    res.json({ messages: messages[chatId] || [] });
+    // Stickers/photos sent in chat were saved with a one-hour presigned B2
+    // URL baked directly into the message (unlike posts/reels/stories, which
+    // store a durable object key and get re-signed on every fetch) — so any
+    // sent sticker or image went permanently dark an hour after sending.
+    // Re-sign into a response copy on every read instead of mutating the
+    // stored message, exactly like GET /api/users/me does for avatars.
+    const signedMessages = await Promise.all(
+      (messages[chatId] || []).map(async (m: any) =>
+        m.mediaUrl ? { ...m, mediaUrl: await signMediaKey(m.mediaUrl) } : m
+      )
+    );
+
+    res.json({ messages: signedMessages });
   });
 
   app.post('/api/chats/:id/messages', async (req, res) => {

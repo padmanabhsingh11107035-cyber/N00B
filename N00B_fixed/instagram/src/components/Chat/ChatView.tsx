@@ -1849,6 +1849,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         referrerPolicy="no-referrer"
                         loading="lazy"
                         decoding="async"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (!img.dataset.hasFailed) {
+                            img.dataset.hasFailed = 'true';
+                            img.src = 'https://i.giphy.com/media/BPJmthQ3YRwD6QqcVD/giphy.gif';
+                          }
+                        }}
                       />
                     ) : isSticker && m.text ? (
                       <p className="text-7xl leading-none">{m.text}</p>

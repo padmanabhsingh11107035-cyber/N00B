@@ -2,6 +2,11 @@ import React from 'react';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  // When set, a caught error renders this instead of the full-screen
+  // takeover — used to scope a crash to one feature (e.g. chat) so the rest
+  // of the app (nav, other tabs) stays usable instead of the whole screen
+  // going down over a bug in a single view.
+  fallback?: React.ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -32,6 +37,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
       return (
         <div className="fixed inset-0 z-[9999] bg-zinc-950 flex items-center justify-center p-6">
           <div className="max-w-sm w-full text-center space-y-4">

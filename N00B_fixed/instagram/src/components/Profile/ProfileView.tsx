@@ -50,6 +50,7 @@ import {
   X,
   Loader2,
   AlertCircle,
+  Clock,
   Calculator as CalculatorIcon
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
@@ -98,7 +99,9 @@ interface ProfileViewProps {
   onLogout?: () => void;
   onDeleteMyAccount?: (password: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   onUserUpdated?: (user: User) => void;
-  onToggleFollowUser?: (userId: string) => void;
+  onToggleFollowUser?: (
+    userId: string
+  ) => void | Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean; followersCount: number; message?: string } | undefined>;
   onBlockUser?: (userId: string) => void;
   onReportUser?: (userId: string, reason: string, details?: string) => void;
   onDeletePost?: (postId: string) => void;
@@ -213,6 +216,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (targetUser.isFollowing !== undefined) return !!targetUser.isFollowing;
     return !!currentUser.followingIds?.includes(targetUser.id);
   });
+  const [isTargetFollowRequested, setIsTargetFollowRequested] = useState<boolean>(
+    () => !!targetUser.isFollowRequested
+  );
 
   useEffect(() => {
     setIsTargetFollowing(
@@ -220,7 +226,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         ? !!targetUser.isFollowing
         : !!currentUser.followingIds?.includes(targetUser.id)
     );
-  }, [targetUser.id, targetUser.isFollowing, currentUser.followingIds]);
+    setIsTargetFollowRequested(!!targetUser.isFollowRequested);
+  }, [targetUser.id, targetUser.isFollowing, targetUser.isFollowRequested, currentUser.followingIds]);
 
   // Private chat is only available between users where at least one follows the other
   const targetFollowsMe = !!targetUser.followingIds?.includes(currentUser.id);
@@ -352,23 +359,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleToggleFollowTargetUser = async () => {
     if (isOwnProfile) return;
+    // Cancelling a pending request or unfollowing both just clear state;
+    // only a fresh follow/request click plays the confetti.
+    const wasIdle = !isTargetFollowing && !isTargetFollowRequested;
     try {
-      const nextFollow = !isTargetFollowing;
-      setIsTargetFollowing(nextFollow);
-      if (onToggleFollowUser) {
-        onToggleFollowUser(targetUser.id);
-      } else {
-        const res = await toggleFollowUser(targetUser.id);
-        if (res && res.success !== undefined) {
-          setIsTargetFollowing(!!res.isFollowing);
+      const res = onToggleFollowUser
+        ? await onToggleFollowUser(targetUser.id)
+        : await toggleFollowUser(targetUser.id);
+      if (res && res.success !== undefined) {
+        setIsTargetFollowing(!!res.isFollowing);
+        setIsTargetFollowRequested(!!res.isFollowRequested);
+        if (wasIdle && (res.isFollowing || res.isFollowRequested)) {
+          confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
         }
-      }
-      if (nextFollow) {
-        confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
       }
     } catch (err) {
       console.error(err);
-      setIsTargetFollowing(!isTargetFollowing);
     }
   };
 
@@ -459,6 +465,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const res = await acceptFollowRequest(requesterId);
       if (res.success) {
         setFollowRequests(res.followRequests || []);
+        if (onUserUpdated) {
+          onUserUpdated({ ...currentUser, followersCount: res.followersCount, followRequests: res.followRequests });
+        }
         confetti({ particleCount: 25, spread: 45, origin: { y: 0.8 } });
       }
     } catch (e) {
@@ -1030,7 +1039,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <button
                       onClick={handleToggleFollowTargetUser}
                       className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
-                        isTargetFollowing
+                        isTargetFollowing || isTargetFollowRequested
                           ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-red-500/40 hover:text-red-400'
                           : 'bg-[#00FF66] hover:bg-[#00e65c] text-black font-extrabold'
                       }`}
@@ -1039,9 +1048,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <>
                           <UserCheck className="w-3.5 h-3.5 text-red-400 group-hover:text-red-500" /> Unfollow
                         </>
+                      ) : isTargetFollowRequested ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5" /> Requested
+                        </>
                       ) : (
                         <>
-                          <UserPlus className="w-3.5 h-3.5" /> Follow
+                          <UserPlus className="w-3.5 h-3.5" /> {targetUser.accountType === 'private' ? 'Request' : 'Follow'}
                         </>
                       )}
                     </button>
@@ -1202,8 +1215,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Follow Requests Drawer (for Private Accounts) */}
-      {isPrivate && followRequests.length > 0 && (
+      {/* 3. Follow Requests Drawer (for Private Accounts) — only ever the
+          viewer's OWN incoming requests, so this must never render while
+          looking at someone else's profile. */}
+      {isOwnProfile && isPrivate && followRequests.length > 0 && (
         <div className="my-4 p-4 bg-purple-950/40 border border-purple-500/30 rounded-2xl space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

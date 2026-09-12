@@ -25,6 +25,8 @@ import {
   fetchReels,
   fetchUsers,
   toggleFollowUser,
+  acceptFollowRequest,
+  declineFollowRequest,
   toggleLikePost,
   toggleSavePost,
   toggleArchivePost,
@@ -49,6 +51,7 @@ import { FeedView } from './components/Feed/FeedView';
 import { ExploreView } from './components/Explore/ExploreView';
 import { ReelsView } from './components/Reels/ReelsView';
 import { ChatView } from './components/Chat/ChatView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
 import { MusicHubView } from './components/Music/MusicHubView';
 import { ProfileView } from './components/Profile/ProfileView';
@@ -389,7 +392,11 @@ export default function App() {
     try {
       const res = await toggleFollowUser(userId);
       setRegisteredUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, isFollowing: res.isFollowing, followersCount: res.followersCount } : u))
+        prev.map((u) =>
+          u.id === userId
+            ? { ...u, isFollowing: res.isFollowing, isFollowRequested: !!res.isFollowRequested, followersCount: res.followersCount }
+            : u
+        )
       );
       if (currentUser) {
         const curFollowing = currentUser.followingIds || [];
@@ -408,6 +415,7 @@ export default function App() {
             ? {
                 ...prev,
                 isFollowing: res.isFollowing,
+                isFollowRequested: !!res.isFollowRequested,
                 followersCount: res.followersCount
               }
             : null
@@ -441,35 +449,42 @@ export default function App() {
     setUnreadNotificationCount(0);
   };
 
-  const handleAcceptFollowRequest = (notifId: string, actorUsername: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === notifId
-          ? { ...n, actionStatus: 'accepted', text: 'You accepted their follow request.' }
-          : n
-      )
-    );
-    setRegisteredUsers((prev) =>
-      prev.map((u) =>
-        u.username === actorUsername ? { ...u, isFollowing: true, isFollowRequested: false } : u
-      )
-    );
-    if (currentUser) {
-      setCurrentUser((prev) => (prev ? { ...prev, followersCount: (prev.followersCount || 0) + 1 } : null));
+  const handleAcceptFollowRequest = async (notifId: string, actorId: string) => {
+    try {
+      const res = await acceptFollowRequest(actorId);
+      if (!res.success) return;
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notifId
+            ? { ...n, actionStatus: 'accepted', text: 'You accepted their follow request.' }
+            : n
+        )
+      );
+      // The requester is the one who now follows US — from our side that
+      // shows up as them being a follower, not us following them.
+      setRegisteredUsers((prev) =>
+        prev.map((u) => (u.id === actorId ? { ...u, followingIds: [...(u.followingIds || []), currentUser?.id || ''] } : u))
+      );
+      setCurrentUser((prev) => (prev ? { ...prev, followersCount: res.followersCount } : null));
+    } catch (err) {
+      console.error('Failed to accept follow request:', err);
     }
   };
 
-  const handleDeclineFollowRequest = (notifId: string, actorUsername: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === notifId
-          ? { ...n, actionStatus: 'declined', text: 'Follow request dismissed.' }
-          : n
-      )
-    );
-    setRegisteredUsers((prev) =>
-      prev.map((u) => (u.username === actorUsername ? { ...u, isFollowRequested: false } : u))
-    );
+  const handleDeclineFollowRequest = async (notifId: string, actorId: string) => {
+    try {
+      const res = await declineFollowRequest(actorId);
+      if (!res.success) return;
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notifId
+            ? { ...n, actionStatus: 'declined', text: 'Follow request dismissed.' }
+            : n
+        )
+      );
+    } catch (err) {
+      console.error('Failed to decline follow request:', err);
+    }
   };
 
   const handleSelectNavTab = (tab: NavTab) => {
@@ -782,26 +797,46 @@ export default function App() {
 
         {activeTab === 'chat' && (
           <div className="py-2 px-2">
-            <ChatView
-              currentUser={currentUser}
-              pendingChatUser={pendingChatUser}
-              onPendingChatUserHandled={() => setPendingChatUser(null)}
-              onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
-              onUserUpdated={(u) => setCurrentUser(u)}
-              onNavigateToProfile={handleNavigateToUserProfile}
-              onPlayGame={(gameId, challengerUsername, roomCode) => {
-                const matched = ALL_50_MINI_GAMES.find(
-                  (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
-                );
-                if (matched) {
-                  setGameToPlay({
-                    game: matched,
-                    challenger: challengerUsername,
-                    roomCode
-                  });
-                }
-              }}
-            />
+            <ErrorBoundary
+              fallback={
+                <div className="w-full max-w-6xl mx-auto h-[calc(100vh-80px)] min-h-[580px] max-h-[880px] rounded-2xl border border-zinc-800/80 bg-zinc-950 flex items-center justify-center p-6">
+                  <div className="max-w-sm w-full text-center space-y-4">
+                    <div className="text-4xl">😬</div>
+                    <h2 className="text-white text-base font-bold">This chat ran into a problem</h2>
+                    <p className="text-zinc-400 text-sm">
+                      The rest of NOOB is unaffected — your account and messages are safe. Reloading usually fixes it.
+                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="w-full py-3 bg-[#00FF66] text-black font-bold rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
+                    >
+                      Reload NOOB
+                    </button>
+                  </div>
+                </div>
+              }
+            >
+              <ChatView
+                currentUser={currentUser}
+                pendingChatUser={pendingChatUser}
+                onPendingChatUserHandled={() => setPendingChatUser(null)}
+                onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
+                onUserUpdated={(u) => setCurrentUser(u)}
+                onNavigateToProfile={handleNavigateToUserProfile}
+                onPlayGame={(gameId, challengerUsername, roomCode) => {
+                  const matched = ALL_50_MINI_GAMES.find(
+                    (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
+                  );
+                  if (matched) {
+                    setGameToPlay({
+                      game: matched,
+                      challenger: challengerUsername,
+                      roomCode
+                    });
+                  }
+                }}
+              />
+            </ErrorBoundary>
           </div>
         )}
 

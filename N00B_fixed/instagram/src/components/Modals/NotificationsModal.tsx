@@ -41,8 +41,8 @@ interface NotificationsModalProps {
   notificationSettings: NotificationSettingsState;
   onUpdateSettings: (settings: NotificationSettingsState) => void;
   onClose: () => void;
-  onAcceptFollowRequest: (notifId: string, actorUsername: string) => void;
-  onDeclineFollowRequest: (notifId: string, actorUsername: string) => void;
+  onAcceptFollowRequest: (notifId: string, actorId: string) => void;
+  onDeclineFollowRequest: (notifId: string, actorId: string) => void;
   onClearAll: () => void;
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
@@ -315,13 +315,13 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           {notif.type === 'follow_request_received' && notif.actionStatus === 'pending' && (
                             <div className="flex items-center gap-2 mt-2">
                               <button
-                                onClick={() => onAcceptFollowRequest(notif.id, notif.actorUsername)}
+                                onClick={() => notif.actorId && onAcceptFollowRequest(notif.id, notif.actorId)}
                                 className="px-3 py-1 bg-[#00FF66] hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
                               >
                                 <Check className="w-3.5 h-3.5" /> Accept
                               </button>
                               <button
-                                onClick={() => onDeclineFollowRequest(notif.id, notif.actorUsername)}
+                                onClick={() => notif.actorId && onDeclineFollowRequest(notif.id, notif.actorId)}
                                 className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                               >
                                 Delete

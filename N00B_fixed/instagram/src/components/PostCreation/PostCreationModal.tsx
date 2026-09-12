@@ -35,7 +35,7 @@ interface PostCreationModalProps {
   currentUser: User;
   allUsers?: User[];
   onClose: () => void;
-  onSubmitPost: (data: { isReel?: boolean; reelData?: Partial<Reel>; postData?: Partial<Post> }) => void;
+  onSubmitPost: (data: { isReel?: boolean; reelData?: Partial<Reel>; postData?: Partial<Post> }) => Promise<void>;
 }
 
 const FILTERS = [
@@ -105,6 +105,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
   // Uploading state & UI feedback
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -227,7 +228,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
     setMediaMode('text');
   };
 
-  const handlePublish = (e: React.FormEvent) => {
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // 1. Content Category is blank but COMPULSORY
@@ -254,11 +255,13 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           .map((h) => (h.startsWith('#') ? h : `#${h}`))
       : [];
 
-    // If Reel Mode -> Video only
-    if (creationType === 'reel') {
-      onSubmitPost({
-        isReel: true,
-        reelData: {
+    setIsPublishing(true);
+    try {
+      // If Reel Mode -> Video only
+      if (creationType === 'reel') {
+        await onSubmitPost({
+          isReel: true,
+          reelData: {
           videoUrl: videoObjectKey,
           caption: caption.trim() || 'New Reel ✨',
           hashtags: parsedHashtags,
@@ -286,11 +289,11 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           webLink: webLink.trim() || undefined
         }
       });
-    } else {
-      // Post Mode -> Image only
-      onSubmitPost({
-        isReel: false,
-        postData: {
+      } else {
+        // Post Mode -> Image only
+        await onSubmitPost({
+          isReel: false,
+          postData: {
           caption: caption.trim(),
           location: location.trim() || undefined,
           slides: slides.map((s) => ({
@@ -320,12 +323,17 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           isLikeCountHidden: hideLikes,
           isCommentsDisabled: disableComments,
           scheduledFor: scheduledFor || undefined
-        }
-      });
-    }
+          }
+        });
+      }
 
-    confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
-    onClose();
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+      onClose();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to publish. Please try again.');
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const isReadyToSubmit =
@@ -365,10 +373,10 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
           <button
             onClick={handlePublish}
-            disabled={!isReadyToSubmit || isUploadingMedia}
+            disabled={!isReadyToSubmit || isUploadingMedia || isPublishing}
             className="px-4 py-1.5 bg-[#00FF66] disabled:opacity-40 disabled:hover:scale-100 text-black text-xs font-black rounded-full hover:scale-105 transition-all shadow-md shadow-[#00FF66]/30 cursor-pointer"
           >
-            {creationType === 'reel' ? 'Share Reel' : 'Share Post'}
+            {isPublishing ? 'Publishing...' : creationType === 'reel' ? 'Share Reel' : 'Share Post'}
           </button>
         </div>
 

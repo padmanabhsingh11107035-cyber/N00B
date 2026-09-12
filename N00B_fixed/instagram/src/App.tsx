@@ -282,24 +282,23 @@ export default function App() {
   };
 
   // --- SMART POST OR REEL ACTIONS ---
+  // Deliberately doesn't catch its own errors — PostCreationModal awaits
+  // this and needs the rejection to know a post/reel actually failed (e.g.
+  // hitting the daily free-tier limit) instead of showing success anyway.
   const handleCreatePostOrReel = async (data: {
     isReel?: boolean;
     reelData?: Partial<Reel>;
     postData?: Partial<Post>;
   }) => {
-    try {
-      if (data.isReel && data.reelData) {
-        const newReel = await createReel(data.reelData);
-        setReels((prev) => [newReel, ...prev]);
-        setSelectedReelId(newReel.id);
-        setActiveTab('reels');
-      } else if (data.postData) {
-        const newPost = await createPost(data.postData);
-        setPosts((prev) => [newPost, ...prev]);
-        setActiveTab('feed');
-      }
-    } catch (err) {
-      console.error('Failed to create post or reel:', err);
+    if (data.isReel && data.reelData) {
+      const newReel = await createReel(data.reelData);
+      setReels((prev) => [newReel, ...prev]);
+      setSelectedReelId(newReel.id);
+      setActiveTab('reels');
+    } else if (data.postData) {
+      const newPost = await createPost(data.postData);
+      setPosts((prev) => [newPost, ...prev]);
+      setActiveTab('feed');
     }
   };
 

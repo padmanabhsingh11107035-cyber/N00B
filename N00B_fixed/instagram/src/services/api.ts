@@ -266,6 +266,9 @@ export async function createPost(postData: Partial<Post>): Promise<Post> {
     body: safeJsonStringify(postData)
   });
   const data = await res.json();
+  if (!res.ok || !data.post) {
+    throw new Error(data.error || 'Failed to publish post.');
+  }
   return data.post;
 }
 
@@ -397,6 +400,9 @@ export async function createReel(reelData: Partial<Reel>): Promise<Reel> {
     body: safeJsonStringify(reelData)
   });
   const data = await res.json();
+  if (!res.ok || !data.reel) {
+    throw new Error(data.error || 'Failed to publish reel.');
+  }
   return data.reel;
 }
 
@@ -936,6 +942,18 @@ export async function joinMatchmaking(
 
 export async function getMatchmakingStatus(): Promise<{ success: boolean; matched: boolean; room?: GameRoom }> {
   const res = await fetch(`${API_BASE}/games/matchmaking/status`, { headers: getAuthHeaders() });
+  return await res.json();
+}
+
+// Chess Blitz is capped at one round a week for free accounts — call this
+// once, right before letting the player enter any mode (bot, pass & play,
+// friend invite, matchmaking) for that game. NOOB Pro accounts always
+// succeed without consuming anything.
+export async function startChessRound(): Promise<{ success: boolean; isPro?: boolean; error?: string; nextAvailableAt?: string }> {
+  const res = await fetch(`${API_BASE}/games/chess/start`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
   return await res.json();
 }
 

@@ -28,6 +28,7 @@ import {
   getGameRoom,
   submitGameRoomResult,
   submitGameRoomMove,
+  startChessRound,
   joinMatchmaking,
   getMatchmakingStatus,
   cancelMatchmaking,
@@ -93,6 +94,47 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   onClose,
   onPointsUpdated
 }) => {
+  // Chess Blitz is capped at one round a week for free accounts (its real
+  // stakes make it something worth grinding otherwise). The check/consume
+  // call fires once on mount for every entry path — bot, pass & play,
+  // friend invite link, matchmaking — since they can all land here without
+  // going through the mode-select screen (e.g. accepting a friend's invite
+  // sets initialRoomCode and skips straight past it).
+  const isChessBlitz = game.id === 'chess_blitz';
+  const [chessLimitChecked, setChessLimitChecked] = useState(!isChessBlitz || !!currentUser.proTier);
+  const [chessLimitBlocked, setChessLimitBlocked] = useState<{ message: string; nextAvailableAt?: string } | null>(null);
+  // Consuming the weekly credit is a real server-side side effect (not an
+  // idempotent read), so a ref guards it against ever being sent twice —
+  // React 18 StrictMode intentionally mounts, cleans up, then re-mounts
+  // effects once in dev specifically to catch exactly this class of bug.
+  // Deliberately no cancel-on-cleanup here: the ref already guarantees this
+  // fires at most once per component instance, and since StrictMode's dev
+  // "cleanup" isn't a real unmount, guarding on it would just discard the
+  // one real in-flight response and leave the check stuck forever.
+  const chessCheckStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isChessBlitz || currentUser.proTier) return;
+    if (chessCheckStartedRef.current) return;
+    chessCheckStartedRef.current = true;
+    (async () => {
+      try {
+        const res = await startChessRound();
+        if (!res.success) {
+          setChessLimitBlocked({
+            message: res.error || 'Chess Blitz is limited to once a week on the free plan.',
+            nextAvailableAt: res.nextAvailableAt
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setChessLimitChecked(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [currentMode, setCurrentMode] = useState<PlayMode>(
     initialRoomCode && !BOARD_GAME_IDS.includes(game.id)
       ? 'play_match'
@@ -763,6 +805,37 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-5 flex-1 overflow-y-auto max-h-[75vh]">
+          {!chessLimitChecked ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center gap-3">
+              <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#00FF66] rounded-full animate-spin" />
+              <p className="text-xs text-zinc-500">Checking availability...</p>
+            </div>
+          ) : chessLimitBlocked ? (
+            <div className="py-10 flex flex-col items-center text-center space-y-4 px-2">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-2xl">
+                ♟️
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Weekly Chess Limit Reached</h3>
+                <p className="text-xs text-zinc-400 mt-2 max-w-xs mx-auto">{chessLimitBlocked.message}</p>
+                {chessLimitBlocked.nextAvailableAt && (
+                  <p className="text-[11px] text-zinc-500 mt-2">
+                    Next free game unlocks {new Date(chessLimitBlocked.nextAvailableAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <p className="text-[11px] text-amber-300/80 max-w-xs mx-auto">
+                Upgrade to NOOB Pro from your profile for unlimited Chess Blitz, any time.
+              </p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <>
           {/* 1. SELECT MODE VIEW */}
           {currentMode === 'select_mode' && (
             <div className="space-y-4">
@@ -1501,6 +1574,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 </button>
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </div>

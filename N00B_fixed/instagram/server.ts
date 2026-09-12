@@ -1772,6 +1772,25 @@ async function startServer() {
     res.json({ posts: mapped });
   });
 
+  const DAILY_POST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+  // Free accounts get one post OR reel a day (shared cap across both,
+  // tracked by the same timestamp) to keep the feed from being spammed by
+  // a single account; NOOB Pro removes the cap.
+  function checkDailyPostLimit(user: any): { allowed: boolean; error?: string; nextAvailableAt?: string } {
+    if (!user || user.proTier) return { allowed: true };
+    const last = user.lastContentPostAt ? new Date(user.lastContentPostAt).getTime() : 0;
+    const now = Date.now();
+    if (now - last < DAILY_POST_COOLDOWN_MS) {
+      return {
+        allowed: false,
+        error: 'Free accounts can publish one post or reel per day. Upgrade to NOOB Pro for unlimited posting.',
+        nextAvailableAt: new Date(last + DAILY_POST_COOLDOWN_MS).toISOString()
+      };
+    }
+    return { allowed: true };
+  }
+
   app.post('/api/posts', (req, res) => {
     const active = getActiveUser(req);
     const author = active || {
@@ -1780,6 +1799,13 @@ async function startServer() {
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
       isVerified: true
     };
+
+    if (active) {
+      const limitCheck = checkDailyPostLimit(active);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({ error: limitCheck.error, nextAvailableAt: limitCheck.nextAvailableAt });
+      }
+    }
 
     const { slides, caption, category, hashtags, audioTrack, webLink } = req.body;
 
@@ -1811,6 +1837,7 @@ async function startServer() {
       active.postsCount = (active.postsCount || 0) + 1;
       active.noobPoints = (active.noobPoints || 0) + 25;
       recordTransaction(active, 25, 'Published a post');
+      active.lastContentPostAt = new Date().toISOString();
     }
     res.status(201).json({ success: true, post: newPost });
   });
@@ -2140,6 +2167,13 @@ async function startServer() {
       isVerified: true
     };
 
+    if (active) {
+      const limitCheck = checkDailyPostLimit(active);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({ error: limitCheck.error, nextAvailableAt: limitCheck.nextAvailableAt });
+      }
+    }
+
     const { videoUrl, thumbnailUrl, caption, audioTrack, hashtags } = req.body;
 
     const newReel = {
@@ -2169,6 +2203,7 @@ async function startServer() {
     if (active) {
       active.noobPoints = (active.noobPoints || 0) + 25;
       recordTransaction(active, 25, 'Published a reel');
+      active.lastContentPostAt = new Date().toISOString();
     }
     res.status(201).json({ success: true, reel: newReel });
   });
@@ -3581,6 +3616,33 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
     matchmakingQueue = matchmakingQueue.filter(q => q.userId !== active.id);
+    res.json({ success: true });
+  });
+
+  const CHESS_WEEKLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Chess Blitz's real stakes (a shot at a 50,000,000-point jackpot, or a
+  // full balance wipe) make it something a free account could otherwise
+  // grind endlessly — cap it to one round a week; NOOB Pro removes the cap.
+  // The client calls this once, the moment it's about to let the player
+  // enter ANY mode (bot, pass & play, friend invite, matchmaking) for
+  // Chess Blitz, so a single check here covers every entry point instead
+  // of needing one in each.
+  app.post('/api/games/chess/start', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (active.proTier) return res.json({ success: true, isPro: true });
+
+    const last = active.lastChessBlitzAt ? new Date(active.lastChessBlitzAt).getTime() : 0;
+    const now = Date.now();
+    if (now - last < CHESS_WEEKLY_COOLDOWN_MS) {
+      return res.status(403).json({
+        error: 'Chess Blitz is limited to once a week on the free plan. Upgrade to NOOB Pro for unlimited play.',
+        nextAvailableAt: new Date(last + CHESS_WEEKLY_COOLDOWN_MS).toISOString()
+      });
+    }
+
+    active.lastChessBlitzAt = new Date(now).toISOString();
     res.json({ success: true });
   });
 

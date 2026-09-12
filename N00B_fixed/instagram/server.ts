@@ -1588,6 +1588,48 @@ async function startServer() {
     res.json({ success: true, user: sanitizeUser(users[index]) });
   });
 
+  // Live Profile Pictures — a NOOB Pro perk. These are animated SVGs (CSS/
+  // SMIL animation embedded in the file itself), so they animate as a
+  // completely ordinary <img src="..."> anywhere an avatar is already
+  // rendered — no video/GIF player or per-component changes needed
+  // anywhere else in the app.
+  const LIVE_AVATAR_PRESETS = [
+    { id: 'neon_pulse', name: 'Neon Pulse', url: '/live-avatars/neon-pulse.svg' },
+    { id: 'orbit_glow', name: 'Orbit Glow', url: '/live-avatars/orbit-glow.svg' }
+  ];
+
+  app.get('/api/live-avatars/presets', (req, res) => {
+    res.json({ presets: LIVE_AVATAR_PRESETS });
+  });
+
+  // Applies a preset or a user's own uploaded custom animated image as
+  // their live profile picture. Gated on holding ANY NOOB Pro tier — not a
+  // specific one — matching how every other Pro perk in this app checks
+  // `proTier` (e.g. the Chess Blitz weekly cap and the daily posting cap).
+  app.post('/api/users/me/live-avatar', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (!active.proTier) {
+      return res.status(403).json({ error: 'Live Profile Pictures are a NOOB Pro feature. Upgrade to unlock them.' });
+    }
+
+    const { presetId, customUrl } = req.body;
+    let newAvatar: string | undefined;
+    if (presetId) {
+      const preset = LIVE_AVATAR_PRESETS.find(p => p.id === presetId);
+      if (!preset) return res.status(400).json({ error: 'Unknown preset.' });
+      newAvatar = preset.url;
+    } else if (customUrl && String(customUrl).trim()) {
+      newAvatar = String(customUrl).trim();
+    } else {
+      return res.status(400).json({ error: 'Choose a preset or upload a custom live picture.' });
+    }
+
+    active.avatar = newAvatar;
+    active.isLiveAvatar = true;
+    res.json({ success: true, user: sanitizeUser(active) });
+  });
+
   // Peer-to-peer NOOB Points transfer — the sender's balance moves
   // immediately (both sides recorded via recordTransaction) so the wallet
   // reflects it on the very next read, no polling delay.

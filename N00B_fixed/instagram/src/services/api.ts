@@ -139,6 +139,31 @@ export async function recoverAccountAccess(payload: {
   return data;
 }
 
+export interface LiveAvatarPreset {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export async function fetchLiveAvatarPresets(): Promise<{ presets: LiveAvatarPreset[] }> {
+  const res = await fetch(`${API_BASE}/live-avatars/presets`);
+  return await res.json();
+}
+
+// NOOB Pro only — the server 403s this for a free-tier account.
+export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: string }): Promise<{
+  success: boolean;
+  user?: User;
+  error?: string;
+}> {
+  const res = await fetch(`${API_BASE}/users/me/live-avatar`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  return await res.json();
+}
+
 export async function logoutUser(): Promise<{ success: boolean }> {
   setSessionUserId(null);
   const res = await fetch(`${API_BASE}/auth/logout`, {

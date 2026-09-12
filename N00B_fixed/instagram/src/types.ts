@@ -25,6 +25,7 @@ export interface User {
   // back down to a client — never populated when reading a user.
   password?: string;
   avatar: string;
+  isLiveAvatar?: boolean;
   bio: string;
   accountType: AccountType;
   agreedToTerms?: boolean;

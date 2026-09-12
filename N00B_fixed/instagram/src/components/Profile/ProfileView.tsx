@@ -51,7 +51,8 @@ import {
   Loader2,
   AlertCircle,
   Clock,
-  Calculator as CalculatorIcon
+  Calculator as CalculatorIcon,
+  Zap
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
 import {
@@ -81,6 +82,7 @@ import { GetVerifiedModal } from './GetVerifiedModal';
 import { AdminControlModal } from '../Modals/AdminControlModal';
 import { AccountsStatisticsModal } from './AccountsStatisticsModal';
 import { ProFeaturesModal } from './ProFeaturesModal';
+import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
@@ -205,6 +207,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Modals for Accounts & Statistics, Blocked Accounts, and Report
   const [showAccountsStatisticsModal, setShowAccountsStatisticsModal] = useState(false);
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
+  const [showLiveAvatarModal, setShowLiveAvatarModal] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
@@ -718,6 +721,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         Subscriptions, perks &amp; exclusive access
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option: Live Profile Picture (NOOB Pro perk) */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowLiveAvatarModal(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Zap className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
+                        Live Profile Picture
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        Animated avatars — NOOB Pro exclusive
                       </span>
                     </div>
                   </button>
@@ -2118,6 +2142,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onClose={() => setShowProFeaturesModal(false)}
           onUserUpdated={onUserUpdated}
+        />
+      )}
+
+      {showLiveAvatarModal && (
+        <LiveProfilePictureModal
+          currentUser={currentUser}
+          onClose={() => setShowLiveAvatarModal(false)}
+          onUserUpdated={onUserUpdated}
+          onUpgradeClick={() => setShowProFeaturesModal(true)}
         />
       )}
     </div>

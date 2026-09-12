@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="og-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#150826"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="og-arc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FF66"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: og-spin 3.2s linear infinite; }
+      .spinRev { transform-origin: 100px 100px; animation: og-spinRev 4.5s linear infinite; }
+      .dot { animation: og-twinkle 1.6s ease-in-out infinite; }
+      @keyframes og-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes og-spinRev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+      @keyframes og-twinkle {
+        0%, 100% { opacity: 0.35; }
+        50%      { opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#og-bg)"/>
+
+  <g class="spinRev">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="#2a2a35" stroke-width="1.5" stroke-dasharray="3 6"/>
+  </g>
+
+  <g class="spin">
+    <path d="M100 32 A68 68 0 0 1 168 100" fill="none" stroke="url(#og-arc)" stroke-width="4" stroke-linecap="round"/>
+    <circle class="dot" cx="168" cy="100" r="5" fill="#00E5FF"/>
+  </g>
+
+  <g class="spinRev">
+    <path d="M100 46 A54 54 0 0 0 46 100" fill="none" stroke="#00FF66" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    <circle class="dot" cx="46" cy="100" r="4" fill="#00FF66"/>
+  </g>
+
+  <circle cx="100" cy="100" r="38" fill="#0a0a12" stroke="#00E5FF" stroke-width="2"/>
+  <path d="M100 72 L118 100 L100 128 L82 100 Z" fill="#00E5FF"/>
+  <path d="M100 84 L110 100 L100 116 L90 100 Z" fill="#0a0a12"/>
+</svg>

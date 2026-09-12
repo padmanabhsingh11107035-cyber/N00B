@@ -13,7 +13,15 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
-  Coins
+  Coins,
+  Info,
+  Mail,
+  Phone,
+  Cake,
+  MapPin,
+  Briefcase,
+  Globe2,
+  Fingerprint
 } from 'lucide-react';
 import { User } from '../../types';
 import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints } from '../../services/api';
@@ -47,6 +55,12 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
   // Delete-account confirmation state
   const [selectedUserForDelete, setSelectedUserForDelete] = useState<User | null>(null);
+
+  // Full account-details view (email, phone, DOB/age, etc.) — never shows
+  // the password, which the server already strips before this data ever
+  // reaches the client (GET /api/admin/users returns sanitizeUser(), not
+  // the raw record).
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
 
   // Points-adjustment modal state
   const [selectedUserForPoints, setSelectedUserForPoints] = useState<User | null>(null);
@@ -211,6 +225,17 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     } finally {
       setIsSendingNotif(false);
     }
+  };
+
+  const calculateAge = (dob?: string): string => {
+    if (!dob) return 'Not provided';
+    const birth = new Date(dob);
+    if (isNaN(birth.getTime())) return 'Not provided';
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const monthDiff = now.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--;
+    return `${age} years old`;
   };
 
   const filteredUsers = usersList.filter(
@@ -418,6 +443,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
                         {/* Action buttons */}
                         <div className="shrink-0 flex items-center gap-1.5">
+                          <button
+                            onClick={() => setSelectedUserForDetails(user)}
+                            title="View full account details (email, phone, age, etc.)"
+                            className="px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                            Details
+                          </button>
                           <button
                             onClick={() => {
                               setSelectedUserForPoints(user);
@@ -780,6 +813,233 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded-xl text-xs font-black shadow-lg cursor-pointer"
               >
                 {actionLoading === selectedUserForPoints.id ? 'Updating...' : 'Update Balance'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Account Details Sub-Modal — everything GET /api/admin/users
+          returns except the password, which the server never sends here in
+          the first place (sanitizeUser strips it before this data leaves
+          the server). */}
+      {selectedUserForDetails && (
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-zinc-950 border border-sky-500/40 rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="p-5 border-b border-zinc-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={selectedUserForDetails.avatar || '/noob-logo.svg.jpeg'}
+                  alt={selectedUserForDetails.username}
+                  className="w-11 h-11 rounded-full object-cover border border-zinc-700 shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-black text-white truncate">
+                      {selectedUserForDetails.displayName || selectedUserForDetails.username}
+                    </h3>
+                    {selectedUserForDetails.isVerified && <VerifiedBadge size="sm" />}
+                  </div>
+                  <span className="text-xs text-zinc-400">@{selectedUserForDetails.username}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedUserForDetails(null)}
+                className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Contact Information */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> Contact Information
+                </span>
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Email</span>
+                    <span className="text-xs text-white font-medium text-right break-all">
+                      {selectedUserForDetails.email || 'Not provided'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500 flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</span>
+                    <span className="text-xs text-white font-medium">
+                      {selectedUserForDetails.mobileNumber
+                        ? `${selectedUserForDetails.countryCode || ''} ${selectedUserForDetails.mobileNumber}`.trim()
+                        : 'Not provided'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Details */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Cake className="w-3.5 h-3.5" /> Personal Details
+                </span>
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Date of Birth</span>
+                    <span className="text-xs text-white font-medium">
+                      {selectedUserForDetails.dateOfBirth || 'Not provided'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Age</span>
+                    <span className="text-xs text-white font-medium">
+                      {calculateAge(selectedUserForDetails.dateOfBirth)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Gender</span>
+                    <span className="text-xs text-white font-medium">{selectedUserForDetails.gender || 'Not provided'}</span>
+                  </div>
+                  {selectedUserForDetails.pronouns && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500">Pronouns</span>
+                      <span className="text-xs text-white font-medium">{selectedUserForDetails.pronouns}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> City</span>
+                    <span className="text-xs text-white font-medium">{selectedUserForDetails.city || 'Not provided'}</span>
+                  </div>
+                  {selectedUserForDetails.website && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500 flex items-center gap-1"><Globe2 className="w-3 h-3" /> Website</span>
+                      <span className="text-xs text-white font-medium truncate max-w-[60%]">{selectedUserForDetails.website}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Business Details (only if this is a business account) */}
+              {selectedUserForDetails.isBusiness && (
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5" /> Business Details
+                  </span>
+                  <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500">Category</span>
+                      <span className="text-xs text-white font-medium">{selectedUserForDetails.businessCategory || 'Not provided'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500">Business Email</span>
+                      <span className="text-xs text-white font-medium break-all text-right">{selectedUserForDetails.businessEmail || 'Not provided'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500">Business Phone</span>
+                      <span className="text-xs text-white font-medium">{selectedUserForDetails.businessPhone || 'Not provided'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500">Address</span>
+                      <span className="text-xs text-white font-medium text-right">{selectedUserForDetails.businessAddress || 'Not provided'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Account Info */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Fingerprint className="w-3.5 h-3.5" /> Account Info
+                </span>
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Account ID</span>
+                    <span className="text-[11px] text-zinc-300 font-mono break-all text-right">{selectedUserForDetails.id}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Account Type</span>
+                    <span className="text-xs text-white font-medium capitalize">{selectedUserForDetails.accountType}</span>
+                  </div>
+                  {(selectedUserForDetails as any).createdAt && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500 shrink-0">Joined</span>
+                      <span className="text-xs text-white font-medium text-right break-all">
+                        {(() => {
+                          const raw = (selectedUserForDetails as any).createdAt;
+                          const d = new Date(raw);
+                          return isNaN(d.getTime()) ? raw : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">Verification</span>
+                    <span className="text-xs text-white font-medium capitalize">
+                      {selectedUserForDetails.isVerified ? selectedUserForDetails.verificationTier || 'Verified' : 'Not Verified'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500">NOOB Pro</span>
+                    <span className="text-xs text-white font-medium capitalize">
+                      {selectedUserForDetails.proTier ? `${selectedUserForDetails.proTier} (${selectedUserForDetails.proBilling || 'monthly'})` : 'Free plan'}
+                    </span>
+                  </div>
+                  {selectedUserForDetails.isSuspended && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500">Suspension Reason</span>
+                      <span className="text-xs text-red-400 font-medium text-right">{selectedUserForDetails.suspendedReason || 'Not specified'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Platform Activity Stats */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Platform Stats
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                    <span className="text-sm font-black text-white block">{selectedUserForDetails.followersCount || 0}</span>
+                    <span className="text-[10px] text-zinc-500">Followers</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                    <span className="text-sm font-black text-white block">{selectedUserForDetails.followingCount || 0}</span>
+                    <span className="text-[10px] text-zinc-500">Following</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                    <span className="text-sm font-black text-white block">{selectedUserForDetails.postsCount || 0}</span>
+                    <span className="text-[10px] text-zinc-500">Posts</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                    <span className="text-sm font-black text-amber-400 block">{(selectedUserForDetails.noobPoints || 0).toLocaleString()}</span>
+                    <span className="text-[10px] text-zinc-500">NOOB Points</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                    <span className="text-sm font-black text-white block">{selectedUserForDetails.gamesPlayedCount || 0}</span>
+                    <span className="text-[10px] text-zinc-500">Games Played</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center">
+                    <span className="text-sm font-black text-white block">{selectedUserForDetails.gamesWonCount || 0}</span>
+                    <span className="text-[10px] text-zinc-500">Games Won</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedUserForDetails.bio && (
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">Bio</span>
+                  <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 leading-relaxed">
+                    {selectedUserForDetails.bio}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-zinc-800 shrink-0">
+              <button
+                onClick={() => setSelectedUserForDetails(null)}
+                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>

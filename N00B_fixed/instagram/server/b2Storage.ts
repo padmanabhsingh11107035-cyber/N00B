@@ -24,19 +24,33 @@ function setCachedSignedUrl(key: string, url: string, expiresInSeconds: number) 
 
 // Backblaze B2 S3-Compatible Client Helper
 // Strictly follows security rule: NO hardcoded keys or fallback secrets.
+//
+// Memoized: constructing an S3Client resolves its config/credential/retry
+// middleware stack synchronously, which is real work on Node's single
+// thread. This used to run on EVERY call — including calls that immediately
+// bail out on a cache hit or a non-B2 value — which, multiplied across every
+// avatar/media URL signed on a page like Reels (reels × 3 fields + every
+// user's avatar + posts + stories, all in one burst), was a large chunk of
+// a 20+ second load. The env vars this reads are static for the process's
+// lifetime, so building the client once and reusing it is always correct.
+let cachedB2Client: { client: S3Client | null; bucket: string; endpoint: string; isConfigured: boolean } | null = null;
+
 export function getB2Client(): { client: S3Client | null; bucket: string; endpoint: string; isConfigured: boolean } {
+  if (cachedB2Client) return cachedB2Client;
+
   const keyId = process.env.B2_KEY_ID;
   const applicationKey = process.env.B2_APPLICATION_KEY;
   const bucketName = process.env.B2_BUCKET_NAME || 'noob-learning-media';
   const endpoint = process.env.B2_ENDPOINT || 'https://s3.us-east-005.backblazeb2.com';
 
   if (!keyId || !applicationKey) {
-    return {
+    cachedB2Client = {
       client: null,
       bucket: bucketName,
       endpoint,
       isConfigured: false
     };
+    return cachedB2Client;
   }
 
   const client = new S3Client({
@@ -49,12 +63,13 @@ export function getB2Client(): { client: S3Client | null; bucket: string; endpoi
     }
   });
 
-  return {
+  cachedB2Client = {
     client,
     bucket: bucketName,
     endpoint,
     isConfigured: true
   };
+  return cachedB2Client;
 }
 
 /**
@@ -119,6 +134,17 @@ export async function uploadMediaToB2(
 export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 3600): Promise<string> {
   if (!keyOrUrl) return '';
   if (keyOrUrl.startsWith('data:')) return keyOrUrl;
+  // A leading slash means this is already a resolvable local/static path
+  // (e.g. the default "/noob-logo.svg.jpeg" avatar), not a B2 object key —
+  // real upload keys are always "folder/filename", never slash-prefixed.
+  // Checked before touching B2 at all: this is the single most common case
+  // (every default avatar) and needs no client or cache lookup.
+  if (keyOrUrl.startsWith('/')) return keyOrUrl;
+
+  // A cached, still-fresh signed URL (see the module comment above) means no
+  // B2 client is needed at all — check before constructing/fetching one.
+  const cached = getCachedSignedUrl(keyOrUrl);
+  if (cached) return cached;
 
   const { client, bucket, endpoint, isConfigured } = getB2Client();
 
@@ -140,20 +166,11 @@ export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 
     }
     return keyOrUrl;
   }
-  // A leading slash means this is already a resolvable local/static path
-  // (e.g. the default "/noob-logo.svg.jpeg" avatar), not a B2 object key —
-  // real upload keys are always "folder/filename", never slash-prefixed.
-  if (keyOrUrl.startsWith('/')) {
-    return keyOrUrl;
-  }
 
   if (!isConfigured || !client) {
     // If not configured, return key or placeholder
     return keyOrUrl;
   }
-
-  const cached = getCachedSignedUrl(keyOrUrl);
-  if (cached) return cached;
 
   try {
     const command = new GetObjectCommand({

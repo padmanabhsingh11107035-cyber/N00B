@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 interface BirthdayWheelPickerProps {
   value: string; // 'YYYY-MM-DD' or ''
   maxDate: Date; // latest selectable date (13+ years old cutoff)
+  minDate: Date; // earliest selectable date (82 years old cap)
   onClose: () => void;
   onConfirm: (isoDate: string) => void;
 }
@@ -126,7 +127,7 @@ function WheelColumn<T>({
   );
 }
 
-export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value, maxDate, onClose, onConfirm }) => {
+export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value, maxDate, minDate, onClose, onConfirm }) => {
   const initial = useMemo(() => {
     const parsed = value ? new Date(value) : null;
     if (parsed && !isNaN(parsed.getTime())) {
@@ -140,7 +141,7 @@ export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value,
   const [dayIdx, setDayIdx] = useState(initial.day);
   const [yearIdx, setYearIdx] = useState(0);
 
-  const minYear = maxDate.getFullYear() - 100;
+  const minYear = minDate.getFullYear();
   const maxYear = maxDate.getFullYear();
   const years = useMemo(() => {
     const list: number[] = [];

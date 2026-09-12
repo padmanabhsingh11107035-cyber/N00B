@@ -20,6 +20,10 @@ export interface User {
   countryCode?: string;
   mobileNumber?: string;
   dateOfBirth?: string;
+  // Write-only: accepted by PUT /api/users/me to change the password, but
+  // the server strips it (sanitizeUser) before a User object is ever sent
+  // back down to a client — never populated when reading a user.
+  password?: string;
   avatar: string;
   bio: string;
   accountType: AccountType;
@@ -258,6 +262,7 @@ export interface Story {
   expiresAt: string;
   isCloseFriendsOnly: boolean;
   isViewed: boolean;
+  viewedBy?: string[];
   filter?: string;
   stickers?: {
     type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music';

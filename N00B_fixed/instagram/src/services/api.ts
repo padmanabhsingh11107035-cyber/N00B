@@ -112,6 +112,33 @@ export async function loginUser(payload: {
   return data;
 }
 
+export async function verifyUsernameExists(username: string): Promise<{ exists: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/auth/verify-username`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: safeJsonStringify({ username })
+  });
+  return await res.json();
+}
+
+export async function recoverAccountAccess(payload: {
+  username: string;
+  mobileNumber: string;
+  dateOfBirth: string;
+  email: string;
+}): Promise<{ success: boolean; user?: User; error?: string }> {
+  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: safeJsonStringify(payload)
+  });
+  const data = await res.json();
+  if (data.user && data.user.id) {
+    setSessionUserId(data.user.id);
+  }
+  return data;
+}
+
 export async function logoutUser(): Promise<{ success: boolean }> {
   setSessionUserId(null);
   const res = await fetch(`${API_BASE}/auth/logout`, {
@@ -236,25 +263,25 @@ export async function fetchPosts(category?: string, location?: string): Promise<
   const params = new URLSearchParams();
   if (category) params.append('category', category);
   if (location) params.append('location', location);
-  const res = await fetch(`${API_BASE}/posts?${params.toString()}`);
+  const res = await fetch(`${API_BASE}/posts?${params.toString()}`, { headers: getAuthHeaders() });
   const data = await res.json();
   return data.posts;
 }
 
 export async function fetchLikedPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts/liked`);
+  const res = await fetch(`${API_BASE}/posts/liked`, { headers: getAuthHeaders() });
   const data = await res.json();
   return data.posts;
 }
 
 export async function fetchSavedPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts/saved`);
+  const res = await fetch(`${API_BASE}/posts/saved`, { headers: getAuthHeaders() });
   const data = await res.json();
   return data.posts;
 }
 
 export async function fetchArchivedPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts/archived`);
+  const res = await fetch(`${API_BASE}/posts/archived`, { headers: getAuthHeaders() });
   const data = await res.json();
   return data.posts;
 }
@@ -273,7 +300,12 @@ export async function createPost(postData: Partial<Post>): Promise<Post> {
 }
 
 export async function toggleLikePost(postId: string): Promise<{ isLiked: boolean; likesCount: number }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/like`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/posts/${postId}/like`, { method: 'POST', headers: getAuthHeaders() });
+  return await res.json();
+}
+
+export async function fetchPostLikers(postId: string): Promise<{ users: User[] }> {
+  const res = await fetch(`${API_BASE}/posts/${postId}/likers`, { headers: getAuthHeaders() });
   return await res.json();
 }
 
@@ -361,6 +393,17 @@ export async function createStory(storyData: Partial<Story>): Promise<Story> {
   return data.story;
 }
 
+export async function recordStoryView(storyId: string) {
+  const res = await fetch(`${API_BASE}/stories/${storyId}/view`, { method: 'POST', headers: getAuthHeaders() });
+  return await res.json();
+}
+
+// Owner-only — the server 403s this for anyone but the story's own author.
+export async function fetchStoryViewers(storyId: string): Promise<{ users: User[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/stories/${storyId}/viewers`, { headers: getAuthHeaders() });
+  return await res.json();
+}
+
 export async function addCommentToStory(storyId: string, text: string) {
   const res = await fetch(`${API_BASE}/stories/${storyId}/comment`, {
     method: 'POST',
@@ -408,6 +451,17 @@ export async function createReel(reelData: Partial<Reel>): Promise<Reel> {
 
 export async function toggleLikeReel(reelId: string): Promise<{ isLiked: boolean; likesCount: number }> {
   const res = await fetch(`${API_BASE}/reels/${reelId}/like`, { method: 'POST', headers: getAuthHeaders() });
+  return await res.json();
+}
+
+export async function fetchReelLikers(reelId: string): Promise<{ users: User[] }> {
+  const res = await fetch(`${API_BASE}/reels/${reelId}/likers`, { headers: getAuthHeaders() });
+  return await res.json();
+}
+
+// Owner-only — the server 403s this for anyone but the reel's own author.
+export async function fetchReelViewers(reelId: string): Promise<{ users: User[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/reels/${reelId}/viewers`, { headers: getAuthHeaders() });
   return await res.json();
 }
 

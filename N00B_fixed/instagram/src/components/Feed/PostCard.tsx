@@ -22,6 +22,8 @@ import { Post, User } from '../../types';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
+import { LikesViewsSheet } from '../Common/LikesViewsSheet';
+import { fetchPostLikers } from '../../services/api';
 
 interface PostCardProps {
   post: Post;
@@ -57,6 +59,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
   const [showFullscreenAvatar, setShowFullscreenAvatar] = useState(false);
+  const [showLikesSheet, setShowLikesSheet] = useState(false);
 
   const isOwner = post.userId === currentUser.id || post.username === currentUser.username;
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
@@ -526,9 +529,13 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Like Counts */}
         {!post.isLikeCountHidden && (
-          <div className="mt-2 text-xs font-bold text-white tracking-tight">
+          <button
+            onClick={() => setShowLikesSheet(true)}
+            disabled={post.likesCount === 0}
+            className="mt-2 text-xs font-bold text-white tracking-tight hover:underline disabled:hover:no-underline cursor-pointer disabled:cursor-default text-left"
+          >
             {post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'}
-          </div>
+          </button>
         )}
 
         {/* Captions with Formatted Line Breaks */}
@@ -617,6 +624,14 @@ export const PostCard: React.FC<PostCardProps> = ({
         isVerified={post.isVerified}
         onClose={() => setShowFullscreenAvatar(false)}
       />
+
+      {showLikesSheet && (
+        <LikesViewsSheet
+          title="Liked by"
+          fetchUsers={() => fetchPostLikers(post.id)}
+          onClose={() => setShowLikesSheet(false)}
+        />
+      )}
     </article>
   );
 };

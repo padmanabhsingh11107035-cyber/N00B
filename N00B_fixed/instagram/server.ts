@@ -452,6 +452,22 @@ async function startServer() {
     );
   }
 
+  // Resolves a list of user ids (e.g. likedBy/viewedBy on a post/reel/story)
+  // into full, live, signed-avatar user objects for a "who liked/viewed
+  // this" list — newest first, since that's the more useful reading order
+  // and these arrays are stored oldest-first (push order).
+  async function resolveUserList(userIds: string[]) {
+    const ordered = [...(userIds || [])].reverse();
+    const resolved = await Promise.all(
+      ordered.map(async (id) => {
+        const u = users.find(u => u.id === id);
+        if (!u) return null;
+        return { ...sanitizePublicUser(u), avatar: await signMediaKey(u.avatar) };
+      })
+    );
+    return resolved.filter(Boolean);
+  }
+
   // Permanently removes an account and everything it authored — shared by
   // the admin "delete user" tool and the self-service account-deletion
   // endpoint required by Google Play (any app that lets people sign up must
@@ -656,13 +672,17 @@ async function startServer() {
     if (!bio || !bio.trim()) {
       return res.status(400).json({ error: 'Bio is compulsory. Please write a short bio about yourself.' });
     }
+    if (!mobileNumber || !String(mobileNumber).trim()) {
+      return res.status(400).json({ error: 'Mobile number is required' });
+    }
     if (!agreedToTerms) {
       return res.status(400).json({ error: "You must agree to NOOB's general terms and privacy policy" });
     }
 
     // Google Play requires a minimum-age check for any app allowing account
     // creation — validated server-side too since the client check alone
-    // can be bypassed by calling this endpoint directly.
+    // can be bypassed by calling this endpoint directly. The 82-year cap is
+    // a product decision (kept the same way, for the same reason).
     if (!dateOfBirth) {
       return res.status(400).json({ error: 'Date of birth is required' });
     }
@@ -673,6 +693,9 @@ async function startServer() {
     const ageInYears = (Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
     if (ageInYears < 13) {
       return res.status(400).json({ error: 'You must be at least 13 years old to create a NOOB account' });
+    }
+    if (ageInYears > 82) {
+      return res.status(400).json({ error: 'NOOB accounts are only available to users 82 years old or younger' });
     }
 
     const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_.]/g, '');
@@ -782,6 +805,74 @@ async function startServer() {
   app.post('/api/auth/logout', (req, res) => {
     currentSessionUserId = null;
     res.json({ success: true, message: 'Logged out successfully' });
+  });
+
+  // Forgot-password step 1: gate opening the recovery form on a real
+  // username actually existing, per product requirement. Deliberately
+  // returns only a boolean (no other account detail), and is rate-limited
+  // since it's still a username-enumeration oracle by nature.
+  app.post('/api/auth/verify-username', (req, res) => {
+    if (!checkRateLimit(`verify-username:${req.ip}`, 20, 60000)) {
+      return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+    }
+    const { username } = req.body;
+    if (!username || !String(username).trim()) {
+      return res.status(400).json({ error: 'Please enter a username.' });
+    }
+    const clean = String(username).toLowerCase().trim();
+    const exists = users.some(u => u.username.toLowerCase() === clean);
+    res.json({ exists });
+  });
+
+  // Forgot-password step 2: recover access by proving identity with the
+  // mobile number, date of birth, and email on file — no password reset
+  // link/email service exists in this app, so this is the recovery path.
+  // All three must match; matching succeeds the same as a normal login
+  // (the client then routes the user to Settings to actually set a new
+  // password). Heavily rate-limited since this is effectively a 3-factor
+  // brute-force target for a known username.
+  app.post('/api/auth/forgot-password', (req, res) => {
+    if (!checkRateLimit(`forgot-password:${req.ip}`, 10, 60000)) {
+      return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+    }
+    const { username, mobileNumber, dateOfBirth, email } = req.body;
+    if (!username || !String(username).trim()) {
+      return res.status(400).json({ error: 'Username is required.' });
+    }
+    const clean = String(username).toLowerCase().trim();
+    const user = users.find(u => u.username.toLowerCase() === clean);
+    if (!user) {
+      return res.status(404).json({ error: 'No account found with that username.' });
+    }
+    if (!mobileNumber || !dateOfBirth || !email) {
+      return res.status(400).json({ error: 'Please enter your mobile number, date of birth, and email.' });
+    }
+    if (user.isSuspended) {
+      return res.status(403).json({
+        error: `This account has been suspended by NOOB Administrator.${user.suspendedReason ? ' Reason: ' + user.suspendedReason : ''}`
+      });
+    }
+
+    const normalizeDigits = (s: any) => String(s || '').replace(/\D/g, '');
+    const normalizeDate = (s: any) => {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+    };
+
+    // One generic failure message for any mismatch (not "email wrong" vs
+    // "DOB wrong") — otherwise the response itself becomes an oracle an
+    // attacker could use to guess each field independently.
+    const emailMatches = String(email).trim().toLowerCase() === (user.email || '').trim().toLowerCase();
+    const inputPhoneDigits = normalizeDigits(mobileNumber);
+    const phoneMatches = !!inputPhoneDigits && inputPhoneDigits === normalizeDigits(user.mobileNumber);
+    const inputDob = normalizeDate(dateOfBirth);
+    const dobMatches = !!inputDob && inputDob === normalizeDate(user.dateOfBirth);
+
+    if (!emailMatches || !phoneMatches || !dobMatches) {
+      return res.status(401).json({ error: 'The details you entered do not match our records. Please double-check and try again.' });
+    }
+
+    res.json({ success: true, user: sanitizeUser(user) });
   });
 
 
@@ -1897,6 +1988,18 @@ async function startServer() {
     res.json({ success: true, isLiked: !isLiked, likesCount: post.likesCount });
   });
 
+  // Who liked this post — visible to anyone who can see the post itself
+  // (same privacy boundary as everything else about it).
+  app.get('/api/posts/:id/likers', async (req, res) => {
+    const post = posts.find(p => p.id === req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const active = getActiveUser(req);
+    if (!isAuthorVisibleTo(post.userId, active)) {
+      return res.status(403).json({ error: 'You cannot view this post.' });
+    }
+    res.json({ users: await resolveUserList(post.likedBy || []) });
+  });
+
   app.post('/api/posts/:id/save', (req, res) => {
     const postId = req.params.id;
     const active = getActiveUser(req);
@@ -2147,6 +2250,34 @@ async function startServer() {
     res.status(201).json({ success: true, story: newStory });
   });
 
+  // Record that the active user watched this story — idempotent per user,
+  // same as a reel view, so the owner's "seen by" list has no duplicates.
+  app.post('/api/stories/:id/view', (req, res) => {
+    const story = stories.find(s => s.id === req.params.id);
+    if (!story) return res.status(404).json({ error: 'Story not found' });
+    const active = getActiveUser(req);
+    if (active && active.id !== story.userId) {
+      story.viewedBy = story.viewedBy || [];
+      if (!story.viewedBy.includes(active.id)) {
+        story.viewedBy.push(active.id);
+      }
+    }
+    res.json({ success: true, viewsCount: (story.viewedBy || []).length });
+  });
+
+  // Who viewed this story — owner-only, the same "seen by" convention as
+  // reels (and unlike posts/reels, stories have no "likes" concept in this
+  // app at all, so this is the only list this endpoint needs to serve).
+  app.get('/api/stories/:id/viewers', async (req, res) => {
+    const story = stories.find(s => s.id === req.params.id);
+    if (!story) return res.status(404).json({ error: 'Story not found' });
+    const active = getActiveUser(req);
+    if (!active || active.id !== story.userId) {
+      return res.status(403).json({ error: 'Only the story owner can see who viewed it.' });
+    }
+    res.json({ users: await resolveUserList(story.viewedBy || []) });
+  });
+
   // The client has called this since it was built, but the route never
   // existed — every comment attempt hit the catch-all 404 and the response
   // (no `comment` field) got pushed into the story's comments array as
@@ -2263,6 +2394,29 @@ async function startServer() {
     res.json({ success: true, isLiked: !isLiked, likesCount: reel.likesCount });
   });
 
+  app.get('/api/reels/:id/likers', async (req, res) => {
+    const reel = reels.find(r => r.id === req.params.id);
+    if (!reel) return res.status(404).json({ error: 'Reel not found' });
+    const active = getActiveUser(req);
+    if (!isAuthorVisibleTo(reel.userId, active)) {
+      return res.status(403).json({ error: 'You cannot view this reel.' });
+    }
+    res.json({ users: await resolveUserList(reel.likedBy || []) });
+  });
+
+  // Who viewed this reel — only the reel's own author can see their viewer
+  // list (same as any "seen by" feature elsewhere), not just anyone who can
+  // see the reel itself.
+  app.get('/api/reels/:id/viewers', async (req, res) => {
+    const reel = reels.find(r => r.id === req.params.id);
+    if (!reel) return res.status(404).json({ error: 'Reel not found' });
+    const active = getActiveUser(req);
+    if (!active || active.id !== reel.userId) {
+      return res.status(403).json({ error: 'Only the reel owner can see who viewed it.' });
+    }
+    res.json({ users: await resolveUserList(reel.viewedBy || []) });
+  });
+
   // Save / Unsave Reel (mirrors POST /api/posts/:id/save)
   app.post('/api/reels/:id/save', (req, res) => {
     const reelId = req.params.id;
@@ -2338,6 +2492,16 @@ async function startServer() {
     reelHistory = reelHistory.filter(id => id !== reelId);
     reelHistory.unshift(reelId);
     if (reelHistory.length > 100) reelHistory.length = 100;
+
+    // Track WHO viewed it (not just a raw count) so the reel's owner can see
+    // their viewer list, the same way likedBy already backs the likes list.
+    const active = getActiveUser(req);
+    if (active) {
+      reel.viewedBy = reel.viewedBy || [];
+      if (!reel.viewedBy.includes(active.id)) {
+        reel.viewedBy.push(active.id);
+      }
+    }
 
     res.json({ success: true, viewsCount: reel.viewsCount });
   });

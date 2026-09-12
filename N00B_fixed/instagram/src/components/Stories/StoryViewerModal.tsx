@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye } from 'lucide-react';
 import { Story, User } from '../../types';
+import { recordStoryView, fetchStoryViewers } from '../../services/api';
+import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
 
 interface StoryViewerModalProps {
@@ -27,8 +29,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [pollVoted, setPollVoted] = useState<number | null>(null);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [sliderVal, setSliderVal] = useState(75);
+  const [showViewersSheet, setShowViewersSheet] = useState(false);
 
   const story = stories[currentIndex];
+  const isOwnStory = !!story && story.userId === currentUser.id;
 
   useEffect(() => {
     setProgress(0);
@@ -36,8 +40,16 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     setQuizSelected(null);
   }, [currentIndex]);
 
+  // Record a view the moment this story becomes the active one — skipped
+  // for the owner's own story, same as the reel view-recording pattern
+  // (recordReelView on currentReel change).
   useEffect(() => {
-    if (isPaused || !story) return;
+    if (!story || story.userId === currentUser.id) return;
+    recordStoryView(story.id).catch(() => {});
+  }, [story?.id, currentUser.id]);
+
+  useEffect(() => {
+    if (isPaused || !story || showViewersSheet) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -55,7 +67,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isPaused, currentIndex, stories.length, onClose, story]);
+  }, [isPaused, currentIndex, stories.length, onClose, story, showViewersSheet]);
 
   if (!story) return null;
 
@@ -337,39 +349,65 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           </div>
         )}
 
-        {/* Story Bottom Reply Bar */}
-        <div className="absolute bottom-3 inset-x-3 z-30 flex items-center gap-2">
-          <form onSubmit={handleSendComment} className="flex-1 flex items-center bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 focus-within:border-[#00FF66]">
-            <input
-              type="text"
-              placeholder={`Reply to ${story.username}...`}
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onFocus={() => setIsPaused(true)}
-              onBlur={() => setIsPaused(false)}
-              className="w-full bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none"
-            />
-            {commentText.trim() && (
-              <button type="submit" className="text-[#00FF66] hover:text-emerald-400 ml-1.5 cursor-pointer">
-                <Send className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </form>
+        {/* Story Bottom Bar: reply input for a viewer, "Seen by" for the owner */}
+        {isOwnStory ? (
+          <div className="absolute bottom-3 inset-x-3 z-30">
+            <button
+              onClick={() => {
+                setIsPaused(true);
+                setShowViewersSheet(true);
+              }}
+              className="flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 text-white/90 hover:text-white cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold">Seen by {(story.viewedBy?.length || 0).toLocaleString()}</span>
+            </button>
+          </div>
+        ) : (
+          <div className="absolute bottom-3 inset-x-3 z-30 flex items-center gap-2">
+            <form onSubmit={handleSendComment} className="flex-1 flex items-center bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 focus-within:border-[#00FF66]">
+              <input
+                type="text"
+                placeholder={`Reply to ${story.username}...`}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onFocus={() => setIsPaused(true)}
+                onBlur={() => setIsPaused(false)}
+                className="w-full bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none"
+              />
+              {commentText.trim() && (
+                <button type="submit" className="text-[#00FF66] hover:text-emerald-400 ml-1.5 cursor-pointer">
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </form>
 
-          <button
-            onClick={() => {
-              setIsLiked(!isLiked);
-              if (!isLiked) {
-                confetti({ particleCount: 30, spread: 45, origin: { y: 0.85 } });
-              }
+            <button
+              onClick={() => {
+                setIsLiked(!isLiked);
+                if (!isLiked) {
+                  confetti({ particleCount: 30, spread: 45, origin: { y: 0.85 } });
+                }
+              }}
+              className={`p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
+                isLiked ? 'text-red-500 scale-110' : 'text-white/80 hover:text-white'
+              }`}
+            >
+              <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+            </button>
+          </div>
+        )}
+
+        {showViewersSheet && (
+          <LikesViewsSheet
+            title="Seen by"
+            fetchUsers={() => fetchStoryViewers(story.id)}
+            onClose={() => {
+              setShowViewersSheet(false);
+              setIsPaused(false);
             }}
-            className={`p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
-              isLiked ? 'text-red-500 scale-110' : 'text-white/80 hover:text-white'
-            }`}
-          >
-            <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-          </button>
-        </div>
+          />
+        )}
       </div>
     </div>
   );

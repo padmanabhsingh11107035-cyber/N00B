@@ -14,7 +14,8 @@ import {
   Globe,
   Share2,
   Check,
-  Film
+  Film,
+  Eye
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import {
@@ -22,9 +23,12 @@ import {
   toggleSaveReel,
   recordReelView,
   fetchReelComments,
-  addReelComment
+  addReelComment,
+  fetchReelLikers,
+  fetchReelViewers
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
 
 interface ToggleFollowResult {
@@ -70,6 +74,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [showAlgorithmModal, setShowAlgorithmModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showLikesSheet, setShowLikesSheet] = useState(false);
+  const [showViewersSheet, setShowViewersSheet] = useState(false);
   const [algorithmWeights, setAlgorithmWeights] = useState({
     robotics: 85,
     code: 90,
@@ -258,7 +264,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
   const touchStartY = useRef<number | null>(null);
   const isNavLockedRef = useRef(false);
-  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal;
+  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal || showLikesSheet || showViewersSheet;
 
   const navigateWithCooldown = (direction: 'next' | 'prev') => {
     if (isNavLockedRef.current) return;
@@ -573,24 +579,47 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         {/* Right Floating Engagement Buttons */}
         <div className="absolute bottom-6 right-2.5 z-20 flex flex-col items-center gap-4 pointer-events-auto">
           {/* Like */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleToggleLike();
-            }}
-            className="flex flex-col items-center gap-1 group cursor-pointer"
-          >
-            <div
-              className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform ${
+          <div className="flex flex-col items-center gap-1 group">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleLike();
+              }}
+              className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform cursor-pointer ${
                 currentReel.isLiked ? 'text-red-500' : 'text-white'
               }`}
             >
               <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'fill-current' : ''}`} />
-            </div>
-            <span className="text-[10px] font-bold text-white drop-shadow">
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentReel.likesCount > 0) setShowLikesSheet(true);
+              }}
+              className="text-[10px] font-bold text-white drop-shadow cursor-pointer hover:underline disabled:hover:no-underline"
+              disabled={currentReel.likesCount === 0}
+            >
               {currentReel.likesCount.toLocaleString()}
-            </span>
-          </button>
+            </button>
+          </div>
+
+          {/* Views (owner-only "seen by" list) */}
+          {currentReel.userId === currentUser.id && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowViewersSheet(true);
+              }}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
+            >
+              <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
+                <Eye className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-bold text-white drop-shadow">
+                {currentReel.viewsCount.toLocaleString()}
+              </span>
+            </button>
+          )}
 
           {/* Comment */}
           <button
@@ -782,6 +811,22 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {showLikesSheet && (
+        <LikesViewsSheet
+          title="Liked by"
+          fetchUsers={() => fetchReelLikers(currentReel.id)}
+          onClose={() => setShowLikesSheet(false)}
+        />
+      )}
+
+      {showViewersSheet && (
+        <LikesViewsSheet
+          title="Viewed by"
+          fetchUsers={() => fetchReelViewers(currentReel.id)}
+          onClose={() => setShowViewersSheet(false)}
+        />
       )}
       </div>
     </div>

@@ -156,6 +156,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [blockedWords, setBlockedWords] = useState(currentUser.privacySettings?.blockedWords?.join(', ') || '');
   const [pushFavoritesEnabled, setPushFavoritesEnabled] = useState(true);
 
+  // Change Password (Settings modal) — no current-password re-entry, since
+  // reaching this screen already requires the same authenticated session
+  // every other profile-field edit here trusts.
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   // Persistent Theme State (Tailwind class toggling on body element)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
@@ -323,7 +332,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   });
 
   const displayedReels = reels.filter((r) => {
-    return r.author?.id === targetUser.id || r.author?.username === targetUser.username;
+    return r.userId === targetUser.id || r.username === targetUser.username;
   });
 
   // Builds a real deep link to this specific profile (?profile=username) rather
@@ -448,6 +457,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       confetti({ particleCount: 35, spread: 50, origin: { y: 0.7 } });
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordChangeError('');
+    setPasswordChangeSuccess(false);
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordChangeError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordChangeError('Passwords do not match.');
+      return;
+    }
+    try {
+      setIsChangingPassword(true);
+      const res = await updateCurrentUser({ password: newPassword });
+      if (res && onUserUpdated) {
+        onUserUpdated(res);
+      }
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setPasswordChangeSuccess(true);
+      setTimeout(() => setPasswordChangeSuccess(false), 4000);
+    } catch (err: any) {
+      setPasswordChangeError(err.message || 'Failed to update password. Please try again.');
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -1783,6 +1820,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Change Password */}
+            <div className="pt-3 border-t border-zinc-800 space-y-2.5">
+              <span className="text-xs font-bold text-white block">Change Password</span>
+
+              {passwordChangeError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                  {passwordChangeError}
+                </div>
+              )}
+              {passwordChangeSuccess && (
+                <div className="p-2.5 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/20 text-xs text-[#00FF66]">
+                  Password updated successfully!
+                </div>
+              )}
+
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password (min. 6 characters)"
+                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+              />
+              <input
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Confirm new password"
+                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+              />
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                disabled={isChangingPassword || !newPassword || !confirmNewPassword}
+                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                {isChangingPassword ? 'Updating...' : 'Update Password'}
+              </button>
             </div>
 
             {/* Danger Zone */}

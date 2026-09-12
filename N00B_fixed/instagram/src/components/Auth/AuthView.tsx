@@ -32,7 +32,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser } from '../../services/api';
+import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -339,6 +339,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Forgot Password recovery flow: gated on a valid, already-entered
+  // username (checked before the form even opens), then requires the
+  // mobile number, date of birth, and email on file to all match before
+  // granting access — there's no email/SMS reset link infrastructure, so
+  // this identity check stands in for one.
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState('');
+  const [forgotMobileNumber, setForgotMobileNumber] = useState('');
+  const [forgotDateOfBirth, setForgotDateOfBirth] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+
   // Handle local file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -383,6 +396,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       setErrorMessage('Please enter a password.');
       return;
     }
+    if (!mobileNumber.trim()) {
+      setErrorMessage('Please enter your mobile number.');
+      return;
+    }
 
     if (!dateOfBirth) {
       setErrorMessage('Please enter your date of birth.');
@@ -396,6 +413,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     const ageInYears = (Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
     if (ageInYears < 13) {
       setErrorMessage('You must be at least 13 years old to create a NOOB account.');
+      return;
+    }
+    if (ageInYears > 82) {
+      setErrorMessage('NOOB accounts are only available to users 82 years old or younger.');
       return;
     }
 
@@ -487,6 +508,66 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       setErrorMessage(err.message || 'Server connection error. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Step 1: only opens the recovery form once the typed-in username is
+  // confirmed to actually exist.
+  const handleOpenForgotPassword = async () => {
+    setErrorMessage(null);
+    const uname = loginIdentifier.trim();
+    if (!uname) {
+      setErrorMessage('Please enter your username above first, then tap Forgot Password.');
+      return;
+    }
+    try {
+      setForgotLoading(true);
+      const res = await verifyUsernameExists(uname);
+      if (res.exists) {
+        setForgotUsername(uname);
+        setForgotMobileNumber('');
+        setForgotDateOfBirth('');
+        setForgotEmail('');
+        setForgotError(null);
+        setShowForgotPassword(true);
+      } else {
+        setErrorMessage(res.error || 'No account found with that username.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Server connection error. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Step 2: mobile number, date of birth, and email must ALL match the
+  // account on file — a partial match still fails, and the server never
+  // says which field was wrong.
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    if (!forgotMobileNumber.trim() || !forgotDateOfBirth || !forgotEmail.trim()) {
+      setForgotError('Please fill in your mobile number, date of birth, and email.');
+      return;
+    }
+    try {
+      setForgotLoading(true);
+      const res = await recoverAccountAccess({
+        username: forgotUsername,
+        mobileNumber: forgotMobileNumber.trim(),
+        dateOfBirth: forgotDateOfBirth,
+        email: forgotEmail.trim()
+      });
+      if (res.success && res.user) {
+        setShowForgotPassword(false);
+        onAuthSuccess(res.user);
+      } else {
+        setForgotError(res.error || 'The details you entered do not match our records.');
+      }
+    } catch (err: any) {
+      setForgotError(err.message || 'Server connection error. Please try again.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -824,10 +905,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
                   <div className="sm:col-span-6">
                     <label className="text-xs font-bold text-zinc-300 block mb-1.5">
-                      Mobile Number
+                      Mobile Number <span className="text-cyan-400">*</span>
                     </label>
                     <input
                       type="tel"
+                      required
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value)}
                       placeholder="e.g. 9876543210"
@@ -854,7 +936,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   </span>
                   <CalendarDays className="w-4 h-4 text-cyan-400 shrink-0" />
                 </button>
-                <p className="text-[10px] text-zinc-500 mt-1">You must be at least 13 years old to use NOOB.</p>
+                <p className="text-[10px] text-zinc-500 mt-1">You must be between 13 and 82 years old to use NOOB.</p>
               </div>
 
               {/* Row 6: Password */}
@@ -1243,6 +1325,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   placeholder="Enter your password"
                   className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                 />
+                <div className="text-right mt-1.5">
+                  <button
+                    type="button"
+                    onClick={handleOpenForgotPassword}
+                    disabled={forgotLoading}
+                    className="text-xs font-bold text-cyan-400 hover:text-cyan-300 cursor-pointer disabled:opacity-50"
+                  >
+                    {forgotLoading ? 'Checking...' : 'Forgot Password?'}
+                  </button>
+                </div>
               </div>
 
               {/* Login Button: Premium Gen Z vibrant gradient, with small flanking accent dashes */}
@@ -1317,12 +1409,88 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         <BirthdayWheelPicker
           value={dateOfBirth}
           maxDate={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000)}
+          minDate={new Date(Date.now() - 82 * 365.25 * 24 * 60 * 60 * 1000)}
           onClose={() => setShowBirthdayPicker(false)}
           onConfirm={(iso) => {
             setDateOfBirth(iso);
             setShowBirthdayPicker(false);
           }}
         />
+      )}
+
+      {/* Forgot Password recovery form — only reachable once the typed
+          username was confirmed to exist (handleOpenForgotPassword) */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full sm:max-w-sm bg-[#141418] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+              <h3 className="text-sm font-bold text-white">Recover @{forgotUsername}</h3>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(false)}
+                className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleForgotPasswordSubmit} className="p-4 space-y-3.5 overflow-y-auto">
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Enter the mobile number, date of birth, and email on this account. If everything matches, you'll be
+                logged straight in — then head to Account Settings to set a new password.
+              </p>
+
+              {forgotError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+                  {forgotError}
+                </div>
+              )}
+
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Mobile Number</label>
+                <input
+                  type="tel"
+                  required
+                  value={forgotMobileNumber}
+                  onChange={(e) => setForgotMobileNumber(e.target.value)}
+                  placeholder="e.g. 9876543210"
+                  className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Date of Birth</label>
+                <input
+                  type="date"
+                  required
+                  value={forgotDateOfBirth}
+                  onChange={(e) => setForgotDateOfBirth(e.target.value)}
+                  className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all [color-scheme:dark]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {forgotLoading ? 'Verifying...' : 'Verify & Log In'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

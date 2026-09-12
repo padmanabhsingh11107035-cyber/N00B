@@ -98,6 +98,12 @@ export default function App() {
     soundAlerts: true
   });
   const [loading, setLoading] = useState(true);
+  // A single failed/rejected call in the initial Promise.all (a network
+  // blip, a transient 5xx, the brief boot gap right after a deploy) used to
+  // silently drop straight through to the logged-out screen with only a
+  // console.error — a logged-in user would see it as being signed out "for
+  // no reason" and have no way to recover except guessing to reload.
+  const [initialLoadFailed, setInitialLoadFailed] = useState(false);
 
   // Active Modals & Selected items
   const [activeStoryViewerIndex, setActiveStoryViewerIndex] = useState<number | null>(null);
@@ -253,6 +259,7 @@ export default function App() {
   const loadInitialData = async () => {
     try {
       setLoading(true);
+      setInitialLoadFailed(false);
       const [user, pList, sList, rList, uList, notifRes] = await Promise.all([
         fetchCurrentUser(),
         fetchPosts(),
@@ -272,6 +279,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load initial data:', err);
+      setInitialLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -604,6 +612,28 @@ export default function App() {
           NOOB
         </span>
         <span className="text-[10px] text-zinc-500 mt-1">Fun & Connecting People...</span>
+      </div>
+    );
+  }
+
+  if (initialLoadFailed) {
+    return (
+      <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl">
+          ⚠️
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-white">Couldn't Load Your Data</h2>
+          <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">
+            NOOB couldn't reach the server just now — this is usually a brief connection hiccup. Your account is fine.
+          </p>
+        </div>
+        <button
+          onClick={loadInitialData}
+          className="px-6 py-2.5 bg-[#00FF66] text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
+        >
+          Retry
+        </button>
       </div>
     );
   }

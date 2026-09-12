@@ -89,6 +89,10 @@ function checkRateLimit(ip: string, limit: number = 60, windowMs: number = 60000
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  // Assigned once app.listen() runs at the bottom of this function; the
+  // shutdown handler below closes over this same binding, so it sees the
+  // real server instance by the time a signal actually arrives.
+  let httpServer: ReturnType<typeof app.listen> | null = null;
 
   await connectDB();
 
@@ -388,6 +392,19 @@ async function startServer() {
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, async () => {
       if (persistTimer) clearTimeout(persistTimer);
+      // Stop accepting new connections FIRST, before persisting/exiting —
+      // otherwise this instance can keep answering requests (each one
+      // reading its own soon-to-be-stale `users` array) for however long
+      // persistStateNow() takes during a redeploy's brief container swap,
+      // and its final write on the way out can even race a just-started
+      // replacement container's writes. Capped with a timeout so one
+      // slow/hanging connection can never block a real shutdown.
+      if (httpServer) {
+        await Promise.race([
+          new Promise<void>((resolve) => httpServer!.close(() => resolve())),
+          new Promise<void>((resolve) => setTimeout(resolve, 5000))
+        ]);
+      }
       await persistStateNow();
       process.exit(0);
     });
@@ -4473,7 +4490,7 @@ COMPLETE PLATFORM CAPABILITIES:
     res.status(500).json({ error: 'Something went wrong on our end. Please try again.' });
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer = app.listen(PORT, '0.0.0.0', () => {
     console.log(`NOOB Social & Mini-Games Server running on http://0.0.0.0:${PORT}`);
   });
 }

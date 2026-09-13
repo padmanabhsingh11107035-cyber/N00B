@@ -83,7 +83,7 @@ export async function signupUser(payload: {
   businessPhone?: string;
   businessAddress?: string;
   agreedToTerms: boolean;
-}): Promise<{ success: boolean; user?: User; error?: string }> {
+}): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string }> {
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

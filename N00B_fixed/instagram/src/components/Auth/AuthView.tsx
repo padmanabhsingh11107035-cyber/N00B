@@ -226,6 +226,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [mode, setMode] = useState<'signup' | 'login'>('login');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(notice || null);
+  const [suspendedNotice, setSuspendedNotice] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   // Legal Modals
@@ -469,6 +470,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       if (res.success && res.user) {
         confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
         onAuthSuccess(res.user);
+      } else if (res.suspended) {
+        setSuspendedNotice(
+          res.message ||
+            'We have detected that your account is suspended, and attempting to create a new account could result in further action against you. Please wait — our team will contact you.'
+        );
       } else {
         setErrorMessage(res.error || 'Account creation failed. User ID may already exist.');
       }
@@ -1510,6 +1516,34 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             setShowForgotBirthdayPicker(false);
           }}
         />
+      )}
+
+      {/* Suspended-account signup block — a suspended user cannot dodge
+          their suspension by just registering a fresh account with the
+          same email/mobile number. Account creation is refused outright
+          (the server never created the account), and this always sends
+          the person back to the login screen rather than leaving them on
+          the signup form. */}
+      {suspendedNotice && (
+        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#141418] border border-red-500/30 rounded-3xl p-6 shadow-2xl text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+              <AlertCircle className="w-7 h-7 text-red-400" />
+            </div>
+            <h3 className="text-sm font-bold text-white">Account Suspended</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">{suspendedNotice}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setSuspendedNotice(null);
+                setMode('login');
+              }}
+              className="w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

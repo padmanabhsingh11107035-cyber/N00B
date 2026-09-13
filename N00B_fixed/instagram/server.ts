@@ -725,6 +725,27 @@ async function startServer() {
       return res.status(409).json({ error: 'User ID is already taken. Please choose another.' });
     }
 
+    // Block a suspended user from simply signing up again under a fresh
+    // username to dodge their suspension — matched on email and/or mobile
+    // number against every currently-suspended account, since either one
+    // alone (not just an exact full match) is enough to identify them.
+    const normalizedSignupEmail = email.trim().toLowerCase();
+    const normalizedSignupMobile = String(mobileNumber).trim();
+    const suspendedMatch = users.find(
+      (u) =>
+        u.isSuspended &&
+        ((normalizedSignupEmail && u.email?.toLowerCase() === normalizedSignupEmail) ||
+          (normalizedSignupMobile && u.mobileNumber === normalizedSignupMobile))
+    );
+    if (suspendedMatch) {
+      return res.status(403).json({
+        error: 'This account is suspended.',
+        suspended: true,
+        message:
+          "We have detected that your account is suspended, and attempting to create a new account could result in further action against you. Please wait — our team will contact you."
+      });
+    }
+
     const computedDisplayName =
       displayName?.trim() || (lastName?.trim() ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim());
     const chosenAccountType: 'public' | 'private' | 'business' =

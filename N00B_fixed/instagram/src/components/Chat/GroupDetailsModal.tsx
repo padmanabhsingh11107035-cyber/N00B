@@ -58,11 +58,15 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
   const isCreator = chat.creatorId === currentUser.id;
   const isAdmin = isCreator || chat.adminIds?.includes(currentUser.id) || false;
+  // The NOOB master admin account isn't limited to friends — it can add any
+  // registered user to a group, follow relationship or not.
+  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
 
   // Filter friends available to add who aren't already in the group
   const currentParticipantIds = (chat.participants || []).map((p) => p.id);
   const availableFriendsToAdd = allUsers.filter((u) => {
     if (u.id === currentUser.id || currentParticipantIds.includes(u.id) || u.isAi) return false;
+    if (isMasterAdmin) return true;
     const isFriend = u.isFollowing || currentUser.followingIds?.includes(u.id) || u.followers?.includes?.(currentUser.id);
     return isFriend || allUsers.length <= 4;
   });
@@ -347,7 +351,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 className="px-2.5 py-1 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>Add Friends</span>
+                <span>{isMasterAdmin ? 'Add Members' : 'Add Friends'}</span>
               </button>
             )}
           </div>
@@ -356,13 +360,17 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           {showAddMembers && (
             <div className="p-3 rounded-2xl bg-zinc-900 border border-purple-500/30 space-y-2 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white">Select Friends to Add</span>
+                <span className="text-xs font-bold text-white">
+                  {isMasterAdmin ? 'Select Users to Add' : 'Select Friends to Add'}
+                </span>
                 <span className="text-[10px] text-zinc-400">{selectedNewUserIds.length} selected</span>
               </div>
 
               <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                 {availableFriendsToAdd.length === 0 ? (
-                  <p className="text-[11px] text-zinc-500 p-2 text-center">All your connected friends are already in this group!</p>
+                  <p className="text-[11px] text-zinc-500 p-2 text-center">
+                    {isMasterAdmin ? 'Every registered user is already in this group!' : 'All your connected friends are already in this group!'}
+                  </p>
                 ) : (
                   availableFriendsToAdd.map((u) => {
                     const isSelected = selectedNewUserIds.includes(u.id);
@@ -404,7 +412,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   disabled={loading || selectedNewUserIds.length === 0}
                   className="w-full py-2 bg-[#00FF66] text-black font-extrabold text-xs rounded-xl hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                 >
-                  Add {selectedNewUserIds.length} Friends to Group
+                  Add {selectedNewUserIds.length} {isMasterAdmin ? 'Users' : 'Friends'} to Group
                 </button>
               )}
             </div>

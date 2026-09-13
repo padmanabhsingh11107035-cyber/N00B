@@ -44,9 +44,14 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   if (!isOpen) return null;
 
+  // The NOOB master admin account isn't limited to friends — it can add
+  // any registered user to a group, follow relationship or not.
+  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
+
   // Filter friends: users who follow currentUser OR whom currentUser follows
   const friendsList = availableUsers.filter((u) => {
     if (u.id === currentUser.id || u.isAi) return false;
+    if (isMasterAdmin) return true;
     const isFollowing = u.isFollowing || currentUser.followingIds?.includes(u.id);
     const isFollower = u.followers?.includes?.(currentUser.id) || currentUser.followers?.includes?.(u.id);
     // Include friends (following or followers), or all non-self users if list is small
@@ -264,7 +269,9 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                 <span className="w-4 h-4 rounded-full bg-purple-500/30 text-purple-300 text-[10px] flex items-center justify-center font-bold">3</span>
                 Select Members ({selectedUserIds.length} chosen) <span className="text-red-400">*</span>
               </label>
-              <span className="text-[10px] text-zinc-500">Friends (Followers & Following)</span>
+              <span className="text-[10px] text-zinc-500">
+                {isMasterAdmin ? 'Any NOOB user (Admin)' : 'Friends (Followers & Following)'}
+              </span>
             </div>
 
             {/* Friend Search Input */}
@@ -272,7 +279,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               <Search className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
               <input
                 type="text"
-                placeholder="Search friends..."
+                placeholder={isMasterAdmin ? 'Search users...' : 'Search friends...'}
                 value={memberSearchQuery}
                 onChange={(e) => setMemberSearchQuery(e.target.value)}
                 className="w-full bg-transparent focus:outline-none placeholder-zinc-500"
@@ -283,11 +290,20 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 border border-zinc-800/80 rounded-2xl p-2 bg-zinc-900/40">
               {filteredFriends.length === 0 ? (
                 <div className="p-4 text-center text-xs text-zinc-500">
-                  {memberSearchQuery ? 'No friends matched your search.' : 'No friends found. Follow people to add them to groups!'}
+                  {memberSearchQuery
+                    ? 'No users matched your search.'
+                    : isMasterAdmin
+                      ? 'No other users found.'
+                      : 'No friends found. Follow people to add them to groups!'}
                 </div>
               ) : (
                 filteredFriends.map((u) => {
                   const isSelected = selectedUserIds.includes(u.id);
+                  const isFriend =
+                    u.isFollowing ||
+                    currentUser.followingIds?.includes(u.id) ||
+                    u.followers?.includes?.(currentUser.id) ||
+                    currentUser.followers?.includes?.(u.id);
                   return (
                     <div
                       key={u.id}
@@ -313,10 +329,14 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                           </div>
                           <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
                             <span>@{u.username}</span>
-                            <span className="text-zinc-600">•</span>
-                            <span className="text-[#00FF66] font-semibold flex items-center gap-0.5">
-                              <UserCheck className="w-2.5 h-2.5" /> Friend
-                            </span>
+                            {isFriend && (
+                              <>
+                                <span className="text-zinc-600">•</span>
+                                <span className="text-[#00FF66] font-semibold flex items-center gap-0.5">
+                                  <UserCheck className="w-2.5 h-2.5" /> Friend
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

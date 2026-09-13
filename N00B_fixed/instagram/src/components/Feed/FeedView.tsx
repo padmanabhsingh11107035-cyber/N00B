@@ -38,6 +38,7 @@ interface FeedViewProps {
   onToggleComments: (postId: string) => void;
   onToggleLikeCount: (postId: string) => void;
   onDeletePost: (postId: string) => void;
+  onDeleteSlide?: (postId: string, slideId: string) => void;
   onOpenStoryViewer: (index: number) => void;
   onOpenCreateStory: () => void;
   onOpenStatusNoteModal: () => void;
@@ -67,6 +68,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onToggleComments,
   onToggleLikeCount,
   onDeletePost,
+  onDeleteSlide,
   onOpenStoryViewer,
   onOpenCreateStory,
   onOpenStatusNoteModal,
@@ -394,6 +396,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onToggleComments={onToggleComments}
                 onToggleLikeCount={onToggleLikeCount}
                 onDeletePost={onDeletePost}
+                onDeleteSlide={onDeleteSlide}
                 onHideAd={handleHideAd}
                 onSelectCategory={(cat) => setActiveCategory(cat)}
               />

@@ -94,6 +94,35 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
   const followRequestsCount = notifications.filter((n) => n.type === 'follow_request_received' && n.actionStatus === 'pending').length;
 
+  // "Today" / "Yesterday" / weekday name for the rest of the last week /
+  // "D Mon" beyond that — groups notifications the same way the reference
+  // layout does, without needing to touch the per-row relative time
+  // ("5d ago" etc.) that's already shown on each item.
+  const getDateGroupLabel = (iso: string): string => {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return '';
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'long' }).toUpperCase();
+    return date.toLocaleDateString([], { day: 'numeric', month: 'short' }).toUpperCase();
+  };
+
+  // Notifications already arrive newest-first, so grouping consecutive
+  // items that share a label naturally keeps every group in order without
+  // needing a separate sort pass.
+  const groupedNotifications: { label: string; items: AppNotification[] }[] = [];
+  for (const notif of filteredNotifications) {
+    const label = getDateGroupLabel(notif.createdAt);
+    const lastGroup = groupedNotifications[groupedNotifications.length - 1];
+    if (lastGroup && lastGroup.label === label) {
+      lastGroup.items.push(notif);
+    } else {
+      groupedNotifications.push({ label, items: [notif] });
+    }
+  }
+
   const renderIcon = (type: NotificationType) => {
     switch (type) {
       case 'admin_broadcast':
@@ -261,8 +290,13 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {filteredNotifications.map((notif) => (
+                <div className="space-y-4">
+                  {groupedNotifications.map((group) => (
+                    <div key={group.label + group.items[0].id} className="space-y-2">
+                      <h4 className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider px-1">
+                        {group.label}
+                      </h4>
+                      {group.items.map((notif) => (
                     <div
                       key={notif.id}
                       onClick={() => {
@@ -380,6 +414,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       {!notif.isRead && (
                         <span className="w-2 h-2 rounded-full bg-[#00FF66] shrink-0 mt-2 shadow-[0_0_8px_rgba(0,255,102,0.8)]" />
                       )}
+                    </div>
+                      ))}
                     </div>
                   ))}
                 </div>

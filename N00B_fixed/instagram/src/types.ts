@@ -93,6 +93,10 @@ export interface User {
   // admin-only: sanitizePublicUser strips this before any other user can
   // ever see it.
   ipAddress?: string;
+  // Web Push subscription (browser-issued, opaque to the app) — set once
+  // the user grants push permission and subscribes; also stripped by
+  // sanitizePublicUser.
+  pushSubscription?: any;
   privacySettings: {
     hideTaggedPhotos: boolean;
     blockedWords: string[];
@@ -126,6 +130,7 @@ export interface AppNotification {
   actorAvatar?: string;
   senderId?: string;
   senderUsername?: string;
+  senderDisplayName?: string;
   senderAvatar?: string;
   senderIsVerified?: boolean;
   targetUserId?: string; // 'all' or specific user id/username

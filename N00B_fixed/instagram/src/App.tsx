@@ -35,6 +35,7 @@ import {
   toggleCommentsPost,
   toggleLikeCountPost,
   deletePost,
+  deletePostSlide,
   createPost,
   createReel,
   createStory,
@@ -73,6 +74,7 @@ import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { GamePlayModal } from './components/Games/GamePlayModal';
 import { FindFriendsModal } from './components/Modals/FindFriendsModal';
+import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 
@@ -91,6 +93,7 @@ export default function App() {
   }, [activeTab]);
   const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [reels, setReels] = useState<Reel[]>([]);
@@ -255,6 +258,19 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 
+  // Soft-ask for push notification permission a few seconds after login —
+  // only on the website (the Push API isn't reliably available inside the
+  // Capacitor native-app WebView, which has its own native push path this
+  // doesn't cover), and only once per browser (shouldShowPushPrompt checks
+  // both actual Notification.permission and a localStorage "already asked"
+  // flag, so this never nags someone who already answered).
+  useEffect(() => {
+    if (!currentUser || Capacitor.isNativePlatform()) return;
+    if (!shouldShowPushPrompt()) return;
+    const timer = setTimeout(() => setShowPushPrompt(true), 4000);
+    return () => clearTimeout(timer);
+  }, [currentUser?.id]);
+
   // Prompt for contacts access (to suggest friends already on NOOB) once per
   // install, and only on the native app — there is no contacts permission to
   // request on the website, so this must never fire there.
@@ -411,6 +427,17 @@ export default function App() {
     try {
       await deletePost(postId);
       setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteSlide = async (postId: string, slideId: string) => {
+    try {
+      const res = await deletePostSlide(postId, slideId);
+      if (res.success && res.post) {
+        setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, slides: res.post!.slides } : p)));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -874,6 +901,7 @@ export default function App() {
             onToggleComments={handleToggleComments}
             onToggleLikeCount={handleToggleLikeCount}
             onDeletePost={handleDeletePost}
+            onDeleteSlide={handleDeleteSlide}
             onOpenStoryViewer={(index) => setActiveStoryViewerIndex(index)}
             onOpenCreateStory={() => setShowCreateStoryModal(true)}
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
@@ -1137,6 +1165,9 @@ export default function App() {
           onToggleFollowUser={handleToggleFollowUser}
         />
       )}
+
+      {/* 0.6 Push notification soft-ask (website only, shown once per browser) */}
+      {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && stories[activeStoryViewerIndex] && (

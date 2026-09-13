@@ -18,6 +18,7 @@ import {
 } from './src/data/mockData';
 import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2 } from './server/b2Storage';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
+import { initPush, getVapidPublicKey, sendPush } from './server/push';
 
 // AI Support runs on Groq's free API (an OpenAI-compatible chat completions
 // endpoint) rather than Gemini — it needs no billing account, just a free
@@ -107,6 +108,7 @@ async function startServer() {
   let httpServer: ReturnType<typeof app.listen> | null = null;
 
   await connectDB();
+  await initPush();
 
   // A one-glance checklist of which backend services are actually wired up,
   // printed on every boot so it's obvious in the Railway deploy logs what
@@ -298,6 +300,17 @@ async function startServer() {
     console.log('MongoDB: restored persisted app state');
   }
 
+  // One-time reconciliation: likesCount used to be a separately-incremented
+  // counter that could silently drift from the actual likedBy array — from
+  // likes recorded before per-account like tracking existed, or a liker's
+  // account later being deleted without ever being purged from other
+  // people's likedBy lists. That drift is exactly what produced posts
+  // showing e.g. "6 likes" while the Likes sheet had nobody to show.
+  // Recomputing it from the array itself on every boot makes the two
+  // permanently impossible to disagree with each other again.
+  posts.forEach((p: any) => { p.likesCount = (p.likedBy || []).length; });
+  reels.forEach((r: any) => { r.likesCount = (r.likedBy || []).length; });
+
   // Debounced full-state save: any non-GET request schedules a save a few
   // seconds out, coalescing bursts of mutations into a single write.
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -394,6 +407,35 @@ async function startServer() {
         healedCount++;
       }
     }
+    // Posts/reels/stories/comments used to hardcode createdAt: 'Just now'
+    // at creation and never update it — same unparseable-date problem, same
+    // fix: recover the real time from the epoch embedded in the id.
+    for (const p of posts) {
+      if (isNaN(new Date(p.createdAt).getTime())) {
+        p.createdAt = healLegacyTimestamp(p.id);
+        healedCount++;
+      }
+    }
+    for (const r of reels) {
+      if (isNaN(new Date(r.createdAt).getTime())) {
+        r.createdAt = healLegacyTimestamp(r.id);
+        healedCount++;
+      }
+    }
+    for (const s of stories) {
+      if (isNaN(new Date(s.createdAt).getTime())) {
+        s.createdAt = healLegacyTimestamp(s.id);
+        healedCount++;
+      }
+    }
+    for (const contentId of Object.keys(comments)) {
+      for (const c of comments[contentId] || []) {
+        if (isNaN(new Date(c.createdAt).getTime())) {
+          c.createdAt = healLegacyTimestamp(c.id);
+          healedCount++;
+        }
+      }
+    }
     if (healedCount > 0) {
       console.log(`Self-healed ${healedCount} legacy (pre-ISO) timestamps`);
       schedulePersist();
@@ -442,7 +484,7 @@ async function startServer() {
     // display name) and pendingSentRequests reveals which private accounts
     // THIS user has asked to follow — both are private to the account
     // owner, not for every other viewer of their profile/directory entry.
-    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ipAddress, ...publicUser } = u;
+    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ipAddress, pushSubscription, ...publicUser } = u;
     return publicUser;
   }
 
@@ -496,6 +538,35 @@ async function startServer() {
       comments[contentId] = comments[contentId].filter((c: any) => c.userId !== target.id);
     });
 
+    // Strip the deleted account out of every OTHER post/reel/story's
+    // likedBy and viewedBy too — likesCount is derived from likedBy.length,
+    // so leaving a dangling id in there both lies to the owner about who
+    // liked their content and (until this cleanup existed) permanently
+    // inflated the count relative to what the Likes list could ever show.
+    posts.forEach((p: any) => {
+      if (p.likedBy?.includes(target.id)) {
+        p.likedBy = p.likedBy.filter((id: string) => id !== target.id);
+        p.likesCount = p.likedBy.length;
+      }
+      if (p.viewedBy?.includes(target.id)) {
+        p.viewedBy = p.viewedBy.filter((id: string) => id !== target.id);
+      }
+    });
+    reels.forEach((r: any) => {
+      if (r.likedBy?.includes(target.id)) {
+        r.likedBy = r.likedBy.filter((id: string) => id !== target.id);
+        r.likesCount = r.likedBy.length;
+      }
+      if (r.viewedBy?.includes(target.id)) {
+        r.viewedBy = r.viewedBy.filter((id: string) => id !== target.id);
+      }
+    });
+    stories.forEach((s: any) => {
+      if (s.viewedBy?.includes(target.id)) {
+        s.viewedBy = s.viewedBy.filter((id: string) => id !== target.id);
+      }
+    });
+
     // Detach them from other accounts' follow graphs and chats. Every
     // account that was following the deleted user loses one follow — both
     // the raw list AND the numeric counter, since followersCount/
@@ -523,6 +594,50 @@ async function startServer() {
     });
 
     users = users.filter(u => u.id !== target.id);
+  }
+
+  // Single entry point for creating a notification: builds the record,
+  // appends it to the in-app notifications list, AND — if the recipient has
+  // a push subscription — delivers a real OS/browser-level push
+  // notification, so every notification type only has to be taught about
+  // push delivery once instead of at each of its own call sites. A dead
+  // subscription (the browser reports 404/410) is cleared from the user's
+  // record so future notifications don't keep retrying it.
+  function notifyUser(params: {
+    targetUserId: string;
+    targetUsername?: string;
+    senderId?: string;
+    senderUsername?: string;
+    senderDisplayName?: string;
+    senderAvatar?: string;
+    senderIsVerified?: boolean;
+    title?: string;
+    message: string;
+    type: string;
+    [extra: string]: any;
+  }) {
+    const notification = {
+      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString(),
+      ...params
+    };
+    notifications.unshift(notification);
+
+    const target = users.find(u => u.id === params.targetUserId);
+    if (target?.pushSubscription) {
+      sendPush(target.pushSubscription, {
+        title: params.title || params.senderDisplayName || 'NOOB',
+        body: params.message,
+        icon: params.senderAvatar,
+        url: '/'
+      }).then((result) => {
+        if (result.expired) {
+          target.pushSubscription = undefined;
+        }
+      });
+    }
+
+    return notification;
   }
 
   // Records a NOOB Points change (earn or spend) on a user, for the Wallet
@@ -1486,8 +1601,7 @@ async function startServer() {
       };
       scratchCards.push(scratchCard);
 
-      notifications.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      notifyUser({
         senderId: 'u_noob_admin',
         senderUsername: 'NOOB',
         senderDisplayName: 'NOOB',
@@ -1498,8 +1612,7 @@ async function startServer() {
         title: '🎂 Happy Birthday!',
         message: `Happy Birthday, @${user.username}! We've got a scratch card gift waiting for you — tap to scratch and reveal your surprise.`,
         type: 'birthday_wish',
-        scratchCardId: scratchCard.id,
-        createdAt: new Date().toISOString()
+        scratchCardId: scratchCard.id
       });
 
       // Followers only — people this user follows don't get told, matching
@@ -1507,8 +1620,7 @@ async function startServer() {
       const followerIds = users.filter(u => u.followingIds?.includes(user.id)).map(u => u.id);
       for (const followerId of followerIds) {
         const follower = users.find(u => u.id === followerId);
-        notifications.unshift({
-          id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        notifyUser({
           senderId: user.id,
           senderUsername: user.username,
           senderDisplayName: user.displayName || user.username,
@@ -1518,8 +1630,7 @@ async function startServer() {
           targetUsername: follower?.username,
           title: '🎈 Birthday Alert',
           message: `It's @${user.username}'s birthday today! Send them a message to wish them well.`,
-          type: 'birthday_follower_alert',
-          createdAt: new Date().toISOString()
+          type: 'birthday_follower_alert'
         });
       }
     }
@@ -1591,12 +1702,21 @@ async function startServer() {
     ultimate: 150000
   };
   const PRO_YEARLY_DISCOUNT = 0.17;
+  const PRO_BILLING_PERIOD_MS: Record<'monthly' | 'yearly', number> = {
+    monthly: 30 * 24 * 60 * 60 * 1000,
+    yearly: 365 * 24 * 60 * 60 * 1000
+  };
+
+  function getProRenewalPrice(tierId: string, billing: 'monthly' | 'yearly'): number {
+    const basePrice = PRO_TIER_PRICES[tierId] || 0;
+    return billing === 'yearly' ? Math.round(basePrice * 12 * (1 - PRO_YEARLY_DISCOUNT)) : basePrice;
+  }
 
   app.post('/api/users/upgrade-pro', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in to upgrade.' });
 
-    const { tierId, billing, couponCode } = req.body;
+    const { tierId, billing, couponCode, autoRenew } = req.body;
     // A plain-object index lookup with an attacker-chosen key resolves
     // inherited Object.prototype members too — tierId: "constructor" or
     // "toString" would return a function, which is truthy (so the "unknown
@@ -1626,9 +1746,13 @@ async function startServer() {
       });
     }
 
+    const periodMs = PRO_BILLING_PERIOD_MS[billing as 'monthly' | 'yearly'] || PRO_BILLING_PERIOD_MS.monthly;
+
     users[index].noobPoints -= price;
     users[index].proTier = tierId;
     users[index].proBilling = billing;
+    users[index].proAutoRenew = autoRenew !== false;
+    users[index].proRenewsAt = new Date(Date.now() + periodMs).toISOString();
     recordTransaction(
       users[index],
       -price,
@@ -1639,6 +1763,77 @@ async function startServer() {
 
     res.json({ success: true, user: sanitizeUser(users[index]) });
   });
+
+  // Lets an existing Pro subscriber flip auto-renew on/off without
+  // re-purchasing — turning it off doesn't cancel the current period, it
+  // just means checkProRenewals() will let Pro lapse instead of billing
+  // them again once proRenewsAt is reached.
+  app.post('/api/users/me/pro-auto-renew', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    if (!active.proTier) return res.status(400).json({ error: 'You do not have an active NOOB Pro subscription.' });
+
+    const { enabled } = req.body;
+    active.proAutoRenew = !!enabled;
+    res.json({ success: true, proAutoRenew: active.proAutoRenew });
+  });
+
+  // Runs the monthly/yearly Pro billing cycle: anyone whose proRenewsAt has
+  // passed either gets re-billed (auto-renew on, balance covers it) or has
+  // Pro discontinued (auto-renew off, or the balance couldn't cover it) —
+  // either way they're told via notifyUser so it never happens silently.
+  function checkProRenewals() {
+    const now = Date.now();
+    for (const user of users) {
+      if (!user.proTier || !user.proRenewsAt) continue;
+      if (new Date(user.proRenewsAt).getTime() > now) continue;
+
+      const billing = (user.proBilling as 'monthly' | 'yearly') || 'monthly';
+      const price = getProRenewalPrice(user.proTier, billing);
+
+      if (user.proAutoRenew && (user.noobPoints || 0) >= price) {
+        user.noobPoints -= price;
+        user.proRenewsAt = new Date(now + (PRO_BILLING_PERIOD_MS[billing] || PRO_BILLING_PERIOD_MS.monthly)).toISOString();
+        recordTransaction(user, -price, `NOOB Pro renewal (${user.proTier}, ${billing})`);
+        notifyUser({
+          senderId: 'u_noob_admin',
+          senderUsername: 'NOOB',
+          senderDisplayName: 'NOOB',
+          senderAvatar: '/noob-logo.svg.jpeg',
+          senderIsVerified: true,
+          targetUserId: user.id,
+          targetUsername: user.username,
+          title: '✅ NOOB Pro Renewed',
+          message: `Your NOOB Pro (${user.proTier}) subscription renewed automatically — ${price.toLocaleString()} points were deducted from your Wallet.`,
+          type: 'admin_direct'
+        });
+      } else {
+        const wasAutoRenew = user.proAutoRenew;
+        const discontinuedTier = user.proTier;
+        user.proTier = undefined;
+        user.proBilling = undefined;
+        user.proRenewsAt = undefined;
+        user.proAutoRenew = undefined;
+        notifyUser({
+          senderId: 'u_noob_admin',
+          senderUsername: 'NOOB',
+          senderDisplayName: 'NOOB',
+          senderAvatar: '/noob-logo.svg.jpeg',
+          senderIsVerified: true,
+          targetUserId: user.id,
+          targetUsername: user.username,
+          title: wasAutoRenew ? '⚠️ NOOB Pro Discontinued' : '👋 NOOB Pro Ended',
+          message: wasAutoRenew
+            ? `Your NOOB Pro (${discontinuedTier}) subscription couldn't renew — your Wallet balance was below the ${price.toLocaleString()} points required, so Pro has been discontinued. You can resubscribe any time.`
+            : `Your NOOB Pro (${discontinuedTier}) subscription has ended since Reload Monthly was turned off. You can resubscribe any time.`,
+          type: 'admin_direct'
+        });
+      }
+    }
+    schedulePersist();
+  }
+  checkProRenewals();
+  setInterval(checkProRenewals, 60 * 60 * 1000);
 
   // Live Profile Pictures — a NOOB Pro perk. These are animated SVGs (CSS/
   // SMIL animation embedded in the file itself), so they animate as a
@@ -1680,6 +1875,32 @@ async function startServer() {
     active.avatar = newAvatar;
     active.isLiveAvatar = true;
     res.json({ success: true, user: sanitizeUser(active) });
+  });
+
+  // --- WEB PUSH (real OS/browser notifications, delivered even with the
+  // app closed) ---
+  app.get('/api/push/vapid-public-key', (req, res) => {
+    const key = getVapidPublicKey();
+    if (!key) return res.status(503).json({ error: 'Push notifications are not available right now.' });
+    res.json({ publicKey: key });
+  });
+
+  app.post('/api/push/subscribe', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    const { subscription } = req.body;
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: 'A valid push subscription is required.' });
+    }
+    active.pushSubscription = subscription;
+    res.json({ success: true });
+  });
+
+  app.post('/api/push/unsubscribe', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    active.pushSubscription = undefined;
+    res.json({ success: true });
   });
 
   // Peer-to-peer NOOB Points transfer — the sender's balance moves
@@ -1724,8 +1945,7 @@ async function startServer() {
     recordTransaction(sender, -transferAmount, `Sent to @${recipient.username}${cleanNote ? ': ' + cleanNote : ''}`);
     recordTransaction(recipient, transferAmount, `Received from @${sender.username}${cleanNote ? ': ' + cleanNote : ''}`);
 
-    notifications.unshift({
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    notifyUser({
       senderId: sender.id,
       senderUsername: sender.username,
       senderDisplayName: sender.displayName,
@@ -1735,8 +1955,7 @@ async function startServer() {
       targetUsername: recipient.username,
       title: '💰 NOOB Points Received',
       message: `@${sender.username} sent you ${transferAmount.toLocaleString()} NOOB Points${cleanNote ? ': "' + cleanNote + '"' : '.'}`,
-      type: 'points_transfer',
-      createdAt: new Date().toISOString()
+      type: 'points_transfer'
     });
 
     res.json({
@@ -1867,8 +2086,7 @@ async function startServer() {
         active.pendingSentRequests.push(targetUserId);
       }
 
-      notifications.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      notifyUser({
         type: 'follow_request_received',
         actorId: active.id,
         actorUsername: active.username,
@@ -1882,8 +2100,7 @@ async function startServer() {
         targetUserId: targetUser.id,
         targetUsername: targetUser.username,
         message: 'wants to follow you.',
-        actionStatus: 'pending',
-        createdAt: new Date().toISOString()
+        actionStatus: 'pending'
       });
 
       return res.json({ success: true, isFollowing: false, isFollowRequested: true, followersCount: targetUser.followersCount || 0 });
@@ -1892,6 +2109,19 @@ async function startServer() {
     active.followingIds.push(targetUserId);
     active.followingCount = (active.followingCount || 0) + 1;
     targetUser.followersCount = (targetUser.followersCount || 0) + 1;
+
+    notifyUser({
+      targetUserId: targetUser.id,
+      targetUsername: targetUser.username,
+      senderId: active.id,
+      senderUsername: active.username,
+      senderDisplayName: active.displayName || active.username,
+      senderAvatar: active.avatar,
+      senderIsVerified: !!active.isVerified,
+      message: 'started following you.',
+      type: 'new_follower'
+    });
+
     res.json({ success: true, isFollowing: true, isFollowRequested: false, followersCount: targetUser.followersCount });
   };
 
@@ -1926,8 +2156,7 @@ async function startServer() {
       );
       if (originalNotif) originalNotif.actionStatus = 'accepted';
 
-      notifications.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      notifyUser({
         type: 'follow_request_accepted',
         actorId: active.id,
         actorUsername: active.username,
@@ -1940,8 +2169,7 @@ async function startServer() {
         senderIsVerified: !!active.isVerified,
         targetUserId: requester.id,
         targetUsername: requester.username,
-        message: 'accepted your follow request.',
-        createdAt: new Date().toISOString()
+        message: 'accepted your follow request.'
       });
     }
 
@@ -2029,6 +2257,15 @@ async function startServer() {
 
     const { slides, caption, category, hashtags, audioTrack, webLink } = req.body;
 
+    // Every slide needs a stable id so a single picture/video can later be
+    // removed from the carousel (DELETE /posts/:id/slides/:slideId) without
+    // relying on array position — the real client always assigns one, but
+    // never trust that blindly since this is a public API.
+    const normalizedSlides = (slides || []).map((s: any) => ({
+      ...s,
+      id: s.id || `slide_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+    }));
+
     const newPost = {
       id: `p_${Date.now()}`,
       userId: author.id,
@@ -2037,7 +2274,7 @@ async function startServer() {
       isVerified: !!author.isVerified,
       caption: caption || '',
       createdAt: new Date().toISOString(),
-      slides: slides || [],
+      slides: normalizedSlides,
       likesCount: 0,
       commentsCount: 0,
       sharesCount: 0,
@@ -2073,10 +2310,27 @@ async function startServer() {
 
     if (isLiked) {
       post.likedBy = post.likedBy.filter((id: string) => id !== active?.id);
-      post.likesCount = Math.max(0, (post.likesCount || 0) - 1);
     } else {
       post.likedBy.push(active?.id);
-      post.likesCount = (post.likesCount || 0) + 1;
+    }
+    // Derived from the array itself, never a separately-tracked counter —
+    // that's what let likesCount silently drift from who could actually be
+    // shown in the Likes list.
+    post.likesCount = post.likedBy.length;
+
+    if (!isLiked && active && active.id !== post.userId) {
+      notifyUser({
+        targetUserId: post.userId,
+        targetUsername: post.username,
+        senderId: active.id,
+        senderUsername: active.username,
+        senderDisplayName: active.displayName || active.username,
+        senderAvatar: active.avatar,
+        senderIsVerified: !!active.isVerified,
+        message: 'liked your post.',
+        type: 'post_like',
+        postId: post.id
+      });
     }
 
     res.json({ success: true, isLiked: !isLiked, likesCount: post.likesCount });
@@ -2234,6 +2488,38 @@ async function startServer() {
     res.json({ success: true, message: 'Post deleted successfully' });
   });
 
+  // Remove one picture/video from a multi-slide post without deleting the
+  // whole post — e.g. the NOOB admin needs to take down a single offending
+  // image out of a carousel rather than the entire post. Owner or admin
+  // only, same authority as deleting the whole post. Refuses to remove the
+  // last remaining slide (delete the post itself instead of leaving a post
+  // with zero media).
+  app.delete('/api/posts/:id/slides/:slideId', (req, res) => {
+    const { id: postId, slideId } = req.params;
+    const post = posts.find(p => p.id === postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const active = getActiveUser(req);
+    const isOwner = active && (active.id === post.userId || active.username === post.username);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isOwner && !isMasterAdmin) {
+      return res.status(403).json({ error: 'You can only remove media from your own posts.' });
+    }
+
+    const slideExists = post.slides.some((s: any) => s.id === slideId);
+    if (!slideExists) {
+      return res.status(404).json({ error: 'That picture/video was not found on this post.' });
+    }
+    if (post.slides.length <= 1) {
+      return res.status(400).json({ error: 'This is the only picture/video on the post — delete the whole post instead.' });
+    }
+
+    post.slides = post.slides.filter((s: any) => s.id !== slideId);
+    res.json({ success: true, post });
+  });
+
   // --- COMMENTS ROUTES ---
   app.get('/api/posts/:id/comments', (req, res) => {
     const postId = req.params.id;
@@ -2260,7 +2546,7 @@ async function startServer() {
       likesCount: 0,
       isLiked: false,
       isPinned: false,
-      createdAt: 'Just now'
+      createdAt: new Date().toISOString()
     };
 
     if (!comments[postId]) comments[postId] = [];
@@ -2269,6 +2555,20 @@ async function startServer() {
     const post = posts.find(p => p.id === postId);
     if (post) {
       post.commentsCount = (post.commentsCount || 0) + 1;
+      if (active && active.id !== post.userId) {
+        notifyUser({
+          targetUserId: post.userId,
+          targetUsername: post.username,
+          senderId: active.id,
+          senderUsername: active.username,
+          senderDisplayName: active.displayName || active.username,
+          senderAvatar: active.avatar,
+          senderIsVerified: !!active.isVerified,
+          message: `commented: "${text.trim().slice(0, 80)}${text.trim().length > 80 ? '…' : ''}"`,
+          type: 'post_comment',
+          postId: post.id
+        });
+      }
     }
     if (active) {
       active.noobPoints = (active.noobPoints || 0) + 5;
@@ -2526,10 +2826,24 @@ async function startServer() {
 
     if (isLiked) {
       reel.likedBy = reel.likedBy.filter((id: string) => id !== active?.id);
-      reel.likesCount = Math.max(0, (reel.likesCount || 0) - 1);
     } else {
       reel.likedBy.push(active?.id);
-      reel.likesCount = (reel.likesCount || 0) + 1;
+    }
+    reel.likesCount = reel.likedBy.length;
+
+    if (!isLiked && active && active.id !== reel.userId) {
+      notifyUser({
+        targetUserId: reel.userId,
+        targetUsername: reel.username,
+        senderId: active.id,
+        senderUsername: active.username,
+        senderDisplayName: active.displayName || active.username,
+        senderAvatar: active.avatar,
+        senderIsVerified: !!active.isVerified,
+        message: 'liked your reel.',
+        type: 'post_like',
+        reelId: reel.id
+      });
     }
 
     res.json({ success: true, isLiked: !isLiked, likesCount: reel.likesCount });
@@ -2605,14 +2919,30 @@ async function startServer() {
       likesCount: 0,
       isLiked: false,
       isPinned: false,
-      createdAt: 'Just now'
+      createdAt: new Date().toISOString()
     };
 
     if (!comments[reelId]) comments[reelId] = [];
     comments[reelId].unshift(newComment);
 
     const reel = reels.find(r => r.id === reelId);
-    if (reel) reel.commentsCount = (reel.commentsCount || 0) + 1;
+    if (reel) {
+      reel.commentsCount = (reel.commentsCount || 0) + 1;
+      if (active && active.id !== reel.userId) {
+        notifyUser({
+          targetUserId: reel.userId,
+          targetUsername: reel.username,
+          senderId: active.id,
+          senderUsername: active.username,
+          senderDisplayName: active.displayName || active.username,
+          senderAvatar: active.avatar,
+          senderIsVerified: !!active.isVerified,
+          message: `commented on your reel: "${text.trim().slice(0, 80)}${text.trim().length > 80 ? '…' : ''}"`,
+          type: 'post_comment',
+          reelId: reel.id
+        });
+      }
+    }
     if (active) {
       active.noobPoints = (active.noobPoints || 0) + 5;
       recordTransaction(active, 5, 'Commented on a reel');
@@ -3291,8 +3621,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     if (!chat.isGroup && text) {
       const recipient = chat.participants.find((p: any) => p.id !== active.id);
       if (recipient) {
-        notifications.unshift({
-          id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        notifyUser({
           senderId: active.id,
           senderUsername: active.username,
           senderDisplayName: active.displayName || active.username,
@@ -3303,8 +3632,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
           title: '💬 New Message',
           message: `@${active.username}: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`,
           type: 'new_message',
-          chatId: chat.id,
-          createdAt: new Date().toISOString()
+          chatId: chat.id
         });
       }
     }
@@ -4485,8 +4813,7 @@ COMPLETE PLATFORM CAPABILITIES:
     target.suspendedReason = suspend ? (reason || 'Account suspended by NOOB Admin for policy violation') : undefined;
 
     // Send direct system notification to the target user
-    notifications.unshift({
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    notifyUser({
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
       senderDisplayName: 'NOOB',
@@ -4498,8 +4825,7 @@ COMPLETE PLATFORM CAPABILITIES:
       message: suspend
         ? `Your account @${target.username} has been suspended by NOOB Admin. Reason: ${target.suspendedReason}`
         : 'Your account access has been restored by NOOB Administrator. You may now continue using all features.',
-      type: 'admin_direct',
-      createdAt: new Date().toISOString()
+      type: 'admin_direct'
     });
 
     res.json({
@@ -4537,8 +4863,7 @@ COMPLETE PLATFORM CAPABILITIES:
     target.noobPoints = after;
     recordTransaction(target, after - before, reason?.trim() || `Balance corrected by NOOB Admin (${before.toLocaleString()} → ${after.toLocaleString()})`);
 
-    notifications.unshift({
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    notifyUser({
       senderId: 'u_noob_admin',
       senderUsername: 'NOOB',
       senderDisplayName: 'NOOB',
@@ -4548,8 +4873,7 @@ COMPLETE PLATFORM CAPABILITIES:
       targetUsername: target.username,
       title: '⚠️ Balance Adjusted',
       message: `Your NOOB Points balance was adjusted by an administrator: ${before.toLocaleString()} → ${after.toLocaleString()}.`,
-      type: 'admin_direct',
-      createdAt: new Date().toISOString()
+      type: 'admin_direct'
     });
 
     res.json({ success: true, message: `@${target.username}'s balance updated to ${after.toLocaleString()} points.`, user: sanitizeUser(target) });

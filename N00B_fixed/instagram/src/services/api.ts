@@ -374,6 +374,14 @@ export async function deletePost(postId: string): Promise<boolean> {
   return data.success;
 }
 
+export async function deletePostSlide(postId: string, slideId: string): Promise<{ success: boolean; post?: Post; error?: string }> {
+  const res = await fetch(`${API_BASE}/posts/${postId}/slides/${slideId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return await res.json();
+}
+
 export async function fetchComments(postId: string) {
   try {
     const res = await fetch(`${API_BASE}/posts/${postId}/comments`);
@@ -1170,6 +1178,7 @@ export async function upgradeProTier(payload: {
   tierId: string;
   billing: 'monthly' | 'yearly';
   couponCode?: string;
+  autoRenew?: boolean;
 }): Promise<{ success: boolean; user?: User; error?: string }> {
   const res = await fetch(`${API_BASE}/users/upgrade-pro`, {
     method: 'POST',
@@ -1178,6 +1187,15 @@ export async function upgradeProTier(payload: {
   });
   const data = await res.json();
   return { success: res.ok && data.success, user: data.user, error: data.error };
+}
+
+export async function toggleProAutoRenew(enabled: boolean): Promise<{ success: boolean; proAutoRenew?: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/users/me/pro-auto-renew`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ enabled })
+  });
+  return await res.json();
 }
 
 export async function transferNoobPoints(payload: {
@@ -1393,4 +1411,34 @@ export async function deleteChatMessage(
     headers: getAuthHeaders()
   });
   return await res.json();
+}
+
+// --- Web Push (real OS/browser notifications) ---
+export async function fetchVapidPublicKey(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/push/vapid-public-key`);
+    const data = await res.json();
+    return data.publicKey || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function subscribeToPush(subscription: PushSubscription): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/push/subscribe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ subscription })
+  });
+  const data = await res.json();
+  return !!data.success;
+}
+
+export async function unsubscribeFromPush(): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/push/unsubscribe`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  return !!data.success;
 }

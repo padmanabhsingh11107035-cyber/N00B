@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Check, Crown, Loader2 } from 'lucide-react';
+import { X, Sparkles, Check, Crown, Loader2, RefreshCw } from 'lucide-react';
 import { User } from '../../types';
-import { redeemCouponCode, upgradeProTier } from '../../services/api';
+import { redeemCouponCode, upgradeProTier, toggleProAutoRenew } from '../../services/api';
 
 interface ProFeaturesModalProps {
   currentUser: User;
@@ -55,12 +55,15 @@ const YEARLY_DISCOUNT = 0.17;
 
 export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser, onClose, onUserUpdated }) => {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  const [autoRenew, setAutoRenew] = useState(true);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
   const [couponMsg, setCouponMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [subscribingTier, setSubscribingTier] = useState<string | null>(null);
   const [purchaseMsg, setPurchaseMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [currentAutoRenew, setCurrentAutoRenew] = useState(currentUser.proAutoRenew !== false);
+  const [savingAutoRenew, setSavingAutoRenew] = useState(false);
 
   const priceFor = (tier: ProTier) => {
     const base = billing === 'monthly' ? tier.monthlyPrice : Math.round(tier.monthlyPrice * 12 * (1 - YEARLY_DISCOUNT));
@@ -86,13 +89,30 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
   const handleSubscribe = async (tier: ProTier) => {
     setSubscribingTier(tier.id);
     setPurchaseMsg(null);
-    const res = await upgradeProTier({ tierId: tier.id, billing, couponCode: appliedCoupon?.code });
+    const res = await upgradeProTier({
+      tierId: tier.id,
+      billing,
+      couponCode: appliedCoupon?.code,
+      autoRenew: billing === 'monthly' ? autoRenew : true
+    });
     setSubscribingTier(null);
     if (res.success && res.user) {
       onUserUpdated?.(res.user);
+      setCurrentAutoRenew(res.user.proAutoRenew !== false);
       setPurchaseMsg({ type: 'success', text: `You're now on the ${tier.name} plan!` });
     } else {
       setPurchaseMsg({ type: 'error', text: res.error || 'Could not complete the upgrade.' });
+    }
+  };
+
+  const handleToggleCurrentAutoRenew = async () => {
+    const next = !currentAutoRenew;
+    setSavingAutoRenew(true);
+    setCurrentAutoRenew(next);
+    const res = await toggleProAutoRenew(next);
+    setSavingAutoRenew(false);
+    if (!res.success) {
+      setCurrentAutoRenew(!next);
     }
   };
 
@@ -110,6 +130,36 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Manage an existing subscription's auto-renew — only shown once
+            already subscribed, since there's nothing to "reload" yet. */}
+        {currentUser.proTier && currentUser.proBilling === 'monthly' && (
+          <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-2 rounded-xl ${currentAutoRenew ? 'bg-[#00FF66]/15 text-[#00FF66]' : 'bg-zinc-800 text-zinc-500'}`}>
+                <RefreshCw className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white">Reload Monthly</h4>
+                <p className="text-[10px] text-zinc-400">
+                  {currentAutoRenew
+                    ? 'Your Wallet is billed automatically each month to keep Pro active.'
+                    : `Pro ends on ${currentUser.proRenewsAt ? new Date(currentUser.proRenewsAt).toLocaleDateString() : 'your renewal date'} unless you turn this back on.`}
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={currentAutoRenew}
+                disabled={savingAutoRenew}
+                onChange={handleToggleCurrentAutoRenew}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-[#00FF66]" />
+            </label>
+          </div>
+        )}
 
         {/* Monthly / Yearly toggle */}
         <div className="flex items-center justify-center gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1">
@@ -133,6 +183,27 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             </span>
           </button>
         </div>
+
+        {/* Reload Monthly — whether this new subscription auto-renews each
+            month by deducting NOOB Points from the Wallet, or ends after one
+            period. Only meaningful for monthly billing. */}
+        {billing === 'monthly' && (
+          <label className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 cursor-pointer">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-3.5 h-3.5 text-[#00FF66]" />
+              <span className="text-xs font-semibold text-white">Reload Monthly</span>
+            </div>
+            <div className="relative inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={autoRenew}
+                onChange={(e) => setAutoRenew(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-[#00FF66]" />
+            </div>
+          </label>
+        )}
 
         {/* Discount coupon — applies to whichever tier you subscribe to */}
         <div className="space-y-1">

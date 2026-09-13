@@ -37,6 +37,7 @@ interface PostCardProps {
   onToggleComments: (postId: string) => void;
   onToggleLikeCount: (postId: string) => void;
   onDeletePost: (postId: string) => void;
+  onDeleteSlide?: (postId: string, slideId: string) => void;
   onHideAd?: (postId: string) => void;
   onSelectCategory?: (category: string) => void;
 }
@@ -52,6 +53,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onToggleComments,
   onToggleLikeCount,
   onDeletePost,
+  onDeleteSlide,
   onHideAd,
   onSelectCategory
 }) => {
@@ -93,6 +95,15 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
     });
   }, [post.slides]);
+
+  // Deleting a slide out from under whichever one is currently being viewed
+  // (e.g. the admin removes the last slide in the carousel) would otherwise
+  // leave the index pointing past the new, shorter array.
+  useEffect(() => {
+    if (post.slides && currentSlideIndex >= post.slides.length) {
+      setCurrentSlideIndex(Math.max(0, post.slides.length - 1));
+    }
+  }, [post.slides, currentSlideIndex]);
 
   // Record a view once this post has genuinely scrolled into view (not
   // merely been fetched as part of the feed list) — matches the same
@@ -450,6 +461,23 @@ export const PostCard: React.FC<PostCardProps> = ({
               <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md border border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white z-20">
                 {currentSlideIndex + 1}/{post.slides.length}
               </div>
+
+              {/* Remove just this picture/video from the carousel — owner or
+                  the NOOB admin account only, and only while there's more
+                  than one slide left (removing the last one should be
+                  "delete the whole post" instead). */}
+              {(isOwner || isMasterAdmin) && onDeleteSlide && currentSlide && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSlide(post.id, currentSlide.id);
+                  }}
+                  title="Remove this picture/video"
+                  className="absolute top-11 right-3 p-1.5 rounded-full bg-black/70 hover:bg-red-600 text-white backdrop-blur-md z-20 transition-colors border border-white/10 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </>
           )}
 

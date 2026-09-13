@@ -20,7 +20,8 @@ import {
   BellOff,
   BellRing,
   Coins,
-  Gift
+  Gift,
+  Camera
 } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -149,6 +150,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
       case 'birthday_wish':
       case 'birthday_follower_alert':
         return <Gift className="w-3.5 h-3.5 text-pink-400" />;
+      case 'screenshot_alert':
+        return <Camera className="w-3.5 h-3.5 text-orange-400" />;
       default:
         return <Sparkles className="w-3.5 h-3.5 text-[#00FF66]" />;
     }

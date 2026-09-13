@@ -5,6 +5,7 @@ import { recordStoryView, fetchStoryViewers } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
+import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -38,6 +39,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const story = stories[currentIndex];
   const isOwnStory = !!story && story.userId === currentUser.id;
   const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
+  useScreenshotAlert('story', story?.id, !isOwnStory);
 
   useEffect(() => {
     setProgress(0);

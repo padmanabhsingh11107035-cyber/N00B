@@ -76,6 +76,7 @@ import { CustomerSupportModal } from '../Support/CustomerSupportModal';
 import { HighlightManagerModal, HighlightItem } from './HighlightManagerModal';
 import { HighlightViewerModal } from './HighlightViewerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
+import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { GetVerifiedModal } from './GetVerifiedModal';
@@ -223,6 +224,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Target User (Either currentUser or viewingUser)
   const targetUser: User = viewingUser || currentUser;
   const isOwnProfile = !viewingUser || viewingUser.id === currentUser.id;
+  useScreenshotAlert('profile', targetUser.id, !isOwnProfile);
   const isTargetBlocked = (currentUser.blockedUserIds || []).includes(targetUser.id);
   const [isTargetFollowing, setIsTargetFollowing] = useState<boolean>(() => {
     if (targetUser.isFollowing !== undefined) return !!targetUser.isFollowing;

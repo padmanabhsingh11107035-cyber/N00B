@@ -34,6 +34,7 @@ import {
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
+import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -123,6 +124,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const nextReel = localReels[currentIndex + 1];
   const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
   const isReelOwner = !!currentReel && currentReel.userId === currentUser.id;
+  useScreenshotAlert('reel', currentReel?.id, !!currentReel && !isReelOwner);
   const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
 
   useEffect(() => {

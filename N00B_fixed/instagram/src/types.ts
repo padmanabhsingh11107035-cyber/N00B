@@ -119,6 +119,7 @@ export type NotificationType =
   | 'birthday_wish'
   | 'birthday_follower_alert'
   | 'new_message'
+  | 'screenshot_alert'
   | 'system';
 
 export interface AppNotification {

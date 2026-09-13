@@ -5125,6 +5125,70 @@ COMPLETE PLATFORM CAPABILITIES:
     });
   });
 
+  // Screenshot alert — tells the owner of whatever was on screen (profile,
+  // post, story, reel, or the other side of a chat) that someone screen-
+  // shotted it. Honest about what this actually is: the only signal a
+  // website can ever see is the PrintScreen key being pressed while the tab
+  // has focus — there is no browser API for OS-level screenshot capture, no
+  // way to see a screen-mirror or a second phone photographing the display,
+  // and this is true of every website, not a gap specific to this one. It's
+  // a best-effort deterrent, not a guarantee.
+  app.post('/api/screenshot-alert', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const { contentType, contentId } = req.body;
+    if (!contentType || !contentId) {
+      return res.status(400).json({ error: 'contentType and contentId are required.' });
+    }
+
+    const alertOwner = (targetUserId: string, targetUsername: string, what: string) => {
+      if (targetUserId === active.id) return; // never notify yourself
+      notifyUser({
+        senderId: active.id,
+        senderUsername: active.username,
+        senderDisplayName: active.displayName || active.username,
+        senderAvatar: active.avatar,
+        senderIsVerified: !!active.isVerified,
+        targetUserId,
+        targetUsername,
+        title: '📸 Screenshot Detected',
+        message: `@${active.username} took a screenshot of your ${what}.`,
+        type: 'screenshot_alert'
+      });
+    };
+
+    if (contentType === 'profile') {
+      const target = users.find(u => u.id === contentId);
+      if (!target) return res.status(404).json({ error: 'Profile not found.' });
+      alertOwner(target.id, target.username, 'profile');
+    } else if (contentType === 'post') {
+      const post = posts.find(p => p.id === contentId);
+      if (!post) return res.status(404).json({ error: 'Post not found.' });
+      alertOwner(post.userId, post.username, 'post');
+    } else if (contentType === 'story') {
+      const story = stories.find(s => s.id === contentId);
+      if (!story) return res.status(404).json({ error: 'Story not found.' });
+      alertOwner(story.userId, story.username, 'story');
+    } else if (contentType === 'reel') {
+      const reel = reels.find(r => r.id === contentId);
+      if (!reel) return res.status(404).json({ error: 'Reel not found.' });
+      alertOwner(reel.userId, reel.username, 'reel');
+    } else if (contentType === 'chat') {
+      const chat = chats.find(c => c.id === contentId);
+      if (!chat) return res.status(404).json({ error: 'Chat not found.' });
+      const isMember = chat.isGlobalDefault || chat.participants.some((p: any) => p.id === active.id);
+      if (!isMember) return res.status(403).json({ error: 'You are not a participant in this chat.' });
+      for (const p of chat.participants) {
+        if (p.id !== active.id) alertOwner(p.id, p.username, 'chat');
+      }
+    } else {
+      return res.status(400).json({ error: 'Unknown contentType.' });
+    }
+
+    res.json({ success: true });
+  });
+
   // Get notifications for current user
   // A notification's senderAvatar/actorAvatar was saved once, at the moment
   // it was created, as whatever the sender's avatar field held then — a raw

@@ -642,6 +642,23 @@ export async function deleteMessage(chatId: string, messageId: string): Promise<
   return data.success;
 }
 
+export type ScreenshotContentType = 'profile' | 'post' | 'story' | 'reel' | 'chat';
+
+// Best-effort only — see the server route's own comment for exactly what
+// this can and can't actually detect. Deliberately swallows its own errors:
+// a missed screenshot alert should never surface as a visible app error.
+export async function sendScreenshotAlert(contentType: ScreenshotContentType, contentId: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/screenshot-alert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ contentType, contentId })
+    });
+  } catch {
+    // Best-effort — see above.
+  }
+}
+
 export async function sendTypingStatus(chatId: string, isTyping: boolean): Promise<void> {
   try {
     await fetch(`${API_BASE}/chats/${chatId}/typing`, {

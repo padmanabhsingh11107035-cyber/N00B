@@ -187,6 +187,7 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
 import { safeJsonStringify, safeLocalStorageSet } from '../../utils/safeJson';
+import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { formatClockTime } from '../../utils/formatTime';
 import confetti from 'canvas-confetti';
 
@@ -720,6 +721,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
+  useScreenshotAlert('chat', activeChat?.id, !!activeChat);
 
   // Pings "I'm typing" at most once per pause-cycle (not on every keystroke —
   // the server only needs to know typing is happening, not each character),

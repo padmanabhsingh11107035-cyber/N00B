@@ -25,6 +25,7 @@ import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { fetchPostLikers, fetchPostViewers, recordPostView } from '../../services/api';
 import { formatExactDateTime } from '../../utils/formatTime';
+import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 
 interface PostCardProps {
   post: Post;
@@ -131,6 +132,24 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post.id]);
+
+  // Separate, non-disconnecting observer just for "is this post the one on
+  // screen right now" — unlike the view-recording one above (which fires
+  // once and stops), a feed can have many posts mounted at once and we need
+  // to know, continuously, which single one a PrintScreen press was
+  // plausibly "about".
+  const [isInView, setIsInView] = useState(false);
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => setIsInView(!!entries[0]?.isIntersecting),
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [post.id]);
+  useScreenshotAlert('post', post.id, isInView && !isOwner);
 
   const handleDoubleTap = () => {
     if (!post.isLiked) {

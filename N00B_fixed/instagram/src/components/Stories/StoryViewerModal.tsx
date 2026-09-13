@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2 } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, fetchStoryViewers } from '../../services/api';
+import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
 
@@ -188,7 +189,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-[11px] text-gray-300">{story.createdAt}</span>
+              <span className="text-[11px] text-gray-300">{formatRelativeTime(story.createdAt)}</span>
             </div>
           </div>
 

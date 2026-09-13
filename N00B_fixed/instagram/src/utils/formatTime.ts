@@ -21,6 +21,13 @@ export function formatClockTime(value?: string | null): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Exact absolute date + time in the viewer's local timezone, e.g. "13 Sep 2026, 4:48 PM". */
+export function formatExactDateTime(value?: string | null): string {
+  const date = parseTimestamp(value);
+  if (!date) return value || '';
+  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 /** Relative time for feeds/notifications, e.g. "5m ago", "3h ago", "Sep 10". */
 export function formatRelativeTime(value?: string | null): string {
   const date = parseTimestamp(value);

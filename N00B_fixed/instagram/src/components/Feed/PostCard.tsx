@@ -24,6 +24,7 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { fetchPostLikers, fetchPostViewers, recordPostView } from '../../services/api';
+import { formatExactDateTime } from '../../utils/formatTime';
 
 interface PostCardProps {
   post: Post;
@@ -650,9 +651,10 @@ export const PostCard: React.FC<PostCardProps> = ({
           </button>
         )}
 
-        {/* Timestamp */}
-        <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1 pb-1">
-          {post.createdAt}
+        {/* Timestamp — exact date/time, not a relative "2h ago" that goes
+            stale the moment you stop looking at the screen. */}
+        <div className="text-[10px] uppercase tracking-wider text-zinc-500 mt-1 pb-1 text-right">
+          {formatExactDateTime(post.createdAt)}
         </div>
       </div>
 

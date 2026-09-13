@@ -86,6 +86,18 @@ function checkRateLimit(ip: string, limit: number = 60, windowMs: number = 60000
   return true;
 }
 
+// Railway (like any platform behind a load balancer/proxy) puts the real
+// visitor address in x-forwarded-for, not req.socket.remoteAddress — that
+// header can carry a comma-separated "client, proxy1, proxy2" chain, so the
+// actual client is always the first entry.
+function getClientIp(req: any): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || '127.0.0.1';
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -430,7 +442,7 @@ async function startServer() {
     // display name) and pendingSentRequests reveals which private accounts
     // THIS user has asked to follow — both are private to the account
     // owner, not for every other viewer of their profile/directory entry.
-    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ...publicUser } = u;
+    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ipAddress, ...publicUser } = u;
     return publicUser;
   }
 
@@ -799,7 +811,8 @@ async function startServer() {
         blockedWords: [],
         hiddenStoryUsernames: []
       },
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ipAddress: getClientIp(req)
     };
 
     users.push(newUser);
@@ -836,6 +849,7 @@ async function startServer() {
       });
     }
 
+    user.ipAddress = getClientIp(req);
     currentSessionUserId = user.id;
     res.json({ success: true, user: sanitizeUser(user) });
   });
@@ -2022,7 +2036,7 @@ async function startServer() {
       userAvatar: author.avatar,
       isVerified: !!author.isVerified,
       caption: caption || '',
-      createdAt: 'Just now',
+      createdAt: new Date().toISOString(),
       slides: slides || [],
       likesCount: 0,
       commentsCount: 0,
@@ -2347,7 +2361,7 @@ async function startServer() {
       mediaUrl: mediaUrl || '',
       mediaType: mediaType || 'image',
       durationSeconds: 5,
-      createdAt: 'Just now',
+      createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       isCloseFriendsOnly: !!isCloseFriendsOnly,
       isViewed: false,
@@ -2488,7 +2502,7 @@ async function startServer() {
       isSaved: false,
       isFollowing: false,
       hashtags: hashtags || [],
-      createdAt: 'Just now',
+      createdAt: new Date().toISOString(),
       durationSeconds: 15
     };
 

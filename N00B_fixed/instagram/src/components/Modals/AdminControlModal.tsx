@@ -26,6 +26,7 @@ import {
 import { User } from '../../types';
 import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { formatExactDateTime } from '../../utils/formatTime';
 
 interface AdminControlModalProps {
   currentUser: User;
@@ -958,18 +959,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     <span className="text-[11px] text-zinc-500">Account Type</span>
                     <span className="text-xs text-white font-medium capitalize">{selectedUserForDetails.accountType}</span>
                   </div>
-                  {(selectedUserForDetails as any).createdAt && (
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[11px] text-zinc-500 shrink-0">Joined</span>
-                      <span className="text-xs text-white font-medium text-right break-all">
-                        {(() => {
-                          const raw = (selectedUserForDetails as any).createdAt;
-                          const d = new Date(raw);
-                          return isNaN(d.getTime()) ? raw : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-                        })()}
-                      </span>
-                    </div>
-                  )}
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500">Verification</span>
                     <span className="text-xs text-white font-medium capitalize">
@@ -988,6 +977,27 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       <span className="text-xs text-red-400 font-medium text-right">{selectedUserForDetails.suspendedReason || 'Not specified'}</span>
                     </div>
                   )}
+                  {/* Exact join time and last known IP — kept together at the
+                      bottom of the card since these two are the pieces an
+                      admin actually pulls this panel up to check. */}
+                  <div className="pt-2 mt-1 border-t border-zinc-800 space-y-2">
+                    {(selectedUserForDetails as any).createdAt && (
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11px] text-zinc-500 shrink-0">Joined</span>
+                        <span className="text-xs text-white font-medium text-right break-all">
+                          {formatExactDateTime((selectedUserForDetails as any).createdAt)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500 shrink-0 flex items-center gap-1">
+                        <Fingerprint className="w-3 h-3" /> IP Address
+                      </span>
+                      <span className="text-[11px] text-zinc-300 font-mono text-right break-all">
+                        {(selectedUserForDetails as any).ipAddress || 'Not recorded'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

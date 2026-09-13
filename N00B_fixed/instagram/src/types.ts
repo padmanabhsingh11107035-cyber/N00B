@@ -89,6 +89,10 @@ export interface User {
   isAdmin?: boolean;
   isSuspended?: boolean;
   suspendedReason?: string;
+  // Last known IP address (captured at signup, refreshed on every login) —
+  // admin-only: sanitizePublicUser strips this before any other user can
+  // ever see it.
+  ipAddress?: string;
   privacySettings: {
     hideTaggedPhotos: boolean;
     blockedWords: string[];

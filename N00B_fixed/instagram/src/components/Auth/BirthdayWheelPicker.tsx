@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface BirthdayWheelPickerProps {
@@ -171,7 +172,13 @@ export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value,
     onConfirm(iso);
   };
 
-  return (
+  // Portalled to document.body: some callers (e.g. EditProfileModal) render
+  // this inside an ancestor that itself uses backdrop-blur, and per the CSS
+  // spec a filter/backdrop-filter on ANY ancestor becomes the containing
+  // block for position:fixed descendants — without the portal this
+  // "fullscreen" picker would get trapped inside that ancestor's own
+  // (much smaller) box instead of covering the viewport.
+  return createPortal(
     <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="w-full sm:max-w-sm bg-[#141418] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -227,6 +234,7 @@ export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value,
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

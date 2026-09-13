@@ -26,9 +26,17 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingId, setPendingId] = useState<string | null>(null);
 
-  const followersList = allUsers.filter(
-    (u) => u.id !== targetUser.id && u.followingIds?.includes(targetUser.id)
-  );
+  // Every registered account auto-follows the NOOB admin account at signup,
+  // so its "followers" are, by definition, every other registered user —
+  // mirrors the server's getDisplayFollowersCount rather than trusting a
+  // followingIds reverse-lookup that's exactly what drifted out of sync in
+  // the first place (old test-account deletions inflating the stored
+  // count). Every other account's followers list stays the genuine,
+  // individually-tracked relationship.
+  const followersList =
+    targetUser.id === 'u_noob_admin'
+      ? allUsers.filter((u) => u.id !== targetUser.id)
+      : allUsers.filter((u) => u.id !== targetUser.id && u.followingIds?.includes(targetUser.id));
   const followingList = (targetUser.followingIds || [])
     .map((id) => allUsers.find((u) => u.id === id))
     .filter((u): u is User => !!u);

@@ -15,11 +15,14 @@ import {
   Instagram,
   Twitter,
   Youtube,
-  Github
+  Github,
+  Mail,
+  Cake
 } from 'lucide-react';
 import { User as UserType, AccountType } from '../../types';
 import { updateFullProfile, uploadMediaFile } from '../../services/api';
 import { COUNTRY_OPTIONS, GENDER_OPTIONS } from '../Auth/AuthView';
+import { BirthdayWheelPicker } from '../Auth/BirthdayWheelPicker';
 import confetti from 'canvas-confetti';
 
 interface EditProfileModalProps {
@@ -38,6 +41,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [firstName, setFirstName] = useState(currentUser.firstName || '');
   const [lastName, setLastName] = useState(currentUser.lastName || '');
   const [username, setUsername] = useState(currentUser.username || '');
+  const [email, setEmail] = useState(currentUser.email || '');
+  const [dateOfBirth, setDateOfBirth] = useState(currentUser.dateOfBirth || '');
+  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
   const [bio, setBio] = useState(currentUser.bio || '');
   const [avatar, setAvatar] = useState(currentUser.avatar || '');
   const [avatarObjectKey, setAvatarObjectKey] = useState('');
@@ -136,6 +142,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: username.toLowerCase().trim().replace(/[^a-z0-9_.]/g, ''),
+        email: email.trim(),
+        dateOfBirth,
         bio: bio.trim(),
         avatar: (avatarObjectKey || avatar).trim(),
         website: website.trim(),
@@ -305,6 +313,34 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 placeholder="unique_username"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-zinc-300 block mb-1 flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5 text-zinc-400" /> Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-zinc-300 block mb-1 flex items-center gap-1">
+                <Cake className="w-3.5 h-3.5 text-zinc-400" /> Date of Birth
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowBirthdayPicker(true)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-left text-white focus:outline-none hover:border-cyan-400 cursor-pointer"
+              >
+                {dateOfBirth
+                  ? new Date(dateOfBirth).toLocaleDateString([], { dateStyle: 'long' })
+                  : <span className="text-zinc-500">Select your date of birth</span>}
+              </button>
             </div>
           </div>
 
@@ -612,6 +648,19 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
         </form>
       </div>
+
+      {showBirthdayPicker && (
+        <BirthdayWheelPicker
+          value={dateOfBirth}
+          maxDate={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000)}
+          minDate={new Date(Date.now() - 82 * 365.25 * 24 * 60 * 60 * 1000)}
+          onClose={() => setShowBirthdayPicker(false)}
+          onConfirm={(iso) => {
+            setDateOfBirth(iso);
+            setShowBirthdayPicker(false);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -188,6 +188,25 @@ export async function signMediaKey(keyOrUrl?: string | null, expiresInSeconds = 
 }
 
 /**
+ * Reduces a stored mediaUrl/coverUrl/avatar/etc value (either a bare B2
+ * object key or a presigned URL pointing at one) down to the bare key, or
+ * null if it isn't a key into our own bucket at all (a data: URI, a local
+ * "/..." static path, or some other external URL). Lets two DIFFERENT
+ * pieces of content that happen to reference the exact same uploaded file
+ * be recognized as pointing at the same object, regardless of which form
+ * (signed URL vs bare key) each one happens to have stored.
+ */
+export function getBareMediaKey(keyOrUrl?: string | null): string | null {
+  if (!keyOrUrl || keyOrUrl.startsWith('data:') || keyOrUrl.startsWith('/')) return null;
+  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+    const { bucket, endpoint } = getB2Client();
+    if (!keyOrUrl.startsWith(`${endpoint}/${bucket}/`)) return null;
+    return decodeURIComponent(keyOrUrl.slice(`${endpoint}/${bucket}/`.length).split('?')[0]) || null;
+  }
+  return keyOrUrl;
+}
+
+/**
  * Permanently deletes an object from B2 given its stored key OR a
  * presigned URL pointing at it (the key is pulled out of the URL path the
  * same way signMediaKey does). Used for content whose media should not

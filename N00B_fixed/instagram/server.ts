@@ -16,7 +16,7 @@ import {
   MOCK_HIGHLIGHTS,
   INITIAL_SETTINGS
 } from './src/data/mockData';
-import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2 } from './server/b2Storage';
+import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2, getBareMediaKey } from './server/b2Storage';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 import { initPush, getVapidPublicKey, sendPush } from './server/push';
 
@@ -311,6 +311,17 @@ async function startServer() {
   posts.forEach((p: any) => { p.likesCount = (p.likedBy || []).length; });
   reels.forEach((r: any) => { r.likesCount = (r.likedBy || []).length; });
 
+  // Same drift, same fix, for the NOOB admin account's followersCount —
+  // every registered user auto-follows it at signup, so its real follower
+  // count can never legitimately be anything other than "everyone else".
+  // The live override in getDisplayFollowersCount is what actually protects
+  // every future read of it; this just cleans up the stored field itself so
+  // nothing reading it directly (bypassing that helper) sees stale drift.
+  (() => {
+    const noobAdmin = users.find(u => u.id === 'u_noob_admin');
+    if (noobAdmin) noobAdmin.followersCount = Math.max(0, users.length - 1);
+  })();
+
   // Debounced full-state save: any non-GET request schedules a save a few
   // seconds out, coalescing bursts of mutations into a single write.
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -355,6 +366,26 @@ async function startServer() {
   // removed it from the array or persisted storage. This deletes only the
   // expired story itself; the author's posts/reels are untouched — those
   // are only ever removed when the author deletes them.
+  //
+  // Uploads can end up reused across content types (e.g. someone picks an
+  // already-uploaded photo as both a story and a music track cover), so
+  // deleting the B2 object just because THIS story expired would silently
+  // break every other place still pointing at that same key. Checked
+  // against every other collection that can hold a reference before ever
+  // calling deleteMediaFromB2.
+  function isMediaKeyStillReferenced(key: string): boolean {
+    const matches = (v?: string | null) => !!v && getBareMediaKey(v) === key;
+    return (
+      posts.some(p => p.slides?.some((s: any) => matches(s.mediaUrl))) ||
+      reels.some(r => matches(r.videoUrl) || matches(r.thumbnailUrl)) ||
+      stories.some(s => matches(s.mediaUrl)) ||
+      musicTracks.some(t => matches(t.coverUrl) || matches(t.audioUrl)) ||
+      users.some(u => matches(u.avatar)) ||
+      customStickers.some(s => matches(s.objectKey)) ||
+      chats.some(c => matches(c.avatar))
+    );
+  }
+
   async function cleanupExpiredStories() {
     const now = Date.now();
     const expired = stories.filter(s => s.expiresAt && new Date(s.expiresAt).getTime() < now);
@@ -364,7 +395,11 @@ async function startServer() {
     schedulePersist();
 
     await Promise.all(
-      expired.map(s => deleteMediaFromB2(s.mediaUrl).catch(() => {}))
+      expired.map(s => {
+        const key = getBareMediaKey(s.mediaUrl);
+        if (key && isMediaKeyStillReferenced(key)) return Promise.resolve();
+        return deleteMediaFromB2(s.mediaUrl).catch(() => {});
+      })
     );
   }
   cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
@@ -468,9 +503,30 @@ async function startServer() {
   // response that belongs to the user themselves (login/signup, /users/me,
   // profile update, admin dashboards) — it still includes mobileNumber,
   // countryCode and email, which those contexts legitimately need back.
+  // Every registered account auto-follows the NOOB admin account at signup
+  // (see defaultFollowingIds in /api/auth/signup), so its followers are, by
+  // definition, meant to be every other registered user — but the stored
+  // followersCount counter drifted from that (old test-account deletions
+  // that predated the deleteAccountAndContent follow-cleanup fix inflated
+  // it to e.g. 64 against a real 53 users). Rather than trying to patch the
+  // stored counter back to correct (and risk it drifting again the same
+  // way), NOOB's displayed followersCount is computed live from the actual
+  // user roster every time — it can never disagree with reality again, and
+  // automatically reflects new signups or account deletions with zero
+  // extra bookkeeping. Deliberately does NOT touch followingCount — who
+  // NOOB itself follows stays the genuine, individually-tracked list, this
+  // override only ever applies to the admin account, never a regular user.
+  function getDisplayFollowersCount(user: any): number {
+    if (user?.id === 'u_noob_admin') {
+      return Math.max(0, users.length - 1);
+    }
+    return user?.followersCount || 0;
+  }
+
   function sanitizeUser(u: any) {
     if (!u) return null;
     const { password, ...safeUser } = u;
+    safeUser.followersCount = getDisplayFollowersCount(u);
     return safeUser;
   }
 
@@ -485,6 +541,7 @@ async function startServer() {
     // THIS user has asked to follow — both are private to the account
     // owner, not for every other viewer of their profile/directory entry.
     const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ipAddress, pushSubscription, ...publicUser } = u;
+    publicUser.followersCount = getDisplayFollowersCount(u);
     return publicUser;
   }
 
@@ -1108,6 +1165,8 @@ async function startServer() {
       firstName,
       lastName,
       username,
+      email,
+      dateOfBirth,
       bio,
       avatar,
       website,
@@ -1135,6 +1194,38 @@ async function startServer() {
         return res.status(409).json({ error: 'Username is already taken by another account.' });
       }
       users[index].username = cleanU;
+    }
+
+    if (email !== undefined && email.trim().toLowerCase() !== (users[index].email || '').toLowerCase()) {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+      const emailTaken = users.some(u => u.id !== activeUser.id && u.email?.toLowerCase() === cleanEmail);
+      if (emailTaken) {
+        return res.status(409).json({ error: 'That email address is already in use by another account.' });
+      }
+      users[index].email = cleanEmail;
+    }
+
+    // Deliberately never touches lastBirthdayWishedYear — that's the
+    // once-per-calendar-year gate on the birthday scratch-card gift, and it
+    // must survive a date-of-birth edit. Without this, someone could edit
+    // their DOB to today's date to keep re-triggering checkBirthdays() and
+    // farm the gift indefinitely instead of at most once a year.
+    if (dateOfBirth !== undefined && dateOfBirth !== users[index].dateOfBirth) {
+      const birthDate = new Date(dateOfBirth);
+      if (isNaN(birthDate.getTime()) || birthDate > new Date()) {
+        return res.status(400).json({ error: 'Please enter a valid date of birth.' });
+      }
+      const ageInYears = (Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      if (ageInYears < 13) {
+        return res.status(400).json({ error: 'You must be at least 13 years old to use NOOB.' });
+      }
+      if (ageInYears > 82) {
+        return res.status(400).json({ error: 'NOOB accounts are only available to users 82 years old or younger.' });
+      }
+      users[index].dateOfBirth = dateOfBirth;
     }
 
     if (displayName) users[index].displayName = displayName.trim();
@@ -2027,7 +2118,7 @@ async function startServer() {
         isVerified: u.isVerified,
         accountType: u.accountType,
         isBusiness: u.isBusiness,
-        followersCount: u.followersCount || 0,
+        followersCount: getDisplayFollowersCount(u),
         followingCount: u.followingCount || 0,
         isFollowing: active?.followingIds?.includes(u.id) || false
       }))
@@ -3403,7 +3494,7 @@ async function startServer() {
       gamesWon: activeUser?.gamesWonCount || 0,
       gamesPlayed: activeUser?.gamesPlayedCount || 0,
       isVerified: !!activeUser?.isVerified,
-      followersCount: activeUser?.followersCount || 0,
+      followersCount: getDisplayFollowersCount(activeUser),
       followingCount: activeUser?.followingCount || 0,
       bio: activeUser?.bio || 'Creative creator'
     };
@@ -4615,7 +4706,7 @@ COMPLETE PLATFORM CAPABILITIES:
       const regName = activeUser.displayName || activeUser.username;
       const postsCount = activeUser.postsCount || 0;
       const points = activeUser.noobPoints || 100;
-      const followers = activeUser.followersCount || 0;
+      const followers = getDisplayFollowersCount(activeUser);
       const gamesWon = activeUser.gamesWonCount || 0;
       const isVerified = !!activeUser.isVerified;
 

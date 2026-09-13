@@ -634,12 +634,34 @@ export async function editMessage(chatId: string, messageId: string, text: strin
 }
 
 export async function deleteMessage(chatId: string, messageId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}`, { 
+  const res = await fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
   });
   const data = await res.json();
   return data.success;
+}
+
+export async function sendTypingStatus(chatId: string, isTyping: boolean): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/chats/${chatId}/typing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ isTyping })
+    });
+  } catch {
+    // Best-effort — a dropped typing ping isn't worth surfacing an error for.
+  }
+}
+
+export async function fetchTypingUsers(chatId: string): Promise<User[]> {
+  try {
+    const res = await fetch(`${API_BASE}/chats/${chatId}/typing`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    return data.users || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function translateMessage(chatId: string, messageId: string): Promise<string> {

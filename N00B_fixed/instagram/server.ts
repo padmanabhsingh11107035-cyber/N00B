@@ -227,6 +227,16 @@ async function startServer() {
     ],
     ...MOCK_MESSAGES
   };
+
+  // Who's currently typing, per chat: chatId -> userId -> the timestamp of
+  // their last "I'm typing" ping. Purely ephemeral (never persisted to
+  // Mongo, never worth surviving a restart) — a client polling
+  // GET /:id/typing filters out anything older than TYPING_TTL_MS itself,
+  // so a browser tab that closes mid-type without ever sending
+  // isTyping:false just silently expires a couple seconds later instead of
+  // leaving a permanently-stuck "typing…" indicator.
+  const typingUsers: Record<string, Record<string, number>> = {};
+  const TYPING_TTL_MS = 5000;
   let collections: any[] = [...MOCK_COLLECTIONS];
   let gameScores: any[] = [...MOCK_GAME_SCORES];
   // Real-time-ish multiplayer: two players independently play the same
@@ -3640,6 +3650,58 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     res.json({ messages: signedMessages });
   });
 
+  // "X is typing…" — the client pings this every couple of seconds while
+  // someone has text in the composer (isTyping: true) and once immediately
+  // when they clear it or send (isTyping: false), so stopping feels instant
+  // rather than waiting out the TTL.
+  app.post('/api/chats/:id/typing', (req, res) => {
+    const chatId = req.params.id;
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    const isMember = chat.isGlobalDefault || chat.participants.some((p: any) => p.id === active.id);
+    if (!isMember) return res.status(403).json({ error: 'You are not a participant in this chat.' });
+
+    const { isTyping } = req.body;
+    if (!typingUsers[chatId]) typingUsers[chatId] = {};
+    if (isTyping) {
+      typingUsers[chatId][active.id] = Date.now();
+    } else {
+      delete typingUsers[chatId][active.id];
+    }
+    res.json({ success: true });
+  });
+
+  // Who's typing right now, from someone else's point of view — always
+  // excludes the requester (you never need to be told you're typing) and
+  // anything past the TTL, so a tab that vanished mid-type without ever
+  // sending isTyping:false doesn't leave a permanently-stuck indicator for
+  // everyone else in the chat.
+  app.get('/api/chats/:id/typing', async (req, res) => {
+    const chatId = req.params.id;
+    const active = getActiveUser(req);
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    const entries = typingUsers[chatId] || {};
+    const now = Date.now();
+    const typingUserIds = Object.keys(entries).filter(
+      (uid) => uid !== active?.id && now - entries[uid] < TYPING_TTL_MS
+    );
+
+    const resolved = await Promise.all(
+      typingUserIds.map(async (uid) => {
+        const u = users.find(user => user.id === uid);
+        if (!u) return null;
+        return { ...sanitizePublicUser(u), avatar: await signMediaKey(u.avatar) };
+      })
+    );
+
+    res.json({ users: resolved.filter(Boolean) });
+  });
+
   app.post('/api/chats/:id/messages', async (req, res) => {
     const chatId = req.params.id;
     const active = getActiveUser(req);
@@ -3657,6 +3719,11 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     if (!isMember) {
       return res.status(403).json({ error: 'You are not a participant in this chat.' });
     }
+
+    // Actually sending clears "is typing" immediately — belt and braces
+    // alongside the client's own isTyping:false ping, in case Send got
+    // tapped fast enough to race ahead of that.
+    if (typingUsers[chatId]) delete typingUsers[chatId][active.id];
 
     const { text, mediaUrl, mediaType, scheduledAt, sharedTrack, gameInvite, replyTo } = req.body;
 
@@ -3754,6 +3821,44 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       message: newMsg,
       aiResponse: aiResponseMsg
     });
+  });
+
+  // Edit message endpoint — the client has called this since editing was
+  // built (handleSaveEdit in ChatView.tsx), but the route never existed, so
+  // every edit attempt silently 404'd forever. Author-only, unlike delete:
+  // letting a group admin rewrite someone else's words to look like they
+  // said it is a much bigger integrity problem than removing a message
+  // outright, so this stays strictly self-service.
+  app.put('/api/chats/:id/messages/:messageId', (req, res) => {
+    const { id: chatId, messageId } = req.params;
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    if (!messages[chatId]) return res.status(404).json({ error: 'Message not found' });
+
+    const msg = messages[chatId].find(m => m.id === messageId);
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+
+    if (msg.senderId !== active.id) {
+      return res.status(403).json({ error: 'You can only edit your own messages.' });
+    }
+
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Message text cannot be empty.' });
+    }
+
+    msg.text = text.trim();
+    msg.isEdited = true;
+    msg.editedAt = new Date().toISOString();
+
+    if (chat.lastMessage?.id === messageId) {
+      chat.lastMessage.text = msg.text;
+    }
+
+    res.json({ success: true, message: msg });
   });
 
   // Delete message endpoint (Authors can delete their own; group admins & NOOB master admin can delete any message)

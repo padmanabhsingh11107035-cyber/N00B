@@ -170,6 +170,8 @@ import {
   sendMessage,
   editMessage,
   deleteMessage,
+  sendTypingStatus,
+  fetchTypingUsers,
   translateMessage,
   updateChatSettings,
   fetchUsers,
@@ -278,6 +280,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activePickerTab, setActivePickerTab] = useState<'emojis' | 'gifs' | 'stickers' | 'premium'>('emojis');
   const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
+  const [typingUsers, setTypingUsers] = useState<User[]>([]);
+  const isTypingSentRef = useRef(false);
+  const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeTrackingRef = useRef<{ id: string; startX: number; startY: number; locked: boolean } | null>(null);
   const [myStickers, setMyStickers] = useState<MyCustomSticker[]>([]);
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
@@ -458,9 +463,40 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   }, [activeChatId]);
 
+  // "X is typing…" — polled frequently (much faster than the general
+  // message sync) since this only feels smooth if it appears and clears
+  // within a second or two, the way WhatsApp's does. Reset immediately on
+  // switching chats so a moment-ago typing indicator from the PREVIOUS
+  // conversation never flashes in the newly-opened one before the first
+  // poll for it lands.
+  useEffect(() => {
+    setTypingUsers([]);
+    if (!activeChatId) return;
+    const chatId = activeChatId;
+
+    const poll = async () => {
+      const users = await fetchTypingUsers(chatId);
+      if (activeChatIdRef.current !== chatId) return;
+      setTypingUsers(users);
+    };
+    poll();
+    const interval = setInterval(poll, 1500);
+    return () => {
+      clearInterval(interval);
+      // Navigating away mid-type would otherwise leave the OTHER person
+      // staring at a stuck "typing…" for the rest of its TTL — tell the
+      // server it stopped the moment this chat is no longer the open one.
+      if (isTypingSentRef.current) {
+        isTypingSentRef.current = false;
+        if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
+        sendTypingStatus(chatId, false);
+      }
+    };
+  }, [activeChatId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, typingUsers.length]);
 
   const loadChats = async () => {
     try {
@@ -518,6 +554,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const currentActiveId = activeChatIdRef.current;
       if (currentActiveId) {
         const latestMsgs = await fetchMessages(currentActiveId);
+        // Same guard as loadMessages: if the person switched to a different
+        // chat while this poll's request was in flight, its response is for
+        // a conversation that isn't even open anymore — applying it would
+        // overwrite whatever chat is actually on screen right now.
+        if (activeChatIdRef.current !== currentActiveId) return;
         setMessages((prev) => {
           // A message send appends an optimistic `temp_`-id entry immediately,
           // then swaps it for the real one once the POST resolves. If this
@@ -553,6 +594,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       } catch (e) {}
 
       const data = await fetchMessages(chatId);
+      // The user can switch to a different chat before this fetch resolves
+      // (e.g. clicking through the list quickly) — if a slower, older
+      // request for the PREVIOUS chat lands after that switch, applying it
+      // here would silently replace the chat someone is now looking at with
+      // a different conversation's messages. Only apply it if this fetch's
+      // chat is still the one actually open.
+      if (activeChatIdRef.current !== chatId) return;
       setMessages(data);
       safeLocalStorageSet(`${CACHE_KEY_MSGS}_${chatId}`, safeJsonStringify(data));
     } catch (err) {
@@ -673,6 +721,32 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
 
+  // Pings "I'm typing" at most once per pause-cycle (not on every keystroke —
+  // the server only needs to know typing is happening, not each character),
+  // and schedules the matching "stopped" ping for ~3s after the last
+  // keystroke, mirroring WhatsApp's own timing for when the indicator clears
+  // on the other end.
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputText(e.target.value);
+    if (!activeChat) return;
+
+    if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
+
+    if (e.target.value.trim()) {
+      if (!isTypingSentRef.current) {
+        isTypingSentRef.current = true;
+        sendTypingStatus(activeChat.id, true);
+      }
+      typingStopTimeoutRef.current = setTimeout(() => {
+        isTypingSentRef.current = false;
+        sendTypingStatus(activeChat.id, false);
+      }, 3000);
+    } else if (isTypingSentRef.current) {
+      isTypingSentRef.current = false;
+      sendTypingStatus(activeChat.id, false);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !activeChat) return;
@@ -684,6 +758,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setInputText('');
     setScheduledTime('');
     setReplyingToMessage(null);
+    if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
+    if (isTypingSentRef.current) {
+      isTypingSentRef.current = false;
+      sendTypingStatus(activeChat.id, false);
+    }
 
     // Ultra-fast instant optimistic message with delivered state
     const optimisticMsg: Message = {
@@ -1974,6 +2053,42 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
               );
             })}
+
+            {/* "X is typing…" — the bubble itself matches an ordinary
+                incoming message's exact styling so it reads as a natural
+                part of the conversation rather than a bolted-on system
+                widget. Groups additionally stack the actual typers'
+                avatars above it (mirroring the reference screenshot), since
+                "someone is typing" is ambiguous the moment there's more
+                than one other participant. */}
+            {typingUsers.length > 0 && (
+              <div className="flex flex-col items-start">
+                {activeChat?.isGroup && (
+                  <div className="flex items-center -space-x-1.5 mb-1 px-1">
+                    {typingUsers.slice(0, 3).map((u) => (
+                      <img
+                        key={u.id}
+                        src={u.avatar || '/noob-logo.svg.jpeg'}
+                        alt={u.username}
+                        className="w-4 h-4 rounded-full object-cover border border-zinc-700 ring-1 ring-black"
+                        referrerPolicy="no-referrer"
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="max-w-[82%] px-3.5 py-3 rounded-2xl bg-zinc-900 border border-zinc-800">
+                  <div className="flex items-center gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="w-2 h-2 rounded-full bg-zinc-300 animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -2309,7 +2424,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       : 'Type message...'
                   }
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={handleInputChange}
                   className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none"
                 />
               </div>

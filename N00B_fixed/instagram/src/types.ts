@@ -97,6 +97,9 @@ export interface User {
   // the user grants push permission and subscribes; also stripped by
   // sanitizePublicUser.
   pushSubscription?: any;
+  // FCM device tokens (native Android app only, via @capacitor/push-notifications)
+  // — a user can have several if they've installed the app on multiple devices.
+  pushTokens?: string[];
   privacySettings: {
     hideTaggedPhotos: boolean;
     blockedWords: string[];

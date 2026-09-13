@@ -19,6 +19,7 @@ import {
 import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2, getBareMediaKey } from './server/b2Storage';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 import { initPush, getVapidPublicKey, sendPush } from './server/push';
+import { initFcm, isFcmConfigured, sendFcm } from './server/fcm';
 
 // AI Support runs on Groq's free API (an OpenAI-compatible chat completions
 // endpoint) rather than Gemini — it needs no billing account, just a free
@@ -109,6 +110,7 @@ async function startServer() {
 
   await connectDB();
   await initPush();
+  initFcm();
 
   // A one-glance checklist of which backend services are actually wired up,
   // printed on every boot so it's obvious in the Railway deploy logs what
@@ -122,6 +124,9 @@ async function startServer() {
   );
   console.log(
     `  AI Support (Groq):   ${process.env.GROQ_API_KEY ? '✅ key present' : '⚠️  not configured — set GROQ_API_KEY (AI chat/voice call will use the fallback reply)'}`
+  );
+  console.log(
+    `  Mobile Push (FCM):   ${isFcmConfigured() ? '✅ connected' : '⚠️  not configured — set FIREBASE_SERVICE_ACCOUNT_JSON (the Android app cannot receive push notifications without it)'}`
   );
   console.log('-----------------------------------');
 
@@ -550,7 +555,7 @@ async function startServer() {
     // display name) and pendingSentRequests reveals which private accounts
     // THIS user has asked to follow — both are private to the account
     // owner, not for every other viewer of their profile/directory entry.
-    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ipAddress, pushSubscription, ...publicUser } = u;
+    const { password, mobileNumber, countryCode, email, dateOfBirth, followRequests, pendingSentRequests, ipAddress, pushSubscription, pushTokens, ...publicUser } = u;
     publicUser.followersCount = getDisplayFollowersCount(u);
     return publicUser;
   }
@@ -700,6 +705,17 @@ async function startServer() {
       }).then((result) => {
         if (result.expired) {
           target.pushSubscription = undefined;
+        }
+      });
+    }
+    if (target?.pushTokens?.length) {
+      sendFcm(target.pushTokens, {
+        title: params.title || params.senderDisplayName || 'NOOB',
+        body: params.message,
+        icon: params.senderAvatar
+      }).then((result) => {
+        if (result.deadTokens.length) {
+          target.pushTokens = target.pushTokens.filter((t: string) => !result.deadTokens.includes(t));
         }
       });
     }
@@ -1264,10 +1280,9 @@ async function startServer() {
     });
   });
 
-  // Store a device's push notification token against the logged-in account.
-  // Actually sending notifications still needs a Firebase service account
-  // key configured on the server (not set up yet) — this just persists
-  // tokens so that piece can be wired in later without a client change.
+  // Store a device's FCM push notification token against the logged-in
+  // account — notifyUser() sends to every token here via sendFcm() once
+  // FIREBASE_SERVICE_ACCOUNT_JSON is configured.
   app.post('/api/users/push-token', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });

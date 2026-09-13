@@ -17,7 +17,8 @@ import {
   Film,
   Eye,
   MoreVertical,
-  ArrowLeft
+  ArrowLeft,
+  Trash2
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import {
@@ -27,7 +28,8 @@ import {
   fetchReelComments,
   addReelComment,
   fetchReelLikers,
-  fetchReelViewers
+  fetchReelViewers,
+  deleteReel
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -80,6 +82,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
+  const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
   const [algorithmWeights, setAlgorithmWeights] = useState({
     robotics: 85,
     code: 90,
@@ -119,6 +122,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const currentReel = localReels[currentIndex] || localReels[0];
   const nextReel = localReels[currentIndex + 1];
   const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
+  const isReelOwner = !!currentReel && currentReel.userId === currentUser.id;
+  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
 
   useEffect(() => {
     if (currentReel) {
@@ -302,10 +307,25 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   };
 
+  const handleDeleteReel = async () => {
+    if (!currentReel) return;
+    const deletedId = currentReel.id;
+    try {
+      const success = await deleteReel(deletedId);
+      if (!success) return;
+      setLocalReels((prev) => prev.filter((r) => r.id !== deletedId));
+      // Deleting shifts every later reel down one slot, so clamp the index
+      // rather than leaving it pointing past the new (shorter) array end.
+      setCurrentIndex((prev) => Math.min(prev, Math.max(0, localReels.length - 2)));
+    } catch (err) {
+      console.error('Failed to delete reel:', err);
+    }
+  };
+
   // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
   const touchStartY = useRef<number | null>(null);
   const isNavLockedRef = useRef(false);
-  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal || showLikesViewsSheet;
+  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal || showLikesViewsSheet || showReelOptionsMenu;
 
   const navigateWithCooldown = (direction: 'next' | 'prev') => {
     if (isNavLockedRef.current) return;
@@ -527,18 +547,48 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
 
-            {/* More options: Likes & Views (Views tab only shows for the reel's own owner) */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLikesViewsInitialTab('likes');
-                setShowLikesViewsSheet(true);
-              }}
-              className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
-              title="Likes & Views"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
+            {/* More options: Likes & Views (Views tab only shows for the reel's own owner), plus Delete for the owner or the NOOB admin account */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReelOptionsMenu((v) => !v);
+                }}
+                className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
+                title="More options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {showReelOptionsMenu && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-9 z-40 w-48 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
+                >
+                  <button
+                    onClick={() => {
+                      setLikesViewsInitialTab('likes');
+                      setShowLikesViewsSheet(true);
+                      setShowReelOptionsMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Heart className="w-4 h-4 text-red-400" /> Likes{isReelOwner ? ' & Views' : ''}
+                  </button>
+                  {(isReelOwner || isMasterAdmin) && (
+                    <button
+                      onClick={() => {
+                        setShowReelOptionsMenu(false);
+                        handleDeleteReel();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete Reel
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

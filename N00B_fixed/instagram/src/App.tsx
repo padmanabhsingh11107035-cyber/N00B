@@ -39,6 +39,7 @@ import {
   createReel,
   createStory,
   addCommentToStory,
+  deleteStory,
   updateUserBio,
   updateUserStatusNote,
   logoutUser,
@@ -448,6 +449,15 @@ export default function App() {
           s.id === storyId ? { ...s, comments: [...(s.comments || []), newComment] } : s
         )
       );
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteStory = async (storyId: string) => {
+    try {
+      await deleteStory(storyId);
+      setStories((prev) => prev.filter((s) => s.id !== storyId));
     } catch (err) {
       console.error(err);
     }
@@ -1136,6 +1146,7 @@ export default function App() {
           onClose={() => setActiveStoryViewerIndex(null)}
           currentUser={currentUser}
           onAddComment={handleAddStoryComment}
+          onDeleteStory={handleDeleteStory}
         />
       )}
 

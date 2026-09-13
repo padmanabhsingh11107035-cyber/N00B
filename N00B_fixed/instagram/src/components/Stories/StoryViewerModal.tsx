@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2 } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, fetchStoryViewers } from '../../services/api';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -11,6 +11,7 @@ interface StoryViewerModalProps {
   onClose: () => void;
   currentUser: User;
   onAddComment: (storyId: string, text: string) => void;
+  onDeleteStory?: (storyId: string) => void;
 }
 
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
@@ -18,7 +19,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   initialIndex,
   onClose,
   currentUser,
-  onAddComment
+  onAddComment,
+  onDeleteStory
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
@@ -30,9 +32,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [sliderVal, setSliderVal] = useState(75);
   const [showViewersSheet, setShowViewersSheet] = useState(false);
+  const [showStoryOptionsMenu, setShowStoryOptionsMenu] = useState(false);
 
   const story = stories[currentIndex];
   const isOwnStory = !!story && story.userId === currentUser.id;
+  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
 
   useEffect(() => {
     setProgress(0);
@@ -49,7 +53,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   }, [story?.id, currentUser.id]);
 
   useEffect(() => {
-    if (isPaused || !story || showViewersSheet) return;
+    if (isPaused || !story || showViewersSheet || showStoryOptionsMenu) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -67,7 +71,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isPaused, currentIndex, stories.length, onClose, story, showViewersSheet]);
+  }, [isPaused, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
 
   if (!story) return null;
 
@@ -195,17 +199,51 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
-            {isOwnStory && (
-              <button
-                onClick={() => {
-                  setIsPaused(true);
-                  setShowViewersSheet(true);
-                }}
-                className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white"
-                title="Seen By"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
+            {(isOwnStory || isMasterAdmin) && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowStoryOptionsMenu((v) => {
+                      const next = !v;
+                      setIsPaused(next);
+                      return next;
+                    });
+                  }}
+                  className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white"
+                  title="More options"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+
+                {showStoryOptionsMenu && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 top-9 z-40 w-44 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
+                  >
+                    {isOwnStory && (
+                      <button
+                        onClick={() => {
+                          setShowStoryOptionsMenu(false);
+                          setShowViewersSheet(true);
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Eye className="w-4 h-4 text-emerald-400" /> Seen By
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowStoryOptionsMenu(false);
+                        onDeleteStory?.(story.id);
+                        onClose();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete Story
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

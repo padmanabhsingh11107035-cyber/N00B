@@ -62,6 +62,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showLikesSheet, setShowLikesSheet] = useState(false);
 
   const isOwner = post.userId === currentUser.id || post.username === currentUser.username;
+  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
   const [showTagPill, setShowTagPill] = useState(false);
@@ -339,16 +340,18 @@ export const PostCard: React.FC<PostCardProps> = ({
                   >
                     <EyeOff className="w-4 h-4 text-cyan-400" /> {post.isLikeCountHidden ? 'Unhide Like Count' : 'Hide Like Count'}
                   </button>
-                  <button
-                    onClick={() => {
-                      onDeletePost(post.id);
-                      setShowOptionsMenu(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete Post
-                  </button>
                 </>
+              )}
+              {(isOwner || isMasterAdmin) && (
+                <button
+                  onClick={() => {
+                    onDeletePost(post.id);
+                    setShowOptionsMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete Post
+                </button>
               )}
               <button
                 onClick={() => {

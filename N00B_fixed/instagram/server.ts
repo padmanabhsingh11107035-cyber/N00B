@@ -2366,6 +2366,24 @@ async function startServer() {
     res.json({ users: await resolveUserList(story.viewedBy || []) });
   });
 
+  app.delete('/api/stories/:id', (req, res) => {
+    const storyId = req.params.id;
+    const story = stories.find(s => s.id === storyId);
+    if (!story) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    const active = getActiveUser(req);
+    const isOwner = active && active.id === story.userId;
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isOwner && !isMasterAdmin) {
+      return res.status(403).json({ error: 'You can only delete your own stories.' });
+    }
+
+    stories = stories.filter(s => s.id !== storyId);
+    res.json({ success: true, message: 'Story deleted successfully' });
+  });
+
   // The client has called this since it was built, but the route never
   // existed — every comment attempt hit the catch-all 404 and the response
   // (no `comment` field) got pushed into the story's comments array as

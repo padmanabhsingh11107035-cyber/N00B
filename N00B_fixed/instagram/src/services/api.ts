@@ -548,6 +548,15 @@ export async function deleteReel(reelId: string): Promise<boolean> {
   return data.success;
 }
 
+export async function deleteStory(storyId: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/stories/${storyId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  return data.success;
+}
+
 // Chats & Messages
 export async function fetchChats(): Promise<ChatConversation[]> {
   const res = await fetch(`${API_BASE}/chats`, { headers: getAuthHeaders() });

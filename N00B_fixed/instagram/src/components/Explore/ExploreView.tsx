@@ -630,11 +630,26 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               onClick={() => onSelectReel(reel)}
               className="group relative aspect-[9/16] bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
             >
-              <img
-                src={reel.thumbnailUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80'}
-                alt={reel.caption}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+              {reel.thumbnailUrl ? (
+                <img
+                  src={reel.thumbnailUrl}
+                  alt={reel.caption}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                // Older reels uploaded before thumbnails were captured on
+                // publish have no thumbnailUrl at all — showing the video's
+                // own first frame here is still the ACTUAL reel, unlike the
+                // generic stock photo this used to fall back to (the same
+                // one for every un-thumbnailed reel, regardless of creator).
+                <video
+                  src={reel.videoUrl}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              )}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-white text-[11px] font-bold">
                 <span className="truncate">@{reel.username}</span>
                 <span className="flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded-md">

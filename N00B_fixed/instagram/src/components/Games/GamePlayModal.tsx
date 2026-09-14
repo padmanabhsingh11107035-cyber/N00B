@@ -577,7 +577,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       // High stakes, vs-bot only: winning pays out massively, losing wipes
       // the account's entire current balance instead of just costing 0.
       if (result === 'win') {
-        earned = 50000000;
+        earned = 50000;
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
       } else if (result === 'loss') {
         earned = -(currentUser.noobPoints || 0);
@@ -710,10 +710,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
   // Send Game Invite to Friend
   const handleSendFriendInvite = async (friend: User) => {
+    // Lock the button synchronously, before the network round-trip — it
+    // used to only disable once sendGameInvite's await resolved, leaving a
+    // window where a double-tap (very easy on a touchscreen) fired this
+    // twice and posted the exact same challenge into the chat twice.
+    if (selectedFriend?.id === friend.id && inviteSent) return;
     setSelectedFriend(friend);
+    setInviteSent(true);
     try {
       await sendGameInvite(friend.id, game.id, game.title, generatedRoomCode);
-      setInviteSent(true);
       // Join our own room as player 1 and start waiting for them to accept
       // it from the chat invite — this is the actual connection that was
       // previously missing entirely (the invite used to just be a chat
@@ -725,7 +730,6 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       }
     } catch (err) {
       console.error(err);
-      setInviteSent(true);
     }
   };
 
@@ -1593,7 +1597,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             </p>
             <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-left flex items-center gap-2.5">
               <span className="text-lg">🏆</span>
-              <span className="text-xs font-bold text-emerald-300">If you WIN: +50,000,000 NOOB Points</span>
+              <span className="text-xs font-bold text-emerald-300">If you WIN: +50,000 NOOB Points</span>
             </div>
             <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-left flex items-center gap-2.5">
               <span className="text-lg">💀</span>

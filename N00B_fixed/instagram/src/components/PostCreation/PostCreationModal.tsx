@@ -28,6 +28,7 @@ import {
 import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { analyzeMediaFile } from '../../utils/mediaAnalyzer';
+import { captureVideoThumbnail } from '../../utils/videoThumbnail';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
@@ -78,6 +79,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   // Video data (Reels)
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [videoObjectKey, setVideoObjectKey] = useState<string>('');
+  const [thumbnailObjectKey, setThumbnailObjectKey] = useState<string>('');
   const [musicTitle, setMusicTitle] = useState('Original Sound • ' + (currentUser.displayName || currentUser.username));
   
   // User Tagging / Instagram-style Collaboration
@@ -180,6 +182,23 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
         if (res.objectKey) {
           setVideoObjectKey(res.objectKey);
         }
+
+        // Grab an actual frame from this exact video for its thumbnail —
+        // best-effort: a reel with no thumbnail still falls back cleanly to
+        // its own video element everywhere it's displayed, so a failure
+        // here (an unsupported codec in this browser, e.g.) never blocks
+        // publishing.
+        try {
+          const thumbFile = await captureVideoThumbnail(firstFile);
+          if (thumbFile) {
+            const thumbRes = await uploadMediaFile(thumbFile, 'reels');
+            if (thumbRes.objectKey) {
+              setThumbnailObjectKey(thumbRes.objectKey);
+            }
+          }
+        } catch (thumbErr) {
+          console.error('Thumbnail capture failed:', thumbErr);
+        }
       } else {
         setCreationType('post');
         setMediaMode('photos');
@@ -225,6 +244,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   const handleRemoveVideo = () => {
     setVideoUrl('');
     setVideoObjectKey('');
+    setThumbnailObjectKey('');
     setMediaMode('text');
   };
 
@@ -263,6 +283,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           isReel: true,
           reelData: {
           videoUrl: videoObjectKey,
+          thumbnailUrl: thumbnailObjectKey,
           caption: caption.trim() || 'New Reel ✨',
           hashtags: parsedHashtags,
           category: category as any,

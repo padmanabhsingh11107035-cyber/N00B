@@ -1350,10 +1350,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {c.isGroup ? (
                       <div className="relative">
                         <img
-                          src={
-                            c.avatar ||
-                            'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80'
-                          }
+                          src={c.avatar || '/noob-logo-circle.png'}
                           alt=""
                           className="w-12 h-12 rounded-full object-cover ring-1 ring-purple-500/50"
                         />
@@ -1534,10 +1531,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   {activeChat?.isGroup ? (
                     <div className="relative">
                       <img
-                        src={
-                          activeChat.avatar ||
-                          'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80'
-                        }
+                        src={activeChat.avatar || '/noob-logo-circle.png'}
                         alt=""
                         className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500/60 group-hover:scale-105 transition-transform"
                       />

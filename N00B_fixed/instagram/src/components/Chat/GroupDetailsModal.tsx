@@ -257,7 +257,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           <div className="flex items-center gap-3">
             <div className="relative shrink-0">
               <img
-                src={avatarUrl || chat.avatar || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80'}
+                src={avatarUrl || chat.avatar || '/noob-logo-circle.png'}
                 alt=""
                 className="w-16 h-16 rounded-2xl object-cover ring-2 ring-purple-500/40"
               />

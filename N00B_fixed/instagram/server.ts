@@ -193,10 +193,14 @@ async function startServer() {
     {
       id: 'c_global_lounge',
       name: '🌐 NOOB Global Lounge',
-      avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80',
+      avatar: '/noob-logo-circle.png',
       participants: users.map(sanitizePublicUser),
-      creatorId: 'u_admin',
-      adminIds: ['u_admin'],
+      // Was 'u_admin' — an id that belongs to no real account, so the
+      // actual NOOB master admin (u_noob_admin) could never pass the
+      // isAdmin check on PUT /api/chats/:id/group and had no way to change
+      // this group's name or photo despite being NOOB's own official chat.
+      creatorId: 'u_noob_admin',
+      adminIds: ['u_noob_admin'],
       isGroup: true,
       isGlobalDefault: true,
       description: 'Official global community group chat for all NOOB members',
@@ -492,6 +496,31 @@ async function startServer() {
     }
   }
   healLegacyTimestamps();
+
+  // The Global Lounge chat was originally seeded with creatorId/adminIds
+  // pointing at 'u_admin' — an id that belongs to no real account — instead
+  // of the actual NOOB master admin (u_noob_admin). A database that already
+  // persisted that seed keeps carrying the bad ids forward on every load, so
+  // the fix in the seed literal above only helps a brand new database; this
+  // repairs one that's already been running.
+  function healGlobalLoungeAdmin() {
+    const lounge = chats.find(c => c.id === 'c_global_lounge');
+    if (!lounge) return;
+    let healed = false;
+    if (lounge.creatorId !== 'u_noob_admin') {
+      lounge.creatorId = 'u_noob_admin';
+      healed = true;
+    }
+    if (!Array.isArray(lounge.adminIds) || !lounge.adminIds.includes('u_noob_admin')) {
+      lounge.adminIds = Array.from(new Set([...(lounge.adminIds || []), 'u_noob_admin']));
+      healed = true;
+    }
+    if (healed) {
+      console.log('Self-healed Global Lounge admin rights for u_noob_admin');
+      schedulePersist();
+    }
+  }
+  healGlobalLoungeAdmin();
 
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, async () => {
@@ -3212,7 +3241,7 @@ async function startServer() {
       globalChat = {
         id: 'c_global_lounge',
         name: '🌐 NOOB Global Lounge',
-        avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80',
+        avatar: '/noob-logo-circle.png',
         participants: users.map(sanitizePublicUser),
         creatorId: 'u_noob_admin',
         adminIds: ['u_noob_admin'],
@@ -3335,7 +3364,7 @@ async function startServer() {
     const newChat = {
       id: `c_${Date.now()}`,
       name: isGroup ? (name || 'Group Chat') : undefined,
-      avatar: avatar || (isGroup ? 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80' : undefined),
+      avatar: avatar || (isGroup ? '/noob-logo-circle.png' : undefined),
       description: description || undefined,
       participants: resolvedParticipants,
       isGroup: !!isGroup,
@@ -4098,6 +4127,28 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     const targetUser = users.find(u => u.id === targetUserId);
     if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
 
+    // Belt-and-suspenders against a double-tap or a retried request firing
+    // this twice in quick succession — the client now locks its own button
+    // before this call, but a duplicate identical invite from the same
+    // sender to the same target within a couple seconds is never
+    // legitimate, so just hand back the existing one instead of posting it
+    // again into the chat.
+    const recentDuplicate = Object.values(messages)
+      .flat()
+      .find((m: any) =>
+        m.senderId === active.id &&
+        m.gameInvite &&
+        m.gameInvite.gameId === gameId &&
+        m.gameInvite.roomCode === roomCode &&
+        Date.now() - new Date(m.createdAt).getTime() < 3000
+      ) as any;
+    if (recentDuplicate) {
+      const existingChat = chats.find(c => c.id === recentDuplicate.chatId);
+      if (existingChat) {
+        return res.json({ success: true, message: 'Invite already sent', chatId: existingChat.id, invite: recentDuplicate.gameInvite });
+      }
+    }
+
     // Find or create the 1:1 chat between these two specific people — must
     // check both sides, or this could match some other chat that just
     // happens to include the target and drop the invite into it instead.
@@ -4252,17 +4303,33 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   // shared by both the async "compare submitted results" flow and the
   // live-synced-board flow so points/history stay identical either way.
   function finalizeRoomOutcome(room: any, outcomes: Record<string, 'win' | 'tie' | 'loss'>) {
+    // Chess Blitz keeps its real-stakes payout even when matched against a
+    // real opponent via matchmaking — this used to silently fall through to
+    // the generic 100/50/0 room reward, so a matched chess win never paid
+    // the actual jackpot and a matched loss never wiped the loser's balance
+    // the way a vs-bot round always did.
+    const isChessHighStakes = room.gameId === 'chess_blitz';
+    const pointsByPlayer: Record<string, number> = {};
+
     for (const p of room.players) {
       const user = users.find(u => u.id === p.userId);
       if (!user) continue;
       const outcome = outcomes[p.userId];
-      const earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
-      user.noobPoints = (user.noobPoints || 0) + earned;
+      let earned: number;
+      if (isChessHighStakes) {
+        earned = outcome === 'win' ? 50000 : outcome === 'tie' ? 50 : -(user.noobPoints || 0);
+      } else {
+        earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
+      }
+      pointsByPlayer[p.userId] = earned;
+      user.noobPoints = Math.max(0, (user.noobPoints || 0) + earned);
       user.gamesPlayedCount = (user.gamesPlayedCount || 0) + 1;
       if (outcome === 'win') user.gamesWonCount = (user.gamesWonCount || 0) + 1;
+      const opponent = room.players.find((o: any) => o.userId !== p.userId);
       if (earned > 0) {
-        const opponent = room.players.find((o: any) => o.userId !== p.userId);
         recordTransaction(user, earned, `${outcome === 'win' ? 'Won' : 'Tied'} ${room.gameTitle} vs @${opponent?.username || 'opponent'}`);
+      } else if (earned < 0) {
+        recordTransaction(user, earned, `Lost ${room.gameTitle} vs @${opponent?.username || 'opponent'} — balance wiped`);
       }
       gameScores.unshift({
         id: `gs_${Date.now()}_${p.userId.slice(-4)}`,
@@ -4273,13 +4340,13 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
         score: earned,
         noobsPoints: earned,
         result: outcome,
-        opponent: room.players.find((o: any) => o.userId !== p.userId)?.username || 'Opponent',
+        opponent: opponent?.username || 'Opponent',
         date: 'Just now'
       });
     }
 
     room.status = 'finished';
-    room.outcome = { results: outcomes, points: Object.fromEntries(room.players.map((p: any) => [p.userId, outcomes[p.userId] === 'win' ? 100 : outcomes[p.userId] === 'tie' ? 50 : 0])) };
+    room.outcome = { results: outcomes, points: pointsByPlayer };
   }
 
   function publicRoomView(room: any) {
@@ -4530,7 +4597,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   const CHESS_WEEKLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
-  // Chess Blitz's real stakes (a shot at a 50,000,000-point jackpot, or a
+  // Chess Blitz's real stakes (a shot at 50,000 points, or a
   // full balance wipe) make it something a free account could otherwise
   // grind endlessly — cap it to one round a week; NOOB Pro removes the cap.
   // The client calls this once, the moment it's about to let the player
@@ -4579,17 +4646,7 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     let earnedPoints = 0;
     if (isChessHighStakes) {
       if (result === 'win') {
-        // The jackpot is a one-time new-player reward, not a repeatable
-        // faucet — this used to pay out in full on every single reported
-        // win with no cap, which is how one account reached 148M+ points
-        // by just replaying the same "I won" request. Every win after the
-        // first pays a normal, modest amount instead.
-        if (active && !active.hasWonChessJackpot) {
-          earnedPoints = 50000000;
-          active.hasWonChessJackpot = true;
-        } else {
-          earnedPoints = 500;
-        }
+        earnedPoints = 50000;
       } else if (result === 'loss') {
         earnedPoints = -(active ? active.noobPoints || 0 : 0);
       } else {

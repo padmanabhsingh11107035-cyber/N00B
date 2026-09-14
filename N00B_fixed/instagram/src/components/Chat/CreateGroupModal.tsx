@@ -12,15 +12,6 @@ interface CreateGroupModalProps {
   onGroupCreated: (newChat: ChatConversation) => void;
 }
 
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&auto=format&fit=crop&q=80'
-];
-
 export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   isOpen,
   currentUser,
@@ -30,9 +21,8 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 }) => {
   // Option 1: Name
   const [groupName, setGroupName] = useState('');
-  // Option 2: Profile Picture / Avatar
-  const [avatarUrl, setAvatarUrl] = useState(PRESET_AVATARS[0]);
-  const [customAvatarInput, setCustomAvatarInput] = useState('');
+  // Option 2: Profile Picture / Avatar — custom upload only, no presets.
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   // Option 3: Members
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -119,6 +109,10 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       setErrorMsg('Please select at least 1 friend to add to the group');
       return;
     }
+    if (!avatarUrl) {
+      setErrorMsg('Please upload a group profile picture');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -126,7 +120,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
       const result = await createGroupChat(
         groupName.trim(),
-        avatarUrl || PRESET_AVATARS[0],
+        avatarUrl,
         [...selectedUserIds, currentUser.id],
         `Created by @${currentUser.username}`
       );
@@ -212,52 +206,40 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
             <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800">
               <div className="relative shrink-0">
-                <img
-                  src={avatarUrl}
-                  alt="Group profile"
-                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-purple-500/50"
-                />
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Group profile"
+                    className="w-14 h-14 rounded-2xl object-cover ring-2 ring-purple-500/50"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-zinc-800 ring-2 ring-purple-500/50 flex items-center justify-center">
+                    <Users className="w-6 h-6 text-zinc-500" />
+                  </div>
+                )}
                 <span className="absolute -bottom-1 -right-1 px-1 py-0.2 rounded bg-purple-600 text-white text-[8px] font-bold uppercase">
                   group
                 </span>
               </div>
 
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-[#00FF66]" />
-                    {isUploading ? 'Uploading...' : 'Upload Photo'}
-                  </button>
-                  <span className="text-[11px] text-zinc-500">or choose a preset below</span>
-                </div>
-
-                {/* Preset Avatars */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                  {PRESET_AVATARS.map((url, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setAvatarUrl(url)}
-                      className={`w-7 h-7 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
-                        avatarUrl === url ? 'border-[#00FF66] scale-110' : 'border-transparent opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5 text-[#00FF66]" />
+                  {isUploading ? 'Uploading...' : avatarUrl ? 'Change Photo' : 'Upload Photo'}
+                </button>
+                <p className="text-[11px] text-zinc-500">Custom photo required — no presets.</p>
               </div>
             </div>
           </div>
@@ -373,7 +355,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={loading || !groupName.trim() || selectedUserIds.length === 0}
+              disabled={loading || !groupName.trim() || selectedUserIds.length === 0 || !avatarUrl}
               className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-[#00FF66] text-black font-extrabold text-xs rounded-xl shadow-lg shadow-purple-500/25 hover:opacity-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Users className="w-4 h-4" />

@@ -68,8 +68,52 @@ const PIECE_SVG: Record<string, React.ReactNode> = {
 
 const PIECE_VALUES: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 
-const BOT_DEPTH = 3;
+// Standard simplified piece-square tables (centipawns), row 0 = rank 8 down
+// to row 7 = rank 1 — matching chess.js's own board() layout — so a white
+// piece's bonus is read straight off PST[row][col] and a black piece's off
+// the vertically mirrored PST[7-row][col]. Without these the bot only ever
+// counts material, so it happily leaves pieces passive on the back rank or
+// walks a knight to the rim as long as the piece count stays even.
+const PAWN_PST = [
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [50, 50, 50, 50, 50, 50, 50, 50],
+  [10, 10, 20, 30, 30, 20, 10, 10],
+  [5, 5, 10, 25, 25, 10, 5, 5],
+  [0, 0, 0, 20, 20, 0, 0, 0],
+  [5, -5, -10, 0, 0, -10, -5, 5],
+  [5, 10, 10, -20, -20, 10, 10, 5],
+  [0, 0, 0, 0, 0, 0, 0, 0]
+];
+const KNIGHT_PST = [
+  [-50, -40, -30, -30, -30, -30, -40, -50],
+  [-40, -20, 0, 0, 0, 0, -20, -40],
+  [-30, 0, 10, 15, 15, 10, 0, -30],
+  [-30, 5, 15, 20, 20, 15, 5, -30],
+  [-30, 0, 15, 20, 20, 15, 0, -30],
+  [-30, 5, 10, 15, 15, 10, 5, -30],
+  [-40, -20, 0, 5, 5, 0, -20, -40],
+  [-50, -40, -30, -30, -30, -30, -40, -50]
+];
+const BISHOP_PST = [
+  [-20, -10, -10, -10, -10, -10, -10, -20],
+  [-10, 0, 0, 0, 0, 0, 0, -10],
+  [-10, 0, 5, 10, 10, 5, 0, -10],
+  [-10, 5, 5, 10, 10, 5, 5, -10],
+  [-10, 0, 10, 10, 10, 10, 0, -10],
+  [-10, 10, 10, 10, 10, 10, 10, -10],
+  [-10, 5, 0, 0, 0, 0, 5, -10],
+  [-20, -10, -10, -10, -10, -10, -10, -20]
+];
+const PST: Partial<Record<string, number[][]>> = { p: PAWN_PST, n: KNIGHT_PST, b: BISHOP_PST };
+
 const MATE_SCORE = 100000;
+// Hard wall-clock cap on how long the bot is allowed to "think" — iterative
+// deepening searches as deep as it can within this budget instead of always
+// doing a fixed-depth search, so a busy middlegame with many legal moves can
+// never make a single move take multiple seconds the way a fixed depth-3
+// full search sometimes did.
+const BOT_TIME_BUDGET_MS = 600;
+const BOT_MAX_DEPTH = 6;
 
 function evaluateBoard(chess: Chess): number {
   if (chess.isCheckmate()) {
@@ -80,31 +124,32 @@ function evaluateBoard(chess: Chess): number {
     return 0;
   }
   let score = 0;
-  for (const row of chess.board()) {
-    for (const sq of row) {
-      if (!sq) continue;
+  chess.board().forEach((row, rowIdx) => {
+    row.forEach((sq, colIdx) => {
+      if (!sq) return;
       const value = PIECE_VALUES[sq.type];
-      score += sq.color === 'w' ? value : -value;
-    }
-  }
+      const table = PST[sq.type];
+      const positional = table ? (sq.color === 'w' ? table[rowIdx][colIdx] : table[7 - rowIdx][colIdx]) : 0;
+      score += sq.color === 'w' ? value + positional : -(value + positional);
+    });
+  });
   return score;
 }
 
-function negamax(chess: Chess, depth: number, alpha: number, beta: number, color: 1 | -1): number {
-  if (depth === 0 || chess.isGameOver()) {
-    return color * evaluateBoard(chess);
-  }
-  const moves = chess.moves();
-  let best = -Infinity;
-  for (const move of moves) {
-    chess.move(move);
-    const score = -negamax(chess, depth - 1, -beta, -alpha, color === 1 ? -1 : 1);
-    chess.undo();
-    if (score > best) best = score;
-    if (best > alpha) alpha = best;
-    if (alpha >= beta) break;
-  }
-  return best;
+// Orders moves so captures (highest-value victim first) and promotions are
+// searched before quiet moves — alpha-beta prunes far more branches when the
+// strongest replies are tried first, which is what actually buys the extra
+// search depth within the same time budget rather than slowing it down.
+function moveScore(m: { captured?: string; piece: string; promotion?: string; san: string }): number {
+  let score = 0;
+  if (m.captured) score += (PIECE_VALUES[m.captured] || 0) * 10 - (PIECE_VALUES[m.piece] || 0);
+  if (m.promotion) score += 900;
+  if (m.san.includes('+')) score += 50;
+  return score;
+}
+
+function orderedMoves(chess: Chess) {
+  return chess.moves({ verbose: true }).sort((a, b) => moveScore(b) - moveScore(a));
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -116,21 +161,56 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// Picks the strongest move it can find via depth-limited negamax + alpha-beta.
-// No randomness/weakening here on purpose — chess is meant to stay very hard.
-function findBestMove(chess: Chess): string {
-  const moves = shuffle(chess.moves());
-  const color = chess.turn() === 'w' ? 1 : -1;
-  let bestMove = moves[0];
-  let bestValue = -Infinity;
-  for (const move of moves) {
-    chess.move(move);
-    const value = -negamax(chess, BOT_DEPTH - 1, -Infinity, Infinity, color === 1 ? -1 : 1);
+function negamax(chess: Chess, depth: number, alpha: number, beta: number, color: 1 | -1, deadline: number): number {
+  if (depth === 0 || chess.isGameOver()) {
+    return color * evaluateBoard(chess);
+  }
+  const moves = orderedMoves(chess);
+  let best = -Infinity;
+  for (const m of moves) {
+    chess.move(m.san);
+    const score = -negamax(chess, depth - 1, -beta, -alpha, color === 1 ? -1 : 1, deadline);
     chess.undo();
-    if (value > bestValue) {
-      bestValue = value;
-      bestMove = move;
+    if (score > best) best = score;
+    if (best > alpha) alpha = best;
+    if (alpha >= beta) break;
+    if (Date.now() > deadline) break;
+  }
+  return best;
+}
+
+// Picks the strongest move it can find via iterative-deepening negamax +
+// alpha-beta, going as deep as BOT_TIME_BUDGET_MS allows. No randomness/
+// weakening in the evaluation itself on purpose — chess is meant to stay
+// very hard — but only a FULLY completed depth's result ever replaces the
+// previous one, so a timeout mid-depth can never hand back a half-searched,
+// unreliable move.
+function findBestMove(chess: Chess): string {
+  const deadline = Date.now() + BOT_TIME_BUDGET_MS;
+  const color = chess.turn() === 'w' ? 1 : -1;
+  const rootMoves = shuffle(orderedMoves(chess));
+  let bestMove = rootMoves[0]?.san;
+  if (!bestMove) return bestMove;
+
+  for (let depth = 1; depth <= BOT_MAX_DEPTH; depth++) {
+    let bestValueThisDepth = -Infinity;
+    let bestMoveThisDepth: string | undefined;
+    let completed = true;
+    for (const m of rootMoves) {
+      chess.move(m.san);
+      const value = -negamax(chess, depth - 1, -Infinity, Infinity, color === 1 ? -1 : 1, deadline);
+      chess.undo();
+      if (value > bestValueThisDepth) {
+        bestValueThisDepth = value;
+        bestMoveThisDepth = m.san;
+      }
+      if (Date.now() > deadline) {
+        completed = false;
+        break;
+      }
     }
+    if (completed && bestMoveThisDepth) bestMove = bestMoveThisDepth;
+    if (Date.now() > deadline) break;
   }
   return bestMove;
 }
@@ -163,7 +243,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
         setTimeout(() => onGameOver('win', 100), 1200);
       } else if (winnerIsWhite) {
         setGameOverText('Checkmate! You win!');
-        setTimeout(() => onGameOver('win', 50000000), 1200);
+        setTimeout(() => onGameOver('win', 50000), 1200);
       } else {
         setGameOverText('Checkmate! The bot wins.');
         setTimeout(() => onGameOver('loss', 0), 1200);
@@ -176,6 +256,9 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
 
   const makeBotMove = () => {
     setIsBotThinking(true);
+    // The 120ms here is purely a "thinking" flash so the UI doesn't flicker
+    // on trivial positions — the actual move search is separately capped at
+    // BOT_TIME_BUDGET_MS regardless of position complexity.
     setTimeout(() => {
       const move = findBestMove(chess);
       chess.move(move);
@@ -184,7 +267,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
       if (chess.isGameOver()) {
         reportGameOver('bot');
       }
-    }, 300);
+    }, 120);
   };
 
   const handleSquareClick = (square: Square) => {
@@ -248,7 +331,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
 
       {vsBot && (
         <div className="w-full mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold text-center flex items-center justify-center gap-1.5">
-          <Crown className="w-3.5 h-3.5" /> Win: +50,000,000 NOOBs &nbsp;•&nbsp; Lose: your balance resets to 0
+          <Crown className="w-3.5 h-3.5" /> Win: +50,000 NOOBs &nbsp;•&nbsp; Lose: your balance resets to 0
         </div>
       )}
 

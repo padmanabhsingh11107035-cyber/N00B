@@ -1512,11 +1512,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 key={reel.id}
                 className="relative aspect-[9/16] bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800/80 shadow-md"
               >
-                <img
-                  src={reel.thumbnailUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80'}
-                  alt={reel.caption}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {reel.thumbnailUrl ? (
+                  <img
+                    src={reel.thumbnailUrl}
+                    alt={reel.caption}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  // Older reels with no captured thumbnail — the video's own
+                  // first frame is still the real reel, not a generic stock
+                  // photo shared by every un-thumbnailed reel in the app.
+                  <video
+                    src={reel.videoUrl}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                )}
                 <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 text-xs text-white font-bold bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-lg border border-white/10">
                   <Film className="w-3.5 h-3.5" /> {reel.viewsCount}
                 </div>
@@ -1545,7 +1558,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       {
                         id: `col_${Date.now()}`,
                         name,
-                        coverUrl: savedPosts[0]?.slides?.[0]?.mediaUrl || posts[0]?.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500',
+                        coverUrl: savedPosts[0]?.slides?.[0]?.mediaUrl || posts[0]?.slides?.[0]?.mediaUrl || '/noob-logo-circle.png',
                         postsCount: 1,
                         isCollaborative: false,
                         posts: [savedPosts[0] || posts[0]]
@@ -1608,7 +1621,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     >
                       <div className="aspect-square rounded-xl overflow-hidden bg-black mb-2">
                         <img
-                          src={col.coverUrl || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'}
+                          src={col.coverUrl || '/noob-logo-circle.png'}
                           alt={col.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />

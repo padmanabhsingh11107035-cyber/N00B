@@ -143,9 +143,20 @@ async function startServer() {
   // anyone to confirm which platform this runs on. Bouncing that hostname
   // straight to the real domain means a casual visitor (or a shared old
   // link) never actually sees it serve content.
+  //
+  // Deliberately skipped for /api/* — the client calls its API with a
+  // relative path, so it always targets whatever host the page itself was
+  // loaded from. A page loaded from the onrender.com host (an old tab, a
+  // stale bookmark, anything cached from before this redirect existed)
+  // would have every API call bounced into a CROSS-origin redirect with no
+  // CORS headers configured to allow it — which browsers block outright,
+  // surfacing as "Failed to fetch" even though the server itself is fine.
+  // Redirecting the page itself still stops casual browsing of the raw
+  // host; it just can't also redirect the API out from under a page that's
+  // already loaded and mid-request.
   app.use((req, res, next) => {
     const host = req.hostname || '';
-    if (host.endsWith('.onrender.com')) {
+    if (host.endsWith('.onrender.com') && !req.path.startsWith('/api')) {
       return res.redirect(301, `https://nooob.xyz${req.originalUrl}`);
     }
     next();

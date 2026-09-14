@@ -133,6 +133,24 @@ async function startServer() {
   );
   console.log('-----------------------------------');
 
+  // Express sends "X-Powered-By: Express" on every response by default —
+  // a free tech-stack fingerprint to anyone who checks response headers.
+  app.disable('x-powered-by');
+
+  // The app is still directly reachable at its raw <service>.onrender.com
+  // address alongside the custom domain (that's how every host works, and
+  // it can't be turned off) — visiting it is the single easiest way for
+  // anyone to confirm which platform this runs on. Bouncing that hostname
+  // straight to the real domain means a casual visitor (or a shared old
+  // link) never actually sees it serve content.
+  app.use((req, res, next) => {
+    const host = req.hostname || '';
+    if (host.endsWith('.onrender.com')) {
+      return res.redirect(301, `https://nooob.xyz${req.originalUrl}`);
+    }
+    next();
+  });
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -303,6 +321,14 @@ async function startServer() {
   // the background: the server opens immediately with default/seed data,
   // and the real data (plus the one-time reconciliation that depends on
   // it) swaps in a few seconds later once the load actually finishes.
+  // True for the few minutes after a cold start where MongoDB is connected
+  // but the real data hasn't finished loading yet — the API would otherwise
+  // happily return "0 posts / 1 user" during that window, which is
+  // indistinguishable from actual data loss to anyone looking at the app.
+  // The isDbConnected() check keeps this false (never blocking) when Mongo
+  // isn't configured at all, e.g. local dev.
+  let isRestoringState = isDbConnected();
+
   async function restorePersistedState() {
     if (isDbConnected()) {
       const loaded: Record<string, any> = {};
@@ -362,8 +388,28 @@ async function startServer() {
     healLegacyTimestamps();
     healGlobalLoungeAdmin();
     cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
+    isRestoringState = false;
   }
-  restorePersistedState().catch(err => console.error('Failed to restore persisted state:', err));
+  restorePersistedState().catch(err => {
+    console.error('Failed to restore persisted state:', err);
+    // Don't leave the app permanently answering "still starting up" to
+    // every request if the restore itself failed — better to fall back to
+    // serving the in-memory seed data (same as MongoDB not being configured
+    // at all) than to hang every API response forever.
+    isRestoringState = false;
+  });
+
+  // While isRestoringState is true, every API route would otherwise read
+  // from the same empty/default arrays every other request does — this
+  // just stops those requests short with a response the client can tell
+  // apart from "genuinely no data", instead of letting them succeed with
+  // misleading empty results.
+  app.use('/api', (req, res, next) => {
+    if (isRestoringState && req.path !== '/health') {
+      return res.status(503).json({ error: 'Server is still starting up — please try again in a moment.', starting: true });
+    }
+    next();
+  });
 
   // Debounced full-state save: any non-GET request schedules a save a few
   // seconds out, coalescing bursts of mutations into a single write.
@@ -853,7 +899,7 @@ async function startServer() {
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({
-      status: 'ok',
+      status: isRestoringState ? 'starting' : 'ok',
       serverTime: new Date().toISOString(),
       usersCount: users.length,
       b2Storage: getB2Client().isConfigured ? 'connected' : 'not configured (falling back to inline data URIs)',

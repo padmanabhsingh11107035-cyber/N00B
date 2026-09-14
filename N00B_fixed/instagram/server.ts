@@ -102,7 +102,10 @@ function getClientIp(req: any): string {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // Render (and most cloud hosts) assign their own port via $PORT and
+  // expect the app to bind to it — a hardcoded 3000 would make every
+  // health check fail there even though it works fine locally.
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   // Assigned once app.listen() runs at the bottom of this function; the
   // shutdown handler below closes over this same binding, so it sees the
   // real server instance by the time a signal actually arrives.

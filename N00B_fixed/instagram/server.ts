@@ -329,11 +329,31 @@ async function startServer() {
   // isn't configured at all, e.g. local dev.
   let isRestoringState = isDbConnected();
 
+  // Which collections have actually been confirmed loaded (or saved) for
+  // real in THIS process — persistStateNow() below refuses to write any
+  // collection that isn't in here yet. Without this guard, a collection
+  // whose load failed (timeout, transient error) falls back to the empty/
+  // seed in-memory value as designed, but the very next scheduled save
+  // would then write that empty fallback straight over the real data
+  // already sitting in MongoDB — turning a temporary read failure into
+  // permanent, real data loss. This is exactly what happened once already.
+  const restoredKeys = new Set<(typeof PERSISTED_STATE_KEYS)[number]>();
+
   async function restorePersistedState() {
     if (isDbConnected()) {
       const loaded: Record<string, any> = {};
+      // Each key is caught individually — one collection failing every
+      // retry must never stop the other 18 from loading (Promise.all
+      // rejects the whole batch on a single failure), and a failed key
+      // simply stays out of `loaded`/restoredKeys rather than aborting
+      // the restore or getting treated as confirmed-empty.
       await Promise.all(PERSISTED_STATE_KEYS.map(async (key) => {
-        loaded[key] = await loadCollection(key);
+        try {
+          loaded[key] = await loadCollection(key);
+          restoredKeys.add(key);
+        } catch (err) {
+          console.error(`Giving up on loading "${key}" after retries — leaving it untouched in memory and never persisting it until a load succeeds:`, err);
+        }
       }));
 
       if (loaded.users) users = loaded.users;
@@ -417,27 +437,38 @@ async function startServer() {
 
   async function persistStateNow() {
     if (!isDbConnected()) return;
+    // Only ever write a collection back to MongoDB once we've actually
+    // confirmed (via a successful load, or a previous successful save this
+    // process) what's really in it — writing an unconfirmed one would risk
+    // overwriting real persisted data with whatever empty/seed fallback is
+    // sitting in memory because its load failed. It joins restoredKeys the
+    // moment this save succeeds, so it's only ever skipped until the first
+    // successful load or save.
+    const save = async (key: (typeof PERSISTED_STATE_KEYS)[number], data: any) => {
+      if (!restoredKeys.has(key)) return;
+      await saveCollection(key, data);
+    };
     await Promise.all([
-      saveCollection('users', users),
-      saveCollection('posts', posts),
-      saveCollection('comments', comments),
-      saveCollection('stories', stories),
-      saveCollection('reels', reels),
-      saveCollection('supportReviews', supportReviews),
-      saveCollection('notifications', notifications),
-      saveCollection('chats', chats),
-      saveCollection('messages', messages),
-      saveCollection('collections', collections),
-      saveCollection('gameScores', gameScores),
-      saveCollection('highlights', highlights),
-      saveCollection('reports', reports),
-      saveCollection('chatReviews', chatReviews),
-      saveCollection('settings', settings),
-      saveCollection('reelHistory', reelHistory),
-      saveCollection('musicTracks', musicTracks),
-      saveCollection('coupons', coupons),
-      saveCollection('customStickers', customStickers),
-      saveCollection('scratchCards', scratchCards),
+      save('users', users),
+      save('posts', posts),
+      save('comments', comments),
+      save('stories', stories),
+      save('reels', reels),
+      save('supportReviews', supportReviews),
+      save('notifications', notifications),
+      save('chats', chats),
+      save('messages', messages),
+      save('collections', collections),
+      save('gameScores', gameScores),
+      save('highlights', highlights),
+      save('reports', reports),
+      save('chatReviews', chatReviews),
+      save('settings', settings),
+      save('reelHistory', reelHistory),
+      save('musicTracks', musicTracks),
+      save('coupons', coupons),
+      save('customStickers', customStickers),
+      save('scratchCards', scratchCards),
     ]);
   }
 

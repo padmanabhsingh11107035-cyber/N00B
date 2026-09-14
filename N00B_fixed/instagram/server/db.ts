@@ -55,25 +55,27 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// A load returning null used to be treated as "this collection is
-// genuinely empty" by every caller — indistinguishable from a transient
-// timeout, which silently discarded that collection's real data on the
-// very next state restore. Retrying here means a caller only ever sees
-// null once every attempt has actually failed.
+// Throws once every retry has failed, rather than swallowing the error and
+// returning null — null here means "this document genuinely doesn't
+// exist", a legitimately empty collection that's safe to persist as-is.
+// A caller needs to be able to tell that apart from "the read itself
+// failed", since treating a failed read as confirmed-empty is exactly what
+// let a transient timeout silently discard real persisted data the moment
+// something next saved that same (wrongly empty) collection back.
 export async function loadCollection<T = any>(name: string, attempts = 3): Promise<T | null> {
   if (!db) return null;
+  let lastErr: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
       const doc = await db.collection(STATE_COLLECTION).findOne({ _id: name as any });
       return doc ? (doc.data as T) : null;
     } catch (err) {
-      const isLastAttempt = attempt === attempts;
+      lastErr = err;
       console.error(`MongoDB load failed for "${name}" (attempt ${attempt}/${attempts}):`, err);
-      if (isLastAttempt) return null;
-      await sleep(500 * attempt);
+      if (attempt < attempts) await sleep(500 * attempt);
     }
   }
-  return null;
+  throw lastErr;
 }
 
 export async function saveCollection(name: string, data: any): Promise<void> {

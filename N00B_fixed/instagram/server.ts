@@ -1284,12 +1284,29 @@ async function startServer() {
     res.json({ user: { ...sanitizeUser(activeUser), avatar: await signMediaKey(activeUser.avatar) } });
   });
 
+  // This used to spread the entire request body onto the caller's own user
+  // record with no field filter — meaning any logged-in account could send
+  // { "isAdmin": true } (or isVerified, isSuspended, noobPoints, proTier,
+  // etc. — every privileged field the rest of this file checks) and grant
+  // itself full admin rights in one request. Only these specific,
+  // genuinely self-service fields may be changed through this endpoint;
+  // everything else (name, username, email, avatar, ...) already goes
+  // through the explicitly-whitelisted /api/users/profile/update instead.
+  const SELF_UPDATABLE_USER_FIELDS = [
+    'bio', 'statusNote', 'password', 'accountType', 'isBusiness', 'businessCategory', 'privacySettings'
+  ] as const;
+
   app.put('/api/users/me', async (req, res) => {
     const activeUser = getActiveUser(req);
     if (!activeUser) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    const updated = req.body;
+    const updated: Record<string, any> = {};
+    for (const field of SELF_UPDATABLE_USER_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updated[field] = req.body[field];
+      }
+    }
     const index = users.findIndex(u => u.id === activeUser.id);
     if (index !== -1) {
       users[index] = { ...users[index], ...updated };

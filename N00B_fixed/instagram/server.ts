@@ -292,57 +292,78 @@ async function startServer() {
     'coupons', 'customStickers', 'scratchCards'
   ] as const;
 
-  if (isDbConnected()) {
-    const loaded: Record<string, any> = {};
-    await Promise.all(PERSISTED_STATE_KEYS.map(async (key) => {
-      loaded[key] = await loadCollection(key);
-    }));
+  // Restoring persisted state from MongoDB used to be awaited here, before
+  // a single route was even registered — meaning nothing on this server
+  // (not even /api/health) could respond until every collection finished
+  // loading. That's fine on a fast local connection, but on a free-tier
+  // instance talking to a database in a different region it can take
+  // minutes, and cloud hosts like Render kill a service that doesn't open
+  // its port / answer health checks in time — restarting it, hitting the
+  // exact same slow load again, and repeating forever. This now runs in
+  // the background: the server opens immediately with default/seed data,
+  // and the real data (plus the one-time reconciliation that depends on
+  // it) swaps in a few seconds later once the load actually finishes.
+  async function restorePersistedState() {
+    if (isDbConnected()) {
+      const loaded: Record<string, any> = {};
+      await Promise.all(PERSISTED_STATE_KEYS.map(async (key) => {
+        loaded[key] = await loadCollection(key);
+      }));
 
-    if (loaded.users) users = loaded.users;
-    if (loaded.posts) posts = loaded.posts;
-    if (loaded.comments) comments = loaded.comments;
-    if (loaded.stories) stories = loaded.stories;
-    if (loaded.reels) reels = loaded.reels;
-    if (loaded.supportReviews) supportReviews = loaded.supportReviews;
-    if (loaded.notifications) notifications = loaded.notifications;
-    if (loaded.chats) chats = loaded.chats;
-    if (loaded.messages) messages = loaded.messages;
-    if (loaded.collections) collections = loaded.collections;
-    if (loaded.gameScores) gameScores = loaded.gameScores;
-    if (loaded.highlights) highlights = loaded.highlights;
-    if (loaded.reports) reports = loaded.reports;
-    if (loaded.chatReviews) chatReviews = loaded.chatReviews;
-    if (loaded.settings) settings = loaded.settings;
-    if (loaded.reelHistory) reelHistory = loaded.reelHistory;
-    if (loaded.musicTracks) musicTracks = loaded.musicTracks;
-    if (loaded.coupons) coupons = loaded.coupons;
-    if (loaded.customStickers) customStickers = loaded.customStickers;
-    if (loaded.scratchCards) scratchCards = loaded.scratchCards;
+      if (loaded.users) users = loaded.users;
+      if (loaded.posts) posts = loaded.posts;
+      if (loaded.comments) comments = loaded.comments;
+      if (loaded.stories) stories = loaded.stories;
+      if (loaded.reels) reels = loaded.reels;
+      if (loaded.supportReviews) supportReviews = loaded.supportReviews;
+      if (loaded.notifications) notifications = loaded.notifications;
+      if (loaded.chats) chats = loaded.chats;
+      if (loaded.messages) messages = loaded.messages;
+      if (loaded.collections) collections = loaded.collections;
+      if (loaded.gameScores) gameScores = loaded.gameScores;
+      if (loaded.highlights) highlights = loaded.highlights;
+      if (loaded.reports) reports = loaded.reports;
+      if (loaded.chatReviews) chatReviews = loaded.chatReviews;
+      if (loaded.settings) settings = loaded.settings;
+      if (loaded.reelHistory) reelHistory = loaded.reelHistory;
+      if (loaded.musicTracks) musicTracks = loaded.musicTracks;
+      if (loaded.coupons) coupons = loaded.coupons;
+      if (loaded.customStickers) customStickers = loaded.customStickers;
+      if (loaded.scratchCards) scratchCards = loaded.scratchCards;
 
-    console.log('MongoDB: restored persisted app state');
+      console.log('MongoDB: restored persisted app state');
+    }
+
+    // One-time reconciliation: likesCount used to be a separately-incremented
+    // counter that could silently drift from the actual likedBy array — from
+    // likes recorded before per-account like tracking existed, or a liker's
+    // account later being deleted without ever being purged from other
+    // people's likedBy lists. That drift is exactly what produced posts
+    // showing e.g. "6 likes" while the Likes sheet had nobody to show.
+    // Recomputing it from the array itself on every boot makes the two
+    // permanently impossible to disagree with each other again.
+    posts.forEach((p: any) => { p.likesCount = (p.likedBy || []).length; });
+    reels.forEach((r: any) => { r.likesCount = (r.likedBy || []).length; });
+
+    // Same drift, same fix, for the NOOB admin account's followersCount —
+    // every registered user auto-follows it at signup, so its real follower
+    // count can never legitimately be anything other than "everyone else".
+    // The live override in getDisplayFollowersCount is what actually protects
+    // every future read of it; this just cleans up the stored field itself so
+    // nothing reading it directly (bypassing that helper) sees stale drift.
+    (() => {
+      const noobAdmin = users.find(u => u.id === 'u_noob_admin');
+      if (noobAdmin) noobAdmin.followersCount = Math.max(0, users.length - 1);
+    })();
+
+    // These self-heals and the expired-story sweep all read the arrays
+    // above, so they must run after the real data (if any) has landed —
+    // otherwise they'd silently heal the throwaway seed data instead.
+    healLegacyTimestamps();
+    healGlobalLoungeAdmin();
+    cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
   }
-
-  // One-time reconciliation: likesCount used to be a separately-incremented
-  // counter that could silently drift from the actual likedBy array — from
-  // likes recorded before per-account like tracking existed, or a liker's
-  // account later being deleted without ever being purged from other
-  // people's likedBy lists. That drift is exactly what produced posts
-  // showing e.g. "6 likes" while the Likes sheet had nobody to show.
-  // Recomputing it from the array itself on every boot makes the two
-  // permanently impossible to disagree with each other again.
-  posts.forEach((p: any) => { p.likesCount = (p.likedBy || []).length; });
-  reels.forEach((r: any) => { r.likesCount = (r.likedBy || []).length; });
-
-  // Same drift, same fix, for the NOOB admin account's followersCount —
-  // every registered user auto-follows it at signup, so its real follower
-  // count can never legitimately be anything other than "everyone else".
-  // The live override in getDisplayFollowersCount is what actually protects
-  // every future read of it; this just cleans up the stored field itself so
-  // nothing reading it directly (bypassing that helper) sees stale drift.
-  (() => {
-    const noobAdmin = users.find(u => u.id === 'u_noob_admin');
-    if (noobAdmin) noobAdmin.followersCount = Math.max(0, users.length - 1);
-  })();
+  restorePersistedState().catch(err => console.error('Failed to restore persisted state:', err));
 
   // Debounced full-state save: any non-GET request schedules a save a few
   // seconds out, coalescing bursts of mutations into a single write.
@@ -424,7 +445,9 @@ async function startServer() {
       })
     );
   }
-  cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
+  // The initial run happens inside restorePersistedState() instead of here,
+  // so it operates on the real loaded data rather than the startup seed —
+  // this interval just keeps sweeping every 15 minutes after that.
   setInterval(() => {
     cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
   }, 15 * 60 * 1000);
@@ -498,7 +521,8 @@ async function startServer() {
       schedulePersist();
     }
   }
-  healLegacyTimestamps();
+  // Called from inside restorePersistedState() instead of here, so it runs
+  // against the real loaded data rather than the startup seed.
 
   // The Global Lounge chat was originally seeded with creatorId/adminIds
   // pointing at 'u_admin' — an id that belongs to no real account — instead
@@ -523,7 +547,8 @@ async function startServer() {
       schedulePersist();
     }
   }
-  healGlobalLoungeAdmin();
+  // Called from inside restorePersistedState() instead of here, so it runs
+  // against the real loaded data rather than the startup seed.
 
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, async () => {

@@ -358,12 +358,27 @@ async function startServer() {
   // collection back that hasn't actually been confirmed loaded for real
   // this session, or an incomplete in-memory copy could overwrite real
   // data still safely sitting in MongoDB.
-  async function persistImmediately(key: (typeof PERSISTED_STATE_KEYS)[number], data: any) {
-    if (!isDbConnected() || !restoredKeys.has(key)) return;
+  // Returns whether the data is actually durable in MongoDB now — callers
+  // creating genuinely irreplaceable content (a new account, a post, a
+  // reel, a story) must check this and respond with an error instead of
+  // "success" when it's false, rather than telling the client something
+  // succeeded that a moment later turns out to have never been saved.
+  // saveCollection already retries internally; a false here means it
+  // failed every attempt, most dangerously in the few seconds around a
+  // deploy cutover when a process's DB connection can drop mid-write —
+  // exactly the kind of failure this used to swallow silently.
+  async function persistImmediately(key: (typeof PERSISTED_STATE_KEYS)[number], data: any): Promise<boolean> {
+    if (!isDbConnected()) return true;
+    if (!restoredKeys.has(key)) {
+      console.error(`Refusing immediate save of "${key}" — its collection was never confirmed loaded this boot; see /api/health's unrestoredKeys.`);
+      return false;
+    }
     try {
       await saveCollection(key, data);
+      return true;
     } catch (err) {
-      console.error(`Immediate save of "${key}" failed (will still retry via the debounced save):`, err);
+      console.error(`Immediate save of "${key}" failed after retries:`, err);
+      return false;
     }
   }
 
@@ -1225,8 +1240,16 @@ async function startServer() {
     // again under that identity. Saved immediately rather than left to the
     // debounced sweep, so a process restart/redeploy/free-tier sleep can
     // never land in the gap between "told the client it succeeded" and
-    // "actually durable in MongoDB".
-    await persistImmediately('users', users);
+    // "actually durable in MongoDB". If it genuinely can't be saved right
+    // now, the account must not be reported as created — better an honest
+    // "try again" than a false "success" for something that then evaporates
+    // the moment this process exits.
+    const saved = await persistImmediately('users', users);
+    if (!saved) {
+      users.pop();
+      currentSessionUserId = null;
+      return res.status(503).json({ error: 'Could not save your account right now — please try again in a moment.' });
+    }
 
     res.status(201).json({ success: true, user: sanitizeUser(newUser) });
   });
@@ -2664,8 +2687,19 @@ async function startServer() {
       active.lastContentPostAt = new Date().toISOString();
     }
     // A published post is real content someone made — saved immediately
-    // rather than left to the debounced sweep, same reasoning as signup.
-    await persistImmediately('posts', posts);
+    // rather than left to the debounced sweep, same reasoning as signup. If
+    // it genuinely can't be saved, roll the post (and the points/stats it
+    // earned) back rather than tell the client it was published.
+    const saved = await persistImmediately('posts', posts);
+    if (!saved) {
+      posts.shift();
+      if (active) {
+        active.postsCount = Math.max(0, (active.postsCount || 0) - 1);
+        active.noobPoints = Math.max(0, (active.noobPoints || 0) - 25);
+        active.noobTransactions?.shift();
+      }
+      return res.status(503).json({ error: 'Could not save your post right now — please try again in a moment.' });
+    }
     res.status(201).json({ success: true, post: newPost });
   });
 
@@ -3074,7 +3108,11 @@ async function startServer() {
     stories.unshift(newStory);
     // Real content someone made — saved immediately rather than left to
     // the debounced sweep, same reasoning as signup/posts/reels.
-    await persistImmediately('stories', stories);
+    const saved = await persistImmediately('stories', stories);
+    if (!saved) {
+      stories.shift();
+      return res.status(503).json({ error: 'Could not save your story right now — please try again in a moment.' });
+    }
     res.status(201).json({ success: true, story: newStory });
   });
 
@@ -3218,8 +3256,18 @@ async function startServer() {
       active.lastContentPostAt = new Date().toISOString();
     }
     // A published reel is real content someone made — saved immediately
-    // rather than left to the debounced sweep, same reasoning as signup.
-    await persistImmediately('reels', reels);
+    // rather than left to the debounced sweep, same reasoning as signup. If
+    // it genuinely can't be saved, roll the reel (and the points it earned)
+    // back rather than tell the client it was published.
+    const saved = await persistImmediately('reels', reels);
+    if (!saved) {
+      reels.shift();
+      if (active) {
+        active.noobPoints = Math.max(0, (active.noobPoints || 0) - 25);
+        active.noobTransactions?.shift();
+      }
+      return res.status(503).json({ error: 'Could not save your reel right now — please try again in a moment.' });
+    }
     res.status(201).json({ success: true, reel: newReel });
   });
 

@@ -78,15 +78,32 @@ export async function loadCollection<T = any>(name: string, attempts = 3): Promi
   throw lastErr;
 }
 
-export async function saveCollection(name: string, data: any): Promise<void> {
+// Retries with backoff and THROWS after exhausting them, same reasoning as
+// loadCollection — this used to swallow every failure (catch, log, return
+// normally either way), which meant persistImmediately's caller had no way
+// to tell a real write from a silently-dropped one. A signup, post, reel or
+// story could get told "success" and even be awaited through
+// persistImmediately, while the actual MongoDB write had failed underneath
+// it — most dangerously in the few seconds around a deploy cutover, when a
+// process's DB connection can go away mid-write. That in-memory-only data
+// then vanishes the moment that process exits, with nothing to show it was
+// ever supposed to be saved.
+export async function saveCollection(name: string, data: any, attempts = 3): Promise<void> {
   if (!db) return;
-  try {
-    await db.collection(STATE_COLLECTION).updateOne(
-      { _id: name as any },
-      { $set: { data, updatedAt: new Date() } },
-      { upsert: true }
-    );
-  } catch (err) {
-    console.error(`MongoDB save failed for "${name}":`, err);
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      await db.collection(STATE_COLLECTION).updateOne(
+        { _id: name as any },
+        { $set: { data, updatedAt: new Date() } },
+        { upsert: true }
+      );
+      return;
+    } catch (err) {
+      lastErr = err;
+      console.error(`MongoDB save failed for "${name}" (attempt ${attempt}/${attempts}):`, err);
+      if (attempt < attempts) await sleep(500 * attempt);
+    }
   }
+  throw lastErr;
 }

@@ -395,6 +395,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   if (!currentReel || localReels.length === 0) {
     return (
       <div className="fixed inset-0 z-30 bg-black flex flex-col items-center justify-center text-center px-4 pb-20">
+        {onGoBack && (
+          <button
+            onClick={onGoBack}
+            className="absolute top-3 left-3 p-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-white/80 hover:text-white"
+            title="Go back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
         <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-[#00FF66]">
           <Film className="w-8 h-8" />
         </div>

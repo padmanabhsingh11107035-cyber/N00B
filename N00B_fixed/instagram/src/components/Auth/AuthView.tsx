@@ -47,14 +47,30 @@ interface AuthViewProps {
   notice?: string;
 }
 
-// Generate random 5-character captcha code
+// Generate a random 6-character captcha code that's guaranteed to mix a
+// digit, an uppercase letter, and a lowercase letter — a fixed charset (even
+// a big one) can still be typed by copy-pasting/matching case loosely, so
+// the code always contains all three categories and is checked case-
+// sensitively, forcing a real character-by-character read of the image
+// instead of a same-case guess. Visually similar characters (0/O/o, 1/l/I)
+// are excluded from every category to keep it actually readable.
+const CAPTCHA_DIGITS = '23456789';
+const CAPTCHA_UPPER = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const CAPTCHA_LOWER = 'abcdefghjkmnpqrstuvwxyz';
+const CAPTCHA_ALL = CAPTCHA_DIGITS + CAPTCHA_UPPER + CAPTCHA_LOWER;
+const randomChar = (pool: string) => pool.charAt(Math.floor(Math.random() * pool.length));
+
 const generateCaptchaCode = (): string => {
-  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < 5; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  const required = [randomChar(CAPTCHA_DIGITS), randomChar(CAPTCHA_UPPER), randomChar(CAPTCHA_LOWER)];
+  const rest = Array.from({ length: 3 }, () => randomChar(CAPTCHA_ALL));
+  const chars = [...required, ...rest];
+  // Shuffle so the guaranteed digit/upper/lower aren't always in the same
+  // first three positions.
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
-  return result;
+  return chars.join('');
 };
 
 // Curated 2D Cartoon and 2D Nature avatars. `gender` drives which ones show
@@ -433,9 +449,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       return;
     }
 
-    // Verify Captcha (case-insensitive)
-    if (!userCaptchaInput.trim() || userCaptchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
-      setErrorMessage('Security Captcha does not match. Please enter the correct 5-character code.');
+    // Verify Captcha — case-sensitive now that the code mixes upper/lower
+    // case on purpose; matching case-insensitively would make that pointless.
+    if (!userCaptchaInput.trim() || userCaptchaInput.trim() !== captchaCode) {
+      setErrorMessage('Security Captcha does not match. Please enter the exact 6-character code, matching uppercase/lowercase.');
       handleRefreshCaptcha();
       return;
     }
@@ -1191,11 +1208,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     <input
                       type="text"
                       required
-                      maxLength={5}
+                      maxLength={6}
                       value={userCaptchaInput}
-                      onChange={(e) => setUserCaptchaInput(e.target.value.toUpperCase())}
-                      placeholder="Type 5-char code"
-                      className="w-full bg-[#141418] text-sm font-mono tracking-widest text-white px-3 py-2.5 rounded-xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600 uppercase"
+                      onChange={(e) => setUserCaptchaInput(e.target.value)}
+                      placeholder="Type the 6-char code exactly"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      className="w-full bg-[#141418] text-sm font-mono tracking-widest text-white px-3 py-2.5 rounded-xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                     />
                   </div>
                 </div>

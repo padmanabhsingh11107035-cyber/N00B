@@ -842,7 +842,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 )}
               </div>
               <p className="text-[11px] text-amber-300/80 max-w-xs mx-auto">
-                Upgrade to NOOB Pro from your profile for unlimited Chess Blitz, any time.
+                Upgrade to NOOB Pro from your profile for up to 4 Chess Blitz rounds a week.
               </p>
               <button
                 onClick={onClose}

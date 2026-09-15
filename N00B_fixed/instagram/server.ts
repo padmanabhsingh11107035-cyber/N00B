@@ -350,6 +350,23 @@ async function startServer() {
   // permanent, real data loss. This is exactly what happened once already.
   const restoredKeys = new Set<(typeof PERSISTED_STATE_KEYS)[number]>();
 
+  // Saves one collection immediately (awaited, before the caller responds)
+  // instead of leaving it to the debounced persistStateNow() sweep — used
+  // right after creating something a real person can't just redo if it
+  // silently vanished (a new account, a post, a reel, a story). Same
+  // restoredKeys safety check as the debounced path: never write a
+  // collection back that hasn't actually been confirmed loaded for real
+  // this session, or an incomplete in-memory copy could overwrite real
+  // data still safely sitting in MongoDB.
+  async function persistImmediately(key: (typeof PERSISTED_STATE_KEYS)[number], data: any) {
+    if (!isDbConnected() || !restoredKeys.has(key)) return;
+    try {
+      await saveCollection(key, data);
+    } catch (err) {
+      console.error(`Immediate save of "${key}" failed (will still retry via the debounced save):`, err);
+    }
+  }
+
   async function restorePersistedState() {
     if (isDbConnected()) {
       const loaded: Record<string, any> = {};
@@ -483,12 +500,19 @@ async function startServer() {
     ]);
   }
 
+  // Shortened from 3000ms — this is the same "process dies before the
+  // debounced save fires" window that turned out to actually lose a
+  // brand-new signup once (now additionally protected by its own
+  // immediate save; see /api/auth/signup). Every other mutation still
+  // goes through this debounced path, so shrinking the window here
+  // meaningfully reduces the exposure for all of them at once, without
+  // needing an immediate-save added to every individual endpoint.
   function schedulePersist() {
     if (!isDbConnected() || persistTimer) return;
     persistTimer = setTimeout(() => {
       persistTimer = null;
       persistStateNow().catch(err => console.error('MongoDB persist failed:', err));
-    }, 3000);
+    }, 300);
   }
 
   // Stories are meant to actually vanish after 24 hours — GET /api/stories
@@ -1163,23 +1187,11 @@ async function startServer() {
 
     // A brand-new account is the single most catastrophic thing to lose —
     // it's not just data, it's someone's entire ability to use the app
-    // again under that identity. The generic post-request save everything
-    // else relies on is debounced by ~3 seconds specifically so bursts of
-    // routine mutations coalesce into one write; that's the wrong trade for
-    // a signup, since a process restart/redeploy/free-tier sleep landing in
-    // that window would silently lose an account that was already told
-    // "success". Only do this if users has actually been confirmed loaded
-    // for real this session — otherwise this in-memory array is the
-    // temporary seed fallback, and writing it now would overwrite whatever
-    // real data is still safely sitting in MongoDB (the exact mistake this
-    // whole safeguard exists to prevent).
-    if (restoredKeys.has('users')) {
-      try {
-        await saveCollection('users', users);
-      } catch (err) {
-        console.error('Immediate post-signup save failed (will still retry via the debounced save):', err);
-      }
-    }
+    // again under that identity. Saved immediately rather than left to the
+    // debounced sweep, so a process restart/redeploy/free-tier sleep can
+    // never land in the gap between "told the client it succeeded" and
+    // "actually durable in MongoDB".
+    await persistImmediately('users', users);
 
     res.status(201).json({ success: true, user: sanitizeUser(newUser) });
   });
@@ -2537,7 +2549,7 @@ async function startServer() {
     return { allowed: true };
   }
 
-  app.post('/api/posts', (req, res) => {
+  app.post('/api/posts', async (req, res) => {
     const active = getActiveUser(req);
     const author = active || {
       id: 'u_1',
@@ -2594,6 +2606,9 @@ async function startServer() {
       recordTransaction(active, 25, 'Published a post');
       active.lastContentPostAt = new Date().toISOString();
     }
+    // A published post is real content someone made — saved immediately
+    // rather than left to the debounced sweep, same reasoning as signup.
+    await persistImmediately('posts', posts);
     res.status(201).json({ success: true, post: newPost });
   });
 
@@ -2971,7 +2986,7 @@ async function startServer() {
     res.json({ stories: mapped });
   });
 
-  app.post('/api/stories', (req, res) => {
+  app.post('/api/stories', async (req, res) => {
     const active = getActiveUser(req);
     const author = active || {
       id: 'u_1',
@@ -3000,6 +3015,9 @@ async function startServer() {
     };
 
     stories.unshift(newStory);
+    // Real content someone made — saved immediately rather than left to
+    // the debounced sweep, same reasoning as signup/posts/reels.
+    await persistImmediately('stories', stories);
     res.status(201).json({ success: true, story: newStory });
   });
 
@@ -3095,7 +3113,7 @@ async function startServer() {
     res.json({ reels: mapped });
   });
 
-  app.post('/api/reels', (req, res) => {
+  app.post('/api/reels', async (req, res) => {
     const active = getActiveUser(req);
     const author = active || {
       id: 'u_1',
@@ -3142,6 +3160,9 @@ async function startServer() {
       recordTransaction(active, 25, 'Published a reel');
       active.lastContentPostAt = new Date().toISOString();
     }
+    // A published reel is real content someone made — saved immediately
+    // rather than left to the debounced sweep, same reasoning as signup.
+    await persistImmediately('reels', reels);
     res.status(201).json({ success: true, reel: newReel });
   });
 
@@ -4823,10 +4844,16 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   });
 
   const CHESS_WEEKLY_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+  // Pro used to have no limit at all — now capped at 4 rounds within any
+  // rolling 7-day window (vs. the free plan's 1), tracked as a timestamp
+  // list rather than a single "last played" field since a simple cooldown
+  // can't express "up to N per week" on its own.
+  const CHESS_PRO_WEEKLY_LIMIT = 4;
 
   // Chess Blitz's real stakes (a shot at 50,000 points, or a
   // full balance wipe) make it something a free account could otherwise
-  // grind endlessly — cap it to one round a week; NOOB Pro removes the cap.
+  // grind endlessly — cap it to one round a week; NOOB Pro raises the cap
+  // to 4 rather than removing it.
   // The client calls this once, the moment it's about to let the player
   // enter ANY mode (bot, pass & play, friend invite, matchmaking) for
   // Chess Blitz, so a single check here covers every entry point instead
@@ -4834,18 +4861,32 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   app.post('/api/games/chess/start', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const now = Date.now();
     if (active.proTier) {
-      // Still marks the round ready (see below) — Pro only skips the
-      // cooldown check, not the "a round was actually started" gate.
+      const recent: string[] = (active.chessBlitzTimestamps || []).filter(
+        (t: string) => now - new Date(t).getTime() < CHESS_WEEKLY_COOLDOWN_MS
+      );
+      if (recent.length >= CHESS_PRO_WEEKLY_LIMIT) {
+        const oldest = recent.reduce((min, t) => (new Date(t).getTime() < new Date(min).getTime() ? t : min));
+        return res.status(403).json({
+          error: `Chess Blitz is limited to ${CHESS_PRO_WEEKLY_LIMIT} rounds a week, even on NOOB Pro.`,
+          nextAvailableAt: new Date(new Date(oldest).getTime() + CHESS_WEEKLY_COOLDOWN_MS).toISOString()
+        });
+      }
+      recent.push(new Date(now).toISOString());
+      active.chessBlitzTimestamps = recent;
+      // Still marks the round ready (see below) — this only skips the
+      // free plan's single-use-per-week check, not the "a round was
+      // actually started" gate.
       active.chessRoundReady = true;
       return res.json({ success: true, isPro: true });
     }
 
     const last = active.lastChessBlitzAt ? new Date(active.lastChessBlitzAt).getTime() : 0;
-    const now = Date.now();
     if (now - last < CHESS_WEEKLY_COOLDOWN_MS) {
       return res.status(403).json({
-        error: 'Chess Blitz is limited to once a week on the free plan. Upgrade to NOOB Pro for unlimited play.',
+        error: 'Chess Blitz is limited to once a week on the free plan. Upgrade to NOOB Pro for up to 4 rounds a week.',
         nextAvailableAt: new Date(last + CHESS_WEEKLY_COOLDOWN_MS).toISOString()
       });
     }

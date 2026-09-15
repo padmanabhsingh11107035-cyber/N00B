@@ -631,6 +631,14 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    // sessionEndedNotice only gets set by the false-suspension detector
+    // above and is never cleared afterward — once it fires even once, it's
+    // stuck in this component's state for the rest of the tab's life and
+    // resurfaces on the login screen every subsequent time the user logs
+    // out, voluntarily or not, even long after the account was confirmed
+    // fine. A deliberate logout right here is definitionally not a
+    // suspension, so it must always clear it.
+    setSessionEndedNotice(null);
     try {
       setSessionUserId(null);
       await logoutUser();

@@ -32,7 +32,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess } from '../../services/api';
+import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, uploadMediaFile } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -264,6 +264,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [businessCategory, setBusinessCategory] = useState(BUSINESS_CATEGORIES[0]);
   const [selectedAvatar, setSelectedAvatar] = useState(PRESET_2D_AVATARS[0].url);
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  // The durable B2 object key for an uploaded custom photo — sent to signup
+  // instead of customAvatarUrl (a presigned URL that expires in an hour, or
+  // a raw base64 data URI if the upload failed). Without this, a custom
+  // photo landed straight in the `users` MongoDB document as multi-MB
+  // base64 text instead of B2 storage, growing that single document toward
+  // MongoDB's 16MB per-document limit with every such signup — past which
+  // every future save of the users collection would silently fail.
+  const [customAvatarObjectKey, setCustomAvatarObjectKey] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Honeypot field for bot attack proofing (invisible to humans, bots will fill it)
@@ -370,14 +379,29 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
 
-  // Handle local file upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle local file upload — uploads to B2 (this endpoint doesn't require
+  // an existing session, so it works fine pre-signup) and keeps only the
+  // durable object key + a short-lived preview URL, instead of embedding
+  // the photo itself in the signup payload.
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage('Uploaded image must be under 5MB.');
-        return;
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Uploaded image must be under 5MB.');
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      const result = await uploadMediaFile(file, 'avatars');
+      if (result.url) {
+        setCustomAvatarUrl(result.url);
+        setSelectedAvatar(result.url);
       }
+      setCustomAvatarObjectKey(result.objectKey || '');
+    } catch (err) {
+      console.error('Avatar upload failed, falling back to a local preview:', err);
+      setCustomAvatarObjectKey('');
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result as string;
@@ -387,6 +411,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         }
       };
       reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -399,6 +425,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     if (honeypotValue) {
       console.warn('Bot attack detected via honeypot.');
       setErrorMessage('Security validation failed.');
+      return;
+    }
+
+    if (isUploadingAvatar) {
+      setErrorMessage('Please wait for the avatar upload to finish.');
       return;
     }
 
@@ -464,7 +495,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
     try {
       setLoading(true);
-      const avatarUrl = customAvatarUrl.trim() || selectedAvatar;
+      // Prefer the durable B2 object key over the presigned/base64 URL —
+      // see the comment on customAvatarObjectKey above.
+      const avatarUrl = (customAvatarObjectKey || customAvatarUrl).trim() || selectedAvatar;
       const res = await signupUser({
         firstName: fullName.trim(),
         displayName: fullName.trim(),
@@ -1043,11 +1076,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   </label>
                   <button
                     type="button"
+                    disabled={isUploadingAvatar}
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                   >
                     <Upload className="w-3 h-3" />
-                    <span>Upload Custom</span>
+                    <span>{isUploadingAvatar ? 'Uploading…' : 'Upload Custom'}</span>
                   </button>
                   <input
                     ref={fileInputRef}
@@ -1077,7 +1111,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     <button
                       key={av.id}
                       type="button"
-                      onClick={() => { setSelectedAvatar(av.url); setCustomAvatarUrl(''); }}
+                      onClick={() => { setSelectedAvatar(av.url); setCustomAvatarUrl(''); setCustomAvatarObjectKey(''); }}
                       className={`relative shrink-0 w-12 h-12 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
                         selectedAvatar === av.url && !customAvatarUrl
                           ? 'border-cyan-400 scale-110 shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-400/40'
@@ -1107,6 +1141,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       const seed = Math.random().toString(36).substring(2, 8);
                       const dicebear = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
                       setCustomAvatarUrl(dicebear);
+                      setCustomAvatarObjectKey('');
                       setSelectedAvatar(dicebear);
                     }}
                     className="shrink-0 w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-cyan-400 transition-all cursor-pointer"

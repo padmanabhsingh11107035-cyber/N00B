@@ -1245,6 +1245,13 @@ async function startServer() {
     );
 
     if (!user) {
+      // If the `users` collection never successfully loaded from MongoDB
+      // this boot (see /api/health's unrestoredKeys), this array is just
+      // the empty/seed fallback — telling someone their real account
+      // "wasn't found" here is wrong and alarming, not an actual result.
+      if (isDbConnected() && !restoredKeys.has('users')) {
+        return res.status(503).json({ error: 'The server is still syncing account data — please try again in a minute.' });
+      }
       // Auto-register convenience or clear message
       return res.status(401).json({ error: 'Account not found. Please click "Create Account" below.' });
     }
@@ -1342,6 +1349,21 @@ async function startServer() {
   app.get('/api/users/me', async (req, res) => {
     const activeUser = getActiveUser(req);
     if (!activeUser) {
+      // The frontend's session-status poll (checkSessionStatus) treats a
+      // real 200 + null here as "this account is genuinely gone/suspended"
+      // and force-logs-out with a scary message after two of these in a
+      // row — see App.tsx. That's only true if the `users` collection is
+      // actually known to be correct. If it isn't (a transient MongoDB
+      // load failure at boot left `restoredKeys` without 'users' — see
+      // /api/health's unrestoredKeys), this in-memory array is just the
+      // empty/seed fallback, and every real account would 404 here even
+      // though nothing has actually happened to it. Answering 503 instead
+      // of 200 in that specific case makes checkSessionStatus treat it as
+      // "unknown" (ignored) rather than "invalid" (counted toward a false
+      // suspension).
+      if (req.headers['x-user-id'] && isDbConnected() && !restoredKeys.has('users')) {
+        return res.status(503).json({ error: 'Still syncing account data — please try again shortly.' });
+      }
       return res.json({ user: null });
     }
     // Sign into a fresh response copy rather than the stored user object —

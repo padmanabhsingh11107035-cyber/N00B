@@ -26,6 +26,7 @@ import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { fetchPostLikers, fetchPostViewers, recordPostView } from '../../services/api';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
+import { POST_FILTERS } from '../../data/mockData';
 
 interface PostCardProps {
   post: Post;
@@ -410,7 +411,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           <img
             src={currentSlide.mediaUrl}
             alt={currentSlide.caption || post.caption}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${currentSlide.filter || ''}`}
+            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
             referrerPolicy="no-referrer"
             loading="lazy"
           />

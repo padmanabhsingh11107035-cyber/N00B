@@ -3302,7 +3302,7 @@ async function startServer() {
       }
     }
 
-    const { videoUrl, thumbnailUrl, caption, audioTrack, hashtags } = req.body;
+    const { videoUrl, thumbnailUrl, caption, audioTrack, hashtags, category } = req.body;
 
     const newReel = {
       id: `r_${Date.now()}`,
@@ -3323,6 +3323,7 @@ async function startServer() {
       isSaved: false,
       isFollowing: false,
       hashtags: hashtags || [],
+      category: category || 'others',
       createdAt: new Date().toISOString(),
       durationSeconds: 15
     };

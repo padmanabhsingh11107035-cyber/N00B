@@ -29,6 +29,7 @@ import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { analyzeMediaFile } from '../../utils/mediaAnalyzer';
 import { captureVideoThumbnail } from '../../utils/videoThumbnail';
+import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
@@ -39,15 +40,7 @@ interface PostCreationModalProps {
   onSubmitPost: (data: { isReel?: boolean; reelData?: Partial<Reel>; postData?: Partial<Post> }) => Promise<void>;
 }
 
-const FILTERS = [
-  { id: 'normal', name: 'Normal', style: '' },
-  { id: 'emerald', name: 'Emerald Glow', style: 'hue-rotate-60 contrast-125 saturate-150' },
-  { id: 'cyber', name: 'Cyber Neon', style: 'hue-rotate-180 contrast-150 brightness-110' },
-  { id: 'gala', name: 'GALA Preset', style: 'contrast-110 sepia-25 brightness-105' },
-  { id: 'monochrome', name: 'Monochrome', style: 'grayscale contrast-125' },
-  { id: 'clarendon', name: 'Clarendon', style: 'contrast-125 saturate-125' },
-  { id: 'juno', name: 'Juno', style: 'contrast-115 saturate-140' }
-];
+const FILTERS = POST_FILTERS;
 
 const TEXT_BACKGROUNDS = [
   { id: 'clean', name: 'Default Dark', bgClass: 'bg-zinc-950 border-zinc-800 text-white' },
@@ -931,22 +924,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 }`}
               >
                 <option value="" disabled>-- Select Content Category (Compulsory) --</option>
-                <option value="gaming">🎮 Gaming &amp; Esports</option>
-                <option value="tech">🤖 Tech &amp; Artificial Intelligence</option>
-                <option value="code">💻 Code, Dev &amp; Software Engineering</option>
-                <option value="robotics">🦾 Robotics &amp; Automation</option>
-                <option value="cad">📐 CAD, 3D Printing &amp; Hardware</option>
-                <option value="cybersecurity">🛡️ Cybersecurity &amp; Ethical Hacking</option>
-                <option value="web3">⚡ Web3, Crypto &amp; Decentralized Tech</option>
-                <option value="mobile">📱 Mobile Apps &amp; UI/UX Design</option>
-                <option value="science">🔭 Science, Space &amp; Astronomy</option>
-                <option value="art">🎨 Digital Art, CGI &amp; VFX</option>
-                <option value="music">🎵 Music, Beats &amp; Audio Production</option>
-                <option value="anime">✨ Anime, Manga &amp; Cyber Culture</option>
-                <option value="fashion">👟 Fashion, Streetwear &amp; Aesthetics</option>
-                <option value="tutorials">📚 Education &amp; Skill Tutorials</option>
-                <option value="memes">😂 Memes &amp; Community Humor</option>
-                <option value="others">🌐 Others / General Community</option>
+                {CONTENT_CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
               </select>
               {categoryError && (
                 <p className="text-[11px] text-rose-400 font-semibold mt-1 flex items-center gap-1">

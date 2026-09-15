@@ -30,6 +30,7 @@ import {
 import { Post, Reel, User } from '../../types';
 import { fetchUsers } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { POST_FILTERS } from '../../data/mockData';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -605,7 +606,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 <img
                   src={post.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
                   alt={post.caption}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
                 />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs">
                   <span className="flex items-center gap-1">

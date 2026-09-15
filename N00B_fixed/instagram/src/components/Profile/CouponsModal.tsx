@@ -177,25 +177,36 @@ const CouponCard: React.FC<{
           {isVerification ? <BadgeCheck className="w-5 h-5" /> : `${coupon.discountPercent}%`}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="text-sm font-bold text-white truncate">{coupon.title}</h3>
             {isVerification && (
               <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 font-bold uppercase border border-blue-500/30 shrink-0">
                 Verification
               </span>
             )}
+            {coupon.usageLimit === 'once' && (
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold uppercase border border-amber-500/30 shrink-0">
+                One-Time
+              </span>
+            )}
           </div>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Use code <span className="font-bold text-white tracking-wide">{coupon.code}</span>
-          </p>
+          {coupon.usedByMe ? (
+            <p className="text-xs text-zinc-500 mt-0.5">Already used on this account</p>
+          ) : (
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Use code <span className="font-bold text-white tracking-wide">{coupon.code}</span>
+            </p>
+          )}
         </div>
-        <button
-          onClick={onCopy}
-          className="shrink-0 px-3.5 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-        >
-          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
+        {!coupon.usedByMe && (
+          <button
+            onClick={onCopy}
+            className="shrink-0 px-3.5 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        )}
         {isAdmin && (
           <button
             onClick={onDelete}
@@ -234,6 +245,23 @@ const CouponCard: React.FC<{
   );
 };
 
+// Common coupon terms to tick instead of typing from scratch — picking one
+// appends its exact line to the terms textarea below, which stays a normal
+// editable field, so any of these can still be tweaked or removed by hand
+// afterward.
+const TERMS_TEMPLATES = [
+  'Valid for NOOB Pro upgrades only.',
+  'Cannot be combined with any other coupon or offer.',
+  'Discount applies to the NOOB Points cost only, not real currency.',
+  'Limited to one redemption per account.',
+  'Non-transferable — cannot be resold, gifted, or shared publicly.',
+  'NOOB reserves the right to cancel or modify this coupon at any time.',
+  'Must be applied before checkout — cannot be applied retroactively.',
+  'Valid only for the account it was issued to.',
+  'Expires 30 days after issue if unused.',
+  'Void if the account is suspended or under review.'
+];
+
 const CreateCouponModal: React.FC<{
   onClose: () => void;
   onCreated: () => void;
@@ -244,11 +272,21 @@ const CreateCouponModal: React.FC<{
   const [title, setTitle] = useState('');
   const [discountPercent, setDiscountPercent] = useState('10');
   const [terms, setTerms] = useState('');
+  const [usageLimit, setUsageLimit] = useState<'unlimited' | 'once'>('unlimited');
   const [targetMode, setTargetMode] = useState<'all' | 'specific'>('all');
   const [targetUsername, setTargetUsername] = useState('');
   const [showUserPicker, setShowUserPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const termsLines = terms.split('\n').map((l) => l.trim()).filter(Boolean);
+  const toggleTermsTemplate = (line: string) => {
+    setTerms((prev) => {
+      const lines = prev.split('\n').map((l) => l.trim()).filter(Boolean);
+      const next = lines.includes(line) ? lines.filter((l) => l !== line) : [...lines, line];
+      return next.join('\n');
+    });
+  };
 
   const selectableUsers = allUsers.filter((u) => u.id !== currentUserId);
   const filteredPickerUsers = selectableUsers.filter(
@@ -290,7 +328,8 @@ const CreateCouponModal: React.FC<{
       discountPercent: pct,
       terms,
       targetUsername: targetMode === 'specific' || isVerification ? targetUsername.trim() : undefined,
-      type: couponType
+      type: couponType,
+      usageLimit
     });
     setSubmitting(false);
     if (res.success) onCreated();
@@ -367,15 +406,72 @@ const CreateCouponModal: React.FC<{
           </div>
         )}
 
+        {!isVerification && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-zinc-300 block">Usage Limit</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setUsageLimit('unlimited')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  usageLimit === 'unlimited' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsageLimit('once')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  usageLimit === 'once' ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+                }`}
+              >
+                One Time
+              </button>
+            </div>
+            <p className="text-[11px] text-zinc-500">
+              {usageLimit === 'once'
+                ? 'Each account can redeem this coupon once, then it stops working for them (others it\'s issued to can still use it).'
+                : 'Can be redeemed as many times as an eligible account likes.'}
+            </p>
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-zinc-300 block">
-            Terms &amp; Conditions <span className="text-zinc-500 font-normal">(one per line)</span>
+            Quick Terms <span className="text-zinc-500 font-normal">(tap to add, tap again to remove)</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {TERMS_TEMPLATES.map((line) => {
+              const checked = termsLines.includes(line);
+              return (
+                <button
+                  key={line}
+                  type="button"
+                  onClick={() => toggleTermsTemplate(line)}
+                  className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border cursor-pointer transition-colors text-left ${
+                    checked
+                      ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]'
+                      : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                  }`}
+                >
+                  {checked ? '✓ ' : '+ '}
+                  {line}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-zinc-300 block">
+            Terms &amp; Conditions <span className="text-zinc-500 font-normal">(one per line — edit freely)</span>
           </label>
           <textarea
             value={terms}
             onChange={(e) => setTerms(e.target.value)}
             rows={4}
-            placeholder={'Applicable only on NOOB Pro upgrades\nMaximum discount is 500 points'}
+            placeholder={'Tap a quick term above, or type your own\nApplicable only on NOOB Pro upgrades'}
             className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66] resize-none"
           />
         </div>

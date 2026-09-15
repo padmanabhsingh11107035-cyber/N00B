@@ -1121,6 +1121,9 @@ export interface Coupon {
   discountPercent: number;
   terms: string[];
   targetUsername: string | null;
+  usageLimit: 'once' | 'unlimited';
+  usedCount: number;
+  usedByMe: boolean;
   createdAt: string;
   active: boolean;
 }
@@ -1139,6 +1142,7 @@ export async function createCoupon(payload: {
   terms: string;
   targetUsername?: string;
   type?: 'discount' | 'verification';
+  usageLimit?: 'once' | 'unlimited';
 }): Promise<{ success: boolean; coupon?: Coupon; error?: string }> {
   const res = await fetch(`${API_BASE}/coupons`, {
     method: 'POST',

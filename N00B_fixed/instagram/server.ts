@@ -954,8 +954,23 @@ async function startServer() {
         c.active &&
         c.type !== 'verification' &&
         c.code === normalized &&
-        (!c.targetUsername || c.targetUsername.toLowerCase() === (username || '').toLowerCase())
+        (!c.targetUsername || c.targetUsername.toLowerCase() === (username || '').toLowerCase()) &&
+        !(c.usageLimit === 'once' && (c.usedBy || []).some((u: string) => u.toLowerCase() === (username || '').toLowerCase()))
     ) || null;
+  }
+
+  // Records that this account has now spent a "once" coupon, so
+  // findEligibleCoupon stops offering it back to them — a global "once"
+  // coupon can still be used by every OTHER eligible user, just not this
+  // one again. Only ever call this right after the discount it granted has
+  // actually been applied, never from a read-only eligibility check.
+  function consumeCouponIfLimited(coupon: any, username: string) {
+    if (coupon && coupon.usageLimit === 'once') {
+      coupon.usedBy = coupon.usedBy || [];
+      if (!coupon.usedBy.some((u: string) => u.toLowerCase() === username.toLowerCase())) {
+        coupon.usedBy.push(username);
+      }
+    }
   }
 
   function getActiveUser(req: express.Request) {
@@ -1645,6 +1660,7 @@ async function startServer() {
         -requiredPoints,
         discountCoupon ? `Permanent verification badge (${discountCoupon.discountPercent}% off: ${discountCoupon.code})` : 'Permanent verification badge'
       );
+      consumeCouponIfLimited(discountCoupon, users[index].username);
     } else if (method === 'points_monthly') {
       const requiredPoints = applyDiscount(50000);
       if ((users[index].noobPoints || 0) < requiredPoints) {
@@ -1658,6 +1674,7 @@ async function startServer() {
         -requiredPoints,
         discountCoupon ? `Monthly verification badge (${discountCoupon.discountPercent}% off: ${discountCoupon.code})` : 'Monthly verification badge'
       );
+      consumeCouponIfLimited(discountCoupon, users[index].username);
     } else {
       // Real-money methods (card/UPI/crypto) are intentionally not offered:
       // Google Play requires any real-money purchase of in-app digital
@@ -1690,7 +1707,7 @@ async function startServer() {
   // the moment it's created.
   // ==========================================
 
-  const sanitizeCoupon = (c: any) => ({
+  const sanitizeCoupon = (c: any, viewerUsername?: string) => ({
     id: c.id,
     code: c.code,
     title: c.title,
@@ -1698,6 +1715,12 @@ async function startServer() {
     discountPercent: c.discountPercent,
     terms: c.terms,
     targetUsername: c.targetUsername || null,
+    usageLimit: c.usageLimit === 'once' ? 'once' : 'unlimited',
+    // How many distinct accounts have already spent this coupon — never the
+    // usernames themselves, so this is safe to include for non-admin callers
+    // too (e.g. so a "once" coupon can show "already used" on their own).
+    usedCount: (c.usedBy || []).length,
+    usedByMe: !!viewerUsername && (c.usedBy || []).some((u: string) => u.toLowerCase() === viewerUsername.toLowerCase()),
     createdAt: c.createdAt,
     active: c.active
   });
@@ -1712,13 +1735,13 @@ async function startServer() {
     const isMasterAdmin = active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin';
 
     if (req.query.manage === '1' && isMasterAdmin) {
-      return res.json({ coupons: coupons.map(sanitizeCoupon) });
+      return res.json({ coupons: coupons.map((c) => sanitizeCoupon(c, active.username)) });
     }
 
     const visible = coupons.filter(
       (c) => c.active && (!c.targetUsername || c.targetUsername.toLowerCase() === active.username.toLowerCase())
     );
-    res.json({ coupons: visible.map(sanitizeCoupon) });
+    res.json({ coupons: visible.map((c) => sanitizeCoupon(c, active.username)) });
   });
 
   // Create a coupon — admin only.
@@ -1729,8 +1752,13 @@ async function startServer() {
       return res.status(403).json({ error: 'Only the NOOB admin account can create coupons.' });
     }
 
-    const { title, discountPercent, terms, targetUsername, type } = req.body;
+    const { title, discountPercent, terms, targetUsername, type, usageLimit } = req.body;
     const couponType = type === 'verification' ? 'verification' : 'discount';
+    // Verification coupons are always single-use per the check just below
+    // (one badge, one account); a discount coupon defaults to unlimited
+    // (the long-standing behavior) unless the admin explicitly asks for
+    // one-time-per-account.
+    const resolvedUsageLimit = couponType === 'verification' || usageLimit === 'once' ? 'once' : 'unlimited';
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'A coupon title is required.' });
@@ -1789,6 +1817,8 @@ async function startServer() {
       discountPercent: Math.round(pct),
       terms: termsList,
       targetUsername: resolvedTarget,
+      usageLimit: resolvedUsageLimit,
+      usedBy: [],
       createdBy: active.username,
       createdAt: new Date().toISOString(),
       active: true
@@ -1822,7 +1852,7 @@ async function startServer() {
     if (!coupon) {
       return res.status(404).json({ error: 'That coupon code is invalid, expired, or not available for your account.' });
     }
-    res.json({ success: true, coupon: sanitizeCoupon(coupon) });
+    res.json({ success: true, coupon: sanitizeCoupon(coupon, active.username) });
   });
 
   // ==========================================
@@ -2164,6 +2194,7 @@ async function startServer() {
         ? `NOOB Pro (${tierId}, ${billing}) — ${coupon.discountPercent}% off: ${coupon.code}`
         : `NOOB Pro (${tierId}, ${billing})`
     );
+    consumeCouponIfLimited(coupon, users[index].username);
 
     res.json({ success: true, user: sanitizeUser(users[index]) });
   });

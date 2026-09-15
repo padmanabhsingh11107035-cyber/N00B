@@ -2246,7 +2246,18 @@ async function startServer() {
   // anywhere else in the app.
   const LIVE_AVATAR_PRESETS = [
     { id: 'neon_pulse', name: 'Neon Pulse', url: '/live-avatars/neon-pulse.svg' },
-    { id: 'orbit_glow', name: 'Orbit Glow', url: '/live-avatars/orbit-glow.svg' }
+    { id: 'orbit_glow', name: 'Orbit Glow', url: '/live-avatars/orbit-glow.svg' },
+    { id: 'aurora_wave', name: 'Aurora Wave', url: '/live-avatars/aurora-wave.svg' },
+    { id: 'heartbeat_pulse', name: 'Heartbeat', url: '/live-avatars/heartbeat-pulse.svg' },
+    { id: 'starfield', name: 'Starfield', url: '/live-avatars/starfield.svg' },
+    { id: 'fire_ring', name: 'Fire Ring', url: '/live-avatars/fire-ring.svg' },
+    { id: 'ripple_effect', name: 'Ripple', url: '/live-avatars/ripple-effect.svg' },
+    { id: 'electric_spark', name: 'Electric Spark', url: '/live-avatars/electric-spark.svg' },
+    { id: 'galaxy_spiral', name: 'Galaxy Spiral', url: '/live-avatars/galaxy-spiral.svg' },
+    { id: 'rainbow_ring', name: 'Rainbow Ring', url: '/live-avatars/rainbow-ring.svg' },
+    { id: 'diamond_shine', name: 'Diamond Shine', url: '/live-avatars/diamond-shine.svg' },
+    { id: 'sound_wave', name: 'Sound Wave', url: '/live-avatars/sound-wave.svg' },
+    { id: 'frost_crystal', name: 'Frost Crystal', url: '/live-avatars/frost-crystal.svg' }
   ];
 
   app.get('/api/live-avatars/presets', (req, res) => {

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="fc-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#021826"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: fc-spin 12s linear infinite; }
+      .spinRev { transform-origin: 100px 100px; animation: fc-spinRev 20s linear infinite; }
+      .shimmer { animation: fc-shimmer 2s ease-in-out infinite; }
+      @keyframes fc-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes fc-spinRev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+      @keyframes fc-shimmer {
+        0%, 100% { filter: drop-shadow(0 0 3px #b3e5fc); opacity: 0.85; }
+        50%      { filter: drop-shadow(0 0 12px #e0f7fa); opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#fc-bg)"/>
+
+  <g class="spinRev" opacity="0.4">
+    <circle cx="100" cy="100" r="70" fill="none" stroke="#4fc3f7" stroke-width="1" stroke-dasharray="2 6"/>
+  </g>
+
+  <g class="spin">
+    <g class="shimmer">
+      <path d="M100 40 L100 160 M40 100 L160 100 M58 58 L142 142 M142 58 L58 142"
+        stroke="#b3e5fc" stroke-width="3" stroke-linecap="round"/>
+      <path d="M100 40 L92 58 L108 58 Z" fill="#e0f7fa"/>
+      <path d="M100 160 L92 142 L108 142 Z" fill="#e0f7fa"/>
+      <path d="M40 100 L58 92 L58 108 Z" fill="#e0f7fa"/>
+      <path d="M160 100 L142 92 L142 108 Z" fill="#e0f7fa"/>
+    </g>
+  </g>
+
+  <circle cx="100" cy="100" r="16" fill="#e0f7fa"/>
+</svg>

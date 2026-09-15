@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="fr-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0a02"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="fr-flame" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ff3d00"/>
+      <stop offset="60%" stop-color="#ff9100"/>
+      <stop offset="100%" stop-color="#ffd54f"/>
+    </linearGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: fr-spin 7s linear infinite; }
+      .flame { transform-origin: center; animation: fr-flick 1s ease-in-out infinite; }
+      .core { animation: fr-glow 1.4s ease-in-out infinite; }
+      @keyframes fr-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes fr-flick {
+        0%, 100% { transform: scaleY(1); opacity: 0.85; }
+        50%      { transform: scaleY(1.25); opacity: 1; }
+      }
+      @keyframes fr-glow {
+        0%, 100% { filter: drop-shadow(0 0 5px #ff7a00); }
+        50%      { filter: drop-shadow(0 0 16px #ff9100); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#fr-bg)"/>
+
+  <g class="spin">
+    <path class="flame" style="transform-origin:100px 148px; animation-delay:0s"    d="M100 163 C 91 150, 93 139, 100 130 C 107 139, 109 150, 100 163 Z" fill="url(#fr-flame)"/>
+    <path class="flame" style="transform-origin:52px 100px; animation-delay:0.25s"  d="M52 115 C 43 102, 45 91, 52 82 C 59 91, 61 102, 52 115 Z" fill="url(#fr-flame)" transform="rotate(-90 52 100)"/>
+    <path class="flame" style="transform-origin:100px 52px; animation-delay:0.5s"   d="M100 67 C 91 54, 93 43, 100 34 C 107 43, 109 54, 100 67 Z" fill="url(#fr-flame)" transform="rotate(180 100 52)"/>
+    <path class="flame" style="transform-origin:148px 100px; animation-delay:0.75s" d="M148 115 C 139 102, 141 91, 148 82 C 155 91, 157 102, 148 115 Z" fill="url(#fr-flame)" transform="rotate(90 148 100)"/>
+  </g>
+
+  <g class="core">
+    <circle cx="100" cy="100" r="40" fill="#170701" stroke="#ff9100" stroke-width="2.5"/>
+    <path d="M100 82 C 92 92, 90 102, 100 118 C 110 102, 108 92, 100 82 Z" fill="url(#fr-flame)"/>
+  </g>
+</svg>

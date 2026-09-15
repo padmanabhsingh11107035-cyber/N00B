@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="es-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1c1a02"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .bolt { animation: es-flicker 1.3s steps(1) infinite; }
+      .spark1 { animation: es-pop 1.3s ease-in-out infinite; }
+      .spark2 { animation: es-pop 1.3s ease-in-out infinite 0.35s; }
+      .spark3 { animation: es-pop 1.3s ease-in-out infinite 0.7s; }
+      .spark4 { animation: es-pop 1.3s ease-in-out infinite 1.05s; }
+      @keyframes es-flicker {
+        0%, 8%, 10%, 100% { filter: drop-shadow(0 0 3px #ffee00); opacity: 1; }
+        9%                { filter: drop-shadow(0 0 14px #fff59d); opacity: 0.6; }
+      }
+      @keyframes es-pop {
+        0%, 100% { opacity: 0; transform: scale(0.4); }
+        50%      { opacity: 1; transform: scale(1); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#es-bg)"/>
+
+  <circle class="spark1" cx="60" cy="55" r="2.5" fill="#ffee00"/>
+  <circle class="spark2" cx="145" cy="65" r="2" fill="#fff59d"/>
+  <circle class="spark3" cx="145" cy="140" r="2.3" fill="#ffee00"/>
+  <circle class="spark4" cx="58" cy="145" r="2" fill="#fff59d"/>
+
+  <path class="bolt" d="M108 40 L70 106 L96 106 L88 162 L134 92 L106 92 Z" fill="#ffee00"/>
+</svg>

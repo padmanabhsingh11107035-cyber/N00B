@@ -346,22 +346,22 @@ export async function fetchPostViewers(postId: string): Promise<{ users: User[];
 }
 
 export async function toggleSavePost(postId: string): Promise<{ isSaved: boolean; savesCount: number }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/save`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/posts/${postId}/save`, { method: 'POST', headers: getAuthHeaders() });
   return await res.json();
 }
 
 export async function toggleArchivePost(postId: string): Promise<{ isArchived: boolean }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/archive`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/posts/${postId}/archive`, { method: 'POST', headers: getAuthHeaders() });
   return await res.json();
 }
 
 export async function toggleCommentsPost(postId: string): Promise<{ isCommentsDisabled: boolean }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/toggle-comments`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/posts/${postId}/toggle-comments`, { method: 'POST', headers: getAuthHeaders() });
   return await res.json();
 }
 
 export async function toggleLikeCountPost(postId: string): Promise<{ isLikeCountHidden: boolean }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/toggle-like-count`, { method: 'POST' });
+  const res = await fetch(`${API_BASE}/posts/${postId}/toggle-like-count`, { method: 'POST', headers: getAuthHeaders() });
   return await res.json();
 }
 

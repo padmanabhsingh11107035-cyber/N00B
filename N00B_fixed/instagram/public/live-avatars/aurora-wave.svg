@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="aw-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#031815"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="aw-band1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00FF66" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#00FF66" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#00FF66" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="aw-band2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#00E5FF" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="aw-clip"><circle cx="100" cy="100" r="100"/></clipPath>
+    <style>
+      .wave1 { animation: aw-drift1 3.4s ease-in-out infinite; }
+      .wave2 { animation: aw-drift2 4.2s ease-in-out infinite; }
+      .wave3 { animation: aw-drift1 5s ease-in-out infinite 0.8s; }
+      @keyframes aw-drift1 {
+        0%, 100% { transform: translateX(-18px) translateY(0px); }
+        50%      { transform: translateX(18px) translateY(-8px); }
+      }
+      @keyframes aw-drift2 {
+        0%, 100% { transform: translateX(16px) translateY(6px); }
+        50%      { transform: translateX(-16px) translateY(-6px); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#aw-bg)"/>
+
+  <g clip-path="url(#aw-clip)">
+    <path class="wave1" d="M-20 70 Q 50 30, 100 70 T 220 70" fill="none" stroke="url(#aw-band1)" stroke-width="14" opacity="0.7"/>
+    <path class="wave2" d="M-20 110 Q 50 150, 100 110 T 220 110" fill="none" stroke="url(#aw-band2)" stroke-width="16" opacity="0.75"/>
+    <path class="wave3" d="M-20 90 Q 50 60, 100 90 T 220 90" fill="none" stroke="url(#aw-band1)" stroke-width="10" opacity="0.5"/>
+  </g>
+</svg>

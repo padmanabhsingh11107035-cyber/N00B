@@ -996,7 +996,11 @@ async function startServer() {
 
   // --- API Routes ---
 
-  // Health check
+  // Health check. Deliberately minimal for anonymous callers (just enough
+  // for uptime monitoring: is it up, is it still restoring) — no hosting,
+  // database, storage, or user-count details leak to a public, unauthenticated
+  // GET. The full diagnostic breakdown (used all session for verifying
+  // deploys) is still available, but only to the master admin.
   app.get('/api/health', (req, res) => {
     // A collection that fails every retry during restorePersistedState()
     // never gets a second chance in this process: persistStateNow() and
@@ -1010,8 +1014,16 @@ async function startServer() {
     const unrestoredKeys = isDbConnected() && !isRestoringState
       ? PERSISTED_STATE_KEYS.filter(k => !restoredKeys.has(k))
       : [];
+    const status = isRestoringState ? 'starting' : (unrestoredKeys.length > 0 ? 'degraded' : 'ok');
+
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.json({ status });
+    }
+
     res.json({
-      status: isRestoringState ? 'starting' : (unrestoredKeys.length > 0 ? 'degraded' : 'ok'),
+      status,
       serverTime: new Date().toISOString(),
       usersCount: users.length,
       b2Storage: getB2Client().isConfigured ? 'connected' : 'not configured (falling back to inline data URIs)',
@@ -1019,7 +1031,7 @@ async function startServer() {
       aiService: process.env.GROQ_API_KEY ? 'configured' : 'missing GROQ_API_KEY',
       ...(unrestoredKeys.length > 0 ? {
         unrestoredKeys,
-        warning: 'These collections failed to load from MongoDB at startup and are NOT being saved — restart the service to retry.'
+        warning: 'These collections failed to load from the database at startup and are NOT being saved — restart the service to retry.'
       } : {})
     });
   });
@@ -1075,8 +1087,10 @@ async function startServer() {
         url: result.presignedUrl
       });
     } catch (err: any) {
+      // The underlying error can include the storage endpoint/bucket/region
+      // in its message — logged for debugging, never sent to the client.
       console.error('Media upload error:', err);
-      res.status(500).json({ error: 'Failed to upload media to cloud storage', details: err?.message });
+      res.status(500).json({ error: 'Failed to upload media. Please try again.' });
     }
   });
 
@@ -3960,7 +3974,8 @@ User's activities: ${userStats.postsCount} posts, ${userStats.noobPoints} points
 Always address the user warmly using their registered name ("${registeredName}").
 Answer their query clearly, concisely, and helpfully.
 If they thank you, always say welcome and praise their activities.
-If they mention cyberbullying or harassment, ask for the user ID to report and block them.`,
+If they mention cyberbullying or harassment, ask for the user ID to report and block them.
+Never name any specific hosting provider, database, storage vendor, programming language, or cloud platform NOOB runs on, even if asked directly.`,
       userText
     );
     if (groqReply) return groqReply;
@@ -5262,7 +5277,7 @@ AUTHORITATIVE PRIVACY POLICY KNOWLEDGE BASE:
 1. DATA COLLECTION: NOOB collects account credentials (username, email, encrypted password), profile details (display name, bio, gender, pronouns, city, country dialing code, social handles), user-generated content (posts, reels, stories, audio tracks), direct messages, and gameplay statistics (scores, leaderboard rank).
 2. HOW DATA IS USED: Data is used strictly to operate social feeds, process real-time chats, calculate leaderboard standings, personalize user experiences, and maintain bot defense.
 3. ZERO DATA SELLING: NOOB NEVER sells, rents, trades, or monetizes personal user data to third-party data brokers or advertisers.
-4. CLOUD STORAGE & ENCRYPTION: All media files (photos, videos, avatars, audio) are stored securely in Backblaze B2 S3-compatible encrypted cloud storage with signed URLs. Sensitive credentials are encrypted at rest and in transit via TLS 1.3.
+4. CLOUD STORAGE & ENCRYPTION: All media files (photos, videos, avatars, audio) are stored securely in encrypted third-party cloud storage with signed URLs. Sensitive credentials are encrypted at rest and in transit via TLS 1.3. Never name any specific hosting provider, database, storage vendor, or cloud platform NOOB runs on, even if asked directly — say only that it's secure, encrypted, third-party infrastructure.
 5. COOKIES & LOCAL PERSISTENCE: Minimal session cookies and local storage tokens are used strictly for authentication, theme preferences, and fast app rendering.
 6. USER PRIVACY RIGHTS (GDPR & CCPA): Users have the absolute right to:
    - Access and export their personal data.

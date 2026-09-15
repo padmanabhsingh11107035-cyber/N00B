@@ -87,10 +87,10 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
               4. Sharing & Third Parties
             </h3>
             <p>
-              We do not sell your personal data. Uploaded media (photos, videos, audio) is stored with our cloud
-              storage provider (Backblaze B2) solely to serve it back to the app. Our AI Customer Support feature
-              sends only the text of your support question to our AI provider (Groq) to generate a reply — it never
-              receives your password, email, or phone number.
+              We do not sell your personal data. Uploaded media (photos, videos, audio) is stored with a secure
+              third-party cloud storage provider solely to serve it back to the app. Our AI Customer Support feature
+              sends only the text of your support question to a third-party AI provider to generate a reply — it
+              never receives your password, email, or phone number.
             </p>
           </section>
 

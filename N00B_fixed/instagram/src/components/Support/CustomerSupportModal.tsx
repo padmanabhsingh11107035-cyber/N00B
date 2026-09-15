@@ -702,7 +702,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     },
     {
       q: 'What is the Privacy Policy regarding personal data & storage?',
-      a: 'NOOB NEVER sells your data. All media files are encrypted in Backblaze B2 S3 storage. You have full GDPR/CCPA rights to edit your details, set your account to Private, or delete your account anytime.'
+      a: 'NOOB NEVER sells your data. All media files are encrypted in secure cloud storage. You have full GDPR/CCPA rights to edit your details, set your account to Private, or delete your account anytime.'
     },
     {
       q: 'How does automated media routing work?',

@@ -215,7 +215,7 @@ async function startServer() {
       senderIsVerified: true,
       targetUserId: 'all',
       title: '⚡ Welcome to NOOB',
-      message: 'Welcome to the official NOOB platform! Share your moments, challenge gamers in 50 mini-games, stream tracks, and connect globally.',
+      message: 'Welcome to NOOB! We\'re glad you\'re here.',
       type: 'admin_broadcast',
       createdAt: new Date().toISOString()
     }

@@ -30,7 +30,13 @@ jobs:
           java-version: '21'
 
       - name: Setup Android SDK
+        # packages is pinned to platform-tools only: the action's own default
+        # list still requests the legacy "tools" package, which Google pulled
+        # from its SDK repository on 2026-09-14, making every setup-android@v3
+        # run fail here. The next step installs everything else we need.
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android SDK platform 36 & accept licenses
         # Capacitor's Android template currently targets compileSdkVersion 36,

@@ -1007,7 +1007,7 @@ async function startServer() {
   });
 
   // --- AUTHENTICATION ROUTES ---
-  app.post('/api/auth/signup', (req, res) => {
+  app.post('/api/auth/signup', async (req, res) => {
     const {
       firstName,
       lastName,
@@ -1160,6 +1160,26 @@ async function startServer() {
 
     users.push(newUser);
     currentSessionUserId = newUser.id;
+
+    // A brand-new account is the single most catastrophic thing to lose —
+    // it's not just data, it's someone's entire ability to use the app
+    // again under that identity. The generic post-request save everything
+    // else relies on is debounced by ~3 seconds specifically so bursts of
+    // routine mutations coalesce into one write; that's the wrong trade for
+    // a signup, since a process restart/redeploy/free-tier sleep landing in
+    // that window would silently lose an account that was already told
+    // "success". Only do this if users has actually been confirmed loaded
+    // for real this session — otherwise this in-memory array is the
+    // temporary seed fallback, and writing it now would overwrite whatever
+    // real data is still safely sitting in MongoDB (the exact mistake this
+    // whole safeguard exists to prevent).
+    if (restoredKeys.has('users')) {
+      try {
+        await saveCollection('users', users);
+      } catch (err) {
+        console.error('Immediate post-signup save failed (will still retry via the debounced save):', err);
+      }
+    }
 
     res.status(201).json({ success: true, user: sanitizeUser(newUser) });
   });

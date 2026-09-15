@@ -1137,8 +1137,8 @@ export default function App() {
         hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile}
       />
 
-      {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap) */}
-      {activeTab !== 'chat' && (
+      {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}
+      {activeTab !== 'chat' && activeTab !== 'reels' && (
         <button
           onClick={() => setShowCustomerSupportModal(true)}
           className="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-14 h-14 hover:scale-105 transition-all cursor-pointer group"

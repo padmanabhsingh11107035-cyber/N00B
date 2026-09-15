@@ -435,6 +435,7 @@ async function startServer() {
     // otherwise they'd silently heal the throwaway seed data instead.
     healLegacyTimestamps();
     healGlobalLoungeAdmin();
+    healWelcomeNotificationCopy();
     cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
     isRestoringState = false;
   }
@@ -661,6 +662,24 @@ async function startServer() {
   }
   // Called from inside restorePersistedState() instead of here, so it runs
   // against the real loaded data rather than the startup seed.
+
+  // notif_welcome is an admin-broadcast singleton, not user content — once it
+  // was persisted with an older copy, restorePersistedState() would keep
+  // loading that stale text forever, since `loaded.notifications` overwrites
+  // the in-code seed array wholesale. Re-syncing its title/message here on
+  // every boot keeps it matching whatever copy is currently in code.
+  function healWelcomeNotificationCopy() {
+    const welcome = notifications.find((n: any) => n.id === 'notif_welcome');
+    if (!welcome) return;
+    const canonicalTitle = '⚡ Welcome to NOOB';
+    const canonicalMessage = "Welcome to NOOB! We're glad you're here.";
+    if (welcome.title !== canonicalTitle || welcome.message !== canonicalMessage) {
+      welcome.title = canonicalTitle;
+      welcome.message = canonicalMessage;
+      console.log('Self-healed notif_welcome copy to match current code');
+      schedulePersist();
+    }
+  }
 
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, async () => {

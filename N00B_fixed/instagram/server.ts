@@ -983,13 +983,29 @@ async function startServer() {
 
   // Health check
   app.get('/api/health', (req, res) => {
+    // A collection that fails every retry during restorePersistedState()
+    // never gets a second chance in this process: persistStateNow() and
+    // persistImmediately() both refuse to save any key outside restoredKeys
+    // (by design — see the comment on restoredKeys), so a transient load
+    // failure at boot silently disables persistence for that one collection
+    // for the rest of the process's life, with zero visible symptoms until
+    // whatever it holds vanishes on the next restart. Surfaced here instead
+    // of staying invisible — a restart of the service forces a fresh
+    // restore attempt and clears it.
+    const unrestoredKeys = isDbConnected() && !isRestoringState
+      ? PERSISTED_STATE_KEYS.filter(k => !restoredKeys.has(k))
+      : [];
     res.json({
-      status: isRestoringState ? 'starting' : 'ok',
+      status: isRestoringState ? 'starting' : (unrestoredKeys.length > 0 ? 'degraded' : 'ok'),
       serverTime: new Date().toISOString(),
       usersCount: users.length,
       b2Storage: getB2Client().isConfigured ? 'connected' : 'not configured (falling back to inline data URIs)',
       mongoStorage: getDbStatusLabel(),
-      aiService: process.env.GROQ_API_KEY ? 'configured' : 'missing GROQ_API_KEY'
+      aiService: process.env.GROQ_API_KEY ? 'configured' : 'missing GROQ_API_KEY',
+      ...(unrestoredKeys.length > 0 ? {
+        unrestoredKeys,
+        warning: 'These collections failed to load from MongoDB at startup and are NOT being saved — restart the service to retry.'
+      } : {})
     });
   });
 
@@ -5071,6 +5087,17 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   });
 
   app.put('/api/settings', (req, res) => {
+    // This merges straight into a single persisted app-wide settings
+    // document with no per-field whitelist — previously reachable by
+    // anyone, authenticated or not, letting any caller overwrite/corrupt
+    // shared settings for the whole app. Nothing in the frontend actually
+    // calls this endpoint, so restricting it to the master admin can't
+    // break any real usage.
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
     settings = { ...settings, ...req.body };
     res.json({ success: true, settings });
   });

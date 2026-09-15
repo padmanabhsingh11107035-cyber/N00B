@@ -2676,10 +2676,17 @@ async function startServer() {
             mediaUrl: await signMediaKey(s.mediaUrl)
           }))
         );
+        // Resolve the author's identity live rather than serving whatever
+        // was frozen into the post at creation time — otherwise a profile
+        // picture, display name, or verification change never shows up on
+        // anything posted before it, which reads as a bug ("my old
+        // posts/reels still show my old pfp").
+        const author = users.find(u => u.id === p.userId);
         return {
           ...p,
+          ...(author ? { username: author.username, displayName: author.displayName, isVerified: !!author.isVerified } : {}),
           slides: signedSlides,
-          userAvatar: await signMediaKey(p.userAvatar),
+          userAvatar: await signMediaKey(author?.avatar ?? p.userAvatar),
           isLiked: p.likedBy?.includes(active?.id) || false,
           isSaved: p.savedBy?.includes(active?.id) || false
         };
@@ -2881,13 +2888,17 @@ async function startServer() {
     const active = getActiveUser(req);
     const saved = posts.filter(p => p.savedBy?.includes(active?.id) || p.isSaved);
     const mapped = await Promise.all(
-      saved.map(async (p) => ({
-        ...p,
-        slides: await Promise.all(p.slides.map(async (s: any) => ({ ...s, mediaUrl: await signMediaKey(s.mediaUrl) }))),
-        userAvatar: await signMediaKey(p.userAvatar),
-        isLiked: p.likedBy?.includes(active?.id) || false,
-        isSaved: true
-      }))
+      saved.map(async (p) => {
+        const author = users.find(u => u.id === p.userId);
+        return {
+          ...p,
+          ...(author ? { username: author.username, displayName: author.displayName, isVerified: !!author.isVerified } : {}),
+          slides: await Promise.all(p.slides.map(async (s: any) => ({ ...s, mediaUrl: await signMediaKey(s.mediaUrl) }))),
+          userAvatar: await signMediaKey(author?.avatar ?? p.userAvatar),
+          isLiked: p.likedBy?.includes(active?.id) || false,
+          isSaved: true
+        };
+      })
     );
     res.json({ posts: mapped });
   });
@@ -2896,13 +2907,17 @@ async function startServer() {
     const active = getActiveUser(req);
     const liked = posts.filter(p => p.likedBy?.includes(active?.id) || p.isLiked);
     const mapped = await Promise.all(
-      liked.map(async (p) => ({
-        ...p,
-        slides: await Promise.all(p.slides.map(async (s: any) => ({ ...s, mediaUrl: await signMediaKey(s.mediaUrl) }))),
-        userAvatar: await signMediaKey(p.userAvatar),
-        isLiked: true,
-        isSaved: p.savedBy?.includes(active?.id) || false
-      }))
+      liked.map(async (p) => {
+        const author = users.find(u => u.id === p.userId);
+        return {
+          ...p,
+          ...(author ? { username: author.username, displayName: author.displayName, isVerified: !!author.isVerified } : {}),
+          slides: await Promise.all(p.slides.map(async (s: any) => ({ ...s, mediaUrl: await signMediaKey(s.mediaUrl) }))),
+          userAvatar: await signMediaKey(author?.avatar ?? p.userAvatar),
+          isLiked: true,
+          isSaved: p.savedBy?.includes(active?.id) || false
+        };
+      })
     );
     res.json({ posts: mapped });
   });
@@ -2911,13 +2926,17 @@ async function startServer() {
     const active = getActiveUser(req);
     const archived = posts.filter(p => p.isArchived && (p.userId === active?.id || p.username === active?.username));
     const mapped = await Promise.all(
-      archived.map(async (p) => ({
-        ...p,
-        slides: await Promise.all(p.slides.map(async (s: any) => ({ ...s, mediaUrl: await signMediaKey(s.mediaUrl) }))),
-        userAvatar: await signMediaKey(p.userAvatar),
-        isLiked: p.likedBy?.includes(active?.id) || false,
-        isSaved: p.savedBy?.includes(active?.id) || false
-      }))
+      archived.map(async (p) => {
+        const author = users.find(u => u.id === p.userId);
+        return {
+          ...p,
+          ...(author ? { username: author.username, displayName: author.displayName, isVerified: !!author.isVerified } : {}),
+          slides: await Promise.all(p.slides.map(async (s: any) => ({ ...s, mediaUrl: await signMediaKey(s.mediaUrl) }))),
+          userAvatar: await signMediaKey(author?.avatar ?? p.userAvatar),
+          isLiked: p.likedBy?.includes(active?.id) || false,
+          isSaved: p.savedBy?.includes(active?.id) || false
+        };
+      })
     );
     res.json({ posts: mapped });
   });
@@ -3274,14 +3293,22 @@ async function startServer() {
     const active = getActiveUser(req);
     const visible = reels.filter(r => isAuthorVisibleTo(r.userId, active));
     const mapped = await Promise.all(
-      visible.map(async r => ({
-        ...r,
-        videoUrl: await signMediaKey(r.videoUrl),
-        thumbnailUrl: await signMediaKey(r.thumbnailUrl),
-        userAvatar: await signMediaKey(r.userAvatar),
-        isLiked: r.likedBy?.includes(active?.id) || false,
-        isSaved: r.savedBy?.includes(active?.id) || false
-      }))
+      visible.map(async r => {
+        // Same reasoning as GET /api/posts: resolve the author's current
+        // identity instead of the snapshot frozen in at creation time, so a
+        // pfp/name/verification change is reflected on every reel they've
+        // ever posted, not just new ones.
+        const author = users.find(u => u.id === r.userId);
+        return {
+          ...r,
+          ...(author ? { username: author.username, isVerified: !!author.isVerified } : {}),
+          videoUrl: await signMediaKey(r.videoUrl),
+          thumbnailUrl: await signMediaKey(r.thumbnailUrl),
+          userAvatar: await signMediaKey(author?.avatar ?? r.userAvatar),
+          isLiked: r.likedBy?.includes(active?.id) || false,
+          isSaved: r.savedBy?.includes(active?.id) || false
+        };
+      })
     );
     res.json({ reels: mapped });
   });
@@ -3519,14 +3546,18 @@ async function startServer() {
       .filter(Boolean);
 
     const mapped = await Promise.all(
-      historyReels.map(async r => ({
-        ...r,
-        videoUrl: await signMediaKey(r.videoUrl),
-        thumbnailUrl: await signMediaKey(r.thumbnailUrl),
-        userAvatar: await signMediaKey(r.userAvatar),
-        isLiked: r.likedBy?.includes(active?.id) || false,
-        isSaved: r.savedBy?.includes(active?.id) || false
-      }))
+      historyReels.map(async r => {
+        const author = users.find(u => u.id === r.userId);
+        return {
+          ...r,
+          ...(author ? { username: author.username, isVerified: !!author.isVerified } : {}),
+          videoUrl: await signMediaKey(r.videoUrl),
+          thumbnailUrl: await signMediaKey(r.thumbnailUrl),
+          userAvatar: await signMediaKey(author?.avatar ?? r.userAvatar),
+          isLiked: r.likedBy?.includes(active?.id) || false,
+          isSaved: r.savedBy?.includes(active?.id) || false
+        };
+      })
     );
     res.json({ reels: mapped });
   });

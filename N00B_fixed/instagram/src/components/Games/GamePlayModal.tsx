@@ -53,7 +53,6 @@ import { ChessGame } from './minigames/ChessGame';
 import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
 import { LudoGame } from './minigames/LudoGame';
 import { MonopolyGame } from './minigames/MonopolyGame';
-import { SubwayRunnerGame } from './minigames/SubwayRunnerGame';
 
 interface GamePlayModalProps {
   game: MiniGameMeta;
@@ -83,7 +82,7 @@ const SYNCED_GAME_IDS = ['tictactoe'];
 // Solo-only games with no opponent concept at all — no bot, no friend
 // challenge, no pass-and-play. These skip the mode-select screen entirely
 // and drop straight into gameplay.
-const SOLO_ONLY_GAME_IDS = ['subway_run'];
+const SOLO_ONLY_GAME_IDS: string[] = [];
 
 export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   game,
@@ -784,17 +783,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white leading-tight">{game.title}</h2>
               <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                {game.id === 'subway_run' ? (
-                  <span className="text-amber-400 font-semibold">10 NOOBs per second survived</span>
-                ) : (
-                  <>
-                    <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
-                    <span>•</span>
-                    <span className="text-zinc-400">
-                      {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '50 NOOBs on Tie'}
-                    </span>
-                  </>
-                )}
+                <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
+                <span>•</span>
+                <span className="text-zinc-400">
+                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '50 NOOBs on Tie'}
+                </span>
               </div>
             </div>
           </div>
@@ -1470,10 +1463,6 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <ScribbleGame onFinishGame={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
               )}
 
-              {game.id === 'subway_run' && (
-                <SubwayRunnerGame onSurvivalEnd={finishSurvivalGame} onExit={onClose} />
-              )}
-
               {/* Every catalog id above maps to a dedicated game; this generic
                   engine is kept only as a safety net for an unrecognized id
                   and should never actually be reached in normal use. */}
@@ -1492,8 +1481,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'cyber_drone',
                 'bubble_blitz',
                 'wordle_quest',
-                'scribble',
-                'subway_run'
+                'scribble'
               ].includes(game.id) && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}
@@ -1506,12 +1494,10 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {gameResult === 'win' ? (
                 <div className="space-y-3">
                   <div className="w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center mx-auto text-3xl shadow-[0_0_25px_rgba(251,191,36,0.3)] animate-bounce">
-                    {game.id === 'subway_run' ? '🚆' : '🏆'}
+                    🏆
                   </div>
                   <h3 className="text-xl font-black text-white">
-                    {game.id === 'subway_run'
-                      ? `Run Complete! Survived ${survivalSeconds}s`
-                      : onlineMatch?.opponent
+                    {onlineMatch?.opponent
                       ? `You Beat @${onlineMatch.opponent.username}!`
                       : isPassAndPlay
                       ? 'Player 1 Wins!'

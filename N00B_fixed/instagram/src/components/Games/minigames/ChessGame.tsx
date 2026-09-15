@@ -112,7 +112,7 @@ const MATE_SCORE = 100000;
 // doing a fixed-depth search, so a busy middlegame with many legal moves can
 // never make a single move take multiple seconds the way a fixed depth-3
 // full search sometimes did.
-const BOT_TIME_BUDGET_MS = 600;
+const BOT_TIME_BUDGET_MS = 300;
 const BOT_MAX_DEPTH = 6;
 
 function evaluateBoard(chess: Chess): number {
@@ -256,9 +256,10 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
 
   const makeBotMove = () => {
     setIsBotThinking(true);
-    // The 120ms here is purely a "thinking" flash so the UI doesn't flicker
-    // on trivial positions — the actual move search is separately capped at
-    // BOT_TIME_BUDGET_MS regardless of position complexity.
+    // Near-zero delay — just enough to let React actually paint the
+    // "thinking" state before the (synchronous, main-thread-blocking)
+    // search runs. The real cap on how long a move can take is
+    // BOT_TIME_BUDGET_MS, not this.
     setTimeout(() => {
       const move = findBestMove(chess);
       chess.move(move);
@@ -267,7 +268,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
       if (chess.isGameOver()) {
         reportGameOver('bot');
       }
-    }, 120);
+    }, 30);
   };
 
   const handleSquareClick = (square: Square) => {

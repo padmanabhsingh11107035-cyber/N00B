@@ -595,29 +595,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
   };
 
-  // Quick Demo Account Helper
-  const handleQuickDemo = (type: AccountType) => {
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    const uname = type === 'business' ? `noob_brand_${randomNum}` : type === 'private' ? `secret_vibe_${randomNum}` : `cool_noob_${randomNum}`;
-    setFullName(type === 'business' ? 'Apex Studio' : type === 'private' ? 'Rohan Sharma' : 'Aarav Verma');
-    setEmail(`${uname}@noob.social`);
-    setUserId(uname);
-    setCountryCode('🇮🇳 India (+91)');
-    setMobileNumber(`98765${Math.floor(10000 + Math.random() * 89999)}`);
-    setGender(type === 'private' ? 'Female' : 'Male');
-    setPassword('secretPass123');
-    setAccountType(type);
-    setBio(
-      type === 'business'
-        ? '🚀 Official Brand on NOOB | Creating next-gen experiences & reels'
-        : type === 'private'
-        ? '🔒 Private circle only | Close friends & real connections'
-        : '🎉 Having fun, sharing memes & vibing with everyone!'
-    );
-    setAgreedToTerms(true);
-    setMode('signup');
-  };
-
   return (
     <div className="min-h-screen w-full bg-[#070709] text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Premium Gen Z Background glow accents */}
@@ -1266,36 +1243,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   </>
                 )}
               </button>
-
-              {/* Quick Fill Presets */}
-              <div className="pt-2 border-t border-white/5">
-                <span className="text-[10px] text-zinc-500 block text-center mb-1.5 uppercase tracking-wider font-bold">
-                  Quick Fill Presets
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo('public')}
-                    className="py-1.5 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-[10px] text-zinc-300 hover:text-white border border-white/5 transition-all cursor-pointer truncate"
-                  >
-                    🌐 Public User
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo('private')}
-                    className="py-1.5 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-[10px] text-zinc-300 hover:text-white border border-white/5 transition-all cursor-pointer truncate"
-                  >
-                    🔒 Private User
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo('business')}
-                    className="py-1.5 px-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-[10px] text-zinc-300 hover:text-white border border-white/5 transition-all cursor-pointer truncate"
-                  >
-                    💼 Business Pro
-                  </button>
-                </div>
-              </div>
 
               <div className="text-center pt-1">
                 <p className="text-xs text-zinc-400">

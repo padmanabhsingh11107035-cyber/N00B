@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="rh-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1f0308"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="rh-gem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb3c6"/>
+      <stop offset="45%" stop-color="#e0115f"/>
+      <stop offset="100%" stop-color="#6d0027"/>
+    </linearGradient>
+    <style>
+      .gem { transform-origin: 100px 105px; animation: rh-pulse 1.8s ease-in-out infinite; }
+      .facet { animation: rh-shine 1.8s ease-in-out infinite; }
+      @keyframes rh-pulse {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px #e0115f); }
+        50%      { transform: scale(1.1); filter: drop-shadow(0 0 18px #ff2d6d); }
+      }
+      @keyframes rh-shine {
+        0%, 100% { opacity: 0.3; }
+        50%      { opacity: 0.9; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#rh-bg)"/>
+
+  <g class="gem">
+    <path d="M100 135 C 65 108, 58 78, 80 65 C 92 58, 100 66, 100 78 C 100 66, 108 58, 120 65 C 142 78, 135 108, 100 135 Z"
+      fill="url(#rh-gem)" stroke="#ffd6e0" stroke-width="1.5"/>
+    <path class="facet" d="M100 78 L100 135" stroke="#ffffff" stroke-width="1" opacity="0.5"/>
+    <path class="facet" d="M80 65 L100 90 L120 65" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.6"/>
+  </g>
+</svg>

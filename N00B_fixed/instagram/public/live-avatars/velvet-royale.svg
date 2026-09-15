@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="vr-bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#2d0a3d"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="vr-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff6d8"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: vr-spin 10s linear infinite; }
+      .core { animation: vr-glow 2.4s ease-in-out infinite; }
+      @keyframes vr-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes vr-glow {
+        0%, 100% { filter: drop-shadow(0 0 5px #ffd700); }
+        50%      { filter: drop-shadow(0 0 16px #ffd700); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#vr-bg)"/>
+
+  <g class="spin">
+    <circle cx="100" cy="100" r="72" fill="none" stroke="url(#vr-gold)" stroke-width="1.5" stroke-dasharray="1 11.3"/>
+    <g transform="rotate(0 100 100)"><path d="M100 30 L104 40 L100 50 L96 40 Z" fill="url(#vr-gold)"/></g>
+    <g transform="rotate(90 100 100)"><path d="M100 30 L104 40 L100 50 L96 40 Z" fill="url(#vr-gold)"/></g>
+    <g transform="rotate(180 100 100)"><path d="M100 30 L104 40 L100 50 L96 40 Z" fill="url(#vr-gold)"/></g>
+    <g transform="rotate(270 100 100)"><path d="M100 30 L104 40 L100 50 L96 40 Z" fill="url(#vr-gold)"/></g>
+  </g>
+
+  <g class="core">
+    <circle cx="100" cy="100" r="38" fill="#2d0a3d" stroke="url(#vr-gold)" stroke-width="2.5"/>
+    <path d="M85 92 L100 82 L115 92 L110 110 L90 110 Z" fill="url(#vr-gold)"/>
+  </g>
+</svg>

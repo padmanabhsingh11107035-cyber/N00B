@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="gc-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#221703"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="gc-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff6d8"/>
+      <stop offset="35%" stop-color="#ffd700"/>
+      <stop offset="70%" stop-color="#b8860b"/>
+      <stop offset="100%" stop-color="#fff6d8"/>
+    </linearGradient>
+    <style>
+      .coin { transform-origin: 100px 100px; animation: gc-spin 2.6s linear infinite; }
+      .sheen { animation: gc-sheen 2.6s linear infinite; }
+      @keyframes gc-spin {
+        0%   { transform: scaleX(1); }
+        25%  { transform: scaleX(0.15); }
+        50%  { transform: scaleX(1); }
+        75%  { transform: scaleX(0.15); }
+        100% { transform: scaleX(1); }
+      }
+      @keyframes gc-sheen {
+        0%, 100% { opacity: 0.3; }
+        25%, 75% { opacity: 0.9; }
+        50%      { opacity: 0.3; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#gc-bg)"/>
+
+  <g class="coin">
+    <circle cx="100" cy="100" r="55" fill="url(#gc-gold)" stroke="#7a5a00" stroke-width="2"/>
+    <circle cx="100" cy="100" r="46" fill="none" stroke="#7a5a00" stroke-width="1.5" opacity="0.6"/>
+    <path d="M100 74 L108 96 L132 96 L112 110 L120 132 L100 118 L80 132 L88 110 L68 96 L92 96 Z" fill="#7a5a00" opacity="0.8"/>
+    <rect class="sheen" x="60" y="55" width="10" height="90" fill="#ffffff" opacity="0.5" transform="rotate(20 100 100)"/>
+  </g>
+</svg>

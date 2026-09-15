@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="rc-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1c1204"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="rc-gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff6d8"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+    <style>
+      .crown { animation: rc-bob 2.6s ease-in-out infinite; }
+      .gem1 { animation: rc-twinkle 1.6s ease-in-out infinite; }
+      .gem2 { animation: rc-twinkle 1.6s ease-in-out infinite 0.4s; }
+      .gem3 { animation: rc-twinkle 1.6s ease-in-out infinite 0.8s; }
+      @keyframes rc-bob {
+        0%, 100% { transform: translateY(0px); filter: drop-shadow(0 0 4px #ffd700); }
+        50%      { transform: translateY(-4px); filter: drop-shadow(0 0 14px #ffd700); }
+      }
+      @keyframes rc-twinkle {
+        0%, 100% { opacity: 0.5; transform: scale(0.85); }
+        50%      { opacity: 1; transform: scale(1.15); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#rc-bg)"/>
+
+  <g class="crown">
+    <path d="M55 125 L60 85 L80 105 L100 75 L120 105 L140 85 L145 125 Z" fill="url(#rc-gold)" stroke="#7a5a00" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="55" y="125" width="90" height="14" rx="3" fill="url(#rc-gold)" stroke="#7a5a00" stroke-width="2"/>
+    <circle class="gem1" cx="100" cy="90" r="5" fill="#ff2d6d"/>
+    <circle class="gem2" cx="75" cy="100" r="3.5" fill="#00e5ff"/>
+    <circle class="gem3" cx="125" cy="100" r="3.5" fill="#00e676"/>
+  </g>
+</svg>

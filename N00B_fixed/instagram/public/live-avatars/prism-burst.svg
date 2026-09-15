@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="pb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: pb-spin 8s linear infinite; }
+      .beam { animation: pb-pulse 2s ease-in-out infinite; }
+      .prism { animation: pb-glint 2s ease-in-out infinite; }
+      @keyframes pb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes pb-pulse {
+        0%, 100% { opacity: 0.4; }
+        50%      { opacity: 1; }
+      }
+      @keyframes pb-glint {
+        0%, 100% { filter: drop-shadow(0 0 4px #fff); }
+        50%      { filter: drop-shadow(0 0 14px #fff); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#pb-bg)"/>
+
+  <g class="spin">
+    <line class="beam" x1="100" y1="100" x2="100" y2="35" stroke="#ff3b3b" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="145" y2="55" stroke="#ff9100" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="163" y2="100" stroke="#ffee00" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="145" y2="145" stroke="#00e676" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="100" y2="163" stroke="#00b0ff" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="55" y2="145" stroke="#3d5afe" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="37" y2="100" stroke="#c77dff" stroke-width="4" stroke-linecap="round"/>
+    <line class="beam" x1="100" y1="100" x2="55" y2="55" stroke="#ff6bcb" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <g class="prism">
+    <path d="M100 78 L118 108 L82 108 Z" fill="#ffffff" stroke="#cdefff" stroke-width="1.5"/>
+  </g>
+</svg>

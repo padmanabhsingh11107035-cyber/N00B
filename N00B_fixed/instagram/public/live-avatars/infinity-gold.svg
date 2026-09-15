@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ig-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1c1204"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="ig-gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fff6d8"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#fff6d8"/>
+    </linearGradient>
+    <path id="ig-path" d="M60 100 C 60 78, 80 78, 100 100 C 120 122, 140 122, 140 100 C 140 78, 120 78, 100 100 C 80 122, 60 122, 60 100 Z"/>
+    <style>
+      .loop { animation: ig-glow 2.2s ease-in-out infinite; }
+      @keyframes ig-glow {
+        0%, 100% { filter: drop-shadow(0 0 4px #ffd700); }
+        50%      { filter: drop-shadow(0 0 14px #ffd700); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#ig-bg)"/>
+
+  <use class="loop" href="#ig-path" fill="none" stroke="url(#ig-gold)" stroke-width="8" stroke-linecap="round"/>
+  <circle r="6" fill="#ffffff">
+    <animateMotion dur="3s" repeatCount="indefinite" rotate="auto">
+      <mpath href="#ig-path"/>
+    </animateMotion>
+  </circle>
+</svg>

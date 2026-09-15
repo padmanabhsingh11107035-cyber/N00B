@@ -29,9 +29,9 @@
 
   <g class="spin">
     <path class="flame" style="transform-origin:100px 148px; animation-delay:0s"    d="M100 163 C 91 150, 93 139, 100 130 C 107 139, 109 150, 100 163 Z" fill="url(#fr-flame)"/>
-    <path class="flame" style="transform-origin:52px 100px; animation-delay:0.25s"  d="M52 115 C 43 102, 45 91, 52 82 C 59 91, 61 102, 52 115 Z" fill="url(#fr-flame)" transform="rotate(-90 52 100)"/>
-    <path class="flame" style="transform-origin:100px 52px; animation-delay:0.5s"   d="M100 67 C 91 54, 93 43, 100 34 C 107 43, 109 54, 100 67 Z" fill="url(#fr-flame)" transform="rotate(180 100 52)"/>
-    <path class="flame" style="transform-origin:148px 100px; animation-delay:0.75s" d="M148 115 C 139 102, 141 91, 148 82 C 155 91, 157 102, 148 115 Z" fill="url(#fr-flame)" transform="rotate(90 148 100)"/>
+    <g transform="rotate(-90 52 100)"><path class="flame" style="transform-origin:52px 100px; animation-delay:0.25s"  d="M52 115 C 43 102, 45 91, 52 82 C 59 91, 61 102, 52 115 Z" fill="url(#fr-flame)"/></g>
+    <g transform="rotate(180 100 52)"><path class="flame" style="transform-origin:100px 52px; animation-delay:0.5s"   d="M100 67 C 91 54, 93 43, 100 34 C 107 43, 109 54, 100 67 Z" fill="url(#fr-flame)"/></g>
+    <g transform="rotate(90 148 100)"><path class="flame" style="transform-origin:148px 100px; animation-delay:0.75s" d="M148 115 C 139 102, 141 91, 148 82 C 155 91, 157 102, 148 115 Z" fill="url(#fr-flame)"/></g>
   </g>
 
   <g class="core">

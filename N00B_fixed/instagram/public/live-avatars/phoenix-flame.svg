@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="pf2-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#210a02"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="pf2-fire" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#d4af37"/>
+      <stop offset="40%" stop-color="#ff6b00"/>
+      <stop offset="100%" stop-color="#fff3b0"/>
+    </linearGradient>
+    <style>
+      .wing { transform-origin: 100px 105px; animation: pf2-flap 1.4s ease-in-out infinite; }
+      .body { animation: pf2-glow 1.4s ease-in-out infinite; }
+      @keyframes pf2-flap {
+        0%, 100% { transform: scaleY(1) rotate(0deg); }
+        50%      { transform: scaleY(0.8) rotate(-6deg); }
+      }
+      @keyframes pf2-glow {
+        0%, 100% { filter: drop-shadow(0 0 6px #ff8f00); }
+        50%      { filter: drop-shadow(0 0 20px #ffd700); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#pf2-bg)"/>
+
+  <g class="wing"><path d="M100 105 C 70 90, 45 95, 35 75 C 55 78, 75 82, 95 95 Z" fill="url(#pf2-fire)"/></g>
+  <g class="wing"><path d="M100 105 C 130 90, 155 95, 165 75 C 145 78, 125 82, 105 95 Z" fill="url(#pf2-fire)"/></g>
+
+  <g class="body">
+    <path d="M100 60 C 92 78, 90 95, 100 145 C 110 95, 108 78, 100 60 Z" fill="url(#pf2-fire)"/>
+    <path d="M100 40 C 96 52, 95 62, 100 75 C 105 62, 104 52, 100 40 Z" fill="#fff3b0"/>
+  </g>
+</svg>

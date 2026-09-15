@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="hf-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="hf-holo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6bcb">
+        <animate attributeName="stop-color" values="#ff6bcb;#6bc7ff;#6bffb8;#ffd93d;#ff6bcb" dur="4s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="50%" stop-color="#6bc7ff">
+        <animate attributeName="stop-color" values="#6bc7ff;#6bffb8;#ffd93d;#ff6bcb;#6bc7ff" dur="4s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#c77dff">
+        <animate attributeName="stop-color" values="#c77dff;#ff6bcb;#6bc7ff;#6bffb8;#c77dff" dur="4s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: hf-spin 5s linear infinite; }
+      .shine { animation: hf-shine 2s ease-in-out infinite; }
+      @keyframes hf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes hf-shine {
+        0%, 100% { opacity: 0.5; }
+        50%      { opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#hf-bg)"/>
+
+  <g class="spin">
+    <path d="M100 30 L150 65 L132 130 L68 130 L50 65 Z" fill="url(#hf-holo)" opacity="0.9"/>
+  </g>
+  <circle class="shine" cx="100" cy="100" r="58" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="100" cy="100" r="20" fill="#ffffff" opacity="0.85"/>
+</svg>

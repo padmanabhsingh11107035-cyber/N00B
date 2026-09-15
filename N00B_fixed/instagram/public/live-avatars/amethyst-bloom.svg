@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ab-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#150826"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="ab-gem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0c3fc"/>
+      <stop offset="50%" stop-color="#9966cc"/>
+      <stop offset="100%" stop-color="#4b0082"/>
+    </linearGradient>
+    <style>
+      .petal { transform-origin: 100px 100px; animation: ab-bloom 2.6s ease-in-out infinite; }
+      .p1 { animation-delay: 0s; }
+      .p2 { animation-delay: 0.15s; }
+      .p3 { animation-delay: 0.3s; }
+      .p4 { animation-delay: 0.45s; }
+      .p5 { animation-delay: 0.6s; }
+      .p6 { animation-delay: 0.75s; }
+      @keyframes ab-bloom {
+        0%, 100% { transform: scale(0.85); opacity: 0.7; }
+        50%      { transform: scale(1.05); opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#ab-bg)"/>
+
+  <g transform="rotate(0 100 100)"><path class="petal p1" d="M100 100 L100 50 L112 78 Z" fill="url(#ab-gem)"/></g>
+  <g transform="rotate(60 100 100)"><path class="petal p2" d="M100 100 L100 50 L112 78 Z" fill="url(#ab-gem)"/></g>
+  <g transform="rotate(120 100 100)"><path class="petal p3" d="M100 100 L100 50 L112 78 Z" fill="url(#ab-gem)"/></g>
+  <g transform="rotate(180 100 100)"><path class="petal p4" d="M100 100 L100 50 L112 78 Z" fill="url(#ab-gem)"/></g>
+  <g transform="rotate(240 100 100)"><path class="petal p5" d="M100 100 L100 50 L112 78 Z" fill="url(#ab-gem)"/></g>
+  <g transform="rotate(300 100 100)"><path class="petal p6" d="M100 100 L100 50 L112 78 Z" fill="url(#ab-gem)"/></g>
+
+  <circle cx="100" cy="100" r="16" fill="#f3e8ff" stroke="#e0c3fc" stroke-width="2"/>
+</svg>

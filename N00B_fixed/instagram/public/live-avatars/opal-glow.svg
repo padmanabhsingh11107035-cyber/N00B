@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="og2-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0f0f0f"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="og2-opal" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#a8e6cf">
+        <animate attributeName="stop-color" values="#a8e6cf;#ffd3e0;#c3aed6;#a8d8ff;#a8e6cf" dur="5s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#7c6a9c">
+        <animate attributeName="stop-color" values="#7c6a9c;#6a8fa8;#9c6a86;#6a9c8a;#7c6a9c" dur="5s" repeatCount="indefinite"/>
+      </stop>
+    </radialGradient>
+    <style>
+      .orb { animation: og2-breathe 3s ease-in-out infinite; }
+      @keyframes og2-breathe {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px #ffffff88); }
+        50%      { transform: scale(1.06); filter: drop-shadow(0 0 20px #ffffffcc); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#og2-bg)"/>
+
+  <g class="orb" style="transform-origin:100px 100px">
+    <circle cx="100" cy="100" r="55" fill="url(#og2-opal)" stroke="#ffffff" stroke-width="1.5"/>
+  </g>
+  <ellipse cx="82" cy="82" rx="14" ry="8" fill="#ffffff" opacity="0.55"/>
+</svg>

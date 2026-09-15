@@ -2288,7 +2288,29 @@ async function startServer() {
     { id: 'rainbow_ring', name: 'Rainbow Ring', url: '/live-avatars/rainbow-ring.svg' },
     { id: 'diamond_shine', name: 'Diamond Shine', url: '/live-avatars/diamond-shine.svg' },
     { id: 'sound_wave', name: 'Sound Wave', url: '/live-avatars/sound-wave.svg' },
-    { id: 'frost_crystal', name: 'Frost Crystal', url: '/live-avatars/frost-crystal.svg' }
+    { id: 'frost_crystal', name: 'Frost Crystal', url: '/live-avatars/frost-crystal.svg' },
+    // Premium/luxury-themed set.
+    { id: 'gold_coin_spin', name: 'Gold Coin', url: '/live-avatars/gold-coin-spin.svg' },
+    { id: 'diamond_prism', name: 'Diamond Prism', url: '/live-avatars/diamond-prism.svg' },
+    { id: 'holographic_foil', name: 'Holographic', url: '/live-avatars/holographic-foil.svg' },
+    { id: 'chrome_liquid', name: 'Chrome Liquid', url: '/live-avatars/chrome-liquid.svg' },
+    { id: 'royal_crown', name: 'Royal Crown', url: '/live-avatars/royal-crown.svg' },
+    { id: 'platinum_ring', name: 'Platinum Ring', url: '/live-avatars/platinum-ring.svg' },
+    { id: 'emerald_cut', name: 'Emerald Cut', url: '/live-avatars/emerald-cut.svg' },
+    { id: 'ruby_heart', name: 'Ruby Heart', url: '/live-avatars/ruby-heart.svg' },
+    { id: 'sapphire_swirl', name: 'Sapphire Swirl', url: '/live-avatars/sapphire-swirl.svg' },
+    { id: 'amethyst_bloom', name: 'Amethyst Bloom', url: '/live-avatars/amethyst-bloom.svg' },
+    { id: 'rose_gold_shimmer', name: 'Rose Gold', url: '/live-avatars/rose-gold-shimmer.svg' },
+    { id: 'peacock_feather', name: 'Peacock Feather', url: '/live-avatars/peacock-feather.svg' },
+    { id: 'butterfly_wings', name: 'Butterfly Wings', url: '/live-avatars/butterfly-wings.svg' },
+    { id: 'phoenix_flame', name: 'Phoenix Flame', url: '/live-avatars/phoenix-flame.svg' },
+    { id: 'cosmic_nebula', name: 'Cosmic Nebula', url: '/live-avatars/cosmic-nebula.svg' },
+    { id: 'crystal_ball', name: 'Crystal Ball', url: '/live-avatars/crystal-ball.svg' },
+    { id: 'prism_burst', name: 'Prism Burst', url: '/live-avatars/prism-burst.svg' },
+    { id: 'champagne_bubbles', name: 'Champagne', url: '/live-avatars/champagne-bubbles.svg' },
+    { id: 'opal_glow', name: 'Opal Glow', url: '/live-avatars/opal-glow.svg' },
+    { id: 'velvet_royale', name: 'Velvet Royale', url: '/live-avatars/velvet-royale.svg' },
+    { id: 'infinity_gold', name: 'Infinity Gold', url: '/live-avatars/infinity-gold.svg' }
   ];
 
   app.get('/api/live-avatars/presets', (req, res) => {

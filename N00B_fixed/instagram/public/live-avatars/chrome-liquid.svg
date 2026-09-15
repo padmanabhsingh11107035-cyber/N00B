@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cl-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#141414"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="cl-chrome" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#8fa3b8"/>
+      <stop offset="50%" stop-color="#e8eef2"/>
+      <stop offset="75%" stop-color="#5c6b7a"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <style>
+      .wobble { transform-origin: 100px 100px; animation: cl-wobble 4.5s ease-in-out infinite; }
+      @keyframes cl-wobble {
+        0%, 100% { transform: scale(1, 1) rotate(0deg); }
+        25%      { transform: scale(1.05, 0.95) rotate(4deg); }
+        50%      { transform: scale(0.96, 1.04) rotate(-3deg); }
+        75%      { transform: scale(1.03, 0.97) rotate(2deg); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#cl-bg)"/>
+
+  <g class="wobble">
+    <path fill="url(#cl-chrome)" stroke="#ffffff" stroke-width="1" opacity="0.95">
+      <animate attributeName="d" dur="4.5s" repeatCount="indefinite"
+        values="M100 55 C 135 55, 150 85, 145 115 C 140 145, 110 150, 90 140 C 60 128, 55 95, 70 72 C 80 58, 90 55, 100 55 Z;
+                M100 50 C 140 60, 148 100, 130 125 C 115 148, 80 148, 62 122 C 48 100, 58 65, 85 55 C 92 52, 96 50, 100 50 Z;
+                M100 58 C 130 48, 152 78, 148 108 C 145 138, 118 152, 92 145 C 62 137, 50 100, 68 75 C 78 60, 92 58, 100 58 Z;
+                M100 55 C 135 55, 150 85, 145 115 C 140 145, 110 150, 90 140 C 60 128, 55 95, 70 72 C 80 58, 90 55, 100 55 Z"/>
+    </path>
+  </g>
+</svg>

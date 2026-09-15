@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="rg-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#210f10"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="rg-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff0ee"/>
+      <stop offset="35%" stop-color="#f7cac9"/>
+      <stop offset="70%" stop-color="#b76e79"/>
+      <stop offset="100%" stop-color="#fff0ee"/>
+    </linearGradient>
+    <linearGradient id="rg-shine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="rg-clip"><circle cx="100" cy="100" r="58"/></clipPath>
+    <style>
+      .sweep { animation: rg-sweep 2.6s ease-in-out infinite; }
+      @keyframes rg-sweep {
+        0%   { transform: translateX(-140px); }
+        100% { transform: translateX(140px); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#rg-bg)"/>
+
+  <circle cx="100" cy="100" r="58" fill="url(#rg-metal)" stroke="#fff0ee" stroke-width="2"/>
+  <g clip-path="url(#rg-clip)">
+    <g transform="rotate(20 100 100)">
+      <rect class="sweep" x="0" y="40" width="40" height="120" fill="url(#rg-shine)"/>
+    </g>
+  </g>
+  <path d="M100 76 L108 96 L130 96 L112 110 L118 132 L100 119 L82 132 L88 110 L70 96 L92 96 Z" fill="#ffffff" opacity="0.55"/>
+</svg>

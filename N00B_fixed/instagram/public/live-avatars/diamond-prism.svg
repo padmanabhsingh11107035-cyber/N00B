@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="dp-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a14"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="dp-gem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#cdefff"/>
+      <stop offset="100%" stop-color="#8ec9ff"/>
+    </linearGradient>
+    <style>
+      .ray { transform-origin: 100px 92px; animation: dp-burst 2.2s ease-in-out infinite; }
+      .r1 { animation-delay: 0s; }
+      .r2 { animation-delay: 0.3s; }
+      .r3 { animation-delay: 0.6s; }
+      .r4 { animation-delay: 0.9s; }
+      .gem { animation: dp-glint 2.2s ease-in-out infinite; }
+      @keyframes dp-burst {
+        0%, 100% { opacity: 0; transform: scale(0.6); }
+        50%      { opacity: 0.9; transform: scale(1); }
+      }
+      @keyframes dp-glint {
+        0%, 100% { filter: drop-shadow(0 0 4px #fff); }
+        50%      { filter: drop-shadow(0 0 16px #cdefff); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#dp-bg)"/>
+
+  <g>
+    <line class="ray r1" x1="100" y1="92" x2="100" y2="30" stroke="#ff6b6b" stroke-width="2"/>
+    <line class="ray r2" x1="100" y1="92" x2="150" y2="55" stroke="#ffd93d" stroke-width="2"/>
+    <line class="ray r3" x1="100" y1="92" x2="150" y2="120" stroke="#6bffb8" stroke-width="2"/>
+    <line class="ray r4" x1="100" y1="92" x2="50" y2="120" stroke="#6bc7ff" stroke-width="2"/>
+    <line class="ray r2" x1="100" y1="92" x2="50" y2="55" stroke="#c77dff" stroke-width="2"/>
+  </g>
+
+  <g class="gem">
+    <path d="M100 55 L130 92 L114 150 L86 150 L70 92 Z" fill="url(#dp-gem)" stroke="#ffffff" stroke-width="1.5"/>
+    <path d="M70 92 L130 92 M100 55 L86 150 M100 55 L114 150" stroke="#ffffff" stroke-width="1" opacity="0.6" fill="none"/>
+  </g>
+</svg>

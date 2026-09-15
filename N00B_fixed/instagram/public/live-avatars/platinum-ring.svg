@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="pr-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0f0f12"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="pr-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="30%" stop-color="#cfd4d8"/>
+      <stop offset="60%" stop-color="#8b93a0"/>
+      <stop offset="100%" stop-color="#e8ecef"/>
+    </linearGradient>
+    <style>
+      .spin { transform-origin: 100px 100px; animation: pr-spin 6s linear infinite; }
+      .gem { animation: pr-sparkle 1.8s ease-in-out infinite; }
+      @keyframes pr-spin { from { transform: rotate(0deg) scaleX(1); } 50% { transform: rotate(180deg) scaleX(0.85); } to { transform: rotate(360deg) scaleX(1); } }
+      @keyframes pr-sparkle {
+        0%, 100% { opacity: 0.6; }
+        50%      { opacity: 1; filter: drop-shadow(0 0 8px #cdefff); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#pr-bg)"/>
+
+  <g class="spin">
+    <circle cx="100" cy="100" r="55" fill="none" stroke="url(#pr-metal)" stroke-width="12"/>
+  </g>
+  <g class="gem">
+    <path d="M100 55 L114 70 L106 90 L94 90 L86 70 Z" fill="#cdefff" stroke="#ffffff" stroke-width="1"/>
+  </g>
+</svg>

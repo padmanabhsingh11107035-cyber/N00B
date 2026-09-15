@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a14"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="cb-orb" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#c8b6ff"/>
+      <stop offset="100%" stop-color="#4b2e83"/>
+    </radialGradient>
+    <clipPath id="cb-clip"><circle cx="100" cy="105" r="48"/></clipPath>
+    <style>
+      .swirl { transform-origin: 100px 105px; animation: cb-swirl 5s linear infinite; }
+      .base { animation: cb-glow 2.2s ease-in-out infinite; }
+      @keyframes cb-swirl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes cb-glow {
+        0%, 100% { filter: drop-shadow(0 0 5px #c8b6ff); }
+        50%      { filter: drop-shadow(0 0 16px #ffd700); }
+      }
+    </style>
+  </defs>
+
+  <circle cx="100" cy="100" r="100" fill="url(#cb-bg)"/>
+
+  <g class="base">
+    <circle cx="100" cy="105" r="48" fill="url(#cb-orb)" stroke="#e8dcff" stroke-width="2"/>
+    <g clip-path="url(#cb-clip)">
+      <g class="swirl">
+        <path d="M60 105 C 80 85, 120 85, 140 105 C 120 125, 80 125, 60 105 Z" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.5"/>
+        <path d="M100 65 C 80 85, 80 125, 100 145 C 120 125, 120 85, 100 65 Z" fill="none" stroke="#ffd700" stroke-width="1.5" opacity="0.5"/>
+      </g>
+    </g>
+    <ellipse cx="82" cy="88" rx="10" ry="6" fill="#ffffff" opacity="0.6"/>
+  </g>
+  <path d="M75 148 L125 148 L118 160 L82 160 Z" fill="#3a2a1a"/>
+  <ellipse cx="100" cy="162" rx="26" ry="6" fill="#241a10"/>
+</svg>

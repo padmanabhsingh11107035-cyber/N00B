@@ -100,7 +100,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // going through the mode-select screen (e.g. accepting a friend's invite
   // sets initialRoomCode and skips straight past it).
   const isChessBlitz = game.id === 'chess_blitz';
-  const [chessLimitChecked, setChessLimitChecked] = useState(!isChessBlitz || !!currentUser.proTier);
+  const [chessLimitChecked, setChessLimitChecked] = useState(!isChessBlitz);
   const [chessLimitBlocked, setChessLimitBlocked] = useState<{ message: string; nextAvailableAt?: string } | null>(null);
   // Consuming the weekly credit is a real server-side side effect (not an
   // idempotent read), so a ref guards it against ever being sent twice —
@@ -113,7 +113,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const chessCheckStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!isChessBlitz || currentUser.proTier) return;
+    // Pro accounts used to skip this call entirely (no weekly limit to
+    // check) — but the server also uses this call to mark "a round has
+    // legitimately started" before it will pay out a result, so a Pro
+    // account never calling it meant it could never actually get paid
+    // either. It still short-circuits the cooldown check server-side for
+    // Pro; it just always needs to be called at all.
+    if (!isChessBlitz) return;
     if (chessCheckStartedRef.current) return;
     chessCheckStartedRef.current = true;
     (async () => {
@@ -562,7 +568,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // engine's onGameOver wires here instead of calling finishGame directly.
   const handleGameOver = (result: RoundResult) => {
     if (onlineMatch) finishOnlineMatch(result);
-    else if (isPassAndPlay && !BOARD_GAME_IDS.includes(game.id)) finishPassPlayRound(result);
+    // Chess reports one definitive result the instant checkmate/draw
+    // happens on its single shared board — same as the true board games,
+    // it must never go through finishPassPlayRound's "play two independent
+    // rounds and compare" relay, which was designed for games with no
+    // shared board (each player takes a turn at the SAME solo challenge).
+    // Routing it there meant a finished chess match got treated as only
+    // "Player 1's round" and demanded an unrelated second game before ever
+    // recording the real outcome.
+    else if (isPassAndPlay && !BOARD_GAME_IDS.includes(game.id) && game.id !== 'chess_blitz') finishPassPlayRound(result);
     else finishGame(result);
   };
 
@@ -572,9 +586,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setGameResult(result);
 
     let earned = 0;
-    if (game.id === 'chess_blitz') {
-      // High stakes, vs-bot only: winning pays out massively, losing wipes
-      // the account's entire current balance instead of just costing 0.
+    // High stakes apply ONLY vs the bot — Pass & Play chess is explicitly
+    // advertised as "no risk" (see the chess stakes copy elsewhere), so it
+    // must fall through to the same flat 100/50/0 every other head-to-head
+    // game uses instead of the jackpot/wipe payout.
+    if (game.id === 'chess_blitz' && !isPassAndPlay) {
       if (result === 'win') {
         earned = 50000;
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
@@ -599,7 +615,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setPointsEarned(earned);
 
     try {
-      const res = await recordGameMatch(game.id, game.title, result, opponentName, true);
+      // Was hardcoded true regardless of mode. Harmless for other games,
+      // but now that chess Pass & Play reaches this same function (see
+      // handleGameOver above), sending true here would tell the server
+      // isChessHighStakes=true for a match that's supposed to be risk-free.
+      const res = await recordGameMatch(game.id, game.title, result, opponentName, !isPassAndPlay);
       if (res.success) {
         onPointsUpdated(earned, res.totalNoobPoints, result === 'win');
       }

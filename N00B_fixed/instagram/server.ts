@@ -2738,10 +2738,25 @@ async function startServer() {
     res.json({ posts: mapped });
   });
 
+  // These three toggles had no owner check at all — anyone (even fully
+  // unauthenticated) could hide a stranger's post from their own profile,
+  // or flip comment/like-count visibility on any post they didn't own.
+  function requirePostOwner(req: express.Request, res: express.Response, post: any): boolean {
+    const active = getActiveUser(req);
+    const isOwner = active && (active.id === post.userId || active.username === post.username);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isOwner && !isMasterAdmin) {
+      res.status(403).json({ error: 'You can only modify your own posts.' });
+      return false;
+    }
+    return true;
+  }
+
   app.post('/api/posts/:id/archive', (req, res) => {
     const postId = req.params.id;
     const post = posts.find(p => p.id === postId);
     if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (!requirePostOwner(req, res, post)) return;
     post.isArchived = !post.isArchived;
     res.json({ success: true, isArchived: post.isArchived });
   });
@@ -2750,6 +2765,7 @@ async function startServer() {
     const postId = req.params.id;
     const post = posts.find(p => p.id === postId);
     if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (!requirePostOwner(req, res, post)) return;
     post.isCommentsDisabled = !post.isCommentsDisabled;
     res.json({ success: true, isCommentsDisabled: post.isCommentsDisabled });
   });
@@ -2758,6 +2774,7 @@ async function startServer() {
     const postId = req.params.id;
     const post = posts.find(p => p.id === postId);
     if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (!requirePostOwner(req, res, post)) return;
     post.isLikeCountHidden = !post.isLikeCountHidden;
     res.json({ success: true, isLikeCountHidden: post.isLikeCountHidden });
   });
@@ -2877,11 +2894,26 @@ async function startServer() {
   });
 
   app.delete('/api/posts/:id/comments/:commentId', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
     const { id: postId, commentId } = req.params;
-    if (comments[postId]) {
-      comments[postId] = comments[postId].filter((c: any) => c.id !== commentId);
-    }
+    const comment = comments[postId]?.find((c: any) => c.id === commentId);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
     const post = posts.find(p => p.id === postId);
+    // Had no auth check at all — anyone (even logged out) could delete any
+    // comment platform-wide given its id. The comment's own author, the
+    // post's owner (moderating their own post), or a master admin may
+    // remove it.
+    const isCommentAuthor = active.id === comment.userId;
+    const isPostOwner = !!post && (active.id === post.userId || active.username === post.username);
+    const isMasterAdmin = active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin';
+    if (!isCommentAuthor && !isPostOwner && !isMasterAdmin) {
+      return res.status(403).json({ error: 'You can only delete your own comments.' });
+    }
+
+    comments[postId] = comments[postId].filter((c: any) => c.id !== commentId);
     if (post) {
       post.commentsCount = Math.max(0, (post.commentsCount || 0) - 1);
     }
@@ -3672,9 +3704,19 @@ async function startServer() {
 
   // Update per-chat settings: theme color, vanish mode, read receipts, nickname
   app.put('/api/chats/:id/settings', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
     const chatId = req.params.id;
     const chat = chats.find(c => c.id === chatId);
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    // Was missing entirely — a non-participant who knew the chat id could
+    // change a private conversation's vanish-mode/read-receipts settings.
+    const isMember = chat.isGlobalDefault || chat.participants.some((p: any) => p.id === active.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'You are not a participant in this chat.' });
+    }
 
     const { themeColor, vanishMode, readReceiptsEnabled, nickname } = req.body;
     if (themeColor !== undefined) chat.themeColor = themeColor;
@@ -4091,9 +4133,20 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // End Chat Session endpoint
   app.post('/api/chats/:id/end', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
     const chatId = req.params.id;
     const chat = chats.find(c => c.id === chatId);
     if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    // Was missing entirely — a non-participant who knew the chat id could
+    // forcibly end a stranger's chat session and inject a review-prompt
+    // system message into it.
+    const isMember = chat.isGlobalDefault || chat.participants.some((p: any) => p.id === active.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'You are not a participant in this chat.' });
+    }
 
     chat.isEnded = true;
     chat.endedAt = new Date().toISOString();
@@ -4164,14 +4217,28 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
 
   // Delete Chat Conversation
   app.delete('/api/chats/:id', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
     const chatId = req.params.id;
-    const idx = chats.findIndex(c => c.id === chatId);
-    if (idx !== -1) {
-      chats.splice(idx, 1);
-      delete messages[chatId];
-      return res.json({ success: true, message: 'Chat conversation deleted successfully' });
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+    // This had no auth or membership check at all — anyone who knew or
+    // guessed a chat id (ids are just c_<timestamp>) could permanently
+    // delete that conversation and every message in it for both sides.
+    if (chat.isGlobalDefault) {
+      return res.status(400).json({ error: 'The Global Lounge cannot be deleted.' });
     }
-    res.status(404).json({ error: 'Chat not found' });
+    const isMember = chat.participants.some((p: any) => p.id === active.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'You are not a participant in this chat.' });
+    }
+
+    const idx = chats.findIndex(c => c.id === chatId);
+    chats.splice(idx, 1);
+    delete messages[chatId];
+    res.json({ success: true, message: 'Chat conversation deleted successfully' });
   });
 
   // Block User endpoint
@@ -4469,7 +4536,14 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
       if (!user) continue;
       const outcome = outcomes[p.userId];
       let earned: number;
-      if (isChessHighStakes) {
+      // Same round-consumption guard as the vs-bot payout: only a player
+      // who actually went through /chess/start (which also enforces their
+      // own weekly cooldown) gets the real stakes for this match. Matching
+      // a throwaway account against a main account and self-reporting a
+      // fake result no longer bypasses the cooldown just because it went
+      // through matchmaking instead of record-match directly.
+      if (isChessHighStakes && user.chessRoundReady) {
+        user.chessRoundReady = false;
         earned = outcome === 'win' ? 50000 : outcome === 'tie' ? 50 : -(user.noobPoints || 0);
       } else {
         earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
@@ -4760,7 +4834,12 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
   app.post('/api/games/chess/start', (req, res) => {
     const active = getActiveUser(req);
     if (!active) return res.status(401).json({ error: 'Please log in.' });
-    if (active.proTier) return res.json({ success: true, isPro: true });
+    if (active.proTier) {
+      // Still marks the round ready (see below) — Pro only skips the
+      // cooldown check, not the "a round was actually started" gate.
+      active.chessRoundReady = true;
+      return res.json({ success: true, isPro: true });
+    }
 
     const last = active.lastChessBlitzAt ? new Date(active.lastChessBlitzAt).getTime() : 0;
     const now = Date.now();
@@ -4772,6 +4851,12 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     }
 
     active.lastChessBlitzAt = new Date(now).toISOString();
+    // Consumed by the actual payout (record-match / room result) below —
+    // without this, calling record-match directly and repeatedly (skipping
+    // the UI, and this weekly gate, entirely) could mint the 50,000-point
+    // stake indefinitely, since neither payout endpoint used to check
+    // anything at all about whether a round had really been started.
+    active.chessRoundReady = true;
     res.json({ success: true });
   });
 
@@ -4795,6 +4880,21 @@ If they mention cyberbullying or harassment, ask for the user ID to report and b
     // this outcome, so the actual balance change must be computed here too —
     // otherwise a loss never really wipes the wallet server-side.
     const isChessHighStakes = gameId === 'chess_blitz' && !!vsBot;
+
+    // This endpoint used to trust result/vsBot from the client with no
+    // check at all — a scripted client could call it directly, repeatedly,
+    // with no game ever played, and mint the 50,000-point stake as fast as
+    // the rate limiter allowed (~1,000,000 points/minute). chessRoundReady
+    // is only ever set by a real /api/games/chess/start call (which also
+    // enforces the weekly cooldown for non-Pro accounts) and is consumed
+    // here so a second payout attempt for the same round is rejected until
+    // another /chess/start call succeeds.
+    if (isChessHighStakes) {
+      if (!active || !active.chessRoundReady) {
+        return res.status(403).json({ error: 'No active Chess Blitz round to record a result for.' });
+      }
+      active.chessRoundReady = false;
+    }
 
     let earnedPoints = 0;
     if (isChessHighStakes) {

@@ -240,7 +240,12 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
       const winnerIsWhite = chess.turn() === 'b';
       if (!vsBot) {
         setGameOverText(`Checkmate! ${winnerIsWhite ? 'Player 1 (White)' : 'Player 2 (Black)'} wins!`);
-        setTimeout(() => onGameOver('win', 100), 1200);
+        // This always reported 'win' regardless of winnerIsWhite — the
+        // display text was correct, but the actual recorded result never
+        // reflected who won. Player 1 (White) is the account this device
+        // is logged into, same convention every other Pass & Play game in
+        // this app already uses.
+        setTimeout(() => onGameOver(winnerIsWhite ? 'win' : 'loss', winnerIsWhite ? 100 : 0), 1200);
       } else if (winnerIsWhite) {
         setGameOverText('Checkmate! You win!');
         setTimeout(() => onGameOver('win', 50000), 1200);

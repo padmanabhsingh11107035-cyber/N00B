@@ -132,16 +132,20 @@ export const GamesView: React.FC<GamesViewProps> = ({
     <div className="w-full max-w-4xl mx-auto px-4 pb-24 pt-2">
       {/* Top Header & Points Stat Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-4 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-[#00FF66] flex items-center justify-center shadow-[0_0_20px_rgba(0,255,102,0.3)]">
-            <Gamepad2 className="w-6 h-6 text-black stroke-[2.5]" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black text-white tracking-tight lowercase">
+        <div className="flex items-center justify-between gap-3.5">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-[#00FF66] flex items-center justify-center shadow-[0_0_20px_rgba(0,255,102,0.3)] shrink-0">
+              <Gamepad2 className="w-6 h-6 text-black stroke-[2.5]" />
+            </div>
+            <h1 className="text-xl font-black text-white tracking-tight lowercase truncate">
               noob arena
             </h1>
-            {/* 3-Dot Button on the right side of 'noob arena' written */}
-            <div className="relative" ref={menuRef}>
+          </div>
+
+          {/* 3-Dot Button — pinned to the far right of this row via the
+              parent's justify-between, instead of sitting right next to the
+              title with a large empty gap after it. */}
+          <div className="relative shrink-0" ref={menuRef}>
               <button
                 onClick={() => setShowMenu((prev) => !prev)}
                 aria-label="Arena information"
@@ -201,16 +205,15 @@ export const GamesView: React.FC<GamesViewProps> = ({
               )}
             </div>
           </div>
-        </div>
 
-        {/* Games / Leaderboard switch — a real two-way segmented toggle
+        {/* Games / Leaderboard switch — full-width, evenly-split toggle
             instead of one button whose label used to flip between the
             action and the current state, which read ambiguously at a
             glance ("Leaderboard" while already ON the leaderboard tab). */}
-        <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-md shrink-0">
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-md w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('games')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'games'
                 ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.3)]'
                 : 'text-zinc-400 hover:text-white'
@@ -221,7 +224,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('leaderboard')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'leaderboard'
                 ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
                 : 'text-zinc-400 hover:text-white'

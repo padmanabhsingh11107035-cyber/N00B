@@ -769,6 +769,28 @@ async function startServer() {
     return publicUser;
   }
 
+  // Chat/group participant lists only ever render id/username/displayName/
+  // avatar/isVerified/isAi (checked directly against every place a chat
+  // participant is read on the frontend) — never bio, follower/following ID
+  // arrays, business fields, or privacy settings. GET /api/chats is polled
+  // every 5 seconds for as long as the app is open and re-sends every
+  // visible chat's full participant list (including the Global Lounge,
+  // which includes every registered user), so shipping the entire
+  // sanitized user object per participant here — rather than just the
+  // handful of fields anything actually uses — was pure repeated bandwidth
+  // waste with zero benefit.
+  function sanitizeChatParticipant(u: any) {
+    if (!u) return null;
+    return {
+      id: u.id,
+      username: u.username,
+      displayName: u.displayName,
+      avatar: u.avatar,
+      isVerified: !!u.isVerified,
+      isAi: !!u.isAi
+    };
+  }
+
   // A chat/group's `participants` array is a snapshot taken once, at
   // creation or whenever someone was added — it's never touched again, so
   // anyone who later changes their avatar/display name keeps showing the
@@ -781,8 +803,8 @@ async function startServer() {
     return Promise.all(
       (participants || []).map(async (p: any) => {
         const live = users.find(u => u.id === p.id);
-        if (!live) return p;
-        return { ...sanitizePublicUser(live), avatar: await signMediaKey(live.avatar) };
+        if (!live) return sanitizeChatParticipant(p);
+        return { ...sanitizeChatParticipant(live), avatar: await signMediaKey(live.avatar) };
       })
     );
   }

@@ -203,18 +203,32 @@ export const GamesView: React.FC<GamesViewProps> = ({
           </div>
         </div>
 
-        {/* Actions — balance now lives only on the Wallet page */}
-        <div className="flex items-center gap-3">
+        {/* Games / Leaderboard switch — a real two-way segmented toggle
+            instead of one button whose label used to flip between the
+            action and the current state, which read ambiguously at a
+            glance ("Leaderboard" while already ON the leaderboard tab). */}
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-md shrink-0">
           <button
-            onClick={() => setActiveTab(activeTab === 'games' ? 'leaderboard' : 'games')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md ${
-              activeTab === 'leaderboard'
-                ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                : 'bg-zinc-900 text-amber-400 border border-amber-500/40 hover:bg-zinc-800'
+            onClick={() => setActiveTab('games')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'games'
+                ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.3)]'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Trophy className="w-4 h-4" />
-            <span>{activeTab === 'leaderboard' ? 'View Games' : 'Leaderboard'}</span>
+            <Gamepad2 className="w-3.5 h-3.5" />
+            <span>Games</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('leaderboard')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'leaderboard'
+                ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5" />
+            <span>Leaderboard</span>
           </button>
         </div>
       </div>

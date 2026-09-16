@@ -409,6 +409,33 @@ export const GameBannerArtwork: React.FC<GameIconProps> = ({ id, className = 'w-
         '🧠 MATH'
       );
 
+    // Neon Mole Smash
+    case 'mole_smash':
+      return renderCartoonFrame(
+        'bg-gradient-to-br from-emerald-600 via-green-800 to-zinc-950',
+        <div className="flex items-end gap-2">
+          <div className="w-10 h-8 bg-[#3b2412] border-2 border-black rounded-full" />
+          <div className="w-12 h-14 bg-amber-700 border-2 border-black rounded-t-full flex items-center justify-center text-2xl shadow-[3px_3px_0px_#000] -mb-1 animate-bounce">
+            🐹
+          </div>
+          <div className="w-10 h-8 bg-[#3b2412] border-2 border-black rounded-full" />
+        </div>,
+        '🔨 SMASH'
+      );
+
+    // Fusion Blocks
+    case 'fusion_blocks':
+      return renderCartoonFrame(
+        'bg-gradient-to-br from-amber-500 via-orange-700 to-zinc-950',
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="w-9 h-9 bg-zinc-800 border-2 border-black rounded-lg flex items-center justify-center font-black text-white text-xs shadow-[2px_2px_0px_#000]">2</div>
+          <div className="w-9 h-9 bg-orange-500 border-2 border-black rounded-lg flex items-center justify-center font-black text-white text-xs shadow-[2px_2px_0px_#000]">8</div>
+          <div className="w-9 h-9 bg-emerald-500 border-2 border-black rounded-lg flex items-center justify-center font-black text-white text-xs shadow-[2px_2px_0px_#000]">64</div>
+          <div className="w-9 h-9 bg-yellow-400 border-2 border-black rounded-lg flex items-center justify-center font-black text-black text-[10px] shadow-[2px_2px_0px_#000]">128</div>
+        </div>,
+        '🧩 FUSION'
+      );
+
     // 26. Scribble & Guess
     case 'scribble':
       return renderCartoonFrame(

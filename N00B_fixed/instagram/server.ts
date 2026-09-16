@@ -3632,6 +3632,30 @@ async function startServer() {
     res.status(201).json({ success: true, track: newTrack });
   });
 
+  // Only the account that uploaded a track may rename it, and only the
+  // title — artist/genre/audio/cover stay as originally uploaded, since
+  // those describe the actual recording rather than being a label the
+  // uploader might just want to tidy up.
+  app.put('/api/music/tracks/:id', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+
+    const track = musicTracks.find(t => t.id === req.params.id);
+    if (!track) return res.status(404).json({ error: 'Track not found' });
+
+    if (track.uploaderId !== active.id) {
+      return res.status(403).json({ error: 'Only the publisher who uploaded this track can rename it.' });
+    }
+
+    const { title } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Track title cannot be empty.' });
+    }
+
+    track.title = title.trim().slice(0, 100);
+    res.json({ success: true, track });
+  });
+
   app.post('/api/music/tracks/:id/like', (req, res) => {
     const trackId = req.params.id;
     const active = getActiveUser(req);

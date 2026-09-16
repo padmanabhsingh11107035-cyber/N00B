@@ -940,6 +940,18 @@ export async function toggleLikeMusicTrack(trackId: string): Promise<{ success: 
   return await res.json();
 }
 
+// Renaming is restricted server-side to the account that uploaded the
+// track — this just surfaces whatever error that check returns.
+export async function renameMusicTrack(trackId: string, title: string): Promise<{ success: boolean; track?: import('../types').MusicTrack; error?: string }> {
+  const res = await fetch(`${API_BASE}/music/tracks/${trackId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify({ title })
+  });
+  const data = await res.json();
+  return { success: res.ok && data.success, track: data.track, error: data.error };
+}
+
 // Games & NOOB Points APIs
 export async function fetchGameLeaderboard(): Promise<{
   leaderboard: GameLeaderboardEntry[];

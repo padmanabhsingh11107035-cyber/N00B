@@ -224,5 +224,31 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     players: '1v1 Online',
     iconType: 'calculator',
     tags: ['Math', 'Timer', 'Brain']
+  },
+  {
+    id: 'mole_smash',
+    title: 'Neon Mole Smash',
+    category: 'reflex',
+    description: 'Whack glowing moles the instant they pop up — dodge the bombs, chase the high score.',
+    bannerBg: 'from-[#0f3d24] to-[#04150c]',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    pointsReward: 100,
+    difficulty: 'Easy',
+    players: '1v1 Online',
+    iconType: 'mole',
+    tags: ['Reflex', 'Timer', 'Arcade']
+  },
+  {
+    id: 'fusion_blocks',
+    title: 'Fusion Blocks',
+    category: 'puzzle',
+    description: 'Slide and merge glowing number tiles — chain fusions to reach the target tile before the board fills up.',
+    bannerBg: 'from-[#3d2a0f] to-[#150e04]',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pointsReward: 100,
+    difficulty: 'Medium',
+    players: '1v1 Online',
+    iconType: 'fusion',
+    tags: ['Puzzle', 'Numbers', 'Brain']
   }
 ];

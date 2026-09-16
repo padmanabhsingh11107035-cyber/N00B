@@ -54,10 +54,14 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
     setRoundResult(resultText);
     setIsRevealing(false);
 
+    // Player 1 is always "the account" here, whether Player 2 is the bot
+    // or a second human passing the device — so a Player 2 win is always a
+    // real loss for the account. This used to report 'win' unconditionally
+    // in Pass and Play regardless of who actually won the match.
     if (newPlayerScore >= targetWins) {
       setTimeout(() => onGameOver('win', 100), 1000);
     } else if (newOpponentScore >= targetWins) {
-      setTimeout(() => onGameOver(vsBot ? 'loss' : 'win', vsBot ? 0 : 100), 1000);
+      setTimeout(() => onGameOver('loss', 0), 1000);
     }
   };
 

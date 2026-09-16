@@ -13,10 +13,12 @@ import {
   Radio,
   Share2,
   Check,
-  Clock
+  Clock,
+  Pencil,
+  X as XIcon
 } from 'lucide-react';
 import { MusicTrack, User } from '../../types';
-import { uploadMusicTrack, uploadMediaFile } from '../../services/api';
+import { uploadMusicTrack, uploadMediaFile, renameMusicTrack } from '../../services/api';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { getAudioDuration } from '../../utils/mediaCompressor';
 import confetti from 'canvas-confetti';
@@ -53,6 +55,49 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const [audioObjectKey, setAudioObjectKey] = useState('');
   const [detectedDuration, setDetectedDuration] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Renaming — publisher-only, so this is only ever offered on tracks the
+  // current account itself uploaded (checked against track.uploaderId).
+  const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
+  const [editTitleDraft, setEditTitleDraft] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameError, setRenameError] = useState('');
+
+  const startRename = (track: MusicTrack) => {
+    setEditingTrackId(track.id);
+    setEditTitleDraft(track.title);
+    setRenameError('');
+  };
+
+  const cancelRename = () => {
+    setEditingTrackId(null);
+    setEditTitleDraft('');
+    setRenameError('');
+  };
+
+  const submitRename = async (trackId: string) => {
+    const trimmed = editTitleDraft.trim();
+    if (!trimmed) {
+      setRenameError('Name cannot be empty.');
+      return;
+    }
+    setIsRenaming(true);
+    setRenameError('');
+    try {
+      const res = await renameMusicTrack(trackId, trimmed);
+      if (res.success) {
+        await refreshTracks();
+        setEditingTrackId(null);
+        setEditTitleDraft('');
+      } else {
+        setRenameError(res.error || 'Failed to rename track.');
+      }
+    } catch (err) {
+      setRenameError('Failed to rename track.');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
 
   const coverFileRef = useRef<HTMLInputElement>(null);
   const audioFileRef = useRef<HTMLInputElement>(null);
@@ -293,9 +338,60 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 </div>
 
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors">
-                    {track.title}
-                  </h4>
+                  {editingTrackId === track.id ? (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        autoFocus
+                        value={editTitleDraft}
+                        onChange={(e) => setEditTitleDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') submitRename(track.id);
+                          if (e.key === 'Escape') cancelRename();
+                        }}
+                        maxLength={100}
+                        disabled={isRenaming}
+                        className="min-w-0 flex-1 bg-zinc-950 border border-purple-500/50 rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={isRenaming}
+                        onClick={() => submitRename(track.id)}
+                        className="w-6 h-6 rounded-full bg-[#00FF66] text-black flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
+                        title="Save name"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isRenaming}
+                        onClick={cancelRename}
+                        className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-300 flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
+                        title="Cancel"
+                      >
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <h4 className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors flex items-center gap-1.5">
+                      <span className="truncate">{track.title}</span>
+                      {track.uploaderId === currentUser.id && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startRename(track);
+                          }}
+                          className="shrink-0 text-zinc-500 hover:text-purple-300 cursor-pointer"
+                          title="Rename your track"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      )}
+                    </h4>
+                  )}
+                  {editingTrackId === track.id && renameError && (
+                    <p className="text-[10px] text-rose-400 mt-0.5">{renameError}</p>
+                  )}
                   <p className="text-[11px] text-zinc-400 truncate">
                     {track.artist} • <span className="text-zinc-500">{track.genre}</span>
                   </p>

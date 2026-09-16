@@ -6,6 +6,24 @@ interface ChessGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   // false = Pass and Play: both sides are human, alternating on this device.
   vsBot?: boolean;
+  // How many games (of any kind) this account has played — the bot ramps
+  // up its own search depth/time as this grows, so a brand-new player
+  // isn't dropped straight into the fully-tuned "meant to stay very hard"
+  // bot on their very first match. Defaults to a large number (full
+  // strength) so any caller that doesn't pass it gets today's behavior.
+  gamesPlayedCount?: number;
+}
+
+// Maps games-played into a search depth/time budget tier. Deliberately
+// coarse (4 tiers) rather than a smooth curve — chess strength doesn't
+// need fine granularity, and a stable plateau per tier is easier for a
+// player to actually notice and adapt to than a move-by-move sliding
+// scale would be.
+function botStrengthForExperience(gamesPlayedCount: number): { timeBudgetMs: number; maxDepth: number } {
+  if (gamesPlayedCount < 5) return { timeBudgetMs: 150, maxDepth: 3 };
+  if (gamesPlayedCount < 15) return { timeBudgetMs: 200, maxDepth: 4 };
+  if (gamesPlayedCount < 30) return { timeBudgetMs: 250, maxDepth: 5 };
+  return { timeBudgetMs: BOT_TIME_BUDGET_MS, maxDepth: BOT_MAX_DEPTH };
 }
 
 // Hand-drawn piece silhouettes, one small set of SVG primitives per piece
@@ -185,14 +203,14 @@ function negamax(chess: Chess, depth: number, alpha: number, beta: number, color
 // very hard — but only a FULLY completed depth's result ever replaces the
 // previous one, so a timeout mid-depth can never hand back a half-searched,
 // unreliable move.
-function findBestMove(chess: Chess): string {
-  const deadline = Date.now() + BOT_TIME_BUDGET_MS;
+function findBestMove(chess: Chess, timeBudgetMs = BOT_TIME_BUDGET_MS, maxDepth = BOT_MAX_DEPTH): string {
+  const deadline = Date.now() + timeBudgetMs;
   const color = chess.turn() === 'w' ? 1 : -1;
   const rootMoves = shuffle(orderedMoves(chess));
   let bestMove = rootMoves[0]?.san;
   if (!bestMove) return bestMove;
 
-  for (let depth = 1; depth <= BOT_MAX_DEPTH; depth++) {
+  for (let depth = 1; depth <= maxDepth; depth++) {
     let bestValueThisDepth = -Infinity;
     let bestMoveThisDepth: string | undefined;
     let completed = true;
@@ -215,8 +233,9 @@ function findBestMove(chess: Chess): string {
   return bestMove;
 }
 
-export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }) => {
+export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true, gamesPlayedCount = 9999 }) => {
   const chessRef = useRef(new Chess());
+  const botStrength = useMemo(() => botStrengthForExperience(gamesPlayedCount), [gamesPlayedCount]);
   const [, forceRender] = useState(0);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [isBotThinking, setIsBotThinking] = useState(false);
@@ -266,7 +285,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true }
     // search runs. The real cap on how long a move can take is
     // BOT_TIME_BUDGET_MS, not this.
     setTimeout(() => {
-      const move = findBestMove(chess);
+      const move = findBestMove(chess, botStrength.timeBudgetMs, botStrength.maxDepth);
       chess.move(move);
       rerender();
       setIsBotThinking(false);

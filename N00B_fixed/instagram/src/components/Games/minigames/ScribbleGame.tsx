@@ -3,8 +3,7 @@ import { RotateCcw, Check, Sparkles, Pencil, Eraser, Trash2 } from 'lucide-react
 import confetti from 'canvas-confetti';
 
 interface ScribbleGameProps {
-  onGameOver: (score: number, pointsEarned: number) => void;
-  currentUserUsername: string;
+  onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
 }
 
 const PROMPT_WORDS = [
@@ -137,9 +136,14 @@ export const ScribbleGame: React.FC<ScribbleGameProps> = ({ onGameOver }) => {
   const finishGame = () => {
     setGameActive(false);
     const finalScore = solvedCount * 100 + timeLeft * 5;
-    const pointsEarned = 60 + solvedCount * 20;
+    // Solved 3+ prompts in 45s is a strong showing (win), 1-2 is a
+    // respectable tie, 0 is a loss — maps this into the standard
+    // win/tie/loss shape every other game (and matchmaking/pass-and-play/
+    // bot payouts) already uses, instead of a bespoke score+points
+    // signature nothing else on the call site actually expected.
+    const result: 'win' | 'tie' | 'loss' = solvedCount >= 3 ? 'win' : solvedCount >= 1 ? 'tie' : 'loss';
     confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
-    onGameOver(finalScore, pointsEarned);
+    onGameOver(result, finalScore);
   };
 
   return (

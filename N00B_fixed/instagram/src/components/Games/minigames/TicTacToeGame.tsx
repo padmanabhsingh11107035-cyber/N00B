@@ -7,6 +7,19 @@ interface TicTacToeGameProps {
   // false = Pass and Play: the second tap on the board is a real human
   // move (O), not an AI response. Defaults to true (vs Bot).
   vsBot?: boolean;
+  // How many games this account has played — ramps the bot from "makes
+  // mistakes often" toward "plays perfectly" as the player gets more
+  // experienced, same idea as ChessGame's difficulty ramp. Defaults to a
+  // large number (full strength) so any caller that doesn't pass it keeps
+  // today's fixed 15% mistake rate.
+  gamesPlayedCount?: number;
+}
+
+function imperfectChanceForExperience(gamesPlayedCount: number): number {
+  if (gamesPlayedCount < 5) return 0.4;
+  if (gamesPlayedCount < 15) return 0.25;
+  if (gamesPlayedCount < 30) return 0.15;
+  return 0.05;
 }
 
 type Cell = 'X' | 'O' | null;
@@ -67,8 +80,10 @@ function pickBotMove(board: Cell[], symbol: 'X' | 'O', imperfectChance: number):
 export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
   onGameOver,
   opponentName = 'AI Bot',
-  vsBot = true
+  vsBot = true,
+  gamesPlayedCount = 9999
 }) => {
+  const imperfectChance = imperfectChanceForExperience(gamesPlayedCount);
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [currentTurn, setCurrentTurn] = useState<'X' | 'O'>('X');
   const [winner, setWinner] = useState<'X' | 'O' | 'Tie' | null>(null);
@@ -87,14 +102,16 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
       setWinner(result.winner);
       setWinningLine(result.line);
       setTimeout(() => {
+        // X is always "the account" — whether O is the bot or a second
+        // human passing the device — so this reports the real result
+        // either way. Pass and Play used to always report 'win' here
+        // regardless of who actually won; GamePlayModal now also sends
+        // this straight to the match result instead of treating it as one
+        // round of a two-round relay.
         if (result.winner === 'Tie') {
           onGameOver('tie', 50);
-        } else if (vsBot) {
-          onGameOver(result.winner === 'X' ? 'win' : 'loss', result.winner === 'X' ? 100 : 0);
         } else {
-          // Pass and Play: whichever symbol just won, report that as the
-          // finishing player's own round result to the relay comparison.
-          onGameOver('win', 100);
+          onGameOver(result.winner === 'X' ? 'win' : 'loss', result.winner === 'X' ? 100 : 0);
         }
       }, 700);
       return;
@@ -105,7 +122,7 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
 
     if (vsBot && nextTurn === 'O') {
       setTimeout(() => {
-        const botIndex = pickBotMove(newBoard, 'O', 0.15);
+        const botIndex = pickBotMove(newBoard, 'O', imperfectChance);
         const afterBot = [...newBoard];
         afterBot[botIndex] = 'O';
         setBoard(afterBot);

@@ -49,6 +49,8 @@ import { ColorRushGame } from './minigames/ColorRushGame';
 import { WordleGuessGame } from './minigames/WordleGuessGame';
 import { GenericArcadeGame } from './minigames/GenericArcadeGame';
 import { ScribbleGame } from './minigames/ScribbleGame';
+import { MoleSmashGame } from './minigames/MoleSmashGame';
+import { FusionBlocksGame } from './minigames/FusionBlocksGame';
 import { ChessGame } from './minigames/ChessGame';
 import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
 import { LudoGame } from './minigames/LudoGame';
@@ -78,6 +80,14 @@ const BOARD_GAME_IDS = ['ludo_classic', 'snakes_ladders', 'monopoly_noob'];
 // actually move on the SAME board in real time against each other, instead
 // of each playing their own round against a bot and comparing results.
 const SYNCED_GAME_IDS = ['tictactoe'];
+
+// Games whose built-in Pass and Play mode is a real, complete head-to-head
+// match in itself (both symbols/players share the same instance) — same
+// reasoning as chess_blitz below, these must report their one real result
+// directly instead of being treated as "Player 1's round" of a two-round
+// relay. Without this, TicTacToe/RPS pass-and-play used to always report
+// 'win' for whoever finished the game, regardless of who actually won.
+const SINGLE_RESULT_PASS_PLAY_IDS = ['tictactoe', 'rps'];
 
 // Solo-only games with no opponent concept at all — no bot, no friend
 // challenge, no pass-and-play. These skip the mode-select screen entirely
@@ -297,6 +307,22 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     clearMatchmakingTimers();
     cancelMatchmaking().catch(() => {});
     setCurrentMode('select_mode');
+  };
+
+  // The header's X (and every other close path) used to call onClose
+  // directly — fine most of the time, but while actively searching for a
+  // match it just unmounted the modal without ever telling the server to
+  // leave the queue. That queue entry then sat there until the 60s
+  // staleness sweep, and if a real opponent joined in that window they'd
+  // get "matched" into a room against someone who had already left —
+  // exactly what "matchmaking is broken, my opponent never shows up" looks
+  // like from the other side. Route every close through this instead.
+  const handleModalClose = () => {
+    if (currentMode === 'matchmaking') {
+      clearMatchmakingTimers();
+      cancelMatchmaking().catch(() => {});
+    }
+    onClose();
   };
 
   // Receiving side of a friend invite: join the room the inviter already
@@ -576,7 +602,12 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     // Routing it there meant a finished chess match got treated as only
     // "Player 1's round" and demanded an unrelated second game before ever
     // recording the real outcome.
-    else if (isPassAndPlay && !BOARD_GAME_IDS.includes(game.id) && game.id !== 'chess_blitz') finishPassPlayRound(result);
+    else if (
+      isPassAndPlay &&
+      !BOARD_GAME_IDS.includes(game.id) &&
+      game.id !== 'chess_blitz' &&
+      !SINGLE_RESULT_PASS_PLAY_IDS.includes(game.id)
+    ) finishPassPlayRound(result);
     else finishGame(result);
   };
 
@@ -813,7 +844,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -845,7 +876,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 Upgrade to NOOB Pro from your profile for up to 4 Chess Blitz rounds a week.
               </p>
               <button
-                onClick={onClose}
+                onClick={handleModalClose}
                 className="px-6 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold transition-colors cursor-pointer"
               >
                 Close
@@ -1416,11 +1447,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'tictactoe' && !onlineMatch && (
-                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} />
+                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} />
               )}
 
               {game.id === 'chess_blitz' && (
-                <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} />
+                <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} />
               )}
 
               {game.id === 'snakes_ladders' && (
@@ -1480,7 +1511,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'scribble' && (
-                <ScribbleGame onFinishGame={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} />
+                <ScribbleGame onGameOver={handleGameOver} />
+              )}
+
+              {game.id === 'mole_smash' && (
+                <MoleSmashGame onGameOver={handleGameOver} targetScore={14} />
+              )}
+
+              {game.id === 'fusion_blocks' && (
+                <FusionBlocksGame onGameOver={handleGameOver} targetTile={128} />
               )}
 
               {/* Every catalog id above maps to a dedicated game; this generic
@@ -1501,7 +1540,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'cyber_drone',
                 'bubble_blitz',
                 'wordle_quest',
-                'scribble'
+                'scribble',
+                'mole_smash',
+                'fusion_blocks'
               ].includes(game.id) && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}
@@ -1577,7 +1618,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   Play Again
                 </button>
                 <button
-                  onClick={onClose}
+                  onClick={handleModalClose}
                   className="px-5 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors cursor-pointer"
                 >
                   Close Game

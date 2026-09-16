@@ -6061,8 +6061,18 @@ COMPLETE PLATFORM CAPABILITIES:
     // index: false — index.html must never be cached (it's what points the
     // browser at the current content-hashed JS/CSS bundle); the hashed
     // asset files themselves are safe to cache aggressively since a new
-    // build always gets new filenames.
-    app.use(express.static(distPath, { index: false }));
+    // build always gets new filenames, so a stale cache can never serve
+    // outdated content — but that only actually happens if something sets
+    // the header, which nothing here previously did, so every visit was
+    // re-downloading the full JS/CSS bundle for no reason.
+    app.use(express.static(distPath, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.set('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      }
+    }));
     app.get('*', (req, res) => {
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));

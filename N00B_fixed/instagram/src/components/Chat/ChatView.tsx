@@ -444,13 +444,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
     loadChats();
     loadAllUsers();
 
-    // Cross-device real-time synchronization polling. Was 2s — every tick
-    // re-fetches and re-signs every visible chat's full participant list
-    // (including the Global Lounge's 50+ members), which adds up in server
-    // load over a long session; 5s is still fast enough to feel live.
+    // Cross-device real-time synchronization polling. Was 2s, then 5s —
+    // every tick re-fetches and re-signs every visible chat's full
+    // participant list (including the Global Lounge's every-registered-user
+    // membership), which was a real contributor to bandwidth use across
+    // active sessions. 15s matches the cadence already accepted elsewhere
+    // (the notifications poll) and cuts this endpoint's call volume to a
+    // third, while still updating well within what feels "live" for a
+    // chat list that isn't the one currently on screen.
     const interval = setInterval(() => {
       syncLiveChatData();
-    }, 5000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, []);

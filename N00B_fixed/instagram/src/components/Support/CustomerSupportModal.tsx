@@ -535,7 +535,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const fallbackMsg: ChatMessage = {
         id: `msg_bot_${Date.now()}`,
         sender: 'bot',
-        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with our mini-games (+100 win / +50 tie points), continuous background music playback, story highlights, automated feed/reels media sorting, and our full Terms & Conditions & Privacy Policy!`,
+        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with our mini-games (+10M win / +5M tie points), continuous background music playback, story highlights, automated feed/reels media sorting, and our full Terms & Conditions & Privacy Policy!`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -624,7 +624,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const history = callTranscript.map((t) => ({ sender: t.sender === 'ai' ? 'bot' : 'user', text: t.text }));
       const response = await askAiSupportAssistant(cleanQuery, history);
 
-      const aiReply = response?.reply || `For @${currentUser.username}: Our mini-games grant +100 points for wins and +50 points for ties, your media is encrypted and automatically routed by format, and your privacy is 100% protected. What else can I solve for you?`;
+      const aiReply = response?.reply || `For @${currentUser.username}: Our mini-games grant +10,000,000 points for wins and +5,000,000 points for ties, your media is encrypted and automatically routed by format, and your privacy is 100% protected. What else can I solve for you?`;
       
       const aiEntry = {
         sender: 'ai' as const,
@@ -714,7 +714,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     },
     {
       q: 'How do I earn NOOB points & climb the Leaderboard?',
-      a: 'Play any of our Mini-Games! Winning an arcade match awards +100 NOOB points, and tying awards +50 NOOB points. Your rank updates in real-time on the Global Leaderboard.'
+      a: 'Play any of our Mini-Games! Winning an arcade match awards +10,000,000 NOOB points, and tying awards +5,000,000 NOOB points. Your rank updates in real-time on the Global Leaderboard.'
     },
     {
       q: 'How does background music work?',
@@ -954,7 +954,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   onClick={() => handleQuickPrompt('How does mini-games point scoring work?')}
                   className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                 >
-                  🎮 Mini-Games (+100 Win)
+                  🎮 Mini-Games (+10M Win)
                 </button>
                 <button
                   type="button"

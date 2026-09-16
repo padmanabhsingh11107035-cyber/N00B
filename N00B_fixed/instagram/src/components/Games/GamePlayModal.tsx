@@ -569,10 +569,10 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
     let earned = 0;
     if (overall === 'win') {
-      earned = 100;
+      earned = 10_000_000;
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
     } else if (overall === 'tie') {
-      earned = 50;
+      earned = 5_000_000;
     }
     setPointsEarned(earned);
 
@@ -623,22 +623,22 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     // game uses instead of the jackpot/wipe payout.
     if (game.id === 'chess_blitz' && !isPassAndPlay) {
       if (result === 'win') {
-        earned = 50000;
+        earned = 50_000_000;
         confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
       } else if (result === 'loss') {
         earned = -(currentUser.noobPoints || 0);
       } else {
-        earned = 50;
+        earned = 5_000_000;
       }
     } else if (result === 'win') {
-      earned = 100;
+      earned = 10_000_000;
       confetti({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 }
       });
     } else if (result === 'tie') {
-      earned = 50;
+      earned = 5_000_000;
     } else {
       earned = 0;
     }
@@ -670,7 +670,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setIsSubmitting(true);
     setGameResult('win');
     setSurvivalSeconds(seconds);
-    const estimatedEarned = seconds * 10;
+    const estimatedEarned = seconds * 1000000;
     setPointsEarned(estimatedEarned);
 
     try {
@@ -837,7 +837,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
                 <span>•</span>
                 <span className="text-zinc-400">
-                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '50 NOOBs on Tie'}
+                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '5,000,000 NOOBs on Tie'}
                 </span>
               </div>
             </div>
@@ -1644,7 +1644,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             </p>
             <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-left flex items-center gap-2.5">
               <span className="text-lg">🏆</span>
-              <span className="text-xs font-bold text-emerald-300">If you WIN: +50,000 NOOB Points</span>
+              <span className="text-xs font-bold text-emerald-300">If you WIN: +50,000,000 NOOB Points</span>
             </div>
             <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-left flex items-center gap-2.5">
               <span className="text-lg">💀</span>

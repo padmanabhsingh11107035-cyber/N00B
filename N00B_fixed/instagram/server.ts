@@ -1648,7 +1648,10 @@ async function startServer() {
         return res.status(400).json({ error: 'Invalid or expired verification coupon code.' });
       }
     } else if (method === 'points_permanent') {
-      const requiredPoints = applyDiscount(100000000);
+      // Scaled by the same ~100,000x as every game reward, so verification
+      // still costs roughly the same number of wins as before rather than
+      // becoming trivially affordable now that a single win pays 10M.
+      const requiredPoints = applyDiscount(10_000_000_000_000);
       if ((users[index].noobPoints || 0) < requiredPoints) {
         return res.status(400).json({
           error: `Insufficient NOOB Points. You have ${users[index].noobPoints || 0} points, but ${requiredPoints.toLocaleString()} points are required for permanent verification.`
@@ -1662,7 +1665,7 @@ async function startServer() {
       );
       consumeCouponIfLimited(discountCoupon, users[index].username);
     } else if (method === 'points_monthly') {
-      const requiredPoints = applyDiscount(50000);
+      const requiredPoints = applyDiscount(5_000_000_000);
       if ((users[index].noobPoints || 0) < requiredPoints) {
         return res.status(400).json({
           error: `Insufficient NOOB Points. You have ${users[index].noobPoints || 0} points, but ${requiredPoints.toLocaleString()} points are required for monthly verification.`
@@ -2129,11 +2132,11 @@ async function startServer() {
   // --- NOOB PRO UPGRADE (one-time points purchase, coupon-eligible) ---
   // ==========================================
   const PRO_TIER_PRICES: Record<string, number> = {
-    starter: 50000,
-    plus: 75000,
-    pro: 100000,
-    elite: 125000,
-    ultimate: 150000
+    starter: 5_000_000_000,
+    plus: 7_500_000_000,
+    pro: 10_000_000_000,
+    elite: 12_500_000_000,
+    ultimate: 15_000_000_000
   };
   const PRO_YEARLY_DISCOUNT = 0.17;
   const PRO_BILLING_PERIOD_MS: Record<'monthly' | 'yearly', number> = {
@@ -4773,6 +4776,14 @@ Never name any specific hosting provider, database, storage vendor, programming 
     return null;
   }
 
+  // The whole points economy runs at these three numbers — everything a
+  // player can win, and everything verification/Pro cost, is defined
+  // relative to them so the "how many wins does this cost" ratio stays
+  // consistent everywhere instead of drifting between hand-typed literals.
+  const GENERIC_WIN_POINTS = 10000000; // 10M — was 100
+  const GENERIC_TIE_POINTS = 5000000; // 5M — was 50
+  const CHESS_WIN_POINTS = 50000000; // 50M — chess stays the standout jackpot
+
   function initSyncedBoardIfNeeded(room: any) {
     if (SYNCED_GAME_IDS.includes(room.gameId) && room.players.length === 2 && !room.board) {
       room.board = Array(9).fill(null);
@@ -4805,10 +4816,11 @@ Never name any specific hosting provider, database, storage vendor, programming 
       // through matchmaking instead of record-match directly.
       if (isChessHighStakes && user.chessRoundReady) {
         user.chessRoundReady = false;
-        earned = outcome === 'win' ? 50000 : outcome === 'tie' ? 50 : -(user.noobPoints || 0);
+        earned = outcome === 'win' ? CHESS_WIN_POINTS : outcome === 'tie' ? GENERIC_TIE_POINTS : -(user.noobPoints || 0);
       } else {
-        earned = outcome === 'win' ? 100 : outcome === 'tie' ? 50 : 0;
+        earned = outcome === 'win' ? GENERIC_WIN_POINTS : outcome === 'tie' ? GENERIC_TIE_POINTS : 0;
       }
+      // (Shared constants defined above, near initSyncedBoardIfNeeded.)
       pointsByPlayer[p.userId] = earned;
       user.noobPoints = Math.max(0, (user.noobPoints || 0) + earned);
       user.gamesPlayedCount = (user.gamesPlayedCount || 0) + 1;
@@ -5180,16 +5192,16 @@ Never name any specific hosting provider, database, storage vendor, programming 
     let earnedPoints = 0;
     if (isChessHighStakes) {
       if (result === 'win') {
-        earnedPoints = 50000;
+        earnedPoints = CHESS_WIN_POINTS;
       } else if (result === 'loss') {
         earnedPoints = -(active ? active.noobPoints || 0 : 0);
       } else {
-        earnedPoints = 50;
+        earnedPoints = GENERIC_TIE_POINTS;
       }
     } else if (result === 'win') {
-      earnedPoints = 100;
+      earnedPoints = GENERIC_WIN_POINTS;
     } else if (result === 'tie') {
-      earnedPoints = 50;
+      earnedPoints = GENERIC_TIE_POINTS;
     } else {
       earnedPoints = 0;
     }
@@ -5254,7 +5266,8 @@ Never name any specific hosting provider, database, storage vendor, programming 
       return res.status(400).json({ error: 'Invalid survival time.' });
     }
     const cappedSeconds = Math.min(seconds, 3600);
-    const earnedPoints = cappedSeconds * 10;
+    // Scaled by the same ~100,000x as every other game reward (was 10/sec).
+    const earnedPoints = cappedSeconds * 1000000;
 
     const index = users.findIndex(u => u.id === active.id);
     if (index === -1) return res.status(404).json({ error: 'Your account was not found.' });

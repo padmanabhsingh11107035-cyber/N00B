@@ -264,17 +264,17 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true, 
         // reflected who won. Player 1 (White) is the account this device
         // is logged into, same convention every other Pass & Play game in
         // this app already uses.
-        setTimeout(() => onGameOver(winnerIsWhite ? 'win' : 'loss', winnerIsWhite ? 100 : 0), 1200);
+        setTimeout(() => onGameOver(winnerIsWhite ? 'win' : 'loss', winnerIsWhite ? 10_000_000 : 0), 1200);
       } else if (winnerIsWhite) {
         setGameOverText('Checkmate! You win!');
-        setTimeout(() => onGameOver('win', 50000), 1200);
+        setTimeout(() => onGameOver('win', 50_000_000), 1200);
       } else {
         setGameOverText('Checkmate! The bot wins.');
         setTimeout(() => onGameOver('loss', 0), 1200);
       }
     } else {
       setGameOverText("It's a draw.");
-      setTimeout(() => onGameOver('tie', vsBot ? 50 : 100), 1200);
+      setTimeout(() => onGameOver('tie', vsBot ? 5_000_000 : 10_000_000), 1200);
     }
   };
 
@@ -356,7 +356,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true, 
 
       {vsBot && (
         <div className="w-full mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold text-center flex items-center justify-center gap-1.5">
-          <Crown className="w-3.5 h-3.5" /> Win: +50,000 NOOBs &nbsp;•&nbsp; Lose: your balance resets to 0
+          <Crown className="w-3.5 h-3.5" /> Win: +50,000,000 NOOBs &nbsp;•&nbsp; Lose: your balance resets to 0
         </div>
       )}
 

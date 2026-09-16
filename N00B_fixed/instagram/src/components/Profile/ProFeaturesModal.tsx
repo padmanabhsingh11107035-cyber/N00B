@@ -21,32 +21,32 @@ const TIERS: ProTier[] = [
   {
     id: 'starter',
     name: 'Starter',
-    monthlyPrice: 50000,
+    monthlyPrice: 5_000_000_000,
     perks: ['Pro badge on profile', 'Ad-free browsing', 'Priority in search results'],
   },
   {
     id: 'plus',
     name: 'Plus',
-    monthlyPrice: 75000,
+    monthlyPrice: 7_500_000_000,
     perks: ['Everything in Starter', 'Exclusive profile themes', 'Early access to new mini-games'],
   },
   {
     id: 'pro',
     name: 'Pro',
-    monthlyPrice: 100000,
+    monthlyPrice: 10_000_000_000,
     perks: ['Everything in Plus', 'Higher upload limits for posts & reels', 'Custom accent color'],
     highlight: true,
   },
   {
     id: 'elite',
     name: 'Elite',
-    monthlyPrice: 125000,
+    monthlyPrice: 12_500_000_000,
     perks: ['Everything in Pro', 'Priority customer support', 'Exclusive Elite-only badge'],
   },
   {
     id: 'ultimate',
     name: 'Ultimate',
-    monthlyPrice: 150000,
+    monthlyPrice: 15_000_000_000,
     perks: ['Everything in Elite', 'Animated profile frame', 'Early access to every future feature'],
   },
 ];

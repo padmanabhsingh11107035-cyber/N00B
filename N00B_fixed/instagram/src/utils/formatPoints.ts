@@ -2,6 +2,12 @@
  * Utility function to format NOOB points compactly
  */
 export function formatNoobPoints(points: number = 0): string {
+  if (points >= 1_000_000_000_000) {
+    return `${(points / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '')}T`;
+  }
+  if (points >= 1_000_000_000) {
+    return `${(points / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  }
   if (points >= 1_000_000) {
     return `${(points / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   }

@@ -20,8 +20,8 @@ import { redeemCouponCode } from '../../services/api';
 import confetti from 'canvas-confetti';
 
 const POINTS_PRICE: Record<'points_perm' | 'points_month', number> = {
-  points_perm: 100000000,
-  points_month: 50000
+  points_perm: 10_000_000_000_000,
+  points_month: 5_000_000_000
 };
 
 interface GetVerifiedModalProps {

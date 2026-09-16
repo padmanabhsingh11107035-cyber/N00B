@@ -23,7 +23,11 @@ const AUTO_ADVANCE_MS = 2000;
 export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   const touchStartX = useRef<number | null>(null);
-  const isHighStakes = game.pointsReward >= 1000000;
+  // Was a >=1,000,000 threshold, which worked while only chess paid in the
+  // millions — now that every game's generic win is 10M too, that check
+  // would mislabel every game as "lose vs bot, balance resets to 0" (only
+  // true for chess). Check the actual high-stakes game directly instead.
+  const isHighStakes = game.id === 'chess_blitz';
 
   const slides = [
     // Slide 1: the game's existing unique cartoon banner art

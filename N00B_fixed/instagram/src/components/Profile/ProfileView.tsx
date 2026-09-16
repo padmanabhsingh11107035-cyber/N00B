@@ -52,7 +52,10 @@ import {
   AlertCircle,
   Clock,
   Calculator as CalculatorIcon,
-  Zap
+  Zap,
+  Bell,
+  BellOff,
+  ShoppingBag
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
@@ -67,7 +70,8 @@ import {
   blockUser,
   unblockUser,
   submitSafetyReport,
-  toggleFollowUser
+  toggleFollowUser,
+  unsubscribeFromPush
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -90,6 +94,8 @@ import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
+import { enablePushNotifications } from '../Common/PushNotificationPrompt';
+import { StorePage } from '../Store/StorePage';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -213,6 +219,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
+  const [showStorePage, setShowStorePage] = useState(false);
+  const [notifToggleBusy, setNotifToggleBusy] = useState(false);
+  const [notifToggleMessage, setNotifToggleMessage] = useState<string | null>(null);
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
@@ -444,6 +453,36 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
+  // Real on/off switch for OS-level push notifications — reflects
+  // !!currentUser.pushSubscription rather than its own local state, so it
+  // never drifts from what the browser actually has subscribed.
+  const handleToggleNotifications = async () => {
+    if (notifToggleBusy) return;
+    setNotifToggleBusy(true);
+    setNotifToggleMessage(null);
+    try {
+      if (currentUser.pushSubscription) {
+        const ok = await unsubscribeFromPush();
+        if (ok && onUserUpdated) {
+          onUserUpdated({ ...currentUser, pushSubscription: undefined });
+        }
+      } else {
+        const result = await enablePushNotifications();
+        if (result.status === 'granted' && result.subscription && onUserUpdated) {
+          onUserUpdated({ ...currentUser, pushSubscription: result.subscription });
+        } else if (result.status === 'denied') {
+          setNotifToggleMessage('Notifications are blocked for this site in your browser settings.');
+        } else if (result.status === 'unsupported') {
+          setNotifToggleMessage('Push notifications aren\'t supported on this browser/device.');
+        } else if (result.status === 'error') {
+          setNotifToggleMessage('Something went wrong — please try again.');
+        }
+      }
+    } finally {
+      setNotifToggleBusy(false);
+    }
+  };
+
   const handleSavePrivacySettings = async () => {
     try {
       const res = await updateCurrentUser({
@@ -599,6 +638,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </button>
 
+              {/* Universal: Push Notifications on/off */}
+              {isOwnProfile && (
+                <button
+                  onClick={handleToggleNotifications}
+                  disabled={notifToggleBusy}
+                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer disabled:opacity-60"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    {currentUser.pushSubscription ? <Bell className="w-4 h-4 text-cyan-400" /> : <BellOff className="w-4 h-4 text-cyan-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
+                      Notifications: {notifToggleBusy ? 'Updating…' : currentUser.pushSubscription ? 'On' : 'Off'}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 block truncate">
+                      {notifToggleMessage || 'Get notified even when NOOB isn\'t open'}
+                    </span>
+                  </div>
+                </button>
+              )}
+
               {isOwnProfile ? (
                 <>
                   {/* Option 1: Edit Profile */}
@@ -682,6 +742,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         A quick, distraction-free calculator
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option: NOOB Shop */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowStorePage(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <ShoppingBag className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-orange-400 transition-colors">
+                        NOOB Shop
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        Browse products &amp; your cart
                       </span>
                     </div>
                   </button>
@@ -1703,6 +1784,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
+
+      {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
 
       {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}
 

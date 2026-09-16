@@ -34,6 +34,38 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+export type PushEnableStatus = 'granted' | 'denied' | 'unsupported' | 'error';
+
+// Shared by this soft-ask prompt AND the real on/off toggle in the
+// three-dot Profile menu, so the actual subscribe pipeline (permission,
+// VAPID key, service worker, PushManager) only has to be written once.
+export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription }> {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return { status: 'unsupported' };
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return { status: 'denied' };
+
+    const publicKey = await fetchVapidPublicKey();
+    if (!publicKey) return { status: 'error' };
+
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    const ok = await subscribeToPush(subscription);
+    if (!ok) return { status: 'error' };
+    return { status: 'granted', subscription };
+  } catch (err) {
+    console.error('Failed to enable push notifications:', err);
+    return { status: 'error' };
+  }
+}
+
 interface PushNotificationPromptProps {
   onDone: () => void;
 }
@@ -52,32 +84,8 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ 
 
   const handleEnable = async () => {
     setLoading(true);
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        dismiss();
-        return;
-      }
-
-      const publicKey = await fetchVapidPublicKey();
-      if (!publicKey) {
-        dismiss();
-        return;
-      }
-
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
-
-      await subscribeToPush(subscription);
-    } catch (err) {
-      console.error('Failed to enable push notifications:', err);
-    } finally {
-      dismiss();
-    }
+    await enablePushNotifications();
+    dismiss();
   };
 
   return (

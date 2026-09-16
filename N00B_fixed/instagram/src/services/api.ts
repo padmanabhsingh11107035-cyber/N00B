@@ -12,7 +12,9 @@ import {
   ProfessionalInsights,
   StoryHighlight,
   StatusNote,
-  ShopItem
+  ShopItem,
+  StoreProduct,
+  StoreProductMedia
 } from '../types';
 import { compressMedia } from '../utils/mediaCompressor';
 import { safeJsonStringify } from '../utils/safeJson';
@@ -879,7 +881,7 @@ export async function addPostToCollection(collectionId: string, postId: string) 
 // Media Upload via Backblaze B2 (S3-compatible) with invisible client-side compression
 export async function uploadMediaFile(
   file: File,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' = 'posts'
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' = 'posts'
 ): Promise<{ success: boolean; objectKey: string; url: string }> {
   // Invisibly compress images/videos to reduce latency and bandwidth
   const optimizedFile = await compressMedia(file);
@@ -1283,6 +1285,36 @@ export async function purchaseShopItem(itemId: string): Promise<{ success: boole
   return { success: res.ok && data.success, item: data.item, user: data.user, error: data.error };
 }
 
+// --- NOOB Shop (physical-goods store) — distinct from the ShopItem
+// points-redemption catalog above. ---
+export async function fetchStoreProducts(): Promise<StoreProduct[]> {
+  const res = await fetch(`${API_BASE}/store/products`, { headers: getAuthHeaders() });
+  const data = await res.json();
+  return data.products || [];
+}
+
+export async function createStoreProduct(payload: {
+  price: number;
+  description: string;
+  media: StoreProductMedia[];
+  inStock: boolean;
+}): Promise<{ success: boolean; product?: StoreProduct; error?: string }> {
+  const res = await fetch(`${API_BASE}/store/products`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: safeJsonStringify(payload)
+  });
+  return await res.json();
+}
+
+export async function deleteStoreProduct(productId: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/store/products/${productId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return await res.json();
+}
+
 export async function revealScratchCard(
   scratchCardId: string
 ): Promise<{ success: boolean; gift?: { type: string; value: number | string; label: string }; user?: User; alreadyRevealed?: boolean; error?: string }> {
@@ -1334,7 +1366,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 export async function updateSettings(newSettings: Partial<AppSettings>): Promise<AppSettings> {
   const res = await fetch(`${API_BASE}/settings`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: safeJsonStringify(newSettings)
   });
   const data = await res.json();

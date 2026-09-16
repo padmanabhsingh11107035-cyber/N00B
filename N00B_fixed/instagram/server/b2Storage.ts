@@ -78,7 +78,7 @@ export function getB2Client(): { client: S3Client | null; bucket: string; endpoi
  */
 export async function uploadMediaToB2(
   fileBuffer: Buffer,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers',
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products',
   originalFilename: string,
   contentType: string
 ): Promise<{ objectKey: string; presignedUrl: string }> {

@@ -311,6 +311,10 @@ async function startServer() {
   // to their account) when they scratch it from their notification.
   let scratchCards: any[] = [];
 
+  // NOOB Shop products (physical goods, admin-added) — distinct from the
+  // unrelated points-redemption ShopItem catalog elsewhere in this file.
+  let storeProducts: any[] = [];
+
   // --- MongoDB persistence ---
   // If MONGODB_URI is configured, replace the mock seed data above with whatever
   // was last saved, so state survives server restarts / Railway redeploys.
@@ -318,7 +322,7 @@ async function startServer() {
     'users', 'posts', 'comments', 'stories', 'reels', 'supportReviews',
     'notifications', 'chats', 'messages', 'collections', 'gameScores',
     'highlights', 'reports', 'chatReviews', 'settings', 'reelHistory', 'musicTracks',
-    'coupons', 'customStickers', 'scratchCards'
+    'coupons', 'customStickers', 'scratchCards', 'storeProducts'
   ] as const;
 
   // Restoring persisted state from MongoDB used to be awaited here, before
@@ -419,6 +423,7 @@ async function startServer() {
       if (loaded.coupons) coupons = loaded.coupons;
       if (loaded.customStickers) customStickers = loaded.customStickers;
       if (loaded.scratchCards) scratchCards = loaded.scratchCards;
+      if (loaded.storeProducts) storeProducts = loaded.storeProducts;
 
       console.log('MongoDB: restored persisted app state');
     }
@@ -513,6 +518,7 @@ async function startServer() {
       save('coupons', coupons),
       save('customStickers', customStickers),
       save('scratchCards', scratchCards),
+      save('storeProducts', storeProducts),
     ]);
   }
 
@@ -1088,7 +1094,7 @@ async function startServer() {
         return res.status(400).json({ error: 'Only image, video, and audio files can be uploaded.' });
       }
 
-      const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers';
+      const folder = (req.body.folder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products';
       const result = await uploadMediaToB2(
         req.file.buffer,
         folder,
@@ -1856,6 +1862,75 @@ async function startServer() {
       return res.status(404).json({ error: 'That coupon code is invalid, expired, or not available for your account.' });
     }
     res.json({ success: true, coupon: sanitizeCoupon(coupon, active.username) });
+  });
+
+  // ==========================================
+  // --- NOOB SHOP (physical-goods store: admin-added products, browsing +
+  // cart/checkout scaffolding). Distinct from the unrelated points-
+  // redemption ShopItem catalog served at /api/shop/catalog above — this
+  // is real merchandise with photos/videos, priced for real-world sale,
+  // not something bought with NOOB points.
+  // ==========================================
+  const MAX_PRODUCT_PHOTOS = 10;
+  const MAX_PRODUCT_VIDEOS = 10;
+
+  app.get('/api/store/products', (req, res) => {
+    const active = getActiveUser(req);
+    if (!active) return res.status(401).json({ error: 'Please log in.' });
+    res.json({ products: storeProducts });
+  });
+
+  app.post('/api/store/products', (req, res) => {
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Only the NOOB admin account can add products.' });
+    }
+
+    const { price, description, media, inStock } = req.body;
+    if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+      return res.status(400).json({ error: 'Enter a valid price.' });
+    }
+    if (!description || !String(description).trim()) {
+      return res.status(400).json({ error: 'A description is required.' });
+    }
+    if (!Array.isArray(media) || media.length === 0) {
+      return res.status(400).json({ error: 'Add at least one photo or video.' });
+    }
+    const photoCount = media.filter((m: any) => m?.type === 'photo').length;
+    const videoCount = media.filter((m: any) => m?.type === 'video').length;
+    if (photoCount > MAX_PRODUCT_PHOTOS) {
+      return res.status(400).json({ error: `A product can have at most ${MAX_PRODUCT_PHOTOS} photos.` });
+    }
+    if (videoCount > MAX_PRODUCT_VIDEOS) {
+      return res.status(400).json({ error: `A product can have at most ${MAX_PRODUCT_VIDEOS} videos.` });
+    }
+
+    const product = {
+      id: `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      price,
+      description: String(description).trim(),
+      media: media.map((m: any) => ({ type: m?.type === 'video' ? 'video' : 'photo', url: m?.url })),
+      inStock: inStock !== false,
+      createdAt: new Date().toISOString(),
+      createdBy: active.id
+    };
+    storeProducts.unshift(product);
+    res.status(201).json({ success: true, product });
+  });
+
+  app.delete('/api/store/products/:id', (req, res) => {
+    const active = getActiveUser(req);
+    const isMasterAdmin = active && (active.isAdmin || active.username.toLowerCase() === 'noob' || active.id === 'u_noob_admin');
+    if (!isMasterAdmin) {
+      return res.status(403).json({ error: 'Only the NOOB admin account can manage products.' });
+    }
+    const before = storeProducts.length;
+    storeProducts = storeProducts.filter((p: any) => p.id !== req.params.id);
+    if (storeProducts.length === before) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+    res.json({ success: true });
   });
 
   // ==========================================

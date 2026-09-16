@@ -202,6 +202,23 @@ export interface ShopItem {
   category: string;
 }
 
+// NOOB Shop (physical-goods store: admin-added products, real-world
+// delivery/pickup) — distinct from ShopItem above, which is the unrelated
+// points-redemption sticker/GIF/emoji catalog.
+export interface StoreProductMedia {
+  type: 'photo' | 'video';
+  url: string;
+}
+
+export interface StoreProduct {
+  id: string;
+  price: number;
+  description: string;
+  media: StoreProductMedia[];
+  inStock: boolean;
+  createdAt: string;
+}
+
 export interface PostSlide {
   id: string;
   mediaUrl: string;
@@ -475,5 +492,9 @@ export interface AppSettings {
     syncedDevicesCount: number;
     activeSessions: { id: string; device: string; location: string; lastActive: string }[];
   };
+  // NOOB Shop: admin-controlled kill switch for checkout, and the flat
+  // delivery charge applied when a buyer picks Delivery over Pickup.
+  storeEnabled: boolean;
+  storeDeliveryFee: number;
 }
 

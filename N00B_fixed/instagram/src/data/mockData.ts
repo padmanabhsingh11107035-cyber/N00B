@@ -86,7 +86,9 @@ export const INITIAL_SETTINGS = {
     lastSynced: 'Just now',
     syncedDevicesCount: 1,
     activeSessions: []
-  }
+  },
+  storeEnabled: true,
+  storeDeliveryFee: 0
 };
 
 // Shared between the post/reel creation form (the picker) and every place a

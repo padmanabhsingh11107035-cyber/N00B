@@ -1029,10 +1029,19 @@ async function startServer() {
     return !!(isFollowing || isFollower);
   }
 
-  // Schedule a debounced state save after every mutating request finishes
+  // Schedule a debounced state save after every mutating request finishes.
+  // Was unconditional on method alone — every rejected request (wrong
+  // password, permission denied, duplicate signup, a validation error,
+  // literally any non-2xx response) still scheduled a save of all ~19
+  // persisted collections, even though a rejected request never touched
+  // any of them (every mutating endpoint in this file validates and
+  // returns its error before mutating anything, never after). Only
+  // scheduling on success cuts a real, unnecessary share of outbound
+  // MongoDB traffic without skipping any request that actually mutated
+  // something.
   app.use((req, res, next) => {
     res.on('finish', () => {
-      if (req.method !== 'GET') schedulePersist();
+      if (req.method !== 'GET' && res.statusCode >= 200 && res.statusCode < 300) schedulePersist();
     });
     next();
   });

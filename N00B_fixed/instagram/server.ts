@@ -1437,6 +1437,13 @@ async function startServer() {
   // Current user & profile
   app.get('/api/users/me', async (req, res) => {
     const activeUser = getActiveUser(req);
+    // checkSessionStatus polls this every 30s for as long as the app is
+    // open, purely to learn valid/invalid/unknown — it threw away the
+    // entire profile it received every single time. ?lite=1 keeps every
+    // bit of the status logic below identical (same 503-vs-null
+    // distinction the comment describes) but skips building and signing
+    // the full profile for a caller that never looks at it.
+    const isLite = req.query.lite === '1' || req.query.lite === 'true';
     if (!activeUser) {
       // The frontend's session-status poll (checkSessionStatus) treats a
       // real 200 + null here as "this account is genuinely gone/suspended"
@@ -1453,7 +1460,10 @@ async function startServer() {
       if (req.headers['x-user-id'] && isDbConnected() && !restoredKeys.has('users')) {
         return res.status(503).json({ error: 'Still syncing account data — please try again shortly.' });
       }
-      return res.json({ user: null });
+      return res.json(isLite ? { valid: false } : { user: null });
+    }
+    if (isLite) {
+      return res.json({ valid: true });
     }
     // Sign into a fresh response copy rather than the stored user object —
     // overwriting activeUser.avatar in place would permanently replace a

@@ -213,12 +213,16 @@ export async function fetchCurrentUser(): Promise<User | null> {
 // out with a scary "your account was suspended" message.
 export async function checkSessionStatus(): Promise<'valid' | 'invalid' | 'unknown'> {
   try {
-    const res = await fetch(`${API_BASE}/users/me`, {
+    // ?lite=1 skips sending back the full profile (bio, follower/following
+    // ID arrays, business fields, privacy settings, push subscription —
+    // none of it) for a poll that only ever checked truthiness and threw
+    // the rest away, every 30 seconds, for as long as the app stays open.
+    const res = await fetch(`${API_BASE}/users/me?lite=1`, {
       headers: getAuthHeaders()
     });
     if (!res.ok) return 'unknown';
     const data = await res.json();
-    return data.user ? 'valid' : 'invalid';
+    return data.valid ? 'valid' : 'invalid';
   } catch (err) {
     return 'unknown';
   }

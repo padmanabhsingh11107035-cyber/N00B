@@ -10,7 +10,9 @@ interface StoreSettingsModalProps {
 }
 
 export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ settings, onClose, onSaved }) => {
-  const [storeEnabled, setStoreEnabled] = useState(settings.storeEnabled);
+  // A settings document persisted before this field existed won't have it
+  // yet — treat that as "enabled" (the real default), not as "disabled".
+  const [storeEnabled, setStoreEnabled] = useState(settings.storeEnabled !== false);
   const [deliveryFee, setDeliveryFee] = useState(String(settings.storeDeliveryFee ?? 0));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

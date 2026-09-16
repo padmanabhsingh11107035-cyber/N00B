@@ -112,8 +112,11 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     }
   };
 
+  // storeEnabled defaults to true when a pre-existing settings document
+  // (persisted before this field existed) doesn't have it yet — only an
+  // explicit `false` from the admin's toggle should read as "paused."
   const checkoutBlockedReason =
-    settings && !settings.storeEnabled
+    settings && settings.storeEnabled === false
       ? 'Ordering is currently paused by NOOB.'
       : 'Online ordering isn\'t live yet — check back soon!';
 

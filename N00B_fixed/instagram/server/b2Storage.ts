@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 
 // AWS SigV4 stamps the current time into every signed URL, so calling
 // getSignedUrl again for the exact same object produces a different query
@@ -125,6 +126,57 @@ export async function uploadMediaToB2(
     objectKey,
     presignedUrl
   };
+}
+
+/**
+ * Generates a presigned POST policy so the browser can upload a file
+ * directly to B2, bypassing this server entirely for the file bytes —
+ * unlike uploadMediaToB2 above, which relays the whole file through our
+ * own outbound bandwidth. A plain presigned PUT URL (the simpler,
+ * one-line alternative) can't enforce a size limit at all, which would
+ * let a direct upload bypass maxSizeBytes entirely; the POST-policy form
+ * bakes a `content-length-range` condition into the signature itself, so
+ * B2 rejects an oversized upload before it's even accepted — the same
+ * guarantee multer's `limits.fileSize` gives the relayed path.
+ * Returns null if B2 isn't configured, so callers can fall back to the
+ * relayed upload path.
+ */
+export async function createPresignedUpload(
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products',
+  originalFilename: string,
+  contentType: string,
+  maxSizeBytes: number
+): Promise<{ objectKey: string; uploadUrl: string; fields: Record<string, string>; presignedUrl: string } | null> {
+  const { client, bucket, isConfigured } = getB2Client();
+  if (!isConfigured || !client) return null;
+
+  const fileExt = originalFilename.split('.').pop() || 'dat';
+  const randomSuffix = Math.random().toString(36).substring(2, 9);
+  const objectKey = `${folder}/${Date.now()}-${randomSuffix}.${fileExt}`;
+
+  const { url, fields } = await createPresignedPost(client, {
+    Bucket: bucket,
+    Key: objectKey,
+    Conditions: [
+      ['content-length-range', 0, maxSizeBytes],
+      ['eq', '$Content-Type', contentType]
+    ],
+    Fields: {
+      'Content-Type': contentType
+    },
+    // Short-lived — this is a one-shot "upload this exact file now" grant,
+    // not a general-purpose credential, so there's no reason for it to
+    // outlive the few seconds/minutes an upload actually takes.
+    Expires: 300
+  });
+
+  // The object doesn't exist yet (the browser hasn't uploaded it), but a
+  // presigned GET URL is just a signature over "who may fetch this key
+  // once it exists" — safe to hand out now so the caller has a display
+  // URL ready the moment the upload completes, no second round-trip.
+  const presignedUrl = await signMediaKey(objectKey);
+
+  return { objectKey, uploadUrl: url, fields, presignedUrl };
 }
 
 /**

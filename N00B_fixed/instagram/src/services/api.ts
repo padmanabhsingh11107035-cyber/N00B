@@ -882,15 +882,15 @@ export async function addPostToCollection(collectionId: string, postId: string) 
   return await res.json();
 }
 
-// Media Upload via Backblaze B2 (S3-compatible) with invisible client-side compression
-export async function uploadMediaFile(
+// Relays the file through our own server to B2 — the original path, kept
+// exactly as it was so it remains a fully-working fallback (see
+// uploadMediaFile below) whenever a direct upload isn't possible.
+async function uploadMediaFileRelayed(
   file: File,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' = 'posts'
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products'
 ): Promise<{ success: boolean; objectKey: string; url: string }> {
-  // Invisibly compress images/videos to reduce latency and bandwidth
-  const optimizedFile = await compressMedia(file);
   const formData = new FormData();
-  formData.append('file', optimizedFile);
+  formData.append('file', file);
   formData.append('folder', folder);
 
   const userId = getSessionUserId() || '';
@@ -903,6 +903,58 @@ export async function uploadMediaFile(
   });
 
   return await res.json();
+}
+
+// Media Upload via Backblaze B2 (S3-compatible) with invisible client-side
+// compression. Uploads go straight from this browser to B2 whenever
+// possible — /api/upload/presign hands back a one-time, size-limited
+// upload grant, so the actual file bytes never pass through (and never
+// count against) our own server's bandwidth, unlike the relayed path
+// above. Falls back to that relayed path automatically (same return
+// shape either way, so nothing downstream needs to know which happened)
+// whenever direct upload isn't available yet — B2 not configured, or the
+// bucket's CORS rules not yet set to allow this origin — so upload never
+// actually breaks, it just doesn't get the bandwidth saving until that's
+// set up.
+export async function uploadMediaFile(
+  file: File,
+  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' = 'posts'
+): Promise<{ success: boolean; objectKey: string; url: string }> {
+  // Invisibly compress images/videos to reduce latency and bandwidth
+  const optimizedFile = await compressMedia(file);
+
+  try {
+    const presignRes = await fetch(`${API_BASE}/upload/presign`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: safeJsonStringify({
+        folder,
+        filename: optimizedFile.name,
+        contentType: optimizedFile.type
+      })
+    });
+    if (!presignRes.ok) throw new Error('Presign not available');
+    const presign = await presignRes.json();
+    if (!presign.success) throw new Error('Presign not available');
+
+    const uploadForm = new FormData();
+    Object.entries(presign.fields as Record<string, string>).forEach(([key, value]) => {
+      uploadForm.append(key, value);
+    });
+    // The actual file must be the LAST field per S3/B2's POST policy rules.
+    uploadForm.append('file', optimizedFile);
+
+    const putRes = await fetch(presign.uploadUrl, { method: 'POST', body: uploadForm });
+    if (!putRes.ok) throw new Error('Direct upload failed');
+
+    return { success: true, objectKey: presign.objectKey, url: presign.url };
+  } catch (err) {
+    // Any failure here — B2 not configured, CORS not set up yet, a flaky
+    // network — falls straight back to the always-available relayed path
+    // rather than surfacing an error, so uploads keep working exactly as
+    // before until direct upload is fully set up.
+    return uploadMediaFileRelayed(optimizedFile, folder);
+  }
 }
 
 // Full detailed Profile Update

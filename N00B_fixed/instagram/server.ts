@@ -16,7 +16,7 @@ import {
   MOCK_HIGHLIGHTS,
   INITIAL_SETTINGS
 } from './src/data/mockData';
-import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2, getBareMediaKey } from './server/b2Storage';
+import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2, getBareMediaKey, createPresignedUpload } from './server/b2Storage';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 import { initPush, getVapidPublicKey, sendPush } from './server/push';
 import { initFcm, isFcmConfigured, sendFcm } from './server/fcm';
@@ -1143,6 +1143,58 @@ async function startServer() {
       // in its message — logged for debugging, never sent to the client.
       console.error('Media upload error:', err);
       res.status(500).json({ error: 'Failed to upload media. Please try again.' });
+    }
+  });
+
+  // Presigned direct-to-B2 upload — the browser uploads the file straight
+  // to B2 using the returned policy, instead of this server relaying every
+  // byte (the previous /api/upload/media path, still kept fully working
+  // below as the fallback whenever this isn't available: B2 not
+  // configured, or the browser's direct upload to B2 fails for any reason
+  // — e.g. the bucket's CORS rules haven't been set to allow this origin
+  // yet). Only metadata is validated here since the actual bytes never
+  // pass through this server on this path; the presigned POST policy's
+  // own content-length-range condition (see createPresignedUpload) is
+  // what actually enforces the 50MB limit, the same guarantee multer's
+  // limits.fileSize gives the relayed path.
+  const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+  app.post('/api/upload/presign', async (req, res) => {
+    try {
+      const { folder: rawFolder, filename, contentType } = req.body || {};
+      if (!filename || !contentType) {
+        return res.status(400).json({ error: 'filename and contentType are required.' });
+      }
+
+      const ext = (String(filename).split('.').pop() || '').toLowerCase();
+      const mimeType = String(contentType).toLowerCase();
+      if (BLOCKED_MEDIA_MIME_TYPES.includes(mimeType) || BLOCKED_MEDIA_EXTENSIONS.includes(ext)) {
+        return res.status(400).json({
+          error: ext === 'wma'
+            ? 'WMA audio isn\'t supported by web browsers. Please upload MP3, WAV, or M4A instead.'
+            : 'HEIC/HEIF photos aren\'t supported by web browsers. On iPhone: Settings > Camera > Formats > select "Most Compatible" to save new photos as JPEG, or use "Options" when picking a photo to convert it first.'
+        });
+      }
+      if (!ALLOWED_MEDIA_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
+        return res.status(400).json({ error: 'Only image, video, and audio files can be uploaded.' });
+      }
+
+      const folder = (rawFolder || 'posts') as 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products';
+      const presigned = await createPresignedUpload(folder, String(filename), String(contentType), MAX_UPLOAD_BYTES);
+      if (!presigned) {
+        // B2 isn't configured — the caller falls back to /api/upload/media.
+        return res.status(503).json({ error: 'Direct upload is not available right now.' });
+      }
+
+      res.json({
+        success: true,
+        objectKey: presigned.objectKey,
+        uploadUrl: presigned.uploadUrl,
+        fields: presigned.fields,
+        url: presigned.presignedUrl
+      });
+    } catch (err: any) {
+      console.error('Presigned upload error:', err);
+      res.status(500).json({ error: 'Failed to prepare upload. Please try again.' });
     }
   });
 

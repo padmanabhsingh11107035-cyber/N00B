@@ -15,7 +15,7 @@ import { runImport } from './run-import.mjs';
 import { createTestDb, makePgAdapter, asUser, asAnon } from './pg-test-env.mjs';
 
 const backupsRoot = 'backups';
-const dir = process.argv[2] || path.join(backupsRoot, fs.readdirSync(backupsRoot).filter((d) => fs.existsSync(path.join(backupsRoot, d, 'users.json'))).sort().pop());
+const dir = process.argv.slice(2).find((a) => !a.startsWith('--')) || path.join(backupsRoot, fs.readdirSync(backupsRoot).filter((d) => fs.existsSync(path.join(backupsRoot, d, 'users.json'))).sort().pop());
 const raw = loadBackup(dir);
 
 let passed = 0;
@@ -33,7 +33,9 @@ const section = (t) => console.log(`\n${t}`);
 // ------------------------------------------------------------------ 1. load
 section('1. Import the real backup into a fresh database');
 const plan = buildImportPlan(raw, { withChats: false });
-const db = await createTestDb();
+const autoExpose = !process.argv.includes('--no-auto-expose');
+console.log(`(project setting "Automatically expose new tables": ${autoExpose ? 'ON' : 'OFF'})`);
+const db = await createTestDb({ autoExpose });
 const adapter = makePgAdapter(db);
 const result = await runImport(plan, adapter, { log: () => {} });
 check(result.verification.ok, 'import verification passed', JSON.stringify(result.verification.problems));
@@ -144,7 +146,15 @@ const privateTarget = idOf(privateRaw[1]), publicTarget = idOf(publicTargetRaw);
 const rowsAs = (uid, sql, params) => asUser(db, uid, async () => (await db.query(sql, params)).rows);
 const execAs = (uid, sql, params) => asUser(db, uid, async () => db.query(sql, params));
 
-check((await asAnon(db, async () => (await db.query('select count(*)::int n from profiles')).rows[0].n)) === 0, 'a logged-out visitor sees no profiles');
+{
+  const tables = (await db.query(`select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'`)).rows.map((r) => r.table_name);
+  let leaked = [];
+  for (const t of tables) { try { await asAnon(db, () => db.query(`select 1 from public.${t} limit 1`)); leaked.push(t); } catch { /* denied, as intended */ } }
+  check(leaked.length === 0, `a logged-out visitor (the public key) is refused on all ${tables.length} tables`, leaked.join(', '));
+  let openLegacy = false;
+  try { await asUser(db, adminRaw ? idOf(adminRaw) : '', () => db.query('select 1 from public.legacy_import limit 1')); openLegacy = true; } catch { /* denied */ }
+  check(!openLegacy, 'even an admin browser session can NOT read the raw legacy_import table');
+}
 check((await rowsAs(viewer, 'select count(*)::int n from profiles'))[0].n === raw.users.length, `a signed-in user sees all ${raw.users.length} profile cards`);
 check((await rowsAs(viewer, 'select user_id from profile_private')).length === 1, 'a user can read only their OWN private details (email, phone, birthday)');
 check((await rowsAs(noob, 'select user_id from profile_private')).length === raw.users.length, 'the admin can read everyone\'s private details');
@@ -201,7 +211,7 @@ check((await rowsAs(viewer, `select count(*)::int n from posts where user_id = $
 const myNotifs = (await rowsAs(viewer, 'select id, target_user_id from notifications'));
 const expectedForViewer = plan.tables.notifications.filter((x) => x.target_user_id === viewer || x.target_user_id === null).length;
 check(myNotifs.length === expectedForViewer && myNotifs.every((r) => r.target_user_id === viewer || r.target_user_id === null), 'a user sees only their own notifications plus broadcasts');
-await expectFail(() => execAs(viewer, `insert into notifications (target_user_id, type, message) values ($1, 'system', 'spoof')`, [author]), /row-level security/, 'a user can NOT create notifications for others');
+await expectFail(() => execAs(viewer, `insert into notifications (target_user_id, type, message) values ($1, 'system', 'spoof')`, [author]), /row-level security|permission denied/, 'a user can NOT create notifications for others');
 
 // chat: Global Lounge
 const lounge = (await db.query('select id from chats where is_global_default')).rows[0].id;
@@ -210,8 +220,8 @@ check((await execAs(viewer, `insert into messages (chat_id, sender_id, text) val
 await expectFail(() => execAs(viewer, `insert into messages (chat_id, sender_id, text) values ($1, $2, 'forged')`, [lounge, author]), /row-level security/, 'a user can NOT post a message as someone else');
 
 // economy is read-only for clients
-await expectFail(() => execAs(viewer, `insert into game_scores (user_id, game_id, score, points_awarded) values ($1, 'tictactoe', 999, 999999999)`, [viewer]), /row-level security/, 'a user can NOT write their own game score / points');
-await expectFail(() => execAs(viewer, `insert into noob_transactions (user_id, amount, reason) values ($1, 999999999, 'gift')`, [viewer]), /row-level security/, 'a user can NOT write their own points history');
+await expectFail(() => execAs(viewer, `insert into game_scores (user_id, game_id, score, points_awarded) values ($1, 'tictactoe', 999, 999999999)`, [viewer]), /row-level security|permission denied/, 'a user can NOT write their own game score / points');
+await expectFail(() => execAs(viewer, `insert into noob_transactions (user_id, amount, reason) values ($1, 999999999, 'gift')`, [viewer]), /row-level security|permission denied/, 'a user can NOT write their own points history');
 check((await rowsAs(viewer, 'select count(*)::int n from noob_transactions'))[0].n === (viewerRaw.noobTransactions || []).length, 'a user sees only their own points history');
 check((await execAs(viewer, 'update app_settings set store_enabled = false')).affectedRows === 0, 'a normal user can NOT switch the shop off');
 check((await execAs(noob, 'update app_settings set store_enabled = true')).affectedRows === 1, 'the admin CAN change app settings');

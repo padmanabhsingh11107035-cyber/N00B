@@ -8,7 +8,10 @@ import { PGlite } from '@electric-sql/pglite';
 
 export const MIGRATIONS_DIR = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..', 'supabase', 'migrations');
 
-export async function createTestDb() {
+// autoExpose = true mimics a Supabase project created with "Automatically expose
+// new tables" ticked (every new table is granted to the API roles by default);
+// false mimics it unticked. The migration must behave identically in both.
+export async function createTestDb({ autoExpose = true } = {}) {
   const db = new PGlite();
   await db.exec(`
     create role anon nologin;
@@ -27,14 +30,9 @@ export async function createTestDb() {
     grant usage on schema auth to anon, authenticated, service_role;
     grant execute on function auth.uid() to anon, authenticated, service_role;
   `);
+  if (autoExpose) await db.exec('alter default privileges in schema public grant all on tables to anon, authenticated, service_role;');
   const files = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort();
   for (const f of files) await db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
-  // Supabase grants table access to its roles by default; RLS then decides.
-  await db.exec(`
-    grant usage on schema public to anon, authenticated, service_role;
-    grant all on all tables in schema public to anon, authenticated, service_role;
-    grant execute on all functions in schema public to anon, authenticated, service_role;
-  `);
   return db;
 }
 

@@ -850,6 +850,51 @@ create policy support_reviews_admin_select on public.support_reviews for select 
 -- legacy_import: no policy on purpose — service role only.
 
 -- ===========================================================================
+-- Table privileges (least privilege, explicit)
+--
+-- Row-level security decides WHICH rows; these grants decide whether a role may
+-- touch a table AT ALL. They are spelled out here so the result is identical
+-- whether or not the project has "Automatically expose new tables" switched on:
+-- start from nothing, then grant only what each policy above actually uses.
+--   * anon (a logged-out visitor / the public key) gets NO table access.
+--   * authenticated gets exactly the actions its policies allow.
+--   * service_role (imports, Edge Functions) gets everything.
+-- ===========================================================================
+revoke all on all tables in schema public from anon, authenticated;
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to service_role;
+
+grant select, update                          on public.profiles           to authenticated;
+grant select, insert, update                  on public.profile_private    to authenticated;
+grant select, insert, update, delete          on public.push_subscriptions to authenticated;
+grant select, insert, delete                  on public.follows            to authenticated;
+grant select, insert, delete                  on public.follow_requests    to authenticated;
+grant select, insert, update, delete          on public.blocks             to authenticated;
+grant select, insert, update, delete          on public.posts              to authenticated;
+grant select, insert, update, delete          on public.post_slides        to authenticated;
+grant select, insert, delete                  on public.post_likes         to authenticated;
+grant select, insert, update, delete          on public.post_saves         to authenticated;
+grant select, insert                          on public.post_views         to authenticated;
+grant select, insert, update, delete          on public.reels              to authenticated;
+grant select, insert, delete                  on public.reel_likes         to authenticated;
+grant select, insert, update, delete          on public.reel_saves         to authenticated;
+grant select, insert                          on public.reel_views         to authenticated;
+grant select, insert, update, delete          on public.comments           to authenticated;
+grant select, delete                          on public.notifications      to authenticated;
+grant select, insert, update, delete          on public.notification_reads to authenticated;
+grant select, insert, update, delete          on public.chats              to authenticated;
+grant select, update, delete                  on public.chat_members       to authenticated;
+grant select, insert, update, delete          on public.messages           to authenticated;
+grant select                                  on public.game_scores        to authenticated;
+grant select                                  on public.noob_transactions  to authenticated;
+grant select, insert, update, delete          on public.coupons            to authenticated;
+grant select, update                          on public.app_settings       to authenticated;
+grant select, insert                          on public.support_reviews    to authenticated;
+-- legacy_import: no grant to anon/authenticated on purpose.
+
+-- ===========================================================================
 -- Realtime (live chat / notifications) — only where the publication exists
 -- ===========================================================================
 do $$

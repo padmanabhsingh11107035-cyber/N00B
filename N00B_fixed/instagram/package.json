@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist dist-server server.js",
     "lint": "tsc --noEmit",
-    "test:supabase": "node scripts/supabase/test-import.mjs",
+    "test:supabase": "node scripts/supabase/test-import.mjs && node scripts/supabase/test-import.mjs --no-auto-expose",
     "android:sync": "vite build && npx cap sync android"
   },
   "dependencies": {

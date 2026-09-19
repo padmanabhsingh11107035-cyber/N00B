@@ -44,9 +44,15 @@ if (!fs.existsSync(listFile)) {
 const keys = JSON.parse(fs.readFileSync(listFile, 'utf8'));
 const mediaDir = path.join(dir, 'media');
 
+// The region is part of the endpoint ("s3.<region>.backblazeb2.com"), so
+// derive it — a bucket in another region then only needs B2_ENDPOINT set.
+const region = process.env.B2_REGION
+  || (endpoint.match(/s3\.([a-z0-9-]+)\.backblazeb2\.com/) || [])[1]
+  || 'us-east-005';
+
 const client = new S3Client({
   endpoint,
-  region: process.env.B2_REGION || 'us-east-005',
+  region,
   forcePathStyle: true,
   credentials: { accessKeyId: keyId, secretAccessKey: applicationKey }
 });

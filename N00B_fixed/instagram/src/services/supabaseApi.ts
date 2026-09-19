@@ -330,6 +330,7 @@ export async function updateFullProfile(profileData: Partial<User>): Promise<{ s
 
 export async function fetchUsers(search?: string): Promise<User[]> {
   try {
+    if (!(await currentSession())) return [];
     const list = await rpc<User[]>('search_users', { p_search: search || '' });
     return (list || []).map((u) => mapUser(u) as User);
   } catch {
@@ -368,6 +369,7 @@ export async function declineFollowRequest(requesterId: string): Promise<{ succe
 export async function fetchPosts(_category?: string, _location?: string): Promise<Post[]> {
   // (The old server ignored both filters too — screens filter what they show.)
   try {
+    if (!(await currentSession())) return []; // logged-out visitors see nothing (and we don't even ask)
     return mapPosts(await rpc<any[]>('feed_posts'));
   } catch {
     return [];
@@ -375,15 +377,30 @@ export async function fetchPosts(_category?: string, _location?: string): Promis
 }
 
 export async function fetchLikedPosts(): Promise<Post[]> {
-  try { return mapPosts(await rpc<any[]>('liked_posts')); } catch { return []; }
+  try {
+    if (!(await currentSession())) return [];
+    return mapPosts(await rpc<any[]>('liked_posts'));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchSavedPosts(): Promise<Post[]> {
-  try { return mapPosts(await rpc<any[]>('saved_posts')); } catch { return []; }
+  try {
+    if (!(await currentSession())) return [];
+    return mapPosts(await rpc<any[]>('saved_posts'));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchArchivedPosts(): Promise<Post[]> {
-  try { return mapPosts(await rpc<any[]>('archived_posts')); } catch { return []; }
+  try {
+    if (!(await currentSession())) return [];
+    return mapPosts(await rpc<any[]>('archived_posts'));
+  } catch {
+    return [];
+  }
 }
 
 export async function createPost(postData: Partial<Post>): Promise<Post> {

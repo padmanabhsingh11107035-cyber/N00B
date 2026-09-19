@@ -107,6 +107,21 @@ if (write) {
     check(liked.isLiked === true, 'liking works');
     const cm = await rpc(c, 'add_comment', { p_post: post.id, p_text: 'hello' });
     check(cm.comment.text === 'hello', 'commenting works');
+    // media storage: upload as a signed-in user, view through the public address, folder rules, cleanup
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    const fileKey = `posts/livetest-${stamp}.png`;
+    const up = await c.storage.from('media').upload(fileKey, png, { contentType: 'image/png', upsert: false });
+    check(!up.error, 'a signed-in user can upload a picture', up.error ? `(${up.error.message})` : '');
+    const back = await fetch(`${url}/storage/v1/object/public/media/${fileKey}`);
+    check(back.ok && Buffer.from(await back.arrayBuffer()).length === png.length, 'the picture is viewable at its public address');
+    const wrong = await c.storage.from('media').upload(`secret/livetest-${stamp}.png`, png, { contentType: 'image/png' });
+    check(!!wrong.error, 'uploading into an unknown folder is refused');
+    const anonUp = await fresh().storage.from('media').upload(`posts/anon-${stamp}.png`, png, { contentType: 'image/png' });
+    check(!!anonUp.error, 'a logged-out visitor can NOT upload');
+    const rm = await c.storage.from('media').remove([fileKey]);
+    check(!rm.error && (rm.data || []).length === 1, 'you can delete your own file');
+    let inlineRefused = false; try { await rpc(c, 'update_my_profile', { p: { avatar: 'data:image/jpeg;base64,' + 'A'.repeat(40000) } }); } catch (e) { inlineRefused = /too large/i.test(e.message); }
+    check(inlineRefused, 'a huge inline photo is refused by the database');
     const del = await rpc(c, 'delete_my_account', { p_password: 'Test-pass-1234' });
     check(del.success === true, 'deleting the throwaway account works (cleans up after itself)');
   } else {

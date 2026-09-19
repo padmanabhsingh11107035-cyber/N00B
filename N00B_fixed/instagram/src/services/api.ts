@@ -16,8 +16,56 @@ import {
   StoreProduct,
   StoreProductMedia
 } from '../types';
-import { compressMedia } from '../utils/mediaCompressor';
+import { uploadMediaFile } from './supabaseApi';
 import { safeJsonStringify } from '../utils/safeJson';
+
+// Phase 1 (accounts, profiles, follows, posts, comments, notifications, settings, media upload) now runs
+// on Supabase — same function names and return shapes as the old Express versions.
+export {
+  fetchHealth,
+  signupUser,
+  loginUser,
+  verifyUsernameExists,
+  recoverAccountAccess,
+  logoutUser,
+  deleteMyAccount,
+  fetchCurrentUser,
+  checkSessionStatus,
+  updateCurrentUser,
+  updateUserBio,
+  updateUserStatusNote,
+  fetchUsers,
+  toggleFollowUser,
+  acceptFollowRequest,
+  declineFollowRequest,
+  fetchPosts,
+  fetchLikedPosts,
+  fetchSavedPosts,
+  fetchArchivedPosts,
+  createPost,
+  toggleLikePost,
+  fetchPostLikers,
+  recordPostView,
+  fetchPostViewers,
+  toggleSavePost,
+  toggleArchivePost,
+  toggleCommentsPost,
+  toggleLikeCountPost,
+  deletePost,
+  deletePostSlide,
+  fetchComments,
+  addComment,
+  deleteComment,
+  togglePinComment,
+  fetchAppNotifications,
+  markNotificationsAsRead,
+  clearAllNotifications,
+  fetchSettings,
+  updateSettings,
+  updateUserSettings,
+  uploadMediaFile,
+  updateFullProfile
+} from './supabaseApi';
 
 const API_BASE = '/api';
 
@@ -56,91 +104,6 @@ function getAuthHeaders(): HeadersInit {
   };
 }
 
-export async function fetchHealth(): Promise<{ status: string; usersCount?: number }> {
-  try {
-    const res = await fetch(`${API_BASE}/health`);
-    return await res.json();
-  } catch (err) {
-    return { status: 'offline' };
-  }
-}
-
-// --- AUTHENTICATION API ---
-export async function signupUser(payload: {
-  firstName: string;
-  lastName?: string;
-  username: string;
-  displayName?: string;
-  email: string;
-  countryCode?: string;
-  mobileNumber?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  password: string;
-  avatar?: string;
-  bio?: string;
-  accountType?: 'public' | 'private' | 'business';
-  businessCategory?: string;
-  businessEmail?: string;
-  businessPhone?: string;
-  businessAddress?: string;
-  agreedToTerms: boolean;
-}): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string }> {
-  const res = await fetch(`${API_BASE}/auth/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: safeJsonStringify(payload)
-  });
-  const data = await res.json();
-  if (data.user && data.user.id) {
-    setSessionUserId(data.user.id);
-  }
-  return data;
-}
-
-export async function loginUser(payload: {
-  identifier: string;
-  password?: string;
-}): Promise<{ success: boolean; user?: User; error?: string }> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: safeJsonStringify(payload)
-  });
-  const data = await res.json();
-  if (data.user && data.user.id) {
-    setSessionUserId(data.user.id);
-  }
-  return data;
-}
-
-export async function verifyUsernameExists(username: string): Promise<{ exists: boolean; error?: string }> {
-  const res = await fetch(`${API_BASE}/auth/verify-username`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: safeJsonStringify({ username })
-  });
-  return await res.json();
-}
-
-export async function recoverAccountAccess(payload: {
-  username: string;
-  mobileNumber: string;
-  dateOfBirth: string;
-  email: string;
-}): Promise<{ success: boolean; user?: User; error?: string }> {
-  const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: safeJsonStringify(payload)
-  });
-  const data = await res.json();
-  if (data.user && data.user.id) {
-    setSessionUserId(data.user.id);
-  }
-  return data;
-}
-
 export interface LiveAvatarPreset {
   id: string;
   name: string;
@@ -166,93 +129,6 @@ export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: 
   return await res.json();
 }
 
-export async function logoutUser(): Promise<{ success: boolean }> {
-  setSessionUserId(null);
-  const res = await fetch(`${API_BASE}/auth/logout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  return await res.json();
-}
-
-// Self-service account deletion (Google Play requires this: a logged-in
-// user must be able to permanently delete their own account and content
-// without needing an admin). Requires the account password to confirm.
-export async function deleteMyAccount(password: string): Promise<{ success: boolean; message?: string; error?: string }> {
-  const res = await fetch(`${API_BASE}/users/me`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ password })
-  });
-  const data = await res.json();
-  if (data.success) {
-    setSessionUserId(null);
-  }
-  return data;
-}
-
-export async function fetchCurrentUser(): Promise<User | null> {
-  try {
-    const res = await fetch(`${API_BASE}/users/me`, {
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.user || null;
-  } catch (err) {
-    return null;
-  }
-}
-
-// Used only to poll whether a session is still valid (e.g. to detect a
-// suspension mid-session). Unlike fetchCurrentUser, this must NEVER collapse
-// "the server said you're logged out" (200 + user: null — the only case
-// that's actually true) together with "the request didn't work" (a network
-// blip, a 502/503 during a deploy, a timeout) — those are transient and must
-// not be treated as a suspension, or a routine deploy hiccup logs everyone
-// out with a scary "your account was suspended" message.
-export async function checkSessionStatus(): Promise<'valid' | 'invalid' | 'unknown'> {
-  try {
-    // ?lite=1 skips sending back the full profile (bio, follower/following
-    // ID arrays, business fields, privacy settings, push subscription —
-    // none of it) for a poll that only ever checked truthiness and threw
-    // the rest away, every 30 seconds, for as long as the app stays open.
-    const res = await fetch(`${API_BASE}/users/me?lite=1`, {
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) return 'unknown';
-    const data = await res.json();
-    return data.valid ? 'valid' : 'invalid';
-  } catch (err) {
-    return 'unknown';
-  }
-}
-
-export async function updateCurrentUser(userData: Partial<User>): Promise<User> {
-  const res = await fetch(`${API_BASE}/users/me`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(userData)
-  });
-  const data = await res.json();
-  return data.user;
-}
-
-export async function updateUserBio(newBio: string): Promise<User> {
-  return updateCurrentUser({ bio: newBio });
-}
-
-export async function updateUserStatusNote(note?: StatusNote): Promise<User> {
-  return updateCurrentUser({ statusNote: note });
-}
-
-export async function fetchUsers(search?: string): Promise<User[]> {
-  const url = search ? `${API_BASE}/users?search=${encodeURIComponent(search)}` : `${API_BASE}/users`;
-  const res = await fetch(url, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.users || [];
-}
-
 // Matches a device's contact phone numbers against registered users
 // server-side (native app "Find Friends" flow) — the numbers themselves are
 // never sent back, only public profile fields for any matches found.
@@ -264,166 +140,6 @@ export async function matchContacts(phoneNumbers: string[]): Promise<User[]> {
   });
   const data = await res.json();
   return data.users || [];
-}
-
-export async function toggleFollowUser(userId: string): Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean; followersCount: number; message?: string }> {
-  const res = await fetch(`${API_BASE}/users/${userId}/toggle-follow`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function acceptFollowRequest(requesterId: string): Promise<{ success: boolean; followersCount: number; followRequests: any[] }> {
-  const res = await fetch(`${API_BASE}/users/follow-requests/${requesterId}/accept`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function declineFollowRequest(requesterId: string): Promise<{ success: boolean; followRequests: any[] }> {
-  const res = await fetch(`${API_BASE}/users/follow-requests/${requesterId}/decline`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function fetchPosts(category?: string, location?: string): Promise<Post[]> {
-  const params = new URLSearchParams();
-  if (category) params.append('category', category);
-  if (location) params.append('location', location);
-  const res = await fetch(`${API_BASE}/posts?${params.toString()}`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.posts;
-}
-
-export async function fetchLikedPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts/liked`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.posts;
-}
-
-export async function fetchSavedPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts/saved`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.posts;
-}
-
-export async function fetchArchivedPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts/archived`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.posts;
-}
-
-export async function createPost(postData: Partial<Post>): Promise<Post> {
-  const res = await fetch(`${API_BASE}/posts`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(postData)
-  });
-  const data = await res.json();
-  if (!res.ok || !data.post) {
-    throw new Error(data.error || 'Failed to publish post.');
-  }
-  return data.post;
-}
-
-export async function toggleLikePost(postId: string): Promise<{ isLiked: boolean; likesCount: number }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/like`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function fetchPostLikers(postId: string): Promise<{ users: User[] }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/likers`, { headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function recordPostView(postId: string) {
-  const res = await fetch(`${API_BASE}/posts/${postId}/view`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-// Owner-only — the server 403s this for anyone but the post's own author.
-export async function fetchPostViewers(postId: string): Promise<{ users: User[]; error?: string }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/viewers`, { headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function toggleSavePost(postId: string): Promise<{ isSaved: boolean; savesCount: number }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/save`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function toggleArchivePost(postId: string): Promise<{ isArchived: boolean }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/archive`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function toggleCommentsPost(postId: string): Promise<{ isCommentsDisabled: boolean }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/toggle-comments`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function toggleLikeCountPost(postId: string): Promise<{ isLikeCountHidden: boolean }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/toggle-like-count`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function deletePost(postId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/posts/${postId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
-  return data.success;
-}
-
-export async function deletePostSlide(postId: string, slideId: string): Promise<{ success: boolean; post?: Post; error?: string }> {
-  const res = await fetch(`${API_BASE}/posts/${postId}/slides/${slideId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function fetchComments(postId: string) {
-  try {
-    const res = await fetch(`${API_BASE}/posts/${postId}/comments`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data.comments) ? data.comments : [];
-  } catch (err) {
-    console.error('Error fetching comments:', err);
-    return [];
-  }
-}
-
-export async function addComment(postId: string, text: string) {
-  const res = await fetch(`${API_BASE}/posts/${postId}/comments`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ text })
-  });
-  const data = await res.json();
-  return data.comment;
-}
-
-export async function deleteComment(postId: string, commentId: string) {
-  const res = await fetch(`${API_BASE}/posts/${postId}/comments/${commentId}`, { 
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function togglePinComment(postId: string, commentId: string) {
-  const res = await fetch(`${API_BASE}/posts/${postId}/comments/${commentId}/pin`, { 
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
 }
 
 // Stories & Highlights
@@ -882,91 +598,6 @@ export async function addPostToCollection(collectionId: string, postId: string) 
   return await res.json();
 }
 
-// Relays the file through our own server to B2 — the original path, kept
-// exactly as it was so it remains a fully-working fallback (see
-// uploadMediaFile below) whenever a direct upload isn't possible.
-async function uploadMediaFileRelayed(
-  file: File,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products'
-): Promise<{ success: boolean; objectKey: string; url: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('folder', folder);
-
-  const userId = getSessionUserId() || '';
-  const res = await fetch(`${API_BASE}/upload/media`, {
-    method: 'POST',
-    headers: {
-      ...(userId ? { 'x-user-id': userId } : {})
-    },
-    body: formData
-  });
-
-  return await res.json();
-}
-
-// Media Upload via Backblaze B2 (S3-compatible) with invisible client-side
-// compression. Uploads go straight from this browser to B2 whenever
-// possible — /api/upload/presign hands back a one-time, size-limited
-// upload grant, so the actual file bytes never pass through (and never
-// count against) our own server's bandwidth, unlike the relayed path
-// above. Falls back to that relayed path automatically (same return
-// shape either way, so nothing downstream needs to know which happened)
-// whenever direct upload isn't available yet — B2 not configured, or the
-// bucket's CORS rules not yet set to allow this origin — so upload never
-// actually breaks, it just doesn't get the bandwidth saving until that's
-// set up.
-export async function uploadMediaFile(
-  file: File,
-  folder: 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' = 'posts'
-): Promise<{ success: boolean; objectKey: string; url: string }> {
-  // Invisibly compress images/videos to reduce latency and bandwidth
-  const optimizedFile = await compressMedia(file);
-
-  try {
-    const presignRes = await fetch(`${API_BASE}/upload/presign`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: safeJsonStringify({
-        folder,
-        filename: optimizedFile.name,
-        contentType: optimizedFile.type
-      })
-    });
-    if (!presignRes.ok) throw new Error('Presign not available');
-    const presign = await presignRes.json();
-    if (!presign.success) throw new Error('Presign not available');
-
-    const uploadForm = new FormData();
-    Object.entries(presign.fields as Record<string, string>).forEach(([key, value]) => {
-      uploadForm.append(key, value);
-    });
-    // The actual file must be the LAST field per S3/B2's POST policy rules.
-    uploadForm.append('file', optimizedFile);
-
-    const putRes = await fetch(presign.uploadUrl, { method: 'POST', body: uploadForm });
-    if (!putRes.ok) throw new Error('Direct upload failed');
-
-    return { success: true, objectKey: presign.objectKey, url: presign.url };
-  } catch (err) {
-    // Any failure here — B2 not configured, CORS not set up yet, a flaky
-    // network — falls straight back to the always-available relayed path
-    // rather than surfacing an error, so uploads keep working exactly as
-    // before until direct upload is fully set up.
-    return uploadMediaFileRelayed(optimizedFile, folder);
-  }
-}
-
-// Full detailed Profile Update
-export async function updateFullProfile(profileData: Partial<User>): Promise<{ success: boolean; user: User; message?: string }> {
-  const res = await fetch(`${API_BASE}/users/profile/update`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(profileData)
-  });
-  return await res.json();
-}
-
 // Music Hub APIs
 export async function fetchMusicTracks(): Promise<import('../types').MusicTrack[]> {
   const res = await fetch(`${API_BASE}/music/tracks`, { headers: getAuthHeaders() });
@@ -1409,26 +1040,6 @@ export async function fetchInsights(): Promise<ProfessionalInsights> {
   return data.insights;
 }
 
-export async function fetchSettings(): Promise<AppSettings> {
-  const res = await fetch(`${API_BASE}/settings`);
-  const data = await res.json();
-  return data.settings;
-}
-
-export async function updateUserSettings(userConfig: Partial<User>): Promise<User> {
-  return updateCurrentUser(userConfig);
-}
-
-export async function updateSettings(newSettings: Partial<AppSettings>): Promise<AppSettings> {
-  const res = await fetch(`${API_BASE}/settings`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(newSettings)
-  });
-  const data = await res.json();
-  return data.settings;
-}
-
 // AI Customer Support Assistant
 export async function askAiSupportAssistant(
   message: string,
@@ -1438,28 +1049,6 @@ export async function askAiSupportAssistant(
     method: 'POST',
     headers: getAuthHeaders(),
     body: safeJsonStringify({ message, conversationHistory })
-  });
-  return await res.json();
-}
-
-// NOOB Admin & Notifications APIs
-export async function fetchAppNotifications(): Promise<{ notifications: import('../types').AppNotification[] }> {
-  const res = await fetch(`${API_BASE}/notifications`, { headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function markNotificationsAsRead(): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/notifications/mark-read`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function clearAllNotifications(): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/notifications/clear`, {
-    method: 'POST',
-    headers: getAuthHeaders()
   });
   return await res.json();
 }

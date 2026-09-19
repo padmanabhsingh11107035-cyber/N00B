@@ -11,7 +11,8 @@
     "clean": "rm -rf dist dist-server server.js",
     "lint": "tsc --noEmit",
     "test:supabase": "node scripts/supabase/test-phase1.mjs && node scripts/supabase/test-import.mjs && node scripts/supabase/test-import.mjs --no-auto-expose && node scripts/supabase/test-import.mjs --with-reels --with-chats",
-    "android:sync": "vite build && npx cap sync android"
+    "android:sync": "vite build && npx cap sync android",
+    "dev:web": "vite --port 5173 --host 127.0.0.1"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",
@@ -20,6 +21,7 @@
     "@capacitor-community/contacts": "latest",
     "@capacitor/core": "latest",
     "@capacitor/push-notifications": "latest",
+    "@supabase/supabase-js": "^2.116.0",
     "@tailwindcss/vite": "^4.1.14",
     "@types/canvas-confetti": "^1.9.0",
     "@types/leaflet": "^1.9.22",
@@ -45,7 +47,6 @@
     "@capacitor/android": "latest",
     "@capacitor/cli": "latest",
     "@electric-sql/pglite": "^0.5.8",
-    "@supabase/supabase-js": "^2.116.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/web-push": "^3.6.4",

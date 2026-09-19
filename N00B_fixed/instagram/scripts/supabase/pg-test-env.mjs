@@ -32,6 +32,20 @@ export async function createTestDb({ autoExpose = true } = {}) {
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to anon, authenticated, service_role;
     grant execute on function auth.uid() to anon, authenticated, service_role;
+    -- just enough of Supabase Storage for the media migration and its policies
+    create schema storage;
+    create table storage.buckets (
+      id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]
+    );
+    create table storage.objects (
+      id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid, owner_id text, created_at timestamptz default now()
+    );
+    alter table storage.objects enable row level security;
+    create function storage.foldername(name text) returns text[] language sql immutable as
+      $$ select (string_to_array(name, '/'))[1:greatest(array_length(string_to_array(name, '/'), 1) - 1, 0)] $$;
+    grant usage on schema storage to anon, authenticated, service_role;
+    grant select, insert, update, delete on storage.objects to anon, authenticated;
+    grant execute on function storage.foldername(text) to anon, authenticated;
   `);
   if (autoExpose) await db.exec('alter default privileges in schema public grant all on tables to anon, authenticated, service_role;');
   const files = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort();

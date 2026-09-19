@@ -241,5 +241,28 @@ const del = await rpc(c, 'delete_my_account', 'correct horse');
 check(del.success === true && (await n('select count(*)::int n from profiles where id = $1', [c])) === 0 && (await n('select count(*)::int n from auth.users where id = $1', [c])) === 0, 'with the right password the account and its login are gone');
 check((await n('select count(*)::int n from follows where follower_id = $1 or followee_id = $1', [c])) === 0 && (await n('select count(*)::int n from posts where user_id = $1', [c])) === 0, '...along with its follows and posts');
 
+// =====================================================================================
+section('12. Media storage and the inline-image guard');
+const run = (uid, sql, params = []) => asUser(db, uid, () => db.query(sql, params));
+check((await n(`select count(*)::int n from storage.buckets where id = 'media' and public and file_size_limit = 52428800`)) === 1, 'a public "media" bucket exists with the 50 MB limit');
+await run(a, `insert into storage.objects (bucket_id, name, owner_id) values ('media', 'posts/t1.jpg', $1)`, [a]);
+check((await n(`select count(*)::int n from storage.objects where name = 'posts/t1.jpg'`)) === 1, 'a signed-in user can upload into a known folder');
+await expectFail(() => run(a, `insert into storage.objects (bucket_id, name, owner_id) values ('media', 'secret/x.jpg', $1)`, [a]), /row-level security/, 'uploading into an unknown folder is refused');
+await expectFail(() => run(a, `insert into storage.objects (bucket_id, name, owner_id) values ('other-bucket', 'posts/x.jpg', $1)`, [a]), /row-level security/, 'uploading into any other bucket is refused');
+await expectFail(() => asAnon(db, () => db.query(`insert into storage.objects (bucket_id, name) values ('media', 'posts/anon.jpg')`)), /row-level security|permission denied/, 'a logged-out visitor can NOT upload');
+check((await asAnon(db, async () => (await db.query('select count(*)::int n from storage.objects')).rows[0].n)) === 0, 'a logged-out visitor can not list the bucket\'s files');
+check((await run(b, 'select count(*)::int n from storage.objects')).rows[0].n === 0 && (await run(a, 'select count(*)::int n from storage.objects')).rows[0].n === 1, 'a signed-in user can list only their OWN files, never other people\'s');
+check((await run(b, `delete from storage.objects where name = 'posts/t1.jpg'`)).affectedRows === 0, 'you can NOT delete someone else\'s file');
+check((await run(a, `delete from storage.objects where name = 'posts/t1.jpg'`)).affectedRows === 1, 'you CAN delete your own file');
+await run(a, `insert into storage.objects (bucket_id, name, owner_id) values ('media', 'posts/t2.jpg', $1)`, [a]);
+check((await run(admin, `delete from storage.objects where name = 'posts/t2.jpg'`)).affectedRows === 1, 'the admin can remove any file (moderation)');
+
+const big = 'data:image/jpeg;base64,' + 'A'.repeat(40000);
+await expectFail(() => run(a, 'update profiles set avatar = $1 where id = $2', [big, a]), /too large/, 'a huge inline profile photo is refused (the original bandwidth bug can not come back)');
+await expectFail(() => rpc(a, 'create_post', [{ mediaUrl: big, mediaType: 'image' }], 'x', 'tech', [], null, null), /too large/, 'a huge inline picture in a post is refused');
+check((await run(a, 'update profiles set avatar = $1 where id = $2', ['avatars/normal-key.jpg', a])).affectedRows === 1, 'a normal file key is accepted');
+check((await run(a, 'update profiles set avatar = $1 where id = $2', ['data:image/png;base64,iVBORw0KGgo=', a])).affectedRows === 1, 'a tiny inline image is still fine');
+await expectFail(() => db.query(`insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'big@users.nooob.xyz', $1::jsonb)`, [j({ username: 'bigphoto', avatar: big })]), /too large/, 'a sign-up carrying a huge inline photo is refused');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

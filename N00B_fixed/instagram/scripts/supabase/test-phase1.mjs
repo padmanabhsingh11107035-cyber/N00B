@@ -196,7 +196,7 @@ check((await n(`select count(*)::int n from notifications where type = 'post_com
 check((await n('select comments_count n from posts where id = $1', [pid])) === 1, 'the comment counter went up');
 await expectFail(() => rpc(b, 'add_comment', pid, '   '), /cannot be empty/, 'an empty comment is refused');
 check((await rpc(a, 'post_comments', pid)).comments.length === 1, 'anyone who can see the post can read its comments');
-await expectFail(() => rpc(b, 'toggle_pin_comment', cm.comment.id), /Only the post owner/, 'the commenter can not pin their own comment');
+await expectFail(() => rpc(b, 'toggle_pin_comment', cm.comment.id), /Only the (post )?owner/, 'the commenter can not pin their own comment');
 check((await rpc(newbie, 'toggle_pin_comment', cm.comment.id)).isPinned === true, 'the post owner can pin a comment');
 await expectFail(() => call(a, 'delete from comments where id = $1 returning id', [cm.comment.id]).then((r) => { if (!r.length) throw new Error('nothing deleted'); }), /nothing deleted/, 'a stranger can not delete someone else\'s comment');
 await call(newbie, 'delete from comments where id = $1', [cm.comment.id]);

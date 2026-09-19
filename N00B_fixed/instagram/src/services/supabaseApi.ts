@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack } from '../types';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
@@ -615,4 +615,303 @@ export async function uploadMediaFile(
     throw new Error('Please log in to upload.');
   }
   return uploadToStorage(optimizedFile, folder);
+}
+
+// ----------------------------------------------------------------------------- stories & highlights
+
+function mapStory(s: any): Story {
+  return {
+    ...s,
+    mediaUrl: resolveMedia(s.mediaUrl),
+    userAvatar: resolveMedia(s.userAvatar),
+    comments: (s.comments || []).map(mapComment)
+  };
+}
+
+export async function fetchStories(): Promise<Story[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('active_stories')) || []).map(mapStory);
+  } catch {
+    return [];
+  }
+}
+
+export async function createStory(storyData: Partial<Story>): Promise<Story> {
+  try {
+    const story = await rpc<any>('create_story', {
+      p_media_url: toStoredMedia(storyData.mediaUrl),
+      p_media_type: storyData.mediaType || 'image',
+      p_stickers: storyData.stickers || [],
+      p_close_friends: !!storyData.isCloseFriendsOnly
+    });
+    return mapStory(story);
+  } catch (err) {
+    throw new Error(errorText(err, 'Could not post your story.'));
+  }
+}
+
+export async function recordStoryView(storyId: string) {
+  try { return await rpc('record_story_view', { p_story: storyId }); } catch { return { success: false }; }
+}
+
+// Owner-only — the database refuses anyone but the story's own author.
+export async function fetchStoryViewers(storyId: string): Promise<{ users: User[]; error?: string }> {
+  try {
+    const res = await rpc<{ users: User[] }>('story_viewers', { p_story: storyId });
+    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+  } catch (err) {
+    return { users: [], error: errorText(err, 'Only the story owner can see who viewed it.') };
+  }
+}
+
+export async function addCommentToStory(storyId: string, text: string) {
+  try {
+    const res = await rpc<{ comment: any }>('add_story_comment', { p_story: storyId, p_text: text });
+    return mapComment(res.comment);
+  } catch (err) {
+    console.error('Could not post the story comment:', err);
+    return undefined;
+  }
+}
+
+export async function deleteStory(storyId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('stories').delete().eq('id', storyId).select('id');
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
+export async function fetchHighlights(): Promise<StoryHighlight[]> {
+  try {
+    if (!(await currentSession())) return [];
+    const list = (await rpc<any[]>('my_highlights')) || [];
+    return list.map((h) => ({ ...h, coverUrl: resolveMedia(h.coverUrl) }));
+  } catch {
+    return [];
+  }
+}
+
+export async function createHighlight(title: string, coverUrl: string, storyIds: string[]) {
+  try {
+    const res = await rpc<any>('create_highlight', { p_title: title, p_cover_url: toStoredMedia(coverUrl), p_story_ids: storyIds });
+    return { ...res, highlight: res.highlight ? { ...res.highlight, coverUrl: resolveMedia(res.highlight.coverUrl) } : res.highlight };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not create the highlight.') };
+  }
+}
+
+// ----------------------------------------------------------------------------- reels
+
+function mapReel(r: any): Reel {
+  return {
+    ...r,
+    userAvatar: resolveMedia(r.userAvatar),
+    videoUrl: resolveMedia(r.videoUrl),
+    thumbnailUrl: resolveMedia(r.thumbnailUrl),
+    audioTrack: r.audioTrack
+      ? { ...r.audioTrack, coverUrl: r.audioTrack.coverUrl ? resolveMedia(r.audioTrack.coverUrl) : r.audioTrack.coverUrl }
+      : r.audioTrack
+  };
+}
+
+export async function fetchReels(): Promise<Reel[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('feed_reels')) || []).map(mapReel);
+  } catch {
+    return [];
+  }
+}
+
+export async function createReel(reelData: Partial<Reel>): Promise<Reel> {
+  try {
+    const reel = await rpc<any>('create_reel', {
+      p_video_url: toStoredMedia(reelData.videoUrl),
+      p_thumbnail_url: toStoredMedia(reelData.thumbnailUrl),
+      p_caption: reelData.caption || '',
+      p_audio: reelData.audioTrack ?? null,
+      p_hashtags: reelData.hashtags || [],
+      p_category: reelData.category || 'others'
+    });
+    return mapReel(reel);
+  } catch (err) {
+    throw new Error(errorText(err, 'Failed to publish reel.'));
+  }
+}
+
+export async function toggleLikeReel(reelId: string): Promise<{ isLiked: boolean; likesCount: number }> {
+  try { return await rpc('toggle_reel_like', { p_reel: reelId }); } catch (err) { return { error: errorText(err, 'Could not update the like.') } as any; }
+}
+
+export async function fetchReelLikers(reelId: string): Promise<{ users: User[] }> {
+  try {
+    const res = await rpc<{ users: User[] }>('reel_likers', { p_reel: reelId });
+    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+  } catch {
+    return { users: [] };
+  }
+}
+
+// Owner-only — the database refuses anyone but the reel's own author.
+export async function fetchReelViewers(reelId: string): Promise<{ users: User[]; error?: string }> {
+  try {
+    const res = await rpc<{ users: User[] }>('reel_viewers', { p_reel: reelId });
+    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+  } catch (err) {
+    return { users: [], error: errorText(err, 'Only the reel owner can see who viewed it.') };
+  }
+}
+
+export async function toggleSaveReel(reelId: string): Promise<{ isSaved: boolean; savesCount: number }> {
+  try { return await rpc('toggle_reel_save', { p_reel: reelId }); } catch (err) { return { error: errorText(err, 'Could not update the save.') } as any; }
+}
+
+export async function fetchReelComments(reelId: string) {
+  try {
+    const res = await rpc<{ comments: any[] }>('reel_comments', { p_reel: reelId });
+    return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+  } catch (err) {
+    console.error('Error fetching reel comments:', err);
+    return [];
+  }
+}
+
+export async function addReelComment(reelId: string, text: string) {
+  try {
+    const res = await rpc<{ comment: any }>('add_reel_comment', { p_reel: reelId, p_text: text });
+    return mapComment(res.comment);
+  } catch (err) {
+    console.error('Could not post the comment:', err);
+    return undefined;
+  }
+}
+
+export async function recordReelView(reelId: string) {
+  try { return await rpc('record_reel_view', { p_reel: reelId }); } catch { return { success: false }; }
+}
+
+export async function fetchReelHistory(): Promise<Reel[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('reel_history')) || []).map(mapReel);
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteReel(reelId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('reels').delete().eq('id', reelId).select('id');
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
+// ----------------------------------------------------------------------------- music
+
+function mapTrack(t: any): MusicTrack {
+  return { ...t, audioUrl: resolveMedia(t.audioUrl), coverUrl: resolveMedia(t.coverUrl), uploaderAvatar: resolveMedia(t.uploaderAvatar) };
+}
+
+export async function fetchMusicTracks(): Promise<MusicTrack[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('list_music_tracks')) || []).map(mapTrack);
+  } catch {
+    return [];
+  }
+}
+
+export async function uploadMusicTrack(trackData: {
+  title: string;
+  artist?: string;
+  genre?: string;
+  audioUrl: string;
+  coverUrl?: string;
+  duration?: string;
+}): Promise<{ success: boolean; track: MusicTrack }> {
+  try {
+    const res = await rpc<any>('upload_music_track', {
+      p: { ...trackData, audioUrl: toStoredMedia(trackData.audioUrl), coverUrl: toStoredMedia(trackData.coverUrl) }
+    });
+    return { success: true, track: mapTrack(res.track) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not upload the track.') } as any;
+  }
+}
+
+export async function toggleLikeMusicTrack(trackId: string): Promise<{ success: boolean; isLiked: boolean; likesCount: number }> {
+  try { return await rpc('toggle_music_like', { p_track: trackId }); } catch (err) { return { success: false, error: errorText(err, 'Could not update the like.') } as any; }
+}
+
+// Renaming is restricted (in the database) to the account that uploaded the track.
+export async function renameMusicTrack(trackId: string, title: string): Promise<{ success: boolean; track?: MusicTrack; error?: string }> {
+  try {
+    const res = await rpc<any>('rename_music_track', { p_track: trackId, p_title: title });
+    return { success: true, track: mapTrack(res.track) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not rename the track.') };
+  }
+}
+
+// ----------------------------------------------------------------------------- custom stickers
+
+export interface MyCustomSticker {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export async function fetchMyStickers(): Promise<MyCustomSticker[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<MyCustomSticker[]>('my_stickers')) || []).map((s) => ({ ...s, url: resolveMedia(s.url) }));
+  } catch {
+    return [];
+  }
+}
+
+export async function uploadCustomSticker(file: File, title?: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const uploaded = await uploadMediaFile(file, 'stickers');
+    await rpc('add_sticker', { p_key: uploaded.objectKey, p_title: title || null });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Failed to upload sticker.') };
+  }
+}
+
+export async function deleteCustomSticker(id: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.from('custom_stickers').delete().eq('id', id).select('id');
+  if (error || !data || data.length === 0) return { success: false, error: 'You can only delete stickers from your own gallery.' };
+  return { success: true };
+}
+
+// ----------------------------------------------------------------------------- saved collections
+
+function mapCollection(c: any): SavedCollection {
+  return { ...c, coverUrl: resolveMedia(c.coverUrl), coverImage: resolveMedia(c.coverUrl) };
+}
+
+export async function fetchCollections(): Promise<SavedCollection[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('my_collections')) || []).map(mapCollection);
+  } catch {
+    return [];
+  }
+}
+
+export async function createCollection(payload: Partial<SavedCollection>): Promise<SavedCollection> {
+  try {
+    const res = await rpc<any>('create_collection', { p_name: payload.name || null, p_cover_url: toStoredMedia(payload.coverUrl || payload.coverImage) || null });
+    return mapCollection(res.collection);
+  } catch (err) {
+    throw new Error(errorText(err, 'Could not create the collection.'));
+  }
+}
+
+export async function addPostToCollection(collectionId: string, postId: string) {
+  try {
+    const res = await rpc<any>('add_post_to_collection', { p_collection: collectionId, p_post: postId });
+    return { ...res, collection: res.collection ? mapCollection(res.collection) : res.collection };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not add the post.') };
+  }
 }

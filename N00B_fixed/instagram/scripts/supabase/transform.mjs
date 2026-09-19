@@ -337,7 +337,9 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
   for (const c of chatsToImport) {
     const cid = chatUuid.get(c.id);
     const createdAt = isoOrNull(c.createdAt) || earliestUser;
-    tables.chats.push({
+    // The Global Lounge room itself is created by the chat migration (with this same id) so it always exists;
+    // only its old messages (if asked for) are imported.
+    if (!c.isGlobalDefault) tables.chats.push({
       id: cid, legacy_id: c.id, name: str(c.name), avatar: mediaRef(c.avatar, 'avatars', `chat-${c.id}`), description: str(c.description),
       is_group: bool(c.isGroup), is_global_default: bool(c.isGlobalDefault), creator_id: userUuid.get(c.creatorId) || null,
       theme_color: c.themeColor || '#00FF66', vanish_mode: bool(c.vanishMode), read_receipts_enabled: c.readReceiptsEnabled !== false,

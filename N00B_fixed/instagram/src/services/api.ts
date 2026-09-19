@@ -64,7 +64,36 @@ export {
   updateSettings,
   updateUserSettings,
   uploadMediaFile,
-  updateFullProfile
+  updateFullProfile,
+  fetchStories,
+  createStory,
+  recordStoryView,
+  fetchStoryViewers,
+  addCommentToStory,
+  deleteStory,
+  fetchHighlights,
+  createHighlight,
+  fetchReels,
+  createReel,
+  toggleLikeReel,
+  fetchReelLikers,
+  fetchReelViewers,
+  toggleSaveReel,
+  fetchReelComments,
+  addReelComment,
+  recordReelView,
+  fetchReelHistory,
+  deleteReel,
+  fetchMusicTracks,
+  uploadMusicTrack,
+  toggleLikeMusicTrack,
+  renameMusicTrack,
+  fetchMyStickers,
+  uploadCustomSticker,
+  deleteCustomSticker,
+  fetchCollections,
+  createCollection,
+  addPostToCollection
 } from './supabaseApi';
 
 const API_BASE = '/api';
@@ -140,151 +169,6 @@ export async function matchContacts(phoneNumbers: string[]): Promise<User[]> {
   });
   const data = await res.json();
   return data.users || [];
-}
-
-// Stories & Highlights
-export async function fetchStories(): Promise<Story[]> {
-  const res = await fetch(`${API_BASE}/stories`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.stories;
-}
-
-export async function createStory(storyData: Partial<Story>): Promise<Story> {
-  const res = await fetch(`${API_BASE}/stories`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(storyData)
-  });
-  const data = await res.json();
-  return data.story;
-}
-
-export async function recordStoryView(storyId: string) {
-  const res = await fetch(`${API_BASE}/stories/${storyId}/view`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-// Owner-only — the server 403s this for anyone but the story's own author.
-export async function fetchStoryViewers(storyId: string): Promise<{ users: User[]; error?: string }> {
-  const res = await fetch(`${API_BASE}/stories/${storyId}/viewers`, { headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function addCommentToStory(storyId: string, text: string) {
-  const res = await fetch(`${API_BASE}/stories/${storyId}/comment`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ text })
-  });
-  const data = await res.json();
-  return data.comment;
-}
-
-export async function fetchHighlights(): Promise<StoryHighlight[]> {
-  const res = await fetch(`${API_BASE}/highlights`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.highlights;
-}
-
-export async function createHighlight(title: string, coverUrl: string, storyIds: string[]) {
-  const res = await fetch(`${API_BASE}/highlights`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ title, coverUrl, storyIds })
-  });
-  return await res.json();
-}
-
-// Reels
-export async function fetchReels(): Promise<Reel[]> {
-  const res = await fetch(`${API_BASE}/reels`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.reels;
-}
-
-export async function createReel(reelData: Partial<Reel>): Promise<Reel> {
-  const res = await fetch(`${API_BASE}/reels`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(reelData)
-  });
-  const data = await res.json();
-  if (!res.ok || !data.reel) {
-    throw new Error(data.error || 'Failed to publish reel.');
-  }
-  return data.reel;
-}
-
-export async function toggleLikeReel(reelId: string): Promise<{ isLiked: boolean; likesCount: number }> {
-  const res = await fetch(`${API_BASE}/reels/${reelId}/like`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function fetchReelLikers(reelId: string): Promise<{ users: User[] }> {
-  const res = await fetch(`${API_BASE}/reels/${reelId}/likers`, { headers: getAuthHeaders() });
-  return await res.json();
-}
-
-// Owner-only — the server 403s this for anyone but the reel's own author.
-export async function fetchReelViewers(reelId: string): Promise<{ users: User[]; error?: string }> {
-  const res = await fetch(`${API_BASE}/reels/${reelId}/viewers`, { headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function toggleSaveReel(reelId: string): Promise<{ isSaved: boolean; savesCount: number }> {
-  const res = await fetch(`${API_BASE}/reels/${reelId}/save`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function fetchReelComments(reelId: string) {
-  try {
-    const res = await fetch(`${API_BASE}/reels/${reelId}/comments`, { headers: getAuthHeaders() });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data.comments) ? data.comments : [];
-  } catch (err) {
-    console.error('Error fetching reel comments:', err);
-    return [];
-  }
-}
-
-export async function addReelComment(reelId: string, text: string) {
-  const res = await fetch(`${API_BASE}/reels/${reelId}/comments`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ text })
-  });
-  const data = await res.json();
-  return data.comment;
-}
-
-export async function recordReelView(reelId: string) {
-  const res = await fetch(`${API_BASE}/reels/${reelId}/history`, { method: 'POST', headers: getAuthHeaders() });
-  return await res.json();
-}
-
-export async function fetchReelHistory(): Promise<Reel[]> {
-  const res = await fetch(`${API_BASE}/reels/history`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.reels;
-}
-
-export async function deleteReel(reelId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/reels/${reelId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
-  return data.success;
-}
-
-export async function deleteStory(storyId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/stories/${storyId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
-  return data.success;
 }
 
 // Chats & Messages
@@ -572,75 +456,6 @@ export async function fetchSupportRatingSummary(): Promise<{ average: number | n
   return await res.json();
 }
 
-// Saved Collections
-export async function fetchCollections(): Promise<SavedCollection[]> {
-  const res = await fetch(`${API_BASE}/collections`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.collections;
-}
-
-export async function createCollection(payload: Partial<SavedCollection>): Promise<SavedCollection> {
-  const res = await fetch(`${API_BASE}/collections`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(payload)
-  });
-  const data = await res.json();
-  return data.collection;
-}
-
-export async function addPostToCollection(collectionId: string, postId: string) {
-  const res = await fetch(`${API_BASE}/collections/${collectionId}/add-post`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ postId })
-  });
-  return await res.json();
-}
-
-// Music Hub APIs
-export async function fetchMusicTracks(): Promise<import('../types').MusicTrack[]> {
-  const res = await fetch(`${API_BASE}/music/tracks`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.tracks || [];
-}
-
-export async function uploadMusicTrack(trackData: {
-  title: string;
-  artist?: string;
-  genre?: string;
-  audioUrl: string;
-  coverUrl?: string;
-  duration?: string;
-}): Promise<{ success: boolean; track: import('../types').MusicTrack }> {
-  const res = await fetch(`${API_BASE}/music/tracks`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(trackData)
-  });
-  return await res.json();
-}
-
-export async function toggleLikeMusicTrack(trackId: string): Promise<{ success: boolean; isLiked: boolean; likesCount: number }> {
-  const res = await fetch(`${API_BASE}/music/tracks/${trackId}/like`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-// Renaming is restricted server-side to the account that uploaded the
-// track — this just surfaces whatever error that check returns.
-export async function renameMusicTrack(trackId: string, title: string): Promise<{ success: boolean; track?: import('../types').MusicTrack; error?: string }> {
-  const res = await fetch(`${API_BASE}/music/tracks/${trackId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ title })
-  });
-  const data = await res.json();
-  return { success: res.ok && data.success, track: data.track, error: data.error };
-}
-
 // Games & NOOB Points APIs
 export async function fetchGameLeaderboard(): Promise<{
   leaderboard: GameLeaderboardEntry[];
@@ -882,40 +697,6 @@ export interface MyCustomSticker {
   id: string;
   title: string;
   url: string;
-}
-
-export async function fetchMyStickers(): Promise<MyCustomSticker[]> {
-  const res = await fetch(`${API_BASE}/stickers`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.stickers || [];
-}
-
-export async function uploadCustomSticker(file: File, title?: string): Promise<{ success: boolean; error?: string }> {
-  const uploadResult = await uploadMediaFile(file, 'stickers');
-  if (!uploadResult.success) {
-    return { success: false, error: 'Failed to upload sticker.' };
-  }
-  // Without B2 credentials configured (e.g. local dev), uploadMediaFile falls back
-  // to a data: URI that only exists in this one response — store that directly
-  // instead of a short object key that would resolve to nothing on the next
-  // fetch. signMediaKey already passes a data: URI through unchanged either way.
-  const reference = uploadResult.url?.startsWith('data:') ? uploadResult.url : uploadResult.objectKey;
-  const res = await fetch(`${API_BASE}/stickers`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ objectKey: reference, title })
-  });
-  const data = await res.json();
-  return { success: res.ok && data.success, error: data.error };
-}
-
-export async function deleteCustomSticker(id: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${API_BASE}/stickers/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
-  return { success: res.ok && data.success, error: data.error };
 }
 
 export async function upgradeProTier(payload: {

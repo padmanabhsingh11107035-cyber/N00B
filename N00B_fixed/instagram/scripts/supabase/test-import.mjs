@@ -256,8 +256,8 @@ await expectFail(() => execAs(viewer, `insert into notifications (target_user_id
 // chat: Global Lounge
 const lounge = (await db.query('select id from chats where is_global_default')).rows[0].id;
 check((await rowsAs(viewer, 'select count(*)::int n from messages where chat_id = $1', [lounge]))[0].n === (withChats ? (raw.messages[raw.chats.find((c) => c.isGlobalDefault).id] || []).length : 0), 'everyone can read the Global Lounge room (history only if chats were imported)');
-check((await execAs(viewer, `insert into messages (chat_id, sender_id, text) values ($1, $2, 'hello lounge')`, [lounge, viewer])).affectedRows === 1, 'everyone can post in the Global Lounge as themselves');
-await expectFail(() => execAs(viewer, `insert into messages (chat_id, sender_id, text) values ($1, $2, 'forged')`, [lounge, author]), /row-level security/, 'a user can NOT post a message as someone else');
+check((await execAs(viewer, 'select public.send_message($1, $2::jsonb) r', [lounge, JSON.stringify({ text: 'hello lounge' })])).rows[0].r.message.senderId === viewer, 'everyone can post in the Global Lounge as themselves (through the send function)');
+await expectFail(() => execAs(viewer, `insert into messages (chat_id, sender_id, text) values ($1, $2, 'forged')`, [lounge, author]), /row-level security|permission denied/, 'a user can NOT post a message as someone else (the table is closed to direct writes)');
 
 // economy is read-only for clients
 await expectFail(() => execAs(viewer, `insert into game_scores (user_id, game_id, score, points_awarded) values ($1, 'tictactoe', 999, 999999999)`, [viewer]), /row-level security|permission denied/, 'a user can NOT write their own game score / points');

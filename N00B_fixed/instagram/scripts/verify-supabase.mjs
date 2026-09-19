@@ -57,7 +57,9 @@ const publishable = process.env.SUPABASE_PUBLISHABLE_KEY;
 let liveOk = true;
 if (publishable) {
   console.log('\nLive checks through the public API (what the website will do):');
-  const flagged = new Set((await adapter.fetchAll('profiles')).filter((p) => p.extra?.needs_password_reset).map((p) => p.id));
+  const profiles = await adapter.fetchAll('profiles');
+  const flagged = new Set(profiles.filter((p) => p.extra?.needs_password_reset).map((p) => p.id));
+  const adminIds = new Set(profiles.filter((p) => p.is_admin).map((p) => p.id));
   const fresh = () => createClient(url, publishable, { auth: { autoRefreshToken: false, persistSession: false } });
   const check = (ok, label, detail = '') => { if (!ok) liveOk = false; console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${label}${ok ? '' : ` ${detail}`}`); };
 
@@ -67,28 +69,46 @@ if (publishable) {
   const login = await anon.rpc('resolve_login_email', { identifier: plan.tables.profiles[1].username });
   check(login.data === plan.authUsers.find((a) => a.id === plan.tables.profiles[1].id).email, 'typing a username finds the right login account');
 
+  // Sign in as everyone; keep one ORDINARY session and one ADMIN session for the privacy checks.
   let signedIn = 0;
   const failed = [];
-  let sample = null;
+  let ordinary = null;
+  let admin = null;
   for (const a of plan.authUsers) {
     if (flagged.has(a.id)) continue;
     const client = fresh();
     const { error } = await client.auth.signInWithPassword({ email: a.email, password: a.password });
-    if (error) failed.push(a.user_metadata.username);
-    else { signedIn++; if (!sample) sample = { client, a }; else await client.auth.signOut(); }
+    if (error) { failed.push(a.user_metadata.username); continue; }
+    signedIn++;
+    if (adminIds.has(a.id) && !admin) admin = { client, a };
+    else if (!adminIds.has(a.id) && !ordinary) ordinary = { client, a };
+    else await client.auth.signOut();
   }
   check(failed.length === 0, `${signedIn} accounts can log in with their OLD password`, `— could not log in: ${failed.join(', ')}`);
   if (flagged.size) console.log(`  note: ${flagged.size} account(s) flagged for a password reset were skipped`);
-  if (sample) {
-    const me = await sample.client.from('profiles').select('id');
-    check(!me.error && me.data.length === plan.tables.profiles.length, `a logged-in user sees all ${plan.tables.profiles.length} profile cards`);
-    const priv = await sample.client.from('profile_private').select('user_id');
-    check(!priv.error && priv.data.length === 1 && priv.data[0].user_id === sample.a.id, 'a logged-in user sees ONLY their own private details');
-    const legacy = await sample.client.from('legacy_import').select('key').limit(1);
-    check(!!legacy.error || (legacy.data || []).length === 0, 'a logged-in user can NOT read the raw legacy table');
-    const posts = await sample.client.from('posts').select('id');
-    check(!posts.error && posts.data.length > 0, 'a logged-in user can read posts');
-    await sample.client.auth.signOut();
+
+  if (ordinary) {
+    const c = ordinary.client;
+    const cards = await c.from('profiles').select('id');
+    check(!cards.error && cards.data.length === plan.tables.profiles.length, `an ordinary user sees all ${plan.tables.profiles.length} profile cards`);
+    const priv = await c.from('profile_private').select('user_id');
+    check(!priv.error && priv.data.length === 1 && priv.data[0].user_id === ordinary.a.id, 'an ordinary user sees ONLY their own private details (email, phone, birthday)');
+    const push = await c.from('push_subscriptions').select('user_id');
+    check(!push.error && push.data.every((r) => r.user_id === ordinary.a.id), 'an ordinary user can NOT see other people push subscriptions');
+    const legacy = await c.from('legacy_import').select('key').limit(1);
+    check(!!legacy.error || (legacy.data || []).length === 0, 'an ordinary user can NOT read the raw legacy table');
+    const posts = await c.from('posts').select('id');
+    check(!posts.error && posts.data.length > 0, 'an ordinary user can read posts');
+    const tx = await c.from('noob_transactions').select('user_id');
+    check(!tx.error && tx.data.every((r) => r.user_id === ordinary.a.id), 'an ordinary user sees ONLY their own points history');
+    await c.auth.signOut();
+  }
+  if (admin) {
+    const priv = await admin.client.from('profile_private').select('user_id');
+    check(!priv.error && priv.data.length === plan.tables.profiles.length, 'the admin account CAN see everyone private details (by design, for support)');
+    const legacy = await admin.client.from('legacy_import').select('key').limit(1);
+    check(!!legacy.error || (legacy.data || []).length === 0, 'even an admin browser session can NOT read the raw legacy table');
+    await admin.client.auth.signOut();
   }
 }
 

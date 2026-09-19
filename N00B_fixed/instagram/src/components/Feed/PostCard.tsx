@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { can } from '../../adminAccess';
 import {
   Heart,
   MessageCircle,
@@ -67,7 +68,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showLikesSheet, setShowLikesSheet] = useState(false);
 
   const isOwner = post.userId === currentUser.id || post.username === currentUser.username;
-  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
+  // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
+  const isMasterAdmin = can(currentUser, 'moderate_content');
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
   const [showTagPill, setShowTagPill] = useState(false);

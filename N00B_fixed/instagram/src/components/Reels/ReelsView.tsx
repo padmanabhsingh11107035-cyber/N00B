@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { can } from '../../adminAccess';
 import {
   Heart,
   MessageCircle,
@@ -125,7 +126,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
   const isReelOwner = !!currentReel && currentReel.userId === currentUser.id;
   useScreenshotAlert('reel', currentReel?.id, !!currentReel && !isReelOwner);
-  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
+  // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
+  const isMasterAdmin = can(currentUser, 'moderate_content');
 
   useEffect(() => {
     if (currentReel) {

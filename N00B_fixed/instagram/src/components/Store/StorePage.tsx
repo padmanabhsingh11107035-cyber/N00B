@@ -6,6 +6,7 @@ import {
   Minus,
   Settings,
   Trash2,
+  Pencil,
   PackageOpen,
   Store as StoreIcon,
   Truck,
@@ -15,11 +16,13 @@ import {
 } from 'lucide-react';
 import { User, StoreProduct, AppSettings } from '../../types';
 import { fetchStoreProducts, deleteStoreProduct, fetchSettings } from '../../services/api';
-import { AddProductModal } from './AddProductModal';
+import { can } from '../../adminAccess';
+import { ProductEditorModal } from './ProductEditorModal';
 import { ProductDetailModal } from './ProductDetailModal';
 import { StoreSettingsModal } from './StoreSettingsModal';
 import { ShopMap, SHOP_ADDRESS } from './ShopMap';
 import { formatPrice } from './formatPrice';
+import { availableStock, cartKey, isBuyable, splitCartKey, totalStock, variantLabel, LOW_STOCK_AT } from './variants';
 
 interface StorePageProps {
   currentUser: User;
@@ -30,20 +33,20 @@ type StoreView = 'grid' | 'cart' | 'checkout';
 type DeliveryMethod = 'pickup' | 'delivery';
 
 export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) => {
-  const isMasterAdmin = !!currentUser && (
-    !!currentUser.isAdmin ||
-    currentUser.username?.toLowerCase() === 'noob' ||
-    currentUser.id === 'u_noob_admin'
-  );
+  // may add, edit and remove products: the main admin, or an admin who was given the "manage the shop" permission
+  const canManage = can(currentUser, 'manage_store');
 
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [view, setView] = useState<StoreView>('grid');
+  // what is in the cart: a product, or one version of it (see cartKey) -> how many
   const [cart, setCart] = useState<Record<string, number>>({});
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<StoreProduct | undefined>(undefined);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Checkout form
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup');
@@ -61,6 +64,18 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
       const [p, s] = await Promise.all([fetchStoreProducts(), fetchSettings()]);
       setProducts(p);
       setSettings(s);
+      // stock may have changed since the cart was filled: drop what is gone and trim what is now more than is left
+      setCart((prev) => {
+        const next: Record<string, number> = {};
+        for (const [key, qty] of Object.entries(prev) as [string, number][]) {
+          const { productId, variantKey } = splitCartKey(key);
+          const product = p.find((x) => x.id === productId);
+          if (!product || !isBuyable(product, variantKey)) continue;
+          const limit = availableStock(product, variantKey);
+          next[key] = limit === null ? qty : Math.min(qty, limit);
+        }
+        return next;
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -73,13 +88,21 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const showNotice = (text: string) => {
+    setNotice(text);
+    window.setTimeout(() => setNotice((current) => (current === text ? null : current)), 3500);
+  };
+
   const cartCount: number = (Object.values(cart) as number[]).reduce((sum, qty) => sum + qty, 0);
 
   const cartItems = useMemo(
     () =>
       Object.entries(cart)
-        .map(([id, qty]) => ({ product: products.find((p) => p.id === id), qty }))
-        .filter((entry): entry is { product: StoreProduct; qty: number } => !!entry.product),
+        .map(([key, qty]) => {
+          const { productId, variantKey } = splitCartKey(key);
+          return { key, product: products.find((p) => p.id === productId), variantKey, qty };
+        })
+        .filter((entry): entry is { key: string; product: StoreProduct; variantKey: string | null; qty: number } => !!entry.product),
     [cart, products]
   );
 
@@ -87,29 +110,52 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const deliveryFee = deliveryMethod === 'delivery' ? settings?.storeDeliveryFee || 0 : 0;
   const total = subtotal + deliveryFee;
 
-  const addToCart = (productId: string) => {
-    setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
+  const addToCart = (productId: string, variantKey?: string | null) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product || !isBuyable(product, variantKey)) return;
+    const key = cartKey(productId, variantKey);
+    const limit = availableStock(product, variantKey);
+    setCart((prev) => {
+      const have = prev[key] || 0;
+      if (limit !== null && have >= limit) return prev;
+      return { ...prev, [key]: have + 1 };
+    });
+    if (limit !== null && (cart[key] || 0) >= limit) showNotice(`Only ${limit} available.`);
     setSelectedProduct(null);
   };
 
-  const updateQty = (productId: string, delta: number) => {
+  const updateQty = (key: string, delta: number) => {
+    const { productId, variantKey } = splitCartKey(key);
+    const product = products.find((p) => p.id === productId);
+    const limit = product ? availableStock(product, variantKey) : null;
     setCart((prev) => {
       const next = { ...prev };
-      const newQty = (next[productId] || 0) + delta;
+      let newQty = (next[key] || 0) + delta;
+      if (limit !== null && newQty > limit) newQty = limit;
       if (newQty <= 0) {
-        delete next[productId];
+        delete next[key];
       } else {
-        next[productId] = newQty;
+        next[key] = newQty;
       }
       return next;
     });
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    if (!window.confirm('Remove this product from the shop? This cannot be undone.')) return;
     const res = await deleteStoreProduct(productId);
     if (res.success) {
       setProducts((prev) => prev.filter((p) => p.id !== productId));
+      setCart((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => splitCartKey(key).productId !== productId)));
+    } else {
+      showNotice(res.error || 'Could not remove the product.');
     }
+  };
+
+  const openEditor = (product?: StoreProduct) => {
+    setSelectedProduct(null);
+    setEditingProduct(product);
+    setEditorOpen(true);
   };
 
   // storeEnabled defaults to true when a pre-existing settings document
@@ -142,7 +188,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         <h1 className="text-lg font-black tracking-tight flex-1">
           {view === 'grid' ? 'NOOB Shop' : view === 'cart' ? 'Your Cart' : 'Checkout'}
         </h1>
-        {view === 'grid' && isMasterAdmin && (
+        {view === 'grid' && canManage && (
           <button
             onClick={() => setShowSettingsModal(true)}
             className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
@@ -151,9 +197,9 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
             <Settings className="w-5 h-5 text-zinc-300" />
           </button>
         )}
-        {view === 'grid' && isMasterAdmin && (
+        {view === 'grid' && canManage && (
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => openEditor()}
             className="p-2 rounded-full bg-[#00FF66]/20 border border-[#00FF66]/40 hover:bg-[#00FF66]/30 transition-colors cursor-pointer"
             aria-label="Add product"
           >
@@ -176,6 +222,12 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         )}
       </div>
 
+      {notice && (
+        <div role="status" className="relative z-20 px-4 py-2 bg-amber-500/15 border-b border-amber-500/30 text-xs font-semibold text-amber-200 text-center">
+          {notice}
+        </div>
+      )}
+
       {/* Body */}
       <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6">
         {view === 'grid' && (
@@ -189,47 +241,75 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                 <PackageOpen className="w-12 h-12 text-zinc-700" />
                 <p className="text-sm font-bold text-zinc-400">No products yet</p>
                 <p className="text-xs text-zinc-600 max-w-xs">
-                  {isMasterAdmin ? 'Tap the + button above to add your first product.' : 'Check back soon — new products are on the way!'}
+                  {canManage ? 'Tap the + button above to add your first product.' : 'Check back soon — new products are on the way!'}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 cursor-pointer group relative"
-                    onClick={() => setSelectedProduct(product)}
-                  >
-                    <div className="w-full aspect-square bg-zinc-900 relative">
-                      {product.media[0]?.type === 'video' ? (
-                        <video src={product.media[0].url} className="w-full h-full object-cover" muted />
-                      ) : (
-                        <img src={product.media[0]?.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                      )}
-                      {!product.inStock && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-red-400 bg-black/70 px-2 py-1 rounded-full">Out of Stock</span>
-                        </div>
-                      )}
-                      {isMasterAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProduct(product.id);
-                          }}
-                          className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-black/70 hover:bg-red-500/80 cursor-pointer"
-                          aria-label="Delete product"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-white" />
-                        </button>
-                      )}
+                {products.map((product) => {
+                  const soldOut = !product.inStock;   // worked out by the database: any version in stock, a count above 0, or the plain switch
+                  const units = totalStock(product);
+                  return (
+                    <div
+                      key={product.id}
+                      className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/60 cursor-pointer group relative"
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      <div className="w-full aspect-square bg-zinc-900 relative">
+                        {product.media[0]?.type === 'video' ? (
+                          <video src={product.media[0].url} className="w-full h-full object-cover" muted />
+                        ) : (
+                          <img src={product.media[0]?.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        )}
+                        {soldOut && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-red-400 bg-black/70 px-2 py-1 rounded-full">Out of Stock</span>
+                          </div>
+                        )}
+                        {!soldOut && units !== null && units <= LOW_STOCK_AT && (
+                          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold text-amber-300 bg-black/70 px-2 py-0.5 rounded-full">
+                            Only {units} left
+                          </span>
+                        )}
+                        {canManage && (
+                          <div className="absolute top-1.5 right-1.5 flex flex-col gap-1.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditor(product);
+                              }}
+                              className="p-1.5 rounded-full bg-black/70 hover:bg-[#00FF66]/80 cursor-pointer"
+                              aria-label="Edit product"
+                              title="Edit product"
+                            >
+                              <Pencil className="w-3.5 h-3.5 text-white" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProduct(product.id);
+                              }}
+                              className="p-1.5 rounded-full bg-black/70 hover:bg-red-500/80 cursor-pointer"
+                              aria-label="Delete product"
+                              title="Delete product"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2.5 space-y-0.5">
+                        <span className="text-sm font-black text-[#00FF66] block">{formatPrice(product.price)}</span>
+                        <span className="text-[11px] text-zinc-400 block line-clamp-2">{product.description}</span>
+                        {product.options.length > 0 && (
+                          <span className="text-[10px] text-zinc-500 block truncate">
+                            Choose: {product.options.map((o) => o.name).join(' · ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="p-2.5 space-y-0.5">
-                      <span className="text-sm font-black text-[#00FF66] block">{formatPrice(product.price)}</span>
-                      <span className="text-[11px] text-zinc-400 block line-clamp-2">{product.description}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
@@ -244,30 +324,42 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
               </div>
             ) : (
               <>
-                {cartItems.map(({ product, qty }) => (
-                  <div key={product.id} className="flex items-center gap-3 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-3">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-zinc-900 shrink-0">
-                      {product.media[0]?.type === 'video' ? (
-                        <video src={product.media[0].url} className="w-full h-full object-cover" muted />
-                      ) : (
-                        <img src={product.media[0]?.url} alt="" className="w-full h-full object-cover" />
-                      )}
+                {cartItems.map(({ key, product, variantKey, qty }) => {
+                  const limit = availableStock(product, variantKey);
+                  const label = variantLabel(product, variantKey);
+                  const atLimit = limit !== null && qty >= limit;
+                  return (
+                    <div key={key} className="flex items-center gap-3 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-3">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-zinc-900 shrink-0">
+                        {product.media[0]?.type === 'video' ? (
+                          <video src={product.media[0].url} className="w-full h-full object-cover" muted />
+                        ) : (
+                          <img src={product.media[0]?.url} alt="" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-zinc-300 line-clamp-1">{product.description}</p>
+                        {label && <p className="text-[11px] text-zinc-500 line-clamp-1">{label}</p>}
+                        <span className="text-sm font-black text-[#00FF66]">{formatPrice(product.price)}</span>
+                        {atLimit && <span className="text-[10px] text-amber-300 block">That&apos;s all we have</span>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => updateQty(key, -1)} className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center cursor-pointer" aria-label="Fewer">
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs font-bold w-4 text-center">{qty}</span>
+                        <button
+                          onClick={() => updateQty(key, 1)}
+                          disabled={atLimit}
+                          className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="More"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-zinc-300 line-clamp-1">{product.description}</p>
-                      <span className="text-sm font-black text-[#00FF66]">{formatPrice(product.price)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button onClick={() => updateQty(product.id, -1)} className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center cursor-pointer">
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="text-xs font-bold w-4 text-center">{qty}</span>
-                      <button onClick={() => updateQty(product.id, 1)} className="w-7 h-7 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center cursor-pointer">
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
                   <span className="text-xs text-zinc-400">Subtotal</span>
@@ -401,14 +493,20 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
       </div>
 
       {selectedProduct && (
-        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={addToCart}
+          onEdit={canManage ? openEditor : undefined}
+        />
       )}
 
-      {showAddModal && (
-        <AddProductModal
-          onClose={() => setShowAddModal(false)}
-          onCreated={() => {
-            setShowAddModal(false);
+      {editorOpen && (
+        <ProductEditorModal
+          product={editingProduct}
+          onClose={() => setEditorOpen(false)}
+          onSaved={() => {
+            setEditorOpen(false);
             loadData();
           }}
         />

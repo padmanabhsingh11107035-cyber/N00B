@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -538,14 +538,34 @@ export async function togglePinComment(_postId: string, commentId: string) {
 
 // ----------------------------------------------------------------------------- notifications
 
-export async function fetchAppNotifications(): Promise<{ notifications: AppNotification[] }> {
+// `failed` is true when the list could not be loaded (network hiccup, session refreshing): callers keep what they
+// already show instead of replacing it with an empty list.
+export async function fetchAppNotifications(): Promise<{ notifications: AppNotification[]; failed?: boolean }> {
   try {
     if (!(await currentSession())) return { notifications: [] };
     const res = await rpc<{ notifications: any[] }>('my_notifications');
     return { notifications: (res.notifications || []).map(mapNotification) };
   } catch {
-    return { notifications: [] };
+    return { notifications: [], failed: true };
   }
+}
+
+// Calls `onChange` (at most a few times a second) when a notification arrives, is removed, or the connection is
+// (re)established — so the bell updates the moment something happens instead of on the next timer tick.
+export function subscribeToNotificationChanges(onChange: () => void): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const fire = () => {
+    if (timer) return;
+    timer = setTimeout(() => { timer = null; onChange(); }, 300);
+  };
+  const channel = supabase
+    .channel(`notification-changes-${crypto.randomUUID()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, fire)
+    .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
+  return () => {
+    if (timer) clearTimeout(timer);
+    supabase.removeChannel(channel);
+  };
 }
 
 export async function markNotificationsAsRead(): Promise<{ success: boolean }> {
@@ -1236,6 +1256,19 @@ export async function manageGroupAdmin(
   }
 }
 
+// Group admins only: when on, nobody but the group's admins can send messages (members see a notice instead of the message box).
+export async function setGroupSendPolicy(
+  chatId: string,
+  onlyAdmins: boolean
+): Promise<{ success: boolean; chat?: ChatConversation; error?: string }> {
+  try {
+    const res = await rpc<any>('set_group_send_policy', { p_chat: chatId, p_only_admins: onlyAdmins });
+    return { ...res, chat: res.chat ? mapChat(res.chat) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not change this setting.');
+  }
+}
+
 export async function removeGroupMember(
   chatId: string,
   targetUserId: string
@@ -1673,6 +1706,9 @@ export async function revealScratchCard(
 
 const mapProduct = (p: any): StoreProduct => ({
   ...p,
+  stock: p.stock ?? null,
+  options: p.options || [],
+  variants: p.variants || [],
   media: (p.media || []).map((m: StoreProductMedia) => ({ ...m, url: resolveMedia(m.url) }))
 });
 
@@ -1680,19 +1716,27 @@ export async function fetchStoreProducts(): Promise<StoreProduct[]> {
   try { return ((await rpc<any[]>('list_store_products')) || []).map(mapProduct); } catch { return []; }
 }
 
-export async function createStoreProduct(payload: {
-  price: number;
-  description: string;
-  media: StoreProductMedia[];
-  inStock: boolean;
-}): Promise<{ success: boolean; product?: StoreProduct; error?: string }> {
+const productForDatabase = (payload: StoreProductInput) => ({
+  ...payload,
+  media: payload.media.map((m: StoreProductMedia) => ({ ...m, url: toStoredMedia(m.url) }))
+});
+
+export async function createStoreProduct(payload: StoreProductInput): Promise<{ success: boolean; product?: StoreProduct; error?: string }> {
   try {
-    const res = await rpc<any>('create_store_product', {
-      p: { ...payload, media: payload.media.map((m) => ({ ...m, url: toStoredMedia(m.url) })) }
-    });
+    const res = await rpc<any>('create_store_product', { p: productForDatabase(payload) });
     return { ...res, product: res.product ? mapProduct(res.product) : undefined };
   } catch (err) {
     return failWith(err, 'Could not add the product.');
+  }
+}
+
+// Edit an existing product: price, description, pictures, how many are in stock, and its versions (colour / size / model ...).
+export async function updateStoreProduct(productId: string, payload: StoreProductInput): Promise<{ success: boolean; product?: StoreProduct; error?: string }> {
+  try {
+    const res = await rpc<any>('update_store_product', { p_id: productId, p: productForDatabase(payload) });
+    return { ...res, product: res.product ? mapProduct(res.product) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not save the product.');
   }
 }
 
@@ -1778,6 +1822,62 @@ export async function fetchAdminUsersList(): Promise<{ success: boolean; users: 
     return { success: true, users: (res.users || []).map((u: any) => mapUser(u) as User) };
   } catch (err) {
     return { success: false, users: [], error: errorText(err, 'Could not load the accounts.') };
+  }
+}
+
+// ---- giving other people admin powers (main administrator only) and the activity log
+
+export interface AdminStaffMember {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  isVerified?: boolean;
+  permissions: string[];
+  grantedAt?: string;
+  updatedAt?: string;
+  grantedBy?: string | null;
+}
+
+export interface AdminAuditEntry {
+  id: number;
+  at: string;
+  actor: string | null;
+  action: string;
+  target: string | null;
+  details: Record<string, any>;
+}
+
+const mapStaff = (s: any): AdminStaffMember => ({ ...s, avatar: resolveMedia(s.avatar), permissions: s.permissions || [] });
+
+export async function fetchAdminStaff(): Promise<{ success: boolean; staff: AdminStaffMember[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_staff_list');
+    return { success: true, staff: (res.staff || []).map(mapStaff) };
+  } catch (err) {
+    return { success: false, staff: [], error: errorText(err, 'Could not load the admin team.') };
+  }
+}
+
+// Replaces everything this person is allowed to do (an empty list removes their admin access completely).
+export async function setAdminPermissions(
+  userId: string,
+  permissions: string[]
+): Promise<{ success: boolean; message?: string; staff?: AdminStaffMember | null; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_set_permissions', { p_user: userId, p_permissions: permissions });
+    return { ...res, staff: res.staff ? mapStaff(res.staff) : null };
+  } catch (err) {
+    return failWith(err, 'Could not change admin access.');
+  }
+}
+
+export async function fetchAdminAudit(limit = 100): Promise<{ success: boolean; entries: AdminAuditEntry[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_audit_log', { p_limit: limit });
+    return { success: true, entries: res.entries || [] };
+  } catch (err) {
+    return { success: false, entries: [], error: errorText(err, 'Could not load the activity log.') };
   }
 }
 

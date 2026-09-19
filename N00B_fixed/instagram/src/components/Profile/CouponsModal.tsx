@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Copy, Check, Ticket, Plus, X, Trash2, BadgeCheck } from 'lucide-react';
 import { User } from '../../types';
+import { can } from '../../adminAccess';
 import { Coupon, fetchMyCoupons, createCoupon, deleteCoupon, redeemCouponCode } from '../../services/api';
 
 interface CouponsModalProps {
@@ -9,8 +10,8 @@ interface CouponsModalProps {
   allUsers?: User[];
 }
 
-const isMasterAdmin = (user: User) =>
-  !!user.isAdmin || user.username.toLowerCase() === 'noob' || user.id === 'u_noob_admin';
+// may create and delete coupons: the main admin, or an admin who was given the "manage coupons" permission
+const isMasterAdmin = (user: User) => can(user, 'manage_coupons');
 
 export const CouponsModal: React.FC<CouponsModalProps> = ({ currentUser, onClose, allUsers = [] }) => {
   const admin = isMasterAdmin(currentUser);

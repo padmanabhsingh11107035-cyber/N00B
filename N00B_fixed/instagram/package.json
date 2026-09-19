@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist dist-server server.js",
     "lint": "tsc --noEmit",
-    "test:supabase": "node scripts/supabase/test-phase1.mjs && node scripts/supabase/test-phase2.mjs && node scripts/supabase/test-chat.mjs && node scripts/supabase/test-economy.mjs && node scripts/supabase/test-recovery.mjs && node scripts/supabase/test-ai-function.mjs && node scripts/supabase/test-backup.mjs && node scripts/supabase/test-upgrade.mjs && node scripts/supabase/test-import.mjs && node scripts/supabase/test-import.mjs --no-auto-expose && node scripts/supabase/test-import.mjs --with-reels --with-chats",
+    "test:supabase": "node scripts/supabase/test-phase1.mjs && node scripts/supabase/test-phase2.mjs && node scripts/supabase/test-chat.mjs && node scripts/supabase/test-economy.mjs && node scripts/supabase/test-staff.mjs && node scripts/supabase/test-store.mjs && node scripts/supabase/test-push.mjs && node scripts/supabase/test-recovery.mjs && node scripts/supabase/test-ai-function.mjs && node scripts/supabase/test-backup.mjs && node scripts/supabase/test-upgrade.mjs && node scripts/supabase/test-import.mjs && node scripts/supabase/test-import.mjs --no-auto-expose && node scripts/supabase/test-import.mjs --with-reels --with-chats",
     "android:sync": "vite build && npx cap sync android",
     "backup": "node scripts/backup-supabase.mjs",
     "dev:web": "vite --port 5173 --host 127.0.0.1"

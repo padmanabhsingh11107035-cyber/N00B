@@ -52,10 +52,17 @@ export async function enablePushNotifications(): Promise<{ status: PushEnableSta
 
     const registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey)
-    });
+    const subscribeOptions = { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) };
+    let subscription: PushSubscription;
+    try {
+      subscription = await registration.pushManager.subscribe(subscribeOptions);
+    } catch (err) {
+      // The browser still holds a subscription made with a different key (e.g. from before the move): drop it and start fresh.
+      const stale = await registration.pushManager.getSubscription();
+      if (!stale) throw err;
+      await stale.unsubscribe();
+      subscription = await registration.pushManager.subscribe(subscribeOptions);
+    }
 
     const ok = await subscribeToPush(subscription);
     if (!ok) return { status: 'error' };

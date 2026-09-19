@@ -1,8 +1,10 @@
 // NOOB — Edge Function "ai".
 //
-// Two jobs, both needing the AI key (which lives only here, as the secret GROQ_API_KEY — never in the app):
+// Three jobs. The first two need the AI key (which lives only here, as the secret GROQ_API_KEY — never in the app):
 //   { action: "support", message, conversationHistory }  -> the in-app AI Customer Support Assistant
 //   { action: "translate", chatId, messageId }           -> translate one chat message (English)
+//   { action: "push", notificationId }                   -> deliver a notification to the person's phone/browser (called by the
+//                                                           database; needs the secret VAPID_PRIVATE_KEY)
 //
 // Deploy with "Verify JWT" switched OFF: the person's login token is checked in the code below, and
 // a logged-out visitor simply gets the generic (guest) assistant.
@@ -36,6 +38,158 @@ function envKey(classic: string, listName: string): string {
 }
 const serviceKey = () => envKey('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEYS');
 const publicKey = () => envKey('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS');
+
+// ---------------------------------------------------------------------------- push notifications
+// { action: "push", notificationId } — sent by the DATABASE (a trigger) whenever a notification is created, with the private
+// password in the x-noob-push header. The database decides who gets it (push_claim); this code only encrypts and delivers.
+// Needs the function secret VAPID_PRIVATE_KEY (and optionally VAPID_SUBJECT, a "mailto:" address for the push services).
+const te = new TextEncoder();
+const concat = (...parts: Uint8Array[]): Uint8Array => {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) { out.set(p, at); at += p.length; }
+  return out;
+};
+const b64uToBytes = (s: string): Uint8Array => {
+  const b = atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '='));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+};
+const bytesToB64u = (b: Uint8Array): string => {
+  let s = '';
+  for (const x of b) s += String.fromCharCode(x);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
+async function hkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, bytes: number): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, bytes * 8));
+}
+
+// RFC 8291 "aes128gcm": only the person's browser can read what the push service carries.
+async function encryptPush(plaintext: Uint8Array, uaPublic: Uint8Array, authSecret: Uint8Array): Promise<Uint8Array> {
+  const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']) as CryptoKeyPair;
+  const asPublic = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, pair.privateKey, 256));
+  const ikm = await hkdf(authSecret, shared, concat(te.encode('WebPush: info\0'), uaPublic, asPublic), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, te.encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, te.encode('Content-Encoding: nonce\0'), 12);
+  const aes = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aes, concat(plaintext, new Uint8Array([2]))));
+  const head = new Uint8Array(21 + asPublic.length);
+  head.set(salt, 0);
+  new DataView(head.buffer).setUint32(16, 4096);
+  head[20] = asPublic.length;
+  head.set(asPublic, 21);
+  return concat(head, sealed);
+}
+
+// RFC 8292 VAPID: proves to the push service that the message comes from this app. Returns a function that builds the
+// Authorization header for a given push service address (one signature per service, reused for everyone on it).
+async function makeVapid(publicKey: string, privateKey: string, subject: string): Promise<(endpoint: string) => Promise<string>> {
+  const pub = b64uToBytes(publicKey);
+  const key = await crypto.subtle.importKey('jwk', {
+    kty: 'EC', crv: 'P-256', x: bytesToB64u(pub.slice(1, 33)), y: bytesToB64u(pub.slice(33, 65)), d: privateKey, ext: true
+  }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const head = bytesToB64u(te.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const cache = new Map<string, string>();
+  return async (endpoint: string) => {
+    const aud = new URL(endpoint).origin;
+    let jwt = cache.get(aud);
+    if (!jwt) {
+      const claims = bytesToB64u(te.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: subject })));
+      const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, te.encode(`${head}.${claims}`)));
+      jwt = `${head}.${claims}.${bytesToB64u(sig)}`;
+      cache.set(aud, jwt);
+    }
+    return `vapid t=${jwt}, k=${publicKey}`;
+  };
+}
+
+// Push addresses come from the browser, so only ever call the real push services (never an address someone made up).
+const PUSH_HOSTS = [/(^|\.)googleapis\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)notify\.windows\.com$/];
+function pushAddressOk(endpoint: string): boolean {
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === 'https:' && (u.port === '' || u.port === '443') && !u.username && !u.password && PUSH_HOSTS.some((re) => re.test(u.hostname));
+  } catch { return false; }
+}
+
+// 'sent' | 'gone' (the push service says this address no longer exists, or it is unusable) | 'failed' (try again next time)
+async function sendPush(sub: any, payload: Uint8Array, vapid: (endpoint: string) => Promise<string>): Promise<'sent' | 'gone' | 'failed'> {
+  const endpoint = String(sub?.endpoint ?? '');
+  let uaPublic: Uint8Array, authSecret: Uint8Array;
+  try {
+    uaPublic = b64uToBytes(String(sub?.keys?.p256dh ?? ''));
+    authSecret = b64uToBytes(String(sub?.keys?.auth ?? ''));
+  } catch { return 'gone'; }
+  if (uaPublic.length !== 65 || uaPublic[0] !== 4 || authSecret.length < 16) return 'gone';
+  if (!pushAddressOk(endpoint)) {
+    console.warn(`push: not sending to an unrecognised address (${oneLine(endpoint, 60)})`);
+    return 'failed';
+  }
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'normal',
+        Authorization: await vapid(endpoint)
+      },
+      body: await encryptPush(payload, uaPublic, authSecret),
+      signal: AbortSignal.timeout(10_000)
+    });
+    if (res.status >= 200 && res.status < 300) return 'sent';
+    if (res.status === 404 || res.status === 410) return 'gone';
+    console.warn(`push: ${new URL(endpoint).hostname} answered ${res.status} ${oneLine(await res.text().catch(() => ''), 160)}`);
+    return 'failed';
+  } catch (e) {
+    console.warn(`push: could not reach ${oneLine(endpoint, 60)}: ${oneLine((e as Error)?.message, 120)}`);
+    return 'failed';
+  }
+}
+
+async function handlePush(req: Request, body: any, admin: any): Promise<Response> {
+  const secret = req.headers.get('x-noob-push') || '';
+  const id = String(body?.notificationId ?? '');
+  if (!secret || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid request.' }, 400);
+  const privateKey = (Deno.env.get('VAPID_PRIVATE_KEY') || '').trim();
+  if (!privateKey) {
+    console.error('push: the VAPID_PRIVATE_KEY secret is not set — notifications are not being pushed');
+    return json({ error: 'Push is not set up.' }, 503);   // answered BEFORE the notification is marked as pushed
+  }
+  const { data, error } = await admin.rpc('push_claim', { p_secret: secret, p_id: id });
+  if (error) {
+    const denied = /unauthorized/i.test(String(error.message));
+    if (!denied) console.error(`push: push_claim failed: ${oneLine(error.message, 200)}`);
+    return json({ error: denied ? 'Unauthorized' : 'Push failed.' }, denied ? 401 : 500);
+  }
+  if (!data?.claimed) return json({ success: true, sent: 0, note: 'Already handled.' });
+  const recipients: { userId: string; subscription: any }[] = Array.isArray(data.recipients) ? data.recipients : [];
+  if (!recipients.length) return json({ success: true, sent: 0 });
+
+  let vapid: (endpoint: string) => Promise<string>;
+  try {
+    vapid = await makeVapid(String(data.publicKey || ''), privateKey, (Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@nooob.xyz').trim());
+  } catch (e) {
+    console.error(`push: the VAPID keys are not usable (${oneLine((e as Error)?.message, 120)}) — check VAPID_PRIVATE_KEY matches the public key`);
+    return json({ error: 'Push keys are invalid.' }, 500);
+  }
+  const payload = te.encode(JSON.stringify({ title: String(data.title ?? 'NOOB'), body: String(data.body ?? ''), url: '/' }));
+  const tally = { sent: 0, gone: 0, failed: 0 };
+  const dead: { userId: string; endpoint: string }[] = [];
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(10, recipients.length) }, async () => {
+    while (next < recipients.length) {
+      const r = recipients[next++];
+      const outcome = await sendPush(r.subscription, payload, vapid);
+      tally[outcome]++;
+      if (outcome === 'gone') dead.push({ userId: r.userId, endpoint: String(r.subscription?.endpoint ?? '') });
+    }
+  }));
+  if (dead.length) await admin.rpc('push_forget', { p_secret: secret, p_dead: dead });
+  return json({ success: true, ...tally });
+}
 
 // Simple per-person limit so nobody can burn the free AI quota: 20 requests a minute.
 const hits = new Map<string, { n: number; reset: number }>();
@@ -192,8 +346,11 @@ Deno.serve(async (req) => {
   const url = Deno.env.get('SUPABASE_URL')!;
   const admin = createClient(url, serviceKey(), { auth: { persistSession: false, autoRefreshToken: false } });
 
+  // Pushing a notification: called by the database itself (proved by the private password), so no per-person limit applies.
+  if (body?.action === 'push') return await handlePush(req, body, admin);
+
   // Who is asking? (a real signed-in person, or a guest)
-  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const token =(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let userId: string | null = null;
   if (token) {
     const { data } = await admin.auth.getUser(token);

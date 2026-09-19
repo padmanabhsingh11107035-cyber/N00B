@@ -87,6 +87,10 @@ export interface User {
   highlights?: { id: string; title: string; coverUrl: string; storyIds: string[] }[];
   statusNote?: StatusNote;
   isAdmin?: boolean;
+  // What the main administrator has allowed this person to do in the Admin Control Panel (see adminAccess.ts). Empty for most people.
+  adminPermissions?: string[];
+  // Shown to administrators in the accounts list: this account is an administrator of some kind.
+  isStaff?: boolean;
   isSuspended?: boolean;
   suspendedReason?: string;
   // Last known IP address (captured at signup, refreshed on every login) —
@@ -210,13 +214,43 @@ export interface StoreProductMedia {
   url: string;
 }
 
+// A kind of choice a product comes in ("Colour": Red, Blue) — up to 3 per product.
+export interface StoreProductOption {
+  name: string;
+  values: string[];
+}
+
+// One buyable version of a product (Red / Small) with its own stock. `key` looks like "Colour=Red|Size=S".
+export interface StoreProductVariant {
+  key: string;
+  options: Record<string, string>;
+  stock: number;
+}
+
 export interface StoreProduct {
   id: string;
   price: number;
   description: string;
   media: StoreProductMedia[];
+  // Worked out by the database: any version in stock, or stock above 0, or (when nothing is counted) the plain In-Stock switch.
   inStock: boolean;
+  // How many are in stock. null = not counted (the plain In-Stock switch is used). Ignored when the product has versions.
+  stock: number | null;
+  options: StoreProductOption[];
+  variants: StoreProductVariant[];
   createdAt: string;
+  updatedAt?: string | null;
+}
+
+// What the admin sends when adding or editing a product.
+export interface StoreProductInput {
+  price: number;
+  description: string;
+  media: StoreProductMedia[];
+  inStock: boolean;
+  stock?: number | null;
+  options?: StoreProductOption[];
+  variants?: { options: Record<string, string>; stock: number }[];
 }
 
 export interface PostSlide {
@@ -398,6 +432,8 @@ export interface ChatConversation {
   creatorId?: string;
   adminIds?: string[];
   isGlobalDefault?: boolean;
+  // Group setting: when true only the group's admins can send messages (everyone else sees a notice instead of the message box).
+  onlyAdminsCanSend?: boolean;
   description?: string;
   isAi?: boolean;
   isEnded?: boolean;

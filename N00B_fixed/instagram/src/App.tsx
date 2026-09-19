@@ -47,6 +47,7 @@ import {
   deleteMyAccount,
   setSessionUserId,
   fetchAppNotifications,
+  subscribeToNotificationChanges,
   clearAllNotifications,
   markNotificationsAsRead
 } from './services/api';
@@ -238,24 +239,32 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 
-  // Notifications used to only refresh on cold load, login, or a manual
-  // pull-to-refresh — a new one (e.g. someone's DM) wouldn't show up on the
-  // bell/badge until the next of those happened. Poll like the session
-  // check above, just faster, so it feels live while the app is open.
+  // Notifications arrive LIVE: the database tells this screen the moment one is created (Realtime), and it also
+  // refreshes when the connection comes back, when the tab is opened again, and once a minute as a safety net.
+  // A failed refresh (bad connection, session renewing) keeps the list already on screen rather than emptying it.
   useEffect(() => {
     if (!currentUser) return;
-    const interval = setInterval(async () => {
+    let stopped = false;
+    const refresh = async () => {
       try {
         const notifRes = await fetchAppNotifications();
-        if (notifRes && Array.isArray(notifRes.notifications)) {
-          setNotifications(notifRes.notifications);
-          setUnreadNotificationCount(notifRes.notifications.filter((n: any) => !n.isRead).length);
-        }
+        if (stopped || notifRes.failed || !Array.isArray(notifRes.notifications)) return;
+        setNotifications(notifRes.notifications);
+        setUnreadNotificationCount(notifRes.notifications.filter((n: any) => !n.isRead).length);
       } catch (err) {
         console.error(err);
       }
-    }, 20000);
-    return () => clearInterval(interval);
+    };
+    const unsubscribe = subscribeToNotificationChanges(refresh);
+    const interval = setInterval(refresh, 60000);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      unsubscribe();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [currentUser?.id]);
 
   // Soft-ask for push notification permission a few seconds after login —
@@ -292,14 +301,14 @@ export default function App() {
         fetchStories(),
         fetchReels(),
         fetchUsers(),
-        fetchAppNotifications().catch(() => ({ notifications: [] }))
+        fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }))
       ]);
       setCurrentUser(user);
       setPosts(pList);
       setStories(sList);
       setReels(rList);
       setRegisteredUsers(uList);
-      if (notifRes && Array.isArray(notifRes.notifications)) {
+      if (notifRes && !notifRes.failed && Array.isArray(notifRes.notifications)) {
         setNotifications(notifRes.notifications);
         setUnreadNotificationCount(notifRes.notifications.filter((n: any) => !n.isRead).length);
       }

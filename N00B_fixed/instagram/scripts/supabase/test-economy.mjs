@@ -494,7 +494,7 @@ const lst = await rpc(admin, 'admin_users_list');
 const la0 = lst.users.find((u) => u.id === a);
 check(lst.success && lst.users.length === raw.users.length && la0.email !== undefined && la0.mobileNumber !== undefined && la0.isSuspended === false && la0.noobPoints === 500 && !JSON.stringify(lst).includes('encrypted_password') && !('password' in la0), 'the admin sees every account with contact details (never passwords)');
 // suspend
-await expectFail(() => rpc(a, 'admin_suspend_user', b, 'x', true), /Only the NOOB administrator can suspend/, 'an ordinary user can not suspend anyone');
+await expectFail(() => rpc(a, 'admin_suspend_user', b, 'x', true), /permission to suspend accounts/, 'an ordinary user can not suspend anyone');
 await expectFail(() => rpc(admin, 'admin_suspend_user', adminName, 'x', true), /cannot be suspended/, 'the main admin can not be suspended');
 await expectFail(() => rpc(admin, 'admin_suspend_user', 'zzz_nobody', 'x', true), /Target account not found/, 'an unknown account is refused');
 await expectFail(() => rpc(admin, 'admin_suspend_user', '', 'x', true), /Target user ID or username is required/, 'no target is refused');
@@ -513,7 +513,7 @@ await db.query('update profiles set is_suspended = false where id = $1', [a]);
 await expectFail(() => call(admin, `update profiles set is_suspended = true where id = $1`, [b]), /protected profile fields/, 'even the admin\'s browser can not flip flags through the table — only the function does');
 // adjust points
 await setPts(a, 5000);
-await expectFail(() => rpc(a, 'admin_adjust_points', a, 999), /Only the NOOB administrator can adjust/, 'an ordinary user can not adjust balances');
+await expectFail(() => rpc(a, 'admin_adjust_points', a, 999), /permission to adjust point balances/, 'an ordinary user can not adjust balances');
 const adj1 = await rpc(admin, 'admin_adjust_points', a, 1234.6, null, '  fixing a bug ');
 check(adj1.success && adj1.user.noobPoints === 1235 && adj1.message.includes('1,235') && (await txs(a)).at(-1).reason === 'fixing a bug' && (await txs(a)).at(-1).amount === '-3765', '"set to" replaces the balance and is logged with the admin\'s reason');
 const adj2 = await rpc(admin, 'admin_adjust_points', a, null, -100000);
@@ -532,9 +532,9 @@ await rpc(admin, 'admin_send_notification', '@' + aName, 'Hello', 'Just you');
 check((await rpc(a, 'my_notifications')).notifications.some((x) => x.title === 'Hello' && x.type === 'admin_direct') && !(await rpc(b, 'my_notifications')).notifications.some((x) => x.title === 'Hello'), 'a direct notice reaches only that person');
 await expectFail(() => rpc(admin, 'admin_send_notification', 'all', '', 'x'), /title and message are required/, 'a notice needs a title');
 await expectFail(() => rpc(admin, 'admin_send_notification', 'zzz_nobody', 'a', 'b'), /User "@zzz_nobody" was not found/, 'an unknown person is refused');
-await expectFail(() => rpc(a, 'admin_send_notification', 'all', 'a', 'b'), /Only the NOOB administrator can dispatch/, 'an ordinary user can not broadcast');
+await expectFail(() => rpc(a, 'admin_send_notification', 'all', 'a', 'b'), /permission to send notifications/, 'an ordinary user can not broadcast');
 // delete
-await expectFail(() => rpc(a, 'admin_delete_user', b), /Only the NOOB administrator can delete/, 'an ordinary user can not delete accounts');
+await expectFail(() => rpc(a, 'admin_delete_user', b), /permission to delete accounts/, 'an ordinary user can not delete accounts');
 await expectFail(() => rpc(admin, 'admin_delete_user', adminName), /cannot be deleted/, 'the main admin can not be deleted');
 await expectFail(() => rpc(admin, 'admin_delete_user', 'zzz_nobody'), /Target account not found/, 'an unknown account is refused');
 const before = await n('select count(*)::int n from profiles');
@@ -595,9 +595,9 @@ check((await rpc(a, 'save_push_subscription', { endpoint: 'https://push.example/
 await expectFail(() => rpc(a, 'save_push_subscription', { keys: {} }), /valid push subscription/, 'a subscription without an endpoint is refused');
 check((await call(b, 'select * from push_subscriptions')).length === 0, 'nobody else can read your subscription');
 check((await rpc(a, 'remove_push_subscription')).success && (await n('select count(*)::int n from push_subscriptions where user_id = $1', [a])) === 0, 'and it can be removed');
-check((await rpc(a, 'get_vapid_public_key')) === null, 'no public push key is set yet');
-await db.query(`update app_settings set settings = settings || '{"vapidPublicKey": "BPUBLICKEY123"}'::jsonb where id = 1`);
-check((await rpc(a, 'get_vapid_public_key')) === 'BPUBLICKEY123', 'once set, everyone can read the (public) key');
+check((await rpc(a, 'get_vapid_public_key')) === 'BJD8vrncNsY8azuccm06W6rB5DKz6OcBqbegOUj5N-ZzAmYW_PgUddPNCQVnoR4lUf9r4f2z5orkhPLfIf6i2r8', 'the public push key is already set, and everyone can read it');
+await db.query(`update internal_config set value = 'BPUBLICKEY123' where key = 'vapid_public_key'`);
+check((await rpc(a, 'get_vapid_public_key')) === 'BPUBLICKEY123', 'it is read from the private settings table (which a data import can never overwrite)');
 
 // =====================================================================================
 section('20. The physical-goods store');

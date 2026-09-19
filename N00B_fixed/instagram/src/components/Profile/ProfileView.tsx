@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isStaff } from '../../adminAccess';
 import {
   Grid,
   Film,
@@ -851,8 +852,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                   </button>
 
-                  {/* Option 3: NOOB Admin Panel (Only for official NOOB admin account) */}
-                  {(currentUser.isAdmin && (currentUser.username.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin')) && (
+                  {/* Option 3: Admin Control Panel (the NOOB admin, and anyone the NOOB admin has given admin access to) */}
+                  {isStaff(currentUser) && (
                     <button
                       onClick={() => {
                         setShowThreeDotsMenu(false);

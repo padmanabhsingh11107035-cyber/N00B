@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadBackup, buildImportPlan } from './transform.mjs';
 import { runImport } from './run-import.mjs';
-import { createTestDb, makePgAdapter, MIGRATIONS_DIR } from './pg-test-env.mjs';
+import { createTestDb, makePgAdapter, asUser, MIGRATIONS_DIR } from './pg-test-env.mjs';
 
 const backupsRoot = 'backups';
 const dir = process.argv.slice(2).find((x) => !x.startsWith('--')) || path.join(backupsRoot, fs.readdirSync(backupsRoot).filter((d) => fs.existsSync(path.join(backupsRoot, d, 'users.json'))).sort().pop());
@@ -18,7 +18,7 @@ let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
 const section = (t) => console.log(`\n${t}`);
 
-const MIG6 = '20260919000006_economy_games_admin.sql';
+const MIG6 = "20260919000006_economy_games_admin.sql";
 section('Building the live situation (migrations 1-5 + real data)');
 const db = await createTestDb({ upTo: '20260919000005_chat.sql' });
 const plan = buildImportPlan(raw, {});
@@ -67,6 +67,39 @@ await db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, MIG6), 'utf8'));
 const again = await snap();
 check(JSON.stringify(after) === JSON.stringify(again), 'nothing changed on the second run');
 check((await db.query(`select count(*)::int n from shop_items`)).rows[0].n === 24, 'and no duplicate shop items appeared');
+
+section('Applying migrations 7 (recovery) and 8 (staff permissions, group setting, push) on top');
+const read = (f) => fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8');
+await db.exec(read('20260919000007_recovery.sql'));
+const LOUNGE = (await db.query('select id from chats where is_global_default')).rows[0].id;
+const lgBefore = (await db.query('select name, description, is_group, creator_id from chats where id = $1', [LOUNGE])).rows[0];
+const M8 = '20260919000008_staff_permissions_group_policy_push.sql';
+await db.exec(read(M8));
+const after8 = await snap();
+check(JSON.stringify(after) === JSON.stringify(after8), 'migration 8 changes no count and no point total');
+check(JSON.stringify(lgBefore) === JSON.stringify((await db.query('select name, description, is_group, creator_id from chats where id = $1', [LOUNGE])).rows[0]), 'the Global Lounge is untouched');
+check((await db.query('select count(*)::int n from chats where only_admins_can_send')).rows[0].n === 0, 'no group is switched to "admins only" by the upgrade');
+check((await db.query('select count(*)::int n from admin_grants')).rows[0].n === 0, 'nobody gets any admin permission by the upgrade');
+const cfg = Object.fromEntries((await db.query('select key, value from internal_config')).rows.map((r) => [r.key, r.value]));
+check(/^BJD8vr/.test(cfg.vapid_public_key) && cfg.push_url.startsWith('https://') && /^[0-9a-f]{64}$/.test(cfg.push_secret), 'the push key, the function address and a random private password are stored');
+await db.exec(read(M8));
+const cfg2 = Object.fromEntries((await db.query('select key, value from internal_config')).rows.map((r) => [r.key, r.value]));
+check(JSON.stringify(await snap()) === JSON.stringify(after8) && cfg2.push_secret === cfg.push_secret, 'running migration 8 a second time is harmless (the private password does not change)');
+check((await db.query(`select count(*)::int n from pg_trigger where tgname = 'notifications_push'`)).rows[0].n === 1, 'and there is exactly one push trigger');
+
+section('Applying migration 9 (shop inventory and versions) on top');
+await db.query(`insert into store_products (price, description, media, in_stock) values (129, 'Old sticker sheet', '[{"type":"photo","url":"p.jpg"}]', false), (299, 'Old mug', '[{"type":"photo","url":"m.jpg"}]', true)`);
+const shopBefore = (await db.query('select id, price::text, description, media::text, in_stock from store_products order by description')).rows;
+const M9 = '20260919000009_store_inventory_variants.sql';
+await db.exec(read(M9));
+const shopAfter = (await db.query('select id, price::text, description, media::text, in_stock from store_products order by description')).rows;
+check(JSON.stringify(shopBefore) === JSON.stringify(shopAfter), 'every existing product keeps its price, description, pictures and in-stock state');
+check(JSON.stringify(await snap()) === JSON.stringify(after8), 'migration 9 changes no count and no point total');
+const someone = (await db.query('select id from profiles where not is_admin and not is_suspended order by created_at limit 1')).rows[0].id;
+const shopList = await asUser(db, someone, async () => (await db.query('select public.list_store_products() as r')).rows[0].r);
+check(shopList.length === 2 && shopList.every((p) => p.stock === null && p.variants.length === 0 && p.options.length === 0) && shopList.find((p) => p.description === 'Old sticker sheet').inStock === false && shopList.find((p) => p.description === 'Old mug').inStock === true, 'old products show in the shop exactly as before (no stock number, no versions)');
+await db.exec(read(M9));
+check(JSON.stringify((await db.query('select id, price::text, description, media::text, in_stock from store_products order by description')).rows) === JSON.stringify(shopBefore), 'running migration 9 a second time is harmless');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

@@ -11,7 +11,8 @@ import {
   Upload,
   Search,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { ChatConversation, User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -20,6 +21,7 @@ import {
   manageGroupAdmin,
   removeGroupMember,
   addGroupMembers,
+  setGroupSendPolicy,
   uploadMediaFile
 } from '../../services/api';
 
@@ -78,6 +80,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     try {
       setIsUploading(true);
       setErrorMsg('');
+      setSuccessMsg('');
       // Routes through the same invisible client-side compression every
       // other upload in the app uses, instead of sending the raw
       // camera-resolution file straight to B2.
@@ -110,6 +113,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     try {
       setLoading(true);
       setErrorMsg('');
+      setSuccessMsg('');
       const res = await updateGroupDetails(chat.id, {
         name: groupName.trim(),
         avatar: avatarUrl || undefined,
@@ -120,6 +124,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         setIsEditingInfo(false);
         setSuccessMsg('Group info updated successfully!');
         setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        setErrorMsg((res as any).error || 'Could not update the group.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to update group');
@@ -132,15 +138,39 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     try {
       setLoading(true);
       setErrorMsg('');
+      setSuccessMsg('');
       const action = currentlyAdmin ? 'remove_admin' : 'make_admin';
       const res = await manageGroupAdmin(chat.id, targetUserId, action);
       if (res.success && res.chat) {
         onChatUpdated(res.chat);
         setSuccessMsg(currentlyAdmin ? 'Admin status removed.' : 'Promoted user to Group Admin!');
         setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        setErrorMsg((res as any).error || 'Could not change admin roles.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to update admin role');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Admins only: switch "only admins can send messages" on or off. Everyone in the group sees a notice in the chat.
+  const handleToggleSendPolicy = async () => {
+    try {
+      setLoading(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+      const res = await setGroupSendPolicy(chat.id, !chat.onlyAdminsCanSend);
+      if (res.success && res.chat) {
+        onChatUpdated(res.chat);
+        setSuccessMsg(res.chat.onlyAdminsCanSend ? 'Only admins can send messages now.' : 'Everyone can send messages again.');
+        setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        setErrorMsg(res.error || 'Could not change this setting.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Could not change this setting.');
     } finally {
       setLoading(false);
     }
@@ -151,11 +181,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     try {
       setLoading(true);
       setErrorMsg('');
+      setSuccessMsg('');
       const res = await removeGroupMember(chat.id, targetUserId);
       if (res.success && res.chat) {
         onChatUpdated(res.chat);
         setSuccessMsg('Member removed from group.');
         setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        setErrorMsg((res as any).error || 'Could not remove that member.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to remove member');
@@ -172,6 +205,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
       if (res.success) {
         onClose();
         window.location.reload();
+      } else {
+        setErrorMsg((res as any).error || 'Could not leave the group.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to leave group');
@@ -185,6 +220,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
     try {
       setLoading(true);
       setErrorMsg('');
+      setSuccessMsg('');
       const res = await addGroupMembers(chat.id, selectedNewUserIds);
       if (res.success && res.chat) {
         onChatUpdated(res.chat);
@@ -192,6 +228,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         setShowAddMembers(false);
         setSuccessMsg('Added friends to the group!');
         setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        setErrorMsg((res as any).error || 'Could not add members.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to add members');
@@ -337,6 +375,42 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           </div>
         </div>
 
+        {/* Who may write in this group */}
+        {(isAdmin || chat.onlyAdminsCanSend) && (
+          <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-purple-400" />
+                Only admins can send messages
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">
+                {isAdmin
+                  ? 'When this is on, members can read the chat but only the group admins can write in it.'
+                  : 'Right now only the group admins can write in this chat.'}
+              </p>
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!chat.onlyAdminsCanSend}
+                aria-label="Only admins can send messages"
+                onClick={handleToggleSendPolicy}
+                disabled={loading}
+                className={`relative w-11 h-6 rounded-full shrink-0 transition-colors cursor-pointer disabled:opacity-60 ${
+                  chat.onlyAdminsCanSend ? 'bg-[#00FF66]' : 'bg-zinc-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    chat.onlyAdminsCanSend ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Member Management Section */}
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
@@ -345,7 +419,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
               Members ({(chat.participants || []).length})
             </span>
 
-            {isAdmin && (
+            {isAdmin && !chat.isGlobalDefault && (
               <button
                 onClick={() => setShowAddMembers(!showAddMembers)}
                 className="px-2.5 py-1 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
@@ -498,7 +572,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                         </button>
                       )}
 
-                      {!isMemberCreator && (
+                      {!isMemberCreator && !chat.isGlobalDefault && (
                         <button
                           onClick={() => handleRemoveMember(member.id)}
                           disabled={loading}

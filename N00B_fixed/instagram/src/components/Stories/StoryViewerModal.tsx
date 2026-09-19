@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2 } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, fetchStoryViewers } from '../../services/api';
@@ -38,7 +39,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   const story = stories[currentIndex];
   const isOwnStory = !!story && story.userId === currentUser.id;
-  const isMasterAdmin = !!currentUser.isAdmin || currentUser.username?.toLowerCase() === 'noob' || currentUser.id === 'u_noob_admin';
+  // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
+  const isMasterAdmin = can(currentUser, 'moderate_content');
   useScreenshotAlert('story', story?.id, !isOwnStory);
 
   useEffect(() => {

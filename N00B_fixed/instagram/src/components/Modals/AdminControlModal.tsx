@@ -21,10 +21,17 @@ import {
   MapPin,
   Briefcase,
   Globe2,
-  Fingerprint
+  Fingerprint,
+  ShieldCheck,
+  History
 } from 'lucide-react';
 import { User } from '../../types';
-import { fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints } from '../../services/api';
+import {
+  fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
+  fetchAdminStaff, setAdminPermissions, fetchAdminAudit
+} from '../../services/api';
+import type { AdminStaffMember, AdminAuditEntry } from '../../services/api';
+import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime } from '../../utils/formatTime';
 
@@ -33,9 +40,57 @@ interface AdminControlModalProps {
   onClose: () => void;
 }
 
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity';
+
+// One line of the activity log, in plain words.
+function describeAudit(e: AdminAuditEntry): string {
+  const who = e.actor ? `@${e.actor}` : 'An admin';
+  const target = e.target ? `@${e.target}` : '';
+  const d = e.details || {};
+  switch (e.action) {
+    case 'admin_access_set': return `${who} set admin access for ${target}: ${(d.permissions || []).map(permissionLabel).join(', ') || 'nothing'}.`;
+    case 'admin_access_removed': return `${who} removed all admin access from ${target}.`;
+    case 'account_suspended': return `${who} suspended ${target}${d.reason ? ` (${d.reason})` : ''}.`;
+    case 'account_restored': return `${who} restored ${target}.`;
+    case 'account_deleted': return `${who} permanently deleted the account @${d.username || e.target || 'unknown'}.`;
+    case 'points_adjusted': return `${who} changed ${target}'s NOOB points from ${Number(d.from ?? 0).toLocaleString()} to ${Number(d.to ?? 0).toLocaleString()}${d.reason ? ` (${d.reason})` : ''}.`;
+    case 'notification_sent': return `${who} sent a notification ${target ? `to ${target}` : 'to everyone'}.`;
+    case 'report_resolved': return `${who} resolved a report about ${target}${d.suspended ? ' and suspended them' : ''}.`;
+    case 'report_dismissed': return `${who} dismissed a report about ${target}.`;
+    case 'report_banned': return `${who} banned ${target} over a report.`;
+    case 'coupon_created': return `${who} created the coupon ${d.code || ''}.`;
+    case 'coupon_removed': return `${who} removed a coupon.`;
+    case 'product_added': return `${who} added a shop product.`;
+    case 'product_updated': return `${who} edited a shop product.`;
+    case 'product_removed': return `${who} removed a shop product.`;
+    case 'message_deleted': return `${who} deleted a chat message.`;
+    default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;
+  }
+}
+
 export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUser, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'reports' | 'notify'>('users');
+  // What this person may do. The database enforces every one of these again — this only decides which buttons appear.
+  const main = isMainAdmin(currentUser);
+  const canViewAccounts = can(currentUser, 'view_accounts');
+  const canSuspend = can(currentUser, 'suspend_accounts');
+  const canDelete = can(currentUser, 'delete_accounts');
+  const canAdjustPoints = can(currentUser, 'adjust_points');
+  const canHandleReports = can(currentUser, 'handle_reports');
+  const canNotify = can(currentUser, 'send_notifications');
+  const canOpenAccounts = canViewAccounts || canSuspend || canDelete || canAdjustPoints || canHandleReports;
+
+  const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : 'users');
   const [usersList, setUsersList] = useState<User[]>([]);
+
+  // Admin team (main admin only): who has which powers, and the editor for ticking them
+  const [staffList, setStaffList] = useState<AdminStaffMember[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffEditor, setStaffEditor] = useState<{ userId: string; username: string; displayName?: string; avatar?: string; existing: boolean } | null>(null);
+  const [editorPerms, setEditorPerms] = useState<string[]>([]);
+  const [savingStaff, setSavingStaff] = useState(false);
+  const [auditEntries, setAuditEntries] = useState<AdminAuditEntry[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
   const [reportsList, setReportsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingReports, setLoadingReports] = useState(false);
@@ -69,9 +124,80 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [pointsReason, setPointsReason] = useState('');
 
   useEffect(() => {
-    loadUsers();
-    loadReports();
+    if (canOpenAccounts) loadUsers(); else setLoading(false);
+    if (canHandleReports) loadReports();
+    if (main) loadStaff();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'activity' && main) loadAudit();
+  }, [activeTab]);
+
+  const loadStaff = async () => {
+    setLoadingStaff(true);
+    const res = await fetchAdminStaff();
+    if (res.success) setStaffList(res.staff);
+    else setStatusMessage({ text: res.error || 'Could not load the admin team.', type: 'error' });
+    setLoadingStaff(false);
+  };
+
+  const loadAudit = async () => {
+    setLoadingAudit(true);
+    const res = await fetchAdminAudit(200);
+    if (res.success) setAuditEntries(res.entries);
+    else setStatusMessage({ text: res.error || 'Could not load the activity log.', type: 'error' });
+    setLoadingAudit(false);
+  };
+
+  const openStaffEditor = (who: { userId: string; username: string; displayName?: string; avatar?: string }, current: string[] = []) => {
+    setStaffEditor({ ...who, existing: current.length > 0 });
+    setEditorPerms(current);
+  };
+
+  const togglePerm = (key: string) =>
+    setEditorPerms((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+
+  const saveStaff = async (permissions: string[] = editorPerms) => {
+    if (!staffEditor) return;
+    if (permissions.length === 0 && !staffEditor.existing) {
+      setStatusMessage({ text: 'Tick at least one thing this person is allowed to do.', type: 'error' });
+      return;
+    }
+    try {
+      setSavingStaff(true);
+      const res = await setAdminPermissions(staffEditor.userId, permissions);
+      if (res.success) {
+        setStatusMessage({ text: res.message || 'Admin access updated.', type: 'success' });
+        setStaffEditor(null);
+        setStaffSearch('');
+        await Promise.all([loadStaff(), canOpenAccounts ? loadUsers() : Promise.resolve()]);
+      } else {
+        setStatusMessage({ text: res.error || 'Could not change admin access.', type: 'error' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
+    } finally {
+      setSavingStaff(false);
+    }
+  };
+
+  const removeStaffAccess = async (member: AdminStaffMember) => {
+    if (!confirm(`Remove ALL admin access from @${member.username}? They will no longer see the Admin Control Panel.`)) return;
+    try {
+      setSavingStaff(true);
+      const res = await setAdminPermissions(member.userId, []);
+      if (res.success) {
+        setStatusMessage({ text: res.message || `@${member.username} no longer has admin access.`, type: 'success' });
+        await Promise.all([loadStaff(), canOpenAccounts ? loadUsers() : Promise.resolve()]);
+      } else {
+        setStatusMessage({ text: res.error || 'Could not remove admin access.', type: 'error' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
+    } finally {
+      setSavingStaff(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -79,6 +205,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       const res = await fetchAdminUsersList();
       if (res.success && res.users) {
         setUsersList(res.users);
+      } else if (!res.success) {
+        setStatusMessage({ text: res.error || 'Failed to load user accounts', type: 'error' });
       }
     } catch (e: any) {
       console.error('Error loading admin users:', e);
@@ -265,7 +393,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 <h2 className="text-base sm:text-lg font-black text-white tracking-tight">NOOB Admin Control Panel</h2>
                 <VerifiedBadge size="sm" />
               </div>
-              <p className="text-xs text-zinc-400">Master Platform Overseer • Logged in as @{currentUser.username}</p>
+              <p className="text-xs text-zinc-400">{main ? 'Master Platform Overseer' : 'Admin Team Member'} • Logged in as @{currentUser.username}</p>
             </div>
           </div>
 
@@ -319,49 +447,91 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           </div>
           <div>
             <span className="text-[11px] text-zinc-400 block font-medium">Admin Role</span>
-            <span className="text-sm font-black text-[#00FF66]">Authorized</span>
+            <span className="text-sm font-black text-[#00FF66]">{main ? 'Authorized' : 'Delegate'}</span>
           </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-1.5 px-4 pt-3 border-b border-zinc-800 bg-zinc-950 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'users'
-                ? 'border-[#00FF66] text-[#00FF66]'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Users className="w-4 h-4" /> Account Moderation ({usersList.length})
-          </button>
+          {canOpenAccounts && (
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'users'
+                  ? 'border-[#00FF66] text-[#00FF66]'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Users className="w-4 h-4" /> Account Moderation ({usersList.length})
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'reports'
-                ? 'border-amber-400 text-amber-400'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" /> Safety Reports ({reportsList.length})
-          </button>
+          {canHandleReports && (
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'reports'
+                  ? 'border-amber-400 text-amber-400'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" /> Safety Reports ({reportsList.length})
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('notify')}
-            className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'notify'
-                ? 'border-[#00FF66] text-[#00FF66]'
-                : 'border-transparent text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Bell className="w-4 h-4" /> Custom Notification
-          </button>
+          {canNotify && (
+            <button
+              onClick={() => setActiveTab('notify')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'notify'
+                  ? 'border-[#00FF66] text-[#00FF66]'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Bell className="w-4 h-4" /> Custom Notification
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('staff')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'staff'
+                  ? 'border-sky-400 text-sky-400'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" /> Admin Team ({staffList.length})
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'activity'
+                  ? 'border-sky-400 text-sky-400'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <History className="w-4 h-4" /> Activity Log
+            </button>
+          )}
         </div>
 
         {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
-          {activeTab === 'users' ? (
+          {!(main || canOpenAccounts || canHandleReports || canNotify) ? (
+            <div className="py-12 px-4 text-center space-y-2">
+              <ShieldCheck className="w-8 h-8 text-sky-400 mx-auto" />
+              <h4 className="text-sm font-bold text-white">Your admin access is active</h4>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                {currentUser.adminPermissions && currentUser.adminPermissions.length > 0
+                  ? `You can: ${currentUser.adminPermissions.map(permissionLabel).join(', ')}. These work directly where they happen (in the Shop, Coupons, posts, reels, stories and chats) — there is nothing more to manage in this panel.`
+                  : 'You do not have any admin powers right now.'}
+              </p>
+            </div>
+          ) : activeTab === 'users' ? (
             <div className="space-y-3">
               {/* Search bar & Refresh */}
               <div className="flex items-center gap-2">
@@ -371,7 +541,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search accounts by @username, name, or email..."
+                    placeholder={canViewAccounts ? 'Search accounts by @username, name, or email...' : 'Search accounts by @username or name...'}
                     className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
                   />
                 </div>
@@ -397,7 +567,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               ) : (
                 <div className="space-y-2">
                   {filteredUsers.map((user) => {
-                    const isSelf = user.id === currentUser.id || user.username.toLowerCase() === 'noob';
+                    const isMainRow = user.username.toLowerCase() === 'noob';
+                    // nobody acts on their own account, on the main admin, or (for delegates) on any other admin
+                    const isSelf = user.id === currentUser.id || isMainRow || (!main && !!user.isStaff);
                     const isSuspended = Boolean(user.isSuspended);
 
                     return (
@@ -425,11 +597,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                   Suspended
                                 </span>
                               )}
-                              {isSelf && (
+                              {isMainRow ? (
                                 <span className="text-[10px] bg-[#00FF66]/20 text-[#00FF66] px-2 py-0.5 rounded-full font-bold border border-[#00FF66]/30">
                                   Primary Admin
                                 </span>
-                              )}
+                              ) : user.isStaff ? (
+                                <span className="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full font-bold border border-sky-500/30">
+                                  Admin Team
+                                </span>
+                              ) : null}
                             </div>
                             <span className="text-[11px] text-zinc-400 block truncate">
                               {user.displayName || user.email || 'NOOB Member'} • {user.followersCount || 0} followers • {(user.noobPoints || 0).toLocaleString()} noobs
@@ -444,32 +620,36 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
                         {/* Action buttons */}
                         <div className="shrink-0 flex items-center gap-1.5">
-                          <button
-                            onClick={() => setSelectedUserForDetails(user)}
-                            title="View full account details (email, phone, age, etc.)"
-                            className="px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <Info className="w-3.5 h-3.5" />
-                            Details
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedUserForPoints(user);
-                              setPointsInput(String(user.noobPoints || 0));
-                              setPointsReason('');
-                            }}
-                            disabled={actionLoading === user.id}
-                            title="Set this account's NOOB Points balance"
-                            className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <Coins className="w-3.5 h-3.5" />
-                            Points
-                          </button>
+                          {canViewAccounts && (
+                            <button
+                              onClick={() => setSelectedUserForDetails(user)}
+                              title="View full account details (email, phone, age, etc.)"
+                              className="px-3 py-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                              Details
+                            </button>
+                          )}
+                          {canAdjustPoints && (
+                            <button
+                              onClick={() => {
+                                setSelectedUserForPoints(user);
+                                setPointsInput(String(user.noobPoints || 0));
+                                setPointsReason('');
+                              }}
+                              disabled={actionLoading === user.id || (!main && isSelf)}
+                              title="Set this account's NOOB Points balance"
+                              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Coins className="w-3.5 h-3.5" />
+                              Points
+                            </button>
+                          )}
                           {isSelf ? (
                             <span className="text-[11px] text-zinc-500 font-bold px-3 py-1.5">Immune</span>
                           ) : (
                             <>
-                              {isSuspended ? (
+                              {canSuspend && (isSuspended ? (
                                 <button
                                   onClick={() => handleToggleSuspend(user, false)}
                                   disabled={actionLoading === user.id}
@@ -487,15 +667,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                   <UserX className="w-3.5 h-3.5" />
                                   Suspend
                                 </button>
+                              ))}
+                              {canDelete && (
+                                <button
+                                  onClick={() => setSelectedUserForDelete(user)}
+                                  disabled={actionLoading === user.id}
+                                  title="Permanently delete this account and their content"
+                                  className="p-1.5 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               )}
-                              <button
-                                onClick={() => setSelectedUserForDelete(user)}
-                                disabled={actionLoading === user.id}
-                                title="Permanently delete this account and their content"
-                                className="p-1.5 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {!canSuspend && !canDelete && !canAdjustPoints && !canViewAccounts && (
+                                <span className="text-[11px] text-zinc-600 px-3 py-1.5">View only</span>
+                              )}
                             </>
                           )}
                         </div>
@@ -618,7 +803,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'notify' ? (
             /* Custom Notification Dispatch Form */
             <form onSubmit={handleSendNotification} className="space-y-4">
               <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
@@ -704,6 +889,149 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 )}
               </button>
             </form>
+          ) : activeTab === 'staff' && main ? (
+            /* Admin Team: give other people admin powers — only the ones ticked */
+            <div className="space-y-4">
+              <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-sky-400" /> Give someone admin access
+                  </span>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Pick a member, then tick exactly what they may do. They can only use what you tick, everything they do is written to the
+                    Activity Log, and you can change or remove their access at any time.
+                  </p>
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={staffSearch}
+                    onChange={(e) => setStaffSearch(e.target.value)}
+                    placeholder="Search a member by @username or name..."
+                    className="w-full bg-zinc-950 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-sky-400"
+                  />
+                </div>
+                {staffSearch.trim() && (
+                  <div className="space-y-1.5">
+                    {usersList
+                      .filter((u) => !u.isStaff && u.username.toLowerCase() !== 'noob' && !u.isAi &&
+                        (u.username.toLowerCase().includes(staffSearch.trim().toLowerCase().replace(/^@/, '')) ||
+                          u.displayName?.toLowerCase().includes(staffSearch.trim().toLowerCase())))
+                      .slice(0, 6)
+                      .map((u) => (
+                        <div key={u.id} className="flex items-center justify-between gap-3 p-2 rounded-xl bg-zinc-950/70 border border-zinc-800">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img src={u.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-8 h-8 rounded-full object-cover border border-zinc-700 shrink-0" referrerPolicy="no-referrer" />
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-white block truncate">@{u.username}</span>
+                              <span className="text-[10px] text-zinc-500 block truncate">{u.displayName || 'NOOB Member'}</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => openStaffEditor({ userId: u.id, username: u.username, displayName: u.displayName, avatar: u.avatar })}
+                            className="px-3 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 rounded-xl text-xs font-bold cursor-pointer shrink-0"
+                          >
+                            Choose
+                          </button>
+                        </div>
+                      ))}
+                    {usersList.filter((u) => !u.isStaff && u.username.toLowerCase().includes(staffSearch.trim().toLowerCase().replace(/^@/, ''))).length === 0 && (
+                      <p className="text-[11px] text-zinc-500 text-center py-2">No matching member without admin access.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Current admin team ({staffList.length})</span>
+                  <button onClick={loadStaff} className="text-xs text-sky-300 hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingStaff ? 'animate-spin' : ''}`} /> Refresh
+                  </button>
+                </div>
+                {staffList.length === 0 ? (
+                  <div className="py-8 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+                    Nobody else has admin access yet. Only you can use this panel.
+                  </div>
+                ) : (
+                  staffList.map((m) => (
+                    <div key={m.userId} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <img src={m.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0" referrerPolicy="no-referrer" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-black text-white truncate">@{m.username}</span>
+                              {m.isVerified && <VerifiedBadge size="sm" />}
+                            </div>
+                            <span className="text-[10px] text-zinc-500 block truncate">
+                              {m.permissions.length} of {ADMIN_PERMISSIONS.length} powers{m.grantedAt ? ` • since ${formatExactDateTime(m.grantedAt)}` : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => openStaffEditor(m, m.permissions)}
+                            disabled={savingStaff}
+                            className="px-3 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            Edit access
+                          </button>
+                          <button
+                            onClick={() => removeStaffAccess(m)}
+                            disabled={savingStaff}
+                            className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {m.permissions.map((p) => (
+                          <span key={p} className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 font-semibold">
+                            {permissionLabel(p)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : main ? (
+            /* Activity Log: what every admin did */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <History className="w-4 h-4 text-sky-400" /> What the admin team has done
+                </span>
+                <button onClick={loadAudit} className="text-xs text-sky-300 hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+              {loadingAudit && auditEntries.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-sky-400 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400">Loading the activity log...</p>
+                </div>
+              ) : auditEntries.length === 0 ? (
+                <div className="py-10 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+                  Nothing yet. Every admin action from now on is recorded here.
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {auditEntries.map((e) => (
+                    <div key={e.id} className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                      <p className="text-xs text-zinc-200 leading-relaxed">{describeAudit(e)}</p>
+                      <span className="text-[10px] text-zinc-500">{formatExactDateTime(e.at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-xs text-zinc-500">You do not have access to this section.</div>
           )}
         </div>
 
@@ -1084,6 +1412,77 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               >
                 {actionLoading === selectedUserForDelete.id ? 'Deleting...' : 'Permanently Delete'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin access editor: tick exactly what this person may do */}
+      {staffEditor && (
+        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-zinc-950 border border-sky-500/40 rounded-3xl shadow-2xl flex flex-col max-h-[88vh]">
+            <div className="p-5 border-b border-zinc-800 flex items-center gap-3 shrink-0">
+              <img src={staffEditor.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-10 h-10 rounded-full object-cover border border-zinc-700 shrink-0" referrerPolicy="no-referrer" />
+              <div className="min-w-0">
+                <h3 className="text-sm font-black text-white truncate">
+                  {staffEditor.existing ? 'Change' : 'Give'} admin access — @{staffEditor.username}
+                </h3>
+                <p className="text-[11px] text-zinc-400">Tick everything this person is allowed to do. Anything left unticked stays blocked.</p>
+              </div>
+            </div>
+
+            <div className="p-4 overflow-y-auto space-y-2">
+              <div className="flex items-center justify-end gap-3 text-[11px] font-bold">
+                <button type="button" onClick={() => setEditorPerms(ADMIN_PERMISSIONS.map((p) => p.key))} className="text-sky-300 hover:underline cursor-pointer">Tick all</button>
+                <button type="button" onClick={() => setEditorPerms([])} className="text-zinc-400 hover:underline cursor-pointer">Untick all</button>
+              </div>
+              {ADMIN_PERMISSIONS.map((p) => {
+                const checked = editorPerms.includes(p.key);
+                return (
+                  <label
+                    key={p.key}
+                    className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-colors ${
+                      checked ? 'bg-sky-500/10 border-sky-500/40' : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => togglePerm(p.key)}
+                      className="mt-0.5 w-4 h-4 accent-sky-400 cursor-pointer shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="text-xs font-bold text-white block">{p.label}</span>
+                      <span className="text-[11px] text-zinc-400 block leading-snug">{p.description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+              {editorPerms.includes('delete_accounts') && (
+                <p className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 leading-snug">
+                  Deleting an account can not be undone. Only give this to someone you fully trust.
+                </p>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-zinc-800 shrink-0 space-y-2">
+              <p className="text-[10px] text-zinc-500 text-center">@{staffEditor.username} gets a notification when their access changes.</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStaffEditor(null)}
+                  disabled={savingStaff}
+                  className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => saveStaff()}
+                  disabled={savingStaff || (editorPerms.length === 0 && !staffEditor.existing)}
+                  className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-black rounded-xl text-xs font-black shadow-lg cursor-pointer"
+                >
+                  {savingStaff ? 'Saving...' : editorPerms.length === 0 ? 'Remove all access' : `Save (${editorPerms.length} allowed)`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

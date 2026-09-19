@@ -37,6 +37,7 @@ export {
   deleteComment,
   togglePinComment,
   fetchAppNotifications,
+  subscribeToNotificationChanges,
   markNotificationsAsRead,
   clearAllNotifications,
   fetchSettings,
@@ -88,6 +89,7 @@ export {
   createGroupChat,
   updateGroupDetails,
   manageGroupAdmin,
+  setGroupSendPolicy,
   removeGroupMember,
   addGroupMembers,
   blockUser,
@@ -129,6 +131,7 @@ export {
   revealScratchCard,
   fetchStoreProducts,
   createStoreProduct,
+  updateStoreProduct,
   deleteStoreProduct,
   fetchInsights,
   askAiSupportAssistant,
@@ -138,6 +141,9 @@ export {
   deleteUserAccount,
   fetchAdminUsersList,
   fetchAdminReports,
+  fetchAdminStaff,
+  setAdminPermissions,
+  fetchAdminAudit,
   takeAdminReportAction,
   deleteChatMessage,
   registerPushToken,
@@ -152,7 +158,9 @@ export type {
   GameRoomPlayer,
   GameRoom,
   Coupon,
-  MyCustomSticker
+  MyCustomSticker,
+  AdminStaffMember,
+  AdminAuditEntry
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

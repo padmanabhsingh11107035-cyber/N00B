@@ -50,6 +50,7 @@ import {
   Reply
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
+import { can } from '../../adminAccess';
 
 const EMOJI_CATEGORIES = [
   {
@@ -267,6 +268,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupDetails, setShowGroupDetails] = useState(false);
   const [inputText, setInputText] = useState('');
+  // Why the last message could not be sent (shown above the message box for a few seconds).
+  const [sendError, setSendError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [inChatSearchQuery, setInChatSearchQuery] = useState('');
   const [showInChatSearch, setShowInChatSearch] = useState(false);
@@ -724,6 +727,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
+
+  // A group set to "only admins can send messages": everyone else sees a notice instead of the message box.
+  // (adminIds is the same list the database uses, so this always agrees with what the server will accept.)
+  const sendBlocked = !!activeChat?.isGroup && !!activeChat.onlyAdminsCanSend && !activeChat.adminIds?.includes(currentUser.id);
+
+  // The server refused (or could not deliver) a message: take it off the screen, give the typed text back, and say why.
+  const reportSendFailure = (optimisticId: string, err: unknown, restoreText?: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+    if (restoreText) setInputText(restoreText);
+    const reason = err instanceof Error && err.message ? err.message : 'Your message could not be sent.';
+    setSendError(reason);
+    window.setTimeout(() => setSendError((current) => (current === reason ? '' : current)), 6000);
+  };
   useScreenshotAlert('chat', activeChat?.id, !!activeChat);
 
   // Pings "I'm typing" at most once per pause-cycle (not on every keystroke —
@@ -828,6 +844,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       }, 500);
     } catch (err) {
       console.error(err);
+      reportSendFailure(optimisticMsg.id, err, textToSend);
     }
   };
 
@@ -887,6 +904,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       });
     } catch (err) {
       console.error(err);
+      reportSendFailure(optimisticMsg.id, err);
     }
   };
 
@@ -925,6 +943,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       });
     } catch (err) {
       console.error(err);
+      reportSendFailure(optimisticMsg.id, err);
     }
   };
 
@@ -967,6 +986,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       });
     } catch (err) {
       console.error(err);
+      reportSendFailure(optimisticMsg.id, err);
     }
   };
 
@@ -1766,7 +1786,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 activeChat.adminIds?.includes(currentUser.id) ||
                 isNoobMaster
               ));
-              const canDeleteAsAdmin = isGroupAdmin || isNoobMaster;
+              const canDeleteAsAdmin = isGroupAdmin || isNoobMaster || can(currentUser, 'moderate_chats');
               const senderUser =
                 activeChat?.participants?.find((p) => p.id === m.senderId) ||
                 (m.senderUsername ? {
@@ -2093,6 +2113,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Bottom Message Input Bar */}
           <div className="p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/90 shrink-0 relative">
+            {sendError && !sendBlocked && (
+              <div role="alert" className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1">{sendError}</span>
+                <button type="button" onClick={() => setSendError('')} className="text-red-300/70 hover:text-red-200 cursor-pointer" aria-label="Dismiss">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            {sendBlocked ? (
+              <div className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-zinc-800/70 border border-zinc-700/70 text-xs sm:text-sm text-zinc-300 font-semibold">
+                <Lock className="w-4 h-4 text-purple-400 shrink-0" />
+                Only admins can send messages
+              </div>
+            ) : (
+            <>
             {/* Replying-to preview, WhatsApp-style */}
             {replyingToMessage && (
               <div className="flex items-center gap-2 mb-2 pl-3 pr-2 py-1.5 rounded-xl bg-zinc-800/80 border-l-4 border-[#00FF66]">
@@ -2437,6 +2473,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <span className="text-xs font-bold hidden sm:inline">Send</span>
               </button>
             </form>
+            </>
+            )}
           </div>
         </section>
       </div>

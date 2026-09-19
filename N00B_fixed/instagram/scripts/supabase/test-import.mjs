@@ -227,13 +227,13 @@ await expectFail(() => execAs(liker, 'insert into post_likes (post_id, user_id) 
 await execAs(liker, 'delete from post_likes where post_id = $1 and user_id = $2', [somePost.id, liker]);
 check((await n('select likes_count n from posts where id = $1', [somePost.id])) === somePost.likes_count, 'unliking lowers it back');
 await expectFail(() => execAs(author, 'update posts set likes_count = 99999 where id = $1', [somePost.id]), /protected post fields/, 'even a post\'s author can NOT fake its like count');
-await expectFail(() => execAs(viewer, `insert into posts (user_id, caption) values ($1, 'as someone else')`, [author]), /row-level security/, 'a user can NOT post as someone else');
+await expectFail(() => execAs(viewer, `insert into posts (user_id, caption) values ($1, 'as someone else')`, [author]), /row-level security|permission denied/, 'a user can NOT post as someone else');
 check((await execAs(viewer, `update posts set caption = 'edited' where id = $1`, [somePost.id])).affectedRows === 0, 'a user can NOT edit someone else\'s post');
 
 // follows
-await expectFail(() => execAs(author, 'insert into follows (follower_id, followee_id) values ($1, $2)', [author, privateTarget]), /row-level security/, 'following a PRIVATE account directly is refused (needs a request)');
+await expectFail(() => execAs(author, 'insert into follows (follower_id, followee_id) values ($1, $2)', [author, privateTarget]), /row-level security|permission denied/, 'following a PRIVATE account directly is refused (needs a request)');
 check((await execAs(author, 'insert into follow_requests (requester_id, target_id) values ($1, $2)', [author, privateTarget])).affectedRows === 1, '...a follow request is allowed instead');
-await execAs(author, 'insert into follows (follower_id, followee_id) values ($1, $2) on conflict do nothing', [author, publicTarget]);
+await execAs(author, 'select public.toggle_follow($1)', [publicTarget]);
 check((await n('select followers_count n from profiles where id = $1', [publicTarget])) === (followersRaw[publicTargetRaw.id] || 0) + 1, 'following a public account raises its follower count by exactly 1');
 
 // comments

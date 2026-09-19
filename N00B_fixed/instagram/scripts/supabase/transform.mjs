@@ -253,6 +253,7 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
     const uid = userUuid.get(p.userId);
     if (!uid) { skip(`post ${p.id}: author ${p.userId} not found`); postUuid.delete(p.id); continue; }
     const pid = postUuid.get(p.id);
+    const postCreatedAt = isoOrNull(p.createdAt) || earliestUser;
     tables.posts.push({
       id: pid, legacy_id: p.id, user_id: uid, caption: p.caption || '', location: str(p.location), category: str(p.category),
       hashtags: arr(p.hashtags).map(String), audio_track: p.audioTrack ?? null, web_link: str(p.webLink), text_bg_style: str(p.textBgStyle),
@@ -272,7 +273,7 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
     });
     const each = (list, table, col) => {
       for (const who of new Set(arr(list))) {
-        if (userUuid.has(who)) tables[table].push({ post_id: pid, user_id: userUuid.get(who) });
+        if (userUuid.has(who)) tables[table].push({ post_id: pid, user_id: userUuid.get(who), created_at: postCreatedAt });
         else skip(`${col} on post ${p.id}: unknown account ${who}`);
       }
     };
@@ -292,6 +293,7 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
     const uid = userUuid.get(r.userId);
     if (!uid) { skip(`reel ${r.id}: author ${r.userId} not found`); reelUuid.delete(r.id); continue; }
     const rid = reelUuid.get(r.id);
+    const reelCreatedAt = isoOrNull(r.createdAt) || earliestUser;
     const video = mediaRef(r.videoUrl, 'reels', r.id);
     if (!video) { skip(`reel ${r.id}: no video`); reelUuid.delete(r.id); continue; }
     if (int(r.savesCount) > 0 && !arr(r.savedBy).length) warn(`Reel ${r.id} had ${r.savesCount} save(s) but the old data doesn't say who saved it, so the saves can't be carried over.`);
@@ -305,7 +307,7 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
     });
     const each = (list, table, col) => {
       for (const who of new Set(arr(list))) {
-        if (userUuid.has(who)) tables[table].push({ reel_id: rid, user_id: userUuid.get(who) });
+        if (userUuid.has(who)) tables[table].push({ reel_id: rid, user_id: userUuid.get(who), created_at: reelCreatedAt });
         else skip(`${col} on reel ${r.id}: unknown account ${who}`);
       }
     };

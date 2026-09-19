@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
 export const MIGRATIONS_DIR = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..', 'supabase', 'migrations');
 
@@ -12,8 +13,10 @@ export const MIGRATIONS_DIR = path.join(path.dirname(new URL(import.meta.url).pa
 // new tables" ticked (every new table is granted to the API roles by default);
 // false mimics it unticked. The migration must behave identically in both.
 export async function createTestDb({ autoExpose = true } = {}) {
-  const db = new PGlite();
+  const db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(`
+    create schema extensions;
+    create extension pgcrypto with schema extensions;
     create role anon nologin;
     create role authenticated nologin;
     create role service_role nologin bypassrls;

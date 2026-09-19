@@ -233,15 +233,37 @@ export async function verifyUsernameExists(username: string): Promise<{ exists: 
   }
 }
 
-// Recovery needs a small server-side function (it must sign someone in without their password after
-// checking three personal details). Until that function is deployed the screen shows this message.
-export async function recoverAccountAccess(_payload: {
+// The message an Edge Function sent back with a failing status (its body is { error: "..." }).
+async function functionError(error: any, fallback: string): Promise<string> {
+  try {
+    const body = await error?.context?.json?.();
+    if (body?.error) return String(body.error);
+  } catch {
+    // not JSON — use the fallback
+  }
+  return fallback;
+}
+
+// "Forgot password": the "recover-account" Edge Function checks mobile number + date of birth + email (with
+// guess limits) and answers with a one-time sign-in token, which is exchanged here for a normal session.
+export async function recoverAccountAccess(payload: {
   username: string;
   mobileNumber: string;
   dateOfBirth: string;
   email: string;
 }): Promise<{ success: boolean; user?: User; error?: string }> {
-  return { success: false, error: 'Account recovery is being set up. Please contact NOOB support to regain access.' };
+  const unavailable = 'Recovery is unavailable right now. Please try again later.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: payload });
+    if (error) return { success: false, error: await functionError(error, unavailable) };
+    if (!data?.tokenHash) return { success: false, error: unavailable };
+    const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
+    if (signInError) return { success: false, error: 'Could not sign you in. Please try again.' };
+    const user = await rpc<any>('get_my_user');
+    return { success: true, user: mapUser(user) as User };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
 }
 
 export async function logoutUser(): Promise<{ success: boolean }> {

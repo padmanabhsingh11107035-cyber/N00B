@@ -166,6 +166,8 @@ const CURATED_STICKERS = [
 ];
 import {
   fetchChats,
+  toggleChatPin,
+  subscribeToChatChanges,
   fetchMessages,
   sendMessage,
   editMessage,
@@ -444,15 +446,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
     loadChats();
     loadAllUsers();
 
-    // Cross-device real-time synchronization polling. Kept at 5s — chat
-    // responsiveness is not something to trade away for bandwidth; the
-    // static-asset caching fix (see server.ts) addresses the same underlying
-    // problem without touching chat speed at all.
+    // Cross-device real-time sync. Messages and membership changes now arrive LIVE over Supabase Realtime
+    // (instant, and nothing is fetched while nothing happens). A slow 30s poll stays as a safety net in case
+    // the live connection drops.
+    const unsubscribe = subscribeToChatChanges(() => {
+      syncLiveChatData();
+    });
     const interval = setInterval(() => {
       syncLiveChatData();
-    }, 5000);
+    }, 30000);
 
-    return () => clearInterval(interval);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -705,11 +712,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const handleTogglePin = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/chats/${chatId}/pin`, {
-        method: 'POST',
-        headers: { 'x-user-id': currentUser.id }
-      });
-      const data = await res.json();
+      const data = await toggleChatPin(chatId);
       if (data.success) {
         setConversations(
           conversations.map((c) => (c.id === chatId ? { ...c, isPinned: data.isPinned } : c))

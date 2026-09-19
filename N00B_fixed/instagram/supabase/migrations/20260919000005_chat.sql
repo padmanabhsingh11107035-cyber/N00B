@@ -53,6 +53,22 @@ values ('48fd69c6-1d91-5380-b643-17d24d3363b0', '🌐 NOOB Global Lounge', '/noo
         'Official global community group chat for all NOOB members', true, true, '#00FF66')
 on conflict (id) do nothing;
 
+-- Pictures sent in chat must be real files too, never huge inline images (same guard as profile photos).
+create or replace function public.guard_inline_media() returns trigger
+language plpgsql set search_path = public as $$
+declare v text;
+begin
+  -- (read the field by name: a plain "new.media_url" would not even compile for the tables that lack it)
+  v := to_jsonb(new) ->> (case when tg_table_name in ('post_slides', 'messages') then 'media_url' else 'avatar' end);
+  if v is not null and v like 'data:%' and length(v) > 30000 then
+    raise exception 'That picture is too large to save directly. Please upload it as a file instead.' using errcode = '22001';
+  end if;
+  return new;
+end;
+$$;
+create trigger messages_no_inline_media before insert or update of media_url on public.messages
+  for each row execute function public.guard_inline_media();
+
 -- ===========================================================================
 -- 2. Tighten what a browser may do directly (everything else goes through functions)
 -- ===========================================================================

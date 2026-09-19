@@ -93,7 +93,29 @@ export {
   deleteCustomSticker,
   fetchCollections,
   createCollection,
-  addPostToCollection
+  addPostToCollection,
+  fetchChats,
+  createChat,
+  deleteChat,
+  fetchMessages,
+  sendMessage,
+  editMessage,
+  deleteMessage,
+  sendTypingStatus,
+  fetchTypingUsers,
+  updateChatSettings,
+  endChat,
+  submitChatReview,
+  createGroupChat,
+  updateGroupDetails,
+  manageGroupAdmin,
+  removeGroupMember,
+  addGroupMembers,
+  blockUser,
+  unblockUser,
+  toggleChatPin,
+  toggleChatMute,
+  subscribeToChatChanges
 } from './supabaseApi';
 
 const API_BASE = '/api';
@@ -171,83 +193,6 @@ export async function matchContacts(phoneNumbers: string[]): Promise<User[]> {
   return data.users || [];
 }
 
-// Chats & Messages
-export async function fetchChats(): Promise<ChatConversation[]> {
-  const res = await fetch(`${API_BASE}/chats`, { headers: getAuthHeaders() });
-  const data = await res.json();
-  return data.chats || [];
-}
-
-export async function createChat(payload: {
-  participantIds: string[];
-  isGroup?: boolean;
-  name?: string;
-  avatar?: string;
-  description?: string;
-}): Promise<ChatConversation> {
-  const res = await fetch(`${API_BASE}/chats`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(payload)
-  });
-  const data = await res.json();
-  if (!res.ok || !data.chat) {
-    throw new Error(data.error || 'Failed to create chat');
-  }
-  return data.chat;
-}
-
-export async function deleteChat(chatId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
-  return data.success;
-}
-
-export async function fetchMessages(chatId: string): Promise<Message[]> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/messages`, { headers: getAuthHeaders() });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.messages || [];
-}
-
-export async function sendMessage(chatId: string, payload: Partial<Message>): Promise<Message & { aiResponse?: Message }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/messages`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(payload)
-  });
-  const data = await res.json();
-  if (!res.ok || !data.message) {
-    throw new Error(data.error || 'Failed to send message');
-  }
-  if (data.aiResponse) {
-    return { ...data.message, aiResponse: data.aiResponse };
-  }
-  return data.message;
-}
-
-export async function editMessage(chatId: string, messageId: string, text: string): Promise<Message> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ text })
-  });
-  const data = await res.json();
-  return data.message;
-}
-
-export async function deleteMessage(chatId: string, messageId: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
-  return data.success;
-}
-
 export type ScreenshotContentType = 'profile' | 'post' | 'story' | 'reel' | 'chat';
 
 // Best-effort only — see the server route's own comment for exactly what
@@ -265,28 +210,6 @@ export async function sendScreenshotAlert(contentType: ScreenshotContentType, co
   }
 }
 
-export async function sendTypingStatus(chatId: string, isTyping: boolean): Promise<void> {
-  try {
-    await fetch(`${API_BASE}/chats/${chatId}/typing`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ isTyping })
-    });
-  } catch {
-    // Best-effort — a dropped typing ping isn't worth surfacing an error for.
-  }
-}
-
-export async function fetchTypingUsers(chatId: string): Promise<User[]> {
-  try {
-    const res = await fetch(`${API_BASE}/chats/${chatId}/typing`, { headers: getAuthHeaders() });
-    const data = await res.json();
-    return data.users || [];
-  } catch {
-    return [];
-  }
-}
-
 export async function translateMessage(chatId: string, messageId: string): Promise<string> {
   const res = await fetch(`${API_BASE}/chats/${chatId}/messages/${messageId}/translate`, { 
     method: 'POST',
@@ -294,121 +217,6 @@ export async function translateMessage(chatId: string, messageId: string): Promi
   });
   const data = await res.json();
   return data.translatedText;
-}
-
-export async function updateChatSettings(chatId: string, settings: Partial<ChatConversation>) {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/settings`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(settings)
-  });
-  return await res.json();
-}
-
-export async function endChat(chatId: string): Promise<{ success: boolean; chat: ChatConversation; message: string }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/end`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function submitChatReview(
-  chatId: string,
-  rating: number,
-  feedback?: string
-): Promise<{ success: boolean; review: any; message: string }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/review`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ rating, feedback })
-  });
-  return await res.json();
-}
-
-export async function createGroupChat(
-  name: string,
-  avatar?: string,
-  participantIds?: string[],
-  description?: string
-): Promise<{ success: boolean; chat: ChatConversation }> {
-  const res = await fetch(`${API_BASE}/chats`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({
-      name,
-      avatar,
-      participantIds,
-      isGroup: true,
-      description
-    })
-  });
-  return await res.json();
-}
-
-export async function updateGroupDetails(
-  chatId: string,
-  data: { name?: string; avatar?: string; description?: string }
-): Promise<{ success: boolean; chat: ChatConversation }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/group`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify(data)
-  });
-  return await res.json();
-}
-
-export async function manageGroupAdmin(
-  chatId: string,
-  targetUserId: string,
-  action: 'make_admin' | 'remove_admin'
-): Promise<{ success: boolean; chat: ChatConversation; adminIds: string[] }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/admins`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ targetUserId, action })
-  });
-  return await res.json();
-}
-
-export async function removeGroupMember(
-  chatId: string,
-  targetUserId: string
-): Promise<{ success: boolean; chat: ChatConversation; participants: User[] }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/members/remove`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ targetUserId })
-  });
-  return await res.json();
-}
-
-export async function addGroupMembers(
-  chatId: string,
-  userIds: string[]
-): Promise<{ success: boolean; chat: ChatConversation; participants: User[] }> {
-  const res = await fetch(`${API_BASE}/chats/${chatId}/members/add`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: safeJsonStringify({ userIds })
-  });
-  return await res.json();
-}
-
-export async function blockUser(userId: string): Promise<{ success: boolean; message: string; blockedUserIds: string[] }> {
-  const res = await fetch(`${API_BASE}/users/${userId}/block`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
-}
-
-export async function unblockUser(userId: string): Promise<{ success: boolean; message: string; blockedUserIds: string[] }> {
-  const res = await fetch(`${API_BASE}/users/${userId}/unblock`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
-  return await res.json();
 }
 
 export async function submitSafetyReport(

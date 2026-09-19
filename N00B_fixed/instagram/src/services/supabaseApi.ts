@@ -4,7 +4,8 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation } from '../types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
@@ -914,4 +915,330 @@ export async function addPostToCollection(collectionId: string, postId: string) 
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not add the post.') };
   }
+}
+
+// ----------------------------------------------------------------------------- chats & messages
+
+// The database sends "no value" as null; the old server simply left the key out. Screens were written for that.
+function dropNulls<T extends Record<string, any>>(o: T): T {
+  const out: any = {};
+  for (const [k, v] of Object.entries(o)) if (v !== null) out[k] = v;
+  return out;
+}
+
+function mapMessage(m: any): Message {
+  const out: any = dropNulls(m);
+  if (m.senderAvatar) out.senderAvatar = resolveMedia(m.senderAvatar);
+  if (m.mediaUrl) out.mediaUrl = resolveMedia(m.mediaUrl);
+  if (m.sharedTrack) {
+    out.sharedTrack = {
+      ...m.sharedTrack,
+      coverUrl: m.sharedTrack.coverUrl ? resolveMedia(m.sharedTrack.coverUrl) : m.sharedTrack.coverUrl,
+      audioUrl: m.sharedTrack.audioUrl ? resolveMedia(m.sharedTrack.audioUrl) : m.sharedTrack.audioUrl
+    };
+  }
+  return out as Message;
+}
+
+function mapChat(c: any): ChatConversation {
+  const out: any = dropNulls(c);
+  if (c.avatar) out.avatar = resolveMedia(c.avatar);
+  out.participants = (c.participants || []).map((p: any) => ({ ...p, avatar: resolveMedia(p.avatar) }));
+  if (c.lastMessage) out.lastMessage = mapMessage(c.lastMessage);
+  return out as ChatConversation;
+}
+
+// A group photo picked on a screen may arrive as an inline "data:" string — upload it as a real file first.
+async function storedAvatarFor(value?: string | null): Promise<string | null> {
+  if (!value) return null;
+  if (value.startsWith('data:')) {
+    const file = dataUriToFile(value, 'group');
+    return file ? (await uploadToStorage(file, 'avatars')).objectKey : null;
+  }
+  return toStoredMedia(value);
+}
+
+export async function fetchChats(): Promise<ChatConversation[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('my_chats')) || []).map(mapChat);
+  } catch {
+    return [];
+  }
+}
+
+export async function createChat(payload: {
+  participantIds: string[];
+  isGroup?: boolean;
+  name?: string;
+  avatar?: string;
+  description?: string;
+}): Promise<ChatConversation> {
+  try {
+    const res = await rpc<any>('create_chat', {
+      p_participant_ids: payload.participantIds || [],
+      p_is_group: !!payload.isGroup,
+      p_name: payload.name || null,
+      p_avatar: await storedAvatarFor(payload.avatar),
+      p_description: payload.description || null
+    });
+    return mapChat(res.chat);
+  } catch (err) {
+    throw new Error(errorText(err, 'Failed to create chat'));
+  }
+}
+
+export async function deleteChat(chatId: string): Promise<boolean> {
+  try {
+    const res = await rpc<{ success: boolean }>('delete_chat', { p_chat: chatId });
+    return !!res?.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchMessages(chatId: string): Promise<Message[]> {
+  try {
+    const res = await rpc<{ messages: any[] }>('chat_messages', { p_chat: chatId });
+    return (res.messages || []).map(mapMessage);
+  } catch {
+    return [];
+  }
+}
+
+export async function sendMessage(chatId: string, payload: Partial<Message>): Promise<Message & { aiResponse?: Message }> {
+  try {
+    let media = payload.mediaUrl || '';
+    if (media.startsWith('data:')) {
+      const file = dataUriToFile(media, 'chat');
+      media = file ? (await uploadToStorage(file, 'posts')).objectKey : '';
+    }
+    const p: Record<string, unknown> = {
+      text: payload.text || '',
+      mediaUrl: toStoredMedia(media) || undefined,
+      mediaType: payload.mediaType,
+      audioDuration: payload.audioDuration,
+      scheduledAt: payload.scheduledAt,
+      gameInvite: payload.gameInvite,
+      // only the id of a quoted message is sent — the database rebuilds the quote from the real message
+      replyTo: payload.replyTo?.messageId ? { messageId: payload.replyTo.messageId } : undefined,
+      sharedTrack: payload.sharedTrack
+        ? { ...payload.sharedTrack, coverUrl: toStoredMedia(payload.sharedTrack.coverUrl), audioUrl: toStoredMedia(payload.sharedTrack.audioUrl) }
+        : undefined
+    };
+    const res = await rpc<{ message: any }>('send_message', { p_chat: chatId, p });
+    return mapMessage(res.message);
+  } catch (err) {
+    throw new Error(errorText(err, 'Failed to send message'));
+  }
+}
+
+export async function editMessage(chatId: string, messageId: string, text: string): Promise<Message> {
+  const res = await rpc<{ message: any }>('edit_message', { p_chat: chatId, p_message: messageId, p_text: text });
+  return mapMessage(res.message);
+}
+
+// Authors delete their own; group admins delete in their group; the site admin can moderate any message by id.
+export async function deleteMessage(_chatId: string, messageId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('messages').delete().eq('id', messageId).select('id');
+  if (!error && Array.isArray(data) && data.length > 0) return true;
+  try {
+    const res = await rpc<{ success: boolean }>('admin_delete_message', { p_message: messageId });
+    return !!res?.success;
+  } catch {
+    return false;
+  }
+}
+
+// "X is typing…" travels over a live Realtime channel per chat — no database writes, no polling of the server.
+const TYPING_TTL_MS = 5000;
+const typingRooms = new Map<string, { channel: RealtimeChannel; who: Map<string, { user: User; at: number }> }>();
+let cachedCard: { id: string; card: Record<string, unknown> } | null = null;
+
+async function myTypingCard() {
+  const session = await currentSession();
+  if (!session) return null;
+  if (cachedCard?.id === session.user.id) return cachedCard.card;
+  const { data } = await supabase.from('profiles').select('id, username, display_name, avatar, is_verified').eq('id', session.user.id).maybeSingle();
+  if (!data) return null;
+  const card = { id: data.id, username: data.username, displayName: data.display_name, avatar: data.avatar, isVerified: data.is_verified };
+  cachedCard = { id: session.user.id, card };
+  return card;
+}
+
+function typingRoom(chatId: string) {
+  let room = typingRooms.get(chatId);
+  if (room) return room;
+  if (typingRooms.size >= 8) {
+    const oldest = typingRooms.keys().next().value as string;
+    const old = typingRooms.get(oldest);
+    if (old) supabase.removeChannel(old.channel);
+    typingRooms.delete(oldest);
+  }
+  const who = new Map<string, { user: User; at: number }>();
+  const channel = supabase.channel(`typing:${chatId}`, { config: { broadcast: { self: false } } });
+  channel
+    .on('broadcast', { event: 'typing' }, ({ payload }) => {
+      const user = payload?.user;
+      if (!user?.id) return;
+      if (payload.isTyping) who.set(user.id, { user: { ...user, avatar: resolveMedia(user.avatar) } as User, at: Date.now() });
+      else who.delete(user.id);
+    })
+    .subscribe();
+  room = { channel, who };
+  typingRooms.set(chatId, room);
+  return room;
+}
+
+export async function sendTypingStatus(chatId: string, isTyping: boolean): Promise<void> {
+  try {
+    const card = await myTypingCard();
+    if (!card) return;
+    await typingRoom(chatId).channel.send({ type: 'broadcast', event: 'typing', payload: { user: card, isTyping } });
+  } catch {
+    // Best-effort — a dropped typing ping isn't worth surfacing an error for.
+  }
+}
+
+export async function fetchTypingUsers(chatId: string): Promise<User[]> {
+  try {
+    const now = Date.now();
+    const me = (await currentSession())?.user.id;
+    return [...typingRoom(chatId).who.values()].filter((e) => now - e.at < TYPING_TTL_MS && e.user.id !== me).map((e) => e.user);
+  } catch {
+    return [];
+  }
+}
+
+// Calls `onChange` (at most a few times a second) whenever a message or chat membership changes anywhere
+// this person can see — replaces asking the server for everything every 5 seconds.
+export function subscribeToChatChanges(onChange: () => void): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const fire = () => {
+    if (timer) return;
+    timer = setTimeout(() => { timer = null; onChange(); }, 250);
+  };
+  const channel = supabase
+    .channel(`chat-changes-${crypto.randomUUID()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fire)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, fire)
+    .subscribe();
+  return () => {
+    if (timer) clearTimeout(timer);
+    supabase.removeChannel(channel);
+  };
+}
+
+export async function toggleChatPin(chatId: string): Promise<{ success: boolean; isPinned?: boolean; error?: string }> {
+  try { return await rpc('toggle_chat_flag', { p_chat: chatId, p_flag: 'pin' }); } catch (err) { return { success: false, error: errorText(err, 'Could not pin the chat.') }; }
+}
+
+export async function toggleChatMute(chatId: string): Promise<{ success: boolean; isMuted?: boolean; error?: string }> {
+  try { return await rpc('toggle_chat_flag', { p_chat: chatId, p_flag: 'mute' }); } catch (err) { return { success: false, error: errorText(err, 'Could not mute the chat.') }; }
+}
+
+export async function updateChatSettings(chatId: string, settings: Partial<ChatConversation>) {
+  try {
+    const res = await rpc<any>('update_chat_settings', {
+      p_chat: chatId,
+      p: { themeColor: settings.themeColor, vanishMode: settings.vanishMode, readReceiptsEnabled: settings.readReceiptsEnabled, nickname: (settings as any).nickname ?? settings.customNickname }
+    });
+    return { ...res, chat: mapChat(res.chat) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update the chat.') };
+  }
+}
+
+export async function endChat(chatId: string): Promise<{ success: boolean; chat: ChatConversation; message: string }> {
+  try {
+    const res = await rpc<any>('end_chat', { p_chat: chatId });
+    return { ...res, chat: mapChat(res.chat) };
+  } catch (err) {
+    return { success: false, message: errorText(err, 'Could not end the chat.') } as any;
+  }
+}
+
+export async function submitChatReview(
+  chatId: string,
+  rating: number,
+  feedback?: string
+): Promise<{ success: boolean; review: any; message: string }> {
+  try {
+    return await rpc('submit_chat_review', { p_chat: chatId, p_rating: rating, p_feedback: feedback || '' });
+  } catch (err) {
+    return { success: false, message: errorText(err, 'Could not submit the review.') } as any;
+  }
+}
+
+export async function createGroupChat(
+  name: string,
+  avatar?: string,
+  participantIds?: string[],
+  description?: string
+): Promise<{ success: boolean; chat: ChatConversation }> {
+  try {
+    const chat = await createChat({ participantIds: participantIds || [], isGroup: true, name, avatar, description });
+    return { success: true, chat };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not create the group.') } as any;
+  }
+}
+
+export async function updateGroupDetails(
+  chatId: string,
+  data: { name?: string; avatar?: string; description?: string }
+): Promise<{ success: boolean; chat: ChatConversation }> {
+  try {
+    const res = await rpc<any>('update_group_details', {
+      p_chat: chatId, p_name: data.name ?? null, p_avatar: await storedAvatarFor(data.avatar), p_description: data.description ?? null
+    });
+    return { ...res, chat: mapChat(res.chat) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update the group.') } as any;
+  }
+}
+
+export async function manageGroupAdmin(
+  chatId: string,
+  targetUserId: string,
+  action: 'make_admin' | 'remove_admin'
+): Promise<{ success: boolean; chat: ChatConversation; adminIds: string[] }> {
+  try {
+    const res = await rpc<any>('manage_group_admin', { p_chat: chatId, p_target: targetUserId, p_action: action });
+    return { ...res, chat: mapChat(res.chat) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not change admin roles.') } as any;
+  }
+}
+
+export async function removeGroupMember(
+  chatId: string,
+  targetUserId: string
+): Promise<{ success: boolean; chat: ChatConversation; participants: User[] }> {
+  try {
+    const res = await rpc<any>('remove_group_member', { p_chat: chatId, p_target: targetUserId });
+    return { ...res, chat: res.chat ? mapChat(res.chat) : res.chat, participants: (res.participants || []).map((p: any) => ({ ...p, avatar: resolveMedia(p.avatar) })) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not remove that member.') } as any;
+  }
+}
+
+export async function addGroupMembers(
+  chatId: string,
+  userIds: string[]
+): Promise<{ success: boolean; chat: ChatConversation; participants: User[] }> {
+  try {
+    const res = await rpc<any>('add_group_members', { p_chat: chatId, p_user_ids: userIds });
+    return { ...res, chat: mapChat(res.chat), participants: (res.participants || []).map((p: any) => ({ ...p, avatar: resolveMedia(p.avatar) })) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not add members.') } as any;
+  }
+}
+
+export async function blockUser(userId: string): Promise<{ success: boolean; message: string; blockedUserIds: string[] }> {
+  try { return await rpc('block_user', { p_user: userId }); } catch (err) { return { success: false, message: errorText(err, 'Could not block this user.'), blockedUserIds: [] }; }
+}
+
+export async function unblockUser(userId: string): Promise<{ success: boolean; message: string; blockedUserIds: string[] }> {
+  try { return await rpc('unblock_user', { p_user: userId }); } catch (err) { return { success: false, message: errorText(err, 'Could not unblock this user.'), blockedUserIds: [] }; }
 }

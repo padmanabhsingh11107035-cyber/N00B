@@ -27,7 +27,7 @@ import {
   Tooltip
 } from 'recharts';
 import { User } from '../../types';
-import { updateCurrentUser } from '../../services/api';
+import { updateCurrentUser, fetchInsights } from '../../services/api';
 
 interface ProfessionalDashboardModalProps {
   currentUser: User;
@@ -50,10 +50,9 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
   const fetchLiveInsights = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/insights');
-      const data = await res.json();
-      if (data.insights) {
-        setInsights(data.insights);
+      const data = await fetchInsights();
+      if (data) {
+        setInsights(data);
       }
     } catch (e) {
       console.error('Error loading insights', e);

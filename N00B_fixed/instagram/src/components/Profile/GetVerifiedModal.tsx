@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
-import { safeJsonStringify } from '../../utils/safeJson';
-import { redeemCouponCode } from '../../services/api';
+import { redeemCouponCode, verifyAccount } from '../../services/api';
 import confetti from 'canvas-confetti';
 
 const POINTS_PRICE: Record<'points_perm' | 'points_month', number> = {
@@ -104,29 +103,21 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
     try {
       setLoading(true);
 
-      const serverMethod =
+      const serverMethod: 'coupon' | 'points_permanent' | 'points_monthly' =
         selectedOption === 'coupon'
           ? 'coupon'
           : selectedOption === 'points_perm'
           ? 'points_permanent'
           : 'points_monthly';
 
-      const res = await fetch('/api/users/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.id
-        },
-        body: safeJsonStringify({
-          password: password.trim(),
-          method: serverMethod,
-          couponCode: couponCode.trim(),
-          discountCouponCode: appliedDiscount?.code
-        })
+      // The password is sent exactly as typed (never trimmed) — same as the login form.
+      const data = await verifyAccount({
+        password,
+        method: serverMethod,
+        couponCode: couponCode.trim(),
+        discountCouponCode: appliedDiscount?.code
       });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || 'Verification failed. Please check your credentials.');
       }
 

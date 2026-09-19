@@ -20,7 +20,8 @@ export const TABLE_ORDER = [
   ['comments', 'id'],
   ['chats', 'id'], ['chat_members', 'chat_id,user_id'], ['messages', 'id'],
   ['notifications', 'id'], ['notification_reads', 'notification_id,user_id'],
-  ['game_scores', 'id'], ['noob_transactions', 'id'], ['coupons', 'id'],
+  ['game_scores', 'id'], ['noob_transactions', 'id'], ['coupons', 'id'], ['coupon_uses', 'coupon_id,user_id'],
+  ['store_products', 'id'], ['scratch_cards', 'id'], ['reports', 'id'],
   ['app_settings', 'id', true], ['support_reviews', 'id'], ['legacy_import', 'key']
 ];
 const BATCH = 200;

@@ -127,7 +127,8 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
     reels: [], reel_likes: [], reel_saves: [], reel_views: [], comments: [],
     chats: [], chat_members: [], messages: [],
     notifications: [], notification_reads: [],
-    game_scores: [], noob_transactions: [], coupons: [], app_settings: [], support_reviews: [], legacy_import: []
+    game_scores: [], noob_transactions: [], coupons: [], coupon_uses: [], store_products: [], scratch_cards: [], reports: [],
+    app_settings: [], support_reviews: [], legacy_import: []
   };
   const authUsers = [];
 
@@ -418,10 +419,44 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
   for (const c of arr(raw.coupons)) {
     const target = c.targetUsername ? (userByName.get(String(c.targetUsername).toLowerCase()) || null) : null;
     if (c.targetUsername && !target) warn(`Coupon ${c.code}: its target user "${c.targetUsername}" no longer exists — imported as inactive.`);
+    const couponId = uuidFor('coupon', c.id);
     tables.coupons.push({
-      id: uuidFor('coupon', c.id), legacy_id: c.id, code: c.code, title: str(c.title), type: str(c.type), discount_percent: Number.isFinite(Number(c.discountPercent)) ? Number(c.discountPercent) : null,
-      terms: str(c.terms), target_user_id: target, created_by: userUuid.get(c.createdBy) || userByName.get(String(c.createdBy).toLowerCase()) || null,
+      id: couponId, legacy_id: c.id, code: c.code, title: str(c.title), type: str(c.type) || 'discount', discount_percent: Number.isFinite(Number(c.discountPercent)) ? Number(c.discountPercent) : null,
+      terms: (Array.isArray(c.terms) ? c.terms : typeof c.terms === 'string' && c.terms ? c.terms.split('\n') : []).map((t) => String(t).trim()).filter(Boolean),
+      usage_limit: c.usageLimit === 'once' || c.type === 'verification' ? 'once' : 'unlimited',
+      target_user_id: target, created_by: userUuid.get(c.createdBy) || userByName.get(String(c.createdBy).toLowerCase()) || null,
       active: bool(c.active) && !(c.targetUsername && !target), created_at: isoOrNull(c.createdAt) || earliestUser
+    });
+    // who has already spent a one-time coupon
+    for (const uname of new Set(arr(c.usedBy).map((x) => String(x).toLowerCase()))) {
+      const uid = userByName.get(uname);
+      if (uid) tables.coupon_uses.push({ coupon_id: couponId, user_id: uid });
+      else skip(`coupon ${c.code}: used-by user "${uname}" no longer exists`);
+    }
+  }
+  for (const p of arr(raw.storeProducts)) {
+    tables.store_products.push({
+      id: uuidFor('product', p.id), legacy_id: p.id, price: Number(p.price) || 1, description: str(p.description) || '',
+      media: arr(p.media).map((m) => ({ type: m && m.type === 'video' ? 'video' : 'photo', url: mediaRef(m && m.url, 'products', `${p.id}`) })),
+      in_stock: p.inStock !== false, created_by: userUuid.get(p.createdBy) || null, created_at: isoOrNull(p.createdAt) || earliestUser
+    });
+  }
+  for (const s of arr(raw.scratchCards)) {
+    const uid = userUuid.get(s.userId);
+    if (!uid) { skip(`scratch card ${s.id}: owner not found`); continue; }
+    tables.scratch_cards.push({
+      id: uuidFor('scratch', s.id), legacy_id: s.id, user_id: uid, gift: isObj(s.gift) ? s.gift : {},
+      is_revealed: bool(s.isRevealed), revealed_at: isoOrNull(s.revealedAt), created_at: isoOrNull(s.createdAt) || earliestUser
+    });
+  }
+  for (const r of arr(raw.reports)) {
+    const target = userUuid.get(r.targetUserId) || userByName.get(String(r.targetUsername).toLowerCase());
+    if (!target) { skip(`report ${r.id}: reported account "${r.targetUsername}" no longer exists`); continue; }
+    tables.reports.push({
+      id: uuidFor('report', r.id), legacy_id: r.id, reporter_id: userUuid.get(r.reporterId) || userByName.get(String(r.reporterUsername).toLowerCase()) || null,
+      target_id: target, reason: str(r.reason) || 'Cyber Bullying & Harassment', details: str(r.details) || '',
+      status: str(r.status) || 'pending_review', reviewed_by: userByName.get(String(r.reviewedBy).toLowerCase()) || null,
+      reviewed_at: isoOrNull(r.reviewedAt), created_at: isoOrNull(r.createdAt) || earliestUser
     });
   }
   {
@@ -441,7 +476,7 @@ export function buildImportPlan(raw, { withChats = false, withReels = false } = 
 
   // Collections that exist in the old app but are empty in this backup — a loud
   // reminder if that ever stops being true, so they can't be forgotten.
-  for (const name of ['stories', 'highlights', 'musicTracks', 'customStickers', 'storeProducts', 'collections', 'reports', 'chatReviews', 'scratchCards']) {
+  for (const name of ['stories', 'highlights', 'musicTracks', 'customStickers', 'collections', 'chatReviews']) {
     if (arr(raw[name]).length) warn(`The backup contains ${raw[name].length} item(s) in "${name}", which this import doesn't handle yet — they're safe in the raw backup but NOT imported.`);
   }
 

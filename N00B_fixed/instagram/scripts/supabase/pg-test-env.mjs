@@ -12,7 +12,8 @@ export const MIGRATIONS_DIR = path.join(path.dirname(new URL(import.meta.url).pa
 // autoExpose = true mimics a Supabase project created with "Automatically expose
 // new tables" ticked (every new table is granted to the API roles by default);
 // false mimics it unticked. The migration must behave identically in both.
-export async function createTestDb({ autoExpose = true } = {}) {
+// upTo: stop after this migration file (used to test upgrading a database that already holds data).
+export async function createTestDb({ autoExpose = true, upTo = null } = {}) {
   const db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(`
     create schema extensions;
@@ -26,6 +27,7 @@ export async function createTestDb({ autoExpose = true } = {}) {
       email text,
       encrypted_password text,
       raw_user_meta_data jsonb default '{}'::jsonb,
+      banned_until timestamptz,
       created_at timestamptz default now()
     );
     create function auth.uid() returns uuid language sql stable as
@@ -48,7 +50,7 @@ export async function createTestDb({ autoExpose = true } = {}) {
     grant execute on function storage.foldername(text) to anon, authenticated;
   `);
   if (autoExpose) await db.exec('alter default privileges in schema public grant all on tables to anon, authenticated, service_role;');
-  const files = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort();
+  const files = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql') && (!upTo || f <= upTo)).sort();
   for (const f of files) await db.exec(fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'));
   return db;
 }

@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -204,6 +204,7 @@ export async function loginUser(payload: {
     const { error } = await supabase.auth.signInWithPassword({ email, password: payload.password });
     if (error) {
       if (/rate|too many/i.test(error.message)) return { success: false, error: 'Too many attempts. Please wait a moment and try again.' };
+      if (/banned/i.test(error.message)) return { success: false, error: 'This account has been suspended by NOOB Administrator.' };
       if (!identifier.includes('@') && !(await rpc<boolean>('username_taken', { candidate: identifier }))) {
         return { success: false, error: 'Account not found. Please click "Create Account" below.' };
       }
@@ -1243,4 +1244,562 @@ export async function blockUser(userId: string): Promise<{ success: boolean; mes
 
 export async function unblockUser(userId: string): Promise<{ success: boolean; message: string; blockedUserIds: string[] }> {
   try { return await rpc('unblock_user', { p_user: userId }); } catch (err) { return { success: false, message: errorText(err, 'Could not unblock this user.'), blockedUserIds: [] }; }
+}
+
+// ----------------------------------------------------------------------------- phase 3: points, games, shop, coupons, Pro, admin
+
+export interface LiveAvatarPreset {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export type ScreenshotContentType = 'profile' | 'post' | 'story' | 'reel' | 'chat';
+
+export interface GameRoomPlayer {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+}
+
+export interface GameRoom {
+  code: string;
+  gameId: string;
+  gameTitle: string;
+  status: 'waiting' | 'ready' | 'finished';
+  players: GameRoomPlayer[];
+  resultsSubmittedBy: string[];
+  outcome: { results: Record<string, 'win' | 'tie' | 'loss'>; points: Record<string, number> } | null;
+  // Present only for games with true live-synced play (currently Tic Tac Toe) — the two players
+  // move on this same shared board instead of each playing their own round against a bot.
+  board?: ('X' | 'O' | null)[] | null;
+  turn?: string | null;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  title: string;
+  type: 'discount' | 'verification';
+  discountPercent: number;
+  terms: string[];
+  targetUsername: string | null;
+  usageLimit: 'once' | 'unlimited';
+  usedCount: number;
+  usedByMe: boolean;
+  createdAt: string;
+  active: boolean;
+}
+
+const failWith = (err: unknown, fallback: string) => ({ success: false as const, error: errorText(err, fallback) });
+
+function mapRoom(room: any): GameRoom | undefined {
+  if (!room) return undefined;
+  return { ...room, players: (room.players || []).map((p: any) => ({ ...p, avatar: resolveMedia(p.avatar) })) };
+}
+
+// A room call answers { success, room } — only the picture links inside the room need translating.
+async function roomCall(fn: string, args: Record<string, unknown>, fallback: string) {
+  try {
+    const res = await rpc<any>(fn, args);
+    return { ...res, room: mapRoom(res.room) };
+  } catch (err) {
+    return failWith(err, fallback);
+  }
+}
+
+// ---- live profile pictures, contacts, alerts
+
+export async function fetchLiveAvatarPresets(): Promise<{ presets: LiveAvatarPreset[] }> {
+  try { return await rpc('live_avatar_presets_list'); } catch { return { presets: [] }; }
+}
+
+// NOOB Pro only — the database refuses this for a free account.
+export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: string }): Promise<{
+  success: boolean;
+  user?: User;
+  error?: string;
+}> {
+  try {
+    const res = await rpc<{ user: User }>('apply_live_avatar', {
+      p_preset: payload.presetId || null,
+      p_custom_url: payload.customUrl ? toStoredMedia(payload.customUrl) : null
+    });
+    return { success: true, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not apply that picture.');
+  }
+}
+
+// Matches a device's contact phone numbers against registered users (native app "Find Friends") —
+// the numbers themselves are never sent back, only public profile fields for any matches found.
+export async function matchContacts(phoneNumbers: string[]): Promise<User[]> {
+  try {
+    const list = await rpc<any[]>('match_contacts', { p_numbers: phoneNumbers });
+    return (list || []).map((u) => mapUser(u) as User);
+  } catch {
+    return [];
+  }
+}
+
+// Best-effort only. Deliberately swallows its own errors: a missed screenshot alert should never
+// surface as a visible app error.
+export async function sendScreenshotAlert(contentType: ScreenshotContentType, contentId: string): Promise<void> {
+  try {
+    await rpc('screenshot_alert', { p_type: contentType, p_id: contentId });
+  } catch {
+    // Best-effort — see above.
+  }
+}
+
+// Translation (and the AI support assistant) run in one small Edge Function that holds the AI key.
+export async function translateMessage(chatId: string, messageId: string): Promise<string> {
+  try {
+    const { data, error } = await supabase.functions.invoke('ai', { body: { action: 'translate', chatId, messageId } });
+    if (error) return '';
+    return (data as any)?.translatedText || '';
+  } catch {
+    return '';
+  }
+}
+
+export async function submitSafetyReport(
+  targetOrPayload: string | { targetUserId: string; reason: string; details?: string },
+  reason?: string,
+  details?: string
+): Promise<{ success: boolean; reportId?: string; report?: any; message: string; error?: string }> {
+  let targetUserId = '';
+  let reportReason = 'Cyber Bullying & Harassment';
+  let reportDetails = '';
+
+  if (typeof targetOrPayload === 'string') {
+    targetUserId = targetOrPayload;
+    reportReason = reason || 'Cyber Bullying & Harassment';
+    reportDetails = details || '';
+  } else {
+    targetUserId = targetOrPayload.targetUserId;
+    reportReason = targetOrPayload.reason;
+    reportDetails = targetOrPayload.details || '';
+  }
+
+  try {
+    return await rpc('submit_report', { p_target: targetUserId, p_reason: reportReason, p_details: reportDetails });
+  } catch (err) {
+    const message = errorText(err, 'Could not file the report.');
+    return { success: false, message, error: message };
+  }
+}
+
+// ---- support ratings
+
+export async function submitSupportReview(
+  rating: number,
+  feedback?: string
+): Promise<{ success: boolean; average: number; count: number }> {
+  try {
+    return await rpc('submit_support_review', { p_rating: rating, p_feedback: feedback || '' });
+  } catch {
+    return { success: false, average: 0, count: 0 };
+  }
+}
+
+export async function fetchSupportRatingSummary(): Promise<{ average: number | null; count: number }> {
+  try { return await rpc('support_rating_summary'); } catch { return { average: null, count: 0 }; }
+}
+
+// ---- games & NOOB Points
+
+export async function fetchGameLeaderboard(): Promise<{
+  leaderboard: GameLeaderboardEntry[];
+  currentUserPoints: number;
+  currentUserRank: number;
+}> {
+  try {
+    const res = await rpc<any>('game_leaderboard');
+    return { ...res, leaderboard: (res.leaderboard || []).map((e: any) => ({ ...e, avatar: resolveMedia(e.avatar) })) };
+  } catch {
+    return { leaderboard: [], currentUserPoints: 0, currentUserRank: 1 };
+  }
+}
+
+export async function fetchLeaderboard(_gameId?: string): Promise<GameLeaderboardEntry[]> {
+  return (await fetchGameLeaderboard()).leaderboard || [];
+}
+
+export async function recordGameMatch(
+  gameId: string,
+  gameTitle: string,
+  result: 'win' | 'tie' | 'loss',
+  opponentName?: string,
+  vsBot?: boolean
+): Promise<{
+  success: boolean;
+  earnedPoints: number;
+  totalNoobPoints: number;
+  result: string;
+  user?: User;
+  error?: string;
+}> {
+  try {
+    const res = await rpc<any>('record_match', {
+      p_game_id: gameId, p_title: gameTitle, p_result: result, p_opponent: opponentName || null, p_vs_bot: !!vsBot
+    });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return { success: false, earnedPoints: 0, totalNoobPoints: 0, result, error: errorText(err, 'Could not record the match.') };
+  }
+}
+
+export async function submitSurvivalScore(
+  gameId: string,
+  gameTitle: string,
+  survivalSeconds: number
+): Promise<{
+  success: boolean;
+  earnedPoints: number;
+  survivalSeconds: number;
+  totalNoobPoints: number;
+  user?: User;
+  error?: string;
+}> {
+  try {
+    const res = await rpc<any>('submit_survival_score', { p_game_id: gameId, p_title: gameTitle, p_seconds: survivalSeconds });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return { success: false, earnedPoints: 0, survivalSeconds: 0, totalNoobPoints: 0, error: errorText(err, 'Could not save your score.') };
+  }
+}
+
+export async function sendGameInvite(
+  targetUserId: string,
+  gameId: string,
+  gameTitle: string,
+  roomCode?: string
+): Promise<{ success: boolean; message: string; chatId: string; invite: any }> {
+  try {
+    const res = await rpc<any>('send_game_invite', { p_target: targetUserId, p_game_id: gameId, p_title: gameTitle, p_room_code: roomCode || null });
+    return { ...res, invite: res.invite ? mapMessage(res.invite) : res.invite };
+  } catch (err) {
+    return { success: false, message: errorText(err, 'Could not send the invite.'), chatId: '', invite: null };
+  }
+}
+
+// Real 2-player matches (friend invite rooms + random matchmaking)
+
+export async function joinGameRoom(
+  code: string,
+  gameId: string,
+  gameTitle: string
+): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  return roomCall('join_game_room', { p_code: code, p_game_id: gameId, p_title: gameTitle }, 'Could not join the match.');
+}
+
+export async function getGameRoom(code: string): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  return roomCall('get_game_room', { p_code: code }, 'Match not found or has expired.');
+}
+
+export async function submitGameRoomResult(
+  code: string,
+  result: 'win' | 'tie' | 'loss'
+): Promise<{ success: boolean; room?: GameRoom; yourTotalPoints?: number; error?: string }> {
+  return roomCall('submit_game_room_result', { p_code: code, p_result: result }, 'Could not save the result.');
+}
+
+// One live move into a synced-board match (currently Tic Tac Toe) — the database is authoritative on
+// turn order and win detection, and returns the updated shared board for both players.
+export async function submitGameRoomMove(
+  code: string,
+  index: number
+): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  return roomCall('submit_game_room_move', { p_code: code, p_index: index }, 'Could not make that move.');
+}
+
+export async function joinMatchmaking(
+  gameId: string,
+  gameTitle: string
+): Promise<{ success: boolean; matched: boolean; room?: GameRoom; error?: string }> {
+  const res: any = await roomCall('join_matchmaking', { p_game_id: gameId, p_title: gameTitle }, 'Could not start matchmaking.');
+  return res.success === false ? { success: false, matched: false, error: res.error } : res;
+}
+
+export async function getMatchmakingStatus(): Promise<{ success: boolean; matched: boolean; room?: GameRoom }> {
+  const res: any = await roomCall('matchmaking_status', {}, 'Could not check matchmaking.');
+  return res.success === false ? { success: false, matched: false } : res;
+}
+
+// Chess Blitz is capped at one round a week for free accounts (four on Pro) — call this once, right before
+// letting the player enter any mode. The database answers with { success: false, error, nextAvailableAt } when capped.
+export async function startChessRound(): Promise<{ success: boolean; isPro?: boolean; error?: string; nextAvailableAt?: string }> {
+  try { return await rpc('start_chess_round'); } catch (err) { return failWith(err, 'Could not start Chess Blitz.'); }
+}
+
+export async function cancelMatchmaking(): Promise<{ success: boolean }> {
+  try { return await rpc('cancel_matchmaking'); } catch { return { success: false }; }
+}
+
+// ---- coupons
+
+export async function fetchMyCoupons(manage = false): Promise<Coupon[]> {
+  try { return (await rpc<Coupon[]>('my_coupons', { p_manage: manage })) || []; } catch { return []; }
+}
+
+export async function createCoupon(payload: {
+  title: string;
+  discountPercent: number;
+  terms: string;
+  targetUsername?: string;
+  type?: 'discount' | 'verification';
+  usageLimit?: 'once' | 'unlimited';
+}): Promise<{ success: boolean; coupon?: Coupon; error?: string }> {
+  try { return await rpc('create_coupon', { p: payload }); } catch (err) { return failWith(err, 'Could not create the coupon.'); }
+}
+
+export async function deleteCoupon(id: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('delete_coupon', { p_id: id }); } catch (err) { return failWith(err, 'Could not remove the coupon.'); }
+}
+
+export async function redeemCouponCode(code: string): Promise<{ success: boolean; coupon?: Coupon; error?: string }> {
+  try { return await rpc('redeem_coupon_code', { p_code: code }); } catch (err) { return failWith(err, 'That coupon code is invalid.'); }
+}
+
+// ---- Pro, verification, wallet, shop
+
+export async function verifyAccount(payload: {
+  password: string;
+  method: 'coupon' | 'points_permanent' | 'points_monthly';
+  couponCode?: string;
+  discountCouponCode?: string;
+}): Promise<{ success: boolean; message?: string; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('verify_account', {
+      p_password: payload.password, p_method: payload.method,
+      p_coupon_code: payload.couponCode || null, p_discount_code: payload.discountCouponCode || null
+    });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Verification failed. Please check your credentials.');
+  }
+}
+
+export async function upgradeProTier(payload: {
+  tierId: string;
+  billing: 'monthly' | 'yearly';
+  couponCode?: string;
+  autoRenew?: boolean;
+}): Promise<{ success: boolean; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('upgrade_pro', {
+      p_tier: payload.tierId, p_billing: payload.billing, p_coupon: payload.couponCode || null, p_auto_renew: payload.autoRenew !== false
+    });
+    return { success: true, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not upgrade.');
+  }
+}
+
+export async function toggleProAutoRenew(enabled: boolean): Promise<{ success: boolean; proAutoRenew?: boolean; error?: string }> {
+  try { return await rpc('toggle_pro_auto_renew', { p_enabled: enabled }); } catch (err) { return failWith(err, 'Could not change auto-renew.'); }
+}
+
+export async function transferNoobPoints(payload: {
+  recipientId: string;
+  amount: number;
+  note?: string;
+}): Promise<{ success: boolean; user?: User; message?: string; error?: string }> {
+  try {
+    const res = await rpc<any>('wallet_transfer', { p_recipient: payload.recipientId, p_amount: payload.amount, p_note: payload.note || null });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not send the points.');
+  }
+}
+
+export async function fetchShopCatalog(): Promise<{ catalog: ShopItem[]; ownedItemIds: string[] }> {
+  try {
+    const res = await rpc<any>('shop_catalog');
+    return { catalog: res.catalog || [], ownedItemIds: res.ownedItemIds || [] };
+  } catch {
+    return { catalog: [], ownedItemIds: [] };
+  }
+}
+
+export async function purchaseShopItem(itemId: string): Promise<{ success: boolean; item?: ShopItem; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('purchase_shop_item', { p_item: itemId });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not buy that item.');
+  }
+}
+
+export async function revealScratchCard(
+  scratchCardId: string
+): Promise<{ success: boolean; gift?: { type: string; value: number | string; label: string }; user?: User; alreadyRevealed?: boolean; error?: string }> {
+  try {
+    const res = await rpc<any>('reveal_scratch_card', { p_card: scratchCardId });
+    return { ...res, user: res.user ? mapUser(res.user) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not open the scratch card.');
+  }
+}
+
+// ---- NOOB Shop (physical-goods store) — distinct from the points-redemption catalogue above
+
+const mapProduct = (p: any): StoreProduct => ({
+  ...p,
+  media: (p.media || []).map((m: StoreProductMedia) => ({ ...m, url: resolveMedia(m.url) }))
+});
+
+export async function fetchStoreProducts(): Promise<StoreProduct[]> {
+  try { return ((await rpc<any[]>('list_store_products')) || []).map(mapProduct); } catch { return []; }
+}
+
+export async function createStoreProduct(payload: {
+  price: number;
+  description: string;
+  media: StoreProductMedia[];
+  inStock: boolean;
+}): Promise<{ success: boolean; product?: StoreProduct; error?: string }> {
+  try {
+    const res = await rpc<any>('create_store_product', {
+      p: { ...payload, media: payload.media.map((m) => ({ ...m, url: toStoredMedia(m.url) })) }
+    });
+    return { ...res, product: res.product ? mapProduct(res.product) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not add the product.');
+  }
+}
+
+export async function deleteStoreProduct(productId: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('delete_store_product', { p_id: productId }); } catch (err) { return failWith(err, 'Could not remove the product.'); }
+}
+
+// ---- insights (a creator's own numbers)
+
+export async function fetchInsights(): Promise<ProfessionalInsights> {
+  return (await rpc<{ insights: ProfessionalInsights }>('my_insights')).insights;
+}
+
+// ---- AI customer support (runs in the "ai" Edge Function, which holds the AI key)
+
+export async function askAiSupportAssistant(
+  message: string,
+  conversationHistory?: Array<{ sender: 'user' | 'bot'; text: string }>
+): Promise<{ success: boolean; reply: string; model?: string; user?: any; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('ai', { body: { action: 'support', message, conversationHistory } });
+    if (error) throw error;
+    return data as any;
+  } catch (err) {
+    return {
+      success: false,
+      reply: 'Our assistant is taking a short break right now. Please try again in a little while.',
+      error: errorText(err, 'The assistant is unavailable.')
+    };
+  }
+}
+
+// ---- admin tools (the database refuses everyone except the NOOB administrator)
+
+export async function sendAdminNotification(payload: {
+  target?: string;
+  title: string;
+  message: string;
+}): Promise<{ success: boolean; message: string; notification?: any; error?: string }> {
+  try {
+    return await rpc('admin_send_notification', { p_target: payload.target || 'all', p_title: payload.title, p_message: payload.message });
+  } catch (err) {
+    const message = errorText(err, 'Could not send the notification.');
+    return { success: false, message, error: message };
+  }
+}
+
+export async function suspendUserAccount(payload: {
+  targetUserId: string;
+  reason?: string;
+  suspend?: boolean;
+}): Promise<{ success: boolean; message: string; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_suspend_user', { p_target: payload.targetUserId, p_reason: payload.reason || null, p_suspend: payload.suspend !== false });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    const message = errorText(err, 'Could not change the account status.');
+    return { success: false, message, error: message };
+  }
+}
+
+export async function adjustUserPoints(
+  targetUserId: string,
+  payload: { setTo?: number; delta?: number; reason?: string }
+): Promise<{ success: boolean; message?: string; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_adjust_points', {
+      p_target: targetUserId, p_set_to: payload.setTo ?? null, p_delta: payload.delta ?? null, p_reason: payload.reason || null
+    });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not adjust the balance.');
+  }
+}
+
+export async function deleteUserAccount(targetUserId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try { return await rpc('admin_delete_user', { p_target: targetUserId }); } catch (err) { return failWith(err, 'Could not delete the account.'); }
+}
+
+export async function fetchAdminUsersList(): Promise<{ success: boolean; users: User[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_users_list');
+    return { success: true, users: (res.users || []).map((u: any) => mapUser(u) as User) };
+  } catch (err) {
+    return { success: false, users: [], error: errorText(err, 'Could not load the accounts.') };
+  }
+}
+
+export async function fetchAdminReports(): Promise<{ success: boolean; reports: any[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_reports');
+    return { success: true, reports: (res.reports || []).map((r: any) => ({ ...r, targetAvatar: resolveMedia(r.targetAvatar) })) };
+  } catch (err) {
+    return { success: false, reports: [], error: errorText(err, 'Could not load the reports.') };
+  }
+}
+
+export async function takeAdminReportAction(
+  reportId: string,
+  action: 'resolved' | 'dismissed' | 'banned',
+  suspendTarget: boolean = false
+): Promise<{ success: boolean; message?: string; report?: any; error?: string }> {
+  try { return await rpc('admin_report_action', { p_id: reportId, p_action: action, p_suspend: suspendTarget }); } catch (err) { return failWith(err, 'Could not update the report.'); }
+}
+
+// Admin removal of any chat message (a person deleting their own uses deleteMessage).
+export async function deleteChatMessage(
+  _chatId: string,
+  messageId: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try { return await rpc('admin_delete_message', { p_message: messageId }); } catch (err) { return failWith(err, 'Could not delete the message.'); }
+}
+
+// ---- push notifications (delivery happens in an Edge Function; this only registers the device/browser)
+
+export async function registerPushToken(token: string): Promise<{ success: boolean }> {
+  try { return await rpc('register_push_token', { p_token: token }); } catch { return { success: false }; }
+}
+
+export async function fetchVapidPublicKey(): Promise<string | null> {
+  try { return (await rpc<string | null>('get_vapid_public_key')) || null; } catch { return null; }
+}
+
+export async function subscribeToPush(subscription: PushSubscription): Promise<boolean> {
+  try {
+    const res = await rpc<{ success: boolean }>('save_push_subscription', { p_subscription: JSON.parse(JSON.stringify(subscription)) });
+    return !!res?.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function unsubscribeFromPush(): Promise<boolean> {
+  try { return !!(await rpc<{ success: boolean }>('remove_push_subscription'))?.success; } catch { return false; }
 }

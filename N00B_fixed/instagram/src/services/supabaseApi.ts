@@ -1376,9 +1376,12 @@ export async function sendScreenshotAlert(contentType: ScreenshotContentType, co
 }
 
 // Translation (and the AI support assistant) run in one small Edge Function that holds the AI key.
+// (It was deployed from the dashboard under the name 'dynamic-handler'; the code is supabase/functions/ai.)
+const AI_FUNCTION = 'dynamic-handler';
+
 export async function translateMessage(chatId: string, messageId: string): Promise<string> {
   try {
-    const { data, error } = await supabase.functions.invoke('ai', { body: { action: 'translate', chatId, messageId } });
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'translate', chatId, messageId } });
     if (error) return '';
     return (data as any)?.translatedText || '';
   } catch {
@@ -1710,7 +1713,7 @@ export async function askAiSupportAssistant(
   conversationHistory?: Array<{ sender: 'user' | 'bot'; text: string }>
 ): Promise<{ success: boolean; reply: string; model?: string; user?: any; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('ai', { body: { action: 'support', message, conversationHistory } });
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'support', message, conversationHistory } });
     if (error) throw error;
     return data as any;
   } catch (err) {

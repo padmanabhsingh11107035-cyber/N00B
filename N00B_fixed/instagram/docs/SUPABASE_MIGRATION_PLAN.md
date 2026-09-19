@@ -8,6 +8,13 @@ Supabase version is proven, so there is always a working fallback.
 Run NOOB without an Express server: a static frontend talking straight to Supabase (Postgres + Auth + Realtime),
 plus a few small Edge Functions for the things a browser must not do itself. Same features, same design.
 
+## Scope decision (owner, 2026-09-19)
+
+**Moved:** accounts and profiles, posts and photos, likes/saves/comments, follows, points, game scores, points
+transactions, coupons, notifications, settings. **Left behind (safe in the raw backup):** reels and chat history.
+The reels and chat *features* stay in the new app; only their old data is not carried over. The empty Global Lounge
+room is created because the app needs its default room. `--with-reels` / `--with-chats` opt back in.
+
 ## Decisions made (change any of these before Phase 1 if you disagree)
 
 | Topic | Decision | Why |

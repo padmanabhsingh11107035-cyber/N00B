@@ -33,7 +33,12 @@ const section = (t) => console.log(`\n${t}`);
 
 // ------------------------------------------------------------------ 1. load
 section('1. Import the real backup into a fresh database');
-const plan = buildImportPlan(raw, { withChats: false });
+// Reels and chats are left out by default (the owner chose not to move them); a third test run turns both on
+// so that code path stays covered.
+const withReels = process.argv.includes('--with-reels');
+const withChats = process.argv.includes('--with-chats');
+console.log(`(reels imported: ${withReels ? 'yes' : 'no'}, chats imported: ${withChats ? 'yes' : 'no'})`);
+const plan = buildImportPlan(raw, { withChats, withReels });
 const autoExpose = !process.argv.includes('--no-auto-expose');
 console.log(`(project setting "Automatically expose new tables": ${autoExpose ? 'ON' : 'OFF'})`);
 const db = await createTestDb({ autoExpose });
@@ -57,12 +62,23 @@ check((await n('select count(*)::int n from profile_private')) === raw.users.len
 check((await n('select count(*)::int n from posts')) === raw.posts.length, `posts = ${raw.posts.length}`);
 check((await n('select count(*)::int n from post_slides')) === sum(raw.posts, (p) => p.slides.length), `photos = ${sum(raw.posts, (p) => p.slides.length)}`);
 check((await n('select count(*)::int n from post_likes')) === sum(raw.posts, (p) => new Set(p.likedBy).size), 'post likes match');
-check((await n('select count(*)::int n from reels')) === raw.reels.length, `reels = ${raw.reels.length}`);
-check((await n('select count(*)::int n from reel_likes')) === sum(raw.reels, (r) => new Set(r.likedBy).size), 'reel likes match');
+check((await n('select count(*)::int n from reels')) === (withReels ? raw.reels.length : 0), withReels ? `reels = ${raw.reels.length}` : 'no reels were imported (left behind on purpose)');
+check((await n('select count(*)::int n from reel_likes')) === (withReels ? sum(raw.reels, (r) => new Set(r.likedBy).size) : 0), withReels ? 'reel likes match' : 'no reel likes were imported');
+check((await n('select count(*)::int n from messages')) === (withChats ? Object.values(raw.messages).flat().length : 0), withChats ? 'chat messages match' : 'no chat messages were imported (left behind on purpose)');
+check((await n('select count(*)::int n from chats')) === (withChats ? raw.chats.length : raw.chats.filter((c) => c.isGlobalDefault).length), withChats ? 'all chats imported' : 'only the (empty) Global Lounge room exists');
+{
+  const ids = new Set(raw.users.map((u) => u.id));
+  const names = new Set(raw.users.map((u) => u.username.toLowerCase()));
+  const validTarget = (x) => !x.targetUserId || x.targetUserId === 'all' || ids.has(x.targetUserId) || names.has(String(x.targetUserId).toLowerCase());
+  const expected = raw.notifications.filter((x) => validTarget(x) && (withReels || !x.reelId) && (withChats || !(x.chatId || x.type === 'new_message'))).length;
+  check((await n('select count(*)::int n from notifications')) === expected, `notifications = ${expected} (those about left-behind reels/chats, or for deleted accounts, are excluded)`);
+  if (!withChats) check((await n(`select count(*)::int n from notifications where type = 'new_message'`)) === 0, 'no "new message" notifications without chats');
+  if (!withReels) check((await n('select count(*)::int n from notifications where reel_id is not null')) === 0, 'no notifications pointing at reels that were left behind');
+}
 check((await n('select count(*)::int n from follows')) === sum(raw.users, (u) => u.followingIds.length), 'follows match');
 check((await n('select count(*)::int n from noob_transactions')) === sum(raw.users, (u) => (u.noobTransactions || []).length), 'points history matches');
 check((await n('select count(*)::int n from game_scores')) === raw.gameScores.length, `game scores = ${raw.gameScores.length}`);
-check((await n('select count(*)::int n from comments')) === Object.values(raw.comments).flat().length, 'comments match');
+check((await n('select count(*)::int n from comments')) === Object.entries(raw.comments).filter(([k]) => withReels || !k.startsWith('r_')).flatMap(([, v]) => v).length, 'comments match');
 check((await n('select count(*)::int n from coupons')) === raw.coupons.length, 'coupons match');
 check((await n('select count(*)::int n from push_subscriptions')) === raw.users.filter((u) => u.pushSubscription).length, 'push subscriptions match');
 
@@ -239,7 +255,7 @@ await expectFail(() => execAs(viewer, `insert into notifications (target_user_id
 
 // chat: Global Lounge
 const lounge = (await db.query('select id from chats where is_global_default')).rows[0].id;
-check((await rowsAs(viewer, 'select count(*)::int n from messages where chat_id = $1', [lounge]))[0].n === (raw.messages[raw.chats.find((c) => c.isGlobalDefault).id] || []).length, 'everyone can read the Global Lounge history');
+check((await rowsAs(viewer, 'select count(*)::int n from messages where chat_id = $1', [lounge]))[0].n === (withChats ? (raw.messages[raw.chats.find((c) => c.isGlobalDefault).id] || []).length : 0), 'everyone can read the Global Lounge room (history only if chats were imported)');
 check((await execAs(viewer, `insert into messages (chat_id, sender_id, text) values ($1, $2, 'hello lounge')`, [lounge, viewer])).affectedRows === 1, 'everyone can post in the Global Lounge as themselves');
 await expectFail(() => execAs(viewer, `insert into messages (chat_id, sender_id, text) values ($1, $2, 'forged')`, [lounge, author]), /row-level security/, 'a user can NOT post a message as someone else');
 

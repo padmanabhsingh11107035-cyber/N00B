@@ -16,8 +16,10 @@
 //
 // Options:
 //   --backup <folder>   which backup to use (default: newest in ./backups)
-//   --with-chats        also import private chats and their messages
-//                       (the Global Lounge is always included)
+//   --with-chats        also import chats and their messages (by default they are
+//                       left out; the empty Global Lounge room is always created)
+//   --with-reels        also import reels with their likes, views and comments
+//                       (by default they are left out)
 //   --resume            continue an interrupted import; only adds what's missing
 //   --yes               skip the "type IMPORT" confirmation
 //
@@ -42,7 +44,7 @@ if (!fs.existsSync(path.join(dir, 'users.json'))) {
   process.exit(1);
 }
 
-const plan = buildImportPlan(loadBackup(dir), { withChats: flag('--with-chats') });
+const plan = buildImportPlan(loadBackup(dir), { withChats: flag('--with-chats'), withReels: flag('--with-reels') });
 
 // Photos that were stored inside the database become real files next to the
 // other backed-up media, ready to upload to whichever file storage is chosen.

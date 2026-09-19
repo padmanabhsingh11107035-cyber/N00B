@@ -26,7 +26,7 @@ if (!url || !secret) {
 const backupsRoot = 'backups';
 const dir = process.argv.slice(2).find((a) => !a.startsWith('--'))
   || path.join(backupsRoot, fs.readdirSync(backupsRoot).filter((d) => fs.existsSync(path.join(backupsRoot, d, 'users.json'))).sort().pop());
-const plan = buildImportPlan(loadBackup(dir), { withChats: process.argv.includes('--with-chats') });
+const plan = buildImportPlan(loadBackup(dir), { withChats: process.argv.includes('--with-chats'), withReels: process.argv.includes('--with-reels') });
 
 const admin = createClient(url, secret, { auth: { autoRefreshToken: false, persistSession: false } });
 const adapter = {

@@ -74,7 +74,10 @@ export function normalizePhone(countryCodeRaw, mobileRaw) {
 }
 
 // ---------------------------------------------------------------- plan
-export function buildImportPlan(raw, { withChats = false } = {}) {
+// Reels and chats are opt-in: by default they are NOT imported (the owner chose to leave them behind;
+// they stay safe in the raw backup). The Global Lounge room itself is always created, because the app needs
+// its default room — but without its old messages unless withChats is set.
+export function buildImportPlan(raw, { withChats = false, withReels = false } = {}) {
   const warnings = [];
   const skipped = [];
   const warn = (m) => warnings.push(m);
@@ -93,6 +96,7 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
   const userByName = new Map(users.map((u) => [String(u.username).toLowerCase(), userUuid.get(u.id)]));
   const postUuid = new Map(posts.map((p) => [p.id, uuidFor('post', p.id)]));
   const reelUuid = new Map(reels.map((r) => [r.id, uuidFor('reel', r.id)]));
+  if (!withReels) reelUuid.clear();
   const chatUuid = new Map(chats.map((c) => [c.id, uuidFor('chat', c.id)]));
   const earliestUser = users.map((u) => isoOrNull(u.createdAt)).filter(Boolean).sort()[0] || new Date().toISOString();
 
@@ -284,7 +288,7 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
   ]);
   const REEL_DROPPED = new Set(['username', 'userAvatar', 'isVerified', 'isLiked', 'isSaved', 'isFollowing', 'likesCount', 'commentsCount', 'savesCount', 'collabUserAvatar', 'collabUserDisplayName', 'aiTranslationAvailable']);
   const REEL_CONSUMED = new Set([...REEL_MAPPED, ...REEL_DROPPED]);
-  for (const r of reels) {
+  for (const r of (withReels ? reels : [])) {
     const uid = userUuid.get(r.userId);
     if (!uid) { skip(`reel ${r.id}: author ${r.userId} not found`); reelUuid.delete(r.id); continue; }
     const rid = reelUuid.get(r.id);
@@ -313,6 +317,7 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
   // ----------------------------------------------------------- comments
   for (const [parentId, list] of Object.entries(commentsByParent)) {
     const isReel = parentId.startsWith('r_');
+    if (isReel && !withReels) continue;
     const parent = isReel ? reelUuid.get(parentId) : postUuid.get(parentId);
     for (const c of arr(list)) {
       const uid = userUuid.get(c.userId);
@@ -344,7 +349,7 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
         tables.chat_members.push({ chat_id: cid, user_id: userUuid.get(p.id), is_admin: admins.has(p.id) || c.creatorId === p.id });
       }
     }
-    for (const m of arr(messagesByChat[c.id])) {
+    for (const m of (withChats ? arr(messagesByChat[c.id]) : [])) {
       tables.messages.push({
         id: uuidFor('message', m.id), legacy_id: m.id, chat_id: cid, sender_id: userUuid.get(m.senderId) || null, text: m.text || '',
         media_url: mediaRef(m.mediaUrl, 'posts', `msg-${m.id}`), media_type: str(m.mediaType), reactions: arr(m.reactions), reply_to: m.replyTo ?? null,
@@ -356,8 +361,11 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
   }
   if (!withChats) {
     const skippedChats = chats.filter((c) => !c.isGlobalDefault).length;
-    const skippedMsgs = Object.entries(messagesByChat).filter(([id]) => !importedChatIds.has(id)).reduce((n, [, l]) => n + arr(l).length, 0);
-    if (skippedChats || skippedMsgs) warn(`Chats not imported (as requested): ${skippedChats} chat(s), ${skippedMsgs} message(s) — still safe in the raw backup. Use --with-chats to include them.`);
+    const skippedMsgs = Object.values(messagesByChat).reduce((n, l) => n + arr(l).length, 0);
+    if (skippedChats || skippedMsgs) warn(`Chats not imported (as requested): ${skippedChats} chat(s) and ${skippedMsgs} message(s) (the empty Global Lounge room is still created) — safe in the raw backup. Use --with-chats to include them.`);
+  }
+  if (!withReels && (reels.length || Object.keys(commentsByParent).some((k) => k.startsWith('r_')))) {
+    warn(`Reels not imported (as requested): ${reels.length} reel(s) with their likes, views and comments — safe in the raw backup. Use --with-reels to include them.`);
   }
 
   // ----------------------------------------------------------- notifications
@@ -365,7 +373,11 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
   // actor/sender name + avatar are copies of the profile (joined via actor_id now)
   const NOTIF_DROPPED = new Set(['targetUsername', 'senderUsername', 'senderDisplayName', 'senderAvatar', 'senderIsVerified', 'actorUsername', 'actorDisplayName', 'actorAvatar']);
   const NOTIF_CONSUMED = new Set([...NOTIF_MAPPED, ...NOTIF_DROPPED]);
+  const excludedNotifications = { reels: 0, chats: 0 };
   for (const n of notifications) {
+    // notifications that only make sense with the reels/chats that were left behind
+    if (!withReels && n.reelId) { excludedNotifications.reels++; continue; }
+    if (!withChats && (n.chatId || n.type === 'new_message')) { excludedNotifications.chats++; continue; }
     let target = null;
     if (n.targetUserId && n.targetUserId !== 'all') {
       target = userUuid.get(n.targetUserId) || userByName.get(String(n.targetUserId).toLowerCase()) || null;
@@ -383,6 +395,10 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
       data, created_at: isoOrNull(n.createdAt) || earliestUser
     });
     for (const rid of new Set(arr(n.readByUserIds))) if (userUuid.has(rid)) tables.notification_reads.push({ notification_id: nid, user_id: userUuid.get(rid) });
+  }
+
+  if (excludedNotifications.reels || excludedNotifications.chats) {
+    warn(`Notifications left out because they only point at skipped content: ${excludedNotifications.reels} about reels, ${excludedNotifications.chats} about chat messages.`);
   }
 
   // ----------------------------------------------------------- games, coupons, settings, reviews, leftovers
@@ -417,7 +433,7 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
       rating: Math.min(5, Math.max(1, int(r.rating, 5))), feedback: str(r.feedback), created_at: isoOrNull(r.timestamp) || earliestUser
     });
   });
-  if (arr(raw.reelHistory).length) tables.legacy_import.push({ key: 'reelHistory', data: raw.reelHistory });
+  if (withReels && arr(raw.reelHistory).length) tables.legacy_import.push({ key: 'reelHistory', data: raw.reelHistory });
 
   // Collections that exist in the old app but are empty in this backup — a loud
   // reminder if that ever stops being true, so they can't be forgotten.

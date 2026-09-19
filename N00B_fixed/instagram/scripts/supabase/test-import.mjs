@@ -40,6 +40,12 @@ const adapter = makePgAdapter(db);
 const result = await runImport(plan, adapter, { log: () => {} });
 check(result.verification.ok, 'import verification passed', JSON.stringify(result.verification.problems));
 check(result.auth.created === raw.users.length && result.auth.existing === 0, `${raw.users.length} login accounts created`);
+{
+  const shortOnes = raw.users.filter((u) => (u.password || '').length > 0 && u.password.length < 6).map((u) => u.username).sort();
+  check(JSON.stringify([...result.auth.tempPassword].sort()) === JSON.stringify(shortOnes), `accounts whose password the project refuses (${shortOnes.length}) are reported; everyone else keeps their password`);
+  const flagged = (await db.query(`select username from profiles where extra->>'needs_password_reset' = 'true'`)).rows.map((r) => r.username).sort();
+  check(JSON.stringify(flagged) === JSON.stringify(shortOnes), 'those accounts are flagged for a password reset in the database');
+}
 
 // ------------------------------------------------------------------ 2. numbers
 section('2. Every number matches the raw backup');

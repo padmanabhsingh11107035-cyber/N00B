@@ -91,6 +91,10 @@ const adapter = makeSupabaseAdapter(url, key);
 try {
   const { auth, verification } = await runImport(plan, adapter, { resume: flag('--resume'), log: (m) => console.log(`  ${m}`) });
   console.log(`\nLogin accounts: ${auth.created} created, ${auth.existing} already existed.`);
+  if (auth.tempPassword.length) {
+    console.log(`These account(s) could NOT keep their old password (Supabase refused it, e.g. too short) and were given a random one: ${auth.tempPassword.join(', ')}`);
+    console.log('They are flagged for a password reset — those people will need to set a new password.');
+  }
   if (verification.ok) console.log('VERIFIED: every table has all its rows and every counter matches the real data.');
   else { console.log('\nVERIFICATION FOUND PROBLEMS:'); verification.problems.forEach((p) => console.log(`  - ${p}`)); process.exit(3); }
 } catch (err) {

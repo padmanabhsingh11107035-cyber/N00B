@@ -31,10 +31,21 @@ export async function runImport(plan, adapter, { resume = false, log = () => {} 
     throw new Error(`The database already has ${existing} profile(s). Refusing to import on top of existing data. If this is a re-run of an interrupted import, run again with --resume.`);
   }
 
-  const auth = { created: 0, existing: 0 };
+  const auth = { created: 0, existing: 0, tempPassword: [] };
+  const tempLegacyIds = new Set();
   for (const u of plan.authUsers) {
     const result = await adapter.createAuthUser(u);
-    auth[result === 'created' ? 'created' : 'existing']++;
+    if (result === 'exists') { auth.existing++; continue; }
+    auth.created++;
+    // The old password was refused by the project's password rules, so the account
+    // got a random one. Flag the profile so the app can make that person reset it.
+    if (result === 'created_temp_password') {
+      auth.tempPassword.push(u.user_metadata.username);
+      tempLegacyIds.add(u.user_metadata.legacy_id);
+    }
+  }
+  for (const p of plan.tables.profiles) {
+    if (tempLegacyIds.has(p.legacy_id)) p.extra = { ...p.extra, needs_password_reset: true };
   }
   log(`login accounts: ${auth.created} created, ${auth.existing} already existed`);
 

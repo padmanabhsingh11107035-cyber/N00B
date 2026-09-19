@@ -148,6 +148,8 @@ export function buildImportPlan(raw, { withChats = false } = {}) {
     const dob = /^\d{4}-\d{2}-\d{2}/.test(u.dateOfBirth || '') ? u.dateOfBirth.slice(0, 10) : null;
     if (u.dateOfBirth && !dob) warn(`${u.username}: date of birth "${u.dateOfBirth}" isn't a valid date — kept only in the private "legacy" column.`);
     if (!u.password) warn(`${u.username}: has no saved password — a random one is set and they must use "forgot password".`);
+    else if (u.password.length < 6) warn(`${u.username}: password is only ${u.password.length} characters. Supabase's default minimum is 6, so if it is refused this account gets a random password and must set a new one.`);
+    if (u.password && u.password !== u.password.trim()) warn(`${u.username}: password starts or ends with a space. It is kept exactly as saved, so the login form must not trim passwords.`);
     if (u.verificationTier && !['standard', 'plus', 'premium', 'max'].includes(u.verificationTier)) warn(`${u.username}: unknown verification tier "${u.verificationTier}" kept in extra.`);
     if (u.proBilling && !['monthly', 'yearly'].includes(u.proBilling)) warn(`${u.username}: unknown pro billing "${u.proBilling}" kept in extra.`);
     const validTier = ['standard', 'plus', 'premium', 'max'].includes(u.verificationTier) ? u.verificationTier : null;

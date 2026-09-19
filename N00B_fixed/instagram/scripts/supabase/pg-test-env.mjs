@@ -62,11 +62,15 @@ export function makePgAdapter(db) {
   const pgArray = (a) => '{' + a.map((v) => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"').join(',') + '}';
   return {
     async createAuthUser(u) {
+      // Mimic the real Auth rule that refuses passwords under 6 characters.
+      const tooShort = u.password.length < 6;
+      const password = tooShort ? 'random-temporary-password' : u.password;
       const r = await db.query(
         'insert into auth.users (id, email, encrypted_password, raw_user_meta_data) values ($1,$2,$3,$4::jsonb) on conflict (id) do nothing returning id',
-        [u.id, u.email, `test-hash:${u.password.length}`, JSON.stringify(u.user_metadata)]
+        [u.id, u.email, `test-hash:${password.length}`, JSON.stringify(u.user_metadata)]
       );
-      return r.rows.length ? 'created' : 'exists';
+      if (!r.rows.length) return 'exists';
+      return tooShort ? 'created_temp_password' : 'created';
     },
     async authUserCount() { return (await db.query('select count(*)::int n from auth.users')).rows[0].n; },
     async count(table) { return (await db.query(`select count(*)::int n from public.${table}`)).rows[0].n; },

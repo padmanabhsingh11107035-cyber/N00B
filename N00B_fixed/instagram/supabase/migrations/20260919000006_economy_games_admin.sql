@@ -1547,3 +1547,18 @@ revoke execute on function public.require_master_admin(text) from authenticated;
 revoke execute on function public.acting_user() from authenticated;
 revoke execute on function public.report_json(public.reports) from authenticated;
 revoke execute on function public.admin_user_json(public.profiles) from authenticated;
+
+-- Last line of the run: says whether the hourly jobs are in place.
+create or replace function public._cron_status() returns text
+language plpgsql set search_path = public as $$
+declare n int;
+begin
+  if to_regclass('cron.job') is null then
+    return 'Hourly jobs: NOT scheduled (the pg_cron extension is not switched on)';
+  end if;
+  execute $q$select count(*) from cron.job where jobname like 'noob-%'$q$ into n;
+  return 'Hourly jobs scheduled: ' || n;
+end;
+$$;
+revoke execute on function public._cron_status() from public, anon, authenticated;
+select public._cron_status() as result;

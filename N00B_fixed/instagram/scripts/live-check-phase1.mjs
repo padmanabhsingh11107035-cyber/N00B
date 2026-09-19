@@ -61,7 +61,8 @@ const feed = await rpc(u, 'feed_posts');
 check(Array.isArray(feed) && feed.length > 0 && feed.every((p) => p.username && Array.isArray(p.slides) && p.slides.length > 0), `the feed loads (${feed.length} posts, each with author and pictures)`);
 check(feed.every((p, i) => i === 0 || new Date(feed[i - 1].createdAt) >= new Date(p.createdAt)), 'the feed is newest first');
 const everyone = await rpc(u, 'search_users', { p_search: '' });
-check(everyone.length === raw.users.length && everyone.every((p) => p.email === undefined && p.mobileNumber === undefined), `search lists all ${raw.users.length} people, without anyone's email or phone`);
+// (people keep joining after go-live, so "at least the imported accounts")
+check(everyone.length >= raw.users.length && everyone.every((p) => p.email === undefined && p.mobileNumber === undefined), `search lists all ${everyone.length} people (${raw.users.length} imported), without anyone's email or phone`);
 check((await rpc(u, 'search_users', { p_search: ordinaryRaw.username })).some((p) => p.id === uid), 'searching by username finds them');
 const notes = await rpc(u, 'my_notifications');
 check(Array.isArray(notes.notifications), `notifications load (${notes.notifications.length})`);
@@ -81,7 +82,7 @@ await u.auth.signOut();
 
 section('Logged in as the admin');
 const { client: ad } = await login(adminRaw);
-check(((await ad.from('profile_private').select('user_id')).data || []).length === raw.users.length, 'the admin can see everyone\'s private details (for support)');
+check(((await ad.from('profile_private').select('user_id')).data || []).length >= raw.users.length, 'the admin can see everyone\'s private details (for support)');
 check((await rpc(ad, 'get_my_user')).isAdmin === true, 'the admin flag is on');
 await ad.auth.signOut();
 

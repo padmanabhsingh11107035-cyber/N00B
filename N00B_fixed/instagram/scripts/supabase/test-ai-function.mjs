@@ -54,12 +54,21 @@ globalThis.__fake = {
   },
   select: async (auth, f) => (f.table === 'messages' && f.eq.id === 'm1' && f.eq.chat_id === 'c1' && auth === 'Bearer tok-ana' ? { data: { text: 'Hola, ¿cómo estás?' } } : { data: null })
 };
-globalThis.fetch = async (url, init) => {
+let modelListCalls = 0;
+globalThis.fetch = async (url, init = {}) => {
+  if (String(url).endsWith('/models')) {
+    modelListCalls++;
+    return { ok: true, status: 200, json: async () => ({ data: (globalThis.__models || []).map((id) => ({ id })) }), text: async () => '' };
+  }
   const body = JSON.parse(init.body);
   groqCalls.push({ url, auth: init.headers.Authorization, body });
+  const fail = (status, msg) => ({ ok: false, status, json: async () => ({}), text: async () => msg });
+  if (globalThis.__failAll) return globalThis.__okModels && globalThis.__okModels.includes(body.model)
+    ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'answer from ' + body.model } }] }) }
+    : fail(404, '{"error":{"message":"The model does not exist or you do not have access to it.","code":"model_not_found"}}');
   const step = groqPlan.shift() ?? { ok: true, text: 'AI says hello' };
-  if (!step.ok) return { ok: false, status: step.status || 500, json: async () => ({}) };
-  return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: step.text } }] }) };
+  if (!step.ok) return fail(step.status || 500, 'busy');
+  return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: step.text } }] }), text: async () => '' };
 };
 const call = async (body, token, method = 'POST') => {
   const headers = new Headers({ 'content-type': 'application/json', 'x-forwarded-for': String(body?.__ip || '1.1.1.1') });
@@ -67,7 +76,7 @@ const call = async (body, token, method = 'POST') => {
   const res = await handler(new Request('http://fn.local/', { method, headers, body: method === 'POST' ? JSON.stringify(body) : undefined }));
   return { status: res.status, cors: res.headers.get('access-control-allow-origin'), json: await res.json().catch(() => null) };
 };
-const reset = () => { reports = []; groqCalls = []; groqPlan = []; };
+const reset = () => { reports = []; groqCalls = []; groqPlan = []; globalThis.__failAll = false; globalThis.__okModels = null; globalThis.__models = ['whisper-large-v3', 'llama-guard-4', 'zeta-new-model', 'qwen/qwen3-32b', 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b']; };
 
 section('1. Basics');
 const opt = await handler(new Request('http://fn.local/', { method: 'OPTIONS' }));
@@ -124,10 +133,23 @@ check(JSON.stringify(roles) === JSON.stringify(['user:earlier q', 'assistant:ear
 check(!sys.match(/render|mongo|supabase|cloudflare|backblaze/i) || /Never name any specific hosting provider/.test(sys), 'the assistant is told never to name the hosting providers');
 reset(); groqPlan = [{ ok: false, status: 429 }, { ok: true, text: 'second model answer' }];
 r = await call({ message: 'How do stories work?' }, null);
-check(r.json.reply === 'second model answer' && groqCalls.length === 2 && groqCalls[1].body.model === 'llama-3.1-8b-instant', 'if the first AI model is busy, the smaller one answers');
-reset(); groqPlan = [{ ok: false }, { ok: false }];
+check(r.json.reply === 'second model answer' && groqCalls.length === 2 && groqCalls[1].body.model === 'openai/gpt-oss-120b', 'if the first AI model is busy, the next one answers');
+reset(); globalThis.__failAll = true;
 r = await call({ message: 'How do stories work?' }, null);
-check(r.json.success && r.json.model === 'knowledge-engine' && /trouble reaching the AI service/.test(r.json.reply), 'if both fail, the person gets a polite message instead of an error');
+check(r.json.success && r.json.model === 'knowledge-engine' && /trouble reaching the AI service/.test(r.json.reply) && !('debug' in r.json), 'if every model fails, the person gets a polite message instead of an error (and no technical details)');
+r = await call({ message: 'How do stories work?', debug: true }, null);
+check(Array.isArray(r.json.debug) && r.json.debug[0] === 'llama-3.3-70b-versatile:404' && r.json.debug.length === 6, 'when asked (debug), it reports exactly which models were tried and what Groq answered', JSON.stringify(r.json.debug));
+
+// discovery: none of the preferred models work for this key, but another does
+reset(); globalThis.__failAll = true; globalThis.__okModels = ['qwen/qwen3-32b'];
+r = await call({ message: 'How do stories work?', debug: true }, null);
+check(r.json.reply === 'answer from qwen/qwen3-32b' && r.json.model === 'groq', 'if the preferred models are unavailable, it asks Groq what the key CAN use and answers with one of those');
+const triedModels = groqCalls.map((c) => c.body.model);
+check(triedModels.join() === 'llama-3.3-70b-versatile,openai/gpt-oss-120b,llama-3.1-8b-instant,openai/gpt-oss-20b,qwen/qwen3-32b', 'it tries the four preferred models, then the best discovered one', triedModels.join());
+check(!triedModels.some((m) => /whisper|guard/.test(m)), 'speech and safety-filter models are never used for chat');
+const calls1 = modelListCalls;
+await call({ message: 'And how do reels work?' }, null);
+check(modelListCalls === calls1, 'the list of usable models is remembered for a while (not fetched on every question)');
 delete env.GROQ_API_KEY; reset();
 r = await call({ message: 'How do stories work?' }, null);
 check(/trouble reaching the AI service/.test(r.json.reply) && groqCalls.length === 0, 'without the AI key set, the same polite message (and no call is made)');
@@ -150,9 +172,9 @@ r = await call({ action: 'translate', chatId: 'c1', messageId: 'm1' }, 'tok-bob'
 check(r.status === 404 && groqCalls.length === 1, 'someone who can not read that message gets nothing (the database hides it from them) and the AI is not called');
 r = await call({ action: 'translate', chatId: 'c1', messageId: 'zzz' }, 'tok-ana');
 check(r.status === 404, 'an unknown message is refused');
-reset(); groqPlan = [{ ok: false }, { ok: false }];
+reset(); globalThis.__failAll = true; globalThis.__models = [];
 r = await call({ action: 'translate', chatId: 'c1', messageId: 'm1' }, 'tok-ana');
-check(r.status === 503 && /unavailable/.test(r.json.error), 'if the AI is down, translation says so');
+check(r.status === 503 && /unavailable/.test(r.json.error) && !('debug' in r.json), 'if the AI is down, translation says so');
 
 section('6. Limits');
 reset();

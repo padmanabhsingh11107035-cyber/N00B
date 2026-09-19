@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadBackup, buildImportPlan, loginEmailFor } from './transform.mjs';
 import { runImport } from './run-import.mjs';
+import { verifyDeep } from './verify.mjs';
 import { createTestDb, makePgAdapter, asUser, asAnon } from './pg-test-env.mjs';
 
 const backupsRoot = 'backups';
@@ -136,6 +137,23 @@ check(again.verification.ok, 're-run verification still passes (counters not dou
 check(before.profiles === await n('select count(*)::int n from profiles') && before.likes === await n('select count(*)::int n from post_likes') && before.follows === await n('select count(*)::int n from follows'), 're-run adds nothing twice');
 
 // ------------------------------------------------------------------ 4. security
+section('3b. Row-by-row proof (every field of every row)');
+{
+  const deep = await verifyDeep(plan, adapter);
+  check(deep.ok, `every one of ${deep.rowsChecked} rows / ${deep.fieldsChecked} fields and ${deep.loginAccountsChecked} login accounts matches the backup`, deep.problems.slice(0, 5).join('; '));
+  // the checker itself must be able to fail: tamper with one value and one row
+  const victim = plan.tables.profiles[3];
+  await db.query(`update profiles set bio = 'tampered' where id = $1`, [victim.id]);
+  const tampered = await verifyDeep(plan, adapter);
+  check(!tampered.ok && tampered.problems.some((p) => p.includes('column "bio" differs')), 'a single changed value is detected');
+  await db.query('update profiles set bio = $1 where id = $2', [victim.bio, victim.id]);
+  await db.query('delete from post_slides where id = $1', [plan.tables.post_slides[0].id]);
+  const missing = await verifyDeep(plan, adapter);
+  check(!missing.ok && missing.problems.some((p) => p.includes('MISSING')), 'a missing row is detected');
+  await adapter.insertMissing('post_slides', [plan.tables.post_slides[0]], 'id', { overwrite: false });
+  check((await verifyDeep(plan, adapter)).ok, 'after restoring both, everything matches again');
+}
+
 section('4. Privacy and security rules (real signed-in users)');
 const idOf = (u) => profByLegacy[u.id].id;
 const adminRaw = raw.users.find((u) => u.isAdmin);

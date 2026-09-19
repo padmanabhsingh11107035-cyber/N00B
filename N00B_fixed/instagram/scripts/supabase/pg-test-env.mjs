@@ -92,6 +92,11 @@ export function makePgAdapter(db) {
         await db.query(`insert into public.${table} (${cols.join(',')}) values (${casts.join(',')}) on conflict (${conflict}) ${action}`, params);
       }
     },
+    async fetchAll(table) { return (await db.query(`select * from public.${table}`)).rows; },
+    async getAuthUser(id) {
+      const r = (await db.query('select id, email, raw_user_meta_data from auth.users where id = $1', [id])).rows[0];
+      return r ? { id: r.id, email: r.email, user_metadata: r.raw_user_meta_data } : null;
+    },
     async profileCounters() {
       return (await db.query('select id, username, followers_count, following_count, posts_count from public.profiles')).rows;
     }

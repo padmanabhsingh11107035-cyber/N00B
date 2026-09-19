@@ -17,6 +17,7 @@ import {
   INITIAL_SETTINGS
 } from './src/data/mockData';
 import { uploadMediaToB2, signMediaKey, getB2Client, deleteMediaFromB2, getBareMediaKey, createPresignedUpload } from './server/b2Storage';
+import { isBigInlineImage, parseInlineImage, replaceStringsDeep } from './server/inlineImages';
 import { connectDB, isDbConnected, getDbStatusLabel, loadCollection, saveCollection } from './server/db';
 import { initPush, getVapidPublicKey, sendPush } from './server/push';
 import { initFcm, isFcmConfigured, sendFcm } from './server/fcm';
@@ -459,7 +460,7 @@ async function startServer() {
     cleanupExpiredStories().catch(err => console.error('Story cleanup failed:', err));
     isRestoringState = false;
   }
-  restorePersistedState().catch(err => {
+  const stateRestored = restorePersistedState().catch(err => {
     console.error('Failed to restore persisted state:', err);
     // Don't leave the app permanently answering "still starting up" to
     // every request if the restore itself failed — better to fall back to
@@ -536,6 +537,92 @@ async function startServer() {
       persistStateNow().catch(err => console.error('MongoDB persist failed:', err));
     }, 300);
   }
+
+  // --- Oversized inline (base64) images ------------------------------------
+  // An image stored as a "data:image/...;base64,..." string lives INSIDE the
+  // database document instead of in B2. A single 3+ MB profile photo stored
+  // this way rides along in every full-state MongoDB save (each one rewrites
+  // whole collections) and in every /api/chats, /api/users and post-author
+  // payload that embeds that avatar — turning one photo into gigabytes of
+  // outbound traffic. Anything this large belongs in B2, referenced by its
+  // short object key (which every read path already re-signs). Small inline
+  // thumbnails are left alone: below this size they cost less than the extra
+  // B2 round-trip would (see INLINE_IMAGE_MIN_CHARS in server/inlineImages.ts).
+
+  // Uploads one oversized inline image to B2 and returns its object key, or
+  // null when there is nothing to do or it can't be done safely right now
+  // (not a large inline image, B2 not configured, upload failed). A null
+  // ALWAYS means "keep the original value exactly as it was" — this never
+  // throws and never discards the original, so a B2 hiccup can only ever
+  // leave things as they are, never lose the image.
+  async function externalizeInlineImage(value: unknown): Promise<string | null> {
+    if (!isBigInlineImage(value)) return null;
+    if (!getB2Client().isConfigured) return null;
+    try {
+      const parsed = parseInlineImage(value);
+      if (!parsed) return null;
+      const { objectKey } = await uploadMediaToB2(parsed.buffer, 'avatars', `inline.${parsed.extension}`, parsed.mime);
+      // uploadMediaToB2 hands the data URI straight back when B2 isn't
+      // really configured — that's not an upload, so don't treat it as one.
+      return objectKey.startsWith('data:') ? null : objectKey;
+    } catch (err) {
+      console.error('Could not move an inline image to B2 — leaving it as-is:', err);
+      return null;
+    }
+  }
+
+  // One-time (idempotent) cleanup of oversized inline images ALREADY stored
+  // in the database — every copy of each one, wherever it was embedded (the
+  // user's own avatar, the participant snapshots inside every chat, the
+  // avatar copies on notifications/posts/comments, ...). Order matters for
+  // safety: (1) upload every image to B2 first; (2) only then swap the
+  // in-memory copies, matching the EXACT original string so anything the
+  // user changed in the meantime is left alone; (3) persist. If the process
+  // dies anywhere in between, MongoDB still holds the untouched original and
+  // the next boot simply repeats this — worst case is one orphaned B2 object.
+  async function migrateInlineImagesToB2() {
+    if (!isDbConnected() || !getB2Client().isConfigured) return;
+    // Never act on a collection whose real contents were never loaded.
+    if (!restoredKeys.has('users')) return;
+
+    const found = new Set<string>();
+    users.forEach(u => { if (isBigInlineImage(u.avatar)) found.add(u.avatar); });
+    if (restoredKeys.has('chats')) {
+      chats.forEach(c => {
+        if (isBigInlineImage(c.avatar)) found.add(c.avatar);
+        (c.participants || []).forEach((p: any) => { if (isBigInlineImage(p?.avatar)) found.add(p.avatar); });
+      });
+    }
+    if (found.size === 0) return;
+
+    const moved = new Map<string, string>();
+    for (const original of found) {
+      const key = await externalizeInlineImage(original);
+      if (key) moved.set(original, key);
+    }
+    if (moved.size === 0) return;
+
+    const targets: Array<[(typeof PERSISTED_STATE_KEYS)[number], unknown]> = [
+      ['users', users], ['chats', chats], ['notifications', notifications], ['posts', posts],
+      ['comments', comments], ['messages', messages], ['stories', stories], ['reels', reels],
+      ['highlights', highlights], ['reports', reports], ['supportReviews', supportReviews],
+      ['chatReviews', chatReviews], ['collections', collections], ['gameScores', gameScores]
+    ];
+    const changedKeys: Array<[(typeof PERSISTED_STATE_KEYS)[number], unknown]> = [];
+    for (const [name, data] of targets) {
+      if (!restoredKeys.has(name)) continue;
+      if (replaceStringsDeep(data, moved)) changedKeys.push([name, data]);
+    }
+    for (const [name, data] of changedKeys) {
+      await persistImmediately(name, data);
+    }
+    console.log(`Moved ${moved.size} oversized inline image(s) to B2; updated: ${changedKeys.map(([name]) => name).join(', ')}`);
+  }
+  // Runs in the background once the real data has loaded — never delays
+  // startup or any request.
+  stateRestored
+    .then(() => migrateInlineImagesToB2())
+    .catch(err => console.error('Inline image migration failed:', err));
 
   // Stories are meant to actually vanish after 24 hours — GET /api/stories
   // already hides expired ones from the feed, but until now the story
@@ -1221,6 +1308,14 @@ async function startServer() {
       agreedToTerms
     } = req.body;
 
+    // If the browser had to fall back to embedding a big photo inline (its
+    // direct upload failed), park it in B2 now rather than storing megabytes
+    // inside the user record. Done up front, before any of the checks below,
+    // so there's no await between the "username taken?" check and the push
+    // that claims it. Falls back to the original value on any issue.
+    const externalAvatar = await externalizeInlineImage(avatar);
+    const storedAvatar = externalAvatar ?? avatar;
+
     if (!firstName || !firstName.trim()) {
       return res.status(400).json({ error: 'Please enter your name' });
     }
@@ -1318,7 +1413,7 @@ async function startServer() {
       dateOfBirth,
       gender: gender || 'Prefer not to say',
       password,
-      avatar: avatar || '/noob-logo.svg.jpeg',
+      avatar: storedAvatar || '/noob-logo.svg.jpeg',
       bio: bio?.trim() || '🎉 Here for fun, laughs & connecting with cool people!',
       accountType: chosenAccountType,
       isBusiness: chosenAccountType === 'business',
@@ -1369,7 +1464,14 @@ async function startServer() {
       return res.status(503).json({ error: 'Could not save your account right now — please try again in a moment.' });
     }
 
-    res.status(201).json({ success: true, user: sanitizeUser(newUser) });
+    // A stored object key isn't displayable on its own — hand the client a
+    // ready-to-use signed URL for it, same as GET /api/users/me does.
+    res.status(201).json({
+      success: true,
+      user: externalAvatar
+        ? { ...sanitizeUser(newUser), avatar: await signMediaKey(externalAvatar) }
+        : sanitizeUser(newUser)
+    });
   });
 
   app.post('/api/auth/login', (req, res) => {
@@ -1582,7 +1684,7 @@ async function startServer() {
   });
 
   // Full detailed profile update
-  app.post('/api/users/profile/update', (req, res) => {
+  app.post('/api/users/profile/update', async (req, res) => {
     const activeUser = getActiveUser(req);
     if (!activeUser) {
       return res.status(401).json({ error: 'Not authenticated' });
@@ -1608,6 +1710,13 @@ async function startServer() {
       interests,
       socialLinks
     } = req.body;
+
+    // A big photo the browser had to embed inline (its direct upload failed)
+    // goes to B2 instead of into the user record. Awaited up front, before
+    // any checks/mutations below, so those stay one uninterrupted synchronous
+    // block exactly like before. Falls back to the original value on any issue.
+    const externalAvatar = await externalizeInlineImage(avatar);
+    const storedAvatar = externalAvatar ?? avatar;
 
     const index = users.findIndex(u => u.id === activeUser.id);
     if (index === -1) {
@@ -1660,7 +1769,7 @@ async function startServer() {
     if (firstName) users[index].firstName = firstName.trim();
     if (lastName) users[index].lastName = lastName.trim();
     if (bio !== undefined) users[index].bio = bio.trim();
-    if (avatar) users[index].avatar = avatar;
+    if (storedAvatar) users[index].avatar = storedAvatar;
     if (website !== undefined) users[index].website = website.trim();
     if (city !== undefined) users[index].city = city.trim();
     if (countryCode) users[index].countryCode = countryCode;
@@ -1678,7 +1787,9 @@ async function startServer() {
     res.json({
       success: true,
       message: 'Profile successfully updated',
-      user: sanitizeUser(users[index])
+      user: externalAvatar
+        ? { ...sanitizeUser(users[index]), avatar: await signMediaKey(externalAvatar) }
+        : sanitizeUser(users[index])
     });
   });
 
@@ -3939,9 +4050,13 @@ async function startServer() {
   });
 
   // Create new 1-on-1 or Group Chat
-  app.post('/api/chats', (req, res) => {
+  app.post('/api/chats', async (req, res) => {
     const active = getActiveUser(req);
-    const { name, participantIds, isGroup, avatar, description } = req.body;
+    const { name, participantIds, isGroup, avatar: rawAvatar, description } = req.body;
+    // Big inline group photo → B2 (see externalizeInlineImage); awaited up
+    // front so the duplicate-1:1 check and insert below stay synchronous.
+    const externalAvatar = await externalizeInlineImage(rawAvatar);
+    const avatar = externalAvatar ?? rawAvatar;
 
     const resolvedParticipants = users
       .filter(u => participantIds?.includes(u.id))
@@ -4003,11 +4118,14 @@ async function startServer() {
     };
 
     chats.unshift(newChat);
-    res.status(201).json({ success: true, chat: newChat });
+    res.status(201).json({
+      success: true,
+      chat: externalAvatar ? { ...newChat, avatar: await signMediaKey(externalAvatar) } : newChat
+    });
   });
 
   // Update Group details (name, avatar, description)
-  app.put('/api/chats/:id/group', (req, res) => {
+  app.put('/api/chats/:id/group', async (req, res) => {
     const chatId = req.params.id;
     const active = getActiveUser(req);
     const chat = chats.find(c => c.id === chatId);
@@ -4020,11 +4138,18 @@ async function startServer() {
     }
 
     const { name, avatar, description } = req.body;
+    // Big inline group photo → B2 (see externalizeInlineImage). The chat
+    // was looked up above and is still the live object, so nothing here can
+    // go stale across the await.
+    const externalAvatar = await externalizeInlineImage(avatar);
     if (name) chat.name = name.trim();
-    if (avatar) chat.avatar = avatar;
+    if (avatar) chat.avatar = externalAvatar ?? avatar;
     if (description !== undefined) chat.description = description;
 
-    res.json({ success: true, chat });
+    res.json({
+      success: true,
+      chat: externalAvatar ? { ...chat, avatar: await signMediaKey(externalAvatar) } : chat
+    });
   });
 
   // Manage Group Admins (Make Admin / Dismiss Admin)

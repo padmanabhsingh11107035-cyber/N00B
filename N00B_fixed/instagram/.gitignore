@@ -8,3 +8,4 @@ android/
 .env.*.local
 .DS_Store
 .claude/
+backups/

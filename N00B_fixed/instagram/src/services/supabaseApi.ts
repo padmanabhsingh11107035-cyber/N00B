@@ -1122,7 +1122,9 @@ export function subscribeToChatChanges(onChange: () => void): () => void {
     .channel(`chat-changes-${crypto.randomUUID()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fire)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, fire)
-    .subscribe();
+    // Refresh once the connection is (re)established: anything that arrived while it was still opening
+    // (or while it was down) would otherwise wait for the slow fallback refresh.
+    .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
   return () => {
     if (timer) clearTimeout(timer);
     supabase.removeChannel(channel);

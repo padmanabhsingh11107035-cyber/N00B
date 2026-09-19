@@ -88,8 +88,10 @@ try {
 
   // B listens LIVE for new messages the way the app does
   let liveEvents = 0;
-  const listener = B.c.channel(`live-${stamp}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => { liveEvents++; }).subscribe();
-  await wait(2500); // let the subscription establish
+  let ready = false;
+  const listener = B.c.channel(`live-${stamp}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => { liveEvents++; }).subscribe((s) => { if (s === 'SUBSCRIBED') ready = true; });
+  for (let i = 0; i < 40 && !ready; i++) await wait(250); // wait until the server says the subscription is ready
+  await wait(1000); // and let the database side settle
   const sent = (await rpc(A.c, 'send_message', { p_chat: chat.id, p: { text: 'hello live' } })).message;
   let waited = 0;
   while (liveEvents === 0 && waited < 8000) { await wait(250); waited += 250; }

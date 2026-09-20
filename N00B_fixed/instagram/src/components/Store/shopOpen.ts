@@ -11,4 +11,11 @@ export const ordersAccepted = (settings?: { storeEnabled?: boolean } | null): bo
 
 // The database refuses an order with "Ordering is currently paused by NOOB." when the switch is off. Recognise that
 // (or any "not accepting orders" wording) so the friendly message is shown instead of a raw error.
+// When a shop-settings change is refused, say WHICH account is signed in: a browser keeps one saved login for all its tabs and
+// windows, so a screen can still show the admin's buttons while the login that is actually in use belongs to someone else.
+export const settingsRefusedMessage = (username?: string | null): string =>
+  username
+    ? `You are signed in as @${username}, which is not the main NOOB administrator account. Log in as the NOOB account to change the shop settings.`
+    : 'Only the main NOOB administrator account can change the shop settings.';
+
 export const isClosedError = (message?: string | null): boolean => /paused|not accepting orders/i.test(message || '');

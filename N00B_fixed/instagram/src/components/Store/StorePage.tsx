@@ -47,6 +47,22 @@ interface StorePageProps {
 type StoreView = 'grid' | 'cart' | 'checkout' | 'done' | 'orders' | 'account';
 type DeliveryMethod = 'pickup' | 'delivery';
 
+// The person's own profile picture (the one they chose when they made their account, the same as on their profile), used as the
+// Account tab instead of a word and a generic icon. If they have none, or it does not load, a plain person icon is shown.
+const AccountAvatar: React.FC<{ user: User; size: number; active: boolean }> = ({ user, size, active }) => {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [user.avatar]);
+  const ring = active ? 'ring-2 ring-[#00FF66]' : 'ring-1 ring-white/25';
+  if (!user.avatar || failed) {
+    return (
+      <span className={`rounded-full bg-zinc-800 flex items-center justify-center ${ring}`} style={{ width: size, height: size }}>
+        <UserRound className="text-zinc-400" style={{ width: size * 0.55, height: size * 0.55 }} />
+      </span>
+    );
+  }
+  return <img src={user.avatar} alt="" draggable={false} onError={() => setFailed(true)} className={`rounded-full object-cover bg-zinc-800 ${ring}`} style={{ width: size, height: size }} />;
+};
+
 export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) => {
   // may add, edit and remove products and handle orders: the main admin, or an admin who was given the "manage the shop" permission
   const canManage = can(currentUser, 'manage_store');
@@ -312,19 +328,21 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
   const title = { grid: 'NOOB Shop', cart: 'Your Cart', checkout: 'Checkout', done: 'Order placed', orders: 'Orders', account: 'Account details' }[view];
 
-  const navTab = (id: 'grid' | 'cart' | 'orders' | 'account', label: string, Icon: React.ElementType, badge?: number) => {
+  const navTab = (id: 'grid' | 'cart' | 'orders' | 'account', label: string, Icon: React.ElementType, badge?: number, picture?: React.ReactNode) => {
     const active = view === id || (id === 'cart' && view === 'checkout');
     return (
       <button
         key={id}
         onClick={() => setView(id)}
         aria-current={active ? 'page' : undefined}
+        aria-label={picture ? label : undefined}
+        title={picture ? label : undefined}
         className={`relative flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] sm:text-xs font-bold cursor-pointer border-b-2 transition-colors ${
           active ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-400 hover:text-white'
         }`}
       >
-        <Icon className="w-4 h-4" />
-        <span>{label}</span>
+        {picture ?? <Icon className="w-4 h-4" />}
+        {!picture && <span>{label}</span>}
         {!!badge && badge > 0 && (
           <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#00FF66] text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
         )}
@@ -334,7 +352,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
   // Phones and tablets: the four sections as an icons-only glass bar at the bottom (same look as the app's own bottom bar).
   // Laptops (xl and up) keep the labelled tabs under the header.
-  const bottomNavItem = (id: 'grid' | 'cart' | 'orders' | 'account', label: string, Icon: React.ElementType, badge?: number) => {
+  const bottomNavItem = (id: 'grid' | 'cart' | 'orders' | 'account', label: string, Icon: React.ElementType, badge?: number, picture?: React.ReactNode) => {
     const active = view === id || (id === 'cart' && view === 'checkout');
     return (
       <button
@@ -346,7 +364,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         className="w-full h-full flex items-center justify-center cursor-pointer"
       >
         <div className={`liquid-glass-btn relative flex items-center justify-center w-12 h-12 ${active ? 'liquid-glass-btn-active' : ''}`}>
-          <Icon className={`w-6 h-6 ${active ? 'text-[#00FF66]' : 'text-gray-300'}`} strokeWidth={active ? 2.5 : 2} />
+          {picture ?? <Icon className={`w-6 h-6 ${active ? 'text-[#00FF66]' : 'text-gray-300'}`} strokeWidth={active ? 2.5 : 2} />}
           {!!badge && badge > 0 && (
             <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-[#00FF66] text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
           )}
@@ -405,7 +423,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         {navTab('grid', 'Shop', StoreIcon)}
         {navTab('cart', 'Cart', ShoppingCart, cartCount)}
         {navTab('orders', 'Orders', ClipboardList)}
-        {navTab('account', 'Account', UserRound)}
+        {navTab('account', 'Account', UserRound, undefined, <AccountAvatar user={currentUser} size={30} active={view === 'account'} />)}
       </nav>
 
       {/* For the owner: a reminder that orders are switched off (customers see the message when they press Checkout) */}
@@ -746,7 +764,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
           {bottomNavItem('grid', 'Shop', StoreIcon)}
           {bottomNavItem('cart', 'Cart', ShoppingCart, cartCount)}
           {bottomNavItem('orders', 'Orders', ClipboardList)}
-          {bottomNavItem('account', 'Account', UserRound)}
+          {bottomNavItem('account', 'Account', UserRound, undefined, <AccountAvatar user={currentUser} size={34} active={view === 'account'} />)}
         </div>
       </nav>
 

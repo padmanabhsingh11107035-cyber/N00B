@@ -149,5 +149,18 @@ check(await asUser(db, someone, async () => (await db.query('select public.get_m
 await db.exec(read(M12));
 check(JSON.stringify(await snap()) === JSON.stringify(before12), 'running migration 12 a second time is harmless');
 
+section('Applying migration 13 (shop settings function) on top');
+const M13 = '20260921000013_shop_settings_function.sql';
+const before13 = await snap();
+const settings13 = (await db.query('select store_enabled, store_delivery_fee::text f from app_settings where id = 1')).rows[0];
+await db.exec(read(M13));
+check(JSON.stringify(await snap()) === JSON.stringify(before13), 'migration 13 changes no count and no point total');
+const settingsAfter13 = (await db.query('select store_enabled, store_delivery_fee::text f from app_settings where id = 1')).rows[0];
+check(JSON.stringify(settingsAfter13) === JSON.stringify(settings13), 'and the shop settings are exactly as they were (nothing switched on or off)');
+check(await asUser(db, someone, async () => { try { await db.query('select public.set_shop_settings(false, null)'); return false; } catch (e) { return /not the main NOOB administrator/.test(e.message); } }), 'an ordinary member is refused by the new function');
+check((await db.query('select store_enabled from app_settings where id = 1')).rows[0].store_enabled === settings13.store_enabled, '...and nothing changed');
+await db.exec(read(M13));
+check(JSON.stringify(await snap()) === JSON.stringify(before13), 'running migration 13 a second time is harmless');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

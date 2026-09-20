@@ -11,6 +11,7 @@ import { compressMedia } from '../utils/mediaCompressor';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
 import { cleanLanguageCode } from '../i18n/languages.ts';
+import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 
@@ -625,13 +626,24 @@ export async function updateSettings(newSettings: Partial<AppSettings>): Promise
     try { localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify({ ...readLocalSettings(), ...personal })); } catch { /* storage full/blocked */ }
   }
   if (storeEnabled !== undefined || storeDeliveryFee !== undefined) {
-    const shared: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (storeEnabled !== undefined) shared.store_enabled = storeEnabled;
-    if (storeDeliveryFee !== undefined) shared.store_delivery_fee = storeDeliveryFee;
-    // .select() so a change the database silently refused (only the main admin may write here) is noticed instead of looking saved
-    const { data, error } = await supabase.from('app_settings').update(shared).eq('id', 1).select('id');
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) throw new Error('Only the main NOOB admin can change the shop settings.');
+    // The database function checks who is asking, makes the change and writes it to the admin activity log; if it refuses, its
+    // message names the account that is signed in.
+    const viaFunction = await supabase.rpc('set_shop_settings', { p_enabled: storeEnabled ?? null, p_fee: storeDeliveryFee ?? null });
+    if (viaFunction.error) {
+      const notInstalled = viaFunction.error.code === 'PGRST202' || /could not find the function/i.test(viaFunction.error.message || '');
+      if (!notInstalled) throw new Error(viaFunction.error.message);
+      // (the function is not installed yet: change the settings table directly, as before)
+      const shared: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (storeEnabled !== undefined) shared.store_enabled = storeEnabled;
+      if (storeDeliveryFee !== undefined) shared.store_delivery_fee = storeDeliveryFee;
+      // .select() so a change the database silently refused is noticed instead of looking saved
+      const { data, error } = await supabase.from('app_settings').update(shared).eq('id', 1).select('id');
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        const who = await supabase.rpc('get_my_user');
+        throw new Error(settingsRefusedMessage((who.data as any)?.username));
+      }
+    }
   }
   return fetchSettings();
 }

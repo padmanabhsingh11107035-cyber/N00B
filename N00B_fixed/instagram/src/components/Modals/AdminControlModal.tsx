@@ -60,6 +60,7 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'report_banned': return `${who} banned ${target} over a report.`;
     case 'coupon_created': return `${who} created the coupon ${d.code || ''}.`;
     case 'coupon_removed': return `${who} removed a coupon.`;
+    case 'shop_settings_changed': return `${who} changed the shop settings${d.ordersOn === true ? ': orders ON' : d.ordersOn === false ? ': orders OFF' : ''}${d.deliveryCharge != null ? `${d.ordersOn == null ? ':' : ','} delivery charge ${d.deliveryCharge}` : ''}.`;
     case 'product_added': return `${who} added a shop product.`;
     case 'product_updated': return `${who} edited a shop product.`;
     case 'product_removed': return `${who} removed a shop product.`;

@@ -292,6 +292,29 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     );
   };
 
+  // Phones and tablets: the four sections as an icons-only glass bar at the bottom (same look as the app's own bottom bar).
+  // Laptops (xl and up) keep the labelled tabs under the header.
+  const bottomNavItem = (id: 'grid' | 'cart' | 'orders' | 'account', label: string, Icon: React.ElementType, badge?: number) => {
+    const active = view === id || (id === 'cart' && view === 'checkout');
+    return (
+      <button
+        key={id}
+        onClick={() => setView(id)}
+        aria-label={label}
+        aria-current={active ? 'page' : undefined}
+        title={label}
+        className="w-full h-full flex items-center justify-center cursor-pointer"
+      >
+        <div className={`liquid-glass-btn relative flex items-center justify-center w-12 h-12 ${active ? 'liquid-glass-btn-active' : ''}`}>
+          <Icon className={`w-6 h-6 ${active ? 'text-[#00FF66]' : 'text-gray-300'}`} strokeWidth={active ? 2.5 : 2} />
+          {!!badge && badge > 0 && (
+            <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-[#00FF66] text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
+          )}
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-black text-white flex flex-col overflow-hidden">
       <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-[#00FF66]/10 blur-[100px]" />
@@ -338,7 +361,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
       </div>
 
       {/* Shop · Cart · Orders · Account */}
-      <nav className="relative z-10 flex border-b border-white/10 shrink-0 px-2 sm:px-4" aria-label="Shop sections">
+      <nav className="relative z-10 hidden xl:flex border-b border-white/10 shrink-0 px-2 sm:px-4" aria-label="Shop sections">
         {navTab('grid', 'Shop', StoreIcon)}
         {navTab('cart', 'Cart', ShoppingCart, cartCount)}
         {navTab('orders', 'Orders', ClipboardList)}
@@ -369,7 +392,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
       )}
 
       {/* Body */}
-      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-28 xl:pb-6">
         {view === 'grid' && (
           <div className="max-w-6xl mx-auto lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-8">
             {/* Filters: always beside the shelf on a wide screen */}
@@ -646,6 +669,20 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
         {view === 'account' && <AccountDetailsView currentUser={currentUser} onOpenOrders={() => setView('orders')} />}
       </div>
+
+      {/* Bottom bar for phones and tablets: icons only */}
+      <nav
+        className="xl:hidden absolute left-1/2 -translate-x-1/2 z-20 w-[92%] max-w-[380px] pointer-events-auto"
+        style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        aria-label="Shop sections"
+      >
+        <div className="liquid-glass relative rounded-full h-16 grid grid-cols-4 items-center justify-items-center px-1">
+          {bottomNavItem('grid', 'Shop', StoreIcon)}
+          {bottomNavItem('cart', 'Cart', ShoppingCart, cartCount)}
+          {bottomNavItem('orders', 'Orders', ClipboardList)}
+          {bottomNavItem('account', 'Account', UserRound)}
+        </div>
+      </nav>
 
       {showClosed && <OrdersPausedModal onClose={() => setShowClosed(false)} />}
 

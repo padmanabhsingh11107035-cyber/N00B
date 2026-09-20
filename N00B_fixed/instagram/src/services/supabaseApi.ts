@@ -9,6 +9,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
+import { recordDiag } from './authDiag';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 
 // ----------------------------------------------------------------------------- plumbing
@@ -213,7 +214,7 @@ export async function loginUser(payload: {
     }
     const user = await rpc<any>('get_my_user');
     if (user?.isSuspended) {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       return {
         success: false,
         error: `This account has been suspended by NOOB Administrator.${user.suspendedReason ? ' Reason: ' + user.suspendedReason : ''}`
@@ -267,15 +268,18 @@ export async function recoverAccountAccess(payload: {
   }
 }
 
+// Log out of THIS device only. (The library's default, "global", also ends the same account's login on every other device: logging
+// out on the phone used to sign the laptop out within the hour.) The note lets other tabs of this browser say why they were signed out.
 export async function logoutUser(): Promise<{ success: boolean }> {
-  await supabase.auth.signOut();
+  recordDiag({ kind: 'explicit-logout' });
+  await supabase.auth.signOut({ scope: 'local' });
   return { success: true };
 }
 
 export async function deleteMyAccount(password: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const res = await rpc<{ success: boolean; message?: string }>('delete_my_account', { p_password: password });
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     return res;
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not delete the account.') };
@@ -295,12 +299,18 @@ export async function fetchCurrentUser(): Promise<User | null> {
 // Is this person still logged in, and is the account OK? "suspended" is reported ONLY when the database says so;
 // "signed-out" when this browser no longer holds a login; anything that could not be checked is "unknown"
 // (and never ends a session). See utils/sessionWatch.ts.
-export async function checkSessionStatus(): Promise<SessionStatus> {
+// `expectedUserId` is whose account this tab is showing: if the browser's saved login now belongs to someone else (another tab signed in
+// as a different account) the answer is "switched".
+export async function checkSessionStatus(expectedUserId?: string): Promise<SessionStatus> {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error || !data.session) return classifySession({ sessionCheckFailed: !!error, hasSession: false, profileCheckFailed: false, profileFound: false, isSuspended: false });
-    const { data: row, error: qErr } = await supabase.from('profiles').select('is_suspended').eq('id', data.session.user.id).maybeSingle();
-    return classifySession({ sessionCheckFailed: false, hasSession: true, profileCheckFailed: !!qErr, profileFound: !!row, isSuspended: !!row?.is_suspended });
+    const sessionUserId = data.session.user.id;
+    if (expectedUserId && sessionUserId !== expectedUserId) {
+      return classifySession({ sessionCheckFailed: false, hasSession: true, profileCheckFailed: false, profileFound: false, isSuspended: false, sessionUserId, expectedUserId });
+    }
+    const { data: row, error: qErr } = await supabase.from('profiles').select('is_suspended').eq('id', sessionUserId).maybeSingle();
+    return classifySession({ sessionCheckFailed: false, hasSession: true, profileCheckFailed: !!qErr, profileFound: !!row, isSuspended: !!row?.is_suspended, sessionUserId, expectedUserId });
   } catch {
     return 'unknown';
   }
@@ -2032,6 +2042,20 @@ export async function subscribeToPush(subscription: PushSubscription): Promise<b
     return !!res?.success;
   } catch {
     return false;
+  }
+}
+
+// Notifications go to ONE device per account. This is the address of the saved subscription (null = none), so a screen can tell
+// whether THIS device is the one that gets them. (Read straight from the person's own row; nobody else's is visible.)
+export async function fetchMyPushEndpoint(): Promise<string | null> {
+  try {
+    if (!(await currentSession())) return null;
+    const { data, error } = await supabase.from('push_subscriptions').select('subscription').maybeSingle();
+    if (error) return null;
+    const endpoint = (data as any)?.subscription?.endpoint;
+    return typeof endpoint === 'string' ? endpoint : null;
+  } catch {
+    return null;
   }
 }
 

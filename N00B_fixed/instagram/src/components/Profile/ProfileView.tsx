@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { isStaff } from '../../adminAccess';
 import {
   Grid,
@@ -74,7 +74,6 @@ import {
   unblockUser,
   submitSafetyReport,
   toggleFollowUser,
-  unsubscribeFromPush,
   hideProfileFrom,
   unhideProfileFrom
 } from '../../services/api';
@@ -100,7 +99,7 @@ import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
-import { enablePushNotifications } from '../Common/PushNotificationPrompt';
+import { enablePushNotifications, disablePushNotifications, getPushDeviceState, getPushSupport, type PushDeviceState } from '../Common/PushNotificationPrompt';
 import { StorePage } from '../Store/StorePage';
 
 interface ProfileViewProps {
@@ -229,6 +228,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showStorePage, setShowStorePage] = useState(false);
   const [notifToggleBusy, setNotifToggleBusy] = useState(false);
   const [notifToggleMessage, setNotifToggleMessage] = useState<string | null>(null);
+  // Real state of notifications on THIS device (worked out from the browser and the saved subscription, not from the user record)
+  const [pushState, setPushState] = useState<PushDeviceState>(currentUser.pushSubscription ? 'on' : 'off');
+  const pushSupport = useMemo(() => getPushSupport(), []);
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
@@ -242,6 +244,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const targetUser: User = viewingUser || currentUser;
   const isOwnProfile = !viewingUser || viewingUser.id === currentUser.id;
   useScreenshotAlert('profile', targetUser.id, !isOwnProfile);
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    let alive = true;
+    getPushDeviceState().then((state) => { if (alive) setPushState(state); });
+    return () => { alive = false; };
+  }, [isOwnProfile]);
   const isTargetBlocked = (currentUser.blockedUserIds || []).includes(targetUser.id);
   const [isTargetFollowing, setIsTargetFollowing] = useState<boolean>(() => {
     if (targetUser.isFollowing !== undefined) return !!targetUser.isFollowing;
@@ -481,19 +489,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setNotifToggleBusy(true);
     setNotifToggleMessage(null);
     try {
-      if (currentUser.pushSubscription) {
-        const ok = await unsubscribeFromPush();
-        if (ok && onUserUpdated) {
-          onUserUpdated({ ...currentUser, pushSubscription: undefined });
+      if (pushState === 'on') {
+        const ok = await disablePushNotifications();
+        if (ok) {
+          setPushState('off');
+          if (onUserUpdated) onUserUpdated({ ...currentUser, pushSubscription: undefined });
+        } else {
+          setNotifToggleMessage('Couldn\u2019t switch notifications off. Check your connection and try again.');
         }
       } else {
         const result = await enablePushNotifications();
-        if (result.status === 'granted' && result.subscription && onUserUpdated) {
-          onUserUpdated({ ...currentUser, pushSubscription: result.subscription });
+        if (result.status === 'granted' && result.subscription) {
+          setPushState('on');
+          if (onUserUpdated) onUserUpdated({ ...currentUser, pushSubscription: result.subscription });
         } else if (result.status === 'denied') {
-          setNotifToggleMessage('Notifications are blocked for this site in your browser settings.');
+          setNotifToggleMessage('Notifications are blocked for this site. Tap the lock icon next to the address, allow Notifications for nooob.xyz, then try again.');
         } else if (result.status === 'unsupported') {
-          setNotifToggleMessage('Push notifications aren\'t supported on this browser/device.');
+          setNotifToggleMessage(result.message || 'This browser cannot show notifications.');
         } else if (result.status === 'error') {
           setNotifToggleMessage(
             result.reason === 'not-set-up'
@@ -681,11 +693,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
-                      Notifications: {notifToggleBusy ? 'Updating…' : currentUser.pushSubscription ? 'On' : 'Off'}
+                      Notifications: {notifToggleBusy ? 'Updating…' : pushState === 'on' ? 'On' : 'Off'}
                     </span>
-                    <span className="text-[10px] text-zinc-400 block truncate">
-                      {notifToggleMessage || 'Get notified even when NOOB isn\'t open'}
-                    </span>
+                    {(() => {
+                      // A message (what went wrong / what to do) is shown in full; the plain hint stays on one line.
+                      const hint = notifToggleMessage
+                        || (pushSupport.supported === false ? pushSupport.message : pushState === 'other-device' ? 'Turned on for another device. Tap to get them on this one instead.' : null);
+                      return hint
+                        ? <span className="text-[10px] text-amber-300/90 block leading-snug whitespace-normal">{hint}</span>
+                        : <span className="text-[10px] text-zinc-400 block truncate">Get notified even when NOOB isn't open</span>;
+                    })()}
                   </div>
                 </button>
               )}

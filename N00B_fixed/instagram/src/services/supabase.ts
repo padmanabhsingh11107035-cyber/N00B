@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { makePatientFetch } from './authFetch';
+import { recordDiag } from './authDiag';
 
 // Public values — safe to ship to every browser (the publishable key only ever grants what the
 // database's row-level-security rules allow a logged-in or logged-out visitor to do).
@@ -12,14 +13,27 @@ if (!url || !key) {
 }
 
 export const supabase = createClient(url || 'http://localhost:54321', key || 'missing-key', {
-  // A rate-limited login renewal must not sign anyone out (see authFetch.ts).
-  global: { fetch: makePatientFetch((input, init) => fetch(input, init)) },
+  // A rate-limited (or error-page) login renewal must not sign anyone out (see authFetch.ts); what happened is written to the
+  // login recorder (authDiag.ts) so a sign-out can say why.
+  global: {
+    fetch: makePatientFetch(
+      (input, init) => fetch(input, init),
+      (p) => recordDiag({ kind: p.temporary ? 'renewal-delayed' : 'renewal-failed', status: p.status, code: p.code })
+    )
+  },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     // Logins are by username/email + password only, so there is never a token in the address bar.
     detectSessionInUrl: false
   }
+});
+
+// Write the login events to the recorder (never awaits anything: the library calls this from inside its own locks).
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') recordDiag({ kind: 'signed-out' });
+  else if (event === 'SIGNED_IN') recordDiag({ kind: 'signed-in' });
+  else if (event === 'TOKEN_REFRESHED') recordDiag({ kind: 'token-refreshed' });
 });
 
 export const MEDIA_BUCKET = 'media';

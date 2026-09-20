@@ -79,6 +79,7 @@ import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Commo
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
+import { readDiag, explainSessionEnd } from './services/authDiag';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -223,19 +224,48 @@ export default function App() {
   // What it says matters: "suspended" only when the database really says the account is suspended. A login that simply
   // ended (the saved login was removed after a failed renewal, another tab signed out...) is reported as "you were
   // signed out", and a check that could not be completed does nothing (see utils/sessionWatch.ts).
+  //
+  // A browser keeps ONE saved login per site, shared by all its tabs. So the check also compares whose login is saved with
+  // whose account THIS tab shows ("switched" = another tab signed in as someone else), and it runs again the moment you come
+  // back to the tab, which is when another tab may have changed things.
   const watchRef = useRef<WatchState>(initialWatch);
   useEffect(() => {
     if (!currentUser) return;
+    const myId = currentUser.id;
     watchRef.current = initialWatch;
-    const interval = setInterval(async () => {
-      const step = stepWatch(watchRef.current, await checkSessionStatus());
-      watchRef.current = step.state;
-      if (!step.end) return;
-      setSessionEndedNotice(SESSION_ENDED_MESSAGE[step.end]);
-      setSessionUserId(null);
-      setCurrentUser(null);
-    }, 30000);
-    return () => clearInterval(interval);
+    let checking = false;
+    let ended = false;
+    let lastAt = 0;
+    const check = async () => {
+      // never two checks at once, and never counted closer than 5 seconds apart (the "twice in a row" rule needs real time between)
+      if (checking || ended || Date.now() - lastAt < 5000) return;
+      checking = true;
+      try {
+        const step = stepWatch(watchRef.current, await checkSessionStatus(myId));
+        lastAt = Date.now();
+        watchRef.current = step.state;
+        if (!step.end) return;
+        ended = true;
+        // say WHY in plain words (from what the login recorder saw) instead of guessing
+        const why = step.end === 'signed-out' ? ` (Reason: ${explainSessionEnd(readDiag())}.)` : '';
+        setSessionEndedNotice(SESSION_ENDED_MESSAGE[step.end] + why);
+        setSessionUserId(null);
+        setCurrentUser(null);
+      } finally {
+        checking = false;
+      }
+    };
+    const interval = setInterval(check, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', check);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', check);
+    };
   }, [currentUser?.id]);
 
   // Notifications arrive LIVE: the database tells this screen the moment one is created (Realtime), and it also

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Bell } from 'lucide-react';
-import { fetchVapidPublicKey, subscribeToPush } from '../../services/api';
+import { Capacitor } from '@capacitor/core';
+import { fetchVapidPublicKey, subscribeToPush, unsubscribeFromPush, fetchMyPushEndpoint } from '../../services/api';
+import { checkPushSupport, currentPushEnv, type PushSupport } from '../../utils/pushSupport';
 
 const DISMISSED_KEY = 'noob_push_prompt_seen';
 
@@ -45,10 +47,10 @@ export type PushErrorReason = 'not-set-up' | 'browser' | 'save';
 // Shared by this soft-ask prompt AND the real on/off toggle in the
 // three-dot Profile menu, so the actual subscribe pipeline (permission,
 // VAPID key, service worker, PushManager) only has to be written once.
-export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason }> {
-  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-    return { status: 'unsupported' };
-  }
+export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason; message?: string }> {
+  // Not just "unsupported": say WHERE the person is and exactly what to do (iPhone Home Screen, in-app browser, ...)
+  const support = getPushSupport();
+  if (support.supported === false) return { status: 'unsupported', message: support.message };
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return { status: 'denied' };
@@ -77,6 +79,44 @@ export async function enablePushNotifications(): Promise<{ status: PushEnableSta
     console.error('Failed to enable push notifications:', err);
     return { status: 'error', reason: 'browser' };
   }
+}
+
+// Can this phone / browser get notifications, and if not, what should the person do? (see utils/pushSupport.ts)
+export function getPushSupport(): PushSupport {
+  return checkPushSupport(currentPushEnv(Capacitor.isNativePlatform()));
+}
+
+// This browser's own subscription (if it has one).
+export async function getBrowserPushSubscription(): Promise<PushSubscription | null> {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+    const registration = await navigator.serviceWorker.getRegistration();
+    return registration ? await registration.pushManager.getSubscription() : null;
+  } catch {
+    return null;
+  }
+}
+
+// 'on'          this device is the one that gets notifications
+// 'other-device' notifications are on, but for a DIFFERENT device of this account (only one device gets them)
+// 'off'         no notifications
+export type PushDeviceState = 'on' | 'other-device' | 'off';
+export async function getPushDeviceState(): Promise<PushDeviceState> {
+  const [subscription, savedEndpoint] = await Promise.all([getBrowserPushSubscription(), fetchMyPushEndpoint()]);
+  const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  if (subscription && granted && savedEndpoint && subscription.endpoint === savedEndpoint) return 'on';
+  return savedEndpoint ? 'other-device' : 'off';
+}
+
+// Switch notifications off for this device: forget the browser's subscription too, not only the saved copy.
+export async function disablePushNotifications(): Promise<boolean> {
+  try {
+    const subscription = await getBrowserPushSubscription();
+    if (subscription) await subscription.unsubscribe();
+  } catch {
+    // the saved copy is what stops the notifications: carry on
+  }
+  return unsubscribeFromPush();
 }
 
 interface PushNotificationPromptProps {

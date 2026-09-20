@@ -11,6 +11,7 @@ export {
   fetchCurrentUser,
   checkSessionStatus,
   loadSignedInUser,
+  fetchMyPushEndpoint,
   updateCurrentUser,
   updateUserBio,
   updateUserStatusNote,

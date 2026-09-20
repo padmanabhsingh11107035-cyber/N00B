@@ -10,6 +10,8 @@ import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
+import { cleanLanguageCode } from '../i18n/languages.ts';
+import { getLanguage } from '../i18n/engine.ts';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 
 // ----------------------------------------------------------------------------- plumbing
@@ -120,6 +122,7 @@ export async function signupUser(payload: {
   businessPhone?: string;
   businessAddress?: string;
   agreedToTerms: boolean;
+  language?: string; // the preferred language chosen on the sign-up form (English when not given)
 }): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string }> {
   try {
     // Friendly, specific messages first (the old server's exact wording); Auth alone would just say "database error".
@@ -162,7 +165,8 @@ export async function signupUser(payload: {
           business_email: payload.businessEmail,
           business_phone: payload.businessPhone,
           business_address: payload.businessAddress,
-          agreed_to_terms: payload.agreedToTerms
+          agreed_to_terms: payload.agreedToTerms,
+          language: cleanLanguageCode(payload.language)
         }
       }
     });
@@ -1437,7 +1441,7 @@ const AI_FUNCTION = 'dynamic-handler';
 
 export async function translateMessage(chatId: string, messageId: string): Promise<string> {
   try {
-    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'translate', chatId, messageId } });
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'translate', chatId, messageId, lang: getLanguage() } });
     if (error) return '';
     return (data as any)?.translatedText || '';
   } catch {

@@ -526,7 +526,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}`}
           onDoubleClick={handleDoubleTap}
         >
-          <p className="text-base sm:text-lg font-medium leading-relaxed whitespace-pre-line break-words">
+          <p translate="no" className="text-base sm:text-lg font-medium leading-relaxed whitespace-pre-line break-words">
             {post.caption}
           </p>
 
@@ -634,7 +634,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           <span className="font-bold text-white mr-1.5 cursor-pointer hover:underline">
             {post.username}
           </span>
-          <span className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
+          <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
             {post.caption || ''}
           </span>
           {(post.caption || '').length > 90 && (

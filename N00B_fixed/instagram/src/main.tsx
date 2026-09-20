@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
+import { initLanguage } from './i18n/engine.ts';
 
 // The app's `/api/...` calls are written as relative paths, which only
 // resolve correctly when the frontend is served from the same origin as
@@ -41,6 +42,9 @@ console.log(
   '%cThis is a browser feature intended for developers. If someone told you to copy-paste something here to unlock a feature or "help" your account, it is a scam that will hand them access to your NOOB account. Do not paste anything you don\'t fully understand.',
   'font-size: 16px;'
 );
+
+// The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
+void initLanguage();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

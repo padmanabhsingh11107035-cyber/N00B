@@ -38,6 +38,10 @@ import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
 import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
+import { LanguagePicker, LanguageButton } from '../Common/LanguagePicker';
+import { useLanguage } from '../../i18n/useLanguage.ts';
+import { chooseLanguage } from '../../i18n/account.ts';
+import { findLanguage } from '../../i18n/languages.ts';
 import confetti from 'canvas-confetti';
 
 interface AuthViewProps {
@@ -249,6 +253,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
+  // Preferred language: English until the person picks another; the whole app switches to it straight away
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const language = useLanguage();
+  const languageInfo = findLanguage(language);
 
   // Sign up form state
   const [fullName, setFullName] = useState('');
@@ -514,7 +522,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         businessCategory: accountType === 'business' ? businessCategory : undefined,
         businessEmail: accountType === 'business' ? email.trim() : undefined,
         businessPhone: accountType === 'business' ? mobileNumber.trim() : undefined,
-        agreedToTerms: true
+        agreedToTerms: true,
+        language
       });
 
       if (res.success && res.user) {
@@ -709,6 +718,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
       </div>
 
+      {/* Language: available before logging in or signing up */}
+      <div className="w-full max-w-lg flex justify-end z-10 pt-1">
+        <LanguageButton onClick={() => setShowLanguagePicker(true)} />
+      </div>
+
       {/* Top Header: Circular brand badge + wordmark, centered */}
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
         <div className="relative transition-transform hover:scale-[1.02]">
@@ -801,6 +815,23 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 tabIndex={-1}
                 autoComplete="off"
               />
+
+              {/* Preferred language (English by default): the app's menus, buttons and messages use it */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Preferred language</label>
+                <button
+                  type="button"
+                  onClick={() => setShowLanguagePicker(true)}
+                  className="w-full flex items-center justify-between gap-2 bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 outline-none transition-all cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span translate="no" dir="auto" className="font-bold truncate">{languageInfo?.native ?? 'English'}</span>
+                    <span translate="no" className="text-xs text-zinc-500 truncate">{languageInfo?.name ?? 'English'}</span>
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />
+                </button>
+              </div>
 
               {/* Row 1: Name */}
               <div>
@@ -1412,6 +1443,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       )}
       {showPrivacyModal && (
         <PrivacyPolicy onClose={() => setShowPrivacyModal(false)} />
+      )}
+
+      {showLanguagePicker && (
+        <LanguagePicker
+          value={language}
+          onSelect={(code) => {
+            void chooseLanguage(code);
+            setShowLanguagePicker(false);
+          }}
+          onClose={() => setShowLanguagePicker(false)}
+        />
       )}
 
       {showBirthdayPicker && (

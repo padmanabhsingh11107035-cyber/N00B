@@ -135,5 +135,19 @@ await db.exec(read(M11));
 check((await db.query('select count(*)::int n from shop_addresses')).rows[0].n === 1 && JSON.stringify(await snap()) === JSON.stringify(before11), 'running migration 11 a second time is harmless (nothing added twice)');
 check((await db.query(String.raw`select count(*)::int n from pg_indexes where indexname = 'shop_addresses_one_default_idx'`)).rows[0].n === 1, 'and the "one default per person" rule exists exactly once');
 
+section('Applying migration 12 (languages) on top');
+const M12 = '20260920000012_languages.sql';
+const before12 = await snap();
+const orders12 = (await db.query('select count(*)::int n from store_orders')).rows[0].n;
+const addresses12 = (await db.query('select count(*)::int n from shop_addresses')).rows[0].n;
+await db.exec(read(M12));
+check(JSON.stringify(await snap()) === JSON.stringify(before12), 'migration 12 changes no count and no point total');
+check((await db.query('select count(*)::int n from store_orders')).rows[0].n === orders12 && (await db.query('select count(*)::int n from shop_addresses')).rows[0].n === addresses12, 'and no order and no address');
+check((await db.query('select count(*)::int n from ui_translations')).rows[0].n === 0, 'the translation table starts empty');
+check(await asUser(db, someone, async () => JSON.stringify((await db.query(`select public.get_ui_translations('hi') as r`)).rows[0].r) === '{}'), 'a signed-in person can ask for a language (nothing stored yet)');
+check(await asUser(db, someone, async () => (await db.query('select public.get_my_user() as r')).rows[0].r.username.length > 0), 'signing in still works');
+await db.exec(read(M12));
+check(JSON.stringify(await snap()) === JSON.stringify(before12), 'running migration 12 a second time is harmless');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

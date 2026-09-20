@@ -662,7 +662,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           </div>
 
           {/* Caption */}
-          <p className="text-xs text-gray-200 line-clamp-2 leading-snug drop-shadow-md">
+          <p translate="no" className="text-xs text-gray-200 line-clamp-2 leading-snug drop-shadow-md">
             {currentReel.caption}
           </p>
 
@@ -919,7 +919,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               <p className="text-center text-gray-500 py-6">No comments yet. Be the first to comment!</p>
             ) : (
               reelComments.map((c) => (
-                <div key={c.id} className="p-2 bg-neutral-900 rounded-lg">
+                <div key={c.id} translate="no" className="p-2 bg-neutral-900 rounded-lg">
                   <span className="font-bold text-[#00FF66]">@{c.username}:</span> {c.text}
                 </div>
               ))

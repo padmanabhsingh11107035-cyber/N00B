@@ -1993,7 +1993,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     ) : isSticker && m.text ? (
                       <p className="text-7xl leading-none">{m.text}</p>
                     ) : m.text ? (
-                      <p className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
+                      <p translate="no" className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
                     ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite ? (
                       <p className="italic text-zinc-400 text-xs flex items-center gap-1">
                         📷 <span>Shared Attachment</span>
@@ -2002,7 +2002,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     {/* Translated text */}
                     {m.translatedText && (
-                      <p className="mt-1.5 pt-1.5 border-t border-zinc-700/60 text-[11px] text-cyan-300 italic">
+                      <p translate="no" className="mt-1.5 pt-1.5 border-t border-zinc-700/60 text-[11px] text-cyan-300 italic">
                         🌐 {m.translatedText}
                       </p>
                     )}

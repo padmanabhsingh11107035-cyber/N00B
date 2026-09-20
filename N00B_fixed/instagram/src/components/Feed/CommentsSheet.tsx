@@ -195,7 +195,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
                         )}
                         <span className="text-[10px] text-gray-400">{c.createdAt}</span>
                       </div>
-                      <p className="text-xs text-gray-200 mt-1 whitespace-pre-line leading-relaxed">
+                      <p translate="no" className="text-xs text-gray-200 mt-1 whitespace-pre-line leading-relaxed">
                         {c.text}
                       </p>
                     </div>

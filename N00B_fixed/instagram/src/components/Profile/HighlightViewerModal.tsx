@@ -180,7 +180,7 @@ export const HighlightViewerModal: React.FC<HighlightViewerModalProps> = ({
         {/* Bottom Caption & Date */}
         {currentMedia.caption && (
           <div className="relative z-30 p-4 bg-gradient-to-t from-black/90 to-transparent text-white">
-            <p className="text-xs font-medium leading-relaxed">{currentMedia.caption}</p>
+            <p translate="no" className="text-xs font-medium leading-relaxed">{currentMedia.caption}</p>
           </div>
         )}
       </div>

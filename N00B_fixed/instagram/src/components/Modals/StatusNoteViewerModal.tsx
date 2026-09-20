@@ -195,7 +195,7 @@ export const StatusNoteViewerModal: React.FC<StatusNoteViewerModalProps> = ({
           <div className="relative w-full max-w-sm">
             <div className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border-2 border-[#00FF66] rounded-3xl p-6 shadow-[0_0_30px_rgba(0,255,102,0.2)] text-center relative overflow-hidden group">
               <Sparkles className="w-4 h-4 text-[#00FF66] absolute top-3 left-3 opacity-60" />
-              <p className="text-base sm:text-lg font-bold text-white leading-relaxed break-words px-2">
+              <p translate="no" className="text-base sm:text-lg font-bold text-white leading-relaxed break-words px-2">
                 "{note.text}"
               </p>
               {note.location && (

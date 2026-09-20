@@ -95,6 +95,11 @@ import { ProFeaturesModal } from './ProFeaturesModal';
 import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { HideProfileModal } from '../Modals/HideProfileModal';
+import { Globe as GlobeIcon } from 'lucide-react';
+import { LanguagePicker } from '../Common/LanguagePicker';
+import { useLanguage } from '../../i18n/useLanguage.ts';
+import { chooseLanguage } from '../../i18n/account.ts';
+import { findLanguage } from '../../i18n/languages.ts';
 import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
@@ -223,6 +228,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showLiveAvatarModal, setShowLiveAvatarModal] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showHideProfileModal, setShowHideProfileModal] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
@@ -678,6 +685,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <span className="text-[10px] text-zinc-400 block truncate">
                     Tap to switch to {theme === 'dark' ? 'Light' : 'Dark'} theme
                   </span>
+                </div>
+              </button>
+
+              {/* Universal: Language */}
+              <button
+                onClick={() => {
+                  setShowThreeDotsMenu(false);
+                  setShowLanguagePicker(true);
+                }}
+                className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <GlobeIcon className="w-4 h-4 text-sky-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-white block group-hover:text-sky-300 transition-colors">Language</span>
+                  <span translate="no" dir="auto" className="text-[10px] text-zinc-400 block truncate">{findLanguage(language)?.native ?? 'English'}</span>
                 </div>
               </button>
 
@@ -1863,6 +1887,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showHideProfileModal && <HideProfileModal currentUser={currentUser} onClose={() => setShowHideProfileModal(false)} onUserUpdated={onUserUpdated} />}
+      {showLanguagePicker && (
+        <LanguagePicker
+          value={language}
+          onSelect={(code) => {
+            void chooseLanguage(code);
+            setShowLanguagePicker(false);
+          }}
+          onClose={() => setShowLanguagePicker(false)}
+        />
+      )}
 
       {showBlockedAccountsModal && (
         <BlockedAccountsModal

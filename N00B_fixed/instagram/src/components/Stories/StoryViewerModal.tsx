@@ -398,7 +398,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             {story.comments.filter(Boolean).map((c) => (
               <div key={c.id} className="bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-gray-200 flex items-center gap-2">
                 <span className="font-bold text-[#00FF66]">@{c.username}:</span>
-                <span className="truncate">{c.text}</span>
+                <span translate="no" className="truncate">{c.text}</span>
               </div>
             ))}
           </div>

@@ -81,6 +81,7 @@ import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
 import { readDiag, explainSessionEnd } from './services/authDiag';
 import { installContentProtection } from './utils/contentProtection';
+import { applyAccountLanguage, setSignedIn } from './i18n/account.ts';
 import { isMainAdmin } from './adminAccess';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
@@ -275,6 +276,13 @@ export default function App() {
   useEffect(() => {
     if (!currentUser || isMainAdmin(currentUser)) return;
     return installContentProtection();
+  }, [currentUser?.id]);
+
+  // Language: a logged-in person gets the language saved on their account (or their account takes the one this device is showing),
+  // and the translator quietly prepares the rest of the app while they use it.
+  useEffect(() => {
+    setSignedIn(!!currentUser);
+    if (currentUser) void applyAccountLanguage();
   }, [currentUser?.id]);
 
   // Notifications arrive LIVE: the database tells this screen the moment one is created (Realtime), and it also

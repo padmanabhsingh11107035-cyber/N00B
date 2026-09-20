@@ -298,3 +298,8 @@ body.light .chat-wallpaper {
 }
 
 
+
+/* While a saved language is being applied at start-up the page stays hidden for a moment, instead of flashing English first. */
+html[data-i18n-loading] body {
+  visibility: hidden;
+}

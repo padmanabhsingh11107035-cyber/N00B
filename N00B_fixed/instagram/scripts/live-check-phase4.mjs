@@ -94,12 +94,16 @@ try {
   // =====================================================================================
   section('Shop: orders (only the refusals — no real order is placed)');
   const order = (p) => rpc(A.c, 'place_store_order', { p });
-  check(await fails(() => order({ items: [], deliveryMethod: 'pickup', contact }), /cart is empty/), 'an empty cart is refused');
-  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'pickup', contact }), /no longer available/), 'a product that does not exist is refused');
-  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 0 }], deliveryMethod: 'pickup', contact }), /not valid/), 'a quantity of 0 is refused');
-  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'courier', contact }), /pickup or delivery/), 'an unknown delivery method is refused');
-  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'pickup', contact: {} }), /full name/), 'no name is refused');
-  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'delivery', contact: { fullName: 'Live Check', phone: '9876543210' } }), /delivery address/), 'delivery without an address is refused');
+  // When the owner has switched orders OFF, the shop says so before checking anything else: that is the correct refusal then.
+  const ordersOn = (await rpc(A.c, 'get_app_settings')).storeEnabled !== false;
+  if (!ordersOn) console.log('  (the shop\'s Orders switch is OFF right now: every order is refused with the "paused" message, which is expected)');
+  const refused = (re) => (ordersOn ? re : /paused by NOOB/);
+  check(await fails(() => order({ items: [], deliveryMethod: 'pickup', contact }), refused(/cart is empty/)), 'an empty cart is refused');
+  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'pickup', contact }), refused(/no longer available/)), 'a product that does not exist is refused');
+  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 0 }], deliveryMethod: 'pickup', contact }), refused(/not valid/)), 'a quantity of 0 is refused');
+  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'courier', contact }), refused(/pickup or delivery/)), 'an unknown delivery method is refused');
+  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'pickup', contact: {} }), refused(/full name/)), 'no name is refused');
+  check(await fails(() => order({ items: [{ productId: ZERO, quantity: 1 }], deliveryMethod: 'delivery', contact: { fullName: 'Live Check', phone: '9876543210' } }), refused(/delivery address/)), 'delivery without an address is refused');
   check((await rpc(A.c, 'my_store_orders')).orders.length === 0, 'a new account has no orders');
   check(await fails(() => rpc(A.c, 'cancel_my_store_order', { p_id: ZERO }), /Order not found/), 'cancelling an order that is not yours is refused');
   check(!!(await A.c.from('store_orders').select('*').limit(1)).error && !!(await A.c.from('store_order_items').select('*').limit(1)).error, 'the order tables can not be read directly');

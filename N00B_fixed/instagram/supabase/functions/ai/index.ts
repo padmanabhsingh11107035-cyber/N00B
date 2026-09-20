@@ -224,7 +224,7 @@ async function availableModels(apiKey: string): Promise<string[]> {
 }
 
 // Returns the reply (or null) plus a short list of what was tried, e.g. ["llama-3.3-70b-versatile:404"].
-async function queryGroq(messages: { role: string; content: string }[], opts: { temperature?: number } = {}): Promise<{ reply: string | null; tried: string[] }> {
+async function queryGroq(messages: { role: string; content: string }[], opts: { temperature?: number; accept?: (text: string) => boolean } = {}): Promise<{ reply: string | null; tried: string[] }> {
   const tried: string[] = [];
   const apiKey = Deno.env.get('GROQ_API_KEY');
   if (!apiKey) return { reply: null, tried: ['no-key'] };
@@ -247,6 +247,7 @@ async function queryGroq(messages: { role: string; content: string }[], opts: { 
       const data: any = await res.json();
       const reply = data?.choices?.[0]?.message?.content?.trim();
       if (!reply) tried.push(`${model}:empty`);
+      if (reply && opts.accept && !opts.accept(reply)) { tried.push(`${model}:odd`); return null; }
       return reply || null;
     } catch (err: any) {
       console.warn(`AI query error with ${model}:`, err?.message || err);
@@ -523,6 +524,15 @@ async function handleTranslateUi(body: any, admin: any, userId: string | null, i
   return json({ translations, ...(rows.length < missing.length ? { busy: true } : {}) });
 }
 
+// A support answer that is only a scrap of a sentence ("in the chat.") is not an answer: the next model is tried instead of showing it.
+function plausibleSupportReply(text: string): boolean {
+  const t = text.trim();
+  if (t.startsWith('[[END]]')) return true; // the marker that ends a chat can stand alone
+  if (t.length < 8) return false;
+  if (t.length < 80 && /^[a-z]/.test(t)) return false;
+  return true;
+}
+
 // One line of text safe to place inside the assistant's instructions (someone's bio must never act as an instruction).
 const oneLine = (s: unknown, max = 200) => String(s ?? '').replace(/[\r\n\t]+/g, ' ').replace(/["`]/g, "'").slice(0, max);
 
@@ -602,7 +612,7 @@ THE PAGES:
    - The four tabs are Shop, Cart, Orders and Account (shown as your own profile picture).
    - Products have a name, photos or videos, a price in rupees (₹), sometimes versions such as colour or size ("Choose options") and a stock level. You can search, sort by newest or price, filter by price range, in-stock only and colour. Tap a product to read its description.
    - Your cart is remembered on your device for your account.
-   - Checkout: choose Pickup or Delivery. Delivery adds a flat delivery charge that is shown before you confirm, and needs a saved delivery address. Pickup needs your name and a phone number. There is NO online payment: you pay when you pick the order up or when it is delivered.
+   - Checkout: choose Pickup or Delivery. Delivery adds a flat delivery charge that is shown before you confirm, and needs a saved delivery address. Pickup needs your name and a phone number. There is NO online payment: you pay the shop directly when you pick the order up or when it is delivered. The app does not say which payment method is accepted, so NEVER name one (do not say cash, UPI or card); if asked, say the shop will confirm it when it contacts them, or suggest a support ticket.
    - Pickup place: Divyajivan Residency, Nigam Nagar, Chandkheda, Ahmedabad, Gujarat 382424 (the shop shows it on a map).
    - Account tab: "Your Addresses" (up to 10, one marked as the default) and your contact details. Only you and the shop can see them. Add more addresses with "Add address" and pick one at checkout.
    - Orders tab: your orders and their status: placed, then confirmed, then ready (ready for pickup, or out for delivery), then completed. You get a notification at each step. You can cancel an order yourself only while it is still "placed"; after the shop confirms it, contact the shop to change it. Cancelling puts the items back in stock. You can have at most 5 open orders at a time.
@@ -732,7 +742,7 @@ Deno.serve(async (req) => {
     .filter((h: any) => h.content.trim());
   // (the current message is already the last item in the app's history — don't send it twice)
   if (history.length && history[history.length - 1].role === 'user' && history[history.length - 1].content.trim() === text.slice(0, 500).trim()) history.pop();
-  const { reply: ai, tried } = await queryGroq([{ role: 'system', content: buildSystemPrompt(me, LANGUAGE_NAMES[String(body.lang ?? '')] || 'English') }, ...history, { role: 'user', content: text }]);
+  const { reply: ai, tried } = await queryGroq([{ role: 'system', content: buildSystemPrompt(me, LANGUAGE_NAMES[String(body.lang ?? '')] || 'English') }, ...history, { role: 'user', content: text }], { accept: plausibleSupportReply });
   if (ai) {
     // The assistant answers [[END]] + a goodbye when the person asks to end the chat or the call (in any language): the app then ends
     // the session and asks for the 5-star review.

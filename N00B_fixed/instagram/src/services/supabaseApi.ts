@@ -1913,9 +1913,10 @@ export async function fetchInsights(): Promise<ProfessionalInsights> {
 export async function askAiSupportAssistant(
   message: string,
   conversationHistory?: Array<{ sender: 'user' | 'bot'; text: string }>
-): Promise<{ success: boolean; reply: string; model?: string; user?: any; error?: string }> {
+): Promise<{ success: boolean; reply: string; model?: string; user?: any; error?: string; action?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'support', message, conversationHistory } });
+    // lang: the language the person chose for the app, so the assistant answers in it
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'support', message, conversationHistory, lang: getLanguage() } });
     if (error) throw error;
     return data as any;
   } catch (err) {

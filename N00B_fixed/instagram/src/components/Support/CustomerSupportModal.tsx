@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { User } from '../../types';
 import { askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary } from '../../services/api';
+import { wantsToEndSession, goodbyeMessage, goodbyeSpoken } from './supportIntents';
 import confetti from 'canvas-confetti';
 
 interface CustomerSupportModalProps {
@@ -492,6 +493,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     startVoiceListening();
   };
 
+  // The person asked to end the chat (or the assistant understood that they did): the session ends and the 5-star review opens.
+  const finishChatByRequest = () => {
+    stopSpeaking();
+    setIsChatEnded(true);
+    setTimeout(() => setShowReviewModal(true), 1400);
+  };
+
   // Send message to AI Support (Chat assistant does NOT speak, purely text)
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -508,6 +516,17 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
+
+    // "end chat", "bye", ...: say goodbye, ask for the 5-star review, and end the session (no need to ask the AI)
+    if (wantsToEndSession(userText)) {
+      setMessages((prev) => [
+        ...prev,
+        { id: `msg_bot_${Date.now()}`, sender: 'bot', text: goodbyeMessage(currentUser.username, 'chat'), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      ]);
+      finishChatByRequest();
+      return;
+    }
+
     setIsTyping(true);
     setErrorMessage('');
 
@@ -526,6 +545,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         };
 
         setMessages((prev) => [...prev, botMsg]);
+        // (the assistant understood a request to end the chat in another language)
+        if (response.action === 'END_SESSION') finishChatByRequest();
         // Note: Chat assistant does NOT speak aloud; voice is strictly reserved for Voice Calls
       } else {
         throw new Error(response.error || 'Failed to get answer');
@@ -535,7 +556,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const fallbackMsg: ChatMessage = {
         id: `msg_bot_${Date.now()}`,
         sender: 'bot',
-        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with our mini-games (+10M win / +5M tie points), continuous background music playback, story highlights, automated feed/reels media sorting, and our full Terms & Conditions & Privacy Policy!`,
+        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with every part of NOOB: the feed, reels, chat, mini-games (+10M win / +5M tie points), the music hub, your profile and settings, your wallet and NOOB Pro, the NOOB Shop (real products, delivered or picked up), and our Terms & Conditions & Privacy Policy!`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -605,6 +626,25 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     }, 2500);
   };
 
+  // The person asked to end the call (or the assistant understood that they did): say goodbye out loud (asking for the 5-star review),
+  // wait until it has been said, then hang up; the review opens by itself when the call ends.
+  const endCallByRequest = (speak: boolean) => {
+    if (!speak) {
+      setTimeout(() => handleEndCall(), 1800);
+      return;
+    }
+    let waited = 0;
+    setTimeout(() => {
+      const timer = setInterval(() => {
+        waited += 250;
+        if (!isSpeakingRef.current || waited > 13000) {
+          clearInterval(timer);
+          handleEndCall();
+        }
+      }, 250);
+    }, 900);
+  };
+
   // Submit and answer an issue live during the voice call
   const handleAskCallQuestion = async (queryText: string) => {
     if (!queryText.trim() || isCallProcessing) return;
@@ -619,6 +659,18 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setCallTranscript((prev) => [...prev, userEntry]);
+
+    // "end call", "hang up", "bye", ...: say goodbye (asking for the 5-star review) and hang up
+    if (wantsToEndSession(cleanQuery)) {
+      const text = goodbyeMessage(currentUser.username, 'call');
+      setCallTranscript((prev) => [...prev, { sender: 'ai' as const, text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      setLastAiReply(text);
+      const speak = isSpeakerOn && voiceEnabled;
+      if (speak) speakText(goodbyeSpoken(currentUser.username));
+      setIsCallProcessing(false);
+      endCallByRequest(speak);
+      return;
+    }
 
     try {
       const history = callTranscript.map((t) => ({ sender: t.sender === 'ai' ? 'bot' : 'user', text: t.text }));
@@ -637,6 +689,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       if (isSpeakerOn && voiceEnabled) {
         speakText(aiReply);
       }
+      // (the assistant understood a request to end the call in another language)
+      if (response?.action === 'END_SESSION') endCallByRequest(isSpeakerOn && voiceEnabled);
     } catch (err) {
       const fallbackReply = `I understand your question regarding ${cleanQuery}. On NOOB, all features operate instantly in real-time. You have complete data control and 24/7 access to mini-games, music, and encrypted media routing.`;
       setCallTranscript((prev) => [
@@ -715,6 +769,14 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     {
       q: 'How do I earn NOOB points & climb the Leaderboard?',
       a: 'Play any of our Mini-Games! Winning an arcade match awards +10,000,000 NOOB points, and tying awards +5,000,000 NOOB points. Your rank updates in real-time on the Global Leaderboard.'
+    },
+    {
+      q: 'Does the NOOB Shop sell real products, and how do I order?',
+      a: 'Yes. The NOOB Shop sells real, physical products (like mugs and sticker sheets) priced in rupees. Open it from Profile → the ⋮ menu → NOOB Shop, add items to your cart, and check out with Pickup or Delivery. There is no online payment: you pay when you pick the order up or when it is delivered. You can follow your order under Orders, and cancel it yourself until the shop confirms it.'
+    },
+    {
+      q: 'Can I use NOOB in my own language?',
+      a: 'Yes. Choose your language on the sign-up or login page, or later from Profile → the ⋮ menu → Language. Menus, buttons and messages switch to it; posts, reels and what people write stay as they were written. In a chat, tap the globe icon on a message to translate it into your language.'
     },
     {
       q: 'How does background music work?',
@@ -955,6 +1017,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                 >
                   🎮 Mini-Games (+10M Win)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPrompt('How do I order from the NOOB Shop?')}
+                  className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  🛍️ NOOB Shop
                 </button>
                 <button
                   type="button"

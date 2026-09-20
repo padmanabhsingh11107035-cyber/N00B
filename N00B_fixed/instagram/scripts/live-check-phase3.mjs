@@ -152,7 +152,8 @@ try {
   check(await fails(() => rpc(A.c, 'submit_report', { p_target: A.username }), /cannot report or block your own account/), 'you can not report yourself');
   await rpc(A.c, 'screenshot_alert', { p_type: 'profile', p_id: B.id });
   check((await rpc(B.c, 'my_notifications')).notifications.some((n) => n.type === 'screenshot_alert'), 'a screenshot alert reaches the owner');
-  check((await rpc(A.c, 'match_contacts', { p_numbers: ['9999999999', '12345', 'junk'] })).length === 0, 'contact matching returns nobody for unknown numbers');
+  const unknownNumber = '5' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');   // a fresh random number each run: real people sign up over time, so a fixed "unknown" number can end up belonging to somebody
+  check((await rpc(A.c, 'match_contacts', { p_numbers: [unknownNumber, '12345', 'junk'] })).length === 0, 'contact matching returns nobody for unknown numbers');
   const sum = await rpc(A.c, 'support_rating_summary');
   check(typeof sum.count === 'number' && 'average' in sum, 'the support rating summary works');
   check(Array.isArray(await rpc(A.c, 'list_store_products')), 'the store product list works');

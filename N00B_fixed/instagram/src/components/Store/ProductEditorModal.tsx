@@ -35,6 +35,7 @@ let nextOptionId = 1;
 
 export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product, onClose, onSaved }) => {
   const editing = !!product;
+  const [name, setName] = useState(product?.name ?? '');
   const [price, setPrice] = useState(product ? String(product.price) : '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [media, setMedia] = useState<StoreProductMedia[]>(product?.media ?? []);
@@ -139,6 +140,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
   const handleSubmit = async () => {
     setError(null);
     const parsedPrice = Number(price);
+    if (name.trim().length > 80) { setError('The product name can be at most 80 characters.'); return; }
     if (!price || !Number.isFinite(parsedPrice) || parsedPrice <= 0) { setError('Enter a valid price.'); return; }
     if (!description.trim()) { setError('A description is required.'); return; }
     if (media.length === 0) { setError('Add at least one photo or video.'); return; }
@@ -174,13 +176,13 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
         if (Number.isNaN(n)) { setError(`Stock must be a whole number from 0 to ${MAX_STOCK.toLocaleString()} (check ${Object.values(c.options).join(' / ')}).`); return; }
         variants.push({ options: c.options, stock: n ?? 0 });
       }
-      payload = { price: parsedPrice, description: description.trim(), media, options: finalOptions, variants, stock: null, inStock: variants.some((v) => v.stock > 0) };
+      payload = { name: name.trim(), price: parsedPrice, description: description.trim(), media, options: finalOptions, variants, stock: null, inStock: variants.some((v) => v.stock > 0) };
     } else if (trackStock) {
       const n = toStockNumber(stockInput);
       if (n === null || Number.isNaN(n)) { setError(`Enter how many are in stock (0 if none) — a whole number up to ${MAX_STOCK.toLocaleString()}.`); return; }
-      payload = { price: parsedPrice, description: description.trim(), media, options: [], variants: [], stock: n, inStock: n > 0 };
+      payload = { name: name.trim(), price: parsedPrice, description: description.trim(), media, options: [], variants: [], stock: n, inStock: n > 0 };
     } else {
-      payload = { price: parsedPrice, description: description.trim(), media, options: [], variants: [], stock: null, inStock };
+      payload = { name: name.trim(), price: parsedPrice, description: description.trim(), media, options: [], variants: [], stock: null, inStock };
     }
 
     setSubmitting(true);
@@ -209,6 +211,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer" aria-label="Close">
             <X className="w-5 h-5 text-zinc-400" />
           </button>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold text-zinc-400 uppercase">Product name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="e.g. Man Hoodie" className={inputCls} />
+          <p className="text-[10px] text-zinc-600">Shown on the shop shelf. The description below is only shown when someone opens the product.</p>
         </div>
 
         <div className="space-y-1.5">

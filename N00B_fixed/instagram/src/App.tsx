@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import { Post, Reel, Story, User, StatusNote, AppNotification } from './types';
 import {
-  fetchCurrentUser,
   checkSessionStatus,
+  loadSignedInUser,
   fetchPosts,
   fetchStories,
   fetchReels,
@@ -78,6 +78,7 @@ import { FindFriendsModal } from './components/Modals/FindFriendsModal';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
+import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -218,23 +219,21 @@ export default function App() {
   // actually happened to their account. `unknown` is now ignored outright,
   // and even a real `invalid` needs to repeat on the very next poll before
   // acting, so one fluky response can't end a session by itself.
-  const consecutiveInvalidRef = useRef(0);
+  //
+  // What it says matters: "suspended" only when the database really says the account is suspended. A login that simply
+  // ended (the saved login was removed after a failed renewal, another tab signed out...) is reported as "you were
+  // signed out", and a check that could not be completed does nothing (see utils/sessionWatch.ts).
+  const watchRef = useRef<WatchState>(initialWatch);
   useEffect(() => {
     if (!currentUser) return;
-    consecutiveInvalidRef.current = 0;
+    watchRef.current = initialWatch;
     const interval = setInterval(async () => {
-      const status = await checkSessionStatus();
-      if (status === 'unknown') return;
-      if (status === 'valid') {
-        consecutiveInvalidRef.current = 0;
-        return;
-      }
-      consecutiveInvalidRef.current += 1;
-      if (consecutiveInvalidRef.current >= 2) {
-        setSessionEndedNotice('Your account has been suspended by the NOOB administrator. You will not be able to log back in until it is restored.');
-        setSessionUserId(null);
-        setCurrentUser(null);
-      }
+      const step = stepWatch(watchRef.current, await checkSessionStatus());
+      watchRef.current = step.state;
+      if (!step.end) return;
+      setSessionEndedNotice(SESSION_ENDED_MESSAGE[step.end]);
+      setSessionUserId(null);
+      setCurrentUser(null);
     }, 30000);
     return () => clearInterval(interval);
   }, [currentUser?.id]);
@@ -296,7 +295,7 @@ export default function App() {
       setLoading(true);
       setInitialLoadFailed(false);
       const [user, pList, sList, rList, uList, notifRes] = await Promise.all([
-        fetchCurrentUser(),
+        loadSignedInUser(), // a failed request is an error (Retry screen), not "logged out"
         fetchPosts(),
         fetchStories(),
         fetchReels(),
@@ -635,6 +634,7 @@ export default function App() {
     if (user && user.id) {
       setSessionUserId(user.id);
     }
+    setSessionEndedNotice(null);
     setCurrentUser(user);
     loadInitialData();
   };

@@ -14,7 +14,7 @@ export const ADMIN_PERMISSIONS: { key: AdminPermission; label: string; descripti
   { key: 'handle_reports', label: 'Handle reports', description: 'Read reports from members and resolve, dismiss or ban.' },
   { key: 'send_notifications', label: 'Send notifications', description: 'Send a notification to one person or to everyone.' },
   { key: 'manage_coupons', label: 'Manage coupons', description: 'Create, switch off and delete coupons.' },
-  { key: 'manage_store', label: 'Manage the shop', description: 'Add, edit and remove shop products, and set their stock.' },
+  { key: 'manage_store', label: 'Manage the shop', description: 'Add, edit and remove shop products, set their stock, and handle customer orders.' },
   { key: 'moderate_content', label: 'Remove posts, reels & stories', description: 'Delete anyone\'s post, reel, story or comment.' },
   { key: 'moderate_chats', label: 'Delete chat messages', description: 'Delete any message in any chat.' }
 ];

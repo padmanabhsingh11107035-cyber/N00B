@@ -4,10 +4,11 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
+import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 
 // ----------------------------------------------------------------------------- plumbing
@@ -291,19 +292,29 @@ export async function fetchCurrentUser(): Promise<User | null> {
   }
 }
 
-// Only "you are definitely logged out / suspended" counts as invalid; a network blip is "unknown".
-export async function checkSessionStatus(): Promise<'valid' | 'invalid' | 'unknown'> {
+// Is this person still logged in, and is the account OK? "suspended" is reported ONLY when the database says so;
+// "signed-out" when this browser no longer holds a login; anything that could not be checked is "unknown"
+// (and never ends a session). See utils/sessionWatch.ts.
+export async function checkSessionStatus(): Promise<SessionStatus> {
   try {
     const { data, error } = await supabase.auth.getSession();
-    if (error) return 'unknown';
-    if (!data.session) return 'invalid';
+    if (error || !data.session) return classifySession({ sessionCheckFailed: !!error, hasSession: false, profileCheckFailed: false, profileFound: false, isSuspended: false });
     const { data: row, error: qErr } = await supabase.from('profiles').select('is_suspended').eq('id', data.session.user.id).maybeSingle();
-    if (qErr) return 'unknown';
-    if (!row || row.is_suspended) return 'invalid';
-    return 'valid';
+    return classifySession({ sessionCheckFailed: false, hasSession: true, profileCheckFailed: !!qErr, profileFound: !!row, isSuspended: !!row?.is_suspended });
   } catch {
     return 'unknown';
   }
+}
+
+// For loading the app: like fetchCurrentUser, but a FAILED request is an error ("couldn't load, retry") instead of
+// looking like "nobody is logged in", which would drop a signed-in person on the login screen after a connection hiccup.
+// Returns null only when there really is no login saved in this browser.
+export async function loadSignedInUser(): Promise<User | null> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (!data.session) return null;
+  const user = await rpc<User | null>('get_my_user');
+  return user ? (mapUser(user) as User) : null;
 }
 
 // The old PUT /users/me only ever accepted these fields; everything else goes through updateFullProfile.
@@ -1706,6 +1717,8 @@ export async function revealScratchCard(
 
 const mapProduct = (p: any): StoreProduct => ({
   ...p,
+  name: p.name || '',
+  title: p.title || p.name || String(p.description || '').split(String.fromCharCode(10))[0].slice(0, 60) || 'Product',
   stock: p.stock ?? null,
   options: p.options || [],
   variants: p.variants || [],
@@ -1742,6 +1755,101 @@ export async function updateStoreProduct(productId: string, payload: StoreProduc
 
 export async function deleteStoreProduct(productId: string): Promise<{ success: boolean; error?: string }> {
   try { return await rpc('delete_store_product', { p_id: productId }); } catch (err) { return failWith(err, 'Could not remove the product.'); }
+}
+
+// ---- shop account details (contact details + address saved for checkout) and orders
+
+export async function getShopDetails(): Promise<{ success: boolean; details: Partial<ShopDetails>; error?: string }> {
+  try {
+    const res = await rpc<any>('get_shop_details');
+    return { success: true, details: res.details || {} };
+  } catch (err) {
+    return { success: false, details: {}, error: errorText(err, 'Could not load your details.') };
+  }
+}
+
+export async function saveShopDetails(details: Partial<ShopDetails>): Promise<{ success: boolean; details?: Partial<ShopDetails>; error?: string }> {
+  try { return await rpc('save_shop_details', { p: details }); } catch (err) { return failWith(err, 'Could not save your details.'); }
+}
+
+const mapOrder = (o: any): StoreOrder => ({
+  ...o,
+  items: (o.items || []).map((i: any) => ({ ...i, image: i.image ? resolveMedia(i.image) : null })),
+  customer: o.customer ? { ...o.customer, avatar: resolveMedia(o.customer.avatar) } : o.customer
+});
+
+// Payment is on pickup / on delivery (there is no online payment). Prices and stock are always taken from the database.
+export async function placeStoreOrder(payload: {
+  items: { productId: string; variantKey?: string | null; quantity: number }[];
+  deliveryMethod: 'pickup' | 'delivery';
+  contact: Partial<ShopDetails>;
+  note?: string;
+  saveDetails?: boolean;
+}): Promise<{ success: boolean; order?: StoreOrder; error?: string }> {
+  try {
+    const res = await rpc<any>('place_store_order', { p: payload });
+    return { ...res, order: res.order ? mapOrder(res.order) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not place your order.');
+  }
+}
+
+export async function fetchMyStoreOrders(): Promise<{ success: boolean; orders: StoreOrder[]; error?: string }> {
+  try {
+    const res = await rpc<any>('my_store_orders');
+    return { success: true, orders: (res.orders || []).map(mapOrder) };
+  } catch (err) {
+    return { success: false, orders: [], error: errorText(err, 'Could not load your orders.') };
+  }
+}
+
+export async function cancelMyStoreOrder(orderId: string): Promise<{ success: boolean; order?: StoreOrder; error?: string }> {
+  try {
+    const res = await rpc<any>('cancel_my_store_order', { p_id: orderId });
+    return { ...res, order: res.order ? mapOrder(res.order) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not cancel the order.');
+  }
+}
+
+// The shop's side: everyone's orders, and moving an order along (needs the "manage the shop" permission).
+export async function fetchAdminStoreOrders(status?: string): Promise<{ success: boolean; orders: StoreOrder[]; openCount: number; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_store_orders', { p_status: status || null });
+    return { success: true, orders: (res.orders || []).map(mapOrder), openCount: res.openCount || 0 };
+  } catch (err) {
+    return { success: false, orders: [], openCount: 0, error: errorText(err, 'Could not load the orders.') };
+  }
+}
+
+export async function setStoreOrderStatus(orderId: string, status: string, reason?: string): Promise<{ success: boolean; order?: StoreOrder; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_set_store_order_status', { p_id: orderId, p_status: status, p_reason: reason || null });
+    return { ...res, order: res.order ? mapOrder(res.order) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not update the order.');
+  }
+}
+
+// ---- hide my profile from chosen people (they can not see it, and are not told)
+
+export interface HiddenFromUser { id: string; username: string; displayName?: string; avatar?: string; isVerified?: boolean; hiddenAt?: string }
+
+export async function hideProfileFrom(userId: string): Promise<{ success: boolean; hiddenFromIds?: string[]; error?: string }> {
+  try { return await rpc('hide_profile_from', { p_user: userId }); } catch (err) { return failWith(err, 'Could not hide your profile.'); }
+}
+
+export async function unhideProfileFrom(userId: string): Promise<{ success: boolean; hiddenFromIds?: string[]; error?: string }> {
+  try { return await rpc('unhide_profile_from', { p_user: userId }); } catch (err) { return failWith(err, 'Could not show your profile again.'); }
+}
+
+export async function fetchHiddenFrom(): Promise<{ success: boolean; users: HiddenFromUser[]; error?: string }> {
+  try {
+    const res = await rpc<any>('my_hidden_from');
+    return { success: true, users: (res.users || []).map((u: any) => ({ ...u, avatar: resolveMedia(u.avatar) })) };
+  } catch (err) {
+    return { success: false, users: [], error: errorText(err, 'Could not load the list.') };
+  }
 }
 
 // ---- insights (a creator's own numbers)

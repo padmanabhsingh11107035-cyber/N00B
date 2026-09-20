@@ -101,5 +101,23 @@ check(shopList.length === 2 && shopList.every((p) => p.stock === null && p.varia
 await db.exec(read(M9));
 check(JSON.stringify((await db.query('select id, price::text, description, media::text, in_stock from store_products order by description')).rows) === JSON.stringify(shopBefore), 'running migration 9 a second time is harmless');
 
+section('Applying migration 10 (shop orders, product names, hide profile) on top');
+const M10 = '20260920000010_shop_orders_profile_hide.sql';
+const shop10Before = (await db.query('select id, price::text, description, media::text, in_stock, stock from store_products order by description')).rows;
+const follows10Before = await snap();
+const someoneElse = (await db.query('select id from profiles where not is_admin and not is_suspended order by created_at offset 1 limit 1')).rows[0].id;
+await db.exec(read(M10));
+check(JSON.stringify((await db.query('select id, price::text, description, media::text, in_stock, stock from store_products order by description')).rows) === JSON.stringify(shop10Before), 'every existing product keeps its price, description, pictures and stock');
+check(JSON.stringify(await snap()) === JSON.stringify(follows10Before), 'migration 10 changes no count and no point total');
+const shopList10 = await asUser(db, someone, async () => (await db.query('select public.list_store_products() as r')).rows[0].r);
+check(shopList10.length === 2 && shopList10.every((p) => p.name === '' && p.title.length > 0) && shopList10.some((p) => p.title === 'Old mug'), 'old products get a title from their description');
+check(await asUser(db, someone, async () => (await db.query('select public.get_my_user() as r')).rows[0].r.hiddenFromIds.length === 0), 'signing in still works and nobody is hidden from anyone');
+check(await asUser(db, someone, async () => (await db.query(`select jsonb_array_length(public.search_users('')) n`)).rows[0].n) > 0, 'search still lists people');
+check(await asUser(db, someone, async () => (await db.query(`select count(*)::int n from follows`)).rows[0].n) > 0, 'the follow graph is still visible');
+check((await db.query('select count(*)::int n from store_orders')).rows[0].n === 0 && (await db.query('select count(*)::int n from profile_hides')).rows[0].n === 0, 'no orders, and nobody is hidden, after the upgrade');
+await db.exec(read(M10));
+check(JSON.stringify(await snap()) === JSON.stringify(follows10Before), 'running migration 10 a second time is harmless');
+check((await db.query(`select count(*)::int n from pg_trigger where tgname in ('follows_guard_hidden', 'follow_requests_guard_hidden')`)).rows[0].n === 2, 'and there is exactly one guard on each follow table');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

@@ -91,6 +91,8 @@ export interface User {
   adminPermissions?: string[];
   // Shown to administrators in the accounts list: this account is an administrator of some kind.
   isStaff?: boolean;
+  // People this account has hidden its profile from (only present on your own record).
+  hiddenFromIds?: string[];
   isSuspended?: boolean;
   suspendedReason?: string;
   // Last known IP address (captured at signup, refreshed on every login) —
@@ -127,6 +129,7 @@ export type NotificationType =
   | 'birthday_follower_alert'
   | 'new_message'
   | 'screenshot_alert'
+  | 'store_order'
   | 'system';
 
 export interface AppNotification {
@@ -229,6 +232,10 @@ export interface StoreProductVariant {
 
 export interface StoreProduct {
   id: string;
+  // The product's name (shown on the shop shelf). Empty for products made before names existed — use `title` for display.
+  name: string;
+  // What to show as the name: the name, or the first line of the description for older products.
+  title: string;
   price: number;
   description: string;
   media: StoreProductMedia[];
@@ -242,8 +249,57 @@ export interface StoreProduct {
   updatedAt?: string | null;
 }
 
+// Contact details and address saved for the shop ("account details"). Every field is text; empty means not given.
+export interface ShopDetails {
+  fullName: string;
+  phone: string;
+  altPhone: string;
+  email: string;
+  addressLine1: string;
+  addressLine2: string;
+  landmark: string;
+  city: string;
+  state: string;
+  pincode: string;
+  deliveryNotes: string;
+}
+
+export type StoreOrderStatus = 'placed' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
+
+export interface StoreOrderItem {
+  productId: string | null;
+  name: string;
+  variantKey: string | null;
+  variantLabel: string | null;
+  unitPrice: number;
+  quantity: number;
+  image?: string | null;
+}
+
+export interface StoreOrder {
+  id: string;
+  orderNo: number;
+  status: StoreOrderStatus;
+  deliveryMethod: 'pickup' | 'delivery';
+  paymentMethod: string;
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  note: string;
+  contact: Partial<ShopDetails>;
+  items: StoreOrderItem[];
+  cancelledBy?: 'customer' | 'shop' | null;
+  cancelReason?: string | null;
+  statusHistory: { status: StoreOrderStatus; at: string; by: 'customer' | 'shop' }[];
+  createdAt: string;
+  updatedAt: string;
+  // only when the shop owner looks at orders
+  customer?: { id: string; username: string; displayName?: string; avatar?: string } | null;
+}
+
 // What the admin sends when adding or editing a product.
 export interface StoreProductInput {
+  name?: string;
   price: number;
   description: string;
   media: StoreProductMedia[];

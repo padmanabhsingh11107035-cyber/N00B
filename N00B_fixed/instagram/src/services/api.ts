@@ -10,6 +10,7 @@ export {
   deleteMyAccount,
   fetchCurrentUser,
   checkSessionStatus,
+  loadSignedInUser,
   updateCurrentUser,
   updateUserBio,
   updateUserStatusNote,
@@ -132,6 +133,16 @@ export {
   fetchStoreProducts,
   createStoreProduct,
   updateStoreProduct,
+  getShopDetails,
+  saveShopDetails,
+  placeStoreOrder,
+  fetchMyStoreOrders,
+  cancelMyStoreOrder,
+  fetchAdminStoreOrders,
+  setStoreOrderStatus,
+  hideProfileFrom,
+  unhideProfileFrom,
+  fetchHiddenFrom,
   deleteStoreProduct,
   fetchInsights,
   askAiSupportAssistant,
@@ -160,7 +171,8 @@ export type {
   Coupon,
   MyCustomSticker,
   AdminStaffMember,
-  AdminAuditEntry
+  AdminAuditEntry,
+  HiddenFromUser
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

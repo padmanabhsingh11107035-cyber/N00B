@@ -36,10 +36,16 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export type PushEnableStatus = 'granted' | 'denied' | 'unsupported' | 'error';
 
+// Why it failed, so the message can say something useful:
+//   'not-set-up' - the server has no push key yet (the notification setup has not been finished)
+//   'browser'    - the browser refused or failed to subscribe
+//   'save'       - subscribed, but saving it to the account failed (connection)
+export type PushErrorReason = 'not-set-up' | 'browser' | 'save';
+
 // Shared by this soft-ask prompt AND the real on/off toggle in the
 // three-dot Profile menu, so the actual subscribe pipeline (permission,
 // VAPID key, service worker, PushManager) only has to be written once.
-export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription }> {
+export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason }> {
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     return { status: 'unsupported' };
   }
@@ -48,7 +54,7 @@ export async function enablePushNotifications(): Promise<{ status: PushEnableSta
     if (permission !== 'granted') return { status: 'denied' };
 
     const publicKey = await fetchVapidPublicKey();
-    if (!publicKey) return { status: 'error' };
+    if (!publicKey) return { status: 'error', reason: 'not-set-up' };
 
     const registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
@@ -65,11 +71,11 @@ export async function enablePushNotifications(): Promise<{ status: PushEnableSta
     }
 
     const ok = await subscribeToPush(subscription);
-    if (!ok) return { status: 'error' };
+    if (!ok) return { status: 'error', reason: 'save' };
     return { status: 'granted', subscription };
   } catch (err) {
     console.error('Failed to enable push notifications:', err);
-    return { status: 'error' };
+    return { status: 'error', reason: 'browser' };
   }
 }
 

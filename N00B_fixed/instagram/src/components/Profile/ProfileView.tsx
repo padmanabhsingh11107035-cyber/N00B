@@ -56,7 +56,9 @@ import {
   Zap,
   Bell,
   BellOff,
-  ShoppingBag
+  ShoppingBag,
+  EyeOff,
+  Eye
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
@@ -72,7 +74,9 @@ import {
   unblockUser,
   submitSafetyReport,
   toggleFollowUser,
-  unsubscribeFromPush
+  unsubscribeFromPush,
+  hideProfileFrom,
+  unhideProfileFrom
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -91,6 +95,7 @@ import { AccountsStatisticsModal } from './AccountsStatisticsModal';
 import { ProFeaturesModal } from './ProFeaturesModal';
 import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
+import { HideProfileModal } from '../Modals/HideProfileModal';
 import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
@@ -218,6 +223,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
   const [showLiveAvatarModal, setShowLiveAvatarModal] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
+  const [showHideProfileModal, setShowHideProfileModal] = useState(false);
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
@@ -425,6 +431,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
+  // Hide (or show again) MY profile from the person whose profile I am looking at. They are not told.
+  const isHiddenFromTarget = !isOwnProfile && (currentUser.hiddenFromIds || []).includes(targetUser.id);
+  const handleToggleHideFromTarget = async () => {
+    if (isOwnProfile) return;
+    setShowThreeDotsMenu(false);
+    const res = isHiddenFromTarget ? await unhideProfileFrom(targetUser.id) : await hideProfileFrom(targetUser.id);
+    if (res.success) {
+      if (onUserUpdated) onUserUpdated({ ...currentUser, hiddenFromIds: res.hiddenFromIds || [] });
+    } else {
+      window.alert(res.error || 'Could not change that. Please try again.');
+    }
+  };
+
   const handleSubmitReport = async () => {
     if (!reportReason) return;
     setIsReporting(true);
@@ -476,7 +495,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         } else if (result.status === 'unsupported') {
           setNotifToggleMessage('Push notifications aren\'t supported on this browser/device.');
         } else if (result.status === 'error') {
-          setNotifToggleMessage('Something went wrong — please try again.');
+          setNotifToggleMessage(
+            result.reason === 'not-set-up'
+              ? 'Notifications aren’t switched on at the server yet. The NOOB admin needs to finish setting them up.'
+              : result.reason === 'save'
+                ? 'Couldn’t save this setting. Check your connection and try again.'
+                : 'Your browser couldn’t turn notifications on. Try again, or check this site’s notification settings.'
+          );
         }
       }
     } finally {
@@ -589,6 +614,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {isTargetBlocked && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
                 Blocked
+              </span>
+            )}
+            {isHiddenFromTarget && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">
+                Your profile is hidden from them
               </span>
             )}
           </div>
@@ -852,6 +882,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                   </button>
 
+                  {/* Option: Hide my profile from… */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowHideProfileModal(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <EyeOff className="w-4 h-4 text-violet-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-violet-300 transition-colors">
+                        Hide my profile from…
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        {(currentUser.hiddenFromIds || []).length > 0
+                          ? `Hidden from ${(currentUser.hiddenFromIds || []).length} ${(currentUser.hiddenFromIds || []).length === 1 ? 'person' : 'people'}`
+                          : 'Choose who can’t see your profile'}
+                      </span>
+                    </div>
+                  </button>
+
                   {/* Option 3: Admin Control Panel (the NOOB admin, and anyone the NOOB admin has given admin access to) */}
                   {isStaff(currentUser) && (
                     <button
@@ -1006,6 +1059,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         {isTargetBlocked ? 'Restore visibility & interactions' : 'Prevent interaction & hide profile'}
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleToggleHideFromTarget}
+                    className="w-full p-2.5 rounded-xl hover:bg-violet-500/10 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      {isHiddenFromTarget ? <Eye className="w-4 h-4 text-violet-300" /> : <EyeOff className="w-4 h-4 text-violet-300" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-violet-300 block">
+                        {isHiddenFromTarget ? `Show my profile to @${targetUser.username}` : `Hide my profile from @${targetUser.username}`}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        {isHiddenFromTarget ? 'They can see your profile again' : 'They won’t see your profile or posts'}
                       </span>
                     </div>
                   </button>
@@ -1774,6 +1844,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onProfileUpdated={handleProfileUpdated}
         />
       )}
+
+      {showHideProfileModal && <HideProfileModal currentUser={currentUser} onClose={() => setShowHideProfileModal(false)} onUserUpdated={onUserUpdated} />}
 
       {showBlockedAccountsModal && (
         <BlockedAccountsModal

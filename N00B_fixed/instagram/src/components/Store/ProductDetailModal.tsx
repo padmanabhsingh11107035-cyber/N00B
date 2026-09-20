@@ -94,6 +94,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         </div>
 
         <div className="p-5 space-y-3">
+          <h2 className="text-lg font-black text-white leading-snug">{product.title}</h2>
           <div className="flex items-start justify-between gap-3">
             <span className="text-xl font-black text-[#00FF66]">{formatPrice(product.price)}</span>
             <span className={`text-[10px] font-bold border px-2 py-1 rounded-full shrink-0 ${TONE[stock.tone]}`}>{stock.text}</span>

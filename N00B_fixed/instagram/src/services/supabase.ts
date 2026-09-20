@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { makePatientFetch } from './authFetch';
 
 // Public values — safe to ship to every browser (the publishable key only ever grants what the
 // database's row-level-security rules allow a logged-in or logged-out visitor to do).
@@ -11,6 +12,8 @@ if (!url || !key) {
 }
 
 export const supabase = createClient(url || 'http://localhost:54321', key || 'missing-key', {
+  // A rate-limited login renewal must not sign anyone out (see authFetch.ts).
+  global: { fetch: makePatientFetch((input, init) => fetch(input, init)) },
   auth: {
     persistSession: true,
     autoRefreshToken: true,

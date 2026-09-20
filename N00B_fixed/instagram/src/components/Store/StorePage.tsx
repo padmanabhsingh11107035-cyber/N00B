@@ -33,6 +33,7 @@ import { ContactFields, prefillFromProfile, withDefaults, inputClass } from './C
 import { SORT_LABELS, SortKey, ShopFilterState, activeFilterCount, applyShopFilters, emptyFilters } from './filterLogic';
 import { formatPrice } from './formatPrice';
 import { availableStock, cartKey, isBuyable, splitCartKey, variantLabel } from './variants';
+import { loadCart, saveCart } from './cartStorage';
 
 interface StorePageProps {
   currentUser: User;
@@ -53,7 +54,8 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [view, setView] = useState<StoreView>('grid');
   // what is in the cart: a product, or one version of it (see cartKey) -> how many
-  const [cart, setCart] = useState<Record<string, number>>({});
+  // (remembered on this device for this account, so it is still here when you leave the shop and come back)
+  const [cart, setCart] = useState<Record<string, number>>(() => loadCart(currentUser.id));
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<StoreProduct | undefined>(undefined);
@@ -85,7 +87,8 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
       setProducts(p);
       setSettings(s);
       // stock may have changed since the cart was filled: drop what is gone and trim what is now more than is left
-      setCart((prev) => {
+      // (an empty product list can just be a failed load: never let that wipe a saved cart)
+      if (p.length > 0) setCart((prev) => {
         const next: Record<string, number> = {};
         for (const [key, qty] of Object.entries(prev) as [string, number][]) {
           const { productId, variantKey } = splitCartKey(key);
@@ -129,7 +132,6 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     window.setTimeout(() => setNotice((current) => (current && current.text === text ? null : current)), bad ? 6500 : 2500);
   };
 
-  const cartCount: number = (Object.values(cart) as number[]).reduce((sum, qty) => sum + qty, 0);
 
   const cartItems = useMemo(
     () =>
@@ -141,6 +143,14 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         .filter((entry): entry is { key: string; product: StoreProduct; variantKey: string | null; qty: number } => !!entry.product),
     [cart, products]
   );
+
+  // only what can actually be shown counts (a remembered item whose product was removed does not)
+  const cartCount: number = cartItems.reduce((sum, { qty }) => sum + qty, 0);
+
+  // Remember the cart every time it changes
+  useEffect(() => {
+    saveCart(currentUser.id, cart);
+  }, [cart, currentUser.id]);
 
   const visibleProducts = useMemo(() => applyShopFilters(products, filters), [products, filters]);
   const filterCount = activeFilterCount(filters);

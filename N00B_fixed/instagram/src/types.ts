@@ -264,6 +264,24 @@ export interface ShopDetails {
   deliveryNotes: string;
 }
 
+// One saved delivery address in the person's address book (only they can ever see it).
+export interface ShopAddress {
+  id: string;
+  label: string; // "Home", "Work"... (may be empty)
+  isDefault: boolean;
+  fullName: string;
+  phone: string;
+  altPhone: string;
+  addressLine1: string;
+  addressLine2: string;
+  landmark: string;
+  city: string;
+  state: string;
+  pincode: string;
+  deliveryNotes: string;
+  updatedAt?: string;
+}
+
 export type StoreOrderStatus = 'placed' | 'confirmed' | 'ready' | 'completed' | 'cancelled';
 
 export interface StoreOrderItem {

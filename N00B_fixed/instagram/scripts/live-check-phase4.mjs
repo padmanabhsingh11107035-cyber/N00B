@@ -128,6 +128,31 @@ try {
   check(u.success && u.hiddenFromIds.length === 0 && await sees(B) && await finds(B), 'unhiding gives B everything back');
 
   // =====================================================================================
+  section('Shop: address book (several saved addresses, one default)');
+  const addr = { label: 'Home', fullName: 'Live Check', phone: '+91 98765 43210', addressLine1: '12 MG Road', addressLine2: 'Shivaji Nagar', city: 'Pune', state: 'Maharashtra', pincode: '411001' };
+  const saveAddr = (c, p) => rpc(c, 'save_shop_address', { p });
+  check((await rpc(A.c, 'my_shop_addresses')).addresses.length === 0, 'a new account has no saved addresses');
+  const ad1 = await saveAddr(A.c, addr);
+  check(ad1.success && ad1.address.isDefault === true && ad1.addresses.length === 1, 'the first address becomes the default automatically');
+  const ad2 = await saveAddr(A.c, { ...addr, label: 'Work', addressLine1: 'Tech Park, Tower B', city: 'Mumbai', pincode: '400051' });
+  check(ad2.address.isDefault === false && ad2.addresses.length === 2 && ad2.addresses[0].id === ad1.address.id, 'a second address is not the default, and the default is listed first');
+  const sd = await rpc(A.c, 'set_default_shop_address', { p_id: ad2.address.id });
+  check(sd.addresses[0].id === ad2.address.id && sd.addresses.filter((a) => a.isDefault).length === 1, 'the default can be changed (and there is only ever one)');
+  const ed = await saveAddr(A.c, { ...addr, id: ad1.address.id, label: 'Flat', city: 'Pune West' });
+  check(ed.address.city === 'Pune West' && ed.address.label === 'Flat' && ed.addresses.length === 2, 'an address can be edited');
+  check(await fails(() => saveAddr(A.c, { ...addr, pincode: '' }), /pincode/i), 'an address without a pincode is refused');
+  check(await fails(() => saveAddr(A.c, { ...addr, phone: '12' }), /valid phone/i), '...and one with a bad phone number');
+  check(await fails(() => saveAddr(B.c, { ...addr, id: ad1.address.id }), /Address not found/), 'nobody can change someone else\'s address');
+  check(await fails(() => rpc(B.c, 'delete_shop_address', { p_id: ad1.address.id }), /Address not found/), '...or remove it');
+  check((await rpc(B.c, 'my_shop_addresses')).addresses.length === 0, 'and B sees none of A\'s addresses');
+  check(!!(await A.c.from('shop_addresses').select('*').limit(1)).error && !!(await anon.from('shop_addresses').select('*').limit(1)).error, 'the table can not be read directly, by anyone');
+  check(await fails(() => rpc(anon, 'my_shop_addresses'), /permission denied/), 'a logged-out visitor can not use the address book');
+  const rm = await rpc(A.c, 'delete_shop_address', { p_id: ad2.address.id });
+  check(rm.addresses.length === 1 && rm.addresses[0].isDefault === true && rm.addresses[0].id === ad1.address.id, 'removing the default promotes the remaining address to default');
+  const rm2 = await rpc(A.c, 'delete_shop_address', { p_id: ad1.address.id });
+  check(rm2.addresses.length === 0, 'removing the last one leaves none');
+
+  // =====================================================================================
   section('Staying logged in (the check the app runs every 30 seconds)');
   const row = await A.c.from('profiles').select('is_suspended').eq('id', A.id).maybeSingle();
   check(!row.error && row.data && row.data.is_suspended === false, 'a signed-in person can read their own "suspended" flag, and it is false: the app has no reason to say "suspended"');

@@ -119,5 +119,21 @@ await db.exec(read(M10));
 check(JSON.stringify(await snap()) === JSON.stringify(follows10Before), 'running migration 10 a second time is harmless');
 check((await db.query(`select count(*)::int n from pg_trigger where tgname in ('follows_guard_hidden', 'follow_requests_guard_hidden')`)).rows[0].n === 2, 'and there is exactly one guard on each follow table');
 
+section('Applying migration 11 (shop address book) on top');
+const M11 = '20260920000011_shop_address_book.sql';
+// someone who saved an address with the shop details BEFORE the address book existed
+await db.query(String.raw`insert into shop_details (user_id, details) values ($1, $2::jsonb) on conflict (user_id) do update set details = excluded.details`, [someone, JSON.stringify({ fullName: 'Old Buyer', phone: '9876543210', addressLine1: '5 Old Street', city: 'Surat', state: 'Gujarat', pincode: '395003' })]);
+const before11 = await snap();
+const orders11 = (await db.query('select count(*)::int n from store_orders')).rows[0].n;
+await db.exec(read(M11));
+check(JSON.stringify(await snap()) === JSON.stringify(before11), 'migration 11 changes no count and no point total');
+check((await db.query('select count(*)::int n from store_orders')).rows[0].n === orders11, 'and no order');
+const carried11 = await asUser(db, someone, async () => (await db.query('select public.my_shop_addresses() as r')).rows[0].r.addresses);
+check(carried11.length === 1 && carried11[0].isDefault && carried11[0].addressLine1 === '5 Old Street' && carried11[0].city === 'Surat', 'an address saved earlier appears as that person\'s default address');
+check(await asUser(db, someone, async () => (await db.query('select public.get_shop_details() as r')).rows[0].r.details.fullName) === 'Old Buyer', 'their saved shop details are untouched');
+await db.exec(read(M11));
+check((await db.query('select count(*)::int n from shop_addresses')).rows[0].n === 1 && JSON.stringify(await snap()) === JSON.stringify(before11), 'running migration 11 a second time is harmless (nothing added twice)');
+check((await db.query(String.raw`select count(*)::int n from pg_indexes where indexname = 'shop_addresses_one_default_idx'`)).rows[0].n === 1, 'and the "one default per person" rule exists exactly once');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

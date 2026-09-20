@@ -49,10 +49,11 @@ interface ContactFieldsProps {
   contact?: boolean;
   address?: boolean;
   notes?: boolean;
+  email?: boolean; // the email box (not wanted in an address: the email belongs to the contact details)
 }
 
 // The contact-details and address form used on the Account screen and at checkout.
-export const ContactFields: React.FC<ContactFieldsProps> = ({ value, onChange, contact = true, address = true, notes = true }) => {
+export const ContactFields: React.FC<ContactFieldsProps> = ({ value, onChange, contact = true, address = true, notes = true, email = true }) => {
   const set = (key: keyof ShopDetails) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange({ ...value, [key]: e.target.value });
 
   return (
@@ -71,9 +72,11 @@ export const ContactFields: React.FC<ContactFieldsProps> = ({ value, onChange, c
               <input value={value.altPhone} onChange={set('altPhone')} maxLength={20} inputMode="tel" placeholder="Another number" className={inputClass} />
             </Field>
           </div>
-          <Field label="Email (optional)">
-            <input value={value.email} onChange={set('email')} maxLength={120} inputMode="email" autoComplete="email" placeholder="you@example.com" className={inputClass} />
-          </Field>
+          {email && (
+            <Field label="Email (optional)">
+              <input value={value.email} onChange={set('email')} maxLength={120} inputMode="email" autoComplete="email" placeholder="you@example.com" className={inputClass} />
+            </Field>
+          )}
         </div>
       )}
 

@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -1782,6 +1782,28 @@ export async function getShopDetails(): Promise<{ success: boolean; details: Par
 
 export async function saveShopDetails(details: Partial<ShopDetails>): Promise<{ success: boolean; details?: Partial<ShopDetails>; error?: string }> {
   try { return await rpc('save_shop_details', { p: details }); } catch (err) { return failWith(err, 'Could not save your details.'); }
+}
+
+// ---- the address book (several saved delivery addresses, one of them the default)
+
+type AddressResult = { success: boolean; addresses: ShopAddress[]; address?: ShopAddress; error?: string };
+const addressResult = (res: any): AddressResult => ({ success: true, addresses: res?.addresses || [], address: res?.address });
+
+export async function fetchShopAddresses(): Promise<AddressResult> {
+  try { return addressResult(await rpc('my_shop_addresses')); } catch (err) { return { success: false, addresses: [], error: errorText(err, 'Could not load your addresses.') }; }
+}
+
+// Adds an address, or changes one when `address.id` is set. The first address saved becomes the default.
+export async function saveShopAddress(address: Partial<ShopAddress> & { makeDefault?: boolean }): Promise<AddressResult> {
+  try { return addressResult(await rpc('save_shop_address', { p: address })); } catch (err) { return { success: false, addresses: [], error: errorText(err, 'Could not save the address.') }; }
+}
+
+export async function setDefaultShopAddress(id: string): Promise<AddressResult> {
+  try { return addressResult(await rpc('set_default_shop_address', { p_id: id })); } catch (err) { return { success: false, addresses: [], error: errorText(err, 'Could not change the default address.') }; }
+}
+
+export async function deleteShopAddress(id: string): Promise<AddressResult> {
+  try { return addressResult(await rpc('delete_shop_address', { p_id: id })); } catch (err) { return { success: false, addresses: [], error: errorText(err, 'Could not remove the address.') }; }
 }
 
 const mapOrder = (o: any): StoreOrder => ({

@@ -14,10 +14,11 @@ import {
   UserRound,
   SlidersHorizontal,
   CheckCircle2,
+  ChevronRight,
   ShoppingBag
 } from 'lucide-react';
-import { User, StoreProduct, AppSettings, StoreOrder, ShopDetails } from '../../types';
-import { fetchStoreProducts, deleteStoreProduct, fetchSettings, updateSettings, getShopDetails, placeStoreOrder } from '../../services/api';
+import { User, StoreProduct, AppSettings, StoreOrder, ShopDetails, ShopAddress } from '../../types';
+import { fetchStoreProducts, deleteStoreProduct, fetchSettings, updateSettings, getShopDetails, placeStoreOrder, fetchShopAddresses } from '../../services/api';
 import { can, isMainAdmin } from '../../adminAccess';
 import { ProductEditorModal } from './ProductEditorModal';
 import { ProductDetailModal } from './ProductDetailModal';
@@ -34,6 +35,9 @@ import { SORT_LABELS, SortKey, ShopFilterState, activeFilterCount, applyShopFilt
 import { formatPrice } from './formatPrice';
 import { availableStock, cartKey, isBuyable, splitCartKey, variantLabel } from './variants';
 import { loadCart, saveCart } from './cartStorage';
+import { AddressCard } from './AddressCard';
+import { AddressEditorModal } from './AddressEditorModal';
+import { MAX_ADDRESSES, addressToContact, pickCheckoutAddress } from './addressBook';
 
 interface StorePageProps {
   currentUser: User;
@@ -71,6 +75,11 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const [contact, setContact] = useState<ShopDetails>(withDefaults());
   const [contactLoaded, setContactLoaded] = useState(false);
   const [saveDetails, setSaveDetails] = useState(true);
+  // saved delivery addresses (the address book): loaded every time checkout opens; one is chosen for delivery orders
+  const [addresses, setAddresses] = useState<ShopAddress[]>([]);
+  const [addressesLoaded, setAddressesLoaded] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addressEditor, setAddressEditor] = useState<{ address?: ShopAddress } | null>(null);
   const [orderNote, setOrderNote] = useState('');
   const [placing, setPlacing] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<StoreOrder | null>(null);
@@ -126,6 +135,25 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, contactLoaded]);
+
+  // Every time checkout opens: fetch the saved addresses again (they may have been changed on the Account page) and keep the
+  // choice if that address still exists, else preselect the default one.
+  useEffect(() => {
+    if (view !== 'checkout') return;
+    let alive = true;
+    (async () => {
+      const res = await fetchShopAddresses();
+      if (!alive) return;
+      if (res.success) {
+        setAddresses(res.addresses);
+        setSelectedAddressId((current) => pickCheckoutAddress(res.addresses, current));
+      }
+      setAddressesLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [view]);
 
   const showNotice = (text: string, bad = false) => {
     setNotice({ text, bad });
@@ -245,10 +273,9 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     }
   };
 
-  const contactComplete =
-    contact.fullName.trim().length >= 2 &&
-    contact.phone.trim() &&
-    (deliveryMethod === 'pickup' || (contact.addressLine1.trim() && contact.city.trim() && contact.state.trim() && contact.pincode.trim()));
+  const chosenAddress = addresses.find((a) => a.id === selectedAddressId) || null;
+  // delivery: a saved address is chosen (it carries the name, phone and place); pickup: a name and a phone number
+  const contactComplete = deliveryMethod === 'delivery' ? !!chosenAddress : contact.fullName.trim().length >= 2 && !!contact.phone.trim();
 
   const placeOrder = async () => {
     if (placing || cartItems.length === 0) return;
@@ -256,9 +283,12 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     const res = await placeStoreOrder({
       items: cartItems.map(({ product, variantKey, qty }) => ({ productId: product.id, variantKey, quantity: qty })),
       deliveryMethod,
-      contact,
+      contact:
+        deliveryMethod === 'delivery' && chosenAddress
+          ? addressToContact(chosenAddress, contact.email)
+          : { fullName: contact.fullName, phone: contact.phone, altPhone: contact.altPhone, email: contact.email },
       note: orderNote,
-      saveDetails
+      saveDetails: deliveryMethod === 'pickup' && saveDetails
     });
     setPlacing(false);
     if (res.success && res.order) {
@@ -595,12 +625,36 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                   </div>
                 )}
 
-                {!contactLoaded ? (
+                {deliveryMethod === 'delivery' ? (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-white block">Deliver to</span>
+                    {!addressesLoaded ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
+                      </div>
+                    ) : addresses.length === 0 ? (
+                      <p className="text-[11px] text-zinc-500">You have no saved address yet. Add one to have this order delivered.</p>
+                    ) : (
+                      addresses.map((a) => (
+                        <AddressCard key={a.id} address={a} mode="select" selected={a.id === selectedAddressId} onSelect={(x) => setSelectedAddressId(x.id)} onEdit={(x) => setAddressEditor({ address: x })} />
+                      ))
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAddressEditor({})}
+                      disabled={addresses.length >= MAX_ADDRESSES || !addressesLoaded}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-dashed border-zinc-700 text-xs font-bold text-zinc-200 hover:border-zinc-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span>Add a new address</span>
+                      <ChevronRight className="w-4 h-4 text-zinc-400" />
+                    </button>
+                  </div>
+                ) : !contactLoaded ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
                   </div>
                 ) : (
-                  <ContactFields value={contact} onChange={setContact} address={deliveryMethod === 'delivery'} notes={deliveryMethod === 'delivery'} />
+                  <ContactFields value={contact} onChange={setContact} address={false} notes={false} />
                 )}
 
                 <label className="block space-y-1">
@@ -608,10 +662,12 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                   <input value={orderNote} onChange={(e) => setOrderNote(e.target.value)} maxLength={300} placeholder="Anything we should know about this order" className={inputClass} />
                 </label>
 
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={saveDetails} onChange={(e) => setSaveDetails(e.target.checked)} className="w-4 h-4 accent-[#00FF66] cursor-pointer" />
-                  <span className="text-xs text-zinc-300">Save these details for next time</span>
-                </label>
+                {deliveryMethod === 'pickup' && (
+                  <label className="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" checked={saveDetails} onChange={(e) => setSaveDetails(e.target.checked)} className="w-4 h-4 accent-[#00FF66] cursor-pointer" />
+                    <span className="text-xs text-zinc-300">Save these details for next time</span>
+                  </label>
+                )}
 
                 <div className="space-y-1.5 pt-2 border-t border-zinc-800">
                   {cartItems.map(({ key, product, variantKey, qty }) => (
@@ -640,15 +696,15 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
                 <button
                   onClick={placeOrder}
-                  disabled={placing || paused || !contactComplete || !contactLoaded}
+                  disabled={placing || paused || !contactComplete || (deliveryMethod === 'pickup' ? !contactLoaded : !addressesLoaded)}
                   className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />} {placing ? 'Placing your order…' : 'Place Order'}
                 </button>
                 {paused && <p className="text-[11px] text-red-300 text-center">{CLOSED_MESSAGE}</p>}
-                {!paused && !contactComplete && contactLoaded && (
+                {!paused && !contactComplete && (deliveryMethod === 'pickup' ? contactLoaded : addressesLoaded) && (
                   <p className="text-[11px] text-zinc-500 text-center">
-                    {deliveryMethod === 'delivery' ? 'Add your name, phone and full address to place the order.' : 'Add your name and phone number to place the order.'}
+                    {deliveryMethod === 'delivery' ? 'Choose or add a delivery address to place the order.' : 'Add your name and phone number to place the order.'}
                   </p>
                 )}
               </>
@@ -693,6 +749,20 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
           {bottomNavItem('account', 'Account', UserRound)}
         </div>
       </nav>
+
+      {addressEditor && (
+        <AddressEditorModal
+          address={addressEditor.address}
+          hasAddresses={addresses.length > 0}
+          startWith={{ fullName: contact.fullName, phone: contact.phone, altPhone: contact.altPhone }}
+          onClose={() => setAddressEditor(null)}
+          onSaved={({ address, addresses: list }) => {
+            setAddresses(list);
+            if (address) setSelectedAddressId(address.id);   // deliver to the address just added or changed
+            setAddressEditor(null);
+          }}
+        />
+      )}
 
       {showClosed && <OrdersPausedModal onClose={() => setShowClosed(false)} />}
 

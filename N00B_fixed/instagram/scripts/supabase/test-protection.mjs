@@ -1,5 +1,5 @@
 // Tests the pure parts of the content protection: which key presses count as a screenshot shortcut, which elements count as
-// protected media, the attributes put on media, and the watermark. (What it does in a real browser is checked in the browser.)
+// protected media, and the attributes put on media. (What it does in a real browser is checked in the browser.)
 // Pure logic (src/utils/contentProtection.ts): no database or browser needed.
 //
 // Usage: node scripts/supabase/test-protection.mjs
@@ -10,7 +10,7 @@ let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
 const section = (t) => console.log(`\n${t}`);
 const P = await import(pathToFileURL(path.resolve('src/utils/contentProtection.ts')).href);
-const { isCaptureShortcut, mediaAttributes, isProtectedTarget, watermarkTile, watermarkDataUri, MEDIA_SELECTOR, PROTECTION_CSS } = P;
+const { isCaptureShortcut, mediaAttributes, isProtectedTarget, MEDIA_SELECTOR, PROTECTION_CSS } = P;
 
 section('1. Screenshot shortcuts');
 check(isCaptureShortcut({ key: 'PrintScreen', code: 'PrintScreen' }), 'PrintScreen');
@@ -39,15 +39,9 @@ check(v.controlslist.includes('nodownload') && v.controlslist.includes('noremote
 check(mediaAttributes('IMG').draggable === 'false' && mediaAttributes('canvas').draggable === 'false' && mediaAttributes('picture').draggable === 'false', 'pictures can not be dragged out');
 check(Object.keys(mediaAttributes('DIV')).length === 0 && Object.keys(mediaAttributes('input')).length === 0, 'nothing else is touched (text boxes, buttons...)');
 
-section('4. The watermark');
-const tile = watermarkTile('@asha');
-check(tile.startsWith('<svg') && tile.includes('@asha') && tile.includes('rotate(-28'), 'a tilted tile with the viewer\'s name');
-check(watermarkTile('<b>&"x\'').includes('&lt;b&gt;&amp;&quot;x&#39;') && !watermarkTile('<script>').includes('<script>'), 'a hostile name can not break out of the picture (it is escaped)');
-check(watermarkTile('x'.repeat(200)).match(/>(x+)</)[1].length === 40, 'a very long name is cut to 40 characters');
-check(watermarkTile('  @asha  ').includes('>@asha<'), 'spaces around the name are removed');
-const uri = watermarkDataUri('@asha');
-check(uri.startsWith('data:image/svg+xml;utf8,') && !uri.includes('"') && !uri.includes('<') && decodeURIComponent(uri.split(',')[1]) === tile, 'the picture is packed safely for use in a style (no quotes or angle brackets), and unpacks to the same tile');
-check(/fill-opacity="0\.(0[5-9]|1\d?)"/.test(tile), 'it is faint (opacity between 5% and 19%): visible in a screenshot, not in the way');
+section('4. No watermark');
+check(P.watermarkTile === undefined && P.watermarkDataUri === undefined, 'the watermark code is gone (nothing is drawn over the screen)');
+check(!/watermark/i.test(PROTECTION_CSS), 'and the styles do not mention one');
 
 section('5. Printing');
 check(/@media print\s*\{[^}]*display:\s*none\s*!important/.test(PROTECTION_CSS), 'printing or "save as PDF" gives a blank page');

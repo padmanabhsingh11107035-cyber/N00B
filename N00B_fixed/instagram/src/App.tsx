@@ -270,12 +270,11 @@ export default function App() {
     };
   }, [currentUser?.id]);
 
-  // Content protection (see utils/contentProtection.ts): no saving of pictures or videos, the screen goes black for screenshot
-  // shortcuts and when the tab is hidden, and a faint watermark with the viewer's @username covers everything, so a leaked
-  // screenshot points to who took it. The main administrator is exempt (needs their own screenshots to look after the app).
+  // Content protection (see utils/contentProtection.ts): no saving of pictures or videos, and the screen goes black for screenshot
+  // shortcuts and when the tab is hidden. The main administrator is exempt (needs their own screenshots to look after the app).
   useEffect(() => {
     if (!currentUser || isMainAdmin(currentUser)) return;
-    return installContentProtection({ watermarkText: '@' + currentUser.username });
+    return installContentProtection();
   }, [currentUser?.id]);
 
   // Notifications arrive LIVE: the database tells this screen the moment one is created (Realtime), and it also

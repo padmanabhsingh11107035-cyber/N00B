@@ -1,5 +1,5 @@
-// Content protection for the NOOB website: makes it hard to save media and to capture the screen, and makes any capture
-// traceable. It is a DETERRENT, not a guarantee, and it says so honestly:
+// Content protection for the NOOB website: makes it hard to save media and to capture the screen. It is a DETERRENT, not a
+// guarantee, and it says so honestly:
 //   * A website can not block the operating system's own screenshot or screen-recording tools. (The Android app can: see
 //     MainActivity.java, which switches on Android's "secure window".)
 //   * Anything a browser shows can be saved by someone determined enough.
@@ -7,8 +7,8 @@
 //   * no "Save image / video as..." menu, no dragging media out of the page, no long-press save on phones, no download
 //     button or picture-in-picture on videos, and printing / "save as PDF" produce a blank page;
 //   * the screen goes black for a moment when a screenshot shortcut is pressed (PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5) and
-//     whenever the tab is hidden (so app-switcher previews show nothing);
-//   * a faint tiled watermark with the viewer's @username covers everything, so a leaked screenshot points to who took it.
+//     whenever the tab is hidden (so app-switcher previews show nothing).
+// (There is deliberately NO watermark over the screen: it was tried and removed because it was in the way.)
 // The pure parts are exported so they can be tested without a browser.
 
 export const MEDIA_SELECTOR = 'img, video, canvas, picture, [data-protect]';
@@ -50,40 +50,24 @@ export function isProtectedTarget(target: { closest?: (selector: string) => unkn
   }
 }
 
-const escapeXml = (text: string) => text.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c] as string);
-
-// One tile of the watermark: the text, tilted, in a grey that shows faintly on both the dark and the light theme.
-export function watermarkTile(text: string): string {
-  const safe = escapeXml(text.trim().slice(0, 40));
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="170">` +
-    `<text x="130" y="85" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" font-weight="700" ` +
-    `fill="rgb(128,128,128)" fill-opacity="0.14" transform="rotate(-28 130 85)">${safe}</text></svg>`
-  );
-}
-
-export const watermarkDataUri = (text: string): string => `data:image/svg+xml;utf8,${encodeURIComponent(watermarkTile(text))}`;
-
 export const PROTECTION_CSS = `
 img, video, canvas, picture { -webkit-user-drag: none; user-drag: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 @media print { html, body { display: none !important; } }
 `;
 
 export interface ProtectionOptions {
-  // Who is looking, e.g. "@asha": printed faintly all over the screen
-  watermarkText: string;
   // For tests: which document to protect
   doc?: Document;
 }
 
-const IDS = { style: 'noob-protect-style', mark: 'noob-protect-watermark', shield: 'noob-protect-shield' };
+const IDS = { style: 'noob-protect-style', shield: 'noob-protect-shield' };
 
-// One protection per page: switching it on again (another person logs in, the name changes) replaces the earlier one, so nothing
+// One protection per page: switching it on again (another person logs in) replaces the earlier one, so nothing
 // is ever doubled up.
 const active = new WeakMap<Document, () => void>();
 
 // Switch the protection on. Returns a function that switches it off again and removes everything it added.
-export function installContentProtection(options: ProtectionOptions): () => void {
+export function installContentProtection(options: ProtectionOptions = {}): () => void {
   const doc = options.doc ?? document;
   active.get(doc)?.();
   const win = doc.defaultView ?? window;
@@ -99,14 +83,6 @@ export function installContentProtection(options: ProtectionOptions): () => void
   style.textContent = PROTECTION_CSS;
   doc.head.appendChild(style);
   undo.push(() => style.remove());
-
-  // -- watermark (never gets in the way of a tap or a click)
-  const mark = doc.createElement('div');
-  mark.id = IDS.mark;
-  mark.setAttribute('aria-hidden', 'true');
-  mark.style.cssText = `position:fixed;inset:0;z-index:2147483000;pointer-events:none;background-repeat:repeat;background-image:url("${watermarkDataUri(options.watermarkText)}");`;
-  doc.body.appendChild(mark);
-  undo.push(() => mark.remove());
 
   // -- shield (a black cover)
   const shield = doc.createElement('div');

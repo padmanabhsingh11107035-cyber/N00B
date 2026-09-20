@@ -2,7 +2,8 @@
 // source code, and writes them to src/i18n/catalog.json. That list is what gets translated. Text a person WRITES (posts,
 // comments, chat messages, names) is never in it, so it is never translated or sent anywhere.
 //
-// Usage: node scripts/i18n/extract.mjs          (writes src/i18n/catalog.json)
+// Usage: node scripts/i18n/extract.mjs          (writes src/i18n/catalog.json; run it - `npm run i18n` - after adding or changing
+//                                                 any text on a screen, and commit the result: the tests fail when it is out of date)
 //        node scripts/i18n/extract.mjs --check  (fails if the file on disk is out of date)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -134,7 +135,7 @@ const out = JSON.stringify({ count: strings.length, strings }) + '\n';
 const target = 'src/i18n/catalog.json';
 if (process.argv.includes('--check')) {
   const now = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
-  if (now !== out) { console.error('src/i18n/catalog.json is out of date: run  node scripts/i18n/extract.mjs'); process.exit(1); }
+  if (now.replace(/\r\n/g, String.fromCharCode(10)) !== out) { console.error('src/i18n/catalog.json is out of date: run  node scripts/i18n/extract.mjs'); process.exit(1); }
   console.log(`catalog is up to date (${strings.length} texts)`);
 } else {
   fs.writeFileSync(target, out);

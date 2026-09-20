@@ -127,6 +127,10 @@ globalThis.fetch = async (url, init = {}) => {
     if (aiMode === 'drop-slot') out = items.map((t) => '[xx] ' + t.replace(/\{\d+\}/g, ''));
     if (aiMode === 'short') out = out.slice(0, Math.max(1, out.length - 1));
     if (aiMode === 'short-once' && items.length > 4) { out = out.slice(1); aiMode = 'ok'; }
+    if (aiMode === 'lazy') {
+      const firm = body.messages[0].content.includes('IMPORTANT: every string below');
+      out = items.map((t) => (firm && !t.startsWith('Kai') ? '[xx] ' + t : t));
+    }
     if (aiMode === 'fenced') content = '```json\n' + JSON.stringify(out) + '\n```';
     else if (aiMode === 'rambling') content = 'Sure! Here you go: ' + JSON.stringify(items.map((t) => 'x'.repeat(t.length * 10 + 50)));
     else if (aiMode === 'garbage') content = 'I cannot help with that.';
@@ -216,6 +220,19 @@ check(Object.keys(r.json.translations).length === 0 && stored.size === 0, 'a lis
 reset(); aiMode = 'down';
 r = await ask('hi', ['Save']);
 check(r.status === 200 && r.json.busy === true && Object.keys(r.json.translations).length === 0, 'when the AI service is down the app is told to come back later');
+
+section('6b. An AI that hands text back unchanged is asked again, firmly');
+reset(); aiMode = 'lazy';
+r = await ask('hi', ['Enter or pick username', '🇮🇳 India (+91)', 'Kai Warrior', '{0} followers']);
+const lazyCalls = groqCalls.length;
+check(lazyCalls === 2 && groqCalls[1].messages[0].content.includes('IMPORTANT: every string below') && !groqCalls[0].messages[0].content.includes('IMPORTANT: every string below'), 'the second request is made only for the unchanged texts, with a firmer instruction');
+check(r.json.translations[item('Enter or pick username').id] === '[xx] Enter or pick username' && r.json.translations[item('🇮🇳 India (+91)').id] === '[xx] 🇮🇳 India (+91)' && r.json.translations[item('{0} followers').id] === '[xx] {0} followers', 'sentences and country names come back translated the second time (slots kept)');
+check(r.json.translations[item('Kai Warrior').id] === 'Kai Warrior' && stored.get('hi|' + item('Kai Warrior').id) === 'Kai Warrior', 'what still comes back unchanged is accepted (a name can stay the same) and kept');
+check(JSON.parse(groqCalls[1].messages[1].content).length === 4, '(all four came back unchanged the first time, so all four were asked again)');
+reset();
+r = await ask('hi', ['Save']);
+check(groqCalls.length === 1, 'a text that was translated the first time is never asked twice');
+check(/Country, city and language names/.test(groqCalls[0].messages[0].content), 'the instructions say to translate country and place names');
 
 section('7. Texts are data, not instructions');
 reset();

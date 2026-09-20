@@ -5,6 +5,7 @@
 // Usage: node scripts/supabase/test-shop.mjs [backup-folder]
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { loadBackup, buildImportPlan } from './transform.mjs';
 import { runImport } from './run-import.mjs';
 import { createTestDb, makePgAdapter, asUser, asAnon } from './pg-test-env.mjs';
@@ -140,6 +141,34 @@ const shopperOrders = (await rpc(shopper, 'my_store_orders')).orders;
 check(shopperOrders.length === 5 && shopperOrders.every((o) => o.status === 'placed'), 'my orders lists my five');
 await rpc(shopper, 'cancel_my_store_order', shopperOrders[0].id);
 check((await order(shopper, [{ productId: spam.id, quantity: 1 }])).success, 'cancelling one makes room for another');
+
+section('3d. The owner switches orders OFF: everything works except placing an order');
+const Open = await import(pathToFileURL(path.resolve('src/components/Store/shopOpen.ts')).href);
+check(Open.CLOSED_MESSAGE === 'We are not accepting orders for a while.', 'the message customers see is the agreed wording');
+check(Open.ordersAccepted({ storeEnabled: false }) === false && Open.ordersAccepted({ storeEnabled: true }) === true, 'the app reads the switch: off means off, on means on');
+check(Open.ordersAccepted(null) === true && Open.ordersAccepted(undefined) === true && Open.ordersAccepted({}) === true, 'settings that could not be loaded count as open (the database still has the final say)');
+check(Open.isClosedError('Ordering is currently paused by NOOB.') === true && Open.isClosedError('Only 3 left of "Mug".') === false && Open.isClosedError('Enter your full name.') === false && Open.isClosedError(undefined) === false, 'the database\'s "paused" refusal is recognised, other errors are not mistaken for it');
+const gate = await mk({ name: 'Gate', price: 20, stock: 4 });
+const gated = (await order(buyerC, [{ productId: gate.id, quantity: 1 }])).order;   // placed while orders were still on
+check((await rpc(buyerC, 'get_app_settings')).storeEnabled === true, 'orders start ON');
+await db.query('update app_settings set store_enabled = false where id = 1');
+check((await rpc(buyerC, 'get_app_settings')).storeEnabled === false, 'once switched off, every customer sees that orders are off');
+check((await shelf(gate.id)).stock === 3 && (await rpc(buyerC, 'list_store_products')).length > 0, 'browsing the shop still works');
+check((await rpc(buyerC, 'save_shop_details', { p: { fullName: 'Still Works', phone: '9876543210' } })).success, 'saving account details still works');
+check((await rpc(buyerC, 'my_store_orders')).orders.some((o) => o.id === gated.id), 'customers still see their orders');
+await expectFail(() => order(buyerB, [{ productId: gate.id, quantity: 1 }]), /paused by NOOB/, 'placing an order is refused while orders are off');
+check((await shelf(gate.id)).stock === 3, '...and the refused order took nothing off the shelf');
+const undone = (await rpc(buyerC, 'cancel_my_store_order', gated.id)).order;
+check(undone.status === 'cancelled' && (await shelf(gate.id)).stock === 4, 'a customer can still cancel an order they already placed, and the stock goes back');
+await db.query('update app_settings set store_enabled = true where id = 1');
+check((await rpc(buyerC, 'get_app_settings')).storeEnabled === true, 'switching orders back on is seen by everyone');
+check((await order(buyerB, [{ productId: gate.id, quantity: 1 }])).success && (await shelf(gate.id)).stock === 3, 'and ordering works again straight away');
+const tryFlip = async (uid) => { try { return (await call(uid, 'update app_settings set store_enabled = false where id = 1 returning id')).length; } catch (e) { return /permission denied/.test(e.message) ? 0 : -1; } };
+check((await tryFlip(buyerB)) === 0 && (await rpc(buyerB, 'get_app_settings')).storeEnabled === true, 'a customer can not switch the shop off themselves');
+check((await tryFlip(staffShop)) === 0 && (await rpc(buyerB, 'get_app_settings')).storeEnabled === true, 'nor can a helper who only has the "manage the shop" permission (only the main admin owns the switch, so the app shows it only to them)');
+check((await tryFlip(admin)) === 1 && (await rpc(buyerB, 'get_app_settings')).storeEnabled === false, 'the main admin can switch it off');
+await call(admin, 'update app_settings set store_enabled = true where id = 1');
+check((await rpc(buyerB, 'get_app_settings')).storeEnabled === true, '...and back on');
 
 section('4. Seeing and cancelling my orders');
 const mine = (await rpc(buyerA, 'my_store_orders')).orders;

@@ -17,8 +17,8 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { User, StoreProduct, AppSettings, StoreOrder, ShopDetails } from '../../types';
-import { fetchStoreProducts, deleteStoreProduct, fetchSettings, getShopDetails, placeStoreOrder } from '../../services/api';
-import { can } from '../../adminAccess';
+import { fetchStoreProducts, deleteStoreProduct, fetchSettings, updateSettings, getShopDetails, placeStoreOrder } from '../../services/api';
+import { can, isMainAdmin } from '../../adminAccess';
 import { ProductEditorModal } from './ProductEditorModal';
 import { ProductDetailModal } from './ProductDetailModal';
 import { StoreSettingsModal } from './StoreSettingsModal';
@@ -27,6 +27,8 @@ import { ProductCard } from './ProductCard';
 import { ShopFilters } from './ShopFilters';
 import { AccountDetailsView } from './AccountDetailsView';
 import { OrdersView } from './OrdersView';
+import { OrdersPausedModal } from './OrdersPausedModal';
+import { CLOSED_MESSAGE, isClosedError, ordersAccepted } from './shopOpen';
 import { ContactFields, prefillFromProfile, withDefaults, inputClass } from './ContactFields';
 import { SORT_LABELS, SortKey, ShopFilterState, activeFilterCount, applyShopFilters, emptyFilters } from './filterLogic';
 import { formatPrice } from './formatPrice';
@@ -43,6 +45,8 @@ type DeliveryMethod = 'pickup' | 'delivery';
 export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) => {
   // may add, edit and remove products and handle orders: the main admin, or an admin who was given the "manage the shop" permission
   const canManage = can(currentUser, 'manage_store');
+  // The shop's on/off switch and delivery charge are stored in the shared settings, which only the main admin may change.
+  const mainAdmin = isMainAdmin(currentUser);
 
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +72,11 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const [orderNote, setOrderNote] = useState('');
   const [placing, setPlacing] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<StoreOrder | null>(null);
+
+  // "We are not accepting orders for a while": shown when someone presses Checkout while the owner has switched orders off.
+  const [showClosed, setShowClosed] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [savingSwitch, setSavingSwitch] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -188,7 +197,43 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     setEditorOpen(true);
   };
 
-  const paused = !!settings && settings.storeEnabled === false;
+  const acceptingOrders = ordersAccepted(settings);
+  const paused = !acceptingOrders;
+
+  // Pressing "Proceed to Checkout": ask again whether orders are on (the owner may have switched them off since this
+  // page was opened). If they are off, say so instead of opening checkout.
+  const proceedToCheckout = async () => {
+    if (checkingOut) return;
+    setCheckingOut(true);
+    try {
+      const latest = await fetchSettings();
+      setSettings(latest);
+      if (!ordersAccepted(latest)) {
+        setShowClosed(true);
+        return;
+      }
+      setView('checkout');
+    } finally {
+      setCheckingOut(false);
+    }
+  };
+
+  // The owner's switch. Turning orders OFF asks first, because it stops every customer at checkout.
+  const toggleOrders = async () => {
+    if (!settings || savingSwitch) return;
+    const next = !acceptingOrders;
+    if (!next && !window.confirm(`Stop accepting orders? Customers can still browse and fill their cart, but at checkout they will see "${CLOSED_MESSAGE}"`)) return;
+    setSavingSwitch(true);
+    try {
+      const updated = await updateSettings({ storeEnabled: next });
+      setSettings(updated);
+      showNotice(next ? 'Orders are ON. Customers can check out again.' : `Orders are OFF. Customers will see "${CLOSED_MESSAGE}" at checkout.`);
+    } catch (err) {
+      showNotice(err instanceof Error && err.message ? err.message : 'Could not change the setting. Please try again.', true);
+    } finally {
+      setSavingSwitch(false);
+    }
+  };
 
   const contactComplete =
     contact.fullName.trim().length >= 2 &&
@@ -213,8 +258,9 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
       setView('done');
       loadData();   // stock came off the shelf
     } else {
-      showNotice(res.error || 'Could not place your order.', true);
-      loadData();   // somebody may have bought the last one: show what is really left
+      if (isClosedError(res.error)) setShowClosed(true);   // the owner switched orders off while this checkout was open
+      else showNotice(res.error || 'Could not place your order.', true);
+      loadData();   // somebody may have bought the last one (or the shop was closed): show what is really true now
     }
   };
 
@@ -256,8 +302,26 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         <button onClick={goBack} className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer" aria-label="Back">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-black tracking-tight flex-1">{title}</h1>
-        {view === 'grid' && canManage && (
+        <h1 className="text-lg font-black tracking-tight flex-1 whitespace-nowrap">{title}</h1>
+        {view === 'grid' && mainAdmin && settings && (
+          <button
+            onClick={toggleOrders}
+            disabled={savingSwitch}
+            role="switch"
+            aria-checked={acceptingOrders}
+            aria-label="Accept orders"
+            title={acceptingOrders ? 'Orders are ON. Press to stop accepting orders.' : 'Orders are OFF. Press to accept orders again.'}
+            className={`flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full border text-[11px] font-black cursor-pointer disabled:opacity-60 transition-colors ${
+              acceptingOrders ? 'border-[#00FF66]/40 text-[#00FF66] bg-[#00FF66]/10' : 'border-red-500/40 text-red-300 bg-red-500/10'
+            }`}
+          >
+            <span className="whitespace-nowrap"><span className="hidden sm:inline">Orders </span>{acceptingOrders ? 'ON' : 'OFF'}</span>
+            <span className={`relative inline-block w-8 h-[18px] rounded-full transition-colors ${acceptingOrders ? 'bg-[#00FF66]' : 'bg-zinc-600'}`}>
+              <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${acceptingOrders ? 'left-4 bg-black' : 'left-0.5 bg-white'}`} />
+            </span>
+          </button>
+        )}
+        {view === 'grid' && mainAdmin && (
           <button onClick={() => setShowSettingsModal(true)} className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer" aria-label="Shop settings">
             <Settings className="w-5 h-5 text-zinc-300" />
           </button>
@@ -280,6 +344,18 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         {navTab('orders', 'Orders', ClipboardList)}
         {navTab('account', 'Account', UserRound)}
       </nav>
+
+      {/* For the owner: a reminder that orders are switched off (customers see the message when they press Checkout) */}
+      {mainAdmin && settings && !acceptingOrders && (
+        <div className="relative z-10 px-4 py-2 bg-red-500/10 border-b border-red-500/30 text-xs text-red-200 flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-center">
+          <span>
+            <b>Orders are OFF.</b> Customers can browse and fill their cart, but at checkout they see &ldquo;{CLOSED_MESSAGE}&rdquo;
+          </span>
+          <button onClick={toggleOrders} disabled={savingSwitch} className="underline font-bold cursor-pointer disabled:opacity-60">
+            Turn orders on
+          </button>
+        </div>
+      )}
 
       {notice && (
         <div
@@ -432,10 +508,11 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                 </div>
 
                 <button
-                  onClick={() => setView('checkout')}
-                  className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={proceedToCheckout}
+                  disabled={checkingOut}
+                  className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  Proceed to Checkout
+                  {checkingOut && <Loader2 className="w-4 h-4 animate-spin" />} Proceed to Checkout
                 </button>
               </>
             )}
@@ -535,7 +612,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                 >
                   {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />} {placing ? 'Placing your order…' : 'Place Order'}
                 </button>
-                {paused && <p className="text-[11px] text-red-300 text-center">Ordering is currently paused by NOOB.</p>}
+                {paused && <p className="text-[11px] text-red-300 text-center">{CLOSED_MESSAGE}</p>}
                 {!paused && !contactComplete && contactLoaded && (
                   <p className="text-[11px] text-zinc-500 text-center">
                     {deliveryMethod === 'delivery' ? 'Add your name, phone and full address to place the order.' : 'Add your name and phone number to place the order.'}
@@ -569,6 +646,8 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
         {view === 'account' && <AccountDetailsView currentUser={currentUser} onOpenOrders={() => setView('orders')} />}
       </div>
+
+      {showClosed && <OrdersPausedModal onClose={() => setShowClosed(false)} />}
 
       {selectedProduct && (
         <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} onEdit={canManage ? openEditor : undefined} />

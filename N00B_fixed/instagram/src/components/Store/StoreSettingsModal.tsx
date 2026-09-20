@@ -31,7 +31,7 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ settings
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Failed to save. Please try again.');
+      setError(err instanceof Error && err.message ? err.message : 'Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -47,12 +47,14 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ settings
           </button>
         </div>
 
-        <label className="flex items-center justify-between cursor-pointer text-xs text-zinc-300">
+        <label className="flex items-center justify-between gap-4 cursor-pointer text-xs text-zinc-300">
           <div>
-            <span className="block font-bold text-white">Checkout Enabled</span>
-            <span className="block text-[10px] text-zinc-500">Turn off to let users browse but not order</span>
+            <span className="block font-bold text-white">Accept orders</span>
+            <span className="block text-[10px] text-zinc-500 leading-snug">
+              Turn off to stop orders for a while. Customers can still browse and fill their cart, but when they press Checkout they see &ldquo;We are not accepting orders for a while.&rdquo;
+            </span>
           </div>
-          <input type="checkbox" checked={storeEnabled} onChange={(e) => setStoreEnabled(e.target.checked)} className="accent-[#00FF66]" />
+          <input type="checkbox" checked={storeEnabled} onChange={(e) => setStoreEnabled(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
         </label>
 
         <div className="space-y-1.5">

@@ -614,8 +614,10 @@ export async function updateSettings(newSettings: Partial<AppSettings>): Promise
     const shared: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (storeEnabled !== undefined) shared.store_enabled = storeEnabled;
     if (storeDeliveryFee !== undefined) shared.store_delivery_fee = storeDeliveryFee;
-    const { error } = await supabase.from('app_settings').update(shared).eq('id', 1);
-    if (error) console.error('Could not save the shop settings (admin only):', error.message);
+    // .select() so a change the database silently refused (only the main admin may write here) is noticed instead of looking saved
+    const { data, error } = await supabase.from('app_settings').update(shared).eq('id', 1).select('id');
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error('Only the main NOOB admin can change the shop settings.');
   }
   return fetchSettings();
 }

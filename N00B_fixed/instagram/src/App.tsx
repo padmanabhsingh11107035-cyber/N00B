@@ -80,6 +80,8 @@ import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
 import { readDiag, explainSessionEnd } from './services/authDiag';
+import { installContentProtection } from './utils/contentProtection';
+import { isMainAdmin } from './adminAccess';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -266,6 +268,14 @@ export default function App() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', check);
     };
+  }, [currentUser?.id]);
+
+  // Content protection (see utils/contentProtection.ts): no saving of pictures or videos, the screen goes black for screenshot
+  // shortcuts and when the tab is hidden, and a faint watermark with the viewer's @username covers everything, so a leaked
+  // screenshot points to who took it. The main administrator is exempt (needs their own screenshots to look after the app).
+  useEffect(() => {
+    if (!currentUser || isMainAdmin(currentUser)) return;
+    return installContentProtection({ watermarkText: '@' + currentUser.username });
   }, [currentUser?.id]);
 
   // Notifications arrive LIVE: the database tells this screen the moment one is created (Realtime), and it also

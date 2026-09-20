@@ -67,6 +67,9 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Secure window (blocks screenshots and screen recording inside the app)
+        run: cp android-overrides/MainActivity.java android/app/src/main/java/com/noob/social/MainActivity.java
+
       - name: Generate app icon & splash screen from the NOOB logo
         # Installed here rather than as a committed devDependency: it pulls in
         # sharp (a native module), and this way a hiccup there can only ever

@@ -1451,6 +1451,21 @@ export async function sendScreenshotAlert(contentType: ScreenshotContentType, co
 // (It was deployed from the dashboard under the name 'dynamic-handler'; the code is supabase/functions/ai.)
 const AI_FUNCTION = 'dynamic-handler';
 
+export interface GifItem { id: string; title: string; url: string; preview?: string }
+
+// Searches the online GIF library through our server (which holds the library's key). When the library is not switched on for the app
+// (or anything goes wrong) the answer is simply "not configured" and the chat shows its built-in GIFs.
+export async function searchGifs(query: string): Promise<{ configured: boolean; gifs: GifItem[] }> {
+  try {
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'gifs', q: query, lang: getLanguage() } });
+    if (error || !data?.configured) return { configured: false, gifs: [] };
+    const gifs = (Array.isArray(data.gifs) ? data.gifs : []).filter((g: any) => g && typeof g.url === 'string' && /^https:\/\//.test(g.url)).map((g: any) => ({ id: String(g.id), title: String(g.title || 'GIF'), url: g.url, preview: typeof g.preview === 'string' ? g.preview : undefined }));
+    return { configured: true, gifs };
+  } catch {
+    return { configured: false, gifs: [] };
+  }
+}
+
 export async function translateMessage(chatId: string, messageId: string): Promise<string> {
   try {
     const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'translate', chatId, messageId, lang: getLanguage() } });

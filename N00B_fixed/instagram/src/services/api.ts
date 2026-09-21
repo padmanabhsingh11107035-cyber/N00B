@@ -1,6 +1,8 @@
 // The app's server calls. Everything now runs on Supabase (see supabaseApi.ts and supabase/migrations);
 // this file only lists them under the names the screens have always imported.
+export type { GifItem } from './supabaseApi';
 export {
+  searchGifs,
   fetchHealth,
   signupUser,
   loginUser,

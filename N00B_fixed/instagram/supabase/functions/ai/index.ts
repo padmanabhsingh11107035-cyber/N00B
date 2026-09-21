@@ -3,6 +3,8 @@
 // Four jobs. The first three need the AI key (which lives only here, as the secret GROQ_API_KEY — never in the app):
 //   { action: "support", message, conversationHistory }  -> the in-app AI Customer Support Assistant
 //   { action: "translate", chatId, messageId, lang? }    -> translate one chat message (into the person's language; English by default)
+//   { action: "gifs", q?, lang? }                        -> search the online GIF library (GIPHY) for the chat; needs the secret
+//                                                           GIPHY_API_KEY, without it the answer is { configured: false }
 //   { action: "translate-ui", lang, items: [{id,text}] } -> translate the app's own texts into a language, once, and keep them
 //                                                           (table ui_translations, see the migration "languages")
 //   { action: "push", notificationId }                   -> deliver a notification to the person's phone/browser (called by the
@@ -671,6 +673,34 @@ Deno.serve(async (req) => {
     ]);
     if (!translated) return json({ error: 'Translation is unavailable right now.', ...(body.debug === true ? { debug: tried } : {}) }, 503);
     return json({ success: true, translatedText: translated });
+  }
+
+  // ------------------------------------------------------------------ GIF search for the chat (the library's key never leaves here)
+  if (body?.action === 'gifs') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const key = (Deno.env.get('GIPHY_API_KEY') || '').trim();
+    if (!key) return json({ configured: false, gifs: [] });
+    const q = String(body.q ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const lang = /^[a-z]{2}(-[A-Za-z]{2})?$/.test(String(body.lang ?? '')) ? String(body.lang).slice(0, 2).toLowerCase() : 'en';
+    const url = q
+      ? `https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(key)}&q=${encodeURIComponent(q)}&limit=24&rating=pg-13&lang=${lang}`
+      : `https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(key)}&limit=24&rating=pg-13`;
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) { console.warn(`GIF search: ${res.status}`); return json({ configured: true, gifs: [] }); }
+      const data: any = await res.json();
+      // only pictures from the library's own picture servers are ever handed to the app
+      const ok = (u: unknown): u is string => typeof u === 'string' && /^https:\/\/(media\d*|i)\.giphy\.com\//.test(u);
+      const gifs = (Array.isArray(data?.data) ? data.data : []).map((g: any) => {
+        const full = g?.images?.fixed_height?.url ?? g?.images?.original?.url;
+        const small = g?.images?.fixed_height_small?.url ?? g?.images?.fixed_height?.url;
+        return ok(full) ? { id: String(g.id || '').slice(0, 40), title: String(g.title || 'GIF').slice(0, 60), url: full, preview: ok(small) ? small : full } : null;
+      }).filter(Boolean).slice(0, 24);
+      return json({ configured: true, gifs });
+    } catch (err: any) {
+      console.warn('GIF search error:', err?.message || err);
+      return json({ configured: true, gifs: [] });
+    }
   }
 
   // ------------------------------------------------------------------ AI support assistant

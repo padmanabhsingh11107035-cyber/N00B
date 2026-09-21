@@ -1,3 +1,5 @@
+import { EmojiPanel } from './EmojiPanel';
+import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
@@ -51,57 +53,6 @@ import {
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
-
-const EMOJI_CATEGORIES = [
-  {
-    title: 'Smileys & Faces',
-    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪']
-  },
-  {
-    title: 'Reactions & Hype',
-    emojis: ['🔥', '❤️', '👏', '🎉', '💯', '✨', '⚡', '😎', '🙌', '💀', '😭', '🥹', '😳', '🤯', '😱', '🥵', '🥶', '😴', '🤢', '🤡', '👻', '💩', '🫠', '🫡']
-  },
-  {
-    title: 'Gestures & Hands',
-    emojis: ['👍', '👎', '👌', '🤌', '🤙', '👋', '🤝', '🙏', '💪', '✌️', '🤞', '🫶', '👊', '✊', '🤛', '🤜', '👉', '👈', '☝️', '👆', '👇', '✋', '🤚', '🖖']
-  },
-  {
-    title: 'Love & Hearts',
-    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '😻', '💑', '💏', '😽', '🥰']
-  },
-  {
-    title: 'Gaming & Victory',
-    emojis: ['🎮', '🕹️', '👑', '🏆', '👾', '🎯', '🥇', '🥈', '🥉', '⚔️', '🛡️', '🎲', '🚀', '💣', '🃏', '🎰', '🧩', '🏅', '♟️', '🎳', '🕹️', '🎱', '🎮', '🏹']
-  },
-  {
-    title: 'Celebration & Party',
-    emojis: ['🎉', '🎊', '🥳', '🎈', '🎁', '🎂', '🍾', '🥂', '🎆', '🎇', '✨', '🪅', '🎀', '🏆', '🎗️', '🪩', '🎐', '🧨', '🎫', '🎟️', '🪄', '🎭', '🎪', '🎠']
-  },
-  {
-    title: 'Animals & Nature',
-    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🦄', '🐝', '🦋', '🐢', '🐍', '🦖']
-  },
-  {
-    title: 'Food & Drink',
-    emojis: ['🍏', '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍒', '🍑', '🍕', '🍔', '🍟', '🌭', '🍿', '🍩', '🍪', '🎂', '🍰', '🧁', '🍫', '🍬', '🍭', '☕']
-  },
-  {
-    title: 'Activities & Sports',
-    emojis: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🥊', '🥋', '⛳', '🏹', '🎣', '🤺', '🏄', '🏊', '🚴', '🧗', '🏆', '🥇', '🎽', '🛹']
-  },
-  {
-    title: 'Travel & Places',
-    emojis: ['✈️', '🚗', '🚕', '🚀', '🛸', '🚁', '⛵', '🚤', '🏝️', '🏔️', '🗽', '🗼', '🏰', '🎡', '🎢', '🌋', '🏕️', '🛣️', '🚦', '⛽', '🧳', '🗺️', '🚂', '🚢']
-  },
-  {
-    title: 'Objects & Tech',
-    emojis: ['💻', '📱', '⌚', '🎧', '📷', '🎥', '💡', '🔋', '🔌', '💾', '🖥️', '🖱️', '⌨️', '📺', '📡', '💰', '💎', '🔑', '🔒', '📌', '📎', '🔗', '🎁', '🧸']
-  },
-  {
-    title: 'Symbols & Weather',
-    emojis: ['✅', '❌', '⚠️', '❓', '❗', '💤', '💧', '☀️', '🌤️', '⛅', '🌧️', '⛈️', '🌈', '❄️', '☃️', '🌙', '⭐', '🌟', '💫', '☄️', '🌊', '🔥', '💥', '♻️']
-  }
-];
 
 const CURATED_GIFS = [
   { id: 'g1', title: 'Victory Dance', url: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -2216,52 +2167,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
 
                 {/* Tab content */}
-                <div className="max-h-56 overflow-y-auto pr-1">
-                  {activePickerTab === 'emojis' && (
-                    <div className="space-y-3">
-                      {EMOJI_CATEGORIES.map((cat) => (
-                        <div key={cat.title}>
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
-                            {cat.title}
-                          </span>
-                          <div className="grid grid-cols-6 gap-1.5 text-xl">
-                            {cat.emojis.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={() => handleSelectEmoji(emoji)}
-                                className="h-9 rounded-xl hover:bg-zinc-800 flex items-center justify-center transition-transform hover:scale-125 cursor-pointer"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div className="max-h-72 overflow-y-auto pr-1">
+                  {activePickerTab === 'emojis' && <EmojiPanel onPick={handleSelectEmoji} />}
 
-                  {activePickerTab === 'gifs' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {CURATED_GIFS.map((gif) => (
-                        <button
-                          key={gif.id}
-                          type="button"
-                          onClick={() => handleSendGif(gif.url)}
-                          className="group relative rounded-xl overflow-hidden border border-zinc-800 hover:border-[#00FF66] transition-all cursor-pointer text-left"
-                        >
-                          <img
-                            src={gif.url}
-                            alt={gif.title}
-                            className="w-full h-20 object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[9px] font-bold text-white py-0.5 px-1 truncate">
-                            {gif.title}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {activePickerTab === 'gifs' && <GifPanel curated={CURATED_GIFS} onPick={handleSendGif} />}
 
                   {activePickerTab === 'stickers' && (
                     <div className="space-y-3">
@@ -2358,6 +2267,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           ))}
                         </div>
                       </div>
+
+                      <AnimatedStickerPanel onPick={handleSendGif} />
                     </div>
                   )}
 

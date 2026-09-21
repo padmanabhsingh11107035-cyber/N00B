@@ -3,7 +3,9 @@ import { Loader2, X } from 'lucide-react';
 import { ShopAddress, ShopDetails } from '../../types';
 import { saveShopAddress } from '../../services/api';
 import { ContactFields, EMPTY_DETAILS, inputClass } from './ContactFields';
-import { AddressForm, MAX_LABEL, emptyAddressForm, validateAddress } from './addressBook';
+import { AddressForm, MAX_LABEL, emptyAddressForm, roundPin, validateAddress } from './addressBook';
+import { LocationPicker } from './LocationPicker';
+import { pinOf } from './orderTracking';
 
 interface AddressEditorModalProps {
   // the address being changed; leave out to add a new one
@@ -92,6 +94,19 @@ export const AddressEditorModal: React.FC<AddressEditorModalProps> = ({ address,
           </div>
 
           <ContactFields value={asDetails} onChange={setFromDetails} email={false} />
+
+          {/* the exact spot: drag the pin to the door, so the delivery person can find it */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-zinc-300">Pin your exact location</span>
+              {pinOf(form) && (
+                <button type="button" onClick={() => setForm((f) => ({ ...f, lat: null, lng: null }))} className="text-[10px] font-bold text-zinc-400 hover:text-white cursor-pointer underline">
+                  Remove pin
+                </button>
+              )}
+            </div>
+            <LocationPicker value={pinOf(form)} onChange={(p) => setForm((f) => ({ ...f, lat: roundPin(p.lat), lng: roundPin(p.lng) }))} />
+          </div>
 
           {!isDefaultAlready && !mustBeDefault && (
             <label className="flex items-center gap-2.5 cursor-pointer">

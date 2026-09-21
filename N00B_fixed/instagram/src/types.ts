@@ -262,6 +262,9 @@ export interface ShopDetails {
   state: string;
   pincode: string;
   deliveryNotes: string;
+  // the exact spot the customer pinned on the map (both, or neither)
+  lat?: number | null;
+  lng?: number | null;
 }
 
 // One saved delivery address in the person's address book (only they can ever see it).
@@ -279,6 +282,9 @@ export interface ShopAddress {
   state: string;
   pincode: string;
   deliveryNotes: string;
+  // the exact spot the customer pinned on the map (both, or neither)
+  lat?: number | null;
+  lng?: number | null;
   updatedAt?: string;
 }
 

@@ -197,6 +197,7 @@ check(!/no physical|does not sell physical|doesn't sell physical/i.test(kb.repla
 check(kb.includes('Profile → ⋮ → Shop NOOB') && /Pickup or Delivery/.test(kb) && /NO online payment/.test(kb) && /Divyajivan Residency/.test(kb), 'it knows how to open the shop, pickup / delivery, that there is no online payment, and the pickup place');
 check(/placed, then confirmed, then ready.*completed/.test(kb) && /cancel an order yourself only while it is still "placed"/.test(kb) && /at most 5 open orders/.test(kb), 'it knows the order steps, when a customer can cancel, and the limit of 5 open orders');
 check(/not accepting orders for a while/.test(kb) && /Your Addresses/.test(kb) && /up to 10/.test(kb), 'it knows about paused ordering and the address book');
+check(/pin your exact location/.test(kb) && /drag the green pin/.test(kb) && /Track order/.test(kb) && /Switch account/.test(kb) && /different account/.test(kb), 'it knows about the map pin, the order screen and using several accounts at once');
 const pages = ['FEED', 'EXPLORE', 'REELS', 'MUSIC HUB', 'CREATE', 'STORIES & HIGHLIGHTS', 'DIRECT CHAT', 'MINI-GAMES', 'PROFILE', 'ACCOUNT & SETTINGS', 'LANGUAGES', 'WALLET', 'NOOB PRO', 'VERIFIED BADGE', 'SHOP NOOB', 'CUSTOMER SUPPORT'];
 check(pages.every((x) => kb.includes(x)), 'it has a section for every page: ' + pages.filter((x) => !kb.includes(x)).join(', '));
 check(kb.includes('Bottom bar') || kb.includes('bottom bar'), 'it knows where the navigation is');

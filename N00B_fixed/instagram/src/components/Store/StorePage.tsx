@@ -18,7 +18,7 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { User, StoreProduct, AppSettings, StoreOrder, ShopDetails, ShopAddress } from '../../types';
-import { fetchStoreProducts, deleteStoreProduct, fetchSettings, updateSettings, getShopDetails, placeStoreOrder, fetchShopAddresses } from '../../services/api';
+import { fetchStoreProducts, deleteStoreProduct, fetchSettings, updateSettings, getShopDetails, placeStoreOrder, fetchShopAddresses, cancelMyStoreOrder } from '../../services/api';
 import { can, isMainAdmin } from '../../adminAccess';
 import { ProductEditorModal } from './ProductEditorModal';
 import { ProductDetailModal } from './ProductDetailModal';
@@ -37,6 +37,7 @@ import { availableStock, cartKey, isBuyable, splitCartKey, variantLabel } from '
 import { loadCart, saveCart } from './cartStorage';
 import { AddressCard } from './AddressCard';
 import { AddressEditorModal } from './AddressEditorModal';
+import { OrderTrackingScreen } from './OrderTrackingScreen';
 import { MAX_ADDRESSES, addressToContact, pickCheckoutAddress } from './addressBook';
 
 interface StorePageProps {
@@ -732,22 +733,16 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         )}
 
         {view === 'done' && placedOrder && (
-          <div className="max-w-lg mx-auto text-center space-y-4 py-10">
-            <CheckCircle2 className="w-14 h-14 text-[#00FF66] mx-auto" />
-            <h2 className="text-lg font-black">Thank you! Order #{placedOrder.orderNo} is placed.</h2>
-            <p className="text-xs text-zinc-400">
-              {placedOrder.deliveryMethod === 'pickup' ? `Pick it up at ${SHOP_ADDRESS}` : 'We will deliver it to your address'} and pay {formatPrice(placedOrder.total)} then. You will get a
-              notification when the shop confirms it.
-            </p>
-            <div className="flex gap-2 justify-center">
-              <button onClick={() => setView('orders')} className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold cursor-pointer hover:opacity-90">
-                View my orders
-              </button>
-              <button onClick={() => setView('grid')} className="px-5 py-2.5 rounded-2xl border border-zinc-700 text-xs font-bold text-zinc-200 hover:border-zinc-500 cursor-pointer">
-                Keep shopping
-              </button>
-            </div>
-          </div>
+          <OrderTrackingScreen
+            order={placedOrder}
+            onClose={() => setView('orders')}
+            onCancel={async (o) => {
+              if (!window.confirm(`Cancel order #${o.orderNo}?`)) return;
+              const res = await cancelMyStoreOrder(o.id);
+              if (res.success && res.order) setPlacedOrder(res.order);
+              else showNotice(res.error || 'Could not cancel the order.', true);
+            }}
+          />
         )}
 
         {view === 'orders' && <OrdersView canManage={canManage} onOrdersChanged={loadData} />}

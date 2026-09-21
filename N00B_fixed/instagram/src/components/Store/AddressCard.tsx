@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { ShopAddress } from '../../types';
 import { addressSummary } from './addressBook';
+import { pinOf } from './orderTracking';
 
 interface AddressCardProps {
   address: ShopAddress;
@@ -30,6 +31,11 @@ export const AddressCard: React.FC<AddressCardProps> = ({ address, mode, selecte
       {s.street && <p className="text-xs text-zinc-300 truncate">{s.street}</p>}
       {s.place && <p className="text-xs text-zinc-300 truncate">{s.place}</p>}
       {s.phone && <p className="text-[11px] text-zinc-500">Phone: {s.phone}</p>}
+      {pinOf(address) ? (
+        <p className="text-[11px] font-semibold text-[#00FF66]">📍 Exact location pinned</p>
+      ) : (
+        <p className="text-[11px] text-zinc-500">No map pin yet: edit this address to add one.</p>
+      )}
     </div>
   );
 

@@ -4,6 +4,8 @@ import { StoreOrder, StoreOrderStatus } from '../../types';
 import { cancelMyStoreOrder, fetchAdminStoreOrders, fetchMyStoreOrders, setStoreOrderStatus } from '../../services/api';
 import { formatPrice } from './formatPrice';
 import { formatAddress } from './ContactFields';
+import { OrderTrackingScreen } from './OrderTrackingScreen';
+import { pinOf } from './orderTracking';
 
 interface OrdersViewProps {
   // may see and handle everyone's orders (shop managers)
@@ -45,7 +47,8 @@ export const OrderCard: React.FC<{
   busy: boolean;
   onCustomerCancel: (o: StoreOrder) => void;
   onShopStep: (o: StoreOrder, status: StoreOrderStatus, reason?: string) => void;
-}> = ({ order, shopView, busy, onCustomerCancel, onShopStep }) => {
+  onOpen: (o: StoreOrder) => void;
+}> = ({ order, shopView, busy, onCustomerCancel, onShopStep, onOpen }) => {
   const [askReason, setAskReason] = useState(false);
   const [reason, setReason] = useState('');
   const step = nextStep(order);
@@ -131,6 +134,14 @@ export const OrderCard: React.FC<{
         )}
       </div>
 
+      {/* the full order screen: map, steps, items and bill */}
+      <button
+        onClick={() => onOpen(order)}
+        className="w-full py-2 rounded-xl border border-[#00FF66]/40 text-[#00FF66] text-[11px] font-bold hover:bg-[#00FF66]/10 cursor-pointer flex items-center justify-center gap-1.5"
+      >
+        <MapPin className="w-3.5 h-3.5" /> {order.deliveryMethod === 'delivery' && pinOf(order.contact) ? 'Track order & see location' : 'View order details'}
+      </button>
+
       {/* Customer: may cancel until the shop confirms */}
       {!shopView && order.status === 'placed' && (
         <button
@@ -207,6 +218,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [trackingId, setTrackingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -261,6 +273,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
     shopFilter === 'all' ? true : shopFilter === 'open' ? ['placed', 'confirmed', 'ready'].includes(o.status) : o.status === shopFilter
   );
   const list = tab === 'mine' ? mine : shopShown;
+  // the order screen always shows the newest version of the order (a change made while it is open shows straight away)
+  const tracking = trackingId ? [...mine, ...shopOrders].find((o) => o.id === trackingId) ?? null : null;
 
   return (
     <div className="max-w-lg mx-auto space-y-3">
@@ -316,8 +330,12 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
         </div>
       ) : (
         list.map((o) => (
-          <OrderCard key={o.id} order={o} shopView={tab === 'shop'} busy={busyId === o.id} onCustomerCancel={customerCancel} onShopStep={shopStep} />
+          <OrderCard key={o.id} order={o} shopView={tab === 'shop'} busy={busyId === o.id} onCustomerCancel={customerCancel} onShopStep={shopStep} onOpen={(x) => setTrackingId(x.id)} />
         ))
+      )}
+
+      {tracking && (
+        <OrderTrackingScreen order={tracking} shopView={tab === 'shop'} busy={busyId === tracking.id} onClose={() => setTrackingId(null)} onCancel={customerCancel} />
       )}
     </div>
   );

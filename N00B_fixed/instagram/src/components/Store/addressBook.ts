@@ -18,7 +18,9 @@ export const emptyAddressForm = (): AddressForm => ({
   city: '',
   state: '',
   pincode: '',
-  deliveryNotes: ''
+  deliveryNotes: '',
+  lat: null,
+  lng: null
 });
 
 // A phone number with everything but its last four digits hidden: "+91 98765 43210" -> "•••••• 3210".
@@ -43,7 +45,8 @@ export function addressToContact(a: ShopAddress, email = ''): Partial<ShopDetail
   return {
     fullName: a.fullName, phone: a.phone, altPhone: a.altPhone, email,
     addressLine1: a.addressLine1, addressLine2: a.addressLine2, landmark: a.landmark,
-    city: a.city, state: a.state, pincode: a.pincode, deliveryNotes: a.deliveryNotes
+    city: a.city, state: a.state, pincode: a.pincode, deliveryNotes: a.deliveryNotes,
+    lat: a.lat ?? null, lng: a.lng ?? null
   };
 }
 
@@ -61,8 +64,15 @@ export function validateAddress(a: AddressForm): string | null {
   if (a.state.trim() === '') return 'Enter the state.';
   if (a.pincode.trim() === '') return 'Enter the pincode.';
   if (!/^[A-Za-z0-9 -]{4,10}$/.test(a.pincode.trim())) return 'Enter a valid pincode.';
+  // the map pin is optional; when there is one it must be a real place (both numbers)
+  const hasLat = a.lat !== null && a.lat !== undefined;
+  const hasLng = a.lng !== null && a.lng !== undefined;
+  if (hasLat !== hasLng || (hasLat && (!Number.isFinite(a.lat) || !Number.isFinite(a.lng) || Math.abs(a.lat as number) > 90 || Math.abs(a.lng as number) > 180))) return 'The map pin is not a valid location.';
   return null;
 }
+
+// A pin position as it is stored: six decimals (about a tenth of a metre).
+export const roundPin = (n: number): number => Math.round(n * 1e6) / 1e6;
 
 // The default address first, then the rest in the order they were saved (the database already sends them this way; this
 // keeps the screen right after a local change too).

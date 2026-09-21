@@ -162,5 +162,21 @@ check((await db.query('select store_enabled from app_settings where id = 1')).ro
 await db.exec(read(M13));
 check(JSON.stringify(await snap()) === JSON.stringify(before13), 'running migration 13 a second time is harmless');
 
+section('Applying migration 14 (map pin on addresses) on top');
+const M14 = '20260921000014_address_pin.sql';
+const before14 = await snap();
+const addr14 = (await db.query('select id, details::text d from shop_addresses order by id')).rows;
+const orders14 = (await db.query('select id, contact::text c from store_orders order by id')).rows;
+await db.exec(read(M14));
+check(JSON.stringify(await snap()) === JSON.stringify(before14), 'migration 14 changes no count and no point total');
+check(JSON.stringify((await db.query('select id, details::text d from shop_addresses order by id')).rows) === JSON.stringify(addr14), 'every saved address is exactly as it was');
+check(JSON.stringify((await db.query('select id, contact::text c from store_orders order by id')).rows) === JSON.stringify(orders14), 'every order is exactly as it was');
+const tidy = (await db.query(`select public.clean_shop_contact('{"fullName":"Asha","phone":"9876543210","lat":23.02251234567,"lng":"72.5714"}'::jsonb, false, false) as r`)).rows[0].r;
+check(tidy.lat === 23.022512 && tidy.lng === 72.5714, 'the new check tidies a pin');
+check(!('lat' in (await db.query(`select public.clean_shop_contact('{"fullName":"Asha"}'::jsonb, false, false) as r`)).rows[0].r), 'and an address without a pin gets none');
+check(await asUser(db, someone, async () => { try { await db.query(`select public.save_shop_address('{"fullName":"Asha Verma","phone":"9876543210","addressLine1":"12 MG Road","city":"Pune","state":"MH","pincode":"411001","lat":999,"lng":1}'::jsonb)`); return false; } catch (e) { return /map pin is not a valid location/.test(e.message); } }), 'an impossible pin is refused');
+await db.exec(read(M14));
+check(JSON.stringify(await snap()) === JSON.stringify(before14), 'running migration 14 a second time is harmless');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

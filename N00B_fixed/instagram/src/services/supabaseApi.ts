@@ -14,6 +14,9 @@ import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
 import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
+import { createE2ee } from '../e2ee/service.ts';
+import { bindMessages } from '../e2ee/messages.ts';
+import { browserKeyStore } from '../e2ee/keyring.ts';
 
 // ----------------------------------------------------------------------------- plumbing
 
@@ -194,7 +197,7 @@ export async function signupUser(payload: {
       }
     }
     const user = await rpc<User>('get_my_user');
-    return { success: true, user: mapUser(user) as User };
+    return { success: true, user: startChatKeys(mapUser(user)) as User };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not create the account. Please try again.') };
   }
@@ -225,7 +228,7 @@ export async function loginUser(payload: {
         error: `This account has been suspended by NOOB Administrator.${user.suspendedReason ? ' Reason: ' + user.suspendedReason : ''}`
       };
     }
-    return { success: true, user: mapUser(user) as User };
+    return { success: true, user: startChatKeys(mapUser(user)) as User };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not log in. Please check your connection and try again.') };
   }
@@ -291,11 +294,18 @@ export async function deleteMyAccount(password: string): Promise<{ success: bool
   }
 }
 
+// Once a person is known to be signed in, this device gets its chat key ready in the background (so a chat is already locked for it before
+// anybody writes to them). Never blocks anything, and never fails loudly.
+function startChatKeys<U extends { id?: string } | null | undefined>(user: U): U {
+  if (user?.id) void e2ee.ensure(user.id).catch(() => undefined);
+  return user;
+}
+
 export async function fetchCurrentUser(): Promise<User | null> {
   try {
     if (!(await currentSession())) return null;
     const user = await rpc<User | null>('get_my_user');
-    return user ? (mapUser(user) as User) : null;
+    return user ? (startChatKeys(mapUser(user)) as User) : null;
   } catch {
     return null;
   }
@@ -329,7 +339,7 @@ export async function loadSignedInUser(): Promise<User | null> {
   if (error) throw error;
   if (!data.session) return null;
   const user = await rpc<User | null>('get_my_user');
-  return user ? (mapUser(user) as User) : null;
+  return user ? (startChatKeys(mapUser(user)) as User) : null;
 }
 
 // The old PUT /users/me only ever accepted these fields; everything else goes through updateFullProfile.
@@ -1008,8 +1018,11 @@ function dropNulls<T extends Record<string, any>>(o: T): T {
   return out;
 }
 
-function mapMessage(m: any): Message {
+// A locked (end-to-end encrypted) message arrives with its envelope in "e2ee". Screens never see the envelope: the places that receive
+// chat messages open it right after mapping (see unlockMessages); anywhere else it is shown as locked rather than as an empty message.
+function mapMessage(m: any, keepLocked = false): Message {
   const out: any = dropNulls(m);
+  if (out.e2ee && !keepLocked) { delete out.e2ee; out.encrypted = true; out.locked = 'no-key'; }
   if (m.senderAvatar) out.senderAvatar = resolveMedia(m.senderAvatar);
   if (m.mediaUrl) out.mediaUrl = resolveMedia(m.mediaUrl);
   if (m.sharedTrack) {
@@ -1022,11 +1035,11 @@ function mapMessage(m: any): Message {
   return out as Message;
 }
 
-function mapChat(c: any): ChatConversation {
+function mapChat(c: any, keepLocked = false): ChatConversation {
   const out: any = dropNulls(c);
   if (c.avatar) out.avatar = resolveMedia(c.avatar);
   out.participants = (c.participants || []).map((p: any) => ({ ...p, avatar: resolveMedia(p.avatar) }));
-  if (c.lastMessage) out.lastMessage = mapMessage(c.lastMessage);
+  if (c.lastMessage) out.lastMessage = mapMessage(c.lastMessage, keepLocked);
   return out as ChatConversation;
 }
 
@@ -1040,10 +1053,39 @@ async function storedAvatarFor(value?: string | null): Promise<string | null> {
   return toStoredMedia(value);
 }
 
+// ----------------------------------------------------------------------------- end-to-end encryption
+// This device's chat keys, and locking / opening messages. See src/e2ee/service.ts for the rules it keeps.
+const seenStore = {
+  get: (k: string): string | null => { try { return localStorage.getItem(`noob_e2ee_seen_v1_${k}`); } catch { return null; } },
+  set: (k: string, v: string) => { try { localStorage.setItem(`noob_e2ee_seen_v1_${k}`, v); } catch { /* remembered next time */ } }
+};
+
+const deviceLabel = (): string => {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iPhone/iPad' : /Windows/i.test(ua) ? 'Windows' : /Mac OS X/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Device';
+  const br = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'browser';
+  return `${os} · ${br}`;
+};
+
+const webLocks = typeof navigator !== 'undefined' ? (navigator as any).locks : undefined;
+
+export const e2ee = createE2ee({
+  rpc,
+  userId: async () => (await currentSession())?.user?.id ?? null,
+  storeFor: (id) => browserKeyStore(id),
+  seen: seenStore,
+  lock: webLocks?.request ? <T,>(name: string, fn: () => Promise<T>) => webLocks.request(name, fn) as Promise<T> : undefined,
+  deviceLabel
+});
+
+const { unlockOne, unlockMessages, prepareSend, prepareEdit } = bindMessages(e2ee);
+
 export async function fetchChats(): Promise<ChatConversation[]> {
   try {
     if (!(await currentSession())) return [];
-    return ((await rpc<any[]>('my_chats')) || []).map(mapChat);
+    const chats = ((await rpc<any[]>('my_chats')) || []).map((c) => mapChat(c, true));
+    await Promise.all(chats.map(async (c) => { if (c.lastMessage) c.lastMessage = await unlockOne(c.id, c.lastMessage); }));
+    return chats;
   } catch {
     return [];
   }
@@ -1082,7 +1124,7 @@ export async function deleteChat(chatId: string): Promise<boolean> {
 export async function fetchMessages(chatId: string): Promise<Message[]> {
   try {
     const res = await rpc<{ messages: any[] }>('chat_messages', { p_chat: chatId });
-    return (res.messages || []).map(mapMessage);
+    return await unlockMessages(chatId, (res.messages || []).map((m) => mapMessage(m, true)));
   } catch {
     return [];
   }
@@ -1095,9 +1137,20 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
       const file = dataUriToFile(media, 'chat');
       media = file ? (await uploadToStorage(file, 'posts')).objectKey : '';
     }
+    // A text message (or a GIF / sticker, which is only a link to a picture) in a chat that CAN be locked is locked on this device. If it can
+    // not be locked the message FAILS: it is never quietly sent readable instead. Pictures, video and voice notes are not locked yet.
+    const storedMedia = toStoredMedia(media);
+    const lockedPayload = await prepareSend(chatId, {
+      text: payload.text, storedMedia, mediaType: payload.mediaType, sharedTrack: payload.sharedTrack, gameInvite: payload.gameInvite,
+      audioDuration: payload.audioDuration, scheduledAt: payload.scheduledAt, replyToId: payload.replyTo?.messageId
+    });
+    if (lockedPayload) {
+      const locked = await rpc<{ message: any }>('send_message', { p_chat: chatId, p: lockedPayload });
+      return (await unlockMessages(chatId, [mapMessage(locked.message, true)]))[0];
+    }
     const p: Record<string, unknown> = {
       text: payload.text || '',
-      mediaUrl: toStoredMedia(media) || undefined,
+      mediaUrl: storedMedia || undefined,
       mediaType: payload.mediaType,
       audioDuration: payload.audioDuration,
       scheduledAt: payload.scheduledAt,
@@ -1115,9 +1168,22 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
   }
 }
 
+// A locked message is edited by locking the new text again (a plain edit is refused by the database, so it can never overwrite one).
+async function editLocked(chatId: string, messageId: string, text: string): Promise<Message> {
+  const env = await prepareEdit(chatId, messageId, text);
+  const res = await rpc<{ message: any }>('edit_message_e2ee', { p_chat: chatId, p_message: messageId, p_e2ee: env });
+  return (await unlockMessages(chatId, [mapMessage(res.message, true)]))[0];
+}
+
 export async function editMessage(chatId: string, messageId: string, text: string): Promise<Message> {
-  const res = await rpc<{ message: any }>('edit_message', { p_chat: chatId, p_message: messageId, p_text: text });
-  return mapMessage(res.message);
+  if (e2ee.payloadOf(messageId)) return editLocked(chatId, messageId, text);
+  try {
+    const res = await rpc<{ message: any }>('edit_message', { p_chat: chatId, p_message: messageId, p_text: text });
+    return mapMessage(res.message);
+  } catch (err) {
+    if (/end-to-end encrypted/i.test(errorText(err, ''))) return editLocked(chatId, messageId, text);
+    throw err;
+  }
 }
 
 // Authors delete their own; group admins delete in their group; the site admin can moderate any message by id.
@@ -1468,7 +1534,10 @@ export async function searchGifs(query: string): Promise<{ configured: boolean; 
 
 export async function translateMessage(chatId: string, messageId: string): Promise<string> {
   try {
-    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'translate', chatId, messageId, lang: getLanguage() } });
+    // a locked message is opened on this device and only that one text is sent to the translator (the server can not read it itself)
+    const opened = e2ee.payloadOf(messageId);
+    const body = opened ? { action: 'translate-text', text: opened.t, lang: getLanguage() } : { action: 'translate', chatId, messageId, lang: getLanguage() };
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body });
     if (error) return '';
     return (data as any)?.translatedText || '';
   } catch {

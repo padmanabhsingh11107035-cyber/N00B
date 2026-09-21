@@ -178,5 +178,35 @@ check(await asUser(db, someone, async () => { try { await db.query(`select publi
 await db.exec(read(M14));
 check(JSON.stringify(await snap()) === JSON.stringify(before14), 'running migration 14 a second time is harmless');
 
+section('Applying migration 15 (end-to-end encrypted chats) on top');
+const M15 = '20260921000015_e2ee_chats.sql';
+// (the imported backup has no chat history, so a small real one is made first: plain messages, a picture, a quote, a reaction)
+const chat15 = (await db.query('insert into chats (is_group) values (false) returning id')).rows[0].id;
+await db.query('insert into chat_members (chat_id, user_id) values ($1, $2), ($1, $3)', [chat15, someone, someoneElse]);
+const m1 = (await db.query("insert into messages (chat_id, sender_id, text) values ($1, $2, 'hello from before the upgrade') returning id", [chat15, someone])).rows[0].id;
+await db.query("insert into messages (chat_id, sender_id, text, media_url, media_type) values ($1, $2, '', 'posts/old-photo.jpg', 'image')", [chat15, someoneElse]);
+await db.query("insert into messages (chat_id, sender_id, text, reply_to, reactions) values ($1, $2, 'a reply', $3::jsonb, $4::jsonb)", [chat15, someone, JSON.stringify({ messageId: m1, senderUsername: 'x', textPreview: 'hello from before the upgrade' }), JSON.stringify([{ emoji: 'thumbs-up', userId: 'x' }])]);
+const before15 = await snap();   // (counted after the small history exists, so the upgrade is what is being measured)
+const msgs15 = (await db.query('select id, chat_id, sender_id, text, media_url, media_type, reply_to::text r, reactions::text x, is_edited, created_at from messages order by id')).rows;
+const chats15 = (await db.query('select id, name, is_group, last_message_at from chats order by id')).rows;
+await db.exec(read(M15));
+check(JSON.stringify(await snap()) === JSON.stringify(before15), 'migration 15 changes no count and no point total');
+check(msgs15.length > 0 && JSON.stringify((await db.query('select id, chat_id, sender_id, text, media_url, media_type, reply_to::text r, reactions::text x, is_edited, created_at from messages order by id')).rows) === JSON.stringify(msgs15), 'EVERY existing message is exactly as it was (text, pictures, quotes, reactions, times)');
+check(JSON.stringify((await db.query('select id, name, is_group, last_message_at from chats order by id')).rows) === JSON.stringify(chats15), 'every chat is exactly as it was');
+check((await db.query('select count(*)::int n from messages where e2ee is not null')).rows[0].n === 0, 'no old message became "locked": they stay readable as before');
+const someChat = (await db.query('select chat_id from messages limit 1')).rows[0].chat_id;
+const oneMember = (await db.query('select user_id from chat_members where chat_id = $1 limit 1', [someChat])).rows[0]?.user_id;
+if (oneMember) {
+  const listed15 = await asUser(db, oneMember, async () => (await db.query('select public.chat_messages($1) as r', [someChat])).rows[0].r.messages);
+  const original = msgs15.filter((m) => m.chat_id === someChat);
+  check(listed15.length > 0 && listed15.every((m) => 'e2ee' in m && m.e2ee === null) && original.some((o) => listed15.some((m) => m.id === o.id && m.text === o.text)), 'an old chat lists its old messages with the same text (and none is locked)');
+  const sentPlain = await asUser(db, oneMember, async () => (await db.query('select public.send_message($1, $2::jsonb) as r', [someChat, JSON.stringify({ text: 'still plain after the upgrade' })])).rows[0].r);
+  check(sentPlain.success && sentPlain.message.text === 'still plain after the upgrade' && sentPlain.message.e2ee === null, 'a plain message is sent and stored readable, exactly as before');
+} else check(true, '(no chat with members in this backup to try it on)');
+check((await db.query('select count(*)::int n from chat_keys')).rows[0].n === 0 && (await db.query('select count(*)::int n from chat_key_backups')).rows[0].n === 0, 'no key exists until a device registers one');
+const before15b = await snap();
+await db.exec(read(M15));
+check(JSON.stringify(await snap()) === JSON.stringify(before15b), 'running migration 15 a second time is harmless');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

@@ -602,7 +602,8 @@ THE PAGES:
 4. MUSIC HUB: community audio tracks. You can upload your own audio (.mp3, .wav). A playing track keeps playing in a small floating player while you use the rest of the app, and tracks can be shared in chats.
 5. CREATE (+): make a post (photos, several slides allowed), a reel (video), a story, an audio track or a status note. The app sorts uploads by file type: photos to the Feed and Profile, videos to Reels, audio to the Music Hub.
 6. STORIES & HIGHLIGHTS: a story disappears after 24 hours and people can reply to it. Highlights keep stories on your profile: tap "+ New" on your Profile, name it, and the first photo becomes the round cover. You can edit a highlight any time.
-7. DIRECT CHAT: message people; make group chats (a group admin can switch on "Only admins can send messages"); send voice notes, photos and videos; vanish mode (photos and videos that disappear); reply to, edit or delete your own messages; share music tracks; challenge a friend to a mini-game inside the chat. Tap the globe icon on any message to translate it into your language. The "NOOB Global Lounge" is a public room for everyone.
+7. DIRECT CHAT: message people; make group chats (a group admin can switch on "Only admins can send messages"); send voice notes, photos and videos; vanish mode (photos and videos that disappear); reply to, edit or delete your own messages; share music tracks; challenge a friend to a mini-game inside the chat. Tap the globe icon on any message to translate it into your language. The "NOOB Global Lounge" is a public room for everyone. The emoji picker holds every emoji, plus hundreds of animated stickers and GIFs (GIFs can be searched once the GIF library is switched on).
+   - END-TO-END ENCRYPTION: direct chats and private groups are end-to-end encrypted. Text messages, replies, edits, GIFs and stickers are locked on your own device and can only be opened on the devices of the people in that chat, so nobody else can read them, not even NOOB. Photos, videos, voice notes, shared music and game invites are NOT locked yet. The Global Lounge, the AI chat and groups of more than 100 people are not encrypted. The lock at the top of a chat says whether it is encrypted right now and opens a security code you can compare with the other person (if it is the same on both phones, nobody is in the middle). If somebody in a chat has not opened the updated app yet, that chat is not encrypted until they do. Profile → ⋮ → Chat encryption shows your devices and lets you make a backup of your keys locked with your own passphrase: a new phone, or a cleared browser, cannot read older messages without that backup, and NOOB cannot recover them for you. NEVER promise that nothing can ever go wrong: say what is protected and what is not.
 8. MINI-GAMES & LEADERBOARD: 50 games (Cyber Snake, Drone Dash, 2048, Brick Breaker, Pong, Space Invaders, Tic-Tac-Toe, Typing Speed, Chess Blitz and more). Win = +10,000,000 NOOB points, Tie = +5,000,000 NOOB points, Loss = 0 points. Survival games pay 1,000,000 points per second survived. Chess Blitz vs the bot has real stakes: a win pays 50,000,000 points and a loss wipes the balance (free accounts can play it once a week, NOOB Pro up to 4 times a week). Rankings show live on the Global Leaderboard.
 9. PROFILE: Edit Profile (photo, bio, links, details), Share Profile, followers and following, tabs for your posts, reels and saved items (collections). Account types: Public, Private (followers must be approved) and Business (analytics through the Professional Dashboard: reach, engagement, action buttons like email, phone and directions). "Hide my profile from…" lets you choose people who cannot see your profile, posts, reels, stories or followers, cannot find you in search and cannot follow you (they are not told). Blocked Accounts lists people you blocked or restricted.
 10. ACCOUNT & SETTINGS: Language (see below), dark or light mode, notifications on/off (one phone or browser per account gets notifications; on an iPhone, add NOOB to the Home Screen first), "Forgot Password?" on the login page, using several accounts at once (every browser tab can be logged in as a different account: Profile → ⋮ → Switch account, or "Add another account"; logging out only logs out the account of that tab), and deleting your account (Profile → ⋮ → Account Settings & Privacy → Danger Zone → Delete My Account Permanently, needs your password, cannot be undone).
@@ -661,10 +662,17 @@ Deno.serve(async (req) => {
   });
 
   // ------------------------------------------------------------------ translate one chat message
-  if (body?.action === 'translate') {
+  // "translate": the server reads the stored message itself. "translate-text": an end-to-end encrypted message can not be read by the server,
+  // so the person's own device opens it and sends just this one text (only when they press the translate button).
+  if (body?.action === 'translate' || body?.action === 'translate-text') {
     if (!userId) return json({ error: 'Please log in.' }, 401);
-    const { data: msg } = await asUser().from('messages').select('text').eq('id', String(body.messageId)).eq('chat_id', String(body.chatId)).maybeSingle();
-    const text = String(msg?.text ?? '').trim();
+    let text = '';
+    if (body.action === 'translate-text') {
+      text = typeof body.text === 'string' ? body.text.trim() : '';
+    } else {
+      const { data: msg } = await asUser().from('messages').select('text').eq('id', String(body.messageId)).eq('chat_id', String(body.chatId)).maybeSingle();
+      text = String(msg?.text ?? '').trim();
+    }
     if (!text) return json({ error: 'Nothing to translate.' }, 404);
     const target = LANGUAGE_NAMES[String(body.lang ?? '')] ?? 'English';
     const { reply: translated, tried } = await queryGroq([

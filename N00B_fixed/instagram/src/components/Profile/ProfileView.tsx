@@ -96,7 +96,8 @@ import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { HideProfileModal } from '../Modals/HideProfileModal';
 import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
-import { Globe as GlobeIcon, Users } from 'lucide-react';
+import { Globe as GlobeIcon, KeyRound, Users } from 'lucide-react';
+import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
@@ -231,6 +232,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showHideProfileModal, setShowHideProfileModal] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showSwitchAccount, setShowSwitchAccount] = useState(false);
+  const [showEncryptionSettings, setShowEncryptionSettings] = useState(false);
   const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
@@ -706,6 +708,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <span translate="no" dir="auto" className="text-[10px] text-zinc-400 block truncate">{findLanguage(language)?.native ?? 'English'}</span>
                 </div>
               </button>
+
+              {/* Own account: chat encryption keys & backup */}
+              {isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setShowThreeDotsMenu(false);
+                    setShowEncryptionSettings(true);
+                  }}
+                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <KeyRound className="w-4 h-4 text-emerald-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">Chat encryption</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Your keys, devices and backup</span>
+                  </div>
+                </button>
+              )}
 
               {/* Universal: Push Notifications on/off */}
               {isOwnProfile && (
@@ -1915,6 +1936,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         />
       )}
       {showSwitchAccount && <SwitchAccountModal onClose={() => setShowSwitchAccount(false)} />}
+      {showEncryptionSettings && <EncryptionSettingsModal onClose={() => setShowEncryptionSettings(false)} />}
 
       {showBlockedAccountsModal && (
         <BlockedAccountsModal

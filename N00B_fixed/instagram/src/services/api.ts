@@ -2,6 +2,7 @@
 // this file only lists them under the names the screens have always imported.
 export type { GifItem } from './supabaseApi';
 export {
+  e2ee,
   searchGifs,
   fetchHealth,
   signupUser,

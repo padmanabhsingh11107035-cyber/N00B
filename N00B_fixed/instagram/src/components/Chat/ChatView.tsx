@@ -1,5 +1,7 @@
 import { EmojiPanel } from './EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
+import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
+import { useChatCrypto } from './useChatCrypto';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
@@ -17,6 +19,7 @@ import {
   Clock,
   Music,
   ShieldCheck,
+  LockOpen,
   Flame,
   Check,
   CheckCheck,
@@ -135,7 +138,8 @@ import {
   deleteCustomSticker,
   MyCustomSticker,
   fetchShopCatalog,
-  purchaseShopItem
+  purchaseShopItem,
+  e2ee
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -678,6 +682,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
+
+  // End-to-end encryption: is the open chat locked, its security code, and the two screens that explain it
+  const [encryptionTick, setEncryptionTick] = useState(0);
+  const chatCrypto = useChatCrypto(activeChat?.id, encryptionTick);
+  const [showEncryption, setShowEncryption] = useState(false);
+  const [showEncryptionSettings, setShowEncryptionSettings] = useState(false);
 
   // A group set to "only admins can send messages": everyone else sees a notice instead of the message box.
   // (adminIds is the same list the database uses, so this always agrees with what the server will accept.)
@@ -1391,7 +1401,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
                         )}
                         <span className="truncate">
-                          {lastMsg?.text || (c.isGroup ? 'Group channel active' : 'Chat started')}
+                          {lastMsg?.locked
+                            ? '🔒 Locked message'
+                            : lastMsg?.text || (c.isGroup ? 'Group channel active' : 'Chat started')}
                         </span>
                       </div>
 
@@ -1555,17 +1567,32 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       )}
                   </div>
 
-                  <div className="text-[11px] text-zinc-400 flex items-center gap-2">
-                    {activeChat?.isGroup ? (
+                  <div className="text-[11px] text-zinc-400 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                    {activeChat?.isGroup && (
                       <span className="text-purple-300 font-medium flex items-center gap-1">
-                        <Users className="w-3 h-3" /> {(activeChat.participants || []).length} members • Tap for
-                        Info
+                        <Users className="w-3 h-3" /> {(activeChat.participants || []).length} members
                       </span>
-                    ) : (
+                    )}
+                    {!activeChat?.isGroup && activeChat?.vanishMode && (
                       <span className="text-[#00FF66] font-medium flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" />
-                        {activeChat?.vanishMode ? 'Vanish Mode On' : 'End-to-End Encrypted'}
+                        <ShieldCheck className="w-3 h-3" /> Vanish Mode On
                       </span>
+                    )}
+                    {/* Only says "encrypted" when this chat really is: the server is asked, and the answer is shown as it is */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowEncryption(true);
+                      }}
+                      className={`font-medium flex items-center gap-1 cursor-pointer ${chatCrypto?.encryptable ? 'text-[#00FF66]' : 'text-amber-300'}`}
+                      title="About this chat's encryption"
+                    >
+                      {chatCrypto?.encryptable ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
+                      {chatCrypto === null ? 'Checking…' : chatCrypto.encryptable ? 'End-to-end encrypted' : 'Not encrypted'}
+                    </button>
+                    {chatCrypto?.peer?.changed && (
+                      <span className="text-amber-300 font-bold">• Security code changed</span>
                     )}
                   </div>
                 </div>
@@ -1943,6 +1970,28 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       />
                     ) : isSticker && m.text ? (
                       <p className="text-7xl leading-none">{m.text}</p>
+                    ) : m.locked ? (
+                      <div className="text-xs flex items-start gap-1.5 text-zinc-400">
+                        <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="italic">
+                            {m.locked === 'no-key'
+                              ? 'This message is locked and can not be opened on this device.'
+                              : m.locked === 'unverified-sender'
+                                ? 'This message could not be checked, so it is not shown.'
+                                : 'This message is damaged, so it is not shown.'}
+                          </p>
+                          {m.locked === 'no-key' && (
+                            <button
+                              type="button"
+                              onClick={() => setShowEncryptionSettings(true)}
+                              className="text-[10px] font-bold text-[#00FF66] hover:underline cursor-pointer"
+                            >
+                              Restore my key backup to read older messages
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     ) : m.text ? (
                       <p translate="no" className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
                     ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite ? (
@@ -1990,14 +2039,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     >
                       <Reply className="w-3 h-3" />
                     </button>
-                    <button
-                      onClick={() => handleTranslate(m.id)}
-                      className="hover:text-white p-1 rounded"
-                      title="Translate"
-                    >
-                      <Globe className="w-3 h-3" />
-                    </button>
-                    {isMine && (
+                    {!m.locked && (
+                      <button
+                        onClick={() => handleTranslate(m.id)}
+                        className="hover:text-white p-1 rounded"
+                        title="Translate"
+                      >
+                        <Globe className="w-3 h-3" />
+                      </button>
+                    )}
+                    {isMine && !m.locked && (
                       <button
                         onClick={() => {
                           setIsEditingMessageId(m.id);
@@ -2416,6 +2467,37 @@ export const ChatView: React.FC<ChatViewProps> = ({
             setConversations(
               conversations.map((c) => (c.id === updatedChat.id ? updatedChat : c))
             );
+          }}
+        />
+      )}
+
+      {/* End-to-end encryption: what this chat's lock means, and my keys & backup */}
+      {showEncryption && (
+        <ChatEncryptionModal
+          info={chatCrypto}
+          title={
+            activeChat?.isGroup
+              ? activeChat.name || 'Group Chat'
+              : activeChat?.customNickname || activeChat?.participants.find((p) => p.id !== currentUser.id)?.displayName || 'Chat'
+          }
+          onClose={() => setShowEncryption(false)}
+          onOpenSettings={() => {
+            setShowEncryption(false);
+            setShowEncryptionSettings(true);
+          }}
+          onAcknowledge={async () => {
+            if (chatCrypto?.peer) await e2ee.acknowledge(chatCrypto.peer.userId, chatCrypto.peer.fingerprint);
+            setEncryptionTick((t) => t + 1);
+          }}
+        />
+      )}
+      {showEncryptionSettings && (
+        <EncryptionSettingsModal
+          onClose={() => setShowEncryptionSettings(false)}
+          onRestored={() => {
+            setEncryptionTick((t) => t + 1);
+            if (activeChatId) loadMessages(activeChatId);
+            loadChats();
           }}
         />
       )}

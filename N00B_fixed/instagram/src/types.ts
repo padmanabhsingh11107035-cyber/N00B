@@ -500,6 +500,9 @@ export interface Message {
   };
   status?: 'sent' | 'delivered' | 'read';
   scheduledAt?: string;
+  // end-to-end encryption: true when the message was locked on the sender's device; "locked" is set when it can not be opened on this one
+  encrypted?: boolean;
+  locked?: 'no-key' | 'unverified-sender' | 'damaged';
 }
 
 export interface ChatConversation {

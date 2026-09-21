@@ -228,9 +228,9 @@ export default function App() {
   // ended (the saved login was removed after a failed renewal, another tab signed out...) is reported as "you were
   // signed out", and a check that could not be completed does nothing (see utils/sessionWatch.ts).
   //
-  // A browser keeps ONE saved login per site, shared by all its tabs. So the check also compares whose login is saved with
-  // whose account THIS tab shows ("switched" = another tab signed in as someone else), and it runs again the moment you come
-  // back to the tab, which is when another tab may have changed things.
+  // Each tab uses its own account (services/tabSessions.ts), so another tab logging in as someone else no longer affects this one.
+  // The check still compares whose login this tab reads with whose account it shows ("switched" is only a safety net now), and it
+  // runs again the moment you come back to the tab, which is when another tab may have logged this account out.
   const watchRef = useRef<WatchState>(initialWatch);
   useEffect(() => {
     if (!currentUser) return;

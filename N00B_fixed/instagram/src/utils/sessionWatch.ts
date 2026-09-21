@@ -6,8 +6,9 @@
 // is a plain "you were signed out", said in those words. And a check that could not be completed (bad connection,
 // a hiccup on the server) never ends a session at all.
 //
-// A browser keeps ONE saved login per site, shared by all its tabs. If another tab signs in as a DIFFERENT account,
-// this tab would silently start acting as that other account, so that case ("switched") ends this tab straight away.
+// Every tab uses its OWN account (see services/tabSessions.ts), so logging in as another account in another tab does not touch this
+// tab. "switched" is only a safety net now: if this tab ever finds a login for a DIFFERENT account than the one it shows, it must
+// not keep acting as that other account, so it ends straight away.
 
 export type SessionStatus = 'valid' | 'suspended' | 'signed-out' | 'switched' | 'unknown';
 export type EndReason = 'suspended' | 'signed-out' | 'switched';

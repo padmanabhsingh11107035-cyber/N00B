@@ -42,6 +42,7 @@ import { LanguagePicker, LanguageButton } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
+import { tabSessions } from '../../services/supabase';
 import confetti from 'canvas-confetti';
 
 interface AuthViewProps {
@@ -256,6 +257,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // Preferred language: English until the person picks another; the whole app switches to it straight away
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const language = useLanguage();
+  // accounts already logged in on this browser (in other tabs, or earlier): one tap uses one of them in this tab
+  const [savedAccounts] = useState(() => tabSessions.savedAccounts());
   const languageInfo = findLanguage(language);
 
   // Sign up form state
@@ -774,6 +777,25 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="flex-1">{errorMessage}</span>
             <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-white text-sm font-bold">✕</button>
+          </div>
+        )}
+
+        {savedAccounts.length > 0 && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-zinc-900/70 border border-white/10">
+            <p className="text-[11px] font-bold text-zinc-400 mb-2">Continue as (already logged in on this browser)</p>
+            <div className="flex flex-wrap gap-2">
+              {savedAccounts.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => { if (tabSessions.switchTo(a.id)) window.location.reload(); }}
+                  className="px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-400/50 text-xs font-bold text-white cursor-pointer transition-colors"
+                  translate="no"
+                >
+                  @{a.username}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

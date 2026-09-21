@@ -818,7 +818,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                   </button>
 
-                  {/* Option: NOOB Shop */}
+                  {/* Option: Shop NOOB */}
                   <button
                     onClick={() => {
                       setShowThreeDotsMenu(false);
@@ -830,8 +830,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <ShoppingBag className="w-4 h-4 text-orange-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-orange-400 transition-colors">
-                        NOOB Shop
+                      <span className="shop-wordmark text-[19px] leading-tight text-white block group-hover:text-orange-400 transition-colors">
+                        Shop NOOB
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         Browse products &amp; your cart

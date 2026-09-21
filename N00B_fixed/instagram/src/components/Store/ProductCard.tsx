@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { StoreProduct } from '../../types';
 import { formatPrice } from './formatPrice';
 import { LOW_STOCK_AT, hasVariants, totalStock } from './variants';
+import { ProductMediaCarousel } from './ProductMediaCarousel';
 
 interface ProductCardProps {
   product: StoreProduct;
@@ -20,7 +21,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, canManage, on
   const soldOut = !product.inStock;
   const units = totalStock(product);
   const needsChoice = hasVariants(product);
-  const first = product.media[0];
 
   return (
     <div
@@ -28,11 +28,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, canManage, on
     >
       <button type="button" onClick={() => onOpen(product)} className="flex-1 flex flex-col items-center text-center cursor-pointer" aria-label={`Open ${product.title}`}>
         <div className="w-full aspect-square rounded-xl overflow-hidden bg-zinc-900/80 relative">
-          {first?.type === 'video' ? (
-            <video src={first.url} className="w-full h-full object-cover" muted />
-          ) : (
-            <img src={first?.url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
-          )}
+          {/* the product's pictures turn by themselves and loop: after the last one it starts again from the first */}
+          <ProductMediaCarousel media={product.media} className="group-hover:scale-105 transition-transform duration-300" />
           {soldOut && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <span className="text-[10px] font-bold text-red-400 bg-black/70 px-2 py-1 rounded-full">Out of Stock</span>

@@ -151,6 +151,13 @@
   font-family: 'Pacifico', 'Caveat', cursive, sans-serif;
 }
 
+/* The shop's name, written like a logo: a flowing brush script in the style of the Instagram wordmark (Grand Hotel). */
+.shop-wordmark {
+  font-family: 'Grand Hotel', 'Pacifico', cursive, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
 .noob-wordmark {
   font-family: 'Pacifico', cursive, sans-serif;
   background: linear-gradient(135deg, #FF4E6A 0%, #FF758C 50%, #FF8E53 100%);

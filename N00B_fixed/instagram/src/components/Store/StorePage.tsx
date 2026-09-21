@@ -326,7 +326,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     else setView('grid');
   };
 
-  const title = { grid: 'NOOB Shop', cart: 'Your Cart', checkout: 'Checkout', done: 'Order placed', orders: 'Orders', account: 'Account details' }[view];
+  const title = { grid: 'Shop NOOB', cart: 'Your Cart', checkout: 'Checkout', done: 'Order placed', orders: 'Orders', account: 'Account details' }[view];
 
   const navTab = (id: 'grid' | 'cart' | 'orders' | 'account', label: string, Icon: React.ElementType, badge?: number, picture?: React.ReactNode) => {
     const active = view === id || (id === 'cart' && view === 'checkout');
@@ -383,7 +383,8 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         <button onClick={goBack} className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer" aria-label="Back">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-black tracking-tight flex-1 whitespace-nowrap">{title}</h1>
+        {/* the shop's own name is written like a logo (see .shop-wordmark); the other screens keep the plain title */}
+        <h1 className={view === 'grid' ? 'shop-wordmark text-[28px] leading-none flex-1 whitespace-nowrap' : 'text-lg font-black tracking-tight flex-1 whitespace-nowrap'}>{title}</h1>
         {view === 'grid' && mainAdmin && settings && (
           <button
             onClick={toggleOrders}

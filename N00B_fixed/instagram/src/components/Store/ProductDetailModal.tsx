@@ -3,6 +3,7 @@ import { X, ArrowLeft, ChevronLeft, ChevronRight, ShoppingCart, Pencil } from 'l
 import { StoreProduct } from '../../types';
 import { formatPrice } from './formatPrice';
 import { defaultSelection, hasVariants, isBuyable, optionHasStock, stockLabel, variantKeyFor } from './variants';
+import { nextIndex } from './carousel';
 
 interface ProductDetailModalProps {
   product: StoreProduct;
@@ -27,6 +28,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
   const variantKey = versions ? variantKeyFor(product.options, selected) : null;
   const buyable = isBuyable(product, variantKey);
   const stock = stockLabel(product, variantKey);
+
+  // The pictures keep turning by themselves and loop (after the last one, the first again). A video is left to play, and pressing
+  // an arrow starts the wait again.
+  useEffect(() => {
+    if (media.length < 2 || media[slide]?.type === 'video') return;
+    const timer = window.setTimeout(() => setSlide((s) => nextIndex(s, media.length)), 3200);
+    return () => window.clearTimeout(timer);
+  }, [slide, media]);
 
   // Esc goes back to the shop, like the arrow
   useEffect(() => {

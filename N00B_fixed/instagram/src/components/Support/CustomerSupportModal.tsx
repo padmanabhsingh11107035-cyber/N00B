@@ -556,7 +556,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const fallbackMsg: ChatMessage = {
         id: `msg_bot_${Date.now()}`,
         sender: 'bot',
-        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with every part of NOOB: the feed, reels, chat, mini-games (+10M win / +5M tie points), the music hub, your profile and settings, your wallet and NOOB Pro, the NOOB Shop (real products, delivered or picked up), and our Terms & Conditions & Privacy Policy!`,
+        text: `Hey @${currentUser.username}! I am your official NOOB Support Assistant. I can help with every part of NOOB: the feed, reels, chat, mini-games (+10M win / +5M tie points), the music hub, your profile and settings, your wallet and NOOB Pro, Shop NOOB (real products, delivered or picked up), and our Terms & Conditions & Privacy Policy!`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -771,8 +771,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       a: 'Play any of our Mini-Games! Winning an arcade match awards +10,000,000 NOOB points, and tying awards +5,000,000 NOOB points. Your rank updates in real-time on the Global Leaderboard.'
     },
     {
-      q: 'Does the NOOB Shop sell real products, and how do I order?',
-      a: 'Yes. The NOOB Shop sells real, physical products (like mugs and sticker sheets) priced in rupees. Open it from Profile → the ⋮ menu → NOOB Shop, add items to your cart, and check out with Pickup or Delivery. There is no online payment: you pay when you pick the order up or when it is delivered. You can follow your order under Orders, and cancel it yourself until the shop confirms it.'
+      q: 'Does Shop NOOB sell real products, and how do I order?',
+      a: 'Yes. Shop NOOB sells real, physical products (like mugs and sticker sheets) priced in rupees. Open it from Profile → the ⋮ menu → Shop NOOB, add items to your cart, and check out with Pickup or Delivery. There is no online payment: you pay when you pick the order up or when it is delivered. You can follow your order under Orders, and cancel it yourself until the shop confirms it.'
     },
     {
       q: 'Can I use NOOB in my own language?',
@@ -1020,10 +1020,10 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuickPrompt('How do I order from the NOOB Shop?')}
+                  onClick={() => handleQuickPrompt('How do I order from Shop NOOB?')}
                   className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                 >
-                  🛍️ NOOB Shop
+                  🛍️ Shop NOOB
                 </button>
                 <button
                   type="button"

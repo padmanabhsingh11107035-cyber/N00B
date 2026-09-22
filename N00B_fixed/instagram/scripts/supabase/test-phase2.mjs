@@ -176,10 +176,16 @@ check(bHl.items.length === 2 && !bHl.items.some((it) => it.id === removedId), 't
 for (const it of [...bHl.items]) await rpc(b, 'remove_highlight_item', mh.highlightId, it.id);
 check(!(await rpc(b, 'my_highlights')).some((h) => h.id === mh.highlightId), 'removing the last item deletes the manual highlight itself');
 
-// none of this works on an automatic (from-story) highlight
-await expectFail(() => rpc(d, 'rename_highlight', dHl.id, 'Nope'), /automatic name/, 'an automatic highlight can not be renamed');
-await expectFail(() => rpc(d, 'add_to_highlight', dHl.id, [{ mediaUrl: 'x.jpg', mediaType: 'image' }]), /new story/, 'an automatic highlight can not be added to directly');
-await expectFail(() => rpc(d, 'remove_highlight_item', dHl.id, mainPhoto.id), /Delete the story itself/, 'an automatic highlight\'s item can not be removed directly');
+// an automatic (from-story) highlight can still never be renamed — that name stays automatic —
+// but CAN be added to and have an item removed directly, same as a manual one (otherwise there
+// was no working way to edit one of these at all, which is exactly what looked like a broken
+// upload button).
+await expectFail(() => rpc(d, 'rename_highlight', dHl.id, 'Nope'), /automatic name/, 'an automatic highlight still can not be renamed');
+check((await rpc(d, 'add_to_highlight', dHl.id, [{ mediaUrl: 'stories/extra-on-auto.jpg', mediaType: 'image' }])).success === true, 'but CAN be added to directly now');
+check((await rpc(d, 'my_highlights')).find((h) => h.id === dHl.id).items.length === 3, '...and the new item is really there');
+check((await rpc(d, 'remove_highlight_item', dHl.id, mainPhoto.id)).success === true, 'and an item can be removed from it directly now too');
+check(!(await rpc(d, 'my_highlights')).find((h) => h.id === dHl.id).items.some((it) => it.id === mainPhoto.id), '...and it is really gone');
+await expectFail(() => rpc(b, 'add_to_highlight', dHl.id, [{ mediaUrl: 'x.jpg', mediaType: 'image' }]), /your own highlights/, 'a stranger still can not add to someone else\'s highlight');
 
 // =====================================================================================
 section('2. Reels');

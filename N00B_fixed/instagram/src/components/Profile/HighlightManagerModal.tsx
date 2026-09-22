@@ -19,6 +19,10 @@ type PendingItem = { mediaUrl: string; mediaType: 'image' | 'video'; localPrevie
 
 export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ existingHighlight, onClose, onDone }) => {
   const isEditing = !!existingHighlight;
+  // An automatic (from-story) highlight can be added to and have items removed, same as a
+  // manual one, but its name always stays the automatic date label — matching "if the highlight
+  // is made from story then no name is assigned".
+  const canRename = isEditing ? !!existingHighlight?.isManual : true;
   const [title, setTitle] = useState(existingHighlight?.title || '');
   const [items, setItems] = useState(existingHighlight?.items || []);
   const [pendingNew, setPendingNew] = useState<PendingItem[]>([]);
@@ -99,7 +103,7 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
   };
 
   const handleSaveName = async () => {
-    if (!existingHighlight || !title.trim() || title.trim() === existingHighlight.title) return;
+    if (!existingHighlight || !canRename || !title.trim() || title.trim() === existingHighlight.title) return;
     setIsSavingName(true);
     setErrorMessage(null);
     const res = await renameHighlight(existingHighlight.id, title.trim());
@@ -140,8 +144,12 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               </div>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">{isEditing ? 'Edit Highlight' : 'New Highlight'}</h2>
-              <p className="text-[11px] text-zinc-400">This never appears as a 24-hour story</p>
+              <h2 className="text-base font-bold text-white">
+                {isEditing ? (canRename ? 'Edit Highlight' : 'Edit Highlight (from your stories)') : 'New Highlight'}
+              </h2>
+              <p className="text-[11px] text-zinc-400">
+                {isEditing && !canRename ? 'Its name stays automatic, but you can add or remove photos and videos' : 'This never appears as a 24-hour story'}
+              </p>
             </div>
           </div>
           <button onClick={handleClose} className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer">
@@ -156,7 +164,9 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
 
           <div>
             <label className="text-xs font-bold text-zinc-300 block mb-1.5">
-              Highlight Name {!isEditing && <span className="text-zinc-500 font-normal">(optional — leave blank for an automatic name)</span>}
+              Highlight Name{' '}
+              {!isEditing && <span className="text-zinc-500 font-normal">(optional — leave blank for an automatic name)</span>}
+              {isEditing && !canRename && <span className="text-zinc-500 font-normal">(automatic — set by the day it was posted)</span>}
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -164,10 +174,11 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 maxLength={40}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                disabled={isEditing && !canRename}
                 placeholder="e.g. Summer Trip, Gaming Setup..."
-                className="w-full bg-zinc-900 border border-zinc-800 text-sm text-white px-3.5 py-2.5 rounded-2xl focus:border-[#00FF66] outline-none transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 text-sm text-white px-3.5 py-2.5 rounded-2xl focus:border-[#00FF66] outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               />
-              {isEditing && title.trim() && title.trim() !== existingHighlight?.title && (
+              {isEditing && canRename && title.trim() && title.trim() !== existingHighlight?.title && (
                 <button
                   type="button"
                   onClick={handleSaveName}

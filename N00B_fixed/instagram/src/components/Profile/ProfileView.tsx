@@ -1613,7 +1613,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 />
               </div>
 
-              {isOwnProfile && hl.isManual && (
+              {isOwnProfile && (
                 <button
                   type="button"
                   onClick={(e) => {

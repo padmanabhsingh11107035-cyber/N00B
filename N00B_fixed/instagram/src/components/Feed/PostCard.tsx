@@ -8,8 +8,6 @@ import {
   MoreHorizontal,
   MapPin,
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Volume2,
   Tag,
@@ -180,20 +178,6 @@ export const PostCard: React.FC<PostCardProps> = ({
     setTimeout(() => {
       setShowDoubleTapHeart(false);
     }, 850);
-  };
-
-  const handleNextSlide = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (post.slides && currentSlideIndex < post.slides.length - 1) {
-      setCurrentSlideIndex(currentSlideIndex + 1);
-    }
-  };
-
-  const handlePrevSlide = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentSlideIndex > 0) {
-      setCurrentSlideIndex(currentSlideIndex - 1);
-    }
   };
 
   // Swipe-to-navigate the carousel on touch devices — tracked entirely in a
@@ -492,26 +476,10 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* Carousel Multi-slide Arrows (if > 1 slide) */}
+          {/* Carousel Multi-slide indicator (if > 1 slide) — swipe and the dots below move between
+              slides; there are deliberately no tap arrows here any more. */}
           {post.slides && post.slides.length > 1 && (
             <>
-              {currentSlideIndex > 0 && (
-                <button
-                  onClick={handlePrevSlide}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md z-20 transition-transform hover:scale-110 border border-white/10"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              )}
-              {currentSlideIndex < post.slides.length - 1 && (
-                <button
-                  onClick={handleNextSlide}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md z-20 transition-transform hover:scale-110 border border-white/10"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-
               {/* Slide Index Badge (e.g. 1/3) */}
               <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md border border-white/10 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white z-20">
                 {currentSlideIndex + 1}/{post.slides.length}

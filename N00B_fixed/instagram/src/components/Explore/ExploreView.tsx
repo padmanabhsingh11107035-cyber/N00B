@@ -29,8 +29,13 @@ import {
 } from 'lucide-react';
 import { Post, Reel, User } from '../../types';
 import { fetchUsers } from '../../services/api';
+import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { POST_FILTERS } from '../../data/mockData';
+
+// Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
+// exactly the kind of nagging that makes people distrust a permission prompt.
+const CONTACTS_PROMPT_DISMISSED_KEY = 'noob_contacts_prompt_dismissed_v1';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -72,6 +77,58 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [followLoadingId, setFollowLoadingId] = useState<string | null>(null);
+
+  // "Find friends from your contacts" — real, native contact access exists only inside the actual
+  // Android app (there is no meaningful equivalent for a website, on any browser, including on an
+  // iPhone); getContactsPermissionState() already resolves to 'unsupported' everywhere else, so the
+  // banner below simply never appears there.
+  const [contactsPromptState, setContactsPromptState] = useState<'checking' | 'ask' | 'hidden'>('checking');
+  const [contactMatches, setContactMatches] = useState<User[]>([]);
+  const [loadingContactMatches, setLoadingContactMatches] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const state = await getContactsPermissionState();
+      if (!alive) return;
+      if (state === 'granted') {
+        setContactsPromptState('hidden');
+        setLoadingContactMatches(true);
+        const matches = await findFriendsFromContacts();
+        if (alive) {
+          setContactMatches(matches);
+          setLoadingContactMatches(false);
+        }
+      } else if (state === 'prompt' && localStorage.getItem(CONTACTS_PROMPT_DISMISSED_KEY) !== '1') {
+        setContactsPromptState('ask');
+      } else {
+        setContactsPromptState('hidden');
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const handleAllowContactsAccess = async () => {
+    setContactsPromptState('hidden');
+    setLoadingContactMatches(true);
+    try {
+      const matches = await findFriendsFromContacts();
+      setContactMatches(matches);
+    } finally {
+      setLoadingContactMatches(false);
+    }
+  };
+
+  const handleDismissContactsPrompt = () => {
+    try {
+      localStorage.setItem(CONTACTS_PROMPT_DISMISSED_KEY, '1');
+    } catch {
+      // private browsing or storage disabled — the prompt just reappears next visit, harmless
+    }
+    setContactsPromptState('hidden');
+  };
 
   // Pagination & Infinite Scroll
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
@@ -138,18 +195,12 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       setFollowLoadingId(userId);
       const res = await onToggleFollowUser?.(userId);
       if (res && res.success) {
-        setUsersList((prev) =>
-          prev.map((u) =>
-            u.id === userId
-              ? {
-                  ...u,
-                  isFollowing: res.isFollowing,
-                  isFollowRequested: res.isFollowRequested,
-                  followersCount: res.followersCount
-                }
-              : u
-          )
-        );
+        const patch = (u: User) =>
+          u.id === userId
+            ? { ...u, isFollowing: res.isFollowing, isFollowRequested: res.isFollowRequested, followersCount: res.followersCount }
+            : u;
+        setUsersList((prev) => prev.map(patch));
+        setContactMatches((prev) => prev.map(patch));
       }
     } catch (err) {
       console.error('Follow error:', err);
@@ -257,6 +308,87 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       onTouchEnd={handleTouchEnd}
       className="w-full max-w-4xl mx-auto px-3 sm:px-4 pt-3 pb-24 space-y-4 select-none relative"
     >
+      {/* "Find friends from your contacts" — ask once, then show any matches right here at the top */}
+      {contactsPromptState === 'ask' && (
+        <div className="p-4 rounded-3xl bg-zinc-950 border border-[#00FF66]/30 shadow-lg flex items-start gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
+            <Phone className="w-5 h-5 text-[#00FF66]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-white">Find friends from your contacts</h3>
+            <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
+              See which of your phone contacts are already on NOOB, right here at the top of Explore. Your contacts are only ever used to find matches — never stored or shown to anyone else.
+            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={handleAllowContactsAccess}
+                className="px-3.5 py-1.5 rounded-xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black text-xs font-black cursor-pointer transition-colors"
+              >
+                Allow
+              </button>
+              <button
+                onClick={handleDismissContactsPrompt}
+                className="px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-bold cursor-pointer transition-colors border border-zinc-800"
+              >
+                Not Now
+              </button>
+            </div>
+          </div>
+          <button onClick={handleDismissContactsPrompt} className="text-zinc-500 hover:text-white cursor-pointer shrink-0" title="Dismiss">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {(loadingContactMatches || contactMatches.length > 0) && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
+            <Phone className="w-3.5 h-3.5 text-[#00FF66]" /> From Your Contacts
+          </h3>
+          {loadingContactMatches ? (
+            <div className="flex items-center gap-2 text-xs text-zinc-500 px-1 py-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking your contacts…
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none">
+              {contactMatches.map((user) => (
+                <div
+                  key={user.id}
+                  className="shrink-0 w-32 bg-zinc-950 border border-zinc-800/80 rounded-2xl p-3 flex flex-col items-center text-center gap-1.5"
+                >
+                  <img
+                    onClick={() => onNavigateToUserProfile?.(user)}
+                    src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                    alt={user.username}
+                    className="w-12 h-12 rounded-2xl object-cover border border-white/10 cursor-pointer"
+                    referrerPolicy="no-referrer"
+                  />
+                  <span
+                    onClick={() => onNavigateToUserProfile?.(user)}
+                    className="text-xs font-bold text-white truncate w-full cursor-pointer hover:text-[#00FF66]"
+                  >
+                    {user.displayName || user.username}
+                  </span>
+                  {user.id !== currentUser?.id && (
+                    <button
+                      onClick={() => handleToggleFollow(user.id)}
+                      disabled={followLoadingId === user.id}
+                      className={`w-full py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-50 ${
+                        user.isFollowing || user.isFollowRequested
+                          ? 'bg-zinc-900 text-zinc-300 border border-zinc-700'
+                          : 'bg-[#00FF66] text-black'
+                      }`}
+                    >
+                      {user.isFollowing ? 'Following' : user.isFollowRequested ? 'Requested' : 'Follow'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Pull To Refresh / Shuffle Indicator */}
       <div
         className="w-full flex flex-col items-center justify-center overflow-hidden transition-all duration-200"

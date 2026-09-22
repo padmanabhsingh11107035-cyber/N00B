@@ -131,6 +131,23 @@ check(dHl.items[0].id === mainPhoto.id && dHl.items[1].id === pollPage.id, 'the 
 check(dHl.coverUrl === 'stories/poll-main.jpg', 'a poll page is never chosen as the highlight cover icon');
 check(dHl.isManual === false, 'an auto (from-story) highlight is flagged as not manual');
 
+// archiving the SAME story a second time (a retried post, or a migration backfill step running
+// twice — exactly what actually happened in production on 23 Sep) must never duplicate it
+await db.query('select public.archive_story_to_highlight(s) from public.stories s where s.id = $1', [mainPhoto.id]);
+const dHlAfterRearchive = (await rpc(d, 'my_highlights')).find((h) => h.id === dHl.id);
+check(dHlAfterRearchive.items.length === 2 && dHlAfterRearchive.items.filter((it) => it.id === mainPhoto.id).length === 1, 'archiving the same story twice does not duplicate it in the highlight');
+
+// the one-time repair also fixes a highlight some earlier bug already left duplicated
+await db.query(`update public.highlights set items = items || (items -> 0) where id = $1`, [dHl.id]);
+check((await rpc(d, 'my_highlights')).find((h) => h.id === dHl.id).items.length === 3, '(setup) a highlight with a manually-forced duplicate now has 3 items');
+await db.query(`
+  update public.highlights h set items = (
+    select coalesce(jsonb_agg(picked.elem order by (picked.elem ->> 'createdAt')::timestamptz desc), '[]'::jsonb)
+    from (select distinct on (elem ->> 'id') elem from jsonb_array_elements(h.items) elem) picked
+  ) where id = $1`, [dHl.id]);
+const dHlRepaired = (await rpc(d, 'my_highlights')).find((h) => h.id === dHl.id);
+check(dHlRepaired.items.length === 2, 'the repair collapses the duplicate back down to one copy per story');
+
 // =====================================================================================
 section('1c. Manual highlights (created directly from the profile, never touching a story)');
 await expectFail(() => rpc(b, 'create_manual_highlight', 'My Trip', []), /at least one photo/, 'needs at least one item');

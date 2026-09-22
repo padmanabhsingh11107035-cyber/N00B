@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="jg-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#020a20"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="jg-bell" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#e0b3ff"/>
+      <stop offset="100%" stop-color="#8c4dd6" stop-opacity="0.6"/>
+    </radialGradient>
+    <style>
+      .bell { animation: jg-pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .tentacle { animation: jg-wave 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: top center; }
+      .t2 { animation-delay: 0.3s; } .t3 { animation-delay: 0.6s; } .t4 { animation-delay: 0.9s; }
+      @keyframes jg-pulse { 0%, 100% { transform: scaleY(1); filter: drop-shadow(0 0 6px #b366ff); } 50% { transform: scaleY(0.9); filter: drop-shadow(0 0 16px #e0b3ff); } }
+      @keyframes jg-wave { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#jg-bg)"/>
+  <path class="bell" d="M60 90 C 60 60, 140 60, 140 90 C 140 105, 60 105, 60 90 Z" fill="url(#jg-bell)"/>
+  <path class="tentacle" d="M72 100 C 68 120, 78 135, 70 155" fill="none" stroke="#c98cf2" stroke-width="4" stroke-linecap="round"/>
+  <path class="tentacle t2" d="M88 103 C 85 128, 95 140, 88 160" fill="none" stroke="#c98cf2" stroke-width="4" stroke-linecap="round"/>
+  <path class="tentacle t3" d="M112 103 C 115 128, 105 140, 112 160" fill="none" stroke="#c98cf2" stroke-width="4" stroke-linecap="round"/>
+  <path class="tentacle t4" d="M128 100 C 132 120, 122 135, 130 155" fill="none" stroke="#c98cf2" stroke-width="4" stroke-linecap="round"/>
+</svg>

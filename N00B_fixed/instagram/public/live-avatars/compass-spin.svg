@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cp-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a1408"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="cp-needle" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff4d4d"/>
+      <stop offset="100%" stop-color="#e8e8e8"/>
+    </linearGradient>
+    <style>
+      .needle { transform-origin: 100px 100px; animation: cp-swing 3.6s ease-in-out infinite; }
+      @keyframes cp-swing {
+        0%, 100% { transform: rotate(-25deg); }
+        50%      { transform: rotate(200deg); }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#cp-bg)"/>
+  <circle cx="100" cy="100" r="60" fill="none" stroke="#d4af37" stroke-width="3"/>
+  <circle cx="100" cy="100" r="60" fill="#0d0a04"/>
+  <g stroke="#d4af37" stroke-width="1.5">
+    <line x1="100" y1="46" x2="100" y2="56"/><line x1="100" y1="144" x2="100" y2="154"/>
+    <line x1="46" y1="100" x2="56" y2="100"/><line x1="144" y1="100" x2="154" y2="100"/>
+  </g>
+  <g class="needle">
+    <path d="M100 55 L108 100 L100 100 Z" fill="url(#cp-needle)"/>
+    <path d="M100 145 L92 100 L100 100 Z" fill="#8a8a8a"/>
+  </g>
+  <circle cx="100" cy="100" r="5" fill="#d4af37"/>
+</svg>

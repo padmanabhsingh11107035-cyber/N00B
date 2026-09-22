@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cr-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#00232b"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="cr-coral" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ff6f91"/>
+      <stop offset="100%" stop-color="#ffb3c6"/>
+    </linearGradient>
+    <clipPath id="cr-clip"><circle cx="100" cy="100" r="100"/></clipPath>
+    <style>
+      .sway { transform-box: fill-box; transform-origin: bottom center; animation: cr-sway 3.4s ease-in-out infinite; }
+      .sway2 { animation-delay: 0.6s; }
+      .bubble { animation: cr-rise 3.5s linear infinite; }
+      .b2 { animation-delay: 1.2s; } .b3 { animation-delay: 2.1s; }
+      @keyframes cr-sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+      @keyframes cr-rise {
+        0%   { transform: translateY(0); opacity: 0.8; }
+        100% { transform: translateY(-90px); opacity: 0; }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#cr-bg)"/>
+  <g clip-path="url(#cr-clip)">
+    <g class="sway">
+      <path d="M75 165 C 65 140, 70 115, 60 95 C 78 110, 82 140, 78 165 Z" fill="url(#cr-coral)"/>
+    </g>
+    <g class="sway sway2">
+      <path d="M125 165 C 135 135, 128 110, 138 85 C 118 105, 116 140, 120 165 Z" fill="url(#cr-coral)"/>
+    </g>
+    <path d="M95 165 C 90 150, 95 130, 100 120 C 107 130, 110 150, 105 165 Z" fill="#ff9eb6"/>
+    <circle class="bubble" cx="85" cy="140" r="3" fill="#bff3ff" opacity="0.8"/>
+    <circle class="bubble b2" cx="110" cy="150" r="2.4" fill="#bff3ff" opacity="0.8"/>
+    <circle class="bubble b3" cx="125" cy="130" r="2" fill="#bff3ff" opacity="0.8"/>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="pb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0d1a0d"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .bamboo { transform-box: fill-box; transform-origin: bottom center; animation: pb-sway 3.2s ease-in-out infinite; }
+      .b2 { animation-delay: 0.5s; }
+      .blink { transform-box: fill-box; transform-origin: center; animation: pb-blink 4.5s ease-in-out infinite; }
+      @keyframes pb-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+      @keyframes pb-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#pb-bg)"/>
+  <g class="bamboo" fill="#5ea832"><rect x="35" y="90" width="14" height="90" rx="6"/><rect x="30" y="105" width="24" height="6"/><rect x="30" y="135" width="24" height="6"/></g>
+  <g class="bamboo b2" fill="#4d9128"><rect x="150" y="80" width="13" height="100" rx="6"/><rect x="145" y="100" width="23" height="6"/><rect x="145" y="130" width="23" height="6"/><rect x="145" y="160" width="23" height="6"/></g>
+  <circle cx="100" cy="105" r="48" fill="#f5f5f0"/>
+  <circle cx="72" cy="80" r="14" fill="#111"/>
+  <circle cx="128" cy="80" r="14" fill="#111"/>
+  <ellipse class="blink" cx="80" cy="100" rx="9" ry="11" fill="#111"/>
+  <ellipse class="blink" cx="120" cy="100" rx="9" ry="11" fill="#111"/>
+  <ellipse cx="100" cy="118" rx="7" ry="5" fill="#111"/>
+</svg>

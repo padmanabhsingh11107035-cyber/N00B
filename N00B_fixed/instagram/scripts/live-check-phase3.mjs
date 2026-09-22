@@ -96,7 +96,7 @@ try {
   const av = await rpc(A.c, 'apply_live_avatar', { p_preset: 'aurora_wave', p_custom_url: null });
   check(av.user.avatar === '/live-avatars/aurora-wave.svg' && av.user.isLiveAvatar, 'a Pro account can use a live profile picture');
   check(await fails(() => rpc(B.c, 'apply_live_avatar', { p_preset: 'aurora_wave', p_custom_url: null }), /NOOB Pro feature/), 'a free account can not');
-  check((await rpc(A.c, 'live_avatar_presets_list')).presets.length === 34, 'the 34 live pictures are listed');
+  check((await rpc(A.c, 'live_avatar_presets_list')).presets.length === 64, 'the 64 live pictures are listed');
   check(await fails(() => rpc(A.c, 'verify_account', { p_password: 'wrong-password', p_method: 'points_monthly', p_coupon_code: null, p_discount_code: null }), /Invalid password/), 'verification refuses the wrong password (checked against the real login system)');
   const ver = await rpc(A.c, 'verify_account', { p_password: PW, p_method: 'points_monthly', p_coupon_code: null, p_discount_code: null });
   check(ver.success && ver.user.isVerified && ver.user.verificationTier === 'premium', 'the right password verifies the account for 5 billion points');

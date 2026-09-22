@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="de-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0d02"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="de-iris" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#ffdd55"/>
+      <stop offset="55%" stop-color="#ff8c00"/>
+      <stop offset="100%" stop-color="#7a1f00"/>
+    </radialGradient>
+    <style>
+      .iris { animation: de-glow 2s ease-in-out infinite; }
+      .pupil { animation: de-narrow 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .lid { animation: de-blink 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      @keyframes de-glow { 0%, 100% { filter: drop-shadow(0 0 6px #ff8c00); } 50% { filter: drop-shadow(0 0 16px #ffb347); } }
+      @keyframes de-narrow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.7); } }
+      @keyframes de-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.05); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#de-bg)"/>
+  <g class="lid">
+    <path d="M35 100 C 60 60, 140 60, 165 100 C 140 140, 60 140, 35 100 Z" fill="#2a0f00" stroke="#5a2200" stroke-width="2"/>
+    <ellipse class="iris" cx="100" cy="100" rx="42" ry="34" fill="url(#de-iris)"/>
+    <ellipse class="pupil" cx="100" cy="100" rx="8" ry="30" fill="#0a0300"/>
+  </g>
+</svg>

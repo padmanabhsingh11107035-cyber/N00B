@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="lv-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0500"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="lv-core" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#fff3b0"/>
+      <stop offset="45%" stop-color="#ff8500"/>
+      <stop offset="100%" stop-color="#8a0e00"/>
+    </radialGradient>
+    <style>
+      .blob { animation: lv-bubble 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .b2 { animation-delay: 0.9s; }
+      .b3 { animation-delay: 1.7s; }
+      @keyframes lv-bubble {
+        0%, 100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 6px #ff6a00); }
+        50%      { transform: scale(1.08) translateY(-3px); filter: drop-shadow(0 0 16px #ffae42); }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#lv-bg)"/>
+  <circle class="blob" cx="100" cy="105" r="42" fill="url(#lv-core)"/>
+  <circle class="blob b2" cx="72" cy="88" r="14" fill="url(#lv-core)"/>
+  <circle class="blob b3" cx="130" cy="82" r="11" fill="url(#lv-core)"/>
+  <circle class="blob b2" cx="105" cy="65" r="9" fill="url(#lv-core)"/>
+</svg>

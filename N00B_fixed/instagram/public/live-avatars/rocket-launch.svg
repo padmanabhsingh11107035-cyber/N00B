@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="rl-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#050a1a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="rl-flame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff3b0"/>
+      <stop offset="50%" stop-color="#ff8c00"/>
+      <stop offset="100%" stop-color="#ff2b2b"/>
+    </linearGradient>
+    <clipPath id="rl-clip"><circle cx="100" cy="100" r="100"/></clipPath>
+    <style>
+      .rocket { animation: rl-hover 1.4s ease-in-out infinite; }
+      .flame { transform-box: fill-box; transform-origin: top center; animation: rl-flame 0.3s ease-in-out infinite alternate; }
+      .star { animation: rl-twinkle 1.5s ease-in-out infinite; }
+      .s2 { animation-delay: 0.5s; } .s3 { animation-delay: 1s; }
+      @keyframes rl-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+      @keyframes rl-flame { 0% { transform: scaleY(0.8); } 100% { transform: scaleY(1.2); } }
+      @keyframes rl-twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#rl-bg)"/>
+  <g clip-path="url(#rl-clip)">
+    <circle class="star" cx="50" cy="50" r="1.6" fill="#fff"/>
+    <circle class="star s2" cx="150" cy="60" r="1.4" fill="#fff"/>
+    <circle class="star s3" cx="40" cy="140" r="1.8" fill="#fff"/>
+    <circle class="star s2" cx="160" cy="150" r="1.5" fill="#fff"/>
+    <g class="rocket">
+      <path d="M100 45 C 118 65, 118 95, 112 115 L88 115 C 82 95, 82 65, 100 45 Z" fill="#e8e8ec"/>
+      <path d="M100 45 C 108 55, 112 68, 112 80 L88 80 C 88 68, 92 55, 100 45 Z" fill="#ff4d4d"/>
+      <circle cx="100" cy="90" r="9" fill="#7ec9ff"/>
+      <path d="M88 100 L72 118 L88 115 Z" fill="#ff4d4d"/>
+      <path d="M112 100 L128 118 L112 115 Z" fill="#ff4d4d"/>
+      <path class="flame" d="M90 115 L100 150 L110 115 Z" fill="url(#rl-flame)"/>
+    </g>
+  </g>
+</svg>

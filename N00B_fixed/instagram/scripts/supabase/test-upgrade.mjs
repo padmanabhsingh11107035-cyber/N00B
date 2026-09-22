@@ -233,5 +233,25 @@ const before16b = await snap();
 await db.exec(read(M16));
 check(JSON.stringify(await snap()) === JSON.stringify(before16b), 'running migration 16 a second time is harmless');
 
+section('Applying migration 17 (30 more live profile picture presets) on top');
+const M17 = '20260922000017_more_live_avatars.sql';
+const oldPresets = (await db.query('select id, name, url, sort from live_avatar_presets order by sort')).rows;
+check(oldPresets.length === 34, '(34 presets exist before this migration, exactly as migration 6 left them)');
+const before17 = await snap();
+await db.exec(read(M17));
+check(JSON.stringify(await snap()) === JSON.stringify(before17), 'migration 17 changes no count and no point total');
+check(JSON.stringify((await db.query('select id, name, url, sort from live_avatar_presets where sort <= 34 order by sort')).rows) === JSON.stringify(oldPresets), 'every one of the original 34 presets is byte-for-byte unchanged');
+const allPresets = (await db.query('select id, url, sort from live_avatar_presets order by sort')).rows;
+check(allPresets.length === 64 && new Set(allPresets.map((p) => p.id)).size === 64 && new Set(allPresets.map((p) => p.url)).size === 64, '30 new presets are added, none repeating an id or a file path');
+check(allPresets.every((p) => /^\/live-avatars\/[a-z0-9-]+\.svg$/.test(p.url)), 'every new preset points at a real-looking .svg file path');
+const somePro = (await db.query(`select p.id from profiles p where p.pro_tier is not null limit 1`)).rows[0];
+if (somePro) {
+  const applied = await asUser(db, somePro.id, async () => (await db.query(`select public.apply_live_avatar($1) as r`, ['black_hole'])).rows[0].r);
+  check(applied.success !== false && applied.user.avatar === '/live-avatars/black-hole.svg' && applied.user.isLiveAvatar === true, 'a Pro account can already pick one of the 30 new presets');
+} else check(true, '(no Pro account in this backup to try it on)');
+const before17b = await snap();
+await db.exec(read(M17));
+check(JSON.stringify(await snap()) === JSON.stringify(before17b), 'running migration 17 a second time is harmless');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

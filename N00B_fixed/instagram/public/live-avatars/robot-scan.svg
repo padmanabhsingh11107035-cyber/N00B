@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="rs-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0304"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .scanner { animation: rs-sweep 2.2s ease-in-out infinite, rs-glow 2.2s ease-in-out infinite; }
+      @keyframes rs-sweep { 0%, 100% { transform: translateX(-22px); } 50% { transform: translateX(22px); } }
+      @keyframes rs-glow { 0%, 100% { filter: drop-shadow(0 0 5px #ff2b2b); } 50% { filter: drop-shadow(0 0 16px #ff5c5c); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#rs-bg)"/>
+  <rect x="45" y="70" width="110" height="60" rx="20" fill="#1c1c1f" stroke="#3a3a40" stroke-width="3"/>
+  <rect x="55" y="85" width="90" height="30" rx="14" fill="#050506"/>
+  <circle class="scanner" cx="100" cy="100" r="9" fill="#ff2b2b"/>
+  <g stroke="#3a3a40" stroke-width="3">
+    <line x1="70" y1="70" x2="70" y2="55"/>
+    <line x1="130" y1="70" x2="130" y2="55"/>
+  </g>
+</svg>

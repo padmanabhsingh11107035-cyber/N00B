@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="vg-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a0a02"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="vg-cone" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3a2a22"/>
+      <stop offset="100%" stop-color="#1c130f"/>
+    </linearGradient>
+    <radialGradient id="vg-lava" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff3b0"/>
+      <stop offset="60%" stop-color="#ff5a00"/>
+      <stop offset="100%" stop-color="#7a1500"/>
+    </radialGradient>
+    <style>
+      .glow { animation: vg-pulse 2s ease-in-out infinite; }
+      .smoke { animation: vg-smoke 4s ease-out infinite; }
+      .s2 { animation-delay: 1.3s; } .s3 { animation-delay: 2.6s; }
+      @keyframes vg-pulse { 0%, 100% { filter: drop-shadow(0 0 6px #ff5a00); } 50% { filter: drop-shadow(0 0 20px #ffae42); } }
+      @keyframes vg-smoke {
+        0%   { transform: translateY(0) scale(0.6); opacity: 0.6; }
+        100% { transform: translateY(-50px) scale(1.3); opacity: 0; }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#vg-bg)"/>
+  <path d="M55 165 L100 75 L145 165 Z" fill="url(#vg-cone)"/>
+  <circle class="smoke" cx="100" cy="70" r="10" fill="#555" opacity="0.5"/>
+  <circle class="smoke s2" cx="95" cy="70" r="8" fill="#666" opacity="0.5"/>
+  <circle class="smoke s3" cx="105" cy="70" r="9" fill="#5c5c5c" opacity="0.5"/>
+  <path class="glow" d="M85 165 L100 95 L115 165 Z" fill="url(#vg-lava)"/>
+</svg>

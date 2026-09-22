@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="so-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#040818"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="so-planet" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#5ec9ff"/>
+      <stop offset="100%" stop-color="#1a4d8f"/>
+    </radialGradient>
+    <style>
+      .orbit { transform-origin: 100px 100px; animation: so-spin 4s linear infinite; }
+      .blink { animation: so-blink 1s ease-in-out infinite; }
+      @keyframes so-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes so-blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#so-bg)"/>
+  <circle cx="100" cy="100" r="34" fill="url(#so-planet)"/>
+  <path d="M78 88 C 90 82, 100 90, 96 100 C 92 108, 80 104, 78 88 Z" fill="#2e6b3f" opacity="0.7"/>
+  <ellipse cx="100" cy="100" rx="70" ry="26" fill="none" stroke="#4a5a7a" stroke-width="1.5" opacity="0.7"/>
+  <g class="orbit">
+    <g transform="translate(170 100)">
+      <rect x="-6" y="-4" width="12" height="8" fill="#d6d6d6"/>
+      <rect x="-16" y="-2" width="8" height="4" fill="#5ec9ff"/>
+      <rect x="8" y="-2" width="8" height="4" fill="#5ec9ff"/>
+      <circle class="blink" cx="0" cy="-6" r="1.6" fill="#ff4d4d"/>
+    </g>
+  </g>
+</svg>

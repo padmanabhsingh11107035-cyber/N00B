@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="oe-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a1408"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="oe-eye" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffe27a"/>
+      <stop offset="70%" stop-color="#e8a83c"/>
+      <stop offset="100%" stop-color="#7a5010"/>
+    </radialGradient>
+    <style>
+      .eye { animation: oe-blink 3.4s ease-in-out infinite, oe-glow 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      @keyframes oe-blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+      @keyframes oe-glow { 0%, 100% { filter: drop-shadow(0 0 4px #ffcf5c); } 50% { filter: drop-shadow(0 0 12px #ffe27a); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#oe-bg)"/>
+  <ellipse cx="65" cy="105" rx="38" ry="30" fill="#3a2c1a"/>
+  <ellipse cx="135" cy="105" rx="38" ry="30" fill="#3a2c1a"/>
+  <circle class="eye" cx="65" cy="105" r="22" fill="url(#oe-eye)"/>
+  <circle class="eye" cx="135" cy="105" r="22" fill="url(#oe-eye)"/>
+  <circle cx="65" cy="105" r="8" fill="#140d02"/>
+  <circle cx="135" cy="105" r="8" fill="#140d02"/>
+  <path d="M85 90 L100 70 L115 90" fill="none" stroke="#3a2c1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="sn-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#061622"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .flake { transform-origin: 100px 100px; animation: sn-spin 6s linear infinite, sn-glow 2s ease-in-out infinite; }
+      @keyframes sn-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes sn-glow { 0%, 100% { filter: drop-shadow(0 0 4px #bfe9ff); } 50% { filter: drop-shadow(0 0 12px #e8f7ff); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#sn-bg)"/>
+  <g class="flake" stroke="#e8f7ff" stroke-width="4" stroke-linecap="round">
+    <line x1="100" y1="45" x2="100" y2="155"/>
+    <line x1="45" y1="100" x2="155" y2="100"/>
+    <line x1="63" y1="63" x2="137" y2="137"/>
+    <line x1="137" y1="63" x2="63" y2="137"/>
+    <path d="M100 45 L90 60 M100 45 L110 60"/>
+    <path d="M100 155 L90 140 M100 155 L110 140"/>
+    <path d="M45 100 L60 90 M45 100 L60 110"/>
+    <path d="M155 100 L140 90 M155 100 L140 110"/>
+  </g>
+  <circle cx="100" cy="100" r="10" fill="#e8f7ff"/>
+</svg>

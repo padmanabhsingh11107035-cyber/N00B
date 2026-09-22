@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ts-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#2a1200"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="ts-fur" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#ff9d3d"/>
+      <stop offset="100%" stop-color="#e6660a"/>
+    </radialGradient>
+    <clipPath id="ts-clip"><circle cx="100" cy="100" r="62"/></clipPath>
+    <style>
+      .stripe { animation: ts-glow 2.4s ease-in-out infinite; }
+      @keyframes ts-glow { 0%, 100% { filter: drop-shadow(0 0 3px #ff9d3d); } 50% { filter: drop-shadow(0 0 12px #ffb35c); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ts-bg)"/>
+  <circle cx="100" cy="100" r="62" fill="url(#ts-fur)"/>
+  <g clip-path="url(#ts-clip)" class="stripe" fill="#160800">
+    <path d="M55 55 L75 40 L85 60 L60 78 Z"/>
+    <path d="M100 40 L112 65 L95 82 L85 55 Z"/>
+    <path d="M130 50 L150 70 L128 88 L118 62 Z"/>
+    <path d="M45 100 L70 92 L72 115 L48 122 Z"/>
+    <path d="M150 100 L128 92 L126 115 L152 122 Z"/>
+    <path d="M65 130 L90 122 L95 150 L70 158 Z"/>
+    <path d="M135 130 L110 122 L105 150 L130 158 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="sf2-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1f0f00"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="sf2-sun" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#fff3b0"/>
+      <stop offset="60%" stop-color="#ffae42"/>
+      <stop offset="100%" stop-color="#ff5a00"/>
+    </radialGradient>
+    <style>
+      .ray { transform-origin: 100px 100px; animation: sf2-spin 12s linear infinite; }
+      .core { animation: sf2-pulse 2s ease-in-out infinite; }
+      .flare { animation: sf2-burst 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .fl2 { animation-delay: 0.7s; } .fl3 { animation-delay: 1.4s; }
+      @keyframes sf2-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes sf2-pulse { 0%, 100% { filter: drop-shadow(0 0 10px #ff8c00); } 50% { filter: drop-shadow(0 0 26px #ffd27a); } }
+      @keyframes sf2-burst { 0%, 100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1.15); opacity: 1; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#sf2-bg)"/>
+  <g class="ray" fill="#ffae42" opacity="0.85">
+    <path d="M100 20 L106 45 L94 45 Z"/><path d="M100 180 L106 155 L94 155 Z"/>
+    <path d="M20 100 L45 106 L45 94 Z"/><path d="M180 100 L155 106 L155 94 Z"/>
+    <path d="M42 42 L60 55 L52 63 Z"/><path d="M158 158 L140 145 L148 137 Z"/>
+    <path d="M158 42 L140 55 L148 63 Z"/><path d="M42 158 L60 145 L52 137 Z"/>
+  </g>
+  <circle class="core" cx="100" cy="100" r="36" fill="url(#sf2-sun)"/>
+  <circle class="flare" cx="128" cy="80" r="6" fill="#fff3b0"/>
+  <circle class="flare fl2" cx="72" cy="122" r="5" fill="#fff3b0"/>
+  <circle class="flare fl3" cx="120" cy="128" r="4" fill="#fff3b0"/>
+</svg>

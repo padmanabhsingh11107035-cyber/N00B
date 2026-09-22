@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ce-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#08140f"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="ce-eye" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#baffc9"/>
+      <stop offset="60%" stop-color="#39d97a"/>
+      <stop offset="100%" stop-color="#0d5c30"/>
+    </radialGradient>
+    <style>
+      .eye { animation: ce-glow 2s ease-in-out infinite; }
+      .pupil { transform-box: fill-box; transform-origin: center; animation: ce-narrow 2.4s ease-in-out infinite; }
+      @keyframes ce-glow { 0%, 100% { filter: drop-shadow(0 0 5px #39d97a); } 50% { filter: drop-shadow(0 0 15px #baffc9); } }
+      @keyframes ce-narrow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.5); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ce-bg)"/>
+  <path d="M35 100 C 55 80, 80 78, 100 100 C 80 122, 55 120, 35 100 Z" class="eye" fill="url(#ce-eye)"/>
+  <path d="M165 100 C 145 80, 120 78, 100 100 C 120 122, 145 120, 165 100 Z" class="eye" fill="url(#ce-eye)"/>
+  <ellipse class="pupil" cx="60" cy="100" rx="7" ry="20" fill="#020a04"/>
+  <ellipse class="pupil" cx="140" cy="100" rx="7" ry="20" fill="#020a04"/>
+</svg>

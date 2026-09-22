@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="dw-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#012024"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="dw-wing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7dfff0" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#3ad0ff" stop-opacity="0.4"/>
+    </linearGradient>
+    <style>
+      .wing { transform-box: fill-box; transform-origin: center; animation: dw-flutter 0.35s ease-in-out infinite; }
+      .wtop { animation-delay: 0s; } .wbot { animation-delay: 0.08s; }
+      .body { animation: dw-glow 2.4s ease-in-out infinite; }
+      @keyframes dw-flutter { 0%, 100% { transform: scaleY(1) rotate(0deg); } 50% { transform: scaleY(0.85) rotate(4deg); } }
+      @keyframes dw-glow { 0%, 100% { filter: drop-shadow(0 0 4px #00e5c8); } 50% { filter: drop-shadow(0 0 10px #7dfff0); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#dw-bg)"/>
+  <ellipse class="wing wtop" cx="65" cy="80" rx="34" ry="16" fill="url(#dw-wing)"/>
+  <ellipse class="wing wtop" cx="135" cy="80" rx="34" ry="16" fill="url(#dw-wing)"/>
+  <ellipse class="wing wbot" cx="70" cy="112" rx="26" ry="12" fill="url(#dw-wing)"/>
+  <ellipse class="wing wbot" cx="130" cy="112" rx="26" ry="12" fill="url(#dw-wing)"/>
+  <g class="body">
+    <ellipse cx="100" cy="80" rx="7" ry="12" fill="#0a2e2a"/>
+    <rect x="94" y="88" width="12" height="70" rx="6" fill="#0a2e2a"/>
+    <circle cx="96" cy="72" r="3" fill="#7dfff0"/>
+    <circle cx="104" cy="72" r="3" fill="#7dfff0"/>
+  </g>
+</svg>

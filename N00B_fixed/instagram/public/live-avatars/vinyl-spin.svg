@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="vs-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#150a1f"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .record { transform-origin: 100px 100px; animation: vs-spin 3s linear infinite; }
+      .arm { transform-origin: 150px 55px; animation: vs-drop 4s ease-in-out infinite; }
+      @keyframes vs-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes vs-drop { 0%, 20% { transform: rotate(-18deg); } 35%, 100% { transform: rotate(0deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#vs-bg)"/>
+  <g class="record">
+    <circle cx="100" cy="100" r="55" fill="#141416"/>
+    <circle cx="100" cy="100" r="55" fill="none" stroke="#2a2a2e" stroke-width="1"/>
+    <circle cx="100" cy="100" r="46" fill="none" stroke="#2a2a2e" stroke-width="1"/>
+    <circle cx="100" cy="100" r="37" fill="none" stroke="#2a2a2e" stroke-width="1"/>
+    <circle cx="100" cy="100" r="28" fill="none" stroke="#2a2a2e" stroke-width="1"/>
+    <circle cx="100" cy="100" r="18" fill="#c77dff"/>
+    <circle cx="100" cy="100" r="4" fill="#141416"/>
+  </g>
+  <g class="arm">
+    <circle cx="150" cy="55" r="6" fill="#d6d6d6"/>
+    <rect x="147" y="55" width="6" height="55" rx="3" fill="#d6d6d6" transform="rotate(28 150 55)"/>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="uf-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#020d0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="uf-beam" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7dfff0" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#7dfff0" stop-opacity="0"/>
+    </linearGradient>
+    <style>
+      .ship { animation: uf-hover 2.4s ease-in-out infinite; }
+      .beam { animation: uf-pulse 1.6s ease-in-out infinite; }
+      .light { animation: uf-blink 1s ease-in-out infinite; }
+      .l2 { animation-delay: 0.33s; } .l3 { animation-delay: 0.66s; }
+      @keyframes uf-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+      @keyframes uf-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+      @keyframes uf-blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#uf-bg)"/>
+  <path class="beam" d="M75 105 L125 105 L155 165 L45 165 Z" fill="url(#uf-beam)"/>
+  <g class="ship">
+    <ellipse cx="100" cy="100" rx="55" ry="16" fill="#8fa3b8"/>
+    <ellipse cx="100" cy="92" rx="22" ry="16" fill="#bfe9ff" opacity="0.85"/>
+    <ellipse cx="100" cy="100" rx="55" ry="16" fill="none" stroke="#3a4a5c" stroke-width="2"/>
+    <circle class="light" cx="65" cy="105" r="3" fill="#ffdd55"/>
+    <circle class="light l2" cx="100" cy="112" r="3" fill="#ff5c5c"/>
+    <circle class="light l3" cx="135" cy="105" r="3" fill="#7dfff0"/>
+  </g>
+</svg>

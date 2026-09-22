@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ls-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0e1a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="ls-bolt" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fffbe0"/>
+      <stop offset="100%" stop-color="#7dd3ff"/>
+    </linearGradient>
+    <style>
+      .cloud { animation: ls-drift 4s ease-in-out infinite; }
+      .bolt1 { animation: ls-flash 2.4s ease-in-out infinite; }
+      .bolt2 { animation: ls-flash 2.4s ease-in-out infinite 1.2s; }
+      @keyframes ls-drift {
+        0%, 100% { transform: translateX(0); }
+        50%      { transform: translateX(4px); }
+      }
+      @keyframes ls-flash {
+        0%, 88%, 100% { opacity: 0; }
+        90%           { opacity: 1; filter: drop-shadow(0 0 14px #bfe9ff); }
+        94%           { opacity: 0.3; }
+        96%           { opacity: 1; filter: drop-shadow(0 0 18px #ffffff); }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ls-bg)"/>
+  <g class="cloud" fill="#2a3550">
+    <ellipse cx="80" cy="70" rx="30" ry="18"/>
+    <ellipse cx="115" cy="65" rx="26" ry="20"/>
+    <ellipse cx="140" cy="75" rx="22" ry="16"/>
+    <ellipse cx="100" cy="78" rx="45" ry="16"/>
+  </g>
+  <path class="bolt1" d="M105 85 L85 120 L100 120 L88 155 L125 110 L107 110 Z" fill="url(#ls-bolt)"/>
+  <path class="bolt2" d="M75 95 L60 125 L72 125 L62 150" fill="none" stroke="url(#ls-bolt)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -4,8 +4,10 @@
 //
 // The rules it keeps (each one is tested):
 //   * a chat that CAN be locked is never sent unlocked: if locking fails, the message fails (it is not silently sent readable);
-//   * a chat that can not be locked (the public Lounge, the AI chat, very large groups, a member who has no key yet) is sent as before,
-//     and the app says so;
+//   * a chat that can not be locked at all (the public Lounge, the AI chat, very large groups) is sent as before, and the app says so;
+//   * a GROUP chat with a member who has no key yet is sent as before too (groups are not required to be end-to-end encrypted);
+//   * a direct, person-to-person chat is never sent readable, full stop — even the one case that used to fall back (the other
+//     person has no key yet) now blocks instead: nobody but the two people in it, not even NOOB, can ever read it;
 //   * a device key is only ever created when the key store was really read and really empty, and saving only ever adds keys;
 //   * everything fails safe: a message that can not be opened is shown as locked, never as garbage or as somebody else's words.
 import * as C from './crypto.ts';
@@ -176,6 +178,10 @@ export function createE2ee(deps: E2eeDeps) {
       const onlyMeMissing = members.filter((m: any) => !m.keys.length).every((m: any) => m.userId === me);
       return { ...out, encryptable: false, mustLock: (reason === 'ok' || reason === 'missing') && onlyMeMissing && members.length > 0, reason: 'blocked' };
     }
+    // A direct chat is never allowed to fall back to plain text: if the other person simply has no key
+    // registered yet, this device waits rather than sending the message readable. Groups keep the old,
+    // more forgiving behaviour (they are not required to be end-to-end encrypted at all).
+    if (!out.isGroup && reason === 'missing') out.mustLock = true;
     if (out.encryptable && !out.isGroup) {
       const mine = members.find((m: any) => m.userId === me);
       const other = members.find((m: any) => m.userId !== me);
@@ -216,7 +222,14 @@ export function createE2ee(deps: E2eeDeps) {
     const me = await deps.userId();
     if (!me) throw new C.E2eeError('bad-input', 'Please log in.');
     const info = known ?? (await chatCryptoForSend(chatId));
-    if (!info.encryptable) throw new C.E2eeError('bad-input', info.mustLock ? 'This device can not keep chat keys (private browsing?), so it can not send private messages. Use a normal browser window.' : 'This chat is not end-to-end encrypted.');
+    if (!info.encryptable) {
+      const msg = info.reason === 'blocked'
+        ? 'This device can not keep chat keys (private browsing?), so it can not send private messages. Use a normal browser window.'
+        : info.mustLock
+          ? 'This chat can not be sent yet — waiting for the other person\'s device to be ready for end-to-end encryption. Please try again shortly.'
+          : 'This chat is not end-to-end encrypted.';
+      throw new C.E2eeError('bad-input', msg);
+    }
     const ring = await loadRing(me);
     const key = currentKey(ring);
     if (!key) throw new C.E2eeError('no-key', 'This device has no chat key.');

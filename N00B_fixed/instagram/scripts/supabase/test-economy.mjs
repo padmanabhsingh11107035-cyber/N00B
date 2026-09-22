@@ -488,6 +488,24 @@ await expectFail(() => rpc(admin, 'admin_report_action', '00000000-0000-0000-000
 await db.query(`update profiles set is_suspended = false where id = $1`, [b]); await db.query('update auth.users set banned_until = null where id = $1', [b]);
 
 // =====================================================================================
+section('14b. Reported-chat evidence (the ONE exception to real end-to-end encryption)');
+check((await rpc(c, 'find_direct_chat', d)) === null, 'no chat yet between two people: nothing to attach');
+const cdChat = (await rpc(c, 'create_chat', [d])).chat;
+check(String(await rpc(c, 'find_direct_chat', d)) === cdChat.id && String(await rpc(d, 'find_direct_chat', c)) === cdChat.id, 'once a chat exists, either side can find it (read-only — it made nothing new)');
+const evidence = JSON.stringify([{ senderUsername: 'reporter', text: 'this person keeps bothering me', createdAt: new Date().toISOString() }]);
+const repEv = await rpc(c, 'submit_report', d, 'Harassment', 'see attached', evidence);
+check(repEv.success && Array.isArray(repEv.report.evidence) && repEv.report.evidence.length === 1 && repEv.report.evidence[0].text === 'this person keeps bothering me', 'a report can attach a copy of the ONE reported conversation');
+const arEv = await rpc(admin, 'admin_reports');
+check(arEv.reports.find((r) => r.id === repEv.reportId)?.evidence?.[0]?.text === 'this person keeps bothering me', 'and admin sees it through the normal report list — nothing else about this chat is ever readable');
+const repNoEv = await rpc(c, 'submit_report', d, 'Spam', 'no proof attached', JSON.stringify('not an array'));
+check(repNoEv.success && repNoEv.report.evidence === null, 'evidence that is not a small array is simply dropped, not an error');
+const tooBig = JSON.stringify(Array.from({ length: 200 }, (_, i) => ({ senderUsername: 'reporter', text: `msg ${i}`, createdAt: new Date().toISOString() })));
+const repTooBig = await rpc(c, 'submit_report', d, 'Spam', 'huge', tooBig);
+check(repTooBig.success && repTooBig.report.evidence === null, 'an oversized evidence array is dropped too (still files the report)');
+await db.query(`update profiles set is_suspended = false where id = $1`, [d]); await db.query('update auth.users set banned_until = null where id = $1', [d]);
+await db.query('delete from blocks where blocker_id = $1 and blocked_id = $2', [c, d]);
+
+// =====================================================================================
 section('15. Admin tools');
 await resetPeople(); await setPts(a, 500);
 await expectFail(() => rpc(a, 'admin_users_list'), /Administrator privileges required/, 'an ordinary user can not list accounts');

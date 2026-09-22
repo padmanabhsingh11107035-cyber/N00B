@@ -152,15 +152,17 @@ const gifEdited = (await bobD.msgs.unlockMessages(dm.id, [(await bobD.rpc('edit_
 check(gifEdited.text === 'now with words' && gifEdited.mediaUrl === 'https://media.giphy.com/media/abc/giphy.gif', 'editing a message with a GIF keeps the GIF');
 await expectFail(() => annPhone.msgs.prepareEdit(dm.id, s1.message.id, '  '), /cannot be empty/, 'an edit to nothing is refused');
 
-section('4. A chat that can not be locked is sent as before');
+section('4. A direct chat with somebody who has no key yet: blocked, never sent readable');
 const dmMissing = (await asUser(db, cy, async () => (await db.query(`select public.create_chat(array[$1::uuid], false, null, null, null) as r`, [dee])).rows[0].r)).chat;
 const im = await cyD.svc.chatCrypto(dmMissing.id);
-check(!im.encryptable && im.reason === 'missing' && im.missing.includes(nameOf[dee]) && im.mustLock === false, 'somebody with no key yet: not locked, and the app knows who');
-const plainSend = await send(cyD, dmMissing.id, { text: 'plain for now' });
-check(!plainSend.wasLocked && (await stored(plainSend.message.id)).text === 'plain for now', 'the message goes readable, exactly as before');
+check(!im.encryptable && im.reason === 'missing' && im.missing.includes(nameOf[dee]) && im.mustLock === true, 'somebody with no key yet: not locked, and the app knows who, and it must not be sent unlocked');
+await expectFail(() => send(cyD, dmMissing.id, { text: 'plain for now' }), /waiting for the other person/, 'a direct chat refuses to send readable — it waits instead of degrading to plain text');
+check((await db.query('select count(*)::int as n from messages where chat_id = $1', [dmMissing.id])).rows[0].n === 0, 'and nothing at all was stored for it');
 await deeD.svc.ensure(dee);
 const im2 = await cyD.svc.chatCrypto(dmMissing.id, true);
-check(im2.encryptable && im2.reason === 'ok', 'once they have a key, the chat becomes locked');
+check(im2.encryptable && im2.reason === 'ok' && im2.mustLock === false, 'once they have a key, the chat becomes locked and sendable');
+const nowLocked = await send(cyD, dmMissing.id, { text: 'now it can go' });
+check(nowLocked.wasLocked && nowLocked.message.text === 'now it can go', 'and the message that was blocked a moment ago now sends locked');
 const lounge = (await db.query('select id from chats where is_global_default')).rows[0].id;
 const il = await annPhone.svc.chatCrypto(lounge);
 check(!il.encryptable && il.reason === 'public' && il.mustLock === false && (await annPhone.msgs.prepareSend(lounge, { text: 'hi all' })) === null, 'the public Global Lounge is never locked');

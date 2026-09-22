@@ -1592,6 +1592,32 @@ export async function translateMessage(chatId: string, messageId: string): Promi
   }
 }
 
+// Chats are end-to-end encrypted — the server never holds readable text, and nobody but the two
+// people in a chat can ever open it. The ONE deliberate exception: when a person FILES A REPORT
+// against someone they have a direct chat with, their own device (the only place that ever decrypted
+// that one conversation to show it on screen) may attach a copy of it, exactly like forwarding those
+// messages to NOOB Admin by hand. This never gives admin a standing way to read a chat that was never
+// reported — that stays unreadable by anyone but its own members, forever.
+async function gatherReportEvidence(targetUserId: string): Promise<Array<{ senderUsername: string; text: string; mediaType?: string; createdAt: string }> | undefined> {
+  try {
+    const chatId = await rpc<string | null>('find_direct_chat', { p_user: targetUserId });
+    if (!chatId) return undefined;
+    const messages = await fetchMessages(chatId);
+    const evidence = messages
+      .filter((m) => !m.locked && (m.text || m.mediaUrl))
+      .slice(-30)
+      .map((m) => ({
+        senderUsername: m.senderUsername || 'unknown',
+        text: (m.text || '').slice(0, 500),
+        ...(m.mediaUrl ? { mediaType: m.mediaType || 'image' } : {}),
+        createdAt: m.createdAt
+      }));
+    return evidence.length > 0 ? evidence : undefined;
+  } catch {
+    return undefined; // evidence is a bonus, never a reason to fail the report itself
+  }
+}
+
 export async function submitSafetyReport(
   targetOrPayload: string | { targetUserId: string; reason: string; details?: string },
   reason?: string,
@@ -1612,7 +1638,8 @@ export async function submitSafetyReport(
   }
 
   try {
-    return await rpc('submit_report', { p_target: targetUserId, p_reason: reportReason, p_details: reportDetails });
+    const evidence = await gatherReportEvidence(targetUserId);
+    return await rpc('submit_report', { p_target: targetUserId, p_reason: reportReason, p_details: reportDetails, p_evidence: evidence });
   } catch (err) {
     const message = errorText(err, 'Could not file the report.');
     return { success: false, message, error: message };

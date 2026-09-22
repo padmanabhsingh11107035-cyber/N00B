@@ -68,6 +68,23 @@ await expectFail(() => rpc(c, 'chat_messages', ab.id), /not a participant/, 'a s
 check((await call(c, 'select id from messages where chat_id = $1', [ab.id])).length === 0, '...not even by asking the table directly');
 
 // =====================================================================================
+section('2b. The chat list\'s "encrypted" tag');
+check(lounge.isEncryptable === false, 'the Global Lounge is never shown as encryptable');
+check((await rpc(a, 'my_chats')).find((x) => x.id === ab.id).isEncryptable === false, 'a brand new 1:1 chat: neither side has a key yet, so not encryptable');
+const aKey = { kty: 'EC', crv: 'P-256', x: 'A'.repeat(43), y: 'B'.repeat(43) };
+await rpc(a, 'register_chat_key', '0123456789abcdef', aKey, 'A phone');
+check((await rpc(a, 'my_chats')).find((x) => x.id === ab.id).isEncryptable === false, 'only one side has a key so far: still not encryptable');
+const bKey = { kty: 'EC', crv: 'P-256', x: 'C'.repeat(43), y: 'D'.repeat(43) };
+await rpc(b, 'register_chat_key', 'fedcba9876543210', bKey, 'B phone');
+check((await rpc(a, 'my_chats')).find((x) => x.id === ab.id).isEncryptable === true && (await rpc(b, 'my_chats')).find((x) => x.id === ab.id).isEncryptable === true, 'both sides have a key now: the tag flips to encryptable for either of them');
+const gForTag = (await rpc(a, 'create_chat', [b, c], true, 'Tag test')).chat;
+check((await rpc(a, 'my_chats')).find((x) => x.id === gForTag.id).isEncryptable === false, 'a group with an unkeyed member is not encryptable either');
+const cKey = { kty: 'EC', crv: 'P-256', x: 'E'.repeat(43), y: 'F'.repeat(43) };
+await rpc(c, 'register_chat_key', '1111222233334444', cKey, 'C phone');
+check((await rpc(a, 'my_chats')).find((x) => x.id === gForTag.id).isEncryptable === true, 'once everyone in the group has a key, it is encryptable too');
+await rpc(a, 'delete_chat', gForTag.id);
+
+// =====================================================================================
 section('3. Sending, notifications, reading');
 const long = 'x'.repeat(100);
 const s1 = (await rpc(a, 'send_message', ab.id, { text: long })).message;

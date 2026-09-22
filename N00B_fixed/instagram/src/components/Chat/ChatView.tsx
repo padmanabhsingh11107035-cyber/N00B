@@ -1377,6 +1377,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
                         )}
 
+                        {/* Says "encrypted" only when this chat really is right now — every personal AND
+                            group chat gets this tag, not just the Lounge/AI exceptions which stay "not encrypted" */}
+                        <span
+                          className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase border shrink-0 flex items-center gap-0.5 ${
+                            c.isEncryptable
+                              ? 'bg-emerald-500/15 text-[#00FF66] border-[#00FF66]/30'
+                              : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {c.isEncryptable ? <Lock className="w-2.5 h-2.5" /> : <LockOpen className="w-2.5 h-2.5" />}
+                          {c.isEncryptable ? 'encrypted' : 'not encrypted'}
+                        </span>
+
                         {!c.isGroup && partner.isVerified && <VerifiedBadge size="xs" />}
                       </div>
 

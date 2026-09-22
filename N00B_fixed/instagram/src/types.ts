@@ -519,6 +519,10 @@ export interface ChatConversation {
   onlyAdminsCanSend?: boolean;
   description?: string;
   isAi?: boolean;
+  // true when every member currently has an active device key (the Global Lounge and the AI chat are
+  // never encryptable). Shown as a plain "encrypted" / "not encrypted" tag, in the chat list and in
+  // the open chat's own header — it never claims a chat is locked when it is not.
+  isEncryptable?: boolean;
   isEnded?: boolean;
   endedAt?: string;
   review?: {

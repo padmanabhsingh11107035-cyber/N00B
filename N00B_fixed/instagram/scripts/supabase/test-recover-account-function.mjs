@@ -97,7 +97,7 @@ check(!JSON.stringify(r.json).toLowerCase().includes('rk_test_key'), 'the Resend
 delete env.RESEND_API_KEY;
 reset(); dbPlan.recovery_otp_request = () => ({ data: { status: 'ok', userId: 'u-ok', email: 'a@b.c', code: '111111' }, error: null });
 r = await call({ action: 'otp-request', username: 'padma' });
-check(r.status === 503 && r.json.notConfigured === true && resendCalls.length === 0, 'without a Resend key, the app is told plainly (and nothing is "sent")');
+check(r.status === 503 && r.json.notConfigured === true && resendCalls.length === 0 && rpcCalls.length === 0, 'without a Resend key, the app is told plainly, and NOTHING is generated or stored in the database — the account\'s limited send allowance is not wasted on a code that could never be emailed');
 env.RESEND_API_KEY = 'rk_test_key';
 for (const [status, code, pattern] of [
   ['rate_limited', 429, /Too many attempts/], ['cooldown', 429, /just sent/], ['missing_username', 400, /Username is required/],

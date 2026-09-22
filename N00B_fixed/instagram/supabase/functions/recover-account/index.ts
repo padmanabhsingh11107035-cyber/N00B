@@ -103,6 +103,10 @@ Deno.serve(async (req) => {
 
   // -------------------------------------------------------------- emailed one-time code
   if (body?.action === 'otp-request') {
+    // Checked BEFORE touching the database: if emailing is not switched on, nothing is generated or stored — the person's
+    // 3-per-hour allowance and cooldown are not spent on a code that could never be sent to them anyway.
+    const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
+    if (!key) return json({ error: 'Emailing a code is not switched on yet. Please use the questions instead.', notConfigured: true }, 503);
     const { data: check, error } = await admin.rpc('recovery_otp_request', { p_ip: ip, p_username: String(body?.username ?? '') });
     if (error || !check) return json(unavailable, 500);
     switch (check.status) {
@@ -115,8 +119,6 @@ Deno.serve(async (req) => {
       case 'ok': break;
       default: return json(unavailable, 500);
     }
-    const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
-    if (!key) return json({ error: 'Emailing a code is not switched on yet. Please use the questions instead.', notConfigured: true }, 503);
     const sent = await sendOtpEmail(String(check.email), String(check.code));
     if (!sent) return json(unavailable, 502);
     return json({ success: true, maskedEmail: maskEmail(String(check.email)) });

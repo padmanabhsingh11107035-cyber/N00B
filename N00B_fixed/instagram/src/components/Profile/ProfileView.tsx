@@ -722,8 +722,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <KeyRound className="w-4 h-4 text-emerald-300" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">Chat encryption</span>
-                    <span className="text-[10px] text-zinc-400 block truncate">Your keys, devices and backup</span>
+                    <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">My devices</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Chat encryption keys and backup</span>
                   </div>
                 </button>
               )}

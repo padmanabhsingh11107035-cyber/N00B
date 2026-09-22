@@ -48,6 +48,18 @@ export function createTabSessions(local: KV, tab: KV, localKeys: () => string[])
     local.setItem(LAST_KEY, id);
   };
 
+  // Forgets one account's saved login: any tab bound to it is unbound (shown the login screen), and if it was the account a brand-new
+  // tab would start with, that falls back to whichever other saved account is next.
+  const dropSlot = (id: string) => {
+    local.removeItem(slotKey(id));
+    if (tab.getItem(TAB_KEY) === id) tab.setItem(TAB_KEY, '');
+    if (local.getItem(LAST_KEY) === id) {
+      const next = savedAccounts().find((a) => a.id !== id);
+      if (next) local.setItem(LAST_KEY, next.id);
+      else local.removeItem(LAST_KEY);
+    }
+  };
+
   // The account this tab uses right now (null = none: show the login screen).
   const currentAccount = (): string | null => {
     const mine = tab.getItem(TAB_KEY);
@@ -103,13 +115,16 @@ export function createTabSessions(local: KV, tab: KV, localKeys: () => string[])
     // using the same account notice they are signed out; tabs using other accounts are not affected.
     remove(): void {
       const id = tab.getItem(TAB_KEY) || currentAccount();
-      if (id) local.removeItem(slotKey(id));
+      if (id) dropSlot(id);
       tab.setItem(TAB_KEY, '');
-      if (local.getItem(LAST_KEY) === id) {
-        const next = savedAccounts()[0];
-        if (next) local.setItem(LAST_KEY, next.id);
-        else local.removeItem(LAST_KEY);
-      }
+    },
+
+    // "Switch account" → remove one account from this browser's list. This forgets the saved login on THIS device only — the
+    // account itself is entirely untouched (nothing is deleted on the server, and the person can just log back in later). A tab
+    // that is currently using that account is signed out of it (shown the login screen), the same as a normal log-out; other
+    // tabs using OTHER accounts are never affected.
+    forget(id: string): void {
+      dropSlot(id);
     },
 
     // "Add another account" / the login screen: this tab uses no account for now, WITHOUT logging anyone out.

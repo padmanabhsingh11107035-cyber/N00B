@@ -46,6 +46,14 @@ console.log(
 // The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
 void initLanguage();
 
+// Ask the browser not to evict this site's storage under pressure — where saved logins for "several accounts at once" and offline
+// caches live. Some mobile browsers (notably iOS Safari) can otherwise silently clear a site's storage after a period of no use,
+// which would make a saved account quietly vanish from "Switch account" even though nothing was done wrong. Best-effort only: not
+// every browser supports this, and it can't override a person's own "clear data on exit" setting — so it never throws either way.
+if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

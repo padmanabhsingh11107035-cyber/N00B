@@ -77,6 +77,27 @@ B.s.remove();
 check(local.getItem(T.LAST_KEY) === null && tabOn(local).s.currentAccount() === null && B.s.savedAccounts().length === 0, 'when the last account logs out nobody is logged in anywhere, and a new tab shows the login screen');
 check(tabOn(local).s.savedAccounts().length === 0, '(nothing left behind)');
 
+section('4b. "Switch account" → removing one account from the list (not logging out, not deleting)');
+local = makeKV();
+A = tabOn(local);
+A.s.write(JSON.stringify(sessionOf('u-ann', 'ann')));
+B = tabOn(local); B.s.unbind(); B.s.write(JSON.stringify(sessionOf('u-bob', 'bob')));
+let F = tabOn(local); F.s.unbind(); F.s.write(JSON.stringify(sessionOf('u-cy', 'cy')));
+check(A.s.savedAccounts().map((x) => x.username).join() === 'ann,bob,cy', '(three accounts saved, to start)');
+F.s.forget('u-cy');
+check(A.s.savedAccounts().map((x) => x.username).join() === 'ann,bob', 'forgetting cy removes only her from the list');
+check(F.s.currentAccount() === null && F.s.read() === null, 'the tab that WAS cy is signed out of her (shown the login screen)');
+check(A.s.currentAccount() === 'u-ann' && B.s.currentAccount() === 'u-bob', '...while ann and bob, in their own tabs, are completely unaffected');
+A.s.forget('u-bob');
+check(B.s.currentAccount() === null && B.s.read() === null, 'forgetting bob from tab A also signs OUT tab B, which was using bob (same as a normal log-out)');
+check(A.s.currentAccount() === 'u-ann', '...but the tab doing the forgetting (ann) is untouched');
+check(local.getItem(T.LAST_KEY) === 'u-ann', 'a new tab now starts with whichever account is left');
+check(tabOn(local).s.currentAccount() === 'u-ann', '...and it does');
+A.s.forget('u-does-not-exist');
+check(A.s.savedAccounts().map((x) => x.username).join() === 'ann', 'forgetting an id that is not saved does nothing');
+A.s.forget('u-ann');
+check(A.s.currentAccount() === null && A.s.savedAccounts().length === 0 && local.getItem(T.LAST_KEY) === null, 'forgetting the very last account leaves nobody logged in anywhere (a real account is never touched by this — only what THIS browser remembers)');
+
 section('5. After logging out, a reload does not log in as somebody else');
 local = makeKV();
 A = tabOn(local);

@@ -9,3 +9,4 @@ android/
 .DS_Store
 .claude/
 backups/
+supabase/.temp/

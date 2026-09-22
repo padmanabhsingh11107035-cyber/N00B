@@ -1,6 +1,7 @@
 import { EmojiPanel } from './EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
+import { GroupCallModal } from './GroupCallModal';
 import { useChatCrypto } from './useChatCrypto';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -232,6 +233,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [isEditingMessageId, setIsEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showCallModal, setShowCallModal] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [globalChatTheme, setGlobalChatTheme] = useState<string>(() => {
@@ -1716,6 +1718,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
                 </>
               )}
+
+              {/* Group Call — real groups only, and never while "only admins can send" is on (that
+                  restriction turns calling off for everyone, admins included, same as it does typing) */}
+              {activeChat?.isGroup && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
+                <button
+                  onClick={() => setShowCallModal(true)}
+                  className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:bg-[#00FF66] hover:text-black hover:border-[#00FF66] text-zinc-300 transition-all cursor-pointer"
+                  title="Start or join a call"
+                >
+                  <Phone className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -2512,6 +2526,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
             if (activeChatId) loadMessages(activeChatId);
             loadChats();
           }}
+        />
+      )}
+
+      {/* Group Call */}
+      {showCallModal && activeChat?.isGroup && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
+        <GroupCallModal
+          chatId={activeChat.id}
+          chatName={activeChat.name || 'Group Chat'}
+          currentUser={currentUser}
+          onClose={() => setShowCallModal(false)}
         />
       )}
 

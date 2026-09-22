@@ -4,11 +4,11 @@
 //
 // The rules it keeps (each one is tested):
 //   * a chat that CAN be locked is never sent unlocked: if locking fails, the message fails (it is not silently sent readable);
-//   * a chat that can NEVER be locked at all (the public Lounge, the AI chat, and groups over the size cutoff — reason
-//     'large') is sent as before, and the app says so — this is a hard technical limit, not a policy choice;
-//   * every other chat — personal AND group alike — is never sent readable, full stop: if any member simply has no key
-//     yet, the device waits and the message fails rather than going out unlocked. Nobody but the people actually in a
-//     chat, not even NOOB, can ever read it, and that is now true the same way for every chat kind;
+//   * a chat that can not be locked yet (the public Lounge, the AI chat, very large groups, or simply somebody in it —
+//     personal or group alike — who has not opened the updated app yet) is sent as before, unlocked, and the app says
+//     so; it starts locking itself, for everyone, the moment every member has opened the app once;
+//   * the ONE case that always blocks rather than falling back is THIS device's own key store being unusable (private
+//     browsing, storage disabled): that message fails outright rather than being sent unlocked from a broken setup;
 //   * a device key is only ever created when the key store was really read and really empty, and saving only ever adds keys;
 //   * everything fails safe: a message that can not be opened is shown as locked, never as garbage or as somebody else's words.
 import * as C from './crypto.ts';
@@ -179,11 +179,6 @@ export function createE2ee(deps: E2eeDeps) {
       const onlyMeMissing = members.filter((m: any) => !m.keys.length).every((m: any) => m.userId === me);
       return { ...out, encryptable: false, mustLock: (reason === 'ok' || reason === 'missing') && onlyMeMissing && members.length > 0, reason: 'blocked' };
     }
-    // No chat falls back to plain text any more, personal or group: if any member simply has no key
-    // registered yet, this device waits rather than sending the message readable, same as a direct
-    // chat. (A group over the size cutoff — reason 'large' — was never encryptable in the first place;
-    // that is a hard technical limit, unrelated to this, and unaffected by it.)
-    if (reason === 'missing') out.mustLock = true;
     if (out.encryptable && !out.isGroup) {
       const mine = members.find((m: any) => m.userId === me);
       const other = members.find((m: any) => m.userId !== me);
@@ -224,14 +219,7 @@ export function createE2ee(deps: E2eeDeps) {
     const me = await deps.userId();
     if (!me) throw new C.E2eeError('bad-input', 'Please log in.');
     const info = known ?? (await chatCryptoForSend(chatId));
-    if (!info.encryptable) {
-      const msg = info.reason === 'blocked'
-        ? 'This device can not keep chat keys (private browsing?), so it can not send private messages. Use a normal browser window.'
-        : info.mustLock
-          ? 'This chat can not be sent yet — waiting for the other person\'s device to be ready for end-to-end encryption. Please try again shortly.'
-          : 'This chat is not end-to-end encrypted.';
-      throw new C.E2eeError('bad-input', msg);
-    }
+    if (!info.encryptable) throw new C.E2eeError('bad-input', info.mustLock ? 'This device can not keep chat keys (private browsing?), so it can not send private messages. Use a normal browser window.' : 'This chat is not end-to-end encrypted.');
     const ring = await loadRing(me);
     const key = currentKey(ring);
     if (!key) throw new C.E2eeError('no-key', 'This device has no chat key.');

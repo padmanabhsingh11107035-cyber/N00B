@@ -24,7 +24,7 @@ import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
-import { fetchPostLikers, fetchPostViewers, recordPostView } from '../../services/api';
+import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { POST_FILTERS } from '../../data/mockData';
@@ -43,6 +43,7 @@ interface PostCardProps {
   onDeleteSlide?: (postId: string, slideId: string) => void;
   onHideAd?: (postId: string) => void;
   onSelectCategory?: (category: string) => void;
+  onNavigateToProfile?: (user: User) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -58,7 +59,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDeletePost,
   onDeleteSlide,
   onHideAd,
-  onSelectCategory
+  onSelectCategory,
+  onNavigateToProfile
 }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -233,6 +235,13 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  // Tap the author's name or @handle (on a post or its comments) -> their real, full profile.
+  const goToProfile = async (userId: string) => {
+    if (!onNavigateToProfile) return;
+    const user = await fetchUserById(userId);
+    if (user) onNavigateToProfile(user);
+  };
+
   // Text Background styling for text-only thoughts
   const getTextBgClass = (bgStyle?: string) => {
     switch (bgStyle) {
@@ -291,7 +300,10 @@ export const PostCard: React.FC<PostCardProps> = ({
 
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-bold text-white tracking-tight hover:underline cursor-pointer">
+              <span
+                onClick={() => goToProfile(post.userId)}
+                className="text-xs font-bold text-white tracking-tight hover:underline cursor-pointer"
+              >
                 {post.displayName || post.username}
               </span>
               {post.isVerified && <VerifiedBadge size="sm" />}
@@ -314,7 +326,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <span className="truncate max-w-[150px]">{post.location}</span>
                 </div>
               ) : (
-                <span>@{post.username}</span>
+                <span onClick={() => goToProfile(post.userId)} className="hover:underline cursor-pointer">@{post.username}</span>
               )}
 
               {post.category && (

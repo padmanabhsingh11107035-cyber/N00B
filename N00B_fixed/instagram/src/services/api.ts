@@ -21,6 +21,7 @@ export {
   updateUserBio,
   updateUserStatusNote,
   fetchUsers,
+  fetchUserById,
   toggleFollowUser,
   acceptFollowRequest,
   declineFollowRequest,

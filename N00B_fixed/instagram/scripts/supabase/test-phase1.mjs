@@ -59,6 +59,12 @@ check((await chk({ ...good, dateOfBirth: new Date(Date.now() - 10 * 365.25 * 864
 check((await chk({ ...good, dateOfBirth: '1930-01-01' })).error.includes('82'), 'over-82 is refused');
 check((await chk({ ...good, username: authorRaw.username.toUpperCase() })).error.startsWith('User ID is already taken'), 'a taken username (any capitalisation) is refused');
 check((await chk({ ...good, username: '!!!' })).error.includes('invalid characters'), 'a username with only illegal characters is refused');
+for (const bad of ['not-an-email', 'missing@domain', '@nodomain.com', 'spaces in@this.com', 'two@@at.com', 'trailing.dot@x.', 'x'.repeat(255) + '@x.com']) {
+  check((await chk({ ...good, email: bad })).error === 'Please enter a valid email address', `an invalid email like "${bad.slice(0, 20)}" is refused`);
+}
+for (const ok of ['a@b.co', 'first.last+tag@sub.example.com', 'Weird_But-Valid99@example.io']) {
+  check((await chk({ ...good, email: ok })).ok === true, `a real-looking email like "${ok}" is accepted`);
+}
 {
   const victim = (await db.query('select p.id, pp.email from profiles p join profile_private pp on pp.user_id = p.id where not p.is_admin limit 1')).rows[0];
   await db.query('update profiles set is_suspended = true where id = $1', [victim.id]);
@@ -87,6 +93,15 @@ const pubView = (await rpc(b, 'search_users', aRaw.username))[0];
 check(pubView && pubView.id === a && pubView.email === undefined && pubView.mobileNumber === undefined && pubView.dateOfBirth === undefined && pubView.followRequests === undefined, 'other people see NO email / phone / birthday / requests');
 check((await rpc(b, 'search_users', '')).length === raw.users.length + 1, 'searching with no text lists everyone');
 check((await rpc(b, 'search_users', 'zzzz-no-such-person')).length === 0, 'searching for nobody returns nothing');
+
+// A post or reel only carries a small copy of its author — tapping their name/@handle fetches their REAL, full profile by id.
+const byId = await rpc(b, 'user_by_id', a);
+check(byId && byId.id === a && byId.username === aRaw.username && byId.email === undefined && byId.mobileNumber === undefined, 'looking a person up by id gives the same public view as search (no private fields)');
+check((await rpc(b, 'user_by_id', '00000000-0000-0000-0000-000000000000')) === null, 'an id nobody has gives nothing (not an error)');
+await db.query(`insert into profile_hides (owner_id, hidden_from_id) values ($1, $2)`, [a, b]);
+check((await rpc(b, 'user_by_id', a)) === null, 'someone who hid their profile from you is not found by id either');
+await db.query(`delete from profile_hides where owner_id = $1 and hidden_from_id = $2`, [a, b]);
+await expectFail(() => asAnon(db, () => db.query(`select public.user_by_id('${a}')`)), /permission denied/, 'a logged-out visitor can not look anyone up by id');
 const upd = await rpc(a, 'update_my_profile', { bio: 'a new bio', website: 'https://example.com', city: 'Mumbai', interests: ['art', 'code'] });
 check(upd.bio === 'a new bio' && upd.website === 'https://example.com' && upd.interests.join() === 'art,code', 'editing bio / website / interests works');
 const before = await points(a);

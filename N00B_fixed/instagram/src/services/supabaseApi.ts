@@ -197,6 +197,8 @@ export async function signupUser(payload: {
       }
     }
     const user = await rpc<User>('get_my_user');
+    // Never awaited, never lets a slow or failed email hold up or fail the signup itself.
+    void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
     return { success: true, user: startChatKeys(mapUser(user)) as User };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not create the account. Please try again.') };
@@ -419,6 +421,17 @@ export async function updateFullProfile(profileData: Partial<User>): Promise<{ s
     return { success: true, user: mapUser(user) as User, message: 'Profile successfully updated' };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not update your profile.') } as any;
+  }
+}
+
+// A post's or reel's author is only a small denormalized copy (username, avatar, display name) — this fetches their real, full profile
+// for "view profile" from a post/reel/etc. `null` when they don't exist any more, or hid their profile from this viewer.
+export async function fetchUserById(id: string): Promise<User | null> {
+  try {
+    const u = await rpc<any>('user_by_id', { p_id: id });
+    return u ? (mapUser(u) as User) : null;
+  } catch {
+    return null;
   }
 }
 

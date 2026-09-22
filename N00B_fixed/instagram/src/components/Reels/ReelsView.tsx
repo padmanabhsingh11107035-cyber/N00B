@@ -7,9 +7,6 @@ import {
   Bookmark,
   Music,
   Sliders,
-  History,
-  Volume2,
-  VolumeX,
   ExternalLink,
   Sparkles,
   Globe,
@@ -17,7 +14,6 @@ import {
   Check,
   Film,
   Eye,
-  MoreVertical,
   ArrowLeft,
   Trash2
 } from 'lucide-react';
@@ -30,7 +26,8 @@ import {
   addReelComment,
   fetchReelLikers,
   fetchReelViewers,
-  deleteReel
+  deleteReel,
+  fetchUserById
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -52,6 +49,7 @@ interface ReelsViewProps {
   initialReelId?: string;
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
   onGoBack?: () => void;
+  onNavigateToProfile?: (user: User) => void;
 }
 
 // Fisher-Yates shuffle — used to randomize reel order and to reshuffle
@@ -72,19 +70,19 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   onNavigateToChat,
   initialReelId,
   onToggleFollowUser,
-  onGoBack
+  onGoBack,
+  onNavigateToProfile
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isVideoBuffering, setIsVideoBuffering] = useState(true);
+  const [videoFailed, setVideoFailed] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showAlgorithmModal, setShowAlgorithmModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
-  const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
   const [algorithmWeights, setAlgorithmWeights] = useState({
     robotics: 85,
     code: 90,
@@ -123,6 +121,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const currentReel = localReels[currentIndex] || localReels[0];
   const nextReel = localReels[currentIndex + 1];
+  const nextNextReel = localReels[currentIndex + 2];
   const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
   const isReelOwner = !!currentReel && currentReel.userId === currentUser.id;
   useScreenshotAlert('reel', currentReel?.id, !!currentReel && !isReelOwner);
@@ -141,7 +140,17 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     // so its buffering state must reset too — otherwise a spinner from the
     // previous reel could stay hidden/shown incorrectly for this one.
     setIsVideoBuffering(true);
+    setVideoFailed(false);
   }, [currentIndex, currentReel]);
+
+  // A broken video (the file itself is missing/corrupt, not just slow) moves on by itself after a moment — long enough to actually
+  // read the message, short enough that one bad upload doesn't strand anyone on it.
+  useEffect(() => {
+    if (!videoFailed) return;
+    const t = setTimeout(() => handleNextReel(), 2500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoFailed]);
 
   // Actually drive the <video> element from isPlaying — previously this
   // state only existed for the pause icon overlay and never touched
@@ -233,6 +242,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   };
 
+  const goToProfile = async (userId: string) => {
+    if (!onNavigateToProfile) return;
+    const user = await fetchUserById(userId);
+    if (user) onNavigateToProfile(user);
+  };
+
   const handleDoubleTap = () => {
     if (!currentReel.isLiked) {
       handleToggleLike();
@@ -240,6 +255,27 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     setShowHeartAnim(true);
     confetti({ particleCount: 30, spread: 60, origin: { y: 0.6 } });
     setTimeout(() => setShowHeartAnim(false), 800);
+  };
+
+  // One tap pauses/plays; a second tap arriving quickly upgrades it to a like instead (Instagram/TikTok style) — never both. The first
+  // tap's pause is deliberately held back for this short window so a real double-tap never also flashes a pause icon on its way to liking.
+  const lastTapAtRef = useRef(0);
+  const pendingTapRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const DOUBLE_TAP_MS = 280;
+  const handleTap = () => {
+    const now = Date.now();
+    if (pendingTapRef.current && now - lastTapAtRef.current < DOUBLE_TAP_MS) {
+      clearTimeout(pendingTapRef.current);
+      pendingTapRef.current = null;
+      lastTapAtRef.current = 0;
+      handleDoubleTap();
+      return;
+    }
+    lastTapAtRef.current = now;
+    pendingTapRef.current = setTimeout(() => {
+      pendingTapRef.current = null;
+      setIsPlaying((p) => !p);
+    }, DOUBLE_TAP_MS);
   };
 
   const handleToggleSave = async () => {
@@ -329,7 +365,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
   const touchStartY = useRef<number | null>(null);
   const isNavLockedRef = useRef(false);
-  const anyModalOpen = showComments || showAlgorithmModal || showHistoryModal || showLikesViewsSheet || showReelOptionsMenu;
+  const anyModalOpen = showComments || showAlgorithmModal || showLikesViewsSheet;
 
   const navigateWithCooldown = (direction: 'next' | 'prev') => {
     if (isNavLockedRef.current) return;
@@ -375,6 +411,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     const SWIPE_THRESHOLD = 50;
     if (deltaY > SWIPE_THRESHOLD) navigateWithCooldown('next');
     else if (deltaY < -SWIPE_THRESHOLD) navigateWithCooldown('prev');
+    else {
+      // Not a swipe — a tap. Handled here directly (with the browser's own click
+      // suppressed) rather than through onClick/onDoubleClick, which on a real
+      // phone is an unreliable way to tell a single tap from a double one.
+      e.preventDefault();
+      handleTap();
+    }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -432,8 +475,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       <div
         ref={playerRef}
         className="relative w-full h-full flex items-center justify-center cursor-pointer touch-none overscroll-none"
-        onClick={() => setIsPlaying(!isPlaying)}
-        onDoubleClick={handleDoubleTap}
+        onClick={handleTap}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
@@ -449,8 +491,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           preload="auto"
           muted={isMuted}
           onError={(e) => {
+            // A missing/corrupt file on our end, not a slow network — the buffering spinner would otherwise spin forever on a
+            // frozen black frame, which reads as "the app is broken" rather than "this one video can't be played."
             console.warn('Video failed to load source:', e);
             setIsVideoBuffering(false);
+            setVideoFailed(true);
           }}
           onWaiting={() => setIsVideoBuffering(true)}
           onPlaying={() => setIsVideoBuffering(false)}
@@ -460,19 +505,38 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
         {/* Buffering spinner — without this, a slow-loading video just looks
             frozen on a black frame, which reads as broken rather than loading. */}
-        {isVideoBuffering && (
+        {isVideoBuffering && !videoFailed && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <div className="w-10 h-10 rounded-full border-[3px] border-white/20 border-t-white animate-spin" />
           </div>
         )}
 
-        {/* Hidden preload of the next reel in the deck so swiping to it
-            doesn't stall while the browser starts fetching/decoding cold */}
+        {/* A missing/broken video file — clearly says so instead of a frozen black frame, and moves on by itself so nobody gets stuck. */}
+        {videoFailed && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none z-20 text-center px-8">
+            <Film className="w-8 h-8 text-zinc-500" />
+            <p className="text-xs text-zinc-400">This video couldn't be loaded.</p>
+          </div>
+        )}
+
+        {/* Hidden preload of the next TWO reels in the deck so swiping doesn't stall while the browser starts fetching/decoding cold —
+            one reel of lookahead alone still stalls for anyone swiping faster than the current one finishes buffering. */}
         {nextReel && (
           <video
             key={`preload-${nextReel.id}`}
             ref={nextVideoRef}
             src={nextReel.videoUrl}
+            muted
+            playsInline
+            preload="auto"
+            className="absolute w-px h-px opacity-0 pointer-events-none"
+            aria-hidden="true"
+          />
+        )}
+        {nextNextReel && (
+          <video
+            key={`preload2-${nextNextReel.id}`}
+            src={nextNextReel.videoUrl}
             muted
             playsInline
             preload="auto"
@@ -537,71 +601,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               <span>Your Algorithm</span>
             </button>
 
-            {/* Watch History */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowHistoryModal(true);
-              }}
-              className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
-              title="Watch History Log"
-            >
-              <History className="w-4 h-4" />
-            </button>
-
-            {/* Audio Mute */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMuted(!isMuted);
-              }}
-              className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-
-            {/* More options: Likes & Views (Views tab only shows for the reel's own owner), plus Delete for the owner or the NOOB admin account */}
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowReelOptionsMenu((v) => !v);
-                }}
-                className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
-                title="More options"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {showReelOptionsMenu && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-9 z-40 w-48 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
-                >
-                  <button
-                    onClick={() => {
-                      setLikesViewsInitialTab('likes');
-                      setShowLikesViewsSheet(true);
-                      setShowReelOptionsMenu(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Heart className="w-4 h-4 text-red-400" /> Likes{isReelOwner ? ' & Views' : ''}
-                  </button>
-                  {(isReelOwner || isMasterAdmin) && (
-                    <button
-                      onClick={() => {
-                        setShowReelOptionsMenu(false);
-                        handleDeleteReel();
-                      }}
-                      className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete Reel
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
@@ -609,7 +608,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         <div className="absolute bottom-6 left-3 right-16 z-20 space-y-2 pointer-events-auto text-left">
           {/* Creator Profile & Follow (with Instagram-style Dual Overlapping Avatars) */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative flex items-center">
+            <div
+              className="relative flex items-center cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToProfile(currentReel.userId);
+              }}
+            >
               <img
                 src={currentReel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                 alt={currentReel.username}
@@ -629,7 +634,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             </div>
 
             <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-xs font-bold text-white tracking-tight">{currentReel.username}</span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToProfile(currentReel.userId);
+                }}
+                className="text-xs font-bold text-white tracking-tight cursor-pointer hover:underline"
+              >
+                {currentReel.username}
+              </span>
               {currentReel.isVerified && (
                 <VerifiedBadge size="xs" />
               )}
@@ -804,6 +817,22 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             </div>
           </button>
 
+          {/* Delete (the reel's owner, or the NOOB admin account, only) */}
+          {(isReelOwner || isMasterAdmin) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteReel();
+              }}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
+              title="Delete Reel"
+            >
+              <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-red-400 group-hover:scale-110 transition-transform">
+                <Trash2 className="w-5 h-5" />
+              </div>
+            </button>
+          )}
+
           {/* Audio Spinning Disc */}
           <div className="w-8 h-8 rounded-full border-2 border-neutral-700 overflow-hidden animate-spin bg-neutral-900 flex items-center justify-center">
             <Music className="w-4 h-4 text-[#00FF66]" />
@@ -859,43 +888,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             >
               Apply Algorithm Preferences
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Watch History Modal */}
-      {showHistoryModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#121212] border border-neutral-800 rounded-2xl p-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-[#00FF66]" />
-                <h3 className="text-sm font-bold text-white">Reel Watch History</h3>
-              </div>
-              <button onClick={() => setShowHistoryModal(false)} className="text-gray-400 hover:text-white">
-                ✕
-              </button>
-            </div>
-
-            <div className="py-3 space-y-2 max-h-60 overflow-y-auto">
-              {localReels.map((r, i) => (
-                <div
-                  key={r.id}
-                  onClick={() => {
-                    setCurrentIndex(i);
-                    setShowHistoryModal(false);
-                  }}
-                  className="p-2 bg-neutral-900/80 rounded-xl flex items-center gap-2.5 hover:bg-neutral-800 cursor-pointer"
-                >
-                  <img src={r.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'} alt="" className="w-7 h-7 rounded-full object-cover" />
-                  <div className="truncate flex-1">
-                    <span className="text-xs font-bold text-white block">@{r.username}</span>
-                    <span className="text-[10px] text-gray-400 truncate block">{r.caption}</span>
-                  </div>
-                  <span className="text-[10px] text-[#00FF66] font-semibold">{r.viewsCount} views</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       )}

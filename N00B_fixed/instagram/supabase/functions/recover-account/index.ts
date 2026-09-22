@@ -56,24 +56,16 @@ function maskEmail(email: string): string {
   return `${maskPart(name)}@${maskPart(domainName)}${tld}`;
 }
 
-async function sendOtpEmail(email: string, code: string): Promise<boolean> {
+// Shared by every email this function sends. `false` (never thrown) whenever it can't be sent — a missing secret, Resend refusing it,
+// or the network being down — so a caller can decide for itself whether that failure should stop anything else.
+async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
   const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
   if (!key) return false;
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(),
-        to: [email],
-        subject: `${code} is your NOOB login code`,
-        text: `Your NOOB login code is ${code}. It expires in 10 minutes. If you did not ask for this, you can ignore this email — nothing changes until the code is used.`,
-        html: `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
-          <p style="font-size:15px">Your NOOB login code is:</p>
-          <p style="font-size:32px;font-weight:800;letter-spacing:6px;margin:12px 0">${code}</p>
-          <p style="font-size:13px;color:#555">It expires in 10 minutes and can be used once. If you did not ask for this, you can ignore this email — nothing changes until the code is used.</p>
-        </div>`
-      }),
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html }),
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) console.warn(`Resend: ${res.status} ${await res.text().catch(() => '')}`.slice(0, 300));
@@ -83,6 +75,32 @@ async function sendOtpEmail(email: string, code: string): Promise<boolean> {
     return false;
   }
 }
+
+const sendOtpEmail = (email: string, code: string) =>
+  sendEmail(
+    email,
+    `${code} is your NOOB login code`,
+    `Your NOOB login code is ${code}. It expires in 10 minutes. If you did not ask for this, you can ignore this email — nothing changes until the code is used.`,
+    `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
+      <p style="font-size:15px">Your NOOB login code is:</p>
+      <p style="font-size:32px;font-weight:800;letter-spacing:6px;margin:12px 0">${code}</p>
+      <p style="font-size:13px;color:#555">It expires in 10 minutes and can be used once. If you did not ask for this, you can ignore this email — nothing changes until the code is used.</p>
+    </div>`
+  );
+
+const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const sendWelcomeEmail = (email: string, name: string, username: string) =>
+  sendEmail(
+    email,
+    'Welcome to NOOB! 🎉',
+    `Hey ${name}!\n\nWelcome to NOOB — your account @${username} is ready. Share posts and reels, chat with end-to-end encryption, join mini-games, and more.\n\nGlad you're here.\n— The NOOB team`,
+    `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
+      <p style="font-size:20px;font-weight:800;margin:0 0 12px">Welcome to NOOB, ${escapeHtml(name)}! 🎉</p>
+      <p style="font-size:14px;line-height:1.6">Your account <strong>@${escapeHtml(username)}</strong> is ready to go. Share posts and reels, chat with end-to-end encryption, play mini-games, and connect with the community.</p>
+      <p style="font-size:14px;line-height:1.6">Glad you're here.<br/>— The NOOB team</p>
+    </div>`
+  );
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -100,6 +118,24 @@ Deno.serve(async (req) => {
   });
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || (req.headers.get('cf-connecting-ip') ?? 'unknown');
   const unavailable = { error: 'Recovery is unavailable right now. Please try again later.' };
+
+  // -------------------------------------------------------------- welcome email, right after signing up
+  // Called by the app with the BRAND NEW account's own fresh session token — never blocks or fails the signup itself either way,
+  // so this is deliberately forgiving: no key configured, no email on file, or Resend refusing it all just mean no email goes out.
+  if (body?.action === 'welcome') {
+    const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return json({ success: true, sent: false });
+    const { data: authData } = await admin.auth.getUser(token);
+    const userId = authData?.user?.id;
+    if (!userId) return json({ success: true, sent: false });
+    const [{ data: prof }, { data: priv }] = await Promise.all([
+      admin.from('profiles').select('username, display_name').eq('id', userId).maybeSingle(),
+      admin.from('profile_private').select('email').eq('user_id', userId).maybeSingle()
+    ]);
+    if (!prof?.username || !priv?.email) return json({ success: true, sent: false });
+    const sent = await sendWelcomeEmail(priv.email, prof.display_name || prof.username, prof.username);
+    return json({ success: true, sent });
+  }
 
   // -------------------------------------------------------------- emailed one-time code
   if (body?.action === 'otp-request') {

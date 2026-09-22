@@ -48,6 +48,7 @@ interface FeedViewProps {
   onRefreshFeed: () => void;
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
+  onNavigateToProfile?: (user: User) => void;
 }
 
 const POSTS_PER_PAGE = 4;
@@ -76,7 +77,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToChat,
   onRefreshFeed,
   onNavigateToPost,
-  onNavigateToReel
+  onNavigateToReel,
+  onNavigateToProfile
 }) => {
   const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following' | 'favorites'>('foryou');
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
@@ -399,6 +401,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onDeleteSlide={onDeleteSlide}
                 onHideAd={handleHideAd}
                 onSelectCategory={(cat) => setActiveCategory(cat)}
+                onNavigateToProfile={onNavigateToProfile}
               />
             ))}
 

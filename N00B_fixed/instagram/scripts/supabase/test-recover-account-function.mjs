@@ -16,11 +16,19 @@ fs.mkdirSync(tmp, { recursive: true });
 fs.writeFileSync(path.join(tmp, 'stub-supabase.mjs'), `
 export function createClient(url, key, opts) {
   return {
-    auth: { admin: {
-      getUserById: async (id) => globalThis.__fake.getUserById(id),
-      generateLink: async (opts) => globalThis.__fake.generateLink(opts)
-    } },
-    rpc: async (fn, args) => globalThis.__fake.rpc(fn, args)
+    auth: {
+      getUser: async (token) => globalThis.__fake.getUser(token),
+      admin: {
+        getUserById: async (id) => globalThis.__fake.getUserById(id),
+        generateLink: async (opts) => globalThis.__fake.generateLink(opts)
+      }
+    },
+    rpc: async (fn, args) => globalThis.__fake.rpc(fn, args),
+    from: (table) => {
+      const f = { table, eq: {} };
+      const q = { select: () => q, eq: (k, v) => { f.eq[k] = v; return q; }, maybeSingle: async () => globalThis.__fake.select(f) };
+      return q;
+    }
   };
 }
 `);
@@ -35,10 +43,17 @@ await import(new URL(`file:///${path.resolve(tmp, 'fn.ts').replace(/\\/g, '/')}`
 // ---- fakes
 let rpcCalls = [];
 let dbPlan = {};
+let tables = {};
 globalThis.__fake = {
   rpc: async (fn, args) => { rpcCalls.push({ fn, args }); return dbPlan[fn] ? dbPlan[fn](args) : { data: null, error: { message: 'unknown rpc ' + fn } }; },
   getUserById: async (id) => (id === 'u-ok' ? { data: { user: { email: `${id}@users.nooob.xyz` } }, error: null } : { data: { user: null }, error: { message: 'not found' } }),
-  generateLink: async (opts) => (opts.type === 'magiclink' ? { data: { properties: { hashed_token: 'th-' + opts.email } }, error: null } : { data: null, error: { message: 'bad type' } })
+  generateLink: async (opts) => (opts.type === 'magiclink' ? { data: { properties: { hashed_token: 'th-' + opts.email } }, error: null } : { data: null, error: { message: 'bad type' } }),
+  getUser: async (token) => (tables.tokens?.[token] ? { data: { user: { id: tables.tokens[token] } } } : { data: { user: null } }),
+  select: (f) => {
+    const rows = tables[f.table] || [];
+    const row = rows.find((r) => Object.entries(f.eq).every(([k, v]) => r[k] === v));
+    return { data: row || null, error: null };
+  }
 };
 let resendCalls = [];
 globalThis.fetch = async (url, init = {}) => {
@@ -49,7 +64,7 @@ globalThis.fetch = async (url, init = {}) => {
   throw new Error('unexpected fetch ' + url);
 };
 
-const reset = () => { rpcCalls = []; dbPlan = {}; resendCalls = []; globalThis.__resend = null; };
+const reset = () => { rpcCalls = []; dbPlan = {}; resendCalls = []; globalThis.__resend = null; tables = {}; };
 const req = (body, headers = {}) => new Request('https://x.supabase.co/functions/v1/recover-account', {
   method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body)
 });
@@ -130,7 +145,37 @@ reset(); dbPlan.recovery_otp_verify = () => ({ data: null, error: { message: 'db
 r = await call({ action: 'otp-verify', username: 'x', code: '000000' });
 check(r.status === 500 && /unavailable/.test(r.json.error), 'a database error becomes a polite "unavailable"');
 
-section('4. Odds and ends');
+section('4. The welcome email, right after signing up');
+reset();
+env.RESEND_API_KEY = 'rk_test_key';
+tables.tokens = { 'fresh-session-token': 'u-new' };
+tables.profiles = [{ id: 'u-new', username: 'newbie', display_name: 'New Bie' }];
+tables.profile_private = [{ user_id: 'u-new', email: 'newbie@example.com' }];
+r = await call({ action: 'welcome' }, { authorization: 'Bearer fresh-session-token' });
+check(r.status === 200 && r.json.success === true && r.json.sent === true, 'a brand-new account gets a welcome email');
+check(resendCalls.length === 1 && resendCalls[0].to[0] === 'newbie@example.com' && /Welcome to NOOB/.test(resendCalls[0].subject) && resendCalls[0].html.includes('newbie') && resendCalls[0].html.includes('New Bie'), 'it goes to their real email and greets them by name and @handle');
+reset(); env.RESEND_API_KEY = 'rk_test_key';
+r = await call({ action: 'welcome' });
+check(r.status === 200 && r.json.sent === false && resendCalls.length === 0, 'no session token: no email, but still a normal answer (never fails the signup)');
+tables.tokens = { 'fresh-session-token': 'u-new' };
+r = await call({ action: 'welcome' }, { authorization: 'Bearer wrong-token' });
+check(r.json.sent === false && resendCalls.length === 0, 'an unrecognised token: the same, quietly nothing');
+tables.profiles = [{ id: 'u-new', username: 'newbie', display_name: 'New Bie' }];
+tables.profile_private = [];
+r = await call({ action: 'welcome' }, { authorization: 'Bearer fresh-session-token' });
+check(r.json.sent === false && resendCalls.length === 0, 'no email on file for the account: nothing to send, still a normal answer');
+delete env.RESEND_API_KEY;
+tables.profile_private = [{ user_id: 'u-new', email: 'newbie@example.com' }];
+r = await call({ action: 'welcome' }, { authorization: 'Bearer fresh-session-token' });
+check(r.json.success === true && r.json.sent === false && resendCalls.length === 0, 'emailing not switched on yet: still succeeds quietly (never blocks signup)');
+env.RESEND_API_KEY = 'rk_test_key';
+const nameWithHtml = { id: 'u-new', username: 'newbie', display_name: '<script>alert(1)</script>' };
+tables.profiles = [nameWithHtml];
+r = await call({ action: 'welcome' }, { authorization: 'Bearer fresh-session-token' });
+check(!resendCalls.at(-1).html.includes('<script>'), 'a display name is never dropped into the email HTML unescaped');
+delete env.RESEND_API_KEY;
+
+section('4b. Odds and ends');
 const badReq = new Request('https://x.supabase.co/functions/v1/recover-account', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{not valid json' });
 const badRes = await handler(badReq);
 check(badRes.status === 400, 'invalid JSON is refused');

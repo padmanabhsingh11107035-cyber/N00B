@@ -977,6 +977,7 @@ export default function App() {
             onRefreshFeed={loadInitialData}
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
+            onNavigateToProfile={handleNavigateToUserProfile}
           />
         )}
 
@@ -1008,6 +1009,7 @@ export default function App() {
               initialReelId={selectedReelId}
               onToggleFollowUser={handleToggleFollowUser}
               onGoBack={handleReelsGoBack}
+              onNavigateToProfile={handleNavigateToUserProfile}
             />
           </div>
         )}

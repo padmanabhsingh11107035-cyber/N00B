@@ -6,6 +6,7 @@ import {
   Volume2,
   VolumeX,
   Upload,
+  Plus,
   Search,
   Sparkles,
   Disc3,
@@ -184,23 +185,23 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 pb-28 pt-2">
       {/* Music Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
-        <div className="flex items-center gap-3.5">
+      <div className="flex items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
+        <div className="flex items-center gap-3.5 min-w-0">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.35)]"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.35)] shrink-0"
             style={{ background: 'conic-gradient(from 180deg, #00FF66, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #00FF66)' }}
           >
             <Disc3 className="w-6 h-6 text-white stroke-[2.5] animate-spin-slow" />
           </div>
-          <h1 className="text-xl font-black text-white tracking-tight">NOOB Music</h1>
+          <h1 className="text-xl font-black text-white tracking-tight truncate">NOOB Music</h1>
         </div>
 
         <button
           onClick={() => setShowUploadModal(true)}
-          className="px-4 py-2.5 rounded-2xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black text-xs font-black flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.25)] transition-all cursor-pointer self-start sm:self-auto"
+          className="p-2.5 rounded-2xl bg-transparent border border-zinc-700 text-white hover:border-[#00FF66] hover:text-[#00FF66] hover:bg-[#00FF66]/10 transition-all cursor-pointer shrink-0"
+          title="Upload a track"
         >
-          <Upload className="w-4 h-4" />
-          <span>Upload Track</span>
+          <Plus className="w-5 h-5" />
         </button>
       </div>
 

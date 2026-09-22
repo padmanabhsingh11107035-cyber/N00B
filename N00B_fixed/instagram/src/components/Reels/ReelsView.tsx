@@ -6,7 +6,6 @@ import {
   Send,
   Bookmark,
   Music,
-  Sliders,
   ExternalLink,
   Sparkles,
   Globe,
@@ -15,7 +14,8 @@ import {
   Film,
   Eye,
   ArrowLeft,
-  Trash2
+  Trash2,
+  MoreHorizontal
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import {
@@ -80,16 +80,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [videoFailed, setVideoFailed] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [showAlgorithmModal, setShowAlgorithmModal] = useState(false);
+  const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
-  const [algorithmWeights, setAlgorithmWeights] = useState({
-    robotics: 85,
-    code: 90,
-    cad: 70,
-    gaming: 60,
-    synth: 75
-  });
   const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
   const [localReels, setLocalReels] = useState<Reel[]>(reels);
   const [reelComments, setReelComments] = useState<any[]>([]);
@@ -141,6 +134,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     // previous reel could stay hidden/shown incorrectly for this one.
     setIsVideoBuffering(true);
     setVideoFailed(false);
+    setShowReelOptionsMenu(false);
   }, [currentIndex, currentReel]);
 
   // A broken video (the file itself is missing/corrupt, not just slow) moves on by itself after a moment — long enough to actually
@@ -365,7 +359,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
   const touchStartY = useRef<number | null>(null);
   const isNavLockedRef = useRef(false);
-  const anyModalOpen = showComments || showAlgorithmModal || showLikesViewsSheet;
+  const anyModalOpen = showComments || showReelOptionsMenu || showLikesViewsSheet;
 
   const navigateWithCooldown = (direction: 'next' | 'prev') => {
     if (isNavLockedRef.current) return;
@@ -586,22 +580,37 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Your Algorithm Tuner Button */}
-            <button
-              id="your-algorithm-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowAlgorithmModal(true);
-              }}
-              className="flex items-center gap-1 px-2.5 py-1 bg-black/60 hover:bg-[#00FF66]/20 border border-[#00FF66]/50 rounded-full text-[10px] text-[#00FF66] font-bold backdrop-blur-md transition-colors cursor-pointer"
-              title="Tune Algorithm Recommendations"
-            >
-              <Sliders className="w-3 h-3 text-[#00FF66]" />
-              <span>Your Algorithm</span>
-            </button>
+          {(isReelOwner || isMasterAdmin) && (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReelOptionsMenu((v) => !v);
+                }}
+                className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md cursor-pointer"
+                title="Reel options"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
 
-          </div>
+              {showReelOptionsMenu && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-9 z-40 w-44 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
+                >
+                  <button
+                    onClick={() => {
+                      setShowReelOptionsMenu(false);
+                      handleDeleteReel();
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete Reel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Left Creator Overlay */}
@@ -817,80 +826,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             </div>
           </button>
 
-          {/* Delete (the reel's owner, or the NOOB admin account, only) */}
-          {(isReelOwner || isMasterAdmin) && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteReel();
-              }}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
-              title="Delete Reel"
-            >
-              <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-red-400 group-hover:scale-110 transition-transform">
-                <Trash2 className="w-5 h-5" />
-              </div>
-            </button>
-          )}
-
           {/* Audio Spinning Disc */}
           <div className="w-8 h-8 rounded-full border-2 border-neutral-700 overflow-hidden animate-spin bg-neutral-900 flex items-center justify-center">
             <Music className="w-4 h-4 text-[#00FF66]" />
           </div>
         </div>
       </div>
-
-      {/* 2. Your Algorithm Tuning Modal */}
-      {showAlgorithmModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#121212] border border-[#00FF66]/40 rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-[#00FF66]" />
-                <h3 className="text-sm font-bold text-white">Your Reel Algorithm Controls</h3>
-              </div>
-              <button onClick={() => setShowAlgorithmModal(false)} className="text-gray-400 hover:text-white">
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Fine-tune the recommendation weight for specific content topics in your Reels feed.
-            </p>
-
-            <div className="space-y-3">
-              {Object.entries(algorithmWeights).map(([key, val]) => (
-                <div key={key} className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold capitalize text-gray-200">
-                    <span>{key} Topics</span>
-                    <span className="text-[#00FF66]">{val}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={val}
-                    onChange={(e) =>
-                      setAlgorithmWeights({ ...algorithmWeights, [key]: Number(e.target.value) })
-                    }
-                    className="w-full accent-[#00FF66]"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => {
-                setShowAlgorithmModal(false);
-                confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
-              }}
-              className="w-full py-2 bg-[#00FF66] text-black font-bold text-xs rounded-xl cursor-pointer"
-            >
-              Apply Algorithm Preferences
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && (

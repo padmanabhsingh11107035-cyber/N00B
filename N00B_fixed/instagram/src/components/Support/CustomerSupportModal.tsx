@@ -244,6 +244,25 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const micPermissionDeniedRef = useRef(false);
   const stallTimerRef = useRef<any>(null);
   const stalledStopRef = useRef(false);
+  // window.speechSynthesis.getVoices() famously returns an empty list until the browser has
+  // finished loading its voice roster asynchronously — if speakText() calls it too early (which
+  // it did, right when the call greeting fires), no voice ever gets chosen and the browser falls
+  // back to its raw default, which on many platforms reads text in a flat, robotic, word-by-word
+  // way with none of a real voice's natural pacing. Pre-warming this as soon as the support modal
+  // opens gives the list real human time (opening the modal, then tapping "Start Call") to load
+  // before it's ever needed, so even the very first thing spoken gets a proper voice.
+  const cachedVoicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const loadVoices = () => {
+      const list = window.speechSynthesis.getVoices();
+      if (list.length) cachedVoicesRef.current = list;
+    };
+    loadVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+  }, []);
 
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
@@ -295,6 +314,15 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     };
   }, []);
 
+  // How long a given line will roughly take speechSynthesis to say out loud, at the same rate
+  // speakText() uses below — needed because the "start listening" fallback timer has to outlast
+  // the actual speech; a fixed short delay fires while the greeting is still audibly playing,
+  // opening the mic onto the AI's own voice instead of the person's.
+  const estimateSpeechMs = (text: string) => {
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(3000, (words / 2.2) * 1000 + 1500);
+  };
+
   // Soft Indian-accented FEMALE TTS narrator (used in the voice call)
   const speakText = (text: string, msgId?: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -314,7 +342,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     utterance.pitch = 1.08;
     utterance.volume = 0.88;
 
-    const voices = window.speechSynthesis.getVoices();
+    // Prefer a fresh read, but fall back to the pre-warmed cache from mount — on some browsers
+    // getVoices() can still come back empty right at this exact moment even after voiceschanged
+    // has already fired once before, and an empty list here is exactly what causes the flat,
+    // robotic default voice.
+    const freshVoices = window.speechSynthesis.getVoices();
+    if (freshVoices.length) cachedVoicesRef.current = freshVoices;
+    const voices = freshVoices.length ? freshVoices : cachedVoicesRef.current;
     const isIndian = (v: SpeechSynthesisVoice) =>
       v.lang === 'en-IN' || v.lang.startsWith('hi') || v.name.toLowerCase().includes('india') || v.name.toLowerCase().includes('hindi');
     // Only unambiguous female names/markers — "Ravi" and "Prabhat" (both
@@ -661,12 +695,15 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     // second, unused raw MediaStream in parallel held the mic device open for
     // the whole call and could starve SpeechRecognition of exclusive access,
     // which showed up as "the mic indicator is on but nothing is transcribed."
-    // Also initiate listening as fallback if speech finishes fast or user interrupts
+    // Also initiate listening as fallback if speech finishes fast or user interrupts — sized to
+    // the greeting's own length so it can never fire while the greeting is still being read out
+    // loud (a fixed short delay used to open the mic onto the AI's own voice instead of the
+    // person's, which is why the very first turn of a call needed you to type instead of speak).
     setTimeout(() => {
       if (isCallActiveRef.current && !isMutedRef.current && !isSpeakingRef.current) {
         startVoiceListening();
       }
-    }, 2500);
+    }, estimateSpeechMs(greeting));
   };
 
   // The person asked to end the call (or the assistant understood that they did): say goodbye out loud (asking for the 5-star review),

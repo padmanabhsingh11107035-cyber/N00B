@@ -36,8 +36,11 @@ check(isProtectedTarget({ closest: () => { throw new Error('x'); } }) === false,
 section('3. What is put on media');
 const v = mediaAttributes('VIDEO');
 check(v.controlslist.includes('nodownload') && v.controlslist.includes('noremoteplayback') && 'disablepictureinpicture' in v && v.draggable === 'false', 'a video gets no download button, no casting, no picture-in-picture, no dragging');
+const au = mediaAttributes('AUDIO');
+check(au.controlslist.includes('nodownload') && au.controlslist.includes('noremoteplayback'), 'a voice note / audio track gets no download button and no casting either');
 check(mediaAttributes('IMG').draggable === 'false' && mediaAttributes('canvas').draggable === 'false' && mediaAttributes('picture').draggable === 'false', 'pictures can not be dragged out');
 check(Object.keys(mediaAttributes('DIV')).length === 0 && Object.keys(mediaAttributes('input')).length === 0, 'nothing else is touched (text boxes, buttons...)');
+check(MEDIA_SELECTOR.includes('audio'), 'audio is one of the protected element types');
 
 section('4. No watermark');
 check(P.watermarkTile === undefined && P.watermarkDataUri === undefined, 'the watermark code is gone (nothing is drawn over the screen)');

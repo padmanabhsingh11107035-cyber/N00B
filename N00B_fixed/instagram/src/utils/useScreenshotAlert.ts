@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { sendScreenshotAlert, ScreenshotContentType } from '../services/api';
+import { isCaptureShortcut } from './contentProtection';
 
-// The PrintScreen key firing a keydown IS a real, verifiable signal — but
-// it's also the ONLY one a website ever gets. There is no browser API for
-// OS-level screenshot capture (Snipping Tool, a phone's screenshot gesture,
-// a screen-mirror, a second camera pointed at the display all bypass this
-// completely and always will, on every website, not just this one). Treat
-// this as a best-effort deterrent, never as proof a screenshot did or
-// didn't happen.
+// A capture-shortcut keydown (PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5 — see contentProtection.ts,
+// which this shares its detection with) IS a real, verifiable signal — but it's also the ONLY one a
+// website ever gets. There is no browser API for OS-level screenshot capture (Snipping Tool, a
+// phone's screenshot gesture, a screen-mirror, a second camera pointed at the display all bypass this
+// completely and always will, on every website, not just this one). Treat this as a best-effort
+// deterrent, never as proof a screenshot did or didn't happen.
 //
 // `isActive` lets the caller say "this is the one piece of content someone
 // would plausibly be screenshotting right now" — e.g. a post only wires
@@ -22,7 +22,7 @@ export function useScreenshotAlert(contentType: ScreenshotContentType, contentId
     if (!isActive || !contentId) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'PrintScreen' && contentIdRef.current) {
+      if (isCaptureShortcut(e) && contentIdRef.current) {
         sendScreenshotAlert(contentType, contentIdRef.current);
       }
     };

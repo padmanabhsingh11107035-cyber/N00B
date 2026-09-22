@@ -4,14 +4,16 @@
 //     MainActivity.java, which switches on Android's "secure window".)
 //   * Anything a browser shows can be saved by someone determined enough.
 // What it does:
-//   * no "Save image / video as..." menu, no dragging media out of the page, no long-press save on phones, no download
-//     button or picture-in-picture on videos, and printing / "save as PDF" produce a blank page;
+//   * no "Save image / video / audio as..." menu, no dragging media out of the page, no long-press save on phones, no
+//     download button, casting or picture-in-picture on video/audio, and printing / "save as PDF" produce a blank page;
 //   * the screen goes black for a moment when a screenshot shortcut is pressed (PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5) and
-//     whenever the tab is hidden (so app-switcher previews show nothing).
+//     whenever the tab is hidden (so app-switcher previews show nothing);
+//   * Ctrl/Cmd+S is best-effort blocked too, though modern browsers increasingly refuse to let any page cancel it (the
+//     same policy that stops a page from blocking DevTools — this file does not try to fight that one at all: it can't be won).
 // (There is deliberately NO watermark over the screen: it was tried and removed because it was in the way.)
 // The pure parts are exported so they can be tested without a browser.
 
-export const MEDIA_SELECTOR = 'img, video, canvas, picture, [data-protect]';
+export const MEDIA_SELECTOR = 'img, video, audio, canvas, picture, [data-protect]';
 
 export interface KeyLike {
   key?: string;
@@ -37,6 +39,7 @@ export function isCaptureShortcut(e: KeyLike): boolean {
 export function mediaAttributes(tag: string): Record<string, string> {
   const t = tag.toLowerCase();
   if (t === 'video') return { controlslist: 'nodownload noremoteplayback', disablepictureinpicture: '', disableremoteplayback: '', draggable: 'false' };
+  if (t === 'audio') return { controlslist: 'nodownload noremoteplayback', disableremoteplayback: '' };
   if (t === 'img' || t === 'canvas' || t === 'picture') return { draggable: 'false' };
   return {};
 }
@@ -141,18 +144,25 @@ export function installContentProtection(options: ProtectionOptions = {}): () =>
     if (isProtectedTarget(e.target as Element)) e.preventDefault();
   }, true);
 
+  // -- Ctrl/Cmd+S ("Save Page As..."): best-effort only. Modern Chrome and Firefox deliberately do
+  //    not let a page cancel this (same reason they don't let a page block DevTools) — this only
+  //    still works in a shrinking set of browsers, so it is not counted on for anything.
+  on(win, 'keydown', (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key || '').toLowerCase() === 's') e.preventDefault();
+  }, true);
+
   // -- media already on the page and media added later
   const protect = (el: Element) => {
     for (const [name, value] of Object.entries(mediaAttributes(el.tagName))) if (!el.hasAttribute(name)) el.setAttribute(name, value);
   };
-  const protectAll = (root: ParentNode) => root.querySelectorAll('img, video, canvas, picture').forEach(protect);
+  const protectAll = (root: ParentNode) => root.querySelectorAll('img, video, audio, canvas, picture').forEach(protect);
   protectAll(doc);
   const observer = new MutationObserver((records) => {
     for (const r of records) {
       r.addedNodes.forEach((node) => {
         if (node.nodeType !== 1) return;
         const el = node as Element;
-        if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(el.tagName)) protect(el);
+        if (/^(IMG|VIDEO|AUDIO|CANVAS|PICTURE)$/.test(el.tagName)) protect(el);
         protectAll(el);
       });
     }

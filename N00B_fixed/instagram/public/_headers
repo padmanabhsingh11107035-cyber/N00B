@@ -1,7 +1,11 @@
 # Security headers for every page and file of the NOOB website (Cloudflare reads this file).
+# These narrow what a page is even ALLOWED to do — real hardening against a hijacked or injected
+# script (XSS), not a screenshot deterrent. See src/utils/contentProtection.ts for that, and its own
+# honest limits: no website can block an operating system's screenshot tool.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(self), geolocation=(self), display-capture=(), payment=(), usb=(), serial=()
-  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'

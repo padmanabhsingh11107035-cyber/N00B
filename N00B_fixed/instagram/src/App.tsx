@@ -1249,6 +1249,7 @@ export default function App() {
           currentUser={currentUser}
           onAddComment={handleAddStoryComment}
           onDeleteStory={handleDeleteStory}
+          onNavigateToProfile={handleNavigateToUserProfile}
         />
       )}
 

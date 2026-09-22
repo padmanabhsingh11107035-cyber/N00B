@@ -442,6 +442,10 @@ export interface StoryHighlight {
   // `Story` rows it was built from expire and are deleted. See the 22 Sep story/highlight
   // redesign (auto-created per calendar day, no manual "add to highlight" step anymore).
   items: HighlightStoryItem[];
+  // true = created directly from the profile (see manual-highlights migration): can be renamed,
+  // added to, or have an item removed. false = auto-built from stories: name and content are
+  // managed by posting/deleting the actual story instead.
+  isManual: boolean;
 }
 
 export interface Reel {

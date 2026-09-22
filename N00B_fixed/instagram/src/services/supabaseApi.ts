@@ -844,6 +844,7 @@ function mapHighlight(h: any): StoryHighlight {
     title: h.title,
     coverUrl: resolveMedia(h.coverUrl),
     dayKey: h.dayKey,
+    isManual: !!h.isManual,
     items: (h.items || []).map((it: any) => ({ ...it, mediaUrl: resolveMedia(it.mediaUrl) }))
   };
 }
@@ -865,6 +866,54 @@ export async function fetchHighlights(userId?: string): Promise<StoryHighlight[]
 export async function deleteHighlight(highlightId: string): Promise<boolean> {
   const { data, error } = await supabase.from('highlights').delete().eq('id', highlightId).select('id');
   return !error && Array.isArray(data) && data.length > 0;
+}
+
+// A highlight made directly from the profile — separate from the automatic per-day ones stories
+// create, and never becomes (or is made from) a 24-hour story. See the manual-highlights migration.
+export async function createManualHighlight(
+  title: string,
+  items: { mediaUrl: string; mediaType: 'image' | 'video' }[]
+): Promise<{ success: boolean; highlightId?: string; error?: string }> {
+  try {
+    const res = await rpc<{ success: boolean; highlightId: string }>('create_manual_highlight', {
+      p_title: title,
+      p_items: items.map((it) => ({ mediaUrl: toStoredMedia(it.mediaUrl), mediaType: it.mediaType }))
+    });
+    return res;
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not create the highlight.') };
+  }
+}
+
+// Only a manual highlight can be renamed — one made from your stories keeps its automatic date name.
+export async function renameHighlight(highlightId: string, title: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('rename_highlight', { p_highlight: highlightId, p_title: title });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not rename the highlight.') };
+  }
+}
+
+export async function addToHighlight(
+  highlightId: string,
+  items: { mediaUrl: string; mediaType: 'image' | 'video' }[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('add_to_highlight', {
+      p_highlight: highlightId,
+      p_items: items.map((it) => ({ mediaUrl: toStoredMedia(it.mediaUrl), mediaType: it.mediaType }))
+    });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not add to the highlight.') };
+  }
+}
+
+export async function removeHighlightItem(highlightId: string, itemId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('remove_highlight_item', { p_highlight: highlightId, p_item_id: itemId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not remove that item.') };
+  }
 }
 
 // ----------------------------------------------------------------------------- reels

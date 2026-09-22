@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2 } from 'lucide-react';
 import { Story, User } from '../../types';
-import { recordStoryView, fetchStoryViewers } from '../../services/api';
+import { recordStoryView, fetchStoryViewers, fetchUserById } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
@@ -15,6 +15,7 @@ interface StoryViewerModalProps {
   currentUser: User;
   onAddComment: (storyId: string, text: string) => void;
   onDeleteStory?: (storyId: string) => void;
+  onNavigateToProfile?: (user: User) => void;
   // True when playing back a Highlight instead of a live 24h story: same viewer, same sticker
   // rendering ("story and highlight are the same thing" per the 22 Sep redesign), but no view
   // recording, "seen by", comments or delete menu — those all need a live `stories` row, which a
@@ -29,13 +30,16 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   currentUser,
   onAddComment,
   onDeleteStory,
+  onNavigateToProfile,
   isHighlight = false
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [isLiked, setIsLiked] = useState(false);
+  // Keyed by story id (not a single shared boolean) — liking one story must never show as "liked"
+  // on every other story in the same viewing session.
+  const [likedStoryIds, setLikedStoryIds] = useState<Set<string>>(new Set());
   const [isMuted, setIsMuted] = useState(false);
   const [pollVoted, setPollVoted] = useState<number | null>(null);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
@@ -51,7 +55,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [isCommentFocused, setIsCommentFocused] = useState(false);
 
   const story = stories[currentIndex];
+  const nextStory = stories[currentIndex + 1];
   const isOwnStory = !!story && story.userId === currentUser.id;
+  const isLiked = !!story && likedStoryIds.has(story.id);
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
   const isMasterAdmin = can(currentUser, 'moderate_content');
   useScreenshotAlert('story', story?.id, !isOwnStory);
@@ -69,6 +75,33 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     if (isHighlight || !story || story.userId === currentUser.id) return;
     recordStoryView(story.id).catch(() => {});
   }, [isHighlight, story?.id, currentUser.id]);
+
+  // Preload the next story's media so advancing to it is instant instead of showing a blank/
+  // loading frame while the browser only just starts fetching it.
+  useEffect(() => {
+    if (!nextStory?.mediaUrl) return;
+    const img = new Image();
+    img.src = nextStory.mediaUrl;
+  }, [nextStory?.mediaUrl]);
+
+  // Same prefetch-then-cache pattern as the Reels profile-tap fix: the author's card is fetched
+  // in the background for the current and next story, so tapping the avatar/username navigates
+  // instantly instead of waiting on a fresh network round trip.
+  const profileCacheRef = useRef<Map<string, User>>(new Map());
+  useEffect(() => {
+    for (const s of [story, nextStory]) {
+      if (!s || profileCacheRef.current.has(s.userId)) continue;
+      fetchUserById(s.userId).then((user) => { if (user) profileCacheRef.current.set(s.userId, user); }).catch(() => undefined);
+    }
+  }, [story, nextStory]);
+
+  const goToProfile = async (userId: string) => {
+    if (!onNavigateToProfile) return;
+    const cached = profileCacheRef.current.get(userId);
+    if (cached) { onNavigateToProfile(cached); return; }
+    const user = await fetchUserById(userId);
+    if (user) onNavigateToProfile(user);
+  };
 
   useEffect(() => {
     if (isPaused || isCommentFocused || !story || showViewersSheet || showStoryOptionsMenu) return;
@@ -188,7 +221,16 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
         {/* Story Header */}
         <div className="absolute top-5 inset-x-3 z-30 flex items-center justify-between px-2 pt-1">
-          <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (!onNavigateToProfile) return;
+              goToProfile(story.userId);
+              onClose();
+            }}
+            disabled={!onNavigateToProfile}
+            className={`flex items-center gap-2.5 text-left ${onNavigateToProfile ? 'cursor-pointer' : ''}`}
+          >
             <img
               src={story.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
               alt={story.username}
@@ -211,7 +253,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               </div>
               <span className="text-[11px] text-gray-300">{formatRelativeTime(story.createdAt)}</span>
             </div>
-          </div>
+          </button>
 
           <div className="flex items-center gap-2">
             <button
@@ -456,7 +498,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
             <button
               onClick={() => {
-                setIsLiked(!isLiked);
+                if (!story) return;
+                const id = story.id;
+                setLikedStoryIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id); else next.add(id);
+                  return next;
+                });
                 if (!isLiked) {
                   confetti({ particleCount: 30, spread: 45, origin: { y: 0.85 } });
                 }

@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Layers,
   FolderPlus,
+  Plus,
   Volume2,
   Mail,
   Phone,
@@ -84,6 +85,7 @@ import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { CustomerSupportModal } from '../Support/CustomerSupportModal';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
+import { HighlightManagerModal } from './HighlightManagerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -289,7 +291,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // 22 Sep story/highlight redesign).
   const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
   const [activeHighlightForViewer, setActiveHighlightForViewer] = useState<StoryHighlight | null>(null);
+  const [showHighlightManager, setShowHighlightManager] = useState(false);
+  const [editingHighlight, setEditingHighlight] = useState<StoryHighlight | null>(null);
 
+  const reloadHighlights = () => { fetchHighlights(targetUser.id).then(setHighlights); };
   useEffect(() => {
     let alive = true;
     fetchHighlights(targetUser.id).then((list) => { if (alive) setHighlights(list); });
@@ -1575,10 +1580,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* 5. Story Highlights: every story this person has posted, auto-saved and grouped by the
-          day it went up — there's no manual "create a highlight" step anymore (see the 22 Sep
-          story/highlight redesign), so this row only appears once they've actually posted a story. */}
-      {highlights.length > 0 && (
+          day it went up (see the 22 Sep story/highlight redesign) — plus, on your own profile,
+          any you made directly with "+ New" without ever posting a story for them. */}
+      {(isOwnProfile || highlights.length > 0) && (
         <div className="mb-6 flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar">
+          {isOwnProfile && (
+            <div
+              onClick={() => {
+                setEditingHighlight(null);
+                setShowHighlightManager(true);
+              }}
+              className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+            >
+              <div className="w-14 h-14 rounded-full bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:border-[#00FF66] group-hover:text-[#00FF66] transition-all group-hover:scale-105">
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] text-zinc-400 font-bold group-hover:text-[#00FF66] transition-colors">New</span>
+            </div>
+          )}
+
           {highlights.map((hl) => (
             <div key={hl.id} className="flex flex-col items-center gap-1.5 shrink-0 relative group">
               <div
@@ -1593,6 +1613,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 />
               </div>
 
+              {isOwnProfile && hl.isManual && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingHighlight(hl);
+                    setShowHighlightManager(true);
+                  }}
+                  className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
+                  title={`Edit ${hl.title}`}
+                >
+                  <Edit3 className="w-2.5 h-2.5" />
+                </button>
+              )}
               {isOwnProfile && (
                 <button
                   type="button"
@@ -2225,7 +2259,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {/* 11. Highlight Viewer — the same story viewer, in playback-only mode (see the 22 Sep
-          story/highlight redesign: no manual "highlight manager" exists anymore). */}
+          story/highlight redesign). Manual highlight creation/editing is its own modal below. */}
       {activeHighlightForViewer && (
         <StoryViewerModal
           stories={activeHighlightForViewer.items.map((it): Story => ({
@@ -2250,6 +2284,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onAddComment={() => {}}
           isHighlight
+        />
+      )}
+
+      {showHighlightManager && (
+        <HighlightManagerModal
+          existingHighlight={editingHighlight}
+          onDone={reloadHighlights}
+          onClose={() => {
+            setShowHighlightManager(false);
+            setEditingHighlight(null);
+          }}
         />
       )}
 

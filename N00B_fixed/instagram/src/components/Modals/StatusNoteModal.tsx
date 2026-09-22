@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Music, MapPin, Sparkles, Volume2 } from 'lucide-react';
+import { X, MapPin } from 'lucide-react';
 import { User, StatusNote } from '../../types';
 import confetti from 'canvas-confetti';
 
@@ -9,20 +9,12 @@ interface StatusNoteModalProps {
   onSaveNote: (note: StatusNote | undefined) => void;
 }
 
-const MUSIC_SNIPPETS = [
-  'Synthwave Odyssey (0:30)',
-  'Cyberpunk 2077 Night Drive',
-  'Lo-Fi Coding Beats (0:30)',
-  'Robotics Studio Lab Ambience'
-];
-
 export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
   currentUser,
   onClose,
   onSaveNote
 }) => {
   const [noteText, setNoteText] = useState(currentUser.statusNote?.text || '');
-  const [selectedMusic, setSelectedMusic] = useState(currentUser.statusNote?.musicTrack || '');
   const [locationTag, setLocationTag] = useState(currentUser.statusNote?.location || '');
 
   const handleSave = () => {
@@ -32,7 +24,9 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
       const now = Date.now();
       onSaveNote({
         text: noteText.trim().slice(0, 60),
-        musicTrack: selectedMusic || undefined,
+        // musicTrack is no longer settable here — it was a fixed list of made-up song names with
+        // no real audio behind any of them, not a real feature. Kept optional in the type only so
+        // an old note saved before this change still renders fine.
         location: locationTag || undefined,
         createdAt: 'Just now',
         createdAtTimestamp: now,
@@ -85,31 +79,6 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
             alt=""
             className="w-16 h-16 rounded-full object-cover ring-2 ring-[#00FF66] mt-1"
           />
-        </div>
-
-        {/* Add Music Snippet */}
-        <div className="space-y-1.5">
-          <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
-            Add Music Snippet
-          </label>
-          <div className="space-y-1">
-            {MUSIC_SNIPPETS.map((song) => (
-              <button
-                key={song}
-                onClick={() => setSelectedMusic(selectedMusic === song ? '' : song)}
-                className={`w-full p-2 rounded-xl text-xs flex items-center justify-between border transition-all ${
-                  selectedMusic === song
-                    ? 'bg-[#00FF66]/15 border-[#00FF66] text-[#00FF66] font-bold'
-                    : 'bg-neutral-900 border-neutral-800 text-gray-300 hover:text-white'
-                }`}
-              >
-                <span className="flex items-center gap-1.5 truncate">
-                  <Music className="w-3.5 h-3.5 text-[#00FF66]" /> {song}
-                </span>
-                {selectedMusic === song && <Volume2 className="w-3.5 h-3.5 animate-pulse" />}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Location Tag */}

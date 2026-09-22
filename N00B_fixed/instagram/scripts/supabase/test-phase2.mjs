@@ -129,6 +129,40 @@ const mainPhoto = await rpc(d, 'create_story', 'stories/poll-main.jpg');
 const dHl = (await rpc(d, 'my_highlights'))[0];
 check(dHl.items[0].id === mainPhoto.id && dHl.items[1].id === pollPage.id, 'the main photo plays before its poll page inside the highlight');
 check(dHl.coverUrl === 'stories/poll-main.jpg', 'a poll page is never chosen as the highlight cover icon');
+check(dHl.isManual === false, 'an auto (from-story) highlight is flagged as not manual');
+
+// =====================================================================================
+section('1c. Manual highlights (created directly from the profile, never touching a story)');
+await expectFail(() => rpc(b, 'create_manual_highlight', 'My Trip', []), /at least one photo/, 'needs at least one item');
+const mh = await rpc(b, 'create_manual_highlight', 'My Trip', [{ mediaUrl: 'stories/manual1.jpg', mediaType: 'image' }, { mediaUrl: 'stories/manual2.jpg', mediaType: 'image' }]);
+check(mh.success === true && mh.highlightId, 'a manual highlight is created without posting any story');
+check((await rpc(a, 'active_stories')).length === 0 || !(await rpc(a, 'active_stories')).some((s) => s.mediaUrl === 'stories/manual1.jpg'), 'its media never appears as a story');
+let bHl = (await rpc(b, 'my_highlights')).find((h) => h.id === mh.highlightId);
+check(bHl.title === 'My Trip' && bHl.items.length === 2 && bHl.coverUrl === 'stories/manual1.jpg' && bHl.isManual === true, 'it has the given name, both items, and the first item as cover');
+
+// a title left blank falls back to a date label instead of being empty
+const mh2 = await rpc(b, 'create_manual_highlight', '   ', [{ mediaUrl: 'stories/manual3.jpg', mediaType: 'image' }]);
+check((await rpc(b, 'my_highlights')).find((h) => h.id === mh2.highlightId).title.length > 0, 'a blank name falls back to an automatic label, never blank');
+
+// rename, add, remove — manual only
+await expectFail(() => rpc(a, 'rename_highlight', mh.highlightId, 'Stolen'), /your own highlights/, 'a stranger can not rename your highlight');
+check((await rpc(b, 'rename_highlight', mh.highlightId, 'Renamed Trip')).success === true, 'the owner can rename a manual highlight');
+check((await rpc(b, 'add_to_highlight', mh.highlightId, [{ mediaUrl: 'stories/manual4.jpg', mediaType: 'image' }])).success === true, 'the owner can add more to a manual highlight');
+bHl = (await rpc(b, 'my_highlights')).find((h) => h.id === mh.highlightId);
+check(bHl.title === 'Renamed Trip' && bHl.items.length === 3, 'the rename and the added item both stuck');
+const removedId = bHl.items[0].id;
+check((await rpc(b, 'remove_highlight_item', mh.highlightId, removedId)).success === true, 'the owner can remove one item');
+bHl = (await rpc(b, 'my_highlights')).find((h) => h.id === mh.highlightId);
+check(bHl.items.length === 2 && !bHl.items.some((it) => it.id === removedId), 'that item is gone, the rest remain');
+
+// removing the last item deletes the whole highlight
+for (const it of [...bHl.items]) await rpc(b, 'remove_highlight_item', mh.highlightId, it.id);
+check(!(await rpc(b, 'my_highlights')).some((h) => h.id === mh.highlightId), 'removing the last item deletes the manual highlight itself');
+
+// none of this works on an automatic (from-story) highlight
+await expectFail(() => rpc(d, 'rename_highlight', dHl.id, 'Nope'), /automatic name/, 'an automatic highlight can not be renamed');
+await expectFail(() => rpc(d, 'add_to_highlight', dHl.id, [{ mediaUrl: 'x.jpg', mediaType: 'image' }]), /new story/, 'an automatic highlight can not be added to directly');
+await expectFail(() => rpc(d, 'remove_highlight_item', dHl.id, mainPhoto.id), /Delete the story itself/, 'an automatic highlight\'s item can not be removed directly');
 
 // =====================================================================================
 section('2. Reels');

@@ -96,15 +96,25 @@ export function createE2ee(deps: E2eeDeps) {
   const currentKey = (ring: StoredRing): DeviceKey | null => ring.keys.find((k) => k.kid === ring.current) ?? null;
 
   // Make sure this device has a key and that the server knows its PUBLIC half. Cheap after the first time (cached), retried after a minute on failure.
-  async function ensure(userId: string): Promise<Ready> {
+  // `password`: only ever passed right after a real sign-up or password login (never kept around afterwards) — it is what lets a BRAND
+  // NEW device pick up the account's EXISTING key instead of making its own, so the same account reads and sends as one identity no
+  // matter how many devices are signed in, without anybody ever seeing a "device list" or manually restoring a backup for it. A session
+  // simply resuming on a device that already has its key (the ordinary case: reopening the app) never needs this at all.
+  async function ensure(userId: string, password?: string): Promise<Ready> {
     const s = state(userId);
     if (s.ready && (s.ready.ok || now() - s.at < RETRY_MS)) return s.ready;
     if (s.pending) return s.pending; // several calls at once share one set-up (never two keys)
-    s.pending = setUp(userId);
+    s.pending = setUp(userId, password);
     try { return await s.pending; } finally { s.pending = null; }
   }
 
-  async function setUp(userId: string): Promise<Ready> {
+  // The passphrase that wraps the account's shared backup is never one the person has to choose or remember: it is their own login
+  // password, combined with their own account id (only so a short-but-otherwise-fine login password still satisfies the backup's own
+  // strength check — the account id is public knowledge, not a secret ingredient). Nothing new is stored anywhere for this; it reuses
+  // the exact backup this app already offers people manually, just used automatically.
+  const accountSecret = (userId: string, password: string) => `${password}:${userId}`;
+
+  async function setUp(userId: string, password?: string): Promise<Ready> {
     const s = state(userId);
     const result = await lock(`noob-e2ee-${userId}`, async (): Promise<Ready> => {
       let ring: StoredRing;
@@ -112,11 +122,37 @@ export function createE2ee(deps: E2eeDeps) {
       try {
         ring = await store.load();
         if (!currentKey(ring)) {
-          const key = await C.generateDeviceKey(deps.deviceLabel?.() || '');
-          ring = mergeRings(ring, { v: 1, current: key.kid, keys: [key] });
-          ring.current = key.kid;
-          await store.save(ring);
-          ring = await store.load();
+          let restored: DeviceKey[] | null = null;
+          if (password) {
+            try {
+              const backupRes: any = await deps.rpc('get_chat_key_backup');
+              if (backupRes?.backup) restored = await C.readBackup(backupRes.backup, accountSecret(userId, password));
+            } catch {
+              // no backup yet, or this password does not open it (e.g. it changed via a forgot-password
+              // reset) — either way, fall through and this device makes the account's key itself below
+            }
+          }
+          if (restored && restored.length) {
+            ring = mergeRings(ring, { v: 1, current: restored[0].kid, keys: restored });
+            ring.current = restored[0].kid;
+            await store.save(ring);
+            ring = await store.load();
+          } else {
+            const key = await C.generateDeviceKey(deps.deviceLabel?.() || '');
+            ring = mergeRings(ring, { v: 1, current: key.kid, keys: [key] });
+            ring.current = key.kid;
+            await store.save(ring);
+            ring = await store.load();
+            if (password) {
+              try {
+                const backup = await C.makeBackup([key], accountSecret(userId, password));
+                await deps.rpc('save_chat_key_backup', { p_blob: backup });
+              } catch {
+                // saving the shared backup failed (offline, etc.) — this device still has a perfectly good key of
+                // its own; it only means the next NEW device to sign in will make its own too, instead of sharing this one
+              }
+            }
+          }
         }
       } catch { return { ok: false, reason: 'blocked' }; }
       s.ring = ring;

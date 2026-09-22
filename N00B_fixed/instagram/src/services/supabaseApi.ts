@@ -199,7 +199,7 @@ export async function signupUser(payload: {
     const user = await rpc<User>('get_my_user');
     // Never awaited, never lets a slow or failed email hold up or fail the signup itself.
     void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
-    return { success: true, user: startChatKeys(mapUser(user)) as User };
+    return { success: true, user: startChatKeys(mapUser(user), payload.password) as User };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not create the account. Please try again.') };
   }
@@ -230,7 +230,7 @@ export async function loginUser(payload: {
         error: `This account has been suspended by NOOB Administrator.${user.suspendedReason ? ' Reason: ' + user.suspendedReason : ''}`
       };
     }
-    return { success: true, user: startChatKeys(mapUser(user)) as User };
+    return { success: true, user: startChatKeys(mapUser(user), payload.password) as User };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not log in. Please check your connection and try again.') };
   }
@@ -331,9 +331,11 @@ export async function deleteMyAccount(password: string): Promise<{ success: bool
 }
 
 // Once a person is known to be signed in, this device gets its chat key ready in the background (so a chat is already locked for it before
-// anybody writes to them). Never blocks anything, and never fails loudly.
-function startChatKeys<U extends { id?: string } | null | undefined>(user: U): U {
-  if (user?.id) void e2ee.ensure(user.id).catch(() => undefined);
+// anybody writes to them). Never blocks anything, and never fails loudly. `password` is only ever passed right after this same sign-up
+// or login call handed it to us — it lets a brand new device pick up the account's own existing key instead of making a separate one,
+// so the account reads and sends as a single identity no matter how many devices are signed into it at once.
+function startChatKeys<U extends { id?: string } | null | undefined>(user: U, password?: string): U {
+  if (user?.id) void e2ee.ensure(user.id, password).catch(() => undefined);
   return user;
 }
 

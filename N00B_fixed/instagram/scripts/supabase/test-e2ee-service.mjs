@@ -34,7 +34,7 @@ await runImport(buildImportPlan(raw, {}), makePgAdapter(db), { log: () => {} });
 const profByLegacy = Object.fromEntries((await db.query('select * from profiles')).rows.map((p) => [p.legacy_id, p]));
 const adminRaw = raw.users.find((u) => u.isAdmin);
 const pool = raw.users.filter((u) => !u.isAdmin && (u.password || '').length > 0);
-const [ann, bob, cy, dee, eve] = pool.slice(0, 5).map((u) => profByLegacy[u.id].id);
+const [ann, bob, cy, dee, eve, flo] = pool.slice(0, 6).map((u) => profByLegacy[u.id].id);
 const nameOf = Object.fromEntries((await db.query('select id, username from profiles')).rows.map((r) => [r.id, r.username]));
 
 // ------------------------------------------------------------------------------------------------ a "device": a person's phone or laptop
@@ -99,6 +99,27 @@ check(!rro.ok && rro.reason === 'blocked' && count(readOnly, 'register_chat_key'
 const oldStyle = device(ann, { hook: async (fn) => { const e = new Error('Could not find the function public.register_chat_key(p_kid, p_key, p_label) in the schema cache'); e.code = 'PGRST202'; if (fn === 'register_chat_key') throw e; } });
 const ro = await oldStyle.svc.ensure(ann);
 check(!ro.ok && ro.reason === 'off', 'before the database update, encryption is simply "off" (nothing breaks)');
+
+section('1b. One account, several devices signed in at once: ONE shared key, not one each');
+const floPhone = device(flo, { label: 'Flo phone' });
+const floLaptop = device(flo, { label: 'Flo laptop' });
+const floPW = 'flo-real-login-pw';
+const rFlo1 = await floPhone.svc.ensure(flo, floPW);
+check(rFlo1.ok, 'the first device to ever sign in makes the account its (only) key');
+const dmFlo = (await asUser(db, ann, async () => (await db.query(`select public.create_chat(array[$1::uuid], false, null, null, null) as r`, [flo])).rows[0].r)).chat;
+const beforeLaptop = await send(annPhone, dmFlo.id, { text: 'sent before your laptop ever logged in' });
+check(beforeLaptop.wasLocked, 'a message locked while only the phone exists');
+const rFlo2 = await floLaptop.svc.ensure(flo, floPW);
+check(rFlo2.ok, 'a second device, same account, same password, also sets up fine');
+check((await floLaptop.store.load()).current === (await floPhone.store.load()).current, 'and it ends up holding the very same key as the phone — not a new one of its own');
+check(count(floLaptop, 'register_chat_key') === 1 && count(floLaptop, 'save_chat_key_backup') === 0, 'it registered that shared key once, and did not need to (re)save the backup');
+const onLaptop = (await list(floLaptop, dmFlo.id)).find((m) => m.id === beforeLaptop.message.id);
+check(onLaptop && onLaptop.text === 'sent before your laptop ever logged in', 'so the laptop opens a message sent to the phone BEFORE the laptop ever existed — no backup step, no "not encrypted" gap');
+const fromLaptop = await send(floLaptop, dmFlo.id, { text: 'reply from the laptop' });
+check(fromLaptop.wasLocked && (await list(floPhone, dmFlo.id)).find((m) => m.id === fromLaptop.message.id)?.text === 'reply from the laptop', 'and the phone reads what the laptop sends, both ways, same as any two devices sharing one key would');
+const floTablet = device(flo, { label: 'Flo tablet' });
+const rFlo3 = await floTablet.svc.ensure(flo, 'a completely wrong password');
+check(rFlo3.ok && (await floTablet.store.load()).current !== (await floPhone.store.load()).current, 'the wrong password can not open the shared backup, so that device falls back to making its own key instead of failing outright');
 
 section('2. A direct chat: locking, opening, the server sees nothing');
 const dm = (await asUser(db, ann, async () => (await db.query(`select public.create_chat(array[$1::uuid], false, null, null, null) as r`, [bob])).rows[0].r)).chat;

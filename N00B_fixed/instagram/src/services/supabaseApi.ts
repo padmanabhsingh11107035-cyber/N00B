@@ -1562,6 +1562,16 @@ export async function sendScreenshotAlert(contentType: ScreenshotContentType, co
   }
 }
 
+// Tells the rest of a group that a call just went live. Best-effort: a call that failed to notify
+// people is still a perfectly working call.
+export async function notifyCallStarted(chatId: string): Promise<void> {
+  try {
+    await rpc('notify_call_started', { p_chat: chatId });
+  } catch {
+    // Best-effort — see above.
+  }
+}
+
 // Translation (and the AI support assistant) run in one small Edge Function that holds the AI key.
 // (It was deployed from the dashboard under the name 'dynamic-handler'; the code is supabase/functions/ai.)
 const AI_FUNCTION = 'dynamic-handler';

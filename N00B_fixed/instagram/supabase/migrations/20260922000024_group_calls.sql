@@ -42,7 +42,7 @@ begin
         for select to authenticated
         using (
           realtime.topic() like 'call:%'
-          and public.is_chat_member(substring(realtime.topic() from 6)::uuid)
+          and public.can_start_call(substring(realtime.topic() from 6)::uuid)
         )
     $policy$;
     execute $policy$
@@ -50,7 +50,7 @@ begin
         for insert to authenticated
         with check (
           realtime.topic() like 'call:%'
-          and public.is_chat_member(substring(realtime.topic() from 6)::uuid)
+          and public.can_start_call(substring(realtime.topic() from 6)::uuid)
         )
     $policy$;
   end if;

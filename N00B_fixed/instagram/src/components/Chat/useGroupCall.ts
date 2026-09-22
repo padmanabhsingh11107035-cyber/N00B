@@ -9,6 +9,7 @@
 // wanting to be heard.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { joinCallChannel, ICE_SERVERS, MAX_CALL_PARTICIPANTS, type CallChannel, type CallPresence, type SignalMessage } from '../../services/callSignaling';
+import { notifyCallStarted } from '../../services/api';
 import type { User } from '../../types';
 
 export interface CallParticipant {
@@ -183,6 +184,9 @@ export function useGroupCall(chatId: string, me: User) {
     chanRef.current = chan;
     await chan.track(myPresence(false, true));
     setJoined(true);
+    // Tell the rest of the group once, only when this is the very first person in an otherwise empty
+    // call — not on every later join, which would just be noise for an already-live call.
+    if (Object.keys(chan.presenceState()).length <= 1) void notifyCallStarted(chatId).catch(() => undefined);
   }, [chatId, me.id, presence, handleSignal, handlePresence, myPresence]);
 
   const leave = useCallback(() => {

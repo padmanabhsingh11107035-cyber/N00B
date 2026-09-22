@@ -109,6 +109,7 @@ export {
   applyLiveAvatar,
   matchContacts,
   sendScreenshotAlert,
+  notifyCallStarted,
   translateMessage,
   submitSafetyReport,
   submitSupportReview,

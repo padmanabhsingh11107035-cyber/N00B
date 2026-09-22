@@ -23,7 +23,7 @@ import {
   Gift,
   Camera
 } from 'lucide-react';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, Phone } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
 import { formatRelativeTime } from '../../utils/formatTime';
 
@@ -148,6 +148,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Coins className="w-3.5 h-3.5 text-amber-400" />;
       case 'new_message':
         return <MessageCircle className="w-3.5 h-3.5 text-[#00E5FF]" />;
+      case 'call_started':
+        return <Phone className="w-3.5 h-3.5 text-[#00FF66]" />;
       case 'birthday_wish':
       case 'birthday_follower_alert':
         return <Gift className="w-3.5 h-3.5 text-pink-400" />;
@@ -306,7 +308,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     <div
                       key={notif.id}
                       onClick={() => {
-                        if (notif.type === 'new_message' && notif.chatId) {
+                        if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {
                           onOpenChat?.(notif.chatId);
                         } else {
                           const username = notif.senderUsername || notif.actorUsername;
@@ -314,7 +316,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         }
                       }}
                       className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                        (notif.type === 'new_message' && notif.chatId) || notif.senderUsername || notif.actorUsername
+                        ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || notif.senderUsername || notif.actorUsername
                           ? 'cursor-pointer'
                           : ''
                       } ${

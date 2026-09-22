@@ -130,6 +130,7 @@ export type NotificationType =
   | 'new_message'
   | 'screenshot_alert'
   | 'store_order'
+  | 'call_started'
   | 'system';
 
 export interface AppNotification {

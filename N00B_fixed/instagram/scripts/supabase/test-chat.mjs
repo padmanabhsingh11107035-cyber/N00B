@@ -152,6 +152,25 @@ await expectFail(() => rpc(c, 'chat_messages', g.id), /not a participant/, 'some
 check(!(await rpc(c, 'my_chats')).some((x) => x.id === g.id), '...and it disappears from their list');
 
 // =====================================================================================
+section('5b. Group calls: who may start one, and the "a call started" notification');
+check((await rpc(a, 'can_start_call', g.id)) === true, 'a real group, not restricted, a member: calling is allowed');
+check((await rpc(a, 'can_start_call', ab.id)) === false, 'a direct 1:1 chat can never host a call');
+check((await rpc(a, 'can_start_call', LOUNGE)) === false, 'the Global Lounge can never host a call either');
+check((await rpc(c, 'can_start_call', g.id)) === false, 'someone who already left the group can not start a call there');
+const beforeCall = (await n(`select count(*)::int n from notifications where target_user_id = $1 and type = 'call_started'`, [b]));
+check((await rpc(a, 'notify_call_started', g.id)).success === true, 'starting a call in the group succeeds');
+const callNotif = (await db.query(`select * from notifications where target_user_id = $1 and type = 'call_started' order by created_at desc limit 1`, [b])).rows[0];
+const aUsername = (await db.query('select username from profiles where id = $1', [a])).rows[0].username;
+check(!!callNotif && callNotif.chat_id === g.id && callNotif.message.includes(aUsername) && (await n(`select count(*)::int n from notifications where target_user_id = $1 and type = 'call_started'`, [b])) === beforeCall + 1, 'the other member gets exactly one "call started" notification, naming who started it and which chat');
+check((await n(`select count(*)::int n from notifications where target_user_id = $1 and type = 'call_started'`, [a])) === 0, 'the person who started the call does not notify themselves');
+await expectFail(() => rpc(admin, 'notify_call_started', g.id), /not a participant/, 'somebody outside the group can not announce a call in it either');
+check((await rpc(a, 'set_group_send_policy', g.id, true)).chat.onlyAdminsCanSend === true, '(switching "only admins can send" on, to check calling turns off with it)');
+check((await rpc(a, 'can_start_call', g.id)) === false, 'a group under "only admins can send" can not host a call — not even for its own admin');
+await expectFail(() => rpc(a, 'notify_call_started', g.id), /not available/, 'nor can a call be announced there while that restriction is on');
+check((await rpc(a, 'set_group_send_policy', g.id, false)).chat.onlyAdminsCanSend === false, '(switching it back off)');
+check((await rpc(a, 'can_start_call', g.id)) === true, 'and calling works again once the restriction is lifted');
+
+// =====================================================================================
 section('6. Per-person settings');
 check((await rpc(a, 'toggle_chat_flag', ab.id, 'pin')).isPinned === true, 'you can pin a chat');
 check((await rpc(b, 'my_chats')).find((x) => x.id === ab.id).isPinned === false, '...for yourself only (the old app pinned it for both)');

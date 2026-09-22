@@ -274,7 +274,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           <img
             src={story.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
             alt="Story content"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             referrerPolicy="no-referrer"
           />
 

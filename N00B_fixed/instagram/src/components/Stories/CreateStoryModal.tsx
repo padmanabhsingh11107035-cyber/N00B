@@ -168,7 +168,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             <img
               src={selectedImage}
               alt="Preview"
-              className={`w-full h-full object-cover transition-all duration-300 ${getFilterStyle()}`}
+              className={`w-full h-full object-contain transition-all duration-300 ${getFilterStyle()}`}
             />
           ) : (
             <button

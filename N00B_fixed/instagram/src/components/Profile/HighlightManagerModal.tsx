@@ -49,20 +49,28 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
           setErrorMessage('Each photo or video must be under 25MB.');
           continue;
         }
-        const mediaType: 'image' | 'video' = file.type.startsWith('video') ? 'video' : 'image';
-        const uploaded = await uploadMediaFile(file, 'stories');
-        if (!uploaded.url) { setErrorMessage('Upload failed. Please try again.'); continue; }
-        const pending: PendingItem = { mediaUrl: uploaded.objectKey || uploaded.url, mediaType, localPreview: uploaded.url };
+        // uploadMediaFile THROWS (rather than returning an error) for a format the browser can't
+        // handle — most commonly HEIC, the default photo format on iPhone. Without this catch,
+        // that exception silently aborted the whole picker with no message and no item added,
+        // which is exactly what looked like "choosing a photo does nothing".
+        try {
+          const mediaType: 'image' | 'video' = file.type.startsWith('video') ? 'video' : 'image';
+          const uploaded = await uploadMediaFile(file, 'stories');
+          if (!uploaded.url) { setErrorMessage('Upload failed. Please try again.'); continue; }
+          const pending: PendingItem = { mediaUrl: uploaded.objectKey || uploaded.url, mediaType, localPreview: uploaded.url };
 
-        if (isEditing && existingHighlight) {
-          // Already-created highlight: commit immediately, one at a time, so a mid-batch failure
-          // doesn't lose the ones that already succeeded.
-          const res = await addToHighlight(existingHighlight.id, [{ mediaUrl: pending.mediaUrl, mediaType: pending.mediaType }]);
-          if (!res.success) { setErrorMessage(res.error || 'Could not add that item.'); continue; }
-          setItems((prev) => [...prev, { id: `pending_${Date.now()}`, mediaUrl: pending.localPreview, mediaType, createdAt: new Date().toISOString() }]);
-          setChanged(true);
-        } else {
-          setPendingNew((prev) => [...prev, pending]);
+          if (isEditing && existingHighlight) {
+            // Already-created highlight: commit immediately, one at a time, so a mid-batch failure
+            // doesn't lose the ones that already succeeded.
+            const res = await addToHighlight(existingHighlight.id, [{ mediaUrl: pending.mediaUrl, mediaType: pending.mediaType }]);
+            if (!res.success) { setErrorMessage(res.error || 'Could not add that item.'); continue; }
+            setItems((prev) => [...prev, { id: `pending_${Date.now()}`, mediaUrl: pending.localPreview, mediaType, createdAt: new Date().toISOString() }]);
+            setChanged(true);
+          } else {
+            setPendingNew((prev) => [...prev, pending]);
+          }
+        } catch (err) {
+          setErrorMessage(err instanceof Error ? err.message : 'Upload failed. Please try again.');
         }
       }
     } finally {

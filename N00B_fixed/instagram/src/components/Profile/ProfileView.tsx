@@ -338,10 +338,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   useEffect(() => {
+    // Saved / Liked / Archive are always the SIGNED-IN account's own data (the
+    // fetch functions take no user id — there is no "someone else's" version
+    // of them), so only load them while looking at your own profile.
+    if (!isOwnProfile) return;
     loadPrivateCollections();
     loadLikedAndArchived();
     setFollowRequests(currentUser.followRequests || []);
-  }, [currentUser]);
+  }, [currentUser, isOwnProfile]);
+
+  // Landing on someone else's profile while a private tab was still selected
+  // (from your own profile, or from a previous profile you visited) must not
+  // keep showing your own Saved/Liked/Archive under their name.
+  useEffect(() => {
+    if (!isOwnProfile && (activeTab === 'saved' || activeTab === 'liked' || activeTab === 'archive')) {
+      setActiveTab('posts');
+    }
+  }, [isOwnProfile, targetUser.id]);
 
   const loadPrivateCollections = async () => {
     try {
@@ -367,8 +380,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const displayedPosts = posts.filter((p) => {
+    // Archived posts never belong in the main grid — not even for the owner
+    // (that's the point of archiving) — and the database only ever hands an
+    // archived post to its own author or an admin account in the first
+    // place, so this must not special-case "someone else's profile".
     const isAuthor = p.userId === targetUser.id || p.username === targetUser.username;
-    if (!isOwnProfile) return isAuthor;
     return isAuthor && !p.isArchived;
   });
 
@@ -1659,38 +1675,43 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <span className="hidden sm:inline">REELS</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('saved')}
-          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'saved' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-          title="Organized Private Collections"
-        >
-          <Bookmark className="w-4 h-4" />
-          <span className="hidden sm:inline">SAVED</span>
-        </button>
+        {/* Saved, Liked and Archive are private — only the profile's own owner sees these tabs at all. */}
+        {isOwnProfile && (
+          <>
+            <button
+              onClick={() => setActiveTab('saved')}
+              className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'saved' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              }`}
+              title="Organized Private Collections"
+            >
+              <Bookmark className="w-4 h-4" />
+              <span className="hidden sm:inline">SAVED</span>
+            </button>
 
-        <button
-          onClick={() => setActiveTab('liked')}
-          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'liked' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-          title="Liked Posts"
-        >
-          <Heart className="w-4 h-4" />
-          <span className="hidden sm:inline">LIKED</span>
-        </button>
+            <button
+              onClick={() => setActiveTab('liked')}
+              className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'liked' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              }`}
+              title="Liked Posts"
+            >
+              <Heart className="w-4 h-4" />
+              <span className="hidden sm:inline">LIKED</span>
+            </button>
 
-        <button
-          onClick={() => setActiveTab('archive')}
-          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'archive' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-          title="Archived Posts Vault"
-        >
-          <Archive className="w-4 h-4" />
-          <span className="hidden sm:inline">ARCHIVE</span>
-        </button>
+            <button
+              onClick={() => setActiveTab('archive')}
+              className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+                activeTab === 'archive' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              }`}
+              title="Archived Posts Vault"
+            >
+              <Archive className="w-4 h-4" />
+              <span className="hidden sm:inline">ARCHIVE</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* 7. Active Tab Content Area */}
@@ -1770,8 +1791,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         ))}
 
-        {/* C. SAVED POSTS & COLLECTIONS */}
-        {activeTab === 'saved' && (
+        {/* C. SAVED POSTS & COLLECTIONS (owner only) */}
+        {activeTab === 'saved' && isOwnProfile && (
           <div className="space-y-6">
             {/* Header & New Collection Button */}
             <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
@@ -1868,8 +1889,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         )}
 
-        {/* D. LIKED POSTS */}
-        {activeTab === 'liked' && (
+        {/* D. LIKED POSTS (owner only) */}
+        {activeTab === 'liked' && isOwnProfile && (
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {likedPosts.map((post) => (
               <div
@@ -1887,8 +1908,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         )}
 
-        {/* E. ARCHIVE VAULT */}
-        {activeTab === 'archive' && (
+        {/* E. ARCHIVE VAULT (owner only — never visible on someone else's profile) */}
+        {activeTab === 'archive' && isOwnProfile && (
           <div className="space-y-3">
             <p className="text-xs text-zinc-400">
               Only you can see posts in your archive vault. They are removed from your public grid without being deleted.

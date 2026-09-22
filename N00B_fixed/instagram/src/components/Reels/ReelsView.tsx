@@ -15,7 +15,9 @@ import {
   Eye,
   ArrowLeft,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  MessageSquareOff,
+  EyeOff
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import {
@@ -27,7 +29,9 @@ import {
   fetchReelLikers,
   fetchReelViewers,
   deleteReel,
-  fetchUserById
+  fetchUserById,
+  toggleCommentsReel,
+  toggleLikeCountReel
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -93,6 +97,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  // Tapping a creator's name/avatar needs their full profile, which the reel itself only carries a
+  // denormalized sliver of (username, avatar) — fetching it only ON tap means a real network wait
+  // before the profile even starts to open. Instead, the creator of the reel someone is CURRENTLY
+  // watching (and the very next one, so a fast swiper is covered too) is looked up quietly in the
+  // background the moment it's shown; by the time anyone actually taps, it's usually already in hand.
+  const profileCacheRef = useRef<Map<string, User>>(new Map());
   // Set true only when the browser itself rejected unmuted autoplay (not
   // when the user deliberately tapped the volume icon) — lets the
   // first-interaction listener below know it's safe to switch sound back
@@ -120,6 +130,17 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   useScreenshotAlert('reel', currentReel?.id, !!currentReel && !isReelOwner);
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
   const isMasterAdmin = can(currentUser, 'moderate_content');
+
+  useEffect(() => {
+    for (const r of [currentReel, nextReel]) {
+      if (!r || profileCacheRef.current.has(r.userId)) continue;
+      fetchUserById(r.userId)
+        .then((user) => {
+          if (user) profileCacheRef.current.set(r.userId, user);
+        })
+        .catch(() => undefined);
+    }
+  }, [currentReel, nextReel]);
 
   useEffect(() => {
     if (currentReel) {
@@ -238,6 +259,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const goToProfile = async (userId: string) => {
     if (!onNavigateToProfile) return;
+    const cached = profileCacheRef.current.get(userId);
+    if (cached) {
+      onNavigateToProfile(cached);
+      return;
+    }
     const user = await fetchUserById(userId);
     if (user) onNavigateToProfile(user);
   };
@@ -338,6 +364,30 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const handlePrevReel = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const handleToggleReelComments = async () => {
+    if (!currentReel) return;
+    try {
+      const res = await toggleCommentsReel(currentReel.id);
+      if ('isCommentsDisabled' in res) {
+        setLocalReels((prev) => prev.map((r) => (r.id === currentReel.id ? { ...r, isCommentsDisabled: res.isCommentsDisabled } : r)));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleReelLikeCount = async () => {
+    if (!currentReel) return;
+    try {
+      const res = await toggleLikeCountReel(currentReel.id);
+      if ('isLikeCountHidden' in res) {
+        setLocalReels((prev) => prev.map((r) => (r.id === currentReel.id ? { ...r, isLikeCountHidden: res.isLikeCountHidden } : r)));
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -556,7 +606,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         )}
 
         {/* Top Control Bar */}
-        <div className="absolute top-3 inset-x-3 z-30 flex items-center justify-between pointer-events-auto">
+        <div
+          className="absolute top-3 inset-x-3 z-30 flex items-center justify-between pointer-events-auto"
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-2">
             {onGoBack && (
               <button
@@ -596,17 +649,51 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               {showReelOptionsMenu && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-9 z-40 w-44 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
+                  className="absolute right-0 top-9 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
                 >
                   <button
                     onClick={() => {
                       setShowReelOptionsMenu(false);
-                      handleDeleteReel();
+                      setLikesViewsInitialTab('likes');
+                      setShowLikesViewsSheet(true);
                     }}
-                    className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                    className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete Reel
+                    <Heart className="w-4 h-4 text-red-400" /> Likes{isReelOwner ? ' & Views' : ''}
                   </button>
+                  {isReelOwner && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowReelOptionsMenu(false);
+                          handleToggleReelComments();
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <MessageSquareOff className="w-4 h-4 text-purple-400" /> {currentReel.isCommentsDisabled ? 'Turn On Comments' : 'Turn Off Comments'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowReelOptionsMenu(false);
+                          handleToggleReelLikeCount();
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <EyeOff className="w-4 h-4 text-cyan-400" /> {currentReel.isLikeCountHidden ? 'Unhide Like Count' : 'Hide Like Count'}
+                      </button>
+                    </>
+                  )}
+                  {(isReelOwner || isMasterAdmin) && (
+                    <button
+                      onClick={() => {
+                        setShowReelOptionsMenu(false);
+                        handleDeleteReel();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete Reel
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -614,7 +701,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         </div>
 
         {/* Left Creator Overlay */}
-        <div className="absolute bottom-6 left-3 right-16 z-20 space-y-2 pointer-events-auto text-left">
+        <div
+          className="absolute bottom-6 left-3 right-16 z-20 space-y-2 pointer-events-auto text-left"
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
           {/* Creator Profile & Follow (with Instagram-style Dual Overlapping Avatars) */}
           <div className="flex items-center gap-2 flex-wrap">
             <div
@@ -729,7 +819,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         </div>
 
         {/* Right Floating Engagement Buttons */}
-        <div className="absolute bottom-6 right-2.5 z-20 flex flex-col items-center gap-4 pointer-events-auto">
+        <div
+          className="absolute bottom-6 right-2.5 z-20 flex flex-col items-center gap-4 pointer-events-auto"
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
           {/* Like */}
           <div className="flex flex-col items-center gap-1 group">
             <button
@@ -743,19 +836,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             >
               <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'fill-current' : ''}`} />
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (currentReel.likesCount > 0) {
-                  setLikesViewsInitialTab('likes');
-                  setShowLikesViewsSheet(true);
-                }
-              }}
-              className="text-[10px] font-bold text-white drop-shadow cursor-pointer hover:underline disabled:hover:no-underline"
-              disabled={currentReel.likesCount === 0}
-            >
-              {currentReel.likesCount.toLocaleString()}
-            </button>
+            {!currentReel.isLikeCountHidden && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentReel.likesCount > 0) {
+                    setLikesViewsInitialTab('likes');
+                    setShowLikesViewsSheet(true);
+                  }
+                }}
+                className="text-[10px] font-bold text-white drop-shadow cursor-pointer hover:underline disabled:hover:no-underline"
+                disabled={currentReel.likesCount === 0}
+              >
+                {currentReel.likesCount.toLocaleString()}
+              </button>
+            )}
           </div>
 
           {/* Views (owner-only "seen by" list) */}
@@ -778,20 +873,22 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           )}
 
           {/* Comment */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowComments(true);
-            }}
-            className="flex flex-col items-center gap-1 group cursor-pointer"
-          >
-            <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
-              <MessageCircle className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-bold text-white drop-shadow">
-              {currentReel.commentsCount}
-            </span>
-          </button>
+          {!currentReel.isCommentsDisabled && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowComments(true);
+              }}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
+            >
+              <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
+                <MessageCircle className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-bold text-white drop-shadow">
+                {currentReel.commentsCount}
+              </span>
+            </button>
+          )}
 
           {/* Share */}
           <button

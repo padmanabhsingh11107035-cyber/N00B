@@ -38,6 +38,8 @@ export {
   toggleArchivePost,
   toggleCommentsPost,
   toggleLikeCountPost,
+  toggleCommentsReel,
+  toggleLikeCountReel,
   deletePost,
   deletePostSlide,
   fetchComments,

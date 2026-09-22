@@ -148,6 +148,19 @@ await expectFail(() => rpc(a, 'toggle_pin_comment', rc.comment.id), /Only the ow
 check((await rpc(b, 'toggle_pin_comment', rc.comment.id)).isPinned === true, 'the reel\'s owner can pin a comment');
 check((await run(c, 'delete from comments where id = $1', [rc.comment.id])).affectedRows === 0, 'a stranger can not delete the comment');
 check((await run(b, 'delete from comments where id = $1', [rc.comment.id])).affectedRows === 1 && (await n('select comments_count n from reels where id = $1', [reel.id])) === 0, 'the reel\'s owner can delete it, and the counter drops');
+// comments-off / hide-like-count (the same owner controls posts already have)
+await expectFail(() => rpc(a, 'toggle_reel_flag', reel.id, 'comments'), /only modify your own reels/, 'a stranger can not turn off comments on someone else\'s reel');
+check((await rpc(b, 'toggle_reel_flag', reel.id, 'comments')).isCommentsDisabled === true, 'the owner can turn comments off');
+check((await rpc(a, 'feed_reels')).find((r) => r.id === reel.id).isCommentsDisabled === true, '...and the feed reflects it');
+await expectFail(() => rpc(a, 'add_reel_comment', reel.id, 'sneaking in'), /Comments are turned off/, 'nobody can comment while it is off, not even via the normal path');
+await expectFail(() => run(a, `insert into comments (reel_id, user_id, text) values ($1, $2, 'x')`, [reel.id, a]), /permission denied|new row violates/, '...nor by writing to the table directly');
+check((await rpc(b, 'toggle_reel_flag', reel.id, 'comments')).isCommentsDisabled === false, 'and the owner can turn them back on');
+check((await rpc(a, 'add_reel_comment', reel.id, 'now it works')).comment.text === 'now it works', 'commenting works again once they are');
+check((await rpc(b, 'toggle_reel_flag', reel.id, 'like_count')).isLikeCountHidden === true, 'the owner can hide the like count');
+check((await rpc(a, 'feed_reels')).find((r) => r.id === reel.id).isLikeCountHidden === true, '...and the feed reflects that too');
+check((await rpc(admin, 'toggle_reel_flag', reel.id, 'comments')).isCommentsDisabled === true, 'an admin can moderate someone else\'s reel settings too');
+await expectFail(() => rpc(b, 'toggle_reel_flag', reel.id, 'nonsense'), /Unknown reel setting/, 'an unknown flag name is refused');
+await rpc(b, 'toggle_reel_flag', reel.id, 'comments'); // leave comments back on for the deletion checks below
 // delete
 check((await run(c, 'delete from reels where id = $1', [reel.id])).affectedRows === 0, 'a stranger can NOT delete your reel');
 check((await run(b, 'delete from reels where id = $1', [reel.id])).affectedRows === 1, 'you can delete your own reel');

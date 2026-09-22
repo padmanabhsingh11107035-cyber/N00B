@@ -466,6 +466,8 @@ export interface Reel {
   collabUserDisplayName?: string;
   taggedUsers?: { userId?: string; username: string; displayName?: string; avatar?: string }[];
   category?: string;
+  isCommentsDisabled?: boolean;
+  isLikeCountHidden?: boolean;
 }
 
 export interface Message {

@@ -575,6 +575,14 @@ export async function toggleLikeCountPost(postId: string): Promise<{ isLikeCount
   try { return await rpc('toggle_post_flag', { p_post: postId, p_flag: 'like_count' }); } catch (err) { return { error: errorText(err, 'You can only modify your own posts.') } as any; }
 }
 
+export async function toggleCommentsReel(reelId: string): Promise<{ isCommentsDisabled: boolean }> {
+  try { return await rpc('toggle_reel_flag', { p_reel: reelId, p_flag: 'comments' }); } catch (err) { return { error: errorText(err, 'You can only modify your own reels.') } as any; }
+}
+
+export async function toggleLikeCountReel(reelId: string): Promise<{ isLikeCountHidden: boolean }> {
+  try { return await rpc('toggle_reel_flag', { p_reel: reelId, p_flag: 'like_count' }); } catch (err) { return { error: errorText(err, 'You can only modify your own reels.') } as any; }
+}
+
 export async function deletePost(postId: string): Promise<boolean> {
   const { data, error } = await supabase.from('posts').delete().eq('id', postId).select('id');
   return !error && Array.isArray(data) && data.length > 0;

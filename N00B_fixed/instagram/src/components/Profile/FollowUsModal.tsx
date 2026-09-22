@@ -5,8 +5,8 @@ interface FollowUsModalProps {
   onClose: () => void;
 }
 
-const INSTAGRAM_URL = 'https://www.instagram.com/n00b_456_x?stkn=c3Rsb3R1emMwc2s5&utm_source=qr';
-const YOUTUBE_URL = 'https://www.youtube.com/@saraah_robotics_456';
+const INSTAGRAM_URL = 'https://www.instagram.com/nooob.xyz?stkn=c3Rsb3R1emMwc2s5&utm_source=qr';
+const YOUTUBE_URL = 'https://www.youtube.com/channel/UCn_bU5OKH2yraWxNRJIUoMA';
 
 export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
   return (
@@ -41,7 +41,7 @@ export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-sm font-bold text-white block">Instagram</span>
-              <span className="text-[11px] text-zinc-400 block truncate">@n00b_456_x</span>
+              <span className="text-[11px] text-zinc-400 block truncate">@nooob.xyz</span>
             </div>
             <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-pink-400 transition-colors shrink-0" />
           </a>

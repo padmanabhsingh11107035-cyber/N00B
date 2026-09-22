@@ -9,6 +9,8 @@ export {
   loginUser,
   verifyUsernameExists,
   recoverAccountAccess,
+  requestLoginOtp,
+  verifyLoginOtp,
   logoutUser,
   deleteMyAccount,
   fetchCurrentUser,

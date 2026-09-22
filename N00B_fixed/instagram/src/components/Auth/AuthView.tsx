@@ -32,7 +32,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, uploadMediaFile } from '../../services/api';
+import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -390,6 +390,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
 
+  // A second way in, alongside the questions above: a 6-digit code emailed to the address on file. Falls back to the
+  // questions automatically if the site has not switched emailing on yet (handleSendLoginOtp, notConfigured).
+  const [forgotMode, setForgotMode] = useState<'questions' | 'email'>('questions');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpMaskedEmail, setOtpMaskedEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpCooldownUntil, setOtpCooldownUntil] = useState(0);
+  const [otpNow, setOtpNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!showForgotPassword || forgotMode !== 'email' || otpCooldownUntil <= otpNow) return;
+    const t = setInterval(() => setOtpNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [showForgotPassword, forgotMode, otpCooldownUntil, otpNow]);
+
   // Handle local file upload — uploads to B2 (this endpoint doesn't require
   // an existing session, so it works fine pre-signup) and keeps only the
   // durable object key + a short-lived preview URL, instead of embedding
@@ -598,6 +614,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         setForgotDateOfBirth('');
         setForgotEmail('');
         setForgotError(null);
+        setForgotMode('questions');
+        setOtpSent(false);
+        setOtpMaskedEmail('');
+        setOtpCode('');
+        setOtpError(null);
+        setOtpCooldownUntil(0);
         setShowForgotPassword(true);
       } else {
         setErrorMessage(res.error || 'No account found with that username.');
@@ -637,6 +659,51 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       setForgotError(err.message || 'Server connection error. Please try again.');
     } finally {
       setForgotLoading(false);
+    }
+  };
+
+  // Emailed-code path: step A sends the code, step B checks it. Both share the account already confirmed to exist above.
+  const handleSendLoginOtp = async () => {
+    setOtpError(null);
+    try {
+      setOtpLoading(true);
+      const res = await requestLoginOtp(forgotUsername);
+      if (res.success) {
+        setOtpSent(true);
+        setOtpMaskedEmail(res.maskedEmail || '');
+        setOtpCode('');
+        setOtpCooldownUntil(Date.now() + 45000);
+      } else {
+        setOtpError(res.error || 'Could not send a code. Please try again.');
+        if (res.notConfigured) setForgotMode('questions');
+      }
+    } catch (err: any) {
+      setOtpError(err.message || 'Server connection error. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpError(null);
+    if (!otpCode.trim()) {
+      setOtpError('Please enter the code from your email.');
+      return;
+    }
+    try {
+      setOtpLoading(true);
+      const res = await verifyLoginOtp({ username: forgotUsername, code: otpCode.trim() });
+      if (res.success && res.user) {
+        setShowForgotPassword(false);
+        onAuthSuccess(res.user);
+      } else {
+        setOtpError(res.error || 'That code is not right. Please check your email and try again.');
+      }
+    } catch (err: any) {
+      setOtpError(err.message || 'Server connection error. Please try again.');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -1507,66 +1574,151 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               </button>
             </div>
 
-            <form onSubmit={handleForgotPasswordSubmit} className="p-4 space-y-3.5 overflow-y-auto">
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Enter the mobile number, date of birth, and email on this account. If everything matches, you'll be
-                logged straight in — then head to Account Settings to set a new password.
-              </p>
-
-              {forgotError && (
-                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-                  {forgotError}
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Mobile Number</label>
-                <input
-                  type="tel"
-                  required
-                  value={forgotMobileNumber}
-                  onChange={(e) => setForgotMobileNumber(e.target.value)}
-                  placeholder="e.g. 9876543210"
-                  className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Date of Birth</label>
+            {/* Two ways in: the security questions (default) or a code emailed to the address on file */}
+            <div className="flex gap-1.5 px-4 pt-3.5 shrink-0">
+              {(['questions', 'email'] as const).map((m) => (
                 <button
+                  key={m}
                   type="button"
-                  onClick={() => setShowForgotBirthdayPicker(true)}
-                  className="w-full flex items-center justify-between bg-black/40 text-sm px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all cursor-pointer text-left"
+                  onClick={() => {
+                    setForgotMode(m);
+                    setForgotError(null);
+                    setOtpError(null);
+                  }}
+                  className={`flex-1 py-2 rounded-xl text-[11px] font-bold cursor-pointer transition-colors ${
+                    forgotMode === m ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 text-black' : 'bg-black/40 text-zinc-400 hover:text-white border border-white/10'
+                  }`}
                 >
-                  <span className={forgotDateOfBirth ? 'text-white font-medium' : 'text-zinc-500'}>
-                    {forgotDateOfBirth
-                      ? new Date(forgotDateOfBirth).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
-                      : 'Select your date of birth'}
-                  </span>
-                  <CalendarDays className="w-4 h-4 text-cyan-400 shrink-0" />
+                  {m === 'questions' ? 'Answer security questions' : 'Email me a code'}
                 </button>
-              </div>
+              ))}
+            </div>
 
-              <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
-                />
-              </div>
+            {forgotMode === 'questions' && (
+              <form onSubmit={handleForgotPasswordSubmit} className="p-4 space-y-3.5 overflow-y-auto">
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Enter the mobile number, date of birth, and email on this account. If everything matches, you'll be
+                  logged straight in — then head to Account Settings to set a new password.
+                </p>
 
-              <button
-                type="submit"
-                disabled={forgotLoading}
-                className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {forgotLoading ? 'Verifying...' : 'Verify & Log In'}
-              </button>
-            </form>
+                {forgotError && (
+                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+                    {forgotError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Mobile Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={forgotMobileNumber}
+                    onChange={(e) => setForgotMobileNumber(e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Date of Birth</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotBirthdayPicker(true)}
+                    className="w-full flex items-center justify-between bg-black/40 text-sm px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all cursor-pointer text-left"
+                  >
+                    <span className={forgotDateOfBirth ? 'text-white font-medium' : 'text-zinc-500'}>
+                      {forgotDateOfBirth
+                        ? new Date(forgotDateOfBirth).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+                        : 'Select your date of birth'}
+                    </span>
+                    <CalendarDays className="w-4 h-4 text-cyan-400 shrink-0" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full bg-black/40 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {forgotLoading ? 'Verifying...' : 'Verify & Log In'}
+                </button>
+              </form>
+            )}
+
+            {forgotMode === 'email' && (
+              <div className="p-4 space-y-3.5 overflow-y-auto">
+                {otpError && (
+                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+                    {otpError}
+                  </div>
+                )}
+
+                {!otpSent ? (
+                  <>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      We'll email a 6-digit code to the address on this account. Enter it here and you'll be logged
+                      straight in — then head to Account Settings to set a new password.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={otpLoading}
+                      onClick={handleSendLoginOtp}
+                      className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {otpLoading ? 'Sending...' : 'Send code to my email'}
+                    </button>
+                  </>
+                ) : (
+                  <form onSubmit={handleVerifyLoginOtp} className="space-y-3.5">
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      We sent a code to <span className="text-white font-semibold" translate="no">{otpMaskedEmail}</span>. It expires in 10 minutes.
+                    </p>
+                    <div>
+                      <label className="text-xs font-bold text-zinc-300 block mb-1.5">6-digit code</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-700"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={otpLoading}
+                      className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {otpLoading ? 'Verifying...' : 'Verify & Log In'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={otpLoading || otpCooldownUntil > otpNow}
+                      onClick={handleSendLoginOtp}
+                      className="w-full py-2 text-xs font-bold text-cyan-300 hover:text-cyan-200 disabled:text-zinc-600 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {otpCooldownUntil > otpNow ? `Resend code in ${Math.ceil((otpCooldownUntil - otpNow) / 1000)}s` : 'Resend code'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

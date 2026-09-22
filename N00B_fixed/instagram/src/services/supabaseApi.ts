@@ -276,6 +276,40 @@ export async function recoverAccountAccess(payload: {
   }
 }
 
+// "Forgot password", a second way in: a 6-digit code emailed to the address already on file. `notConfigured` is set when the
+// site has not switched this on yet (no email-sending key set) — the screen should fall back to the security-question form.
+export async function requestLoginOtp(username: string): Promise<{ success: boolean; maskedEmail?: string; error?: string; notConfigured?: boolean }> {
+  const unavailable = 'Recovery is unavailable right now. Please try again later.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'otp-request', username } });
+    if (error) {
+      let body: any = null;
+      try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
+      return { success: false, error: body?.error || unavailable, notConfigured: body?.notConfigured === true };
+    }
+    if (!data?.maskedEmail) return { success: false, error: unavailable };
+    return { success: true, maskedEmail: data.maskedEmail };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
+// The code from that email, exchanged for a normal session exactly like the security-question path.
+export async function verifyLoginOtp(payload: { username: string; code: string }): Promise<{ success: boolean; user?: User; error?: string }> {
+  const unavailable = 'Recovery is unavailable right now. Please try again later.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'otp-verify', username: payload.username, code: payload.code } });
+    if (error) return { success: false, error: await functionError(error, unavailable) };
+    if (!data?.tokenHash) return { success: false, error: unavailable };
+    const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
+    if (signInError) return { success: false, error: 'Could not sign you in. Please try again.' };
+    const user = await rpc<any>('get_my_user');
+    return { success: true, user: startChatKeys(mapUser(user)) as User };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
 // Log out of THIS device only. (The library's default, "global", also ends the same account's login on every other device: logging
 // out on the phone used to sign the laptop out within the hour.) The note lets other tabs of this browser say why they were signed out.
 export async function logoutUser(): Promise<{ success: boolean }> {

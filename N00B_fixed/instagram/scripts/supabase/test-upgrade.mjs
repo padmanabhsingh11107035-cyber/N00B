@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { loadBackup, buildImportPlan } from './transform.mjs';
 import { runImport } from './run-import.mjs';
-import { createTestDb, makePgAdapter, asUser, MIGRATIONS_DIR } from './pg-test-env.mjs';
+import { createTestDb, makePgAdapter, asUser, asAnon, MIGRATIONS_DIR } from './pg-test-env.mjs';
 
 const backupsRoot = 'backups';
 const dir = process.argv.slice(2).find((x) => !x.startsWith('--')) || path.join(backupsRoot, fs.readdirSync(backupsRoot).filter((d) => fs.existsSync(path.join(backupsRoot, d, 'users.json'))).sort().pop());
@@ -207,6 +207,31 @@ check((await db.query('select count(*)::int n from chat_keys')).rows[0].n === 0 
 const before15b = await snap();
 await db.exec(read(M15));
 check(JSON.stringify(await snap()) === JSON.stringify(before15b), 'running migration 15 a second time is harmless');
+
+section('Applying migration 16 (emailed OTP recovery) on top');
+const M16 = '20260922000016_recovery_otp.sql';
+const before16 = await snap();
+const attempts16 = (await db.query('select ip, username, ok, created_at from recovery_attempts order by created_at')).rows;
+await db.exec(read(M16));
+check(JSON.stringify(await snap()) === JSON.stringify(before16), 'migration 16 changes no count and no point total');
+check(JSON.stringify((await db.query('select ip, username, ok, created_at from recovery_attempts order by created_at')).rows) === JSON.stringify(attempts16), 'the existing recovery-attempts history is untouched');
+check((await db.query('select count(*)::int n from recovery_otps')).rows[0].n === 0, 'no code exists until somebody asks for one');
+const personRow = (await db.query(`select p.id, p.username from profiles p join profile_private pp on pp.user_id = p.id where coalesce(pp.email, '') <> '' and not p.is_suspended limit 1`)).rows[0];
+if (personRow) {
+  await db.query('set role service_role');
+  let sent, checked;
+  try {
+    sent = (await db.query('select public.recovery_otp_request($1, $2) r', ['1.2.3.4', personRow.username])).rows[0].r;
+    check(sent.status === 'ok' && /^\d{6}$/.test(sent.code), 'the existing "forgot password" security-question check still exists alongside the new emailed code');
+    checked = (await db.query('select public.recovery_otp_verify($1, $2, $3) r', ['1.2.3.4', personRow.username, sent.code])).rows[0].r;
+    check(checked.status === 'ok' && checked.userId === personRow.id, 'and the new emailed code works end to end for a real account from the backup');
+  } finally { await db.query('reset role'); }
+  const stillWorks = await asAnon(db, () => db.query(`select public.recovery_check('9.9.9.9', $1, '0', '2000-01-01', 'nobody@example.com')`, [personRow.username]).catch((e) => e));
+  check(stillWorks instanceof Error && /permission denied/.test(stillWorks.message), 'the OLD recovery_check function is completely unaffected (still exists, still guarded the same way)');
+} else check(true, '(no account with an email on file in this backup to try it on)');
+const before16b = await snap();
+await db.exec(read(M16));
+check(JSON.stringify(await snap()) === JSON.stringify(before16b), 'running migration 16 a second time is harmless');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

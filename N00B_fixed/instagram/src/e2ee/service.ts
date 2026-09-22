@@ -4,10 +4,11 @@
 //
 // The rules it keeps (each one is tested):
 //   * a chat that CAN be locked is never sent unlocked: if locking fails, the message fails (it is not silently sent readable);
-//   * a chat that can not be locked at all (the public Lounge, the AI chat, very large groups) is sent as before, and the app says so;
-//   * a GROUP chat with a member who has no key yet is sent as before too (groups are not required to be end-to-end encrypted);
-//   * a direct, person-to-person chat is never sent readable, full stop — even the one case that used to fall back (the other
-//     person has no key yet) now blocks instead: nobody but the two people in it, not even NOOB, can ever read it;
+//   * a chat that can NEVER be locked at all (the public Lounge, the AI chat, and groups over the size cutoff — reason
+//     'large') is sent as before, and the app says so — this is a hard technical limit, not a policy choice;
+//   * every other chat — personal AND group alike — is never sent readable, full stop: if any member simply has no key
+//     yet, the device waits and the message fails rather than going out unlocked. Nobody but the people actually in a
+//     chat, not even NOOB, can ever read it, and that is now true the same way for every chat kind;
 //   * a device key is only ever created when the key store was really read and really empty, and saving only ever adds keys;
 //   * everything fails safe: a message that can not be opened is shown as locked, never as garbage or as somebody else's words.
 import * as C from './crypto.ts';
@@ -178,10 +179,11 @@ export function createE2ee(deps: E2eeDeps) {
       const onlyMeMissing = members.filter((m: any) => !m.keys.length).every((m: any) => m.userId === me);
       return { ...out, encryptable: false, mustLock: (reason === 'ok' || reason === 'missing') && onlyMeMissing && members.length > 0, reason: 'blocked' };
     }
-    // A direct chat is never allowed to fall back to plain text: if the other person simply has no key
-    // registered yet, this device waits rather than sending the message readable. Groups keep the old,
-    // more forgiving behaviour (they are not required to be end-to-end encrypted at all).
-    if (!out.isGroup && reason === 'missing') out.mustLock = true;
+    // No chat falls back to plain text any more, personal or group: if any member simply has no key
+    // registered yet, this device waits rather than sending the message readable, same as a direct
+    // chat. (A group over the size cutoff — reason 'large' — was never encryptable in the first place;
+    // that is a hard technical limit, unrelated to this, and unaffected by it.)
+    if (reason === 'missing') out.mustLock = true;
     if (out.encryptable && !out.isGroup) {
       const mine = members.find((m: any) => m.userId === me);
       const other = members.find((m: any) => m.userId !== me);

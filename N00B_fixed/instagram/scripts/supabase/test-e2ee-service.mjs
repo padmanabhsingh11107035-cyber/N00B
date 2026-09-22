@@ -34,7 +34,7 @@ await runImport(buildImportPlan(raw, {}), makePgAdapter(db), { log: () => {} });
 const profByLegacy = Object.fromEntries((await db.query('select * from profiles')).rows.map((p) => [p.legacy_id, p]));
 const adminRaw = raw.users.find((u) => u.isAdmin);
 const pool = raw.users.filter((u) => !u.isAdmin && (u.password || '').length > 0);
-const [ann, bob, cy, dee] = pool.slice(0, 4).map((u) => profByLegacy[u.id].id);
+const [ann, bob, cy, dee, eve] = pool.slice(0, 5).map((u) => profByLegacy[u.id].id);
 const nameOf = Object.fromEntries((await db.query('select id, username from profiles')).rows.map((r) => [r.id, r.username]));
 
 // ------------------------------------------------------------------------------------------------ a "device": a person's phone or laptop
@@ -73,6 +73,7 @@ const annLaptop = device(ann, { label: 'Ann laptop' });
 const bobD = device(bob, { label: 'Bob' });
 const cyD = device(cy, { label: 'Cy' });
 const deeD = device(dee, { label: 'Dee' });
+const eveD = device(eve, { label: 'Eve' });
 
 section('1. A device sets itself up');
 const [r1, r2, r3] = await Promise.all([annPhone.svc.ensure(ann), annPhone.svc.ensure(ann), annPhone.svc.ensure(ann)]);
@@ -166,6 +167,19 @@ check(nowLocked.wasLocked && nowLocked.message.text === 'now it can go', 'and th
 const lounge = (await db.query('select id from chats where is_global_default')).rows[0].id;
 const il = await annPhone.svc.chatCrypto(lounge);
 check(!il.encryptable && il.reason === 'public' && il.mustLock === false && (await annPhone.msgs.prepareSend(lounge, { text: 'hi all' })) === null, 'the public Global Lounge is never locked');
+
+section('4b. A group is held to exactly the same rule now — no plain-text fallback either');
+const grpMissing = (await asUser(db, ann, async () => (await db.query(`select public.create_chat(array[$1::uuid, $2::uuid], true, 'No fallback', null, null) as r`, [bob, eve])).rows[0].r)).chat;
+const gim = await annPhone.svc.chatCrypto(grpMissing.id);
+check(!gim.encryptable && gim.reason === 'missing' && gim.missing.includes(nameOf[eve]) && gim.mustLock === true && gim.isGroup === true, 'a group with one un-keyed member: not locked, and it must not be sent unlocked either');
+await expectFail(() => send(annPhone, grpMissing.id, { text: 'plain for now' }), /waiting for the other person/, 'a group refuses to send readable too — the old "groups are not required to be encrypted" exception is gone');
+check((await db.query('select count(*)::int as n from messages where chat_id = $1', [grpMissing.id])).rows[0].n === 0, 'nothing was stored for it');
+await eveD.svc.ensure(eve);
+const gim2 = await annPhone.svc.chatCrypto(grpMissing.id, true);
+check(gim2.encryptable && gim2.reason === 'ok' && gim2.mustLock === false, 'once everyone in the group has a key, it becomes locked and sendable, exactly like a direct chat');
+const grpLocked = await send(annPhone, grpMissing.id, { text: 'now the group can talk' });
+check(grpLocked.wasLocked && grpLocked.message.text === 'now the group can talk', 'and the message that was blocked a moment ago now sends locked, for everyone in the group');
+check((await bobD.msgs.unlockMessages(grpMissing.id, (await bobD.rpc('chat_messages', { p_chat: grpMissing.id })).messages)).find((m) => m.id === grpLocked.message.id)?.text === 'now the group can talk', 'and every OTHER member opens it too, not just the sender');
 
 section('5. Locking can fail: the message must fail, never go out readable');
 const cyPublic = (await cyD.store.load()).keys[0].publicJwk;

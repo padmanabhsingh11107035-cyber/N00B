@@ -1283,6 +1283,7 @@ export default function App() {
           onUpdateSettings={setNotificationSettings}
           onAcceptFollowRequest={handleAcceptFollowRequest}
           onDeclineFollowRequest={handleDeclineFollowRequest}
+          onFollowBack={handleToggleFollowUser}
           onClearAll={handleClearAllNotifications}
           onClose={() => setShowNotificationsModal(false)}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}

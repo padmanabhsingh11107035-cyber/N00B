@@ -45,6 +45,7 @@ interface NotificationsModalProps {
   onClose: () => void;
   onAcceptFollowRequest: (notifId: string, actorId: string) => void;
   onDeclineFollowRequest: (notifId: string, actorId: string) => void;
+  onFollowBack?: (userId: string) => void;
   onClearAll: () => void;
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
@@ -59,6 +60,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onClose,
   onAcceptFollowRequest,
   onDeclineFollowRequest,
+  onFollowBack,
   onClearAll,
   onNavigateToUser,
   onOpenScratchCard,
@@ -371,7 +373,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
                           {/* Action Buttons for Follow Request Received */}
                           {notif.type === 'follow_request_received' && notif.actionStatus === 'pending' && (
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -381,6 +383,21 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                               >
                                 <Check className="w-3.5 h-3.5" /> Accept
                               </button>
+                              {/* Separate from Accept: this only follows them back (raises their follower
+                                  count) — it does not, by itself, approve their request to follow you. */}
+                              {onFollowBack && notif.actorId && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onFollowBack(notif.actorId!);
+                                  }}
+                                  disabled={currentUser.followingIds?.includes(notif.actorId)}
+                                  className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 disabled:cursor-default text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-zinc-700"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5" />
+                                  {currentUser.followingIds?.includes(notif.actorId) ? 'Following' : 'Follow Back'}
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

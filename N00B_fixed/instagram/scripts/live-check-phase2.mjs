@@ -46,9 +46,15 @@ try {
   check((await rpc(A.c, 'story_viewers', { p_story: st.id })).users.length === 1, 'the owner sees who viewed');
   check(await fails(() => rpc(B.c, 'story_viewers', { p_story: st.id }), /Only the story owner/), 'others can not see the viewer list');
   check((await rpc(B.c, 'add_story_comment', { p_story: st.id, p_text: 'nice' })).comment.text === 'nice', 'commenting on a story works');
-  const hl = await rpc(A.c, 'create_highlight', { p_title: 'Live', p_cover_url: '', p_story_ids: [st.id] });
-  check(hl.highlight.title === 'Live' && (await rpc(A.c, 'my_highlights')).length === 1, 'a highlight is created');
-  check(((await A.c.from('stories').delete().eq('id', st.id).select('id')).data || []).length === 1, 'the owner can delete the story');
+  // Every story auto-saves into that day's highlight now — no manual create_highlight step
+  // (retired), and a highlight keeps working after the story itself is deleted (see delete_story
+  // below and the 22 Sep story/highlight redesign).
+  const hlBefore = await rpc(A.c, 'my_highlights');
+  check(hlBefore.length === 1 && hlBefore[0].items.some((it) => it.id === st.id), 'the story auto-saved into today\'s highlight');
+  check(await fails(() => rpc(A.c, 'create_highlight', { p_title: 'Live', p_cover_url: '', p_story_ids: [st.id] }), /permission denied/), 'the old manual create-highlight path is retired');
+  check(await fails(() => A.c.from('stories').delete().eq('id', st.id), /permission denied/), 'a direct delete on stories is refused');
+  check((await rpc(A.c, 'delete_story', { p_story: st.id })).success === true, 'the owner can delete the story via delete_story');
+  check((await rpc(A.c, 'my_highlights')).length === 0, 'that was the only story of the day, so the now-empty highlight is gone too');
 
   // =====================================================================================
   section('Reels');

@@ -86,16 +86,49 @@ check(!(await rpc(b, 'active_stories')).some((s) => s.id === st.id), 'an expired
 await expectFail(() => rpc(b, 'add_story_comment', st.id, 'late'), /not found or has expired/, 'you can not comment on an expired story');
 await expectFail(() => call(a, 'select public.cleanup_expired_stories()'), /permission denied/, 'the cleanup job can not be run from a browser');
 check((await db.query('select public.cleanup_expired_stories() n')).rows[0].n === 1 && (await n('select count(*)::int n from stories where id = $1', [st.id])) === 0, 'the cleanup job removes stories a while after expiry');
-// delete
+// delete (now goes through delete_story() — a direct `delete from stories` is refused outright)
+await expectFail(() => run(b, 'delete from stories where id = $1', [st.id]), /permission denied/, 'a direct delete on stories is refused for everyone, not just strangers');
 const st2 = await rpc(a, 'create_story', 'stories/s2.jpg');
-check((await run(b, 'delete from stories where id = $1', [st2.id])).affectedRows === 0, 'a stranger can NOT delete your story');
-check((await run(a, 'delete from stories where id = $1', [st2.id])).affectedRows === 1, 'you can delete your own story');
+await expectFail(() => rpc(b, 'delete_story', st2.id), /only delete your own/, 'a stranger can NOT delete your story');
+check((await rpc(a, 'delete_story', st2.id)).success === true, 'you can delete your own story');
 const st3 = await rpc(a, 'create_story', 'stories/s3.jpg');
-check((await run(admin, 'delete from stories where id = $1', [st3.id])).affectedRows === 1, 'the admin can delete any story');
-// highlights
-const hl = await rpc(a, 'create_highlight', 'Trip', 'stories/cover.jpg', [st3.id]);
-check(hl.highlight.title === 'Trip' && (await rpc(a, 'my_highlights')).length === 1 && (await rpc(b, 'my_highlights')).length === 0, 'highlights are yours alone');
-await expectFail(() => rpc(a, 'create_highlight', ' ', '', []), /needs a title/, 'a highlight needs a title');
+check((await rpc(admin, 'delete_story', st3.id)).success === true, 'the admin can delete any story');
+
+// =====================================================================================
+section('1b. Highlights (auto-saved per day — "story and highlight are the same thing" redesign)');
+// `st` expired and was cleaned up above (line ~88); its snapshot must still be sitting in the
+// highlight, created back when `st` was originally posted — that's the entire point.
+const aHl = await rpc(a, 'my_highlights');
+check(aHl.length === 1, 'today\'s stories all land in one highlight, not one each');
+check(aHl[0].items.some((it) => it.id === st.id), 'a highlight keeps a story\'s content after the story itself expires and is deleted');
+check(!aHl[0].items.some((it) => it.id === st2.id), 'deleting a story also removes it from the highlight');
+check(aHl[0].title.length > 0 && aHl[0].dayKey, 'the highlight is titled and keyed by day automatically');
+check((await rpc(b, 'my_highlights')).length === 0, 'my_highlights only ever returns your own');
+check((await rpc(b, 'highlights_for_user', a)).length === 1, 'someone else can see your highlights (this never worked before this redesign)');
+await expectFail(() => rpc(a, 'create_highlight', 'Trip', 'stories/cover.jpg', [st3.id]), /permission denied/, 'the old manual create-highlight path is retired');
+
+// deleting the LAST remaining story of a day must remove the now-empty highlight entirely,
+// not leave a title/cover behind with nothing in it
+const cSolo = await rpc(c, 'create_story', 'stories/solo.jpg');
+check((await rpc(c, 'my_highlights')).length === 1, 'a highlight exists while it has a story in it');
+await rpc(c, 'delete_story', cSolo.id);
+check((await rpc(c, 'my_highlights')).length === 0, 'and disappears once its only story is deleted');
+
+// private accounts: highlight visibility follows the same can_view_author rule stories already use
+const pst2 = await rpc(priv, 'create_story', 'stories/p2.jpg');
+check((await rpc(c, 'highlights_for_user', priv)).length === 0, 'a stranger can NOT see a private account\'s highlights');
+await db.query('insert into follows (follower_id, followee_id) values ($1, $2)', [c, priv]);
+check((await rpc(c, 'highlights_for_user', priv)).length === 1, 'an approved follower can see them');
+await db.query('delete from follows where follower_id = $1', [c]);
+await rpc(priv, 'delete_story', pst2.id);
+
+// a poll turns into a second page, and it must play right AFTER the main photo, not before —
+// even though (as CreateStoryModal does) the poll page is actually posted to the server first.
+const pollPage = await rpc(d, 'create_story', 'stories/poll-bg.png', 'image', [{ type: 'poll', data: { question: 'well?', options: ['Yes 🔥', 'No 👎'] }, x: 50, y: 50 }], false);
+const mainPhoto = await rpc(d, 'create_story', 'stories/poll-main.jpg');
+const dHl = (await rpc(d, 'my_highlights'))[0];
+check(dHl.items[0].id === mainPhoto.id && dHl.items[1].id === pollPage.id, 'the main photo plays before its poll page inside the highlight');
+check(dHl.coverUrl === 'stories/poll-main.jpg', 'a poll page is never chosen as the highlight cover icon');
 
 // =====================================================================================
 section('2. Reels');

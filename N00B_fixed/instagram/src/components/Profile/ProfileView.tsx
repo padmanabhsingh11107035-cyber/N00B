@@ -16,7 +16,6 @@ import {
   ExternalLink,
   Layers,
   FolderPlus,
-  Plus,
   Volume2,
   Mail,
   Phone,
@@ -60,7 +59,7 @@ import {
   EyeOff,
   Eye
 } from 'lucide-react';
-import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
+import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
 import {
   fetchCollections,
@@ -75,15 +74,16 @@ import {
   submitSafetyReport,
   toggleFollowUser,
   hideProfileFrom,
-  unhideProfileFrom
+  unhideProfileFrom,
+  fetchHighlights,
+  deleteHighlight
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { CustomerSupportModal } from '../Support/CustomerSupportModal';
-import { HighlightManagerModal, HighlightItem } from './HighlightManagerModal';
-import { HighlightViewerModal } from './HighlightViewerModal';
+import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -283,19 +283,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const targetFollowsMe = !!targetUser.followingIds?.includes(currentUser.id);
   const canMessageTarget = isTargetFollowing || targetFollowsMe;
 
-  // Highlights state: Start with empty / custom highlights (NO default fake icons)
-  const [highlights, setHighlights] = useState<HighlightItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(`noob_highlights_${currentUser?.id || 'me'}`);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return [];
-  });
-  const [selectedHighlightForManage, setSelectedHighlightForManage] = useState<HighlightItem | null>(null);
-  const [showHighlightManager, setShowHighlightManager] = useState(false);
-  const [activeHighlightForViewer, setActiveHighlightForViewer] = useState<HighlightItem | null>(null);
+  // Highlights: every story the target user has ever posted, auto-grouped by the day it was
+  // posted, fetched fresh from the backend for whichever profile is being viewed — not this
+  // browser's own localStorage, so they're the same for every viewer and every device (see the
+  // 22 Sep story/highlight redesign).
+  const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
+  const [activeHighlightForViewer, setActiveHighlightForViewer] = useState<StoryHighlight | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchHighlights(targetUser.id).then((list) => { if (alive) setHighlights(list); });
+    return () => { alive = false; };
+  }, [targetUser.id]);
+
+  const handleDeleteHighlight = async (highlightId: string) => {
+    const prev = highlights;
+    setHighlights((h) => h.filter((x) => x.id !== highlightId));
+    const ok = await deleteHighlight(highlightId);
+    if (!ok) setHighlights(prev);
+  };
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -309,33 +315,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Sync highlights to localStorage
-  const saveHighlights = (newHighlights: HighlightItem[]) => {
-    setHighlights(newHighlights);
-    try {
-      localStorage.setItem(`noob_highlights_${currentUser?.id || 'me'}`, safeJsonStringify(newHighlights));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleSaveHighlight = (highlight: HighlightItem) => {
-    const existingIndex = highlights.findIndex((h) => h.id === highlight.id);
-    let updated: HighlightItem[];
-    if (existingIndex >= 0) {
-      updated = [...highlights];
-      updated[existingIndex] = highlight;
-    } else {
-      updated = [...highlights, highlight];
-    }
-    saveHighlights(updated);
-  };
-
-  const handleDeleteHighlight = (highlightId: string) => {
-    const updated = highlights.filter((h) => h.id !== highlightId);
-    saveHighlights(updated);
-  };
 
   useEffect(() => {
     // Saved / Liked / Archive are always the SIGNED-IN account's own data (the
@@ -1595,63 +1574,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       )}
 
-      {/* 5. Story Highlights Carousel (Dynamic, First image = cover icon, can add more media) */}
-      <div className="mb-6 flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar">
-        {/* + New Highlight Button */}
-        <div
-          onClick={() => {
-            setSelectedHighlightForManage(null);
-            setShowHighlightManager(true);
-          }}
-          className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-        >
-          <div className="w-14 h-14 rounded-full bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:border-[#00FF66] group-hover:text-[#00FF66] transition-all group-hover:scale-105">
-            <Plus className="w-5 h-5" />
-          </div>
-          <span className="text-[11px] text-zinc-400 font-bold group-hover:text-[#00FF66] transition-colors">New</span>
-        </div>
-
-        {/* User-Created Highlights */}
-        {highlights.map((hl) => (
-          <div
-            key={hl.id}
-            className="flex flex-col items-center gap-1.5 shrink-0 relative group"
-          >
-            <div
-              onClick={() => setActiveHighlightForViewer(hl)}
-              className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-[#00FF66] group-hover:to-emerald-400 transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
-            >
-              <img
-                src={hl.cover || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                alt={hl.title}
-                className="w-full h-full rounded-full object-cover p-0.5 bg-black"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-
-            {isOwnProfile && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteHighlight(hl.id);
-                }}
-                className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-red-500 hover:bg-red-600 text-zinc-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
-                title={`Delete ${hl.title}`}
+      {/* 5. Story Highlights: every story this person has posted, auto-saved and grouped by the
+          day it went up — there's no manual "create a highlight" step anymore (see the 22 Sep
+          story/highlight redesign), so this row only appears once they've actually posted a story. */}
+      {highlights.length > 0 && (
+        <div className="mb-6 flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar">
+          {highlights.map((hl) => (
+            <div key={hl.id} className="flex flex-col items-center gap-1.5 shrink-0 relative group">
+              <div
+                onClick={() => setActiveHighlightForViewer(hl)}
+                className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-[#00FF66] group-hover:to-emerald-400 transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
               >
-                <Trash2 className="w-2.5 h-2.5" />
-              </button>
-            )}
+                <img
+                  src={hl.coverUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                  alt={hl.title}
+                  className="w-full h-full rounded-full object-cover p-0.5 bg-black"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
 
-            <span
-              onClick={() => setActiveHighlightForViewer(hl)}
-              className="text-[11px] text-zinc-300 font-medium truncate max-w-[68px] text-center cursor-pointer hover:text-[#00FF66] transition-colors"
-            >
-              {hl.title}
-            </span>
-          </div>
-        ))}
-      </div>
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteHighlight(hl.id);
+                  }}
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-red-500 hover:bg-red-600 text-zinc-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
+                  title={`Delete ${hl.title}`}
+                >
+                  <Trash2 className="w-2.5 h-2.5" />
+                </button>
+              )}
+
+              <span
+                onClick={() => setActiveHighlightForViewer(hl)}
+                className="text-[11px] text-zinc-300 font-medium truncate max-w-[68px] text-center cursor-pointer hover:text-[#00FF66] transition-colors"
+              >
+                {hl.title}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 6. Profile Content Navigation Tabs */}
       <div className="flex items-center justify-around border-b border-zinc-800 text-xs font-bold pt-2 mb-4">
@@ -2259,33 +2224,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         />
       )}
 
-      {/* 11. Highlight Manager & Viewer Modals */}
-      {showHighlightManager && (
-        <HighlightManagerModal
-          currentUser={currentUser}
-          existingHighlight={selectedHighlightForManage}
-          onSave={handleSaveHighlight}
-          onDelete={handleDeleteHighlight}
-          onClose={() => {
-            setShowHighlightManager(false);
-            setSelectedHighlightForManage(null);
-          }}
-        />
-      )}
-
+      {/* 11. Highlight Viewer — the same story viewer, in playback-only mode (see the 22 Sep
+          story/highlight redesign: no manual "highlight manager" exists anymore). */}
       {activeHighlightForViewer && (
-        <HighlightViewerModal
-          highlight={activeHighlightForViewer}
+        <StoryViewerModal
+          stories={activeHighlightForViewer.items.map((it): Story => ({
+            id: it.id,
+            userId: targetUser.id,
+            username: targetUser.username,
+            userAvatar: targetUser.avatar,
+            isVerified: !!targetUser.isVerified,
+            mediaUrl: it.mediaUrl,
+            mediaType: it.mediaType,
+            durationSeconds: 5,
+            createdAt: it.createdAt,
+            expiresAt: it.createdAt,
+            isCloseFriendsOnly: false,
+            isViewed: true,
+            viewedBy: [],
+            stickers: it.stickers || [],
+            comments: []
+          }))}
+          initialIndex={0}
           onClose={() => setActiveHighlightForViewer(null)}
-          onEdit={(hl) => {
-            setActiveHighlightForViewer(null);
-            setSelectedHighlightForManage(hl);
-            setShowHighlightManager(true);
-          }}
-          onDelete={isOwnProfile ? (id) => {
-            handleDeleteHighlight(id);
-            setActiveHighlightForViewer(null);
-          } : undefined}
+          currentUser={currentUser}
+          onAddComment={() => {}}
+          isHighlight
         />
       )}
 

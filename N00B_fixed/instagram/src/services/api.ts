@@ -62,7 +62,7 @@ export {
   addCommentToStory,
   deleteStory,
   fetchHighlights,
-  createHighlight,
+  deleteHighlight,
   fetchReels,
   createReel,
   toggleLikeReel,

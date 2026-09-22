@@ -5,18 +5,24 @@ import { uploadMediaFile } from '../../services/api';
 
 interface CreateStoryModalProps {
   onClose: () => void;
-  onSubmitStory: (storyData: Partial<Story>) => void;
+  // An array because a poll turns into its own second story "page" (a plain colour
+  // background) that must be created right after the main one — see handlePublish.
+  onSubmitStory: (storyData: Partial<Story>[]) => void;
 }
+
+const POLL_BG_COLORS = ['#00FF66', '#7C3AED', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899', '#000000', '#FFFFFF'];
 
 export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedImageObjectKey, setSelectedImageObjectKey] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
   const [isCloseFriends, setIsCloseFriends] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [showPollInput, setShowPollInput] = useState(false);
+  const [pollBgColor, setPollBgColor] = useState(POLL_BG_COLORS[0]);
   const [locationTag, setLocationTag] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,35 +51,82 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
     }
   };
 
-  const handlePublish = () => {
-    if (!selectedImage) return;
-
-    const stickers: any[] = [];
-    if (pollQuestion.trim()) {
-      stickers.push({
-        type: 'poll',
-        data: { question: pollQuestion.trim(), options: ['Yes 🔥', 'No 👎'] },
-        x: 50,
-        y: 40
-      });
-    }
-    if (locationTag.trim()) {
-      stickers.push({
-        type: 'location',
-        data: { name: locationTag.trim(), weather: '24°C Sunny' },
-        x: 50,
-        y: 75
-      });
-    }
-
-    onSubmitStory({
-      mediaUrl: selectedImageObjectKey || selectedImage,
-      mediaType: 'image',
-      filter,
-      isCloseFriendsOnly: isCloseFriends,
-      stickers
+  // A poll no longer overlays the photo — it gets its own following page instead: a
+  // plain, user-chosen background colour with just the poll centered on it. Rendered
+  // once as a real image (not a new story "kind") so it flows through the exact same
+  // upload/storage/expiry/highlight path as every other story, with no schema change.
+  const renderPollPageFile = (color: string): Promise<File> =>
+    new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas unavailable')); return; }
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error('Could not render the poll page')); return; }
+        resolve(new File([blob], 'poll-page.png', { type: 'image/png' }));
+      }, 'image/png');
     });
-    onClose();
+
+  const handlePublish = async () => {
+    if (!selectedImage || isPublishing) return;
+    setIsPublishing(true);
+    setUploadError('');
+
+    try {
+      const mainStickers: any[] = [];
+      if (locationTag.trim()) {
+        mainStickers.push({
+          type: 'location',
+          data: { name: locationTag.trim(), weather: '24°C Sunny' },
+          x: 50,
+          y: 75
+        });
+      }
+
+      const mainStory: Partial<Story> = {
+        mediaUrl: selectedImageObjectKey || selectedImage,
+        mediaType: 'image',
+        filter,
+        isCloseFriendsOnly: isCloseFriends,
+        stickers: mainStickers
+      };
+
+      // The viewer walks a user's stories oldest-created first. So the poll page has to be
+      // POSTED (and therefore timestamped) BEFORE the main photo for it to actually land as
+      // the "next" page after the photo, even though it's built and uploaded second here.
+      const stories: Partial<Story>[] = [];
+
+      if (pollQuestion.trim()) {
+        const pollFile = await renderPollPageFile(pollBgColor);
+        const uploaded = await uploadMediaFile(pollFile, 'stories');
+        if (!uploaded.url) throw new Error('Could not upload the poll page.');
+        stories.push({
+          mediaUrl: uploaded.objectKey || uploaded.url,
+          mediaType: 'image',
+          isCloseFriendsOnly: isCloseFriends,
+          stickers: [
+            {
+              type: 'poll',
+              data: { question: pollQuestion.trim(), options: ['Yes 🔥', 'No 👎'] },
+              x: 50,
+              y: 50
+            }
+          ]
+        });
+      }
+
+      stories.push(mainStory);
+
+      onSubmitStory(stories);
+      onClose();
+    } catch (err) {
+      console.error('Story publish failed:', err);
+      setUploadError('Could not post your story. Please try again.');
+      setIsPublishing(false);
+    }
   };
 
   const getFilterStyle = () => {
@@ -102,10 +155,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           <h3 className="text-sm font-bold text-white tracking-tight">Create NOOB Story</h3>
           <button
             onClick={handlePublish}
-            disabled={!selectedImage || isUploading}
+            disabled={!selectedImage || isUploading || isPublishing}
             className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full hover:scale-105 transition-transform cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            Share
+            {isPublishing ? 'Sharing...' : 'Share'}
           </button>
         </div>
 
@@ -143,24 +196,6 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             className="hidden"
           />
 
-          {/* Interactive Poll Sticker Preview */}
-          {selectedImage && showPollInput && (
-            <div className="absolute top-1/3 inset-x-6 bg-black/80 backdrop-blur-md border border-[#00FF66] rounded-xl p-3 shadow-2xl z-20">
-              <input
-                type="text"
-                placeholder="Ask a question for your poll..."
-                value={pollQuestion}
-                onChange={(e) => setPollQuestion(e.target.value)}
-                className="w-full bg-neutral-900 text-xs text-white p-2 rounded-lg border border-neutral-700 focus:border-[#00FF66] outline-none text-center font-bold"
-                autoFocus
-              />
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <div className="bg-[#00FF66] text-black text-xs font-bold text-center py-1.5 rounded-lg">Yes 🔥</div>
-                <div className="bg-neutral-800 text-white text-xs font-bold text-center py-1.5 rounded-lg">No 👎</div>
-              </div>
-            </div>
-          )}
-
           {/* Location Sticker Preview */}
           {selectedImage && showLocationInput && (
             <div className="absolute bottom-1/4 inset-x-8 bg-black/85 backdrop-blur-md border border-[#00FF66] rounded-xl p-2 shadow-2xl z-20 flex items-center gap-2">
@@ -190,6 +225,11 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         {/* Tools & Filter Presets */}
         {selectedImage && (
           <div className="p-3 bg-neutral-900 border-t border-neutral-800 space-y-3">
+            {uploadError && (
+              <div className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-[11px]">
+                {uploadError}
+              </div>
+            )}
             {/* Quick Interactive Sticker Toggles */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
               <button
@@ -217,6 +257,56 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <Sparkles className="w-3.5 h-3.5" /> Close Friends Only
               </button>
             </div>
+
+            {/* Poll Setup: this no longer overlays the photo — it becomes its own page
+                right after this one, with a plain background in the color you pick. */}
+            {showPollInput && (
+              <div className="p-3 bg-neutral-950 border border-[#00FF66]/30 rounded-xl space-y-2.5">
+                <p className="text-[10px] text-gray-400">
+                  Your poll appears as its own page, right after this photo — not on top of it.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Ask a question for your poll..."
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  className="w-full bg-neutral-900 text-xs text-white p-2 rounded-lg border border-neutral-700 focus:border-[#00FF66] outline-none text-center font-bold"
+                />
+                <div>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1.5">
+                    Poll Page Background Color
+                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {POLL_BG_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setPollBgColor(c)}
+                        title={c}
+                        className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
+                          pollBgColor === c ? 'border-white scale-110' : 'border-neutral-700 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {pollQuestion.trim() && (
+                  <div
+                    className="aspect-[9/16] w-24 mx-auto rounded-lg flex items-center justify-center p-2 shadow-lg"
+                    style={{ backgroundColor: pollBgColor }}
+                  >
+                    <div className="w-full bg-black/85 border border-[#00FF66]/40 rounded-md p-1.5">
+                      <p className="text-[7px] font-bold text-center text-white mb-1 line-clamp-2">{pollQuestion}</p>
+                      <div className="space-y-0.5">
+                        <div className="bg-neutral-800 text-white text-[6px] font-semibold text-center py-0.5 rounded">Yes 🔥</div>
+                        <div className="bg-neutral-800 text-white text-[6px] font-semibold text-center py-0.5 rounded">No 👎</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* AR / Classic Filters Selector */}
             <div>

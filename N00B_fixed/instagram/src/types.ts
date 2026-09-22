@@ -425,11 +425,23 @@ export interface Story {
   }[];
 }
 
+export interface HighlightStoryItem {
+  id: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  stickers?: Story['stickers'];
+  createdAt: string;
+}
+
 export interface StoryHighlight {
   id: string;
   title: string;
   coverUrl: string;
-  storyIds: string[];
+  dayKey: string;
+  // Full, self-contained snapshots — a highlight keeps working even after the original
+  // `Story` rows it was built from expire and are deleted. See the 22 Sep story/highlight
+  // redesign (auto-created per calendar day, no manual "add to highlight" step anymore).
+  items: HighlightStoryItem[];
 }
 
 export interface Reel {

@@ -509,10 +509,15 @@ export default function App() {
   };
 
   // --- STORY ACTIONS ---
-  const handleCreateStory = async (storyData: Partial<Story>) => {
+  // Takes an array because a poll turns into a second story "page" (see CreateStoryModal) that must
+  // be posted right after the main one — sequential, not parallel, so they land in the right order.
+  const handleCreateStory = async (storyDataList: Partial<Story>[]) => {
     try {
-      const newStory = await createStory(storyData);
-      setStories([newStory, ...stories]);
+      const newStories: Story[] = [];
+      for (const storyData of storyDataList) {
+        newStories.push(await createStory(storyData));
+      }
+      setStories([...newStories.reverse(), ...stories]);
     } catch (err) {
       console.error(err);
     }

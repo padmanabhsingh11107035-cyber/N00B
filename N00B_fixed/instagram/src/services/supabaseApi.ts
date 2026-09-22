@@ -825,28 +825,46 @@ export async function addCommentToStory(storyId: string, text: string) {
   }
 }
 
+// Deleting a story also has to strip its snapshot out of that day's highlight (and remove the
+// whole day's highlight if that was its last page) — a plain `.from('stories').delete()` can't do
+// that second part, so this goes through delete_story() instead. The database also now refuses a
+// direct delete on `stories` from any client, so this RPC is the only way to remove one.
 export async function deleteStory(storyId: string): Promise<boolean> {
-  const { data, error } = await supabase.from('stories').delete().eq('id', storyId).select('id');
-  return !error && Array.isArray(data) && data.length > 0;
+  try {
+    const res = await rpc<{ success: boolean }>('delete_story', { p_story: storyId });
+    return !!res?.success;
+  } catch {
+    return false;
+  }
 }
 
-export async function fetchHighlights(): Promise<StoryHighlight[]> {
+function mapHighlight(h: any): StoryHighlight {
+  return {
+    id: h.id,
+    title: h.title,
+    coverUrl: resolveMedia(h.coverUrl),
+    dayKey: h.dayKey,
+    items: (h.items || []).map((it: any) => ({ ...it, mediaUrl: resolveMedia(it.mediaUrl) }))
+  };
+}
+
+// Every story is automatically part of a highlight now (grouped by the day it was posted) — pass
+// the profile being viewed; omit it to fetch your own. See the 22 Sep story/highlight redesign.
+export async function fetchHighlights(userId?: string): Promise<StoryHighlight[]> {
   try {
     if (!(await currentSession())) return [];
-    const list = (await rpc<any[]>('my_highlights')) || [];
-    return list.map((h) => ({ ...h, coverUrl: resolveMedia(h.coverUrl) }));
+    const list = userId
+      ? (await rpc<any[]>('highlights_for_user', { p_user: userId })) || []
+      : (await rpc<any[]>('my_highlights')) || [];
+    return list.map(mapHighlight);
   } catch {
     return [];
   }
 }
 
-export async function createHighlight(title: string, coverUrl: string, storyIds: string[]) {
-  try {
-    const res = await rpc<any>('create_highlight', { p_title: title, p_cover_url: toStoredMedia(coverUrl), p_story_ids: storyIds });
-    return { ...res, highlight: res.highlight ? { ...res.highlight, coverUrl: resolveMedia(res.highlight.coverUrl) } : res.highlight };
-  } catch (err) {
-    return { success: false, error: errorText(err, 'Could not create the highlight.') };
-  }
+export async function deleteHighlight(highlightId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('highlights').delete().eq('id', highlightId).select('id');
+  return !error && Array.isArray(data) && data.length > 0;
 }
 
 // ----------------------------------------------------------------------------- reels

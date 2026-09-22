@@ -15,6 +15,11 @@ interface StoryViewerModalProps {
   currentUser: User;
   onAddComment: (storyId: string, text: string) => void;
   onDeleteStory?: (storyId: string) => void;
+  // True when playing back a Highlight instead of a live 24h story: same viewer, same sticker
+  // rendering ("story and highlight are the same thing" per the 22 Sep redesign), but no view
+  // recording, "seen by", comments or delete menu — those all need a live `stories` row, which a
+  // highlight's older pages no longer have once the original story expires and is deleted.
+  isHighlight?: boolean;
 }
 
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
@@ -23,7 +28,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   onClose,
   currentUser,
   onAddComment,
-  onDeleteStory
+  onDeleteStory,
+  isHighlight = false
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
@@ -36,6 +42,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [sliderVal, setSliderVal] = useState(75);
   const [showViewersSheet, setShowViewersSheet] = useState(false);
   const [showStoryOptionsMenu, setShowStoryOptionsMenu] = useState(false);
+  // Kept fully separate from `isPaused` (the press-and-hold gesture) on purpose: the outer frame's
+  // onTouchStart/onTouchEnd toggle `isPaused` based on raw touch coordinates, and on mobile Safari a
+  // tap that focuses the comment input fires touchend (which un-pauses) up to ~300ms BEFORE the
+  // input's own focus event lands (which re-pauses). In that gap the advance timer could tick past
+  // 100 and skip to the next story right as someone tapped in to type. `isCommentFocused` is driven
+  // only by the input's focus/blur, never by the container's touch handlers, so nothing can race it.
+  const [isCommentFocused, setIsCommentFocused] = useState(false);
 
   const story = stories[currentIndex];
   const isOwnStory = !!story && story.userId === currentUser.id;
@@ -53,12 +66,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // for the owner's own story, same as the reel view-recording pattern
   // (recordReelView on currentReel change).
   useEffect(() => {
-    if (!story || story.userId === currentUser.id) return;
+    if (isHighlight || !story || story.userId === currentUser.id) return;
     recordStoryView(story.id).catch(() => {});
-  }, [story?.id, currentUser.id]);
+  }, [isHighlight, story?.id, currentUser.id]);
 
   useEffect(() => {
-    if (isPaused || !story || showViewersSheet || showStoryOptionsMenu) return;
+    if (isPaused || isCommentFocused || !story || showViewersSheet || showStoryOptionsMenu) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -76,11 +89,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isPaused, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
+  }, [isPaused, isCommentFocused, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
 
   if (!story) return null;
 
   const handleNext = () => {
+    if (isCommentFocused) return;
     if (currentIndex < stories.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
@@ -89,6 +103,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   };
 
   const handlePrev = () => {
+    if (isCommentFocused) return;
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
     }
@@ -100,6 +115,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     onAddComment(story.id, commentText.trim());
     setCommentText('');
     setIsPaused(false);
+    setIsCommentFocused(false);
     (document.activeElement as HTMLElement | null)?.blur();
     confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } });
   };
@@ -204,7 +220,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
-            {(isOwnStory || isMasterAdmin) && (
+            {!isHighlight && (isOwnStory || isMasterAdmin) && (
               <div className="relative">
                 <button
                   onClick={() => {
@@ -393,7 +409,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         </div>
 
         {/* Existing Story Comments Overlay List */}
-        {story.comments && story.comments.length > 0 && (
+        {!isHighlight && story.comments && story.comments.length > 0 && (
           <div className="absolute bottom-16 inset-x-3 z-30 max-h-24 overflow-y-auto space-y-1 pr-2 no-scrollbar">
             {story.comments.filter(Boolean).map((c) => (
               <div key={c.id} className="bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-gray-200 flex items-center gap-2">
@@ -404,8 +420,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           </div>
         )}
 
-        {/* Story Bottom Bar: reply input for a viewer, "Seen by" for the owner */}
-        {isOwnStory ? (
+        {/* Story Bottom Bar: reply input for a viewer, "Seen by" for the owner — a highlight's
+            older pages have no live `stories` row behind them anymore, so neither applies there. */}
+        {isHighlight ? null : isOwnStory ? (
           <div className="absolute bottom-3 inset-x-3 z-30">
             <button
               onClick={() => {
@@ -426,8 +443,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 placeholder={`Reply to ${story.username}...`}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                onFocus={() => setIsPaused(true)}
-                onBlur={() => setIsPaused(false)}
+                onFocus={() => setIsCommentFocused(true)}
+                onBlur={() => setIsCommentFocused(false)}
                 className="w-full bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none"
               />
               {commentText.trim() && (

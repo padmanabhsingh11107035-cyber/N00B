@@ -210,6 +210,15 @@ await db.query('delete from messages where id = $1', [replay]);
 const junk = await bobD.msgs.unlockOne(dm.id, { id: 'j1', senderId: ann, text: '', e2ee: { v: 1, junk: true } });
 check(junk.locked === 'damaged' && junk.text === '', 'a nonsense envelope shows as locked');
 
+// The app keeps ONE long-lived device instance for the whole session (exactly what bobD is here), so its "already opened" cache must not
+// let a message that is moved to a different sender's name keep showing under its old, correctly-opened result.
+check((await list(bobD, dm.id)).find((m) => m.id === target)?.text === 'Meet at 8 instead', '(bobD has this message cached from opening it earlier, correctly, from Ann)');
+await db.query('update messages set sender_id = $1 where id = $2', [bob, target]);
+const restamped = (await list(bobD, dm.id)).find((m) => m.id === target);
+check(restamped.locked === 'unverified-sender' && restamped.text === '', 'moving that SAME message to a different sender is caught even on a device that already had it cached');
+await db.query('update messages set sender_id = $1 where id = $2', [ann, target]);
+check((await list(bobD, dm.id)).find((m) => m.id === target)?.text === 'Meet at 8 instead', '(moving it back reopens it normally)');
+
 section('7. A new device, and the passphrase backup');
 const annNew = device(ann, { label: 'Ann new phone' });
 await annNew.svc.ensure(ann);

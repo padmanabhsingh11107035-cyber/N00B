@@ -248,16 +248,18 @@ export function createE2ee(deps: E2eeDeps) {
     return (await pending).get(kid) ?? null;
   }
 
-  const opened = new Map<string, { iv: string; result: Opened }>();
-  const remember = (id: string, iv: string, result: Opened) => {
+  // Keyed by the message id AND who it claims to be from: if a message's stored sender ever changed (something no ordinary client can do,
+  // but a direct database edit could), this device must check it again rather than keep trusting what it opened under the old name.
+  const opened = new Map<string, { iv: string; senderId: string; result: Opened }>();
+  const remember = (id: string, iv: string, senderId: string, result: Opened) => {
     if (opened.size >= CACHE_MAX) opened.delete(opened.keys().next().value as string);
-    opened.set(id, { iv, result });
+    opened.set(id, { iv, senderId, result });
   };
 
   async function open(chatId: string, messageId: string, senderId: string, envelope: unknown): Promise<Opened> {
     if (!C.isEnvelope(envelope)) return { ok: false, code: 'damaged' };
     const hit = opened.get(messageId);
-    if (hit && hit.iv === envelope.iv) return hit.result;
+    if (hit && hit.iv === envelope.iv && hit.senderId === senderId) return hit.result;
     const me = await deps.userId();
     if (!me) return { ok: false, code: 'no-key' };
     let ring: StoredRing;
@@ -267,13 +269,13 @@ export function createE2ee(deps: E2eeDeps) {
       const senderPublic = async (skid: string) => (senderId === me ? ring.keys.find((k) => k.kid === skid)?.publicJwk : undefined) ?? senderKey(senderId, skid);
       const text = await C.open(envelope, { chatId, ring: ring.keys, senderPublic });
       const result: Opened = { ok: true, payload: decodePayload(text) };
-      remember(messageId, envelope.iv, result);
+      remember(messageId, envelope.iv, senderId, result);
       return result;
     } catch (e: any) {
       const code = e instanceof C.E2eeError && e.code !== 'bad-input' ? e.code : 'unverified-sender';
       const result: Opened = { ok: false, code };
       // a sender key that could not be fetched (offline) is tried again next time; the others will never change
-      if (code !== 'unverified-sender') remember(messageId, envelope.iv, result);
+      if (code !== 'unverified-sender') remember(messageId, envelope.iv, senderId, result);
       return result;
     }
   }

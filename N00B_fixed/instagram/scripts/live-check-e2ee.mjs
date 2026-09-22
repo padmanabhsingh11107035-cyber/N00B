@@ -95,8 +95,10 @@ try {
   const ed = await a1.rpc('edit_message_e2ee', { p_chat: chat.id, p_message: s1.message.id, p_e2ee: env });
   check((await a1.msgs.unlockMessages(chat.id, [ed.message]))[0].text === 'Edited ' + stamp && (await list(b1, chat.id)).find((m) => m.id === s1.message.id).text === 'Edited ' + stamp, 'an edit is locked again');
   check(await fails(() => a1.rpc('edit_message', { p_chat: chat.id, p_message: s1.message.id, p_text: 'plain overwrite' }), /end-to-end encrypted/), 'a readable edit can not overwrite a locked message');
-  const note = await B.c.from('notifications').select('message').eq('target_user_id', B.id).eq('type', 'new_message').order('created_at', { ascending: false }).limit(3);
-  check(!note.error && !(note.data || []).some((n) => n.message.includes(stamp) || n.message.includes('replying')) && (note.data || []).some((n) => /🔒 New message/.test(n.message)), 'the notification only says that a message arrived');
+  // (the @-mention in every notification legitimately includes the username, and the username includes `stamp` — that is not a leak;
+  // what must never appear is the actual SECRET content of a locked message)
+  const note = await B.c.from('notifications').select('message').eq('target_user_id', B.id).eq('type', 'new_message').order('created_at', { ascending: false }).limit(5);
+  check(!note.error && !(note.data || []).some((n) => n.message.includes(secret) || /secret/i.test(n.message)) && (note.data || []).some((n) => /🔒 New message/.test(n.message)), 'a locked message\'s notification only says that a message arrived (a plain one, like the photo below, still shows its real text — that is expected)');
 
   section('Who can not read it');
   const outsider = fresh();

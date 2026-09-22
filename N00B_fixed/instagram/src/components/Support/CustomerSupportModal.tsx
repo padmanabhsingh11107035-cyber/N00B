@@ -19,6 +19,8 @@ import {
   RotateCcw,
   User as UserIcon,
   ShieldAlert,
+  Loader2,
+  Search,
   Crown,
   Phone,
   PhoneCall,
@@ -31,7 +33,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { User } from '../../types';
-import { askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary } from '../../services/api';
+import { askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary, fetchUsers } from '../../services/api';
 import { wantsToEndSession, goodbyeMessage, goodbyeSpoken } from './supportIntents';
 import confetti from 'canvas-confetti';
 
@@ -99,9 +101,50 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [reportErrorMsg, setReportErrorMsg] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
+  // Type-ahead for "who am I reporting": opens on focus (showing everyone, newest first, same as an
+  // empty search) and narrows as you type — so picking the right account never depends on typing an
+  // exact username or ID by hand.
+  const [reportSearchOpen, setReportSearchOpen] = useState(false);
+  const [reportResults, setReportResults] = useState<User[]>([]);
+  const [reportSearching, setReportSearching] = useState(false);
+  const reportSearchSeq = useRef(0);
+  const reportFieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!reportSearchOpen) return;
+    const mine = ++reportSearchSeq.current;
+    const q = reportTargetId.trim().replace(/^@/, '');
+    setReportSearching(true);
+    const t = window.setTimeout(async () => {
+      const list = await fetchUsers(q);
+      if (mine !== reportSearchSeq.current) return;
+      setReportResults(list);
+      setReportSearching(false);
+    }, q ? 250 : 0);
+    return () => window.clearTimeout(t);
+  }, [reportTargetId, reportSearchOpen]);
+
+  useEffect(() => {
+    if (!reportSearchOpen) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (reportFieldRef.current && !reportFieldRef.current.contains(e.target as Node)) setReportSearchOpen(false);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, [reportSearchOpen]);
+
+  const reportChoices = reportResults.filter((u) => u.id !== currentUser.id).slice(0, 50);
+
+  const pickReportTarget = (u: User) => {
+    setReportTargetId(u.username);
+    setReportSearchOpen(false);
+    if (reportErrorMsg) setReportErrorMsg('');
+  };
+
   const handleSafetyReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setReportErrorMsg('');
+    setReportSearchOpen(false);
     const cleanTarget = reportTargetId.trim().replace(/^@/, '');
     if (!cleanTarget) return;
 
@@ -1269,21 +1312,62 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     </div>
                   )}
 
-                  <div>
+                  <div className="relative" ref={reportFieldRef}>
                     <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                       Offender User ID or @Username
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. cyber_troll or u_123"
-                      value={reportTargetId}
-                      onChange={(e) => {
-                        setReportTargetId(e.target.value);
-                        if (reportErrorMsg) setReportErrorMsg('');
-                      }}
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-rose-500 rounded-xl p-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
-                    />
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                      <input
+                        type="text"
+                        required
+                        autoComplete="off"
+                        placeholder="Type or pick a name below"
+                        value={reportTargetId}
+                        onFocus={() => setReportSearchOpen(true)}
+                        onChange={(e) => {
+                          setReportTargetId(e.target.value);
+                          setReportSearchOpen(true);
+                          if (reportErrorMsg) setReportErrorMsg('');
+                        }}
+                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-rose-500 rounded-xl p-2.5 pl-8 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    {reportSearchOpen && (
+                      <div className="absolute z-10 top-full left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl">
+                        {reportSearching && reportChoices.length === 0 ? (
+                          <div className="p-3 flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+                          </div>
+                        ) : reportChoices.length === 0 ? (
+                          <p className="text-xs text-zinc-500 p-3 text-center">
+                            {reportTargetId.trim() ? 'Nobody found.' : 'No accounts to show.'}
+                          </p>
+                        ) : (
+                          reportChoices.map((u) => (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => pickReportTarget(u)}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-zinc-900 text-left cursor-pointer border-b border-zinc-900 last:border-b-0"
+                            >
+                              {u.avatar ? (
+                                <img src={u.avatar} alt="" className="w-7 h-7 rounded-full object-cover bg-zinc-800 shrink-0" />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+                                  <UserIcon className="w-3.5 h-3.5 text-zinc-500" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{u.displayName || u.username}</p>
+                                <p className="text-[10px] text-zinc-500 truncate">@{u.username}</p>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div>

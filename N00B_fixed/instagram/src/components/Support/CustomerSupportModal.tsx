@@ -330,8 +330,12 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     window.speechSynthesis.cancel();
     if (!voiceEnabled) return;
 
-    // Clean emojis and markdown characters for clear speech
+    // Clean emojis and markdown characters for clear speech — order matters: turn a symbol into a
+    // spoken WORD before the generic strip below would otherwise just delete it and leave an
+    // unnatural gap (e.g. "order #42" reading as "order 42" instead of "order number 42").
     const cleanSpeech = text
+      .replace(/#(\d)/g, 'number $1')
+      .replace(/₹\s?(\d)/g, 'rupees $1')
       .replace(/[#*_`~🎮✨🎵📸🔐👋✏️💬🛡️👑•]/g, '')
       .replace(/@\w+/g, (match) => match.replace('@', 'at '))
       .trim();
@@ -754,7 +758,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
     try {
       const history = callTranscript.map((t) => ({ sender: t.sender === 'ai' ? 'bot' : 'user', text: t.text }));
-      const response = await askAiSupportAssistant(cleanQuery, history);
+      const response = await askAiSupportAssistant(cleanQuery, history, 'call');
 
       const aiReply = response?.reply || `For @${currentUser.username}: Our mini-games grant +10,000,000 points for wins and +5,000,000 points for ties, your media is encrypted and automatically routed by format, and your privacy is 100% protected. What else can I solve for you?`;
       

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="os-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#03040a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="os-film" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#3dc8ff"/>
+      <stop offset="25%" stop-color="#a25bff"/>
+      <stop offset="50%" stop-color="#ff2bd6"/>
+      <stop offset="75%" stop-color="#ffe93d"/>
+      <stop offset="100%" stop-color="#3dffb0"/>
+    </radialGradient>
+    <style>
+      .film { transform-origin: 100px 100px; animation: os-swirl 5s linear infinite; }
+      @keyframes os-swirl { 0% { transform: rotate(0deg) scale(1); filter: hue-rotate(0deg); } 100% { transform: rotate(360deg) scale(1); filter: hue-rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#os-bg)"/>
+  <circle class="film" cx="100" cy="100" r="70" fill="url(#os-film)" opacity="0.9"/>
+  <g class="film" opacity="0.55" fill="none" stroke="#ffffff" stroke-width="1.4">
+    <path d="M60 70 C 90 50, 130 60, 130 100"/>
+    <path d="M140 130 C 110 150, 70 140, 70 100"/>
+    <path d="M75 60 C 110 45, 145 75, 135 115"/>
+  </g>
+</svg>

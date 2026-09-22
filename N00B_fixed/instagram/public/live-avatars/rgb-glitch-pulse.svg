@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="rg-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#050505"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="rg-clip"><circle cx="100" cy="100" r="95"/></clipPath>
+    <style>
+      .r { animation: rg-shift-r 1.1s steps(6) infinite; }
+      .g { animation: rg-shift-g 1.1s steps(6) infinite; }
+      .b { animation: rg-shift-b 1.1s steps(6) infinite; }
+      @keyframes rg-shift-r { 0% { transform: translate(0,0); } 20% { transform: translate(6px,-2px); } 40% { transform: translate(-4px,3px); } 60% { transform: translate(3px,2px); } 80% { transform: translate(-5px,-3px); } 100% { transform: translate(0,0); } }
+      @keyframes rg-shift-g { 0% { transform: translate(0,0); } 20% { transform: translate(-5px,3px); } 40% { transform: translate(4px,-3px); } 60% { transform: translate(-3px,-2px); } 80% { transform: translate(5px,2px); } 100% { transform: translate(0,0); } }
+      @keyframes rg-shift-b { 0% { transform: translate(0,0); } 20% { transform: translate(2px,5px); } 40% { transform: translate(-6px,-1px); } 60% { transform: translate(4px,-4px); } 80% { transform: translate(-2px,4px); } 100% { transform: translate(0,0); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#rg-bg)"/>
+  <g clip-path="url(#rg-clip)" font-family="sans-serif" font-weight="900" font-size="70" text-anchor="middle">
+    <text class="r" x="100" y="122" fill="#ff2b4d" opacity="0.85">N</text>
+    <text class="g" x="100" y="122" fill="#2bff7a" opacity="0.85">N</text>
+    <text class="b" x="100" y="122" fill="#2b8aff" opacity="0.85">N</text>
+  </g>
+</svg>

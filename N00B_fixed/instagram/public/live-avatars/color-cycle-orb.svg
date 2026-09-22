@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cc-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#050505"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="cc-orb" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#ff2bd6"/>
+      <stop offset="70%" stop-color="#3dc8ff"/>
+      <stop offset="100%" stop-color="#4d0d66"/>
+    </radialGradient>
+    <style>
+      .orb { animation: cc-cycle 3s linear infinite; }
+      @keyframes cc-cycle {
+        0%   { filter: hue-rotate(0deg) drop-shadow(0 0 8px #ff2bd6); }
+        50%  { filter: hue-rotate(180deg) drop-shadow(0 0 22px #ff2bd6); }
+        100% { filter: hue-rotate(360deg) drop-shadow(0 0 8px #ff2bd6); }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#cc-bg)"/>
+  <circle class="orb" cx="100" cy="100" r="65" fill="url(#cc-orb)"/>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="vs2-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#050510"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="vs2-clip"><circle cx="100" cy="100" r="95"/></clipPath>
+    <style>
+      .arm { transform-origin: 100px 100px; animation: vs2-spin 1.8s linear infinite; }
+      @keyframes vs2-spin { from { transform: rotate(0deg) scale(1); } to { transform: rotate(360deg) scale(1); } }
+      .pull { animation: vs2-pull 1.8s ease-in infinite; }
+      @keyframes vs2-pull { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(0.1); opacity: 0; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#vs2-bg)"/>
+  <g clip-path="url(#vs2-clip)">
+    <g class="arm">
+      <path d="M100 100 Q 160 60, 170 100 Q 175 150, 100 160 Q 30 170, 25 100 Q 20 40, 100 30" fill="none" stroke="#ff2bd6" stroke-width="10" stroke-linecap="round"/>
+    </g>
+    <g class="arm" style="animation-delay:-0.6s">
+      <path d="M100 100 Q 160 60, 170 100 Q 175 150, 100 160 Q 30 170, 25 100 Q 20 40, 100 30" fill="none" stroke="#3dc8ff" stroke-width="10" stroke-linecap="round"/>
+    </g>
+    <g class="arm" style="animation-delay:-1.2s">
+      <path d="M100 100 Q 160 60, 170 100 Q 175 150, 100 160 Q 30 170, 25 100 Q 20 40, 100 30" fill="none" stroke="#ffe93d" stroke-width="10" stroke-linecap="round"/>
+    </g>
+    <circle class="pull" cx="100" cy="100" r="90" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+  </g>
+</svg>

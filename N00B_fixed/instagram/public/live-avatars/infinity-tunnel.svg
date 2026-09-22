@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="it-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#050014"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="it-clip"><circle cx="100" cy="100" r="95"/></clipPath>
+    <style>
+      .ring { transform-origin: 100px 100px; animation: it-zoom 2.4s linear infinite; }
+      .r1 { animation-delay: 0s; } .r2 { animation-delay: -0.6s; } .r3 { animation-delay: -1.2s; } .r4 { animation-delay: -1.8s; }
+      @keyframes it-zoom {
+        0%   { transform: scale(0.1); opacity: 0; }
+        10%  { opacity: 1; }
+        100% { transform: scale(1.4); opacity: 0; }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#it-bg)"/>
+  <g clip-path="url(#it-clip)">
+    <circle class="ring r1" cx="100" cy="100" r="90" fill="none" stroke="#ff2bd6" stroke-width="6"/>
+    <circle class="ring r2" cx="100" cy="100" r="90" fill="none" stroke="#3dc8ff" stroke-width="6"/>
+    <circle class="ring r3" cx="100" cy="100" r="90" fill="none" stroke="#ffe93d" stroke-width="6"/>
+    <circle class="ring r4" cx="100" cy="100" r="90" fill="none" stroke="#3dffb0" stroke-width="6"/>
+  </g>
+</svg>

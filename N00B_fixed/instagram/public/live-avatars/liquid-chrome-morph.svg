@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="lc-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a12"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="lc-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2bd6"/>
+      <stop offset="25%" stop-color="#ffe93d"/>
+      <stop offset="50%" stop-color="#3dffb0"/>
+      <stop offset="75%" stop-color="#3dc8ff"/>
+      <stop offset="100%" stop-color="#a25bff"/>
+    </linearGradient>
+    <style>
+      .blob { animation: lc-morph 5s ease-in-out infinite, lc-hue 6s linear infinite; }
+      @keyframes lc-morph {
+        0%, 100% { d: path('M100 40 C 150 40, 165 90, 150 130 C 135 170, 80 175, 50 145 C 20 115, 30 65, 65 45 C 80 36, 90 38, 100 40 Z'); }
+        50%      { d: path('M100 35 C 140 55, 170 75, 155 120 C 140 165, 90 165, 55 150 C 20 135, 25 80, 55 55 C 75 40, 90 30, 100 35 Z'); }
+      }
+      @keyframes lc-hue { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#lc-bg)"/>
+  <path class="blob" d="M100 40 C 150 40, 165 90, 150 130 C 135 170, 80 175, 50 145 C 20 115, 30 65, 65 45 C 80 36, 90 38, 100 40 Z" fill="url(#lc-metal)"/>
+  <ellipse cx="80" cy="75" rx="18" ry="10" fill="#ffffff" opacity="0.5"/>
+</svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ci-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .ring { animation: ci-breathe 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .c1 { animation-delay: 0s; } .c2 { animation-delay: -0.2s; } .c3 { animation-delay: -0.4s; } .c4 { animation-delay: -0.6s; }
+      .c5 { animation-delay: -0.8s; } .c6 { animation-delay: -1s; } .c7 { animation-delay: -1.2s; }
+      @keyframes ci-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.94); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ci-bg)"/>
+  <circle class="ring c1" cx="100" cy="100" r="88" fill="#ff2b4d"/>
+  <circle class="ring c2" cx="100" cy="100" r="75" fill="#ff8a3d"/>
+  <circle class="ring c3" cx="100" cy="100" r="62" fill="#ffe93d"/>
+  <circle class="ring c4" cx="100" cy="100" r="49" fill="#3dffb0"/>
+  <circle class="ring c5" cx="100" cy="100" r="36" fill="#3dc8ff"/>
+  <circle class="ring c6" cx="100" cy="100" r="23" fill="#a25bff"/>
+  <circle class="ring c7" cx="100" cy="100" r="10" fill="#ffffff"/>
+</svg>

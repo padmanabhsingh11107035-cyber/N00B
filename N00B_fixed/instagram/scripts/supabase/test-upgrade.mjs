@@ -253,5 +253,25 @@ const before17b = await snap();
 await db.exec(read(M17));
 check(JSON.stringify(await snap()) === JSON.stringify(before17b), 'running migration 17 a second time is harmless');
 
+section('Applying migration 18 (36 more illusion-style live profile picture presets) on top');
+const M18 = '20260922000018_illusion_live_avatars.sql';
+const oldPresets18 = (await db.query('select id, name, url, sort from live_avatar_presets order by sort')).rows;
+check(oldPresets18.length === 64, '(64 presets exist before this migration, exactly as migration 17 left them)');
+const before18 = await snap();
+await db.exec(read(M18));
+check(JSON.stringify(await snap()) === JSON.stringify(before18), 'migration 18 changes no count and no point total');
+check(JSON.stringify((await db.query('select id, name, url, sort from live_avatar_presets where sort <= 64 order by sort')).rows) === JSON.stringify(oldPresets18), 'every one of the existing 64 presets is byte-for-byte unchanged');
+const allPresets18 = (await db.query('select id, url, sort from live_avatar_presets order by sort')).rows;
+check(allPresets18.length === 100 && new Set(allPresets18.map((p) => p.id)).size === 100 && new Set(allPresets18.map((p) => p.url)).size === 100, '36 new presets are added, none repeating an id or a file path');
+check(allPresets18.every((p) => /^\/live-avatars\/[a-z0-9-]+\.svg$/.test(p.url)), 'every new preset points at a real-looking .svg file path');
+const somePro18 = (await db.query(`select p.id from profiles p where p.pro_tier is not null limit 1`)).rows[0];
+if (somePro18) {
+  const applied18 = await asUser(db, somePro18.id, async () => (await db.query(`select public.apply_live_avatar($1) as r`, ['illusion_cube'])).rows[0].r);
+  check(applied18.success !== false && applied18.user.avatar === '/live-avatars/illusion-cube.svg' && applied18.user.isLiveAvatar === true, 'a Pro account can already pick one of the 36 new presets');
+} else check(true, '(no Pro account in this backup to try it on)');
+const before18b = await snap();
+await db.exec(read(M18));
+check(JSON.stringify(await snap()) === JSON.stringify(before18b), 'running migration 18 a second time is harmless');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

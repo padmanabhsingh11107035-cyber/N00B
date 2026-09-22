@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="sb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#04060a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <radialGradient id="sb-film" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="20%" stop-color="#ff2bd6" stop-opacity="0.5"/>
+      <stop offset="45%" stop-color="#3dc8ff" stop-opacity="0.5"/>
+      <stop offset="70%" stop-color="#3dffb0" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#a25bff" stop-opacity="0.6"/>
+    </radialGradient>
+    <style>
+      .bubble { animation: sb-hue 4s linear infinite, sb-float 3s ease-in-out infinite; }
+      @keyframes sb-hue { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+      @keyframes sb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#sb-bg)"/>
+  <circle class="bubble" cx="100" cy="100" r="72" fill="url(#sb-film)"/>
+  <ellipse cx="75" cy="70" rx="16" ry="9" fill="#ffffff" opacity="0.7"/>
+  <circle cx="100" cy="100" r="72" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.5"/>
+</svg>

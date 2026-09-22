@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="dg-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a12"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="dg-clip"><circle cx="100" cy="100" r="90"/></clipPath>
+    <style>
+      .d { animation: dg-pulse 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .d1 { animation-delay: 0s; } .d2 { animation-delay: 0.15s; } .d3 { animation-delay: 0.3s; } .d4 { animation-delay: 0.45s; }
+      .d5 { animation-delay: 0.6s; } .d6 { animation-delay: 0.75s; } .d7 { animation-delay: 0.9s; } .d8 { animation-delay: 1.05s; } .d9 { animation-delay: 1.2s; }
+      @keyframes dg-pulse { 0%, 100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1); opacity: 1; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#dg-bg)"/>
+  <g clip-path="url(#dg-clip)">
+    <g>
+      <polygon class="d d1" points="40,40 55,55 40,70 25,55" fill="#ff2bd6"/>
+      <polygon class="d d2" points="100,40 115,55 100,70 85,55" fill="#ff8a3d"/>
+      <polygon class="d d3" points="160,40 175,55 160,70 145,55" fill="#ffe93d"/>
+      <polygon class="d d4" points="40,100 55,115 40,130 25,115" fill="#a3ff3d"/>
+      <polygon class="d d5" points="100,100 115,115 100,130 85,115" fill="#3dffb0"/>
+      <polygon class="d d6" points="160,100 175,115 160,130 145,115" fill="#3dc8ff"/>
+      <polygon class="d d7" points="40,160 55,175 40,190 25,175" fill="#4d5bff"/>
+      <polygon class="d d8" points="100,160 115,175 100,190 85,175" fill="#a25bff"/>
+      <polygon class="d d9" points="160,160 175,175 160,190 145,175" fill="#ff2b4d"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="mb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#08060f"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="mb-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff2b4d"/><stop offset="33%" stop-color="#ffe93d"/>
+      <stop offset="66%" stop-color="#3dc8ff"/><stop offset="100%" stop-color="#a25bff"/>
+    </linearGradient>
+    <style>
+      .loop { transform-origin: 100px 100px; animation: mb-spin 4s linear infinite; }
+      @keyframes mb-spin { from { transform: rotateY(0deg) rotate(0deg); } to { transform: rotateY(360deg) rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#mb-bg)"/>
+  <g class="loop" style="transform-box: fill-box;">
+    <path d="M60 100 C 60 70, 140 130, 140 100 C 140 70, 60 130, 60 100 Z" fill="none" stroke="url(#mb-grad)" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

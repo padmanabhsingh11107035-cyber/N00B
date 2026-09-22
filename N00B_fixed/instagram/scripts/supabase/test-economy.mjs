@@ -216,8 +216,8 @@ await expectFail(() => rpc(a, 'verify_account', 'secret-pw', 'coupon', 'FREEBADG
 section('6. Live profile pictures (a Pro perk)');
 await resetPeople();
 const presets = await rpc(a, 'live_avatar_presets_list');
-check(presets.presets.length === 64 && presets.presets[0].id === 'neon_pulse' && presets.presets[0].url === '/live-avatars/neon-pulse.svg' && presets.presets.at(-1).id === 'solar_flare', 'the 64 presets are listed in order');
-check(new Set(presets.presets.map((p) => p.id)).size === 64 && presets.presets.every((p) => /^\/live-avatars\/[a-z0-9-]+\.svg$/.test(p.url)), 'every preset has a unique id and a real-looking file path');
+check(presets.presets.length === 100 && presets.presets[0].id === 'neon_pulse' && presets.presets[0].url === '/live-avatars/neon-pulse.svg' && presets.presets.at(-1).id === 'illusion_cube', 'the 100 presets are listed in order');
+check(new Set(presets.presets.map((p) => p.id)).size === 100 && presets.presets.every((p) => /^\/live-avatars\/[a-z0-9-]+\.svg$/.test(p.url)), 'every preset has a unique id and a real-looking file path');
 await expectFail(() => rpc(a, 'apply_live_avatar', 'neon_pulse'), /NOOB Pro feature/, 'free accounts are refused');
 await db.query(`update profiles set pro_tier = 'starter' where id = $1`, [a]);
 const la = await rpc(a, 'apply_live_avatar', 'aurora_wave');
@@ -658,7 +658,7 @@ for (const [fn, args] of Object.entries(publicFns)) {
 check(anonBlocked.length === Object.keys(publicFns).length, `a logged-out visitor is refused by all ${Object.keys(publicFns).length} money, game, shop and admin functions`);
 for (const t of ['coupon_uses', 'reports', 'game_rooms', 'matchmaking_queue', 'user_game_state']) await expectFail(() => asAnon(db, () => db.query(`select * from public.${t}`)), /permission denied/, `a logged-out visitor can not read ${t}`);
 check((await asAnon(db, async () => { try { await db.query('select * from public.shop_items'); return false; } catch (e) { return /permission denied/.test(e.message); } })), 'nor the shop list');
-check((await call(a, 'select count(*)::int n from shop_items'))[0].n === 24 && (await call(a, 'select count(*)::int n from live_avatar_presets'))[0].n === 64, 'signed-in people can read the shop and preset lists');
+check((await call(a, 'select count(*)::int n from shop_items'))[0].n === 24 && (await call(a, 'select count(*)::int n from live_avatar_presets'))[0].n === 100, 'signed-in people can read the shop and preset lists');
 await expectFail(() => call(a, `insert into shop_items (id, name, type, content, price, category, sort) values ('x', 'x', 'emoji', 'x', 1, 'x', 99)`), /permission denied/, 'but nobody can edit the shop list');
 await expectFail(() => call(a, `update shop_items set price = 1`), /permission denied/, 'or its prices');
 

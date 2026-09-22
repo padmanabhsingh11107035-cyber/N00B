@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="tv-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#050510"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="tv-clip"><circle cx="100" cy="100" r="95"/></clipPath>
+    <style>
+      .ping { animation: tv-ping 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+      .p2 { animation-delay: -0.66s; } .p3 { animation-delay: -1.33s; }
+      @keyframes tv-ping { 0% { transform: scale(0.15); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#tv-bg)"/>
+  <g clip-path="url(#tv-clip)">
+    <circle class="ping" cx="100" cy="100" r="60" fill="none" stroke="#ff2bd6" stroke-width="3"/>
+    <circle class="ping p2" cx="100" cy="100" r="60" fill="none" stroke="#3dc8ff" stroke-width="3"/>
+    <circle class="ping p3" cx="100" cy="100" r="60" fill="none" stroke="#ffe93d" stroke-width="3"/>
+  </g>
+  <circle cx="100" cy="100" r="14" fill="#ffffff"/>
+</svg>

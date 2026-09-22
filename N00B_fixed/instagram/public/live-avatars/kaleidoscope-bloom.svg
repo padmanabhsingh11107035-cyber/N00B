@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="kb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#100816"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="kb-clip"><circle cx="100" cy="100" r="95"/></clipPath>
+    <style>
+      .bloom { transform-origin: 100px 100px; animation: kb-spin 10s linear infinite; }
+      @keyframes kb-spin { from { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.12); } to { transform: rotate(360deg) scale(1); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#kb-bg)"/>
+  <g clip-path="url(#kb-clip)">
+    <g class="bloom">
+      <path d="M100 100 L100 20 A80 80 0 0 1 169 60 Z" fill="#ff2bd6" opacity="0.85"/>
+      <path d="M100 100 L169 60 A80 80 0 0 1 169 140 Z" fill="#ff8a3d" opacity="0.85"/>
+      <path d="M100 100 L169 140 A80 80 0 0 1 100 180 Z" fill="#ffe93d" opacity="0.85"/>
+      <path d="M100 100 L100 180 A80 80 0 0 1 31 140 Z" fill="#3dffb0" opacity="0.85"/>
+      <path d="M100 100 L31 140 A80 80 0 0 1 31 60 Z" fill="#3dc8ff" opacity="0.85"/>
+      <path d="M100 100 L31 60 A80 80 0 0 1 100 20 Z" fill="#a25bff" opacity="0.85"/>
+      <circle cx="100" cy="100" r="35" fill="#0a0612" opacity="0.9"/>
+      <circle cx="100" cy="100" r="35" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.5"/>
+    </g>
+  </g>
+</svg>

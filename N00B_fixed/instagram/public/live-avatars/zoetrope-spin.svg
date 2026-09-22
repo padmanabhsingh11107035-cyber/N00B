@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="zt-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .disc { transform-origin: 100px 100px; animation: zt-spin 0.6s steps(12) infinite; }
+      @keyframes zt-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#zt-bg)"/>
+  <g class="disc">
+    <path d="M100 100 L100 15 A85 85 0 0 1 122 18 Z" fill="#ff2b4d"/>
+    <path d="M100 100 L122 18 A85 85 0 0 1 143 27 Z" fill="#050505"/>
+    <path d="M100 100 L143 27 A85 85 0 0 1 161 40 Z" fill="#ff8a3d"/>
+    <path d="M100 100 L161 40 A85 85 0 0 1 175 58 Z" fill="#050505"/>
+    <path d="M100 100 L175 58 A85 85 0 0 1 183 79 Z" fill="#ffe93d"/>
+    <path d="M100 100 L183 79 A85 85 0 0 1 185 100 Z" fill="#050505"/>
+    <path d="M100 100 L185 100 A85 85 0 0 1 183 122 Z" fill="#3dffb0"/>
+    <path d="M100 100 L183 122 A85 85 0 0 1 175 143 Z" fill="#050505"/>
+    <path d="M100 100 L175 143 A85 85 0 0 1 161 161 Z" fill="#3dc8ff"/>
+    <path d="M100 100 L161 161 A85 85 0 0 1 143 174 Z" fill="#050505"/>
+    <path d="M100 100 L143 174 A85 85 0 0 1 122 183 Z" fill="#a25bff"/>
+    <path d="M100 100 L122 183 A85 85 0 0 1 100 185 Z" fill="#050505"/>
+    <path d="M100 100 L100 185 A85 85 0 0 1 78 183 Z" fill="#ff2bd6"/>
+    <path d="M100 100 L78 183 A85 85 0 0 1 58 175 Z" fill="#050505"/>
+    <path d="M100 100 L58 175 A85 85 0 0 1 40 161 Z" fill="#ff2b4d"/>
+    <path d="M100 100 L40 161 A85 85 0 0 1 27 143 Z" fill="#050505"/>
+    <path d="M100 100 L27 143 A85 85 0 0 1 18 122 Z" fill="#ff8a3d"/>
+    <path d="M100 100 L18 122 A85 85 0 0 1 15 100 Z" fill="#050505"/>
+    <path d="M100 100 L15 100 A85 85 0 0 1 18 78 Z" fill="#ffe93d"/>
+    <path d="M100 100 L18 78 A85 85 0 0 1 27 58 Z" fill="#050505"/>
+    <path d="M100 100 L27 58 A85 85 0 0 1 40 40 Z" fill="#3dffb0"/>
+    <path d="M100 100 L40 40 A85 85 0 0 1 58 27 Z" fill="#050505"/>
+    <path d="M100 100 L58 27 A85 85 0 0 1 78 18 Z" fill="#3dc8ff"/>
+    <path d="M100 100 L78 18 A85 85 0 0 1 100 15 Z" fill="#050505"/>
+  </g>
+</svg>

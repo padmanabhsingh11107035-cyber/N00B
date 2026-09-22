@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="td-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0812"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .pulse { transform-origin: 100px 100px; animation: td-pulse 3s ease-in-out infinite; }
+      @keyframes td-pulse { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(20deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#td-bg)"/>
+  <g class="pulse">
+    <circle cx="100" cy="100" r="88" fill="#a25bff"/>
+    <circle cx="100" cy="100" r="72" fill="#ff2bd6"/>
+    <circle cx="100" cy="100" r="58" fill="#ff2b4d"/>
+    <circle cx="100" cy="100" r="45" fill="#ff8a3d"/>
+    <circle cx="100" cy="100" r="33" fill="#ffe93d"/>
+    <circle cx="100" cy="100" r="22" fill="#3dffb0"/>
+    <circle cx="100" cy="100" r="11" fill="#3dc8ff"/>
+  </g>
+</svg>

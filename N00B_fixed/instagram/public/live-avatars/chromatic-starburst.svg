@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cs-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0512"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .burst { transform-origin: 100px 100px; animation: cs-spin 5s linear infinite; }
+      @keyframes cs-spin {
+        0%   { transform: rotate(0deg) scale(1); }
+        50%  { transform: rotate(180deg) scale(1.15); }
+        100% { transform: rotate(360deg) scale(1); }
+      }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#cs-bg)"/>
+  <g class="burst">
+    <path d="M100 100 L100 20 L108 55 Z" fill="#ff2b4d"/>
+    <path d="M100 100 L145 30 L130 62 Z" fill="#ff8a3d"/>
+    <path d="M100 100 L175 65 L142 75 Z" fill="#ffe93d"/>
+    <path d="M100 100 L180 100 L145 100 Z" fill="#a3ff3d"/>
+    <path d="M100 100 L175 135 L142 125 Z" fill="#3dffb0"/>
+    <path d="M100 100 L145 170 L130 138 Z" fill="#3dc8ff"/>
+    <path d="M100 100 L100 180 L92 145 Z" fill="#4d5bff"/>
+    <path d="M100 100 L55 170 L70 138 Z" fill="#a25bff"/>
+    <path d="M100 100 L25 135 L58 125 Z" fill="#ff2bd6"/>
+    <path d="M100 100 L20 100 L55 100 Z" fill="#ff2b4d"/>
+    <path d="M100 100 L25 65 L58 75 Z" fill="#ff8a3d"/>
+    <path d="M100 100 L55 30 L70 62 Z" fill="#ffe93d"/>
+  </g>
+  <circle cx="100" cy="100" r="20" fill="#000000"/>
+  <circle cx="100" cy="100" r="20" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
+</svg>

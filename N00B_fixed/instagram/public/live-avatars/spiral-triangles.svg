@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="st2-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#08040f"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .arm { transform-origin: 100px 100px; animation: st2-spin 7s linear infinite; }
+      @keyframes st2-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#st2-bg)"/>
+  <g class="arm">
+    <polygon points="100,100 100,25 120,55" fill="#ff2b4d"/>
+    <polygon points="100,100 138,40 150,75" fill="#ff8a3d"/>
+    <polygon points="100,100 165,75 155,110" fill="#ffe93d"/>
+    <polygon points="100,100 175,120 140,130" fill="#a3ff3d"/>
+    <polygon points="100,100 150,160 120,145" fill="#3dffb0"/>
+    <polygon points="100,100 105,175 80,150" fill="#3dc8ff"/>
+    <polygon points="100,100 50,165 65,130" fill="#4d5bff"/>
+    <polygon points="100,100 30,120 65,110" fill="#a25bff"/>
+    <polygon points="100,100 25,75 60,85" fill="#ff2bd6"/>
+    <polygon points="100,100 55,45 75,70" fill="#ff2b4d"/>
+  </g>
+  <circle cx="100" cy="100" r="16" fill="#000" stroke="#fff" stroke-width="1.2" opacity="0.8"/>
+</svg>

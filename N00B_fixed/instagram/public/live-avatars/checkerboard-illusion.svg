@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ck-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="ck-clip"><circle cx="100" cy="100" r="90"/></clipPath>
+    <style>
+      .grid { transform-origin: 100px 100px; animation: ck-warp 3.2s ease-in-out infinite; }
+      @keyframes ck-warp { 0%, 100% { transform: scale(1,1) rotate(0deg); } 50% { transform: scale(1.15,0.85) rotate(8deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ck-bg)"/>
+  <g clip-path="url(#ck-clip)">
+    <g class="grid">
+      <rect x="10" y="10" width="180" height="180" fill="#0a0a0a"/>
+      <g fill="#ff2b4d"><rect x="10" y="10" width="30" height="30"/><rect x="70" y="10" width="30" height="30"/><rect x="130" y="10" width="30" height="30"/>
+      <rect x="40" y="40" width="30" height="30"/><rect x="100" y="40" width="30" height="30"/><rect x="160" y="40" width="30" height="30"/>
+      <rect x="10" y="70" width="30" height="30"/><rect x="70" y="70" width="30" height="30"/><rect x="130" y="70" width="30" height="30"/></g>
+      <g fill="#3dc8ff"><rect x="40" y="100" width="30" height="30"/><rect x="100" y="100" width="30" height="30"/><rect x="160" y="100" width="30" height="30"/>
+      <rect x="10" y="130" width="30" height="30"/><rect x="70" y="130" width="30" height="30"/><rect x="130" y="130" width="30" height="30"/>
+      <rect x="40" y="160" width="30" height="30"/><rect x="100" y="160" width="30" height="30"/><rect x="160" y="160" width="30" height="30"/></g>
+    </g>
+  </g>
+</svg>

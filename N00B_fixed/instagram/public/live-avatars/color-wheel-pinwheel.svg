@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="cp-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a12"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .wheel { transform-origin: 100px 100px; animation: cp-spin 2.2s linear infinite; }
+      @keyframes cp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#cp-bg)"/>
+  <g class="wheel">
+    <path d="M100 100 L100 15 A85 85 0 0 1 160 40 Z" fill="#ff2b4d"/>
+    <path d="M100 100 L160 40 A85 85 0 0 1 185 100 Z" fill="#ff8a3d"/>
+    <path d="M100 100 L185 100 A85 85 0 0 1 160 160 Z" fill="#ffe93d"/>
+    <path d="M100 100 L160 160 A85 85 0 0 1 100 185 Z" fill="#a3ff3d"/>
+    <path d="M100 100 L100 185 A85 85 0 0 1 40 160 Z" fill="#3dffb0"/>
+    <path d="M100 100 L40 160 A85 85 0 0 1 15 100 Z" fill="#3dc8ff"/>
+    <path d="M100 100 L15 100 A85 85 0 0 1 40 40 Z" fill="#4d5bff"/>
+    <path d="M100 100 L40 40 A85 85 0 0 1 100 15 Z" fill="#a25bff"/>
+    <circle cx="100" cy="100" r="18" fill="#000000"/>
+  </g>
+</svg>

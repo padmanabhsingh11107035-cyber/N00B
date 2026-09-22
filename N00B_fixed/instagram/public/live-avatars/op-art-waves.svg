@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ow-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <clipPath id="ow-clip"><circle cx="100" cy="100" r="95"/></clipPath>
+    <style>
+      .wave { animation: ow-move 2.6s ease-in-out infinite; }
+      .w2 { animation-delay: -0.3s; } .w3 { animation-delay: -0.6s; } .w4 { animation-delay: -0.9s; } .w5 { animation-delay: -1.2s; } .w6 { animation-delay: -1.5s; }
+      @keyframes ow-move { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(14px); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ow-bg)"/>
+  <g clip-path="url(#ow-clip)" stroke-width="9" fill="none" stroke-linecap="round">
+    <path class="wave" d="M-20 25 Q 30 5, 80 25 T 220 25" stroke="#ff2b4d"/>
+    <path class="wave w2" d="M-20 55 Q 30 35, 80 55 T 220 55" stroke="#ff8a3d"/>
+    <path class="wave w3" d="M-20 85 Q 30 65, 80 85 T 220 85" stroke="#ffe93d"/>
+    <path class="wave w4" d="M-20 115 Q 30 95, 80 115 T 220 115" stroke="#3dffb0"/>
+    <path class="wave w5" d="M-20 145 Q 30 125, 80 145 T 220 145" stroke="#3dc8ff"/>
+    <path class="wave w6" d="M-20 175 Q 30 155, 80 175 T 220 175" stroke="#a25bff"/>
+  </g>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="fb-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#08040e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .tier { transform-origin: 100px 100px; animation: fb-spin 6s linear infinite; }
+      .t1 { animation-delay: 0s; } .t2 { animation-direction: reverse; animation-delay: 0s; } .t3 { animation-delay: 0s; }
+      @keyframes fb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#fb-bg)"/>
+  <g class="tier t1">
+    <circle cx="100" cy="30" r="12" fill="#ff2bd6"/><circle cx="149" cy="51" r="12" fill="#ff8a3d"/><circle cx="170" cy="100" r="12" fill="#ffe93d"/>
+    <circle cx="149" cy="149" r="12" fill="#a3ff3d"/><circle cx="100" cy="170" r="12" fill="#3dffb0"/><circle cx="51" cy="149" r="12" fill="#3dc8ff"/>
+    <circle cx="30" cy="100" r="12" fill="#4d5bff"/><circle cx="51" cy="51" r="12" fill="#a25bff"/>
+  </g>
+  <g class="tier t2">
+    <circle cx="100" cy="55" r="8" fill="#ffe93d"/><circle cx="132" cy="68" r="8" fill="#3dffb0"/><circle cx="145" cy="100" r="8" fill="#3dc8ff"/>
+    <circle cx="132" cy="132" r="8" fill="#a25bff"/><circle cx="100" cy="145" r="8" fill="#ff2bd6"/><circle cx="68" cy="132" r="8" fill="#ff8a3d"/>
+    <circle cx="55" cy="100" r="8" fill="#ffe93d"/><circle cx="68" cy="68" r="8" fill="#3dffb0"/>
+  </g>
+  <circle class="tier t3" cx="100" cy="100" r="16" fill="#ffffff"/>
+</svg>

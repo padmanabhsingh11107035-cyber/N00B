@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="ic-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#08080e"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <style>
+      .cube { transform-origin: 100px 100px; animation: ic-spin 6s linear infinite; }
+      @keyframes ic-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#ic-bg)"/>
+  <g class="cube">
+    <polygon points="100,40 155,70 155,130 100,160 45,130 45,70" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.7"/>
+    <polygon points="100,40 155,70 100,100 45,70" fill="#ff2bd6" opacity="0.85"/>
+    <polygon points="155,70 155,130 100,160 100,100" fill="#3dc8ff" opacity="0.85"/>
+    <polygon points="45,70 45,130 100,160 100,100" fill="#ffe93d" opacity="0.85"/>
+    <line x1="100" y1="40" x2="100" y2="100" stroke="#ffffff" stroke-width="1.5" opacity="0.5"/>
+    <line x1="45" y1="70" x2="100" y2="100" stroke="#ffffff" stroke-width="1.5" opacity="0.5"/>
+    <line x1="155" y1="70" x2="100" y2="100" stroke="#ffffff" stroke-width="1.5" opacity="0.5"/>
+  </g>
+</svg>

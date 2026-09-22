@@ -74,6 +74,21 @@ export const PostCard: React.FC<PostCardProps> = ({
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
   const [showTagPill, setShowTagPill] = useState(false);
 
+  // The whole picture, never a hard crop — like Instagram's feed: the box takes the shape of whatever was uploaded, only nudged
+  // toward its 4:5 (portrait) / 1.91:1 (landscape) limits when a picture is more extreme than that. 4:5 while the real shape isn't
+  // known yet (page load, or a slide not opened before) keeps the very first paint identical to before, so there is no layout jump
+  // for the common case; it only widens/narrows once the picture's own shape is read off it.
+  const [slideAspect, setSlideAspect] = useState<number | null>(null);
+  const slideImgRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    setSlideAspect(null);
+    const img = slideImgRef.current;
+    if (img && img.complete && img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
+  }, [currentSlide?.mediaUrl]);
+  const MIN_ASPECT = 4 / 5; // Instagram's tallest allowed portrait
+  const MAX_ASPECT = 1.91; // Instagram's widest allowed landscape
+  const boxAspect = Math.min(MAX_ASPECT, Math.max(MIN_ASPECT, slideAspect ?? MIN_ASPECT));
+
   const primaryTaggedUser = post.taggedUsers && post.taggedUsers.length > 0 
     ? post.taggedUsers[0] 
     : post.collabUsername 
@@ -404,18 +419,24 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* 2. Post Media Container OR Rich Text Thought Card */}
       {hasSlides && currentSlide ? (
         <div
-          className="relative w-full aspect-[4/5] bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
+          className="relative w-full bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
+          style={{ aspectRatio: boxAspect }}
           onDoubleClick={handleDoubleTap}
           onTouchStart={post.slides && post.slides.length > 1 ? handleCarouselTouchStart : undefined}
           onTouchMove={post.slides && post.slides.length > 1 ? handleCarouselTouchMove : undefined}
           onTouchEnd={post.slides && post.slides.length > 1 ? handleCarouselTouchEnd : undefined}
         >
           <img
+            ref={slideImgRef}
             src={currentSlide.mediaUrl}
             alt={currentSlide.caption || post.caption}
             className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
             referrerPolicy="no-referrer"
             loading="lazy"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              if (img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
+            }}
           />
 
           {/* Double-tap animated heart pop */}

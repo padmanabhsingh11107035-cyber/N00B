@@ -52,7 +52,10 @@ try {
   const hlBefore = await rpc(A.c, 'my_highlights');
   check(hlBefore.length === 1 && hlBefore[0].items.some((it) => it.id === st.id), 'the story auto-saved into today\'s highlight');
   check(await fails(() => rpc(A.c, 'create_highlight', { p_title: 'Live', p_cover_url: '', p_story_ids: [st.id] }), /permission denied/), 'the old manual create-highlight path is retired');
-  check(await fails(() => A.c.from('stories').delete().eq('id', st.id), /permission denied/), 'a direct delete on stories is refused');
+  // A raw query-builder call resolves to {data, error} instead of throwing, so `fails()`
+  // (built for the throwing `rpc()` wrapper) can't be used here — check `error` directly.
+  const directDelete = await A.c.from('stories').delete().eq('id', st.id);
+  check(!!directDelete.error && /permission denied/.test(directDelete.error.message), 'a direct delete on stories is refused', `(got: ${directDelete.error?.message || 'no error — it succeeded!'})`);
   check((await rpc(A.c, 'delete_story', { p_story: st.id })).success === true, 'the owner can delete the story via delete_story');
   check((await rpc(A.c, 'my_highlights')).length === 0, 'that was the only story of the day, so the now-empty highlight is gone too');
 

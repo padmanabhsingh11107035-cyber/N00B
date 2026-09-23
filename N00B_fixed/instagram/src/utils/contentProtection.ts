@@ -113,6 +113,28 @@ export function installContentProtection(options: ProtectionOptions = {}): () =>
   };
   undo.push(() => win.clearTimeout(holdTimer));
 
+  // A native file/photo picker (any <input type="file">, including one opened through a <label>)
+  // is reported as the tab going "hidden" by some browsers, exactly like actually switching away —
+  // which put the privacy shield up over the WHOLE screen, at the highest possible stacking order,
+  // the instant someone tapped "Add Media" anywhere in the app, silently blocking every upload flow
+  // with nothing to show for it (no error — the click and the file pick both genuinely happened,
+  // the shield just covered the result). Clicking anything that opens a file picker marks a short
+  // window where a "hidden" reading is not treated as a real backgrounding.
+  let expectFilePicker = false;
+  let expectFilePickerTimer: number | undefined;
+  on(doc, 'click', (e: Event) => {
+    const target = e.target as Element | null;
+    if (!target?.closest) return;
+    const isFileInput = !!target.closest('input[type="file"]');
+    const label = target.closest('label[for]') as HTMLLabelElement | null;
+    const labelsFileInput = !!label && doc.getElementById(label.htmlFor)?.getAttribute('type') === 'file';
+    if (!isFileInput && !labelsFileInput) return;
+    expectFilePicker = true;
+    win.clearTimeout(expectFilePickerTimer);
+    expectFilePickerTimer = win.setTimeout(() => { expectFilePicker = false; }, 8000);
+  }, true);
+  undo.push(() => win.clearTimeout(expectFilePickerTimer));
+
   // -- screenshot shortcuts: cover the screen while the keys are down and for a moment after; also replace what PrintScreen
   //    put on the clipboard
   on(win, 'keydown', (e: KeyboardEvent) => {
@@ -129,9 +151,10 @@ export function installContentProtection(options: ProtectionOptions = {}): () =>
     }
   }, true);
 
-  // -- the tab is hidden (app switcher, another tab): nothing to preview
+  // -- the tab is hidden (app switcher, another tab): nothing to preview — unless a file picker
+  // opening is why, in which case this "hidden" reading is not a real backgrounding at all.
   on(doc, 'visibilitychange', () => {
-    if (doc.visibilityState === 'hidden') cover();
+    if (doc.visibilityState === 'hidden') { if (!expectFilePicker) cover(); }
     else uncover();
   });
   on(win, 'beforeprint', () => coverFor(1500));

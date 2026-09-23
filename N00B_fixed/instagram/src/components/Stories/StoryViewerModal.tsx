@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
-import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, fetchStoryViewers, fetchUserById } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -21,6 +21,10 @@ interface StoryViewerModalProps {
   // recording, "seen by", comments or delete menu — those all need a live `stories` row, which a
   // highlight's older pages no longer have once the original story expires and is deleted.
   isHighlight?: boolean;
+  // Only relevant with isHighlight: opens the highlight editor (rename / add / remove media) for
+  // whichever highlight is currently being viewed. Omitted (or the viewer isn't its owner) hides
+  // the edit pencil entirely — editing someone else's highlight isn't a thing.
+  onEditHighlight?: () => void;
 }
 
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
@@ -31,7 +35,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   onAddComment,
   onDeleteStory,
   onNavigateToProfile,
-  isHighlight = false
+  isHighlight = false,
+  onEditHighlight
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
@@ -262,6 +267,15 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
+            {isHighlight && isOwnStory && onEditHighlight && (
+              <button
+                onClick={onEditHighlight}
+                className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white"
+                title="Edit this highlight"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
             {!isHighlight && (isOwnStory || isMasterAdmin) && (
               <div className="relative">
                 <button

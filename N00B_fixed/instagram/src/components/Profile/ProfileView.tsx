@@ -2324,6 +2324,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onAddComment={() => {}}
           isHighlight
+          onEditHighlight={
+            isOwnProfile
+              ? () => {
+                  setEditingHighlight(activeHighlightForViewer);
+                  setActiveHighlightForViewer(null);
+                  setShowHighlightManager(true);
+                }
+              : undefined
+          }
         />
       )}
 

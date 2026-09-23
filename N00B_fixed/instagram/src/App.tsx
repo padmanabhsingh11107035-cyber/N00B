@@ -56,6 +56,8 @@ import { FeedView } from './components/Feed/FeedView';
 import { ExploreView } from './components/Explore/ExploreView';
 import { ReelsView } from './components/Reels/ReelsView';
 import { ChatView } from './components/Chat/ChatView';
+import { IncomingCallModal } from './components/Chat/IncomingCallModal';
+import { useIncomingCalls } from './components/Chat/useIncomingCalls';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
 import { MusicHubView } from './components/Music/MusicHubView';
@@ -101,6 +103,10 @@ export default function App() {
   }, [activeTab]);
   const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Mounted app-wide (not inside ChatView) so an incoming call reaches someone no matter which tab
+  // they're currently on — a hook, so it must be called unconditionally, before any early return
+  // below. It internally no-ops until currentUser is actually set.
+  const { incoming: incomingCall, decline: declineIncomingCall, clearAfterAccept: clearIncomingCallAfterAccept } = useIncomingCalls(currentUser);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -142,6 +148,7 @@ export default function App() {
   const [viewingProfileUser, setViewingProfileUser] = useState<User | null>(null);
   const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
+  const [pendingCallChatId, setPendingCallChatId] = useState<string | null>(null);
   const [gameToPlay, setGameToPlay] = useState<{
     game: MiniGameMeta;
     challenger?: string;
@@ -778,9 +785,20 @@ export default function App() {
 
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
 
+  const acceptIncomingCall = () => {
+    if (!incomingCall) return;
+    const chatId = incomingCall.chatId;
+    clearIncomingCallAfterAccept();
+    setActiveTab('chat');
+    setPendingCallChatId(chatId);
+  };
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 overflow-x-hidden">
       {isUpdateAvailable && <UpdateAvailableBanner />}
+      {incomingCall && (
+        <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
+      )}
       {/* 1. Left Desktop Sidebar (shown on xl: screens) */}
       <aside className="hidden xl:flex flex-col w-[240px] h-[92vh] sticky top-6 justify-between pb-4 shrink-0 select-none">
         <div className="space-y-7">
@@ -1067,6 +1085,8 @@ export default function App() {
                 onPendingChatUserHandled={() => setPendingChatUser(null)}
                 pendingChatId={pendingChatId}
                 onPendingChatIdHandled={() => setPendingChatId(null)}
+                pendingCallChatId={pendingCallChatId}
+                onPendingCallChatIdHandled={() => setPendingCallChatId(null)}
                 onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
                 onUserUpdated={(u) => setCurrentUser(u)}
                 onNavigateToProfile={handleNavigateToUserProfile}

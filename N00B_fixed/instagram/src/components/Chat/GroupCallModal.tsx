@@ -1,14 +1,27 @@
-import React, { useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Users, AlertTriangle, Loader2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Users, AlertTriangle, Loader2, SwitchCamera } from 'lucide-react';
 import type { User } from '../../types';
 import { useGroupCall, type CallParticipant } from './useGroupCall';
 import { MAX_CALL_PARTICIPANTS } from '../../services/callSignaling';
+import { listenForRings, sendRing } from '../../services/ringSignaling';
+
+interface RingTarget {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+}
 
 interface GroupCallModalProps {
   chatId: string;
   chatName: string;
   currentUser: User;
   onClose: () => void;
+  // Present only when THIS modal instance represents a fresh, outgoing call (the person tapped
+  // "Start a call" themselves) — the other chat members to ring. Omitted when arriving here by
+  // accepting someone else's ring, so accepting a call never also rings everyone right back.
+  ringMembers?: RingTarget[];
+  isGroup?: boolean;
 }
 
 // One participant's tile: their video when they have it on, otherwise their avatar — never a blank
@@ -61,9 +74,11 @@ const AudioSink: React.FC<{ stream: MediaStream }> = ({ stream }) => {
 // A real group call: direct WebRTC between everyone in it (see useGroupCall.ts). Nothing here is ever
 // saved — no recording, no call log, no message about who was on it — the call simply exists for as
 // long as people are in it.
-export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName, currentUser, onClose }) => {
-  const { joined, participants, micOn, cameraOn, error, join, leave, toggleMic, toggleCamera, atCapacity } = useGroupCall(chatId, currentUser);
+export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName, currentUser, onClose, ringMembers, isGroup }) => {
+  const { joined, participants, micOn, cameraOn, error, join, leave, toggleMic, toggleCamera, switchCamera, atCapacity } = useGroupCall(chatId, currentUser);
   const joinAttempted = useRef(false);
+  const ringSent = useRef(false);
+  const [declinedBy, setDeclinedBy] = useState<string[]>([]);
 
   useEffect(() => {
     if (joinAttempted.current) return;
@@ -72,7 +87,45 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Rings the other side(s) the moment this call actually opens — only when this modal represents
+  // a fresh outgoing call (ringMembers given), never when it was opened by accepting one.
+  useEffect(() => {
+    if (!ringMembers || ringMembers.length === 0 || ringSent.current) return;
+    ringSent.current = true;
+    const event = {
+      type: 'incoming' as const,
+      chatId,
+      chatName,
+      isGroup: !!isGroup,
+      from: { id: currentUser.id, username: currentUser.username, displayName: currentUser.displayName, avatar: currentUser.avatar }
+    };
+    for (const m of ringMembers) void sendRing(m.id, event).catch(() => undefined);
+  }, [ringMembers, chatId, chatName, isGroup, currentUser]);
+
+  // Only the caller listens for declines — shown as a small notice, never blocks the call (the
+  // people who did join keep talking regardless of who else said no).
+  useEffect(() => {
+    if (!ringMembers || ringMembers.length === 0) return;
+    const stop = listenForRings(currentUser.id, (e) => {
+      if (e.type === 'declined' && e.chatId === chatId) {
+        setDeclinedBy((prev) => (prev.includes(e.from.username) ? prev : [...prev, e.from.username]));
+      }
+    });
+    return stop;
+  }, [ringMembers, chatId, currentUser.id]);
+
   const handleClose = () => {
+    // Nobody ever picked up — let their phones stop ringing instead of leaving them hanging.
+    if (ringMembers && ringMembers.length > 0 && participants.length <= 1) {
+      const event = {
+        type: 'cancelled' as const,
+        chatId,
+        chatName,
+        isGroup: !!isGroup,
+        from: { id: currentUser.id, username: currentUser.username, displayName: currentUser.displayName, avatar: currentUser.avatar }
+      };
+      for (const m of ringMembers) void sendRing(m.id, event).catch(() => undefined);
+    }
     leave();
     onClose();
   };
@@ -94,6 +147,11 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName
           <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
             <Users className="w-3 h-3" /> {participants.length} in the call — direct between devices, nothing saved
           </p>
+          {declinedBy.length > 0 && (
+            <p className="text-[11px] text-amber-400 mt-0.5">
+              @{declinedBy.join(', @')} declined
+            </p>
+          )}
         </div>
       </header>
 
@@ -144,6 +202,16 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName
         >
           {cameraOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
         </button>
+        {cameraOn && (
+          <button
+            onClick={() => void switchCamera()}
+            disabled={!joined}
+            title="Switch between front and back camera"
+            className="p-4 rounded-full bg-zinc-800 text-white hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <SwitchCamera className="w-5 h-5" />
+          </button>
+        )}
         <button
           onClick={handleClose}
           title="Leave call"

@@ -163,6 +163,10 @@ interface ChatViewProps {
   // notification) instead of resolving/creating one from a target user.
   pendingChatId?: string | null;
   onPendingChatIdHandled?: () => void;
+  // Opens a chat AND its call screen directly — how accepting an incoming call ring (answered from
+  // anywhere in the app, see useIncomingCalls) hands off into the real call.
+  pendingCallChatId?: string | null;
+  onPendingCallChatIdHandled?: () => void;
   onMobileViewChange?: (view: 'list' | 'chat') => void;
   onUserUpdated?: (user: User) => void;
   onNavigateToProfile?: (user: User) => void;
@@ -216,6 +220,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onPendingChatUserHandled,
   pendingChatId,
   onPendingChatIdHandled,
+  pendingCallChatId,
+  onPendingCallChatIdHandled,
   onMobileViewChange,
   onUserUpdated,
   onNavigateToProfile
@@ -238,6 +244,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [editingText, setEditingText] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
+  // True only when THIS person tapped "Start a call" themselves — false when the call screen was
+  // opened by accepting someone else's ring (see the pendingCallChatId effect below). Controls
+  // whether GroupCallModal rings the other chat members at all.
+  const [callIsOutgoing, setCallIsOutgoing] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [globalChatTheme, setGlobalChatTheme] = useState<string>(() => {
@@ -695,6 +705,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
       onPendingChatIdHandled?.();
     }
   }, [pendingChatId, conversations]);
+
+  // Accepting an incoming call ring (from anywhere in the app — see useIncomingCalls) hands off
+  // here: open that chat and its call screen directly, without ringing anyone (callIsOutgoing stays
+  // false), since the ring already happened and this IS the answer to it.
+  useEffect(() => {
+    if (pendingCallChatId && conversations.some((c) => c.id === pendingCallChatId)) {
+      setActiveChatId(pendingCallChatId);
+      setMobileView('chat');
+      setCallIsOutgoing(false);
+      setShowCallModal(true);
+      onPendingCallChatIdHandled?.();
+    }
+  }, [pendingCallChatId, conversations]);
 
   const handleTogglePin = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1951,13 +1974,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </>
               )}
 
-              {/* Group Call — real groups only, and never while "only admins can send" is on (that
-                  restriction turns calling off for everyone, admins included, same as it does typing) */}
-              {activeChat?.isGroup && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
+              {/* Call — any real chat, 1:1 or group, except the AI chat, the Global Lounge, or while
+                  a group's "only admins can send" restriction is on (that turns calling off for
+                  everyone, admins included, same as it does typing) */}
+              {activeChat && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
                 <button
-                  onClick={() => setShowCallModal(true)}
+                  onClick={() => {
+                    setCallIsOutgoing(true);
+                    setShowCallModal(true);
+                  }}
                   className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:bg-[#00FF66] hover:text-black hover:border-[#00FF66] text-zinc-300 transition-all cursor-pointer"
-                  title="Start or join a call"
+                  title="Start a call"
                 >
                   <Phone className="w-4 h-4" />
                 </button>
@@ -2888,13 +2915,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
         />
       )}
 
-      {/* Group Call */}
-      {showCallModal && activeChat?.isGroup && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
+      {/* Call — 1:1 or group */}
+      {showCallModal && activeChat && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
         <GroupCallModal
           chatId={activeChat.id}
-          chatName={activeChat.name || 'Group Chat'}
+          chatName={
+            activeChat.isGroup
+              ? activeChat.name || 'Group Chat'
+              : activeChat.participants.find((p) => p.id !== currentUser.id)?.displayName ||
+                activeChat.participants.find((p) => p.id !== currentUser.id)?.username ||
+                'Chat'
+          }
           currentUser={currentUser}
-          onClose={() => setShowCallModal(false)}
+          isGroup={activeChat.isGroup}
+          ringMembers={
+            callIsOutgoing
+              ? activeChat.participants
+                  .filter((p) => p.id !== currentUser.id)
+                  .map((p) => ({ id: p.id, username: p.username, displayName: p.displayName, avatar: p.avatar }))
+              : undefined
+          }
+          onClose={() => {
+            setShowCallModal(false);
+            setCallIsOutgoing(false);
+          }}
         />
       )}
 

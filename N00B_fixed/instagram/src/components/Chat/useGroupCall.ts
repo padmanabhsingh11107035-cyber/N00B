@@ -35,6 +35,7 @@ export function useGroupCall(chatId: string, me: User) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
 
@@ -227,7 +228,7 @@ export function useGroupCall(chatId: string, me: User) {
       return;
     }
     try {
-      const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
       const track = camStream.getVideoTracks()[0];
       localStreamRef.current?.addTrack(track);
       for (const { pc } of peersRef.current.values()) pc.addTrack(track, localStreamRef.current!);
@@ -237,7 +238,34 @@ export function useGroupCall(chatId: string, me: User) {
     } catch {
       setError('Could not use your camera. Please allow camera access and try again.');
     }
-  }, [cameraOn, micOn, myPresence]);
+  }, [cameraOn, micOn, myPresence, facingMode]);
+
+  // Front/back camera switch — only meaningful once the camera is already on. Replaces the live
+  // video track both locally and on every existing peer connection (RTCRtpSender.replaceTrack),
+  // so nobody else in the call needs a renegotiation for this to take effect.
+  const switchCamera = useCallback(async () => {
+    if (!cameraOn) return;
+    const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+    try {
+      const camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: nextFacing } } });
+      const newTrack = camStream.getVideoTracks()[0];
+      const oldTrack = localStreamRef.current?.getVideoTracks()[0];
+      if (oldTrack) {
+        oldTrack.stop();
+        localStreamRef.current?.removeTrack(oldTrack);
+      }
+      localStreamRef.current?.addTrack(newTrack);
+      for (const { pc } of peersRef.current.values()) {
+        const sender = pc.getSenders().find((s) => s.track?.kind === 'video');
+        if (sender) await sender.replaceTrack(newTrack);
+        else pc.addTrack(newTrack, localStreamRef.current!);
+      }
+      setLocalStream(localStreamRef.current ? new MediaStream(localStreamRef.current.getTracks()) : null);
+      setFacingMode(nextFacing);
+    } catch {
+      setError('Could not switch cameras — this device may only have one.');
+    }
+  }, [cameraOn, facingMode]);
 
   useEffect(() => {
     aliveRef.current = true;
@@ -269,5 +297,18 @@ export function useGroupCall(chatId: string, me: User) {
     )
   ];
 
-  return { joined, participants, micOn, cameraOn, error, join, leave, toggleMic, toggleCamera, atCapacity: Object.keys(presence).length >= MAX_CALL_PARTICIPANTS };
+  return {
+    joined,
+    participants,
+    micOn,
+    cameraOn,
+    facingMode,
+    error,
+    join,
+    leave,
+    toggleMic,
+    toggleCamera,
+    switchCamera,
+    atCapacity: Object.keys(presence).length >= MAX_CALL_PARTICIPANTS
+  };
 }

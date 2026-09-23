@@ -170,9 +170,9 @@ await expectFail(() => rpc(c, 'chat_messages', g.id), /not a participant/, 'some
 check(!(await rpc(c, 'my_chats')).some((x) => x.id === g.id), '...and it disappears from their list');
 
 // =====================================================================================
-section('5b. Group calls: who may start one, and the "a call started" notification');
+section('5b. Calls (1:1 and group): who may start one, and the "a call started" notification');
 check((await rpc(a, 'can_start_call', g.id)) === true, 'a real group, not restricted, a member: calling is allowed');
-check((await rpc(a, 'can_start_call', ab.id)) === false, 'a direct 1:1 chat can never host a call');
+check((await rpc(a, 'can_start_call', ab.id)) === true, 'a direct 1:1 chat can now host a call too');
 check((await rpc(a, 'can_start_call', LOUNGE)) === false, 'the Global Lounge can never host a call either');
 check((await rpc(c, 'can_start_call', g.id)) === false, 'someone who already left the group can not start a call there');
 const beforeCall = (await n(`select count(*)::int n from notifications where target_user_id = $1 and type = 'call_started'`, [b]));
@@ -187,6 +187,11 @@ check((await rpc(a, 'can_start_call', g.id)) === false, 'a group under "only adm
 await expectFail(() => rpc(a, 'notify_call_started', g.id), /not available/, 'nor can a call be announced there while that restriction is on');
 check((await rpc(a, 'set_group_send_policy', g.id, false)).chat.onlyAdminsCanSend === false, '(switching it back off)');
 check((await rpc(a, 'can_start_call', g.id)) === true, 'and calling works again once the restriction is lifted');
+
+const beforeCall1to1 = (await n(`select count(*)::int n from notifications where target_user_id = $1 and type = 'call_started'`, [b]));
+check((await rpc(a, 'notify_call_started', ab.id)).success === true, 'starting a call in a 1:1 chat succeeds too');
+check((await n(`select count(*)::int n from notifications where target_user_id = $1 and type = 'call_started'`, [b])) === beforeCall1to1 + 1, 'the other person in the 1:1 gets the "call started" notification');
+await expectFail(() => rpc(admin, 'notify_call_started', ab.id), /not a participant/, 'somebody outside a 1:1 chat can not announce a call in it either');
 
 // =====================================================================================
 section('6. Per-person settings');

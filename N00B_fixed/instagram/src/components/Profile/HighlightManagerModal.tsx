@@ -41,6 +41,10 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
   // the post composer: image/* and video/* as two entirely separate inputs, never combined). Split
   // the same way here — no combined-type input anywhere in this component anymore.
   const handlePickFiles = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'image' | 'video') => {
+    // Logged unconditionally, before anything can go wrong: if this line is missing from the
+    // console after tapping "Add Photo"/"Add Video" and picking a file, the tap never reached the
+    // <input> at all (a picker/permissions/overlay problem) rather than the upload failing.
+    console.log('[HighlightManagerModal] handlePickFiles fired', { mediaType, fileCount: e.target.files?.length ?? 0 });
     const fileList = e.target.files;
     const ref = mediaType === 'video' ? videoInputRef : photoInputRef;
     if (ref.current) ref.current.value = '';
@@ -75,9 +79,15 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
             setPendingNew((prev) => [...prev, pending]);
           }
         } catch (err) {
+          // Logged too, not just shown — so a screenshot of the console after tapping "Add
+          // Photo"/"Add Video" always has something concrete on it if this still fails.
+          console.error('[HighlightManagerModal] upload failed:', err);
           setErrorMessage(err instanceof Error ? err.message : 'Upload failed. Please try again.');
         }
       }
+    } catch (err) {
+      console.error('[HighlightManagerModal] handlePickFiles crashed:', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong picking that file.');
     } finally {
       setIsUploading(false);
     }
@@ -191,28 +201,45 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               <label className="text-xs font-bold text-zinc-300">Photos &amp; Videos ({displayItems.length})</label>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-              {/* Two separate tiles/inputs, one per type — a single input whose accept covers both
-                  image/* and video/* was the one concrete difference from every OTHER upload in
-                  this app that's proven to work (the story uploader: image/* alone; the post
-                  composer: image/* and video/* as two entirely separate inputs, never combined).
-                  A <label htmlFor> is also the native way to open a file input — it doesn't depend
-                  on a ref existing yet or a JS .click() call succeeding. */}
-              <label
-                htmlFor="highlight-photo-input"
-                aria-disabled={isUploading}
-                className={`aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+              {/* Two separate tiles, one per type — a single input whose accept covers both image/*
+                  and video/* was one difference from every OTHER upload in this app that's proven to
+                  work; splitting it did not fix the real problem, though, so this goes one step
+                  further: the <input type="file"> is no longer opened indirectly at all (no
+                  <label htmlFor>, no JS .click() on a ref) — it sits right on top of the tile,
+                  invisible (opacity 0, not display:none/clip-rect) but literally where the finger
+                  taps, so the tap IS the click on the real input. This is the most-compatible way
+                  a custom-styled file button is built, with no cross-referencing that could quietly
+                  fail on a particular browser. */}
+              <div
+                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden ${isUploading ? 'opacity-50' : ''}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                 <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Photo'}</span>
-              </label>
-              <label
-                htmlFor="highlight-video-input"
-                aria-disabled={isUploading}
-                className={`aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handlePickFiles(e, 'image')}
+                  disabled={isUploading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label="Add Photo"
+                />
+              </div>
+              <div
+                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden ${isUploading ? 'opacity-50' : ''}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                 <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Video'}</span>
-              </label>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => handlePickFiles(e, 'video')}
+                  disabled={isUploading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label="Add Video"
+                />
+              </div>
 
               {displayItems.map((m, idx) => (
                 <div key={m.key} className="aspect-square relative rounded-2xl overflow-hidden border border-zinc-800 bg-black group">
@@ -241,33 +268,7 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               ))}
             </div>
             {/* No `multiple` — one at a time, exactly like the story uploader that already works,
-                is the safe, proven pattern; tapping "+ Add Photo"/"+ Add Video" again adds another.
-                `display:none` (Tailwind's `hidden`) is also a known trouble spot for firing events
-                on a file input in some WebViews — this is visually hidden a different way, by being
-                a 1x1px transparent layer, while staying part of the visible render tree. */}
-            {(() => {
-              const hiddenInputStyle: React.CSSProperties = { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 };
-              return (
-                <>
-                  <input
-                    ref={photoInputRef}
-                    id="highlight-photo-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handlePickFiles(e, 'image')}
-                    style={hiddenInputStyle}
-                  />
-                  <input
-                    ref={videoInputRef}
-                    id="highlight-video-input"
-                    type="file"
-                    accept="video/*"
-                    onChange={(e) => handlePickFiles(e, 'video')}
-                    style={hiddenInputStyle}
-                  />
-                </>
-              );
-            })()}
+                is the safe, proven pattern; tapping "Add Photo"/"Add Video" again adds another. */}
           </div>
 
           <div className="pt-2 flex items-center gap-2 justify-between border-t border-zinc-800">

@@ -77,6 +77,11 @@ const generateCaptchaCode = (): string => {
   return chars.join('');
 };
 
+// Temporary, on request: hides the preset/random avatar picker on signup, leaving only "Upload
+// Custom". Flip back to true to bring it back — nothing else needs to change, a fresh signup
+// still gets a sensible default avatar (PRESET_2D_AVATARS[0]) either way.
+const SHOW_AVATAR_PRESETS = false;
+
 // Curated 2D Cartoon and 2D Nature avatars. `gender` drives which ones show
 // in the picker for a given selected gender ('unisex' always shows).
 const PRESET_2D_AVATARS = [
@@ -1169,8 +1174,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <span>Profile</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-normal">2D Art</span>
+                    <span>Profile Photo</span>
+                    {SHOW_AVATAR_PRESETS && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-normal">2D Art</span>
+                    )}
                   </label>
                   <button
                     type="button"
@@ -1199,7 +1206,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     </div>
                   )}
 
-                  {PRESET_2D_AVATARS.filter((av) =>
+                  {SHOW_AVATAR_PRESETS && PRESET_2D_AVATARS.filter((av) =>
                     gender === 'Male'
                       ? av.gender === 'male' || av.gender === 'unisex'
                       : gender === 'Female'
@@ -1233,20 +1240,22 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     </button>
                   ))}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const seed = Math.random().toString(36).substring(2, 8);
-                      const dicebear = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
-                      setCustomAvatarUrl(dicebear);
-                      setCustomAvatarObjectKey('');
-                      setSelectedAvatar(dicebear);
-                    }}
-                    className="shrink-0 w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-cyan-400 transition-all cursor-pointer"
-                    title="Generate random character"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
+                  {SHOW_AVATAR_PRESETS && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const seed = Math.random().toString(36).substring(2, 8);
+                        const dicebear = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+                        setCustomAvatarUrl(dicebear);
+                        setCustomAvatarObjectKey('');
+                        setSelectedAvatar(dicebear);
+                      }}
+                      className="shrink-0 w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-cyan-400 transition-all cursor-pointer"
+                      title="Generate random character"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -286,5 +286,30 @@ check((await rpc(b, 'my_collections')).length === 0, 'collections are private to
 await expectFail(() => rpc(b, 'add_post_to_collection', col.collection.id, anyPost), /Collection not found/, 'you can not add to someone else\'s collection');
 check((await rpc(a, 'create_collection', '  ', null)).collection.name === 'New Collection', 'an unnamed collection is called "New Collection"');
 
+// =====================================================================================
+section('5. "Followed by" (mutual followers)');
+await clean();
+// a follows b and c; c also follows b. d follows b too, but a does NOT follow d.
+await rpc(a, 'toggle_follow', b);
+await rpc(a, 'toggle_follow', c);
+await rpc(c, 'toggle_follow', b);
+await rpc(d, 'toggle_follow', b);
+{
+  const mutual = await rpc(a, 'mutual_followers', b);
+  check(Array.isArray(mutual) && mutual.length === 1 && mutual[0].id === c, 'viewing b from a shows c (a follows c, c follows b)');
+  check(!mutual.some((m) => m.id === d), 'd is not shown even though d follows b too — a does not follow d');
+}
+{
+  const mutualForC = await rpc(a, 'mutual_followers', c);
+  check(Array.isArray(mutualForC) && mutualForC.length === 0, 'viewing c from a shows nobody (a follows c directly, but nobody a follows also follows c)');
+}
+{
+  // b follows nobody a follows, and this only looks at who I (a) follow — not who follows me.
+  await rpc(b, 'toggle_follow', a); // b now follows a — a's FOLLOWERS gained b, but that must not count
+  const mutual = await rpc(a, 'mutual_followers', b);
+  check(mutual.length === 1 && mutual[0].id === c, 'a follower of mine following the target does not count — only accounts I follow do');
+}
+await clean();
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

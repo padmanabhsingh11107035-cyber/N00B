@@ -23,6 +23,7 @@ export {
   fetchUsers,
   fetchUserById,
   toggleFollowUser,
+  fetchMutualFollowers,
   acceptFollowRequest,
   declineFollowRequest,
   fetchPosts,
@@ -190,7 +191,8 @@ export type {
   MyCustomSticker,
   AdminStaffMember,
   AdminAuditEntry,
-  HiddenFromUser
+  HiddenFromUser,
+  MutualFollower
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

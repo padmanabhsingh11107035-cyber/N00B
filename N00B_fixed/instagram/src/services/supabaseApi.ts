@@ -455,6 +455,18 @@ export async function toggleFollowUser(userId: string): Promise<{ success: boole
   }
 }
 
+// "Followed by ..." on someone else's profile: accounts *I* follow who also follow them. Only ever
+// computed from my following list, never my followers.
+export interface MutualFollower { id: string; username: string; displayName?: string; avatar?: string }
+export async function fetchMutualFollowers(targetUserId: string): Promise<MutualFollower[]> {
+  try {
+    const list = await rpc<any[]>('mutual_followers', { p_target: targetUserId });
+    return (list || []).map((u) => ({ id: u.id, username: u.username, displayName: u.displayName, avatar: resolveMedia(u.avatar) }));
+  } catch {
+    return [];
+  }
+}
+
 export async function acceptFollowRequest(requesterId: string): Promise<{ success: boolean; followersCount: number; followRequests: any[] }> {
   try {
     const res = await rpc<any>('accept_follow_request', { p_requester: requesterId });
@@ -721,7 +733,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 

@@ -77,7 +77,9 @@ import {
   hideProfileFrom,
   unhideProfileFrom,
   fetchHighlights,
-  deleteHighlight
+  deleteHighlight,
+  fetchMutualFollowers,
+  type MutualFollower
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -300,6 +302,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     fetchHighlights(targetUser.id).then((list) => { if (alive) setHighlights(list); });
     return () => { alive = false; };
   }, [targetUser.id]);
+
+  // "Followed by ..." — accounts I follow who also follow this profile (Instagram-style mutual
+  // connections). Only ever computed from MY following list, never from my followers.
+  const [mutualFollowers, setMutualFollowers] = useState<MutualFollower[]>([]);
+  useEffect(() => {
+    if (isOwnProfile) { setMutualFollowers([]); return; }
+    let alive = true;
+    fetchMutualFollowers(targetUser.id).then((list) => { if (alive) setMutualFollowers(list); });
+    return () => { alive = false; };
+  }, [isOwnProfile, targetUser.id]);
 
   const handleDeleteHighlight = async (highlightId: string) => {
     const prev = highlights;
@@ -1390,6 +1402,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <p className="text-xs sm:text-sm text-zinc-200 whitespace-pre-line leading-relaxed max-w-2xl font-normal">
             {targetUser.bio || (isOwnProfile ? 'Welcome to my NOOB profile! Tap Edit Profile to customize your bio.' : 'No bio available yet.')}
           </p>
+
+          {mutualFollowers.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2 shrink-0">
+                {mutualFollowers.slice(0, 3).map((m) => (
+                  <img
+                    key={m.id}
+                    src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                    alt={m.username}
+                    referrerPolicy="no-referrer"
+                    className="w-5 h-5 rounded-full object-cover ring-2 ring-zinc-950 bg-black"
+                  />
+                ))}
+              </div>
+              <p className="text-[11px] text-zinc-400 truncate">
+                Followed by{' '}
+                <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[0].username}</span>
+                {mutualFollowers.length === 2 && (
+                  <>
+                    {' '}and <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[1].username}</span>
+                  </>
+                )}
+                {mutualFollowers.length > 2 && (
+                  <> and <span className="text-zinc-200 font-semibold">{mutualFollowers.length - 1} others</span></>
+                )}
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 pt-1">
             {targetUser.city && (

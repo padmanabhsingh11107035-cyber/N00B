@@ -53,7 +53,9 @@ import {
   SquarePen,
   Filter,
   Smile,
-  Reply
+  Reply,
+  Paperclip,
+  Film
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
@@ -126,6 +128,7 @@ import {
   subscribeToChatChanges,
   fetchMessages,
   sendMessage,
+  uploadMediaFile,
   editMessage,
   deleteMessage,
   sendTypingStatus,
@@ -255,6 +258,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
   const [shopError, setShopError] = useState<string | null>(null);
   const stickerFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Photo / video attachments, and voice messages (record with the mic, like WhatsApp). Photo and
+  // video get two separate single-type inputs rather than one combined accept — the same pattern
+  // used for highlight uploads, since a combined image/video accept type was the one concrete
+  // difference from every proven-working picker elsewhere in the app.
+  const chatPhotoInputRef = useRef<HTMLInputElement>(null);
+  const chatVideoInputRef = useRef<HTMLInputElement>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
   const [scheduledTime, setScheduledTime] = useState('');
   const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
   
@@ -952,6 +970,151 @@ export const ChatView: React.FC<ChatViewProps> = ({
       reportSendFailure(optimisticMsg.id, err);
     }
   };
+
+  // Shared by photo/video attachments and voice messages below — same optimistic-then-confirm
+  // pattern as handleSendGif/handleSendCustomSticker above, just generalized over the media type.
+  const sendMediaMessage = async (mediaUrl: string, mediaType: 'image' | 'video' | 'audio', audioDuration?: string) => {
+    if (!activeChat) return;
+    const optimisticMsg: Message = {
+      id: `temp_${Date.now()}`,
+      chatId: activeChat.id,
+      senderId: currentUser.id,
+      senderUsername: currentUser.username,
+      senderDisplayName: currentUser.displayName,
+      senderAvatar: currentUser.avatar,
+      text: '',
+      mediaUrl,
+      mediaType,
+      audioDuration,
+      createdAt: new Date().toISOString(),
+      isEdited: false,
+      status: 'delivered'
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    try {
+      const response = await sendMessage(activeChat.id, {
+        senderId: currentUser.id,
+        senderUsername: currentUser.username,
+        senderDisplayName: currentUser.displayName,
+        senderAvatar: currentUser.avatar,
+        text: '',
+        mediaUrl,
+        mediaType,
+        audioDuration
+      });
+      setMessages((prev) => {
+        const next = prev.map((m) =>
+          m.id === optimisticMsg.id
+            ? { ...response, mediaUrl: response?.mediaUrl || mediaUrl, mediaType, audioDuration, status: 'delivered' }
+            : m
+        );
+        safeLocalStorageSet(`${CACHE_KEY_MSGS}_${activeChat.id}`, safeJsonStringify(next));
+        return next;
+      });
+      setConversations((prev) => {
+        const label = mediaType === 'audio' ? '🎤 Voice message' : mediaType === 'video' ? '🎥 Video' : '📷 Photo';
+        const next = prev.map((c) =>
+          c.id === activeChat.id
+            ? { ...c, lastMessage: { ...response, mediaUrl: response?.mediaUrl || mediaUrl, status: 'delivered', text: label } }
+            : c
+        );
+        safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(next));
+        return next;
+      });
+    } catch (err) {
+      console.error(err);
+      reportSendFailure(optimisticMsg.id, err);
+    }
+  };
+
+  // Photo/video attachment: no `multiple`, and photo/video use two entirely separate single-type
+  // inputs. uploadMediaFile already refuses anything that isn't image/video/audio (a zip's mime type
+  // never matches), and the storage bucket itself is configured to only accept those three types too
+  // — so a zip attachment (the DoS concern) is refused twice over, independent of this UI.
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'image' | 'video') => {
+    const file = e.target.files?.[0];
+    const ref = mediaType === 'video' ? chatVideoInputRef : chatPhotoInputRef;
+    if (ref.current) ref.current.value = '';
+    setShowAttachMenu(false);
+    if (!file || !activeChat) return;
+    const maxBytes = (mediaType === 'video' ? 50 : 15) * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setSendError(`That ${mediaType} is too large — please keep it under ${mediaType === 'video' ? '50MB' : '15MB'}.`);
+      window.setTimeout(() => setSendError((c) => (c.startsWith('That ') ? '' : c)), 6000);
+      return;
+    }
+    setIsUploadingAttachment(true);
+    try {
+      const uploaded = await uploadMediaFile(file, 'chat');
+      await sendMediaMessage(uploaded.objectKey || uploaded.url, mediaType);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Could not send that attachment.');
+      window.setTimeout(() => setSendError((c) => (c === (err instanceof Error ? err.message : 'Could not send that attachment.') ? '' : c)), 6000);
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  // Voice messages: hold the mic to record, release to send (tap-to-lock isn't implemented — a
+  // press-and-hold, like WhatsApp's basic gesture, is enough here). Recording stays entirely local
+  // until the person lets go; nothing is uploaded if they cancel.
+  const startRecordingVoice = async () => {
+    if (!activeChat || isRecordingVoice) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
+      recordedChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined;
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecordingVoice(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    } catch {
+      setSendError('Microphone access was blocked. Please allow it in your browser settings to send voice messages.');
+      window.setTimeout(() => setSendError((c) => (c.startsWith('Microphone') ? '' : c)), 6000);
+    }
+  };
+
+  const stopRecordingVoice = (shouldSend: boolean) => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || !isRecordingVoice) return;
+    const durationSeconds = recordingSeconds;
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    setIsRecordingVoice(false);
+    recorder.onstop = async () => {
+      recordingStreamRef.current?.getTracks().forEach((t) => t.stop());
+      recordingStreamRef.current = null;
+      if (!shouldSend || durationSeconds < 1) return; // too short to be a real message, or cancelled
+      const blob = new Blob(recordedChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+      const ext = (recorder.mimeType || 'audio/webm').includes('mp4') ? 'm4a' : 'webm';
+      const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: blob.type });
+      const mm = Math.floor(durationSeconds / 60);
+      const ss = String(durationSeconds % 60).padStart(2, '0');
+      setIsUploadingAttachment(true);
+      try {
+        const uploaded = await uploadMediaFile(file, 'chat');
+        await sendMediaMessage(uploaded.objectKey || uploaded.url, 'audio', `${mm}:${ss}`);
+      } catch (err) {
+        setSendError(err instanceof Error ? err.message : 'Could not send that voice message.');
+        window.setTimeout(() => setSendError((c) => (c === (err instanceof Error ? err.message : 'Could not send that voice message.') ? '' : c)), 6000);
+      } finally {
+        setIsUploadingAttachment(false);
+      }
+    };
+    recorder.stop();
+  };
+
+  useEffect(() => {
+    // Safety net: leaving the chat (or the whole component unmounting) mid-recording must not leave
+    // the microphone silently open.
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   const handleSelectEmoji = (emoji: string) => {
     setInputText((prev) => prev + emoji);
@@ -1918,16 +2081,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
-                    {/* Voice duration badge */}
-                    {m.mediaType === 'audio' && (
-                      <div className="mb-1 flex items-center gap-2 text-emerald-400 font-semibold text-[11px]">
-                        <Mic className="w-3.5 h-3.5 animate-pulse" />
-                        <span>Voice Recording ({m.audioDuration || '0:14'})</span>
+                    {/* Voice message: a real playable <audio> element, not just a label — this used to
+                        show a hardcoded "Voice Recording (0:14)" badge and then fall through to the
+                        <img> branch below (nothing actually sent 'audio' messages, so it never got
+                        exercised until now). */}
+                    {m.mediaType === 'audio' && m.mediaUrl && (
+                      <div className="mb-2 flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 min-w-[180px]">
+                        <Mic className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <audio src={m.mediaUrl} controls className="h-8 flex-1 min-w-0" style={{ maxWidth: 220 }} />
+                        {m.audioDuration && <span className="text-[10px] text-zinc-400 shrink-0">{m.audioDuration}</span>}
                       </div>
                     )}
 
                     {/* Media / GIF / Video Display (stickers render separately, chrome-free, below) */}
-                    {m.mediaUrl && !isSticker && (
+                    {m.mediaUrl && !isSticker && m.mediaType !== 'audio' && (
                       <div className="mb-2 rounded-xl overflow-hidden min-h-[100px] max-w-xs sm:max-w-sm bg-black/40 border border-white/10 shadow-md">
                         {m.mediaType === 'video' ? (
                           <video
@@ -2423,7 +2590,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            {isRecordingVoice ? (
+              <div className="flex items-center gap-2 bg-black/80 border border-red-500/40 rounded-2xl px-3.5 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => stopRecordingVoice(false)}
+                  className="p-1.5 rounded-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                  title="Cancel recording"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                <span className="flex-1 text-xs font-bold text-red-300">
+                  Recording... {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => stopRecordingVoice(true)}
+                  className="px-3.5 py-1.5 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
+                >
+                  <Send className="w-3.5 h-3.5" /> Send
+                </button>
+              </div>
+            ) : (
+            <form onSubmit={handleSendMessage} className="flex items-center gap-2 relative">
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -2436,6 +2626,42 @@ export const ChatView: React.FC<ChatViewProps> = ({
               >
                 <Smile className="w-4 h-4" />
               </button>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAttachMenu((v) => !v)}
+                  disabled={isUploadingAttachment}
+                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer disabled:opacity-50 ${
+                    showAttachMenu
+                      ? 'bg-[#00FF66] text-black border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border-zinc-700'
+                  }`}
+                  title="Attach a photo or video"
+                >
+                  {isUploadingAttachment ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                </button>
+                {showAttachMenu && (
+                  <div className="absolute bottom-full mb-2 left-0 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 z-20 min-w-[150px]">
+                    <button
+                      type="button"
+                      onClick={() => { setShowAttachMenu(false); chatPhotoInputRef.current?.click(); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer text-left"
+                    >
+                      <Image className="w-4 h-4 text-cyan-400" /> Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAttachMenu(false); chatVideoInputRef.current?.click(); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer text-left"
+                    >
+                      <Film className="w-4 h-4 text-cyan-400" /> Video
+                    </button>
+                  </div>
+                )}
+                <input ref={chatPhotoInputRef} type="file" accept="image/*" onChange={(e) => handleAttachFile(e, 'image')} className="hidden" />
+                <input ref={chatVideoInputRef} type="file" accept="video/*" onChange={(e) => handleAttachFile(e, 'video')} className="hidden" />
+              </div>
 
               <div className="flex-1 flex items-center bg-black/80 border border-zinc-700/80 rounded-2xl px-3.5 py-2 focus-within:border-[#00FF66] transition-colors shadow-inner">
                 <input
@@ -2453,15 +2679,27 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={!inputText.trim()}
-                className="p-2.5 sm:px-4 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-[#00FF66]/20 cursor-pointer flex items-center gap-1.5"
-              >
-                <Send className="w-4 h-4" />
-                <span className="text-xs font-bold hidden sm:inline">Send</span>
-              </button>
+              {inputText.trim() ? (
+                <button
+                  type="submit"
+                  className="p-2.5 sm:px-4 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all shadow-md shadow-[#00FF66]/20 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="text-xs font-bold hidden sm:inline">Send</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startRecordingVoice}
+                  disabled={isUploadingAttachment}
+                  className="p-2.5 sm:px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-emerald-400 font-bold rounded-2xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  title="Record a voice message"
+                >
+                  {isUploadingAttachment ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                </button>
+              )}
             </form>
+            )}
             </>
             )}
           </div>

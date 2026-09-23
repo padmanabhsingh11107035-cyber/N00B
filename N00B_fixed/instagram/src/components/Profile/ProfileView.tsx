@@ -60,7 +60,7 @@ import {
   EyeOff,
   Eye
 } from 'lucide-react';
-import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight } from '../../types';
+import { Post, Reel, SavedCollection, User, AccountType } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
 import {
   fetchCollections,
@@ -76,8 +76,6 @@ import {
   toggleFollowUser,
   hideProfileFrom,
   unhideProfileFrom,
-  fetchHighlights,
-  deleteHighlight,
   fetchMutualFollowers,
   type MutualFollower
 } from '../../services/api';
@@ -86,8 +84,6 @@ import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { CustomerSupportModal } from '../Support/CustomerSupportModal';
-import { StoryViewerModal } from '../Stories/StoryViewerModal';
-import { HighlightManagerModal } from './HighlightManagerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -287,21 +283,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const targetFollowsMe = !!targetUser.followingIds?.includes(currentUser.id);
   const canMessageTarget = isTargetFollowing || targetFollowsMe;
 
-  // Highlights: every story the target user has ever posted, auto-grouped by the day it was
-  // posted, fetched fresh from the backend for whichever profile is being viewed — not this
-  // browser's own localStorage, so they're the same for every viewer and every device (see the
-  // 22 Sep story/highlight redesign).
-  const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
-  const [activeHighlightForViewer, setActiveHighlightForViewer] = useState<StoryHighlight | null>(null);
-  const [showHighlightManager, setShowHighlightManager] = useState(false);
-  const [editingHighlight, setEditingHighlight] = useState<StoryHighlight | null>(null);
-
-  const reloadHighlights = () => { fetchHighlights(targetUser.id).then(setHighlights); };
-  useEffect(() => {
-    let alive = true;
-    fetchHighlights(targetUser.id).then((list) => { if (alive) setHighlights(list); });
-    return () => { alive = false; };
-  }, [targetUser.id]);
+  // Highlights removed for now (temporary, deliberate — see the note further down where the row
+  // used to render). The backend (tables, RPCs, the auto-archive-from-story trigger) is untouched.
 
   // "Followed by ..." — accounts I follow who also follow this profile (Instagram-style mutual
   // connections). Only ever computed from MY following list, never from my followers.
@@ -312,13 +295,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     fetchMutualFollowers(targetUser.id).then((list) => { if (alive) setMutualFollowers(list); });
     return () => { alive = false; };
   }, [isOwnProfile, targetUser.id]);
-
-  const handleDeleteHighlight = async (highlightId: string) => {
-    const prev = highlights;
-    setHighlights((h) => h.filter((x) => x.id !== highlightId));
-    const ok = await deleteHighlight(highlightId);
-    if (!ok) setHighlights(prev);
-  };
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -1619,78 +1595,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       )}
 
-      {/* 5. Story Highlights: every story this person has posted, auto-saved and grouped by the
-          day it went up (see the 22 Sep story/highlight redesign) — plus, on your own profile,
-          any you made directly with "+ New" without ever posting a story for them. */}
-      {(isOwnProfile || highlights.length > 0) && (
-        <div className="mb-6 flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar">
-          {isOwnProfile && (
-            <div
-              onClick={() => {
-                setEditingHighlight(null);
-                setShowHighlightManager(true);
-              }}
-              className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
-            >
-              <div className="w-14 h-14 rounded-full bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:border-[#00FF66] group-hover:text-[#00FF66] transition-all group-hover:scale-105">
-                <Plus className="w-5 h-5" />
-              </div>
-              <span className="text-[11px] text-zinc-400 font-bold group-hover:text-[#00FF66] transition-colors">New</span>
-            </div>
-          )}
-
-          {highlights.map((hl) => (
-            <div key={hl.id} className="flex flex-col items-center gap-1.5 shrink-0 relative group">
-              <div
-                onClick={() => setActiveHighlightForViewer(hl)}
-                className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-[#00FF66] group-hover:to-emerald-400 transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
-              >
-                <img
-                  src={hl.coverUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                  alt={hl.title}
-                  className="w-full h-full rounded-full object-cover p-0.5 bg-black"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-
-              {isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingHighlight(hl);
-                    setShowHighlightManager(true);
-                  }}
-                  className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
-                  title={`Edit ${hl.title}`}
-                >
-                  <Edit3 className="w-2.5 h-2.5" />
-                </button>
-              )}
-              {isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteHighlight(hl.id);
-                  }}
-                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-red-500 hover:bg-red-600 text-zinc-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
-                  title={`Delete ${hl.title}`}
-                >
-                  <Trash2 className="w-2.5 h-2.5" />
-                </button>
-              )}
-
-              <span
-                onClick={() => setActiveHighlightForViewer(hl)}
-                className="text-[11px] text-zinc-300 font-medium truncate max-w-[68px] text-center cursor-pointer hover:text-[#00FF66] transition-colors"
-              >
-                {hl.title}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Highlights removed for now (temporary, deliberate — the whole highlight system is being
+          rebuilt from scratch on request; see git history for the removed UI). Nothing here touches
+          the database: existing highlight rows, the auto-archive-from-story trigger, and every
+          highlight RPC are all left completely alone, so no data is lost and rebuilding later just
+          means adding UI back on top of data that was never removed. */}
 
       {/* 6. Profile Content Navigation Tabs */}
       <div className="flex items-center justify-around border-b border-zinc-800 text-xs font-bold pt-2 mb-4">
@@ -2298,45 +2207,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         />
       )}
 
-      {/* 11. Highlight Viewer — the same story viewer, in playback-only mode (see the 22 Sep
-          story/highlight redesign). Manual highlight creation/editing is its own modal below. */}
-      {activeHighlightForViewer && (
-        <StoryViewerModal
-          stories={activeHighlightForViewer.items.map((it): Story => ({
-            id: it.id,
-            userId: targetUser.id,
-            username: targetUser.username,
-            userAvatar: targetUser.avatar,
-            isVerified: !!targetUser.isVerified,
-            mediaUrl: it.mediaUrl,
-            mediaType: it.mediaType,
-            durationSeconds: 5,
-            createdAt: it.createdAt,
-            expiresAt: it.createdAt,
-            isCloseFriendsOnly: false,
-            isViewed: true,
-            viewedBy: [],
-            stickers: it.stickers || [],
-            comments: []
-          }))}
-          initialIndex={0}
-          onClose={() => setActiveHighlightForViewer(null)}
-          currentUser={currentUser}
-          onAddComment={() => {}}
-          isHighlight
-        />
-      )}
-
-      {showHighlightManager && (
-        <HighlightManagerModal
-          existingHighlight={editingHighlight}
-          onDone={reloadHighlights}
-          onClose={() => {
-            setShowHighlightManager(false);
-            setEditingHighlight(null);
-          }}
-        />
-      )}
+      {/* Highlight viewer/manager modals removed along with the row above — see the note there. */}
 
       {/* 12. Fullscreen Profile Picture Modal */}
       <FullscreenAvatarModal

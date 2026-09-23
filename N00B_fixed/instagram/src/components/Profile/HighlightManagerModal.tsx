@@ -45,11 +45,16 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
     // console after tapping "Add Photo"/"Add Video" and picking a file, the tap never reached the
     // <input> at all (a picker/permissions/overlay problem) rather than the upload failing.
     console.log('[HighlightManagerModal] handlePickFiles fired', { mediaType, fileCount: e.target.files?.length ?? 0 });
-    const fileList = e.target.files;
+    // input.files is a LIVE FileList tied to the input itself, not a snapshot — resetting the
+    // input's value (below, so the same file can be re-picked later) mutates this exact object
+    // in place, dropping its length to 0. Copying the files out into a real array FIRST, before
+    // that reset, was the actual bug: every previous fix in this component's history worked around
+    // symptoms downstream of this line silently returning empty-handed, never around this line
+    // itself, so nothing every got as far as uploadMediaFile.
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
     const ref = mediaType === 'video' ? videoInputRef : photoInputRef;
     if (ref.current) ref.current.value = '';
-    if (!fileList || fileList.length === 0) return;
-    const files: File[] = Array.from(fileList);
+    if (files.length === 0) return;
 
     setErrorMessage(null);
     setIsUploading(true);

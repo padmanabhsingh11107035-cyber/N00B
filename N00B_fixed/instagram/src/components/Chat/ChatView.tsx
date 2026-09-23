@@ -1375,7 +1375,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       className={`w-full max-w-6xl mx-auto bg-zinc-950 border-zinc-800/80 shadow-2xl overflow-hidden flex flex-col ${
         mobileView === 'chat'
           ? 'fixed inset-0 z-50 h-[100dvh] rounded-none border-0 md:static md:z-auto md:h-[calc(100vh-80px)] md:min-h-[580px] md:max-h-[880px] md:rounded-2xl md:border md:mb-0'
-          : 'relative h-[calc(100vh-80px)] min-h-[580px] max-h-[880px] rounded-2xl border mb-16 sm:mb-0'
+          : 'relative h-[calc(100vh-80px)] min-h-[580px] max-h-[880px] rounded-2xl border'
       }`}
     >
       {chatBlockedNotice && (

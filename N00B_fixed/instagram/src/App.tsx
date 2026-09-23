@@ -968,7 +968,13 @@ export default function App() {
       <main
         className={`relative w-full max-w-[480px] ${
           activeTab === 'chat' ? 'md:max-w-4xl' : 'md:max-w-2xl'
-        } bg-black lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] pb-24 overflow-hidden shrink-0`}
+        } bg-black lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] ${
+          // The chat tab reserves its own bottom-nav clearance internally (its container's height
+          // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
+          // same space, pushing the whole page taller than one viewport and creating a second,
+          // unwanted page-level scroll on top of the chat list's own internal scroll.
+          activeTab === 'chat' ? '' : 'pb-24'
+        } overflow-hidden shrink-0`}
       >
         {activeTab === 'feed' && (
           <FeedView

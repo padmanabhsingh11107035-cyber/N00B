@@ -843,12 +843,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 3. greetings
-  if (/^(hi|hello|hey|hey there|greetings|hola|namaste|yo|sup|help|start)[.! ]*$/i.test(lower)) {
-    return reply({ model: 'instant-knowledge-engine', reply: `Hey ${name}! 👋 What can I help you with?` });
-  }
+  // (A canned "Hey! What can I help you with?" used to fire here for a bare "hi"/"hello"/"help" —
+  // exactly the message a lot of people send FIRST, right after the assistant's own welcome
+  // greeting. That's what "doesn't listen the first time" actually was: a real question sent as
+  // the very first message works fine even with empty history (the AI call below doesn't need
+  // any canned fast path), so a bare greeting now gets a genuine, varied AI reply too instead of
+  // a templated bounce-back that feels like being ignored.
 
-  // 4. everything else goes to the AI (with a little recent conversation for context)
+  // 3. everything goes to the AI (with a little recent conversation for context)
   const history = (Array.isArray(body.conversationHistory) ? body.conversationHistory : []).slice(-6)
     .map((h: any) => ({ role: h?.sender === 'bot' ? 'assistant' : 'user', content: String(h?.text ?? '').slice(0, 500) }))
     .filter((h: any) => h.content.trim());

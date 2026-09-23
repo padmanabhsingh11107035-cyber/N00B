@@ -232,7 +232,11 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 </div>
               ))}
             </div>
-            <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={handlePickFiles} />
+            {/* No `multiple` — a multi-select file input combined with a combined image+video
+                accept list is a known trouble spot on iOS Safari (the change event can simply
+                never fire after picking). One at a time, exactly like the story uploader that
+                already works, is the safe, proven pattern; tapping "+ Add Media" again adds another. */}
+            <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handlePickFiles} />
           </div>
 
           <div className="pt-2 flex items-center gap-2 justify-between border-t border-zinc-800">

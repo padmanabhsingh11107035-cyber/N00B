@@ -5,8 +5,8 @@ import { uploadMediaFile, createManualHighlight, renameHighlight, addToHighlight
 import confetti from 'canvas-confetti';
 
 interface HighlightManagerModalProps {
-  // Editing an existing (always manual — see is-manual gating where this is opened) highlight,
-  // or omitted to create a brand-new one.
+  // Editing an existing highlight (auto-built from stories, or made manually — both can be
+  // renamed and have items added/removed here), or omitted to create a brand-new manual one.
   existingHighlight?: StoryHighlight | null;
   onClose: () => void;
   // Called once, right before closing, with whatever actually changed happened during this
@@ -201,45 +201,46 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               <label className="text-xs font-bold text-zinc-300">Photos &amp; Videos ({displayItems.length})</label>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-              {/* Two separate tiles, one per type — a single input whose accept covers both image/*
-                  and video/* was one difference from every OTHER upload in this app that's proven to
-                  work; splitting it did not fix the real problem, though, so this goes one step
-                  further: the <input type="file"> is no longer opened indirectly at all (no
-                  <label htmlFor>, no JS .click() on a ref) — it sits right on top of the tile,
-                  invisible (opacity 0, not display:none/clip-rect) but literally where the finger
-                  taps, so the tap IS the click on the real input. This is the most-compatible way
-                  a custom-styled file button is built, with no cross-referencing that could quietly
-                  fail on a particular browser. */}
-              <div
-                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden ${isUploading ? 'opacity-50' : ''}`}
+              {/* Same trigger mechanism as every other proven-working upload in the app (story
+                  creation, the post composer, chat attachments): a real <button onClick> calls
+                  ref.current.click() on a plain hidden <input type="file">. An earlier version of
+                  this component put the <input> directly on top of the tile (opacity-0, no click()
+                  indirection) on the theory that ref.click() indirection was the problem — it
+                  wasn't; that version still didn't work on the user's real device, and every other
+                  working upload in this app uses ref.click(), so this reverts to matching them
+                  exactly rather than trying another one-off mechanism. */}
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={isUploading}
+                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${isUploading ? 'opacity-50' : ''}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                 <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Photo'}</span>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handlePickFiles(e, 'image')}
-                  disabled={isUploading}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label="Add Photo"
-                />
-              </div>
-              <div
-                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden ${isUploading ? 'opacity-50' : ''}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                disabled={isUploading}
+                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${isUploading ? 'opacity-50' : ''}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                 <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Video'}</span>
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => handlePickFiles(e, 'video')}
-                  disabled={isUploading}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                  aria-label="Add Video"
-                />
-              </div>
+              </button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handlePickFiles(e, 'image')}
+                className="hidden"
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={(e) => handlePickFiles(e, 'video')}
+                className="hidden"
+              />
 
               {displayItems.map((m, idx) => (
                 <div key={m.key} className="aspect-square relative rounded-2xl overflow-hidden border border-zinc-800 bg-black group">

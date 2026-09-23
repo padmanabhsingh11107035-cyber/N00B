@@ -898,7 +898,7 @@ export async function createManualHighlight(
   }
 }
 
-// Only a manual highlight can be renamed — one made from your stories keeps its automatic date name.
+// Any highlight you own can be renamed, including one made automatically from your stories.
 export async function renameHighlight(highlightId: string, title: string): Promise<{ success: boolean; error?: string }> {
   try {
     return await rpc('rename_highlight', { p_highlight: highlightId, p_title: title });

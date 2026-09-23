@@ -713,11 +713,29 @@ Deno.serve(async (req) => {
     const { data } = await admin.auth.getUser(token);
     userId = data?.user?.id ?? null;
   }
-  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || (req.headers.get('cf-connecting-ip') ?? 'unknown');
   // The app's own texts in another language: has its own (higher) pace limit, because a new language needs many small requests.
   if (body?.action === 'translate-ui') return await handleTranslateUi(body, admin, userId, ip);
   if (!allow(userId || `ip:${ip}`)) {
     return json({ error: 'Too many requests. Please wait a moment before sending another query.' }, 429);
+  }
+  // Every OTHER action below needs userId (translate/translate-text/gifs all return 401 without one),
+  // so an anonymous caller can only ever reach "support" — the one action that costs a real AI call.
+  // The check above is in-memory and per-instance: it stops one warm instance from being hammered,
+  // but not the same IP spread across several instances. This adds a real, shared counter (the same
+  // primitive translate-ui's own quota already uses) as a backstop specifically for guests, since
+  // they need no account at all to reach this — tighter than the general limit on purpose.
+  if (!userId) {
+    const now = new Date();
+    const minuteBucket = now.toISOString().slice(0, 16);
+    const dayBucket = minuteBucket.slice(0, 10);
+    const [{ data: perMinute }, { data: perDay }] = await Promise.all([
+      admin.rpc('ui_usage_take', { p_bucket: `guest-ai:${ip}:${minuteBucket}`, p_amount: 1, p_limit: 6 }),
+      admin.rpc('ui_usage_take', { p_bucket: `guest-ai-day:${ip}:${dayBucket}`, p_amount: 1, p_limit: 150 })
+    ]);
+    if (perMinute !== true || perDay !== true) {
+      return json({ error: 'Too many requests. Please wait a moment before sending another query.' }, 429);
+    }
   }
   const asUser = () => createClient(url, publicKey(), {
     global: { headers: { Authorization: `Bearer ${token}` } },

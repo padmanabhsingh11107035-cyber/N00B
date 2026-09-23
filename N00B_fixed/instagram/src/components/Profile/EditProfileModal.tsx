@@ -20,7 +20,7 @@ import {
   Cake
 } from 'lucide-react';
 import { User as UserType, AccountType } from '../../types';
-import { updateFullProfile, uploadMediaFile } from '../../services/api';
+import { updateFullProfile, updateCurrentUser, uploadMediaFile } from '../../services/api';
 import { COUNTRY_OPTIONS, GENDER_OPTIONS } from '../Auth/AuthView';
 import { BirthdayWheelPicker } from '../Auth/BirthdayWheelPicker';
 import confetti from 'canvas-confetti';
@@ -75,7 +75,39 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Change Password (its own mini-form — a different action from the profile save above, so it
+  // gets its own state and its own submit, and never touches or requires the current password).
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+    try {
+      setIsChangingPassword(true);
+      await updateCurrentUser({ password: newPassword });
+      setPasswordSuccess('Password changed successfully!');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordError(err?.message || 'Failed to change password. Please try again.');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   // Handle Avatar file selection
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -342,6 +374,54 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   : <span className="text-zinc-500">Select your date of birth</span>}
               </button>
             </div>
+          </div>
+
+          {/* Change Password — a separate action from Save Profile below, so it has its own button
+              and never asks for the current password. */}
+          <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-3">
+            <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-zinc-400" /> Change Password
+            </label>
+
+            {passwordError && (
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-[11px] font-semibold text-red-400">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-semibold text-[#00FF66]">
+                {passwordSuccess}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password"
+                autoComplete="new-password"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !newPassword || !confirmPassword}
+              className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold text-white flex items-center gap-1.5 transition-colors cursor-pointer border border-zinc-700"
+            >
+              <Lock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{isChangingPassword ? 'Updating...' : 'Update Password'}</span>
+            </button>
           </div>
 
           {/* Gender Selector */}

@@ -19,10 +19,6 @@ type PendingItem = { mediaUrl: string; mediaType: 'image' | 'video'; localPrevie
 
 export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ existingHighlight, onClose, onDone }) => {
   const isEditing = !!existingHighlight;
-  // An automatic (from-story) highlight can be added to and have items removed, same as a
-  // manual one, but its name always stays the automatic date label — matching "if the highlight
-  // is made from story then no name is assigned".
-  const canRename = isEditing ? !!existingHighlight?.isManual : true;
   const [title, setTitle] = useState(existingHighlight?.title || '');
   const [items, setItems] = useState(existingHighlight?.items || []);
   const [pendingNew, setPendingNew] = useState<PendingItem[]>([]);
@@ -32,16 +28,22 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [changed, setChanged] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = () => {
     if (changed) onDone();
     onClose();
   };
 
-  const handlePickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // A single input whose accept covers BOTH image/* and video/* is the one concrete difference
+  // from every OTHER upload in this app that's proven to work (the story uploader: image/* alone;
+  // the post composer: image/* and video/* as two entirely separate inputs, never combined). Split
+  // the same way here — no combined-type input anywhere in this component anymore.
+  const handlePickFiles = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'image' | 'video') => {
     const fileList = e.target.files;
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    const ref = mediaType === 'video' ? videoInputRef : photoInputRef;
+    if (ref.current) ref.current.value = '';
     if (!fileList || fileList.length === 0) return;
     const files: File[] = Array.from(fileList);
 
@@ -58,7 +60,6 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
         // that exception silently aborted the whole picker with no message and no item added,
         // which is exactly what looked like "choosing a photo does nothing".
         try {
-          const mediaType: 'image' | 'video' = file.type.startsWith('video') ? 'video' : 'image';
           const uploaded = await uploadMediaFile(file, 'stories');
           if (!uploaded.url) { setErrorMessage('Upload failed. Please try again.'); continue; }
           const pending: PendingItem = { mediaUrl: uploaded.objectKey || uploaded.url, mediaType, localPreview: uploaded.url };
@@ -103,7 +104,7 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
   };
 
   const handleSaveName = async () => {
-    if (!existingHighlight || !canRename || !title.trim() || title.trim() === existingHighlight.title) return;
+    if (!existingHighlight || !title.trim() || title.trim() === existingHighlight.title) return;
     setIsSavingName(true);
     setErrorMessage(null);
     const res = await renameHighlight(existingHighlight.id, title.trim());
@@ -144,12 +145,8 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               </div>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">
-                {isEditing ? (canRename ? 'Edit Highlight' : 'Edit Highlight (from your stories)') : 'New Highlight'}
-              </h2>
-              <p className="text-[11px] text-zinc-400">
-                {isEditing && !canRename ? 'Its name stays automatic, but you can add or remove photos and videos' : 'This never appears as a 24-hour story'}
-              </p>
+              <h2 className="text-base font-bold text-white">{isEditing ? 'Edit Highlight' : 'New Highlight'}</h2>
+              <p className="text-[11px] text-zinc-400">This never appears as a 24-hour story</p>
             </div>
           </div>
           <button onClick={handleClose} className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer">
@@ -166,7 +163,6 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
             <label className="text-xs font-bold text-zinc-300 block mb-1.5">
               Highlight Name{' '}
               {!isEditing && <span className="text-zinc-500 font-normal">(optional — leave blank for an automatic name)</span>}
-              {isEditing && !canRename && <span className="text-zinc-500 font-normal">(automatic — set by the day it was posted)</span>}
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -174,11 +170,10 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 maxLength={40}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                disabled={isEditing && !canRename}
                 placeholder="e.g. Summer Trip, Gaming Setup..."
-                className="w-full bg-zinc-900 border border-zinc-800 text-sm text-white px-3.5 py-2.5 rounded-2xl focus:border-[#00FF66] outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-zinc-900 border border-zinc-800 text-sm text-white px-3.5 py-2.5 rounded-2xl focus:border-[#00FF66] outline-none transition-colors"
               />
-              {isEditing && canRename && title.trim() && title.trim() !== existingHighlight?.title && (
+              {isEditing && title.trim() && title.trim() !== existingHighlight?.title && (
                 <button
                   type="button"
                   onClick={handleSaveName}
@@ -196,17 +191,27 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               <label className="text-xs font-bold text-zinc-300">Photos &amp; Videos ({displayItems.length})</label>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-              {/* A <label htmlFor> is the native way to open a file input — it doesn't depend on a
-                  ref existing yet or a JS .click() call succeeding, both of which can silently fail
-                  in some embedded/WebView contexts. This is the same reason a plain <label> is the
-                  standard, most-compatible way to build a custom-styled file picker button. */}
+              {/* Two separate tiles/inputs, one per type — a single input whose accept covers both
+                  image/* and video/* was the one concrete difference from every OTHER upload in
+                  this app that's proven to work (the story uploader: image/* alone; the post
+                  composer: image/* and video/* as two entirely separate inputs, never combined).
+                  A <label htmlFor> is also the native way to open a file input — it doesn't depend
+                  on a ref existing yet or a JS .click() call succeeding. */}
               <label
-                htmlFor="highlight-media-input"
+                htmlFor="highlight-photo-input"
                 aria-disabled={isUploading}
                 className={`aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />}
-                <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Media'}</span>
+                <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Photo'}</span>
+              </label>
+              <label
+                htmlFor="highlight-video-input"
+                aria-disabled={isUploading}
+                className={`aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+              >
+                {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />}
+                <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Video'}</span>
               </label>
 
               {displayItems.map((m, idx) => (
@@ -235,21 +240,34 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 </div>
               ))}
             </div>
-            {/* No `multiple` — a multi-select file input combined with a combined image+video
-                accept list is a known trouble spot on iOS Safari (the change event can simply
-                never fire after picking). One at a time, exactly like the story uploader that
-                already works, is the safe, proven pattern; tapping "+ Add Media" again adds another.
+            {/* No `multiple` — one at a time, exactly like the story uploader that already works,
+                is the safe, proven pattern; tapping "+ Add Photo"/"+ Add Video" again adds another.
                 `display:none` (Tailwind's `hidden`) is also a known trouble spot for firing events
                 on a file input in some WebViews — this is visually hidden a different way, by being
                 a 1x1px transparent layer, while staying part of the visible render tree. */}
-            <input
-              ref={fileInputRef}
-              id="highlight-media-input"
-              type="file"
-              accept="image/*,video/*"
-              onChange={handlePickFiles}
-              style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
-            />
+            {(() => {
+              const hiddenInputStyle: React.CSSProperties = { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 };
+              return (
+                <>
+                  <input
+                    ref={photoInputRef}
+                    id="highlight-photo-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePickFiles(e, 'image')}
+                    style={hiddenInputStyle}
+                  />
+                  <input
+                    ref={videoInputRef}
+                    id="highlight-video-input"
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => handlePickFiles(e, 'video')}
+                    style={hiddenInputStyle}
+                  />
+                </>
+              );
+            })()}
           </div>
 
           <div className="pt-2 flex items-center gap-2 justify-between border-t border-zinc-800">

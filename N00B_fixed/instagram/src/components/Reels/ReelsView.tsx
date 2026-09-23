@@ -17,7 +17,10 @@ import {
   Trash2,
   MoreHorizontal,
   MessageSquareOff,
-  EyeOff
+  EyeOff,
+  CornerDownRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import {
@@ -93,6 +96,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentInput, setCommentInput] = useState('');
   const [isPostingComment, setIsPostingComment] = useState(false);
+  // Replying to a comment (yours or anyone's) — always resolves to the top-level comment's id, even
+  // replying to a reply, since threads are flattened one level deep (matches the backend).
+  const [replyingToComment, setReplyingToComment] = useState<{ topLevelId: string; username: string } | null>(null);
+  const [expandedReplyThreads, setExpandedReplyThreads] = useState<string[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
@@ -325,7 +332,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     if (!currentReel || !commentInput.trim() || isPostingComment) return;
     try {
       setIsPostingComment(true);
-      const comment = await addReelComment(currentReel.id, commentInput.trim());
+      const comment = await addReelComment(currentReel.id, commentInput.trim(), replyingToComment?.topLevelId);
       if (comment) {
         setReelComments((prev) => [comment, ...prev]);
         setLocalReels(
@@ -334,6 +341,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           )
         );
         setCommentInput('');
+        if (replyingToComment) {
+          setExpandedReplyThreads((prev) => (prev.includes(replyingToComment.topLevelId) ? prev : [...prev, replyingToComment.topLevelId]));
+        }
+        setReplyingToComment(null);
       }
     } catch (err) {
       console.error(err);
@@ -942,19 +953,80 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               ✕
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto py-3 space-y-2 text-xs text-gray-300">
+          <div className="flex-1 overflow-y-auto py-3 space-y-1 text-xs text-gray-300">
             {isLoadingComments ? (
               <p className="text-center text-gray-500 py-6">Loading comments...</p>
-            ) : reelComments.length === 0 ? (
+            ) : reelComments.filter((c) => !c.parentId).length === 0 ? (
               <p className="text-center text-gray-500 py-6">No comments yet. Be the first to comment!</p>
             ) : (
-              reelComments.map((c) => (
-                <div key={c.id} translate="no" className="p-2 bg-neutral-900 rounded-lg">
-                  <span className="font-bold text-[#00FF66]">@{c.username}:</span> {c.text}
-                </div>
-              ))
+              reelComments
+                .filter((c) => !c.parentId)
+                .map((c) => {
+                  const replies = reelComments.filter((r) => r.parentId === c.id);
+                  const isExpanded = expandedReplyThreads.includes(c.id);
+                  return (
+                    <div key={c.id} className="py-1">
+                      <div translate="no" className="p-2 bg-neutral-900 rounded-lg">
+                        <span className="font-bold text-[#00FF66]">@{c.username}:</span> {c.text}
+                        <button
+                          type="button"
+                          onClick={() => setReplyingToComment({ topLevelId: c.id, username: c.username })}
+                          className="block mt-1 text-[10px] font-bold text-gray-400 hover:text-white cursor-pointer"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                      {replies.length > 0 && (
+                        <div className="ml-6 mt-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedReplyThreads((prev) =>
+                                prev.includes(c.id) ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                              )
+                            }
+                            className="flex items-center gap-1 text-[10px] font-bold text-gray-400 hover:text-white cursor-pointer mb-1"
+                          >
+                            <CornerDownRight className="w-3 h-3" />
+                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            {isExpanded ? 'Hide' : 'View'} {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+                          </button>
+                          {isExpanded && (
+                            <div className="space-y-1.5">
+                              {replies.map((r) => (
+                                <div key={r.id} translate="no" className="p-2 bg-neutral-900/70 rounded-lg border-l border-neutral-800">
+                                  {r.replyToUsername && r.replyToUsername !== r.username && (
+                                    <span className="text-[#00FF66] font-semibold mr-1">@{r.replyToUsername}</span>
+                                  )}
+                                  <span className="font-bold text-[#00FF66]">@{r.username}:</span> {r.text}
+                                  <button
+                                    type="button"
+                                    onClick={() => setReplyingToComment({ topLevelId: c.id, username: r.username })}
+                                    className="block mt-1 text-[10px] font-bold text-gray-400 hover:text-white cursor-pointer"
+                                  >
+                                    Reply
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
             )}
           </div>
+          {replyingToComment && (
+            <div className="flex items-center justify-between px-1 pb-1.5">
+              <span className="text-[11px] text-gray-400">
+                Replying to <span className="text-[#00FF66] font-semibold">@{replyingToComment.username}</span>
+              </span>
+              <button type="button" onClick={() => setReplyingToComment(null)} className="text-[11px] text-gray-500 hover:text-white cursor-pointer">
+                Cancel
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2 pt-2 border-t border-neutral-800">
             <input
               type="text"
@@ -963,7 +1035,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handlePostComment();
               }}
-              placeholder="Add a comment..."
+              placeholder={replyingToComment ? `Reply to @${replyingToComment.username}...` : 'Add a comment...'}
               className="flex-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
             />
             <button

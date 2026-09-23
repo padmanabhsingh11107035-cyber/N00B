@@ -621,9 +621,9 @@ export async function fetchComments(postId: string) {
   }
 }
 
-export async function addComment(postId: string, text: string) {
+export async function addComment(postId: string, text: string, parentCommentId?: string) {
   try {
-    const res = await rpc<{ comment: any }>('add_comment', { p_post: postId, p_text: text });
+    const res = await rpc<{ comment: any }>('add_comment', { p_post: postId, p_text: text, p_parent_comment: parentCommentId || null });
     return mapComment(res.comment);
   } catch (err) {
     console.error('Could not post the comment:', err);
@@ -1004,9 +1004,9 @@ export async function fetchReelComments(reelId: string) {
   }
 }
 
-export async function addReelComment(reelId: string, text: string) {
+export async function addReelComment(reelId: string, text: string, parentCommentId?: string) {
   try {
-    const res = await rpc<{ comment: any }>('add_reel_comment', { p_reel: reelId, p_text: text });
+    const res = await rpc<{ comment: any }>('add_reel_comment', { p_reel: reelId, p_text: text, p_parent_comment: parentCommentId || null });
     return mapComment(res.comment);
   } catch (err) {
     console.error('Could not post the comment:', err);
@@ -1331,6 +1331,18 @@ export async function deleteMessage(_chatId: string, messageId: string): Promise
     return !!res?.success;
   } catch {
     return false;
+  }
+}
+
+// One reaction per person per message (WhatsApp/iMessage style): reacting with a new emoji replaces
+// your old one on that message, tapping the same emoji again removes it. Persisted on the message
+// row itself, so it survives reload and reaches every participant the same way any other message
+// edit does (they already poll on any `messages` table change).
+export async function toggleMessageReaction(messageId: string, emoji: string): Promise<{ success: boolean; reactions?: Message['reactions']; error?: string }> {
+  try {
+    return await rpc('toggle_message_reaction', { p_message: messageId, p_emoji: emoji });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not react to that message.') };
   }
 }
 

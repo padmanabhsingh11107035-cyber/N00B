@@ -129,6 +129,7 @@ import {
   fetchMessages,
   sendMessage,
   uploadMediaFile,
+  toggleMessageReaction,
   editMessage,
   deleteMessage,
   sendTypingStatus,
@@ -250,6 +251,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const isTypingSentRef = useRef(false);
   const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeTrackingRef = useRef<{ id: string; startX: number; startY: number; locked: boolean } | null>(null);
+  // Press-and-hold (or right-click on desktop) a message to react or reach Reply/Edit/Delete —
+  // replacing a hover-only action bar that never worked on a touchscreen (no real hover state, so
+  // reaching those actions on a phone was the actual complaint). The menu opens at the touch/click
+  // point, clamped to stay on screen.
+  const [activeMessageMenu, setActiveMessageMenu] = useState<{ message: Message; x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+  const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
   const [myStickers, setMyStickers] = useState<MyCustomSticker[]>([]);
   const [isUploadingSticker, setIsUploadingSticker] = useState(false);
   const [stickerUploadError, setStickerUploadError] = useState<string | null>(null);
@@ -1113,6 +1122,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => {
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
       recordingStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
   }, []);
 
@@ -1164,7 +1174,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // which is exactly the kind of per-frame setState that shows up as jank
   // on a real phone. React only gets involved once, at the end of the
   // gesture, to actually open the reply composer.
-  const handleBubbleTouchStart = (e: React.TouchEvent, msgId: string) => {
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+  };
+  const openMessageMenu = (message: Message, x: number, y: number) => {
+    // Clamped so the menu never renders partway off the edge of a narrow phone screen.
+    const clampedX = Math.max(90, Math.min(window.innerWidth - 90, x));
+    const clampedY = Math.max(120, Math.min(window.innerHeight - 40, y));
+    setActiveMessageMenu({ message, x: clampedX, y: clampedY });
+  };
+  const handleBubbleTouchStart = (e: React.TouchEvent, msgId: string, msg: Message) => {
     swipeTrackingRef.current = {
       id: msgId,
       startX: e.touches[0].clientX,
@@ -1172,6 +1191,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
       locked: false
     };
     (e.currentTarget as HTMLElement).style.transition = 'none';
+    longPressFiredRef.current = false;
+    const touchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+    clearLongPressTimer();
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      swipeTrackingRef.current = null; // a long-press wins over a swipe that hasn't locked in yet
+      const row = e.currentTarget as HTMLElement;
+      row.style.transform = '';
+      if (navigator.vibrate) navigator.vibrate(15);
+      openMessageMenu(msg, touchX, touchY);
+    }, 450);
   };
   const handleBubbleTouchMove = (e: React.TouchEvent, msg: Message) => {
     const t = swipeTrackingRef.current;
@@ -1179,6 +1210,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const dx = e.touches[0].clientX - t.startX;
     const dy = e.touches[0].clientY - t.startY;
     if (!t.locked) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return; // not enough movement yet to tell a swipe from a still finger
+      clearLongPressTimer(); // real movement — this is a scroll or a swipe, not a hold
       if (Math.abs(dy) > Math.abs(dx)) return; // vertical scroll gesture, ignore
       t.locked = true;
     }
@@ -1189,6 +1222,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (icon) icon.style.opacity = String(Math.min(1, -clamped / SWIPE_REPLY_THRESHOLD));
   };
   const handleBubbleTouchEnd = (e: React.TouchEvent, msg: Message) => {
+    clearLongPressTimer();
     const t = swipeTrackingRef.current;
     swipeTrackingRef.current = null;
     const row = e.currentTarget as HTMLElement;
@@ -1196,10 +1230,45 @@ export const ChatView: React.FC<ChatViewProps> = ({
     row.style.transform = '';
     const icon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
     if (icon) icon.style.opacity = '0';
+    if (longPressFiredRef.current) return; // the menu already opened; do not also treat this as a swipe
     if (!t || t.id !== msg.id) return;
     const dx = e.changedTouches[0].clientX - t.startX;
     if (t.locked && dx <= -SWIPE_REPLY_THRESHOLD) {
       setReplyingToMessage(msg);
+    }
+  };
+  const handleBubbleContextMenu = (e: React.MouseEvent, msg: Message) => {
+    e.preventDefault(); // right-click (or a trackpad's equivalent) opens the same menu, on desktop
+    openMessageMenu(msg, e.clientX, e.clientY);
+  };
+  const handleToggleReaction = async (messageId: string, emoji: string) => {
+    setActiveMessageMenu(null);
+    // Optimistic: flip my own reaction locally right away, then reconcile with whatever the server
+    // actually stored (it is the source of truth for everyone else's reactions too).
+    const meId = currentUser.id;
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const existing = m.reactions || [];
+        const mine = existing.find((r) => r.users.includes(meId));
+        let next = existing.map((r) => ({ ...r, users: r.users.filter((u) => u !== meId) })).filter((r) => r.users.length > 0);
+        if (!mine || mine.emoji !== emoji) {
+          const target = next.find((r) => r.emoji === emoji);
+          next = target
+            ? next.map((r) => (r.emoji === emoji ? { ...r, users: [...r.users, meId], count: r.users.length + 1 } : r))
+            : [...next, { emoji, count: 1, users: [meId] }];
+        }
+        next = next.map((r) => ({ ...r, count: r.users.length }));
+        return { ...m, reactions: next };
+      })
+    );
+    try {
+      const res = await toggleMessageReaction(messageId, emoji);
+      if (res.success && res.reactions) {
+        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, reactions: res.reactions } : m)));
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1983,9 +2052,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </div>
                   <div
                     className={`flex flex-col w-full ${isMine ? 'items-end' : 'items-start'}`}
-                    onTouchStart={(e) => handleBubbleTouchStart(e, m.id)}
+                    onTouchStart={(e) => handleBubbleTouchStart(e, m.id, m)}
                     onTouchMove={(e) => handleBubbleTouchMove(e, m)}
                     onTouchEnd={(e) => handleBubbleTouchEnd(e, m)}
+                    onContextMenu={(e) => handleBubbleContextMenu(e, m)}
                   >
                   {/* In Group Chats: Show sender name for incoming messages */}
                   {activeChat?.isGroup && !isMine && (
@@ -2224,46 +2294,29 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Message Action Bar on Hover */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mt-1 text-[11px] text-zinc-400">
-                    <button
-                      onClick={() => setReplyingToMessage(m)}
-                      className="hover:text-white p-1 rounded"
-                      title="Reply"
-                    >
-                      <Reply className="w-3 h-3" />
-                    </button>
-                    {!m.locked && (
-                      <button
-                        onClick={() => handleTranslate(m.id)}
-                        className="hover:text-white p-1 rounded"
-                        title="Translate"
-                      >
-                        <Globe className="w-3 h-3" />
-                      </button>
-                    )}
-                    {isMine && !m.locked && (
-                      <button
-                        onClick={() => {
-                          setIsEditingMessageId(m.id);
-                          setEditingText(m.text);
-                        }}
-                        className="hover:text-white p-1 rounded"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                    )}
-                    {(isMine || canDeleteAsAdmin) && (
-                      <button
-                        onClick={() => handleDeleteMsg(m.id)}
-                        className="hover:text-rose-400 p-1 rounded cursor-pointer"
-                        title={isMine ? 'Delete' : 'Delete Message (Admin Moderation)'}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
+                  {/* Reactions — tap one to add/switch/remove yours. Press-and-hold (or right-click)
+                      the bubble itself for Reply/Edit/Delete/Translate and to add a new reaction;
+                      that replaced a hover-only bar that a touchscreen could never reliably reach. */}
+                  {!!m.reactions?.length && (
+                    <div className={`flex flex-wrap gap-1 mt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                      {m.reactions.map((r) => (
+                        <button
+                          key={r.emoji}
+                          type="button"
+                          onClick={() => handleToggleReaction(m.id, r.emoji)}
+                          className={`px-1.5 py-0.5 rounded-full text-[11px] flex items-center gap-1 border cursor-pointer transition-colors ${
+                            r.users.includes(currentUser.id)
+                              ? 'bg-[#00FF66]/15 border-[#00FF66]/40 text-[#00FF66]'
+                              : 'bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                          }`}
+                          title={r.users.includes(currentUser.id) ? 'Tap to remove your reaction' : 'Tap to react'}
+                        >
+                          <span>{r.emoji}</span>
+                          {r.count > 1 && <span className="text-[10px] font-bold">{r.count}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   </div>
                 </div>
               );
@@ -2306,6 +2359,73 @@ export const ChatView: React.FC<ChatViewProps> = ({
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Press-and-hold / right-click menu: quick reactions plus Reply/Translate/Edit/Delete.
+              This is now the ONE reliable way to reach those actions on every device — a hover-only
+              bar never worked on a touchscreen, which was the actual complaint. */}
+          {activeMessageMenu && (
+            <>
+              <div className="fixed inset-0 z-[115]" onClick={() => setActiveMessageMenu(null)} onContextMenu={(e) => { e.preventDefault(); setActiveMessageMenu(null); }} />
+              <div
+                className="fixed z-[116] -translate-x-1/2 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 min-w-[180px]"
+                style={{ left: activeMessageMenu.x, top: activeMessageMenu.y }}
+              >
+                <div className="flex items-center justify-between gap-1 px-1 pb-1.5 border-b border-zinc-800 mb-1">
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleToggleReaction(activeMessageMenu.message.id, emoji)}
+                      className="text-lg hover:scale-125 transition-transform cursor-pointer"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setReplyingToMessage(activeMessageMenu.message); setActiveMessageMenu(null); }}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer text-left"
+                >
+                  <Reply className="w-3.5 h-3.5" /> Reply
+                </button>
+                {!activeMessageMenu.message.locked && (
+                  <button
+                    type="button"
+                    onClick={() => { handleTranslate(activeMessageMenu.message.id); setActiveMessageMenu(null); }}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer text-left"
+                  >
+                    <Globe className="w-3.5 h-3.5" /> Translate
+                  </button>
+                )}
+                {(activeMessageMenu.message.senderId === currentUser.id || activeMessageMenu.message.senderId === 'u_me') && !activeMessageMenu.message.locked && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingMessageId(activeMessageMenu.message.id);
+                      setEditingText(activeMessageMenu.message.text);
+                      setActiveMessageMenu(null);
+                    }}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer text-left"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" /> Edit
+                  </button>
+                )}
+                {(activeMessageMenu.message.senderId === currentUser.id ||
+                  activeMessageMenu.message.senderId === 'u_me' ||
+                  can(currentUser, 'moderate_chats') ||
+                  !!(activeChat?.isGroup && (activeChat.creatorId === currentUser.id || activeChat.adminIds?.includes(currentUser.id)))) && (
+                  <button
+                    type="button"
+                    onClick={() => { handleDeleteMsg(activeMessageMenu.message.id); setActiveMessageMenu(null); }}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-red-500/10 text-xs font-bold text-rose-400 cursor-pointer text-left"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Bottom Message Input Bar */}
           <div className="p-3 sm:p-4 bg-zinc-900/95 border-t border-zinc-800/90 shrink-0 relative">

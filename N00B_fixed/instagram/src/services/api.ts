@@ -96,6 +96,7 @@ export {
   sendMessage,
   editMessage,
   deleteMessage,
+  toggleMessageReaction,
   sendTypingStatus,
   fetchTypingUsers,
   updateChatSettings,

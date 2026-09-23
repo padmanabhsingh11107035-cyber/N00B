@@ -348,6 +348,7 @@ export interface PostSlide {
 export interface PostComment {
   id: string;
   postId: string;
+  reelId?: string;
   userId: string;
   username: string;
   userAvatar: string;
@@ -357,6 +358,13 @@ export interface PostComment {
   likesCount: number;
   isLiked?: boolean;
   isPinned?: boolean;
+  // Replies: parentId is set on a reply, always pointing at the top-level comment (threads are
+  // flattened to one level — replying to a reply attaches to ITS parent, like Instagram).
+  // replyToUsername is who a reply is actually answering, which may be a repliers rather than the
+  // top-level comment's own author.
+  parentId?: string;
+  replyToUserId?: string;
+  replyToUsername?: string;
 }
 
 export interface Post {

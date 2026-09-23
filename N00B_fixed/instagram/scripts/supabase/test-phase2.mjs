@@ -238,6 +238,16 @@ await expectFail(() => rpc(a, 'toggle_pin_comment', rc.comment.id), /Only the ow
 check((await rpc(b, 'toggle_pin_comment', rc.comment.id)).isPinned === true, 'the reel\'s owner can pin a comment');
 check((await run(c, 'delete from comments where id = $1', [rc.comment.id])).affectedRows === 0, 'a stranger can not delete the comment');
 check((await run(b, 'delete from comments where id = $1', [rc.comment.id])).affectedRows === 1 && (await n('select comments_count n from reels where id = $1', [reel.id])) === 0, 'the reel\'s owner can delete it, and the counter drops');
+// replies (same flattened-to-one-level threading as post comments, sharing the same comments table)
+{
+  const rTop = await rpc(a, 'add_reel_comment', reel.id, 'top-level on a reel');
+  const rReply = await rpc(c, 'add_reel_comment', reel.id, 'replying on a reel', rTop.comment.id);
+  check(rReply.comment.parentId === rTop.comment.id && rReply.comment.replyToUsername === rTop.comment.username, 'a reel comment reply carries its parent and who it replies to');
+  const rReplyToReply = await rpc(d, 'add_reel_comment', reel.id, 'reply to the reply', rReply.comment.id);
+  check(rReplyToReply.comment.parentId === rTop.comment.id, 'replying to a reel-comment reply flattens onto the top-level comment');
+  await run(b, 'delete from comments where id = any($1::uuid[])', [[rTop.comment.id, rReply.comment.id, rReplyToReply.comment.id]]);
+  check((await n('select comments_count n from reels where id = $1', [reel.id])) === 0, 'cleanup: reel comment counter is back to 0');
+}
 // comments-off / hide-like-count (the same owner controls posts already have)
 await expectFail(() => rpc(a, 'toggle_reel_flag', reel.id, 'comments'), /only modify your own reels/, 'a stranger can not turn off comments on someone else\'s reel');
 check((await rpc(b, 'toggle_reel_flag', reel.id, 'comments')).isCommentsDisabled === true, 'the owner can turn comments off');

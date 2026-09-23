@@ -218,6 +218,26 @@ await call(newbie, 'delete from comments where id = $1', [cm.comment.id]);
 check((await n('select comments_count n from posts where id = $1', [pid])) === 0, 'the post owner can delete a comment and the counter goes back down');
 
 // =====================================================================================
+section('7b. Comment replies');
+const top = await rpc(c, 'add_comment', pid, 'top-level from c');
+const reply1 = await rpc(a, 'add_comment', pid, 'reply from a', top.comment.id);
+check(reply1.comment.parentId === top.comment.id, 'a reply carries its parent comment id');
+check(reply1.comment.replyToUsername === top.comment.username, '...and who it is replying to');
+const replyToOwn = await rpc(c, 'add_comment', pid, 'replying to my own comment', top.comment.id);
+check(replyToOwn.comment.parentId === top.comment.id && replyToOwn.comment.userId === c, 'you can reply to your own comment too');
+const replyToReply = await rpc(b, 'add_comment', pid, 'reply to a reply', reply1.comment.id);
+check(replyToReply.comment.parentId === top.comment.id, 'replying to a reply flattens onto the original top-level comment, not onto the reply');
+// (compared against reply1's OWN username, not aRaw.username — section 2 already renamed that
+// account, so the raw backup's username is stale by this point in the run)
+check(replyToReply.comment.replyToUsername === reply1.comment.username, '...but still says who (the reply, not the original poster) it is answering');
+const afterReplies = (await rpc(a, 'post_comments', pid)).comments;
+check(afterReplies.filter((x) => x.parentId === top.comment.id).length === 3, 'all three replies show up tagged with the same parent');
+check(afterReplies.find((x) => x.id === top.comment.id).parentId == null, 'the top-level comment itself has no parent');
+await expectFail(() => rpc(a, 'add_comment', pid, 'nope', '00000000-0000-0000-0000-000000000000'), /no longer exists/, 'replying to a made-up comment id is refused');
+await call(newbie, 'delete from comments where id = any($1::uuid[])', [[top.comment.id, reply1.comment.id, replyToOwn.comment.id, replyToReply.comment.id]]);
+check((await n('select comments_count n from posts where id = $1', [pid])) === 0, 'cleanup: the counter is back to 0 for the sections below');
+
+// =====================================================================================
 section('8. Views');
 await rpc(b, 'record_post_view', pid);
 await rpc(b, 'record_post_view', pid);

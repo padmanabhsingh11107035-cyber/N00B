@@ -112,6 +112,24 @@ await expectFail(() => run(a, `insert into messages (chat_id, sender_id, text) v
 await expectFail(() => run(a, `update messages set created_at = now() - interval '9 years' where id = $1`, [s1.id]), /permission denied/, 'rewriting a message\'s time is not allowed');
 
 // =====================================================================================
+section('3b. Message reactions (persisted — the `reactions` column existed since day one, but nothing ever wrote to it)');
+check(pic.reactions === undefined || pic.reactions.length === 0, 'a fresh message starts with no reactions');
+const r1 = await rpc(b, 'toggle_message_reaction', pic.id, '👍');
+check(r1.success === true && r1.reactions.length === 1 && r1.reactions[0].emoji === '👍' && r1.reactions[0].count === 1 && r1.reactions[0].users[0] === b, 'reacting adds the emoji, and it is saved on the message');
+check((await rpc(a, 'chat_messages', ab.id)).messages.find((m) => m.id === pic.id).reactions[0].emoji === '👍', '...and the OTHER participant sees it too on refetch (it really persisted)');
+const r2 = await rpc(a, 'toggle_message_reaction', pic.id, '❤️');
+check(r2.reactions.length === 2 && r2.reactions.find((x) => x.emoji === '❤️').users[0] === a, 'a second person reacting with a different emoji adds a second entry');
+const r3 = await rpc(b, 'toggle_message_reaction', pic.id, '👍');
+check(r3.reactions.length === 1 && r3.reactions[0].emoji === '❤️', 'reacting with the SAME emoji again removes it (tap to un-react)');
+const r4 = await rpc(b, 'toggle_message_reaction', pic.id, '😂');
+check(r4.reactions.length === 2 && r4.reactions.find((x) => x.emoji === '😂').users[0] === b, 'reacting with a NEW emoji after having none re-adds b');
+const r5 = await rpc(b, 'toggle_message_reaction', pic.id, '❤️');
+check(r5.reactions.length === 1 && r5.reactions[0].emoji === '❤️' && r5.reactions[0].count === 2, 'switching emoji moves the person, never leaving two reactions from the same person (one per person, like WhatsApp)');
+await expectFail(() => rpc(c, 'toggle_message_reaction', pic.id, '👍'), /not a participant/, 'a stranger can not react to a message in a chat they are not in');
+await expectFail(() => rpc(a, 'toggle_message_reaction', '00000000-0000-0000-0000-000000000000', '👍'), /Message not found/, 'reacting to a made-up message id is refused');
+await expectFail(() => rpc(a, 'toggle_message_reaction', pic.id, ''), /Pick an emoji/, 'an empty emoji is refused');
+
+// =====================================================================================
 section('4. Editing and deleting messages');
 const ed = (await rpc(a, 'edit_message', ab.id, s1.id, '  edited  ')).message;
 check(ed.text === 'edited' && ed.isEdited === true, 'the author can edit a message');

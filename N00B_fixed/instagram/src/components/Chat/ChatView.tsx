@@ -2051,7 +2051,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <Reply className="w-4 h-4" />
                   </div>
                   <div
-                    className={`flex flex-col w-full ${isMine ? 'items-end' : 'items-start'}`}
+                    className={`flex flex-col w-full select-none ${isMine ? 'items-end' : 'items-start'}`}
+                    style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
                     onTouchStart={(e) => handleBubbleTouchStart(e, m.id, m)}
                     onTouchMove={(e) => handleBubbleTouchMove(e, m)}
                     onTouchEnd={(e) => handleBubbleTouchEnd(e, m)}

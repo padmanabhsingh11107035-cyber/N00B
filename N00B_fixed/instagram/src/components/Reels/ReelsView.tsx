@@ -100,6 +100,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // replying to a reply, since threads are flattened one level deep (matches the backend).
   const [replyingToComment, setReplyingToComment] = useState<{ topLevelId: string; username: string } | null>(null);
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<string[]>([]);
+  const [commentError, setCommentError] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
@@ -330,24 +331,25 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const handlePostComment = async () => {
     if (!currentReel || !commentInput.trim() || isPostingComment) return;
+    setCommentError('');
     try {
       setIsPostingComment(true);
       const comment = await addReelComment(currentReel.id, commentInput.trim(), replyingToComment?.topLevelId);
-      if (comment) {
-        setReelComments((prev) => [comment, ...prev]);
-        setLocalReels(
-          localReels.map((r) =>
-            r.id === currentReel.id ? { ...r, commentsCount: (r.commentsCount || 0) + 1 } : r
-          )
-        );
-        setCommentInput('');
-        if (replyingToComment) {
-          setExpandedReplyThreads((prev) => (prev.includes(replyingToComment.topLevelId) ? prev : [...prev, replyingToComment.topLevelId]));
-        }
-        setReplyingToComment(null);
+      if (!comment) throw new Error('Could not post the comment.');
+      setReelComments((prev) => [comment, ...prev]);
+      setLocalReels(
+        localReels.map((r) =>
+          r.id === currentReel.id ? { ...r, commentsCount: (r.commentsCount || 0) + 1 } : r
+        )
+      );
+      setCommentInput('');
+      if (replyingToComment) {
+        setExpandedReplyThreads((prev) => (prev.includes(replyingToComment.topLevelId) ? prev : [...prev, replyingToComment.topLevelId]));
       }
+      setReplyingToComment(null);
     } catch (err) {
       console.error(err);
+      setCommentError(err instanceof Error ? err.message : 'Could not post the comment. Please try again.');
     } finally {
       setIsPostingComment(false);
     }
@@ -1017,6 +1019,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 })
             )}
           </div>
+          {commentError && (
+            <div className="mx-1 mb-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">
+              {commentError}
+            </div>
+          )}
           {replyingToComment && (
             <div className="flex items-center justify-between px-1 pb-1.5">
               <span className="text-[11px] text-gray-400">

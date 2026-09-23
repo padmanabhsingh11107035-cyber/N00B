@@ -21,6 +21,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   // when tapping "Reply" on a reply, since threads are flattened to one level (matching the backend).
   const [replyingTo, setReplyingTo] = useState<{ topLevelId: string; username: string } | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<string[]>([]);
+  const [commentError, setCommentError] = useState('');
 
   const isPostOwner = post.userId === currentUser.id || post.username === currentUser.username;
 
@@ -45,17 +46,21 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    setCommentError('');
     try {
       const newC = await addComment(post.id, inputText.trim(), replyingTo?.topLevelId);
-      if (newC) {
-        setComments(prev => [...(Array.isArray(prev) ? prev : []), newC]);
-        if (replyingTo) setExpandedThreads((prev) => (prev.includes(replyingTo.topLevelId) ? prev : [...prev, replyingTo.topLevelId]));
-      }
+      if (!newC) throw new Error('Could not post the comment.');
+      // Only clear the input / close the reply composer / celebrate on an ACTUAL success — clearing
+      // these unconditionally used to make a silently-failed save look identical to a real one (the
+      // text vanished, confetti fired, but nothing was ever saved).
+      setComments(prev => [...(Array.isArray(prev) ? prev : []), newC]);
+      if (replyingTo) setExpandedThreads((prev) => (prev.includes(replyingTo.topLevelId) ? prev : [...prev, replyingTo.topLevelId]));
       setInputText('');
       setReplyingTo(null);
       confetti({ particleCount: 20, spread: 45, origin: { y: 0.9 } });
     } catch (err) {
       console.error(err);
+      setCommentError(err instanceof Error ? err.message : 'Could not post the comment. Please try again.');
     }
   };
 
@@ -295,6 +300,11 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
           onSubmit={handleSendComment}
           className="p-3 bg-neutral-900 border-t border-neutral-800"
         >
+          {commentError && (
+            <div className="mb-2 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">
+              {commentError}
+            </div>
+          )}
           {replyingTo && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-[11px] text-gray-400">

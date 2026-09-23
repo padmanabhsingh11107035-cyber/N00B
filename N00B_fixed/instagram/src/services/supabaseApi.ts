@@ -626,8 +626,9 @@ export async function addComment(postId: string, text: string, parentCommentId?:
     const res = await rpc<{ comment: any }>('add_comment', { p_post: postId, p_text: text, p_parent_comment: parentCommentId || null });
     return mapComment(res.comment);
   } catch (err) {
-    console.error('Could not post the comment:', err);
-    return undefined;
+    // Thrown (not swallowed): a caller that clears its input / shows a success animation only on a
+    // real success needs to actually find out when this failed, instead of a silent `undefined`.
+    throw new Error(errorText(err, 'Could not post the comment.'));
   }
 }
 
@@ -1009,8 +1010,7 @@ export async function addReelComment(reelId: string, text: string, parentComment
     const res = await rpc<{ comment: any }>('add_reel_comment', { p_reel: reelId, p_text: text, p_parent_comment: parentCommentId || null });
     return mapComment(res.comment);
   } catch (err) {
-    console.error('Could not post the comment:', err);
-    return undefined;
+    throw new Error(errorText(err, 'Could not post the comment.'));
   }
 }
 

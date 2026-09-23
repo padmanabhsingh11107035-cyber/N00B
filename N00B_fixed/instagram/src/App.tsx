@@ -76,6 +76,8 @@ import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { GamePlayModal } from './components/Games/GamePlayModal';
 import { FindFriendsModal } from './components/Modals/FindFriendsModal';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
+import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
+import { useUpdateAvailable } from './utils/appVersion';
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
@@ -100,6 +102,7 @@ export default function App() {
   const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [reels, setReels] = useState<Reel[]>([]);
@@ -725,47 +728,59 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white">
-        <div className="w-12 h-12 rounded-full border-2 border-red-500 border-t-transparent animate-spin mb-4" />
-        <span className="text-sm font-extrabold tracking-tight text-white">
-          NOOB
-        </span>
-        <span className="text-[10px] text-zinc-500 mt-1">Fun & Connecting People...</span>
-      </div>
+      <>
+        {isUpdateAvailable && <UpdateAvailableBanner />}
+        <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white">
+          <div className="w-12 h-12 rounded-full border-2 border-red-500 border-t-transparent animate-spin mb-4" />
+          <span className="text-sm font-extrabold tracking-tight text-white">
+            NOOB
+          </span>
+          <span className="text-[10px] text-zinc-500 mt-1">Fun & Connecting People...</span>
+        </div>
+      </>
     );
   }
 
   if (initialLoadFailed) {
     return (
-      <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl">
-          ⚠️
+      <>
+        {isUpdateAvailable && <UpdateAvailableBanner />}
+        <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl">
+            ⚠️
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-white">Couldn't Load Your Data</h2>
+            <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">
+              NOOB couldn't reach the server just now — this is usually a brief connection hiccup. Your account is fine.
+            </p>
+          </div>
+          <button
+            onClick={loadInitialData}
+            className="px-6 py-2.5 bg-[#00FF66] text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
+          >
+            Retry
+          </button>
         </div>
-        <div>
-          <h2 className="text-base font-bold text-white">Couldn't Load Your Data</h2>
-          <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">
-            NOOB couldn't reach the server just now — this is usually a brief connection hiccup. Your account is fine.
-          </p>
-        </div>
-        <button
-          onClick={loadInitialData}
-          className="px-6 py-2.5 bg-[#00FF66] text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
-        >
-          Retry
-        </button>
-      </div>
+      </>
     );
   }
 
   // If no user is logged in, present the main Login / Sign Up Page
   if (!currentUser) {
-    return <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} />;
+    return (
+      <>
+        {isUpdateAvailable && <UpdateAvailableBanner />}
+        <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} />
+      </>
+    );
   }
 
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 overflow-x-hidden">
+      {isUpdateAvailable && <UpdateAvailableBanner />}
       {/* 1. Left Desktop Sidebar (shown on xl: screens) */}
       <aside className="hidden xl:flex flex-col w-[240px] h-[92vh] sticky top-6 justify-between pb-4 shrink-0 select-none">
         <div className="space-y-7">

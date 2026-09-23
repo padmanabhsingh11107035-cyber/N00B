@@ -196,15 +196,18 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
               <label className="text-xs font-bold text-zinc-300">Photos &amp; Videos ({displayItems.length})</label>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer group disabled:opacity-50"
+              {/* A <label htmlFor> is the native way to open a file input — it doesn't depend on a
+                  ref existing yet or a JS .click() call succeeding, both of which can silently fail
+                  in some embedded/WebView contexts. This is the same reason a plain <label> is the
+                  standard, most-compatible way to build a custom-styled file picker button. */}
+              <label
+                htmlFor="highlight-media-input"
+                aria-disabled={isUploading}
+                className={`aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                 <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Media'}</span>
-              </button>
+              </label>
 
               {displayItems.map((m, idx) => (
                 <div key={m.key} className="aspect-square relative rounded-2xl overflow-hidden border border-zinc-800 bg-black group">
@@ -235,8 +238,18 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
             {/* No `multiple` — a multi-select file input combined with a combined image+video
                 accept list is a known trouble spot on iOS Safari (the change event can simply
                 never fire after picking). One at a time, exactly like the story uploader that
-                already works, is the safe, proven pattern; tapping "+ Add Media" again adds another. */}
-            <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handlePickFiles} />
+                already works, is the safe, proven pattern; tapping "+ Add Media" again adds another.
+                `display:none` (Tailwind's `hidden`) is also a known trouble spot for firing events
+                on a file input in some WebViews — this is visually hidden a different way, by being
+                a 1x1px transparent layer, while staying part of the visible render tree. */}
+            <input
+              ref={fileInputRef}
+              id="highlight-media-input"
+              type="file"
+              accept="image/*,video/*"
+              onChange={handlePickFiles}
+              style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+            />
           </div>
 
           <div className="pt-2 flex items-center gap-2 justify-between border-t border-zinc-800">

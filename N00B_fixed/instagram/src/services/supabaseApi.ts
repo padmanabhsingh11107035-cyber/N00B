@@ -38,6 +38,27 @@ async function rpc<T = any>(fn: string, args?: Record<string, unknown>): Promise
 
 const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 
+// Short in-memory cache for comment/likers/viewers lists: the dominant cost of reopening one of
+// these (comments sheet, likes/views sheet) is the network round trip, not query time (confirmed
+// directly against production: both execute server-side in single-digit milliseconds) — so the
+// highest-leverage fix for "this takes a while to appear" is not repeating that round trip every
+// time the same list is reopened a few seconds later. Every write that could change a cached list
+// invalidates its entry immediately, so a reopen right after liking/commenting always sees the
+// real, fresh state rather than a stale cached one.
+const shortCache = new Map<string, { at: number; data: any }>();
+const CACHE_MS = 20000;
+function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const hit = shortCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS) return Promise.resolve(hit.data);
+  return fn().then((data) => {
+    shortCache.set(key, { at: Date.now(), data });
+    return data;
+  });
+}
+function invalidateCache(key: string) {
+  shortCache.delete(key);
+}
+
 function mapUser<U extends Partial<User> | null | undefined>(u: U): U {
   if (!u) return u;
   const out: any = { ...u, avatar: resolveMedia((u as any).avatar) };
@@ -550,8 +571,10 @@ export async function toggleLikePost(postId: string): Promise<{ isLiked: boolean
 
 export async function fetchPostLikers(postId: string): Promise<{ users: User[] }> {
   try {
-    const res = await rpc<{ users: User[] }>('post_likers', { p_post: postId });
-    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    return await cached(`post-likers:${postId}`, async () => {
+      const res = await rpc<{ users: User[] }>('post_likers', { p_post: postId });
+      return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    });
   } catch {
     return { users: [] };
   }
@@ -564,8 +587,10 @@ export async function recordPostView(postId: string) {
 // Owner-only — the database refuses anyone but the post's own author.
 export async function fetchPostViewers(postId: string): Promise<{ users: User[]; error?: string }> {
   try {
-    const res = await rpc<{ users: User[] }>('post_viewers', { p_post: postId });
-    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    return await cached(`post-viewers:${postId}`, async () => {
+      const res = await rpc<{ users: User[] }>('post_viewers', { p_post: postId });
+      return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    });
   } catch (err) {
     return { users: [], error: errorText(err, 'Only the post owner can see who viewed it.') };
   }
@@ -613,8 +638,10 @@ export async function deletePostSlide(postId: string, slideId: string): Promise<
 
 export async function fetchComments(postId: string) {
   try {
-    const res = await rpc<{ comments: any[] }>('post_comments', { p_post: postId });
-    return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+    return await cached(`comments:${postId}`, async () => {
+      const res = await rpc<{ comments: any[] }>('post_comments', { p_post: postId });
+      return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+    });
   } catch (err) {
     console.error('Error fetching comments:', err);
     return [];
@@ -624,6 +651,7 @@ export async function fetchComments(postId: string) {
 export async function addComment(postId: string, text: string, parentCommentId?: string) {
   try {
     const res = await rpc<{ comment: any }>('add_comment', { p_post: postId, p_text: text, p_parent_comment: parentCommentId || null });
+    invalidateCache(`comments:${postId}`);
     return mapComment(res.comment);
   } catch (err) {
     // Thrown (not swallowed): a caller that clears its input / shows a success animation only on a
@@ -632,14 +660,34 @@ export async function addComment(postId: string, text: string, parentCommentId?:
   }
 }
 
-export async function deleteComment(_postId: string, commentId: string) {
+export async function deleteComment(postId: string, commentId: string) {
   const { data, error } = await supabase.from('comments').delete().eq('id', commentId).select('id');
+  invalidateCache(`comments:${postId}`);
   if (error || !data || data.length === 0) return { success: false, error: 'You can only delete your own comments.' };
   return { success: true };
 }
 
-export async function togglePinComment(_postId: string, commentId: string) {
-  try { return await rpc('toggle_pin_comment', { p_comment: commentId }); } catch (err) { return { success: false, isPinned: false, error: errorText(err, 'Could not pin the comment.') }; }
+export async function togglePinComment(postId: string, commentId: string) {
+  try {
+    const res = await rpc('toggle_pin_comment', { p_comment: commentId });
+    invalidateCache(`comments:${postId}`);
+    return res;
+  } catch (err) {
+    return { success: false, isPinned: false, error: errorText(err, 'Could not pin the comment.') };
+  }
+}
+
+// Real, persisted comment likes — see migration 20260923000034: this used to be pure client-side
+// state in CommentsSheet.tsx (no backend call at all), so a like never survived closing and
+// reopening the comment sheet, a reload, or being visible to anyone else.
+export async function toggleCommentLike(postId: string, commentId: string) {
+  try {
+    const res = await rpc<{ success: boolean; isLiked: boolean; likesCount: number }>('toggle_comment_like', { p_comment: commentId });
+    invalidateCache(`comments:${postId}`);
+    return res;
+  } catch (err) {
+    return { success: false, isLiked: false, likesCount: 0, error: errorText(err, 'Could not update the like.') };
+  }
 }
 
 // ----------------------------------------------------------------------------- notifications
@@ -974,8 +1022,10 @@ export async function toggleLikeReel(reelId: string): Promise<{ isLiked: boolean
 
 export async function fetchReelLikers(reelId: string): Promise<{ users: User[] }> {
   try {
-    const res = await rpc<{ users: User[] }>('reel_likers', { p_reel: reelId });
-    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    return await cached(`reel-likers:${reelId}`, async () => {
+      const res = await rpc<{ users: User[] }>('reel_likers', { p_reel: reelId });
+      return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    });
   } catch {
     return { users: [] };
   }
@@ -984,8 +1034,10 @@ export async function fetchReelLikers(reelId: string): Promise<{ users: User[] }
 // Owner-only — the database refuses anyone but the reel's own author.
 export async function fetchReelViewers(reelId: string): Promise<{ users: User[]; error?: string }> {
   try {
-    const res = await rpc<{ users: User[] }>('reel_viewers', { p_reel: reelId });
-    return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    return await cached(`reel-viewers:${reelId}`, async () => {
+      const res = await rpc<{ users: User[] }>('reel_viewers', { p_reel: reelId });
+      return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    });
   } catch (err) {
     return { users: [], error: errorText(err, 'Only the reel owner can see who viewed it.') };
   }
@@ -997,8 +1049,10 @@ export async function toggleSaveReel(reelId: string): Promise<{ isSaved: boolean
 
 export async function fetchReelComments(reelId: string) {
   try {
-    const res = await rpc<{ comments: any[] }>('reel_comments', { p_reel: reelId });
-    return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+    return await cached(`reel-comments:${reelId}`, async () => {
+      const res = await rpc<{ comments: any[] }>('reel_comments', { p_reel: reelId });
+      return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+    });
   } catch (err) {
     console.error('Error fetching reel comments:', err);
     return [];
@@ -1008,6 +1062,7 @@ export async function fetchReelComments(reelId: string) {
 export async function addReelComment(reelId: string, text: string, parentCommentId?: string) {
   try {
     const res = await rpc<{ comment: any }>('add_reel_comment', { p_reel: reelId, p_text: text, p_parent_comment: parentCommentId || null });
+    invalidateCache(`reel-comments:${reelId}`);
     return mapComment(res.comment);
   } catch (err) {
     throw new Error(errorText(err, 'Could not post the comment.'));

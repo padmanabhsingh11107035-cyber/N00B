@@ -47,6 +47,7 @@ export {
   addComment,
   deleteComment,
   togglePinComment,
+  toggleCommentLike,
   fetchAppNotifications,
   subscribeToNotificationChanges,
   markNotificationsAsRead,

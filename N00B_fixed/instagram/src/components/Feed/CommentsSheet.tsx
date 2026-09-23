@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, PostComment, User } from '../../types';
-import { fetchComments, addComment, deleteComment, togglePinComment } from '../../services/api';
+import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import confetti from 'canvas-confetti';
 
@@ -83,6 +83,28 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Optimistic, but reconciled with the real (persisted) result — a like used to just flip local
+  // state with no backend call at all, so it silently reset the moment the sheet was closed and
+  // reopened. Rolled back on failure instead of trusting the optimistic flip.
+  const handleToggleLike = async (commentId: string) => {
+    const prev = comments;
+    setComments((cur) =>
+      cur.map((item) =>
+        item.id === commentId
+          ? { ...item, isLiked: !item.isLiked, likesCount: item.likesCount + (item.isLiked ? -1 : 1) }
+          : item
+      )
+    );
+    const res = await toggleCommentLike(post.id, commentId);
+    if (!res.success) {
+      setComments(prev);
+      return;
+    }
+    setComments((cur) =>
+      cur.map((item) => (item.id === commentId ? { ...item, isLiked: res.isLiked, likesCount: res.likesCount } : item))
+    );
   };
 
   const handleBulkDelete = async () => {
@@ -186,15 +208,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
             </button>
           )}
           <button
-            onClick={() => {
-              setComments(
-                comments.map((item) =>
-                  item.id === c.id
-                    ? { ...item, isLiked: !item.isLiked, likesCount: item.likesCount + (item.isLiked ? -1 : 1) }
-                    : item
-                )
-              );
-            }}
+            onClick={() => handleToggleLike(c.id)}
             className={`flex items-center gap-1 text-[11px] p-1 ${c.isLiked ? 'text-red-500' : 'text-gray-400 hover:text-white'}`}
           >
             <Heart className={`w-3.5 h-3.5 ${c.isLiked ? 'fill-current' : ''}`} />

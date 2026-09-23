@@ -28,40 +28,51 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [changed, setChanged] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_PICK_AT_ONCE = 50;
 
   const handleClose = () => {
     if (changed) onDone();
     onClose();
   };
 
-  // A single input whose accept covers BOTH image/* and video/* is the one concrete difference
-  // from every OTHER upload in this app that's proven to work (the story uploader: image/* alone;
-  // the post composer: image/* and video/* as two entirely separate inputs, never combined). Split
-  // the same way here — no combined-type input anywhere in this component anymore.
-  const handlePickFiles = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'image' | 'video') => {
+  // One combined button/input for both photos and videos, with `multiple` — people naturally pick
+  // mixed media together (a few photos and a clip from the same event), and splitting that into two
+  // separate taps was needless friction once the actual upload bug (below) was fixed for real.
+  const handlePickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     // Logged unconditionally, before anything can go wrong: if this line is missing from the
-    // console after tapping "Add Photo"/"Add Video" and picking a file, the tap never reached the
+    // console after tapping "Add Photos/Videos" and picking files, the tap never reached the
     // <input> at all (a picker/permissions/overlay problem) rather than the upload failing.
-    console.log('[HighlightManagerModal] handlePickFiles fired', { mediaType, fileCount: e.target.files?.length ?? 0 });
+    console.log('[HighlightManagerModal] handlePickFiles fired', { fileCount: e.target.files?.length ?? 0 });
     // input.files is a LIVE FileList tied to the input itself, not a snapshot — resetting the
-    // input's value (below, so the same file can be re-picked later) mutates this exact object
+    // input's value (below, so the same files can be re-picked later) mutates this exact object
     // in place, dropping its length to 0. Copying the files out into a real array FIRST, before
     // that reset, was the actual bug: every previous fix in this component's history worked around
     // symptoms downstream of this line silently returning empty-handed, never around this line
-    // itself, so nothing every got as far as uploadMediaFile.
-    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
-    const ref = mediaType === 'video' ? videoInputRef : photoInputRef;
-    if (ref.current) ref.current.value = '';
+    // itself, so nothing ever got as far as uploadMediaFile.
+    let files: File[] = e.target.files ? Array.from(e.target.files) : [];
+    if (fileInputRef.current) fileInputRef.current.value = '';
     if (files.length === 0) return;
 
-    setErrorMessage(null);
+    let skippedCount = 0;
+    if (files.length > MAX_PICK_AT_ONCE) {
+      skippedCount = files.length - MAX_PICK_AT_ONCE;
+      files = files.slice(0, MAX_PICK_AT_ONCE);
+    }
+
+    setErrorMessage(
+      skippedCount > 0 ? `You can add up to ${MAX_PICK_AT_ONCE} at a time — the other ${skippedCount} were skipped.` : null
+    );
     setIsUploading(true);
+    setUploadProgress({ done: 0, total: files.length });
     try {
       for (const file of files) {
+        const mediaType: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
         if (file.size > 25 * 1024 * 1024) {
           setErrorMessage('Each photo or video must be under 25MB.');
+          setUploadProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
           continue;
         }
         // uploadMediaFile THROWS (rather than returning an error) for a format the browser can't
@@ -78,23 +89,26 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
             // doesn't lose the ones that already succeeded.
             const res = await addToHighlight(existingHighlight.id, [{ mediaUrl: pending.mediaUrl, mediaType: pending.mediaType }]);
             if (!res.success) { setErrorMessage(res.error || 'Could not add that item.'); continue; }
-            setItems((prev) => [...prev, { id: `pending_${Date.now()}`, mediaUrl: pending.localPreview, mediaType, createdAt: new Date().toISOString() }]);
+            setItems((prev) => [...prev, { id: `pending_${Date.now()}_${Math.random()}`, mediaUrl: pending.localPreview, mediaType, createdAt: new Date().toISOString() }]);
             setChanged(true);
           } else {
             setPendingNew((prev) => [...prev, pending]);
           }
         } catch (err) {
           // Logged too, not just shown — so a screenshot of the console after tapping "Add
-          // Photo"/"Add Video" always has something concrete on it if this still fails.
+          // Photos/Videos" always has something concrete on it if this still fails.
           console.error('[HighlightManagerModal] upload failed:', err);
           setErrorMessage(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+        } finally {
+          setUploadProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
         }
       }
     } catch (err) {
       console.error('[HighlightManagerModal] handlePickFiles crashed:', err);
-      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong picking that file.');
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong picking those files.');
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -213,37 +227,27 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                   indirection) on the theory that ref.click() indirection was the problem — it
                   wasn't; that version still didn't work on the user's real device, and every other
                   working upload in this app uses ref.click(), so this reverts to matching them
-                  exactly rather than trying another one-off mechanism. */}
+                  exactly rather than trying another one-off mechanism. One combined button/input
+                  for photos and videos together (`multiple`, up to 50 at a time) — the earlier
+                  split-by-type tiles just made picking mixed media slower for no real benefit once
+                  the actual upload bug (see handlePickFiles) was fixed. */}
               <button
                 type="button"
-                onClick={() => photoInputRef.current?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${isUploading ? 'opacity-50' : ''}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />}
-                <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Photo'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                disabled={isUploading}
-                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${isUploading ? 'opacity-50' : ''}`}
-              >
-                {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />}
-                <span className="text-[10px] font-bold">{isUploading ? 'Uploading...' : 'Add Video'}</span>
+                <span className="text-[10px] font-bold text-center px-1">
+                  {isUploading ? `Uploading... ${uploadProgress ? `${uploadProgress.done}/${uploadProgress.total}` : ''}` : 'Add Photos/Videos'}
+                </span>
               </button>
               <input
-                ref={photoInputRef}
+                ref={fileInputRef}
                 type="file"
-                accept="image/*"
-                onChange={(e) => handlePickFiles(e, 'image')}
-                className="hidden"
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                onChange={(e) => handlePickFiles(e, 'video')}
+                accept="image/*,video/*"
+                multiple
+                onChange={handlePickFiles}
                 className="hidden"
               />
 
@@ -273,8 +277,6 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 </div>
               ))}
             </div>
-            {/* No `multiple` — one at a time, exactly like the story uploader that already works,
-                is the safe, proven pattern; tapping "Add Photo"/"Add Video" again adds another. */}
           </div>
 
           <div className="pt-2 flex items-center gap-2 justify-between border-t border-zinc-800">

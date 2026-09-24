@@ -29,7 +29,9 @@ import {
   Zap,
   Star,
   HelpCircle,
-  CalendarDays
+  CalendarDays,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
 import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings } from '../../services/api';
@@ -38,10 +40,12 @@ import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
 import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
-import { LanguagePicker, LanguageButton } from '../Common/LanguagePicker';
+import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
+import { isIos, currentPushEnv } from '../../utils/pushSupport';
+import { canInstallNow, isInstalled, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
 import confetti from 'canvas-confetti';
 
 interface AuthViewProps {
@@ -269,6 +273,48 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const language = useLanguage();
   const languageInfo = findLanguage(language);
+
+  // Install to Home Screen — available before signing in, on every platform: phone, tablet, laptop,
+  // desktop. Chrome/Edge/Android get the browser's real one-tap install; iOS Safari has no such API
+  // at all (Apple only allows it from Safari's own Share menu), so it gets the manual steps instead.
+  const [installAvailable, setInstallAvailable] = useState(canInstallNow());
+  const [appInstalled, setAppInstalled] = useState(isInstalled());
+  const [installBusy, setInstallBusy] = useState(false);
+  const [installHint, setInstallHint] = useState<string | null>(null);
+  useEffect(
+    () =>
+      onInstallStateChange(() => {
+        setInstallAvailable(canInstallNow());
+        setAppInstalled(isInstalled());
+      }),
+    []
+  );
+  const onIos = useMemo(() => isIos(currentPushEnv()), []);
+
+  const handleInstallClick = async () => {
+    if (appInstalled) {
+      setInstallHint('NOOB is already installed on this device.');
+      return;
+    }
+    if (installAvailable) {
+      setInstallBusy(true);
+      const outcome = await promptInstall();
+      setInstallBusy(false);
+      setInstallHint(
+        outcome === 'accepted'
+          ? 'Added to your Home Screen.'
+          : outcome === 'dismissed'
+            ? null
+            : 'Install isn’t available right now — try your browser’s own menu instead.'
+      );
+      return;
+    }
+    if (onIos) {
+      setInstallHint('On iPhone/iPad: tap Share in Safari’s toolbar, then "Add to Home Screen".');
+      return;
+    }
+    setInstallHint('Open NOOB in Chrome, Edge or Samsung Internet to install with one tap, or use your browser’s own menu → "Install app".');
+  };
 
   // Sign up form state
   const [fullName, setFullName] = useState('');
@@ -797,9 +843,23 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
       </div>
 
-      {/* Language: available before logging in or signing up */}
-      <div className="w-full max-w-lg flex justify-end z-10 pt-1">
-        <LanguageButton onClick={() => setShowLanguagePicker(true)} />
+      {/* Install to Home Screen: available before logging in or signing up, on any device */}
+      <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
+        <button
+          type="button"
+          onClick={handleInstallClick}
+          disabled={installBusy}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 hover:border-[#00FF66]/50 text-xs font-bold text-zinc-200 hover:text-white cursor-pointer transition-colors disabled:opacity-60"
+          aria-label="Install NOOB"
+        >
+          {installBusy ? <Loader2 className="w-3.5 h-3.5 text-[#00FF66] animate-spin" /> : <Download className="w-3.5 h-3.5 text-[#00FF66]" />}
+          <span>Install</span>
+        </button>
+        {installHint && (
+          <div className="max-w-[220px] text-right text-[10px] text-zinc-300 bg-zinc-900/95 border border-white/10 rounded-xl px-2.5 py-1.5 leading-snug shadow-lg">
+            {installHint}
+          </div>
+        )}
       </div>
 
       {/* Top Header: Circular brand badge + wordmark, centered */}

@@ -5,6 +5,7 @@ import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
 import { initLanguage } from './i18n/engine.ts';
+import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
 
 // The app's `/api/...` calls are written as relative paths, which only
 // resolve correctly when the frontend is served from the same origin as
@@ -53,6 +54,11 @@ void initLanguage();
 if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
   navigator.storage.persist().catch(() => {});
 }
+
+// Registered unconditionally (not only once someone opts into push, as before) because
+// Chrome's "can this be installed?" check wants an active service worker present — this is
+// what makes the Install and Permissions page's one-tap install button actually appear.
+registerServiceWorkerForInstallability();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

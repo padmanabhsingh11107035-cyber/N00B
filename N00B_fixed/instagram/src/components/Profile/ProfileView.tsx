@@ -54,8 +54,7 @@ import {
   Clock,
   Calculator as CalculatorIcon,
   Zap,
-  Bell,
-  BellOff,
+  Smartphone,
   ShoppingBag,
   EyeOff,
   Eye
@@ -110,8 +109,9 @@ import { CalculatorPage } from './CalculatorPage';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
-import { enablePushNotifications, disablePushNotifications, getPushDeviceState, getPushSupport, type PushDeviceState } from '../Common/PushNotificationPrompt';
 import { StorePage } from '../Store/StorePage';
+import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
+import { MutualFollowersSheet } from './MutualFollowersSheet';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -241,11 +241,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
-  const [notifToggleBusy, setNotifToggleBusy] = useState(false);
-  const [notifToggleMessage, setNotifToggleMessage] = useState<string | null>(null);
-  // Real state of notifications on THIS device (worked out from the browser and the saved subscription, not from the user record)
-  const [pushState, setPushState] = useState<PushDeviceState>(currentUser.pushSubscription ? 'on' : 'off');
-  const pushSupport = useMemo(() => getPushSupport(), []);
+  const [showInstallPermissionsPage, setShowInstallPermissionsPage] = useState(false);
+  const [showMutualFollowersSheet, setShowMutualFollowersSheet] = useState(false);
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
@@ -259,12 +256,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const targetUser: User = viewingUser || currentUser;
   const isOwnProfile = !viewingUser || viewingUser.id === currentUser.id;
   useScreenshotAlert('profile', targetUser.id, !isOwnProfile);
-  useEffect(() => {
-    if (!isOwnProfile) return;
-    let alive = true;
-    getPushDeviceState().then((state) => { if (alive) setPushState(state); });
-    return () => { alive = false; };
-  }, [isOwnProfile]);
   const isTargetBlocked = (currentUser.blockedUserIds || []).includes(targetUser.id);
   const [isTargetFollowing, setIsTargetFollowing] = useState<boolean>(() => {
     if (targetUser.isFollowing !== undefined) return !!targetUser.isFollowing;
@@ -504,46 +495,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  // Real on/off switch for OS-level push notifications — reflects
-  // !!currentUser.pushSubscription rather than its own local state, so it
-  // never drifts from what the browser actually has subscribed.
-  const handleToggleNotifications = async () => {
-    if (notifToggleBusy) return;
-    setNotifToggleBusy(true);
-    setNotifToggleMessage(null);
-    try {
-      if (pushState === 'on') {
-        const ok = await disablePushNotifications();
-        if (ok) {
-          setPushState('off');
-          if (onUserUpdated) onUserUpdated({ ...currentUser, pushSubscription: undefined });
-        } else {
-          setNotifToggleMessage('Couldn\u2019t switch notifications off. Check your connection and try again.');
-        }
-      } else {
-        const result = await enablePushNotifications();
-        if (result.status === 'granted' && result.subscription) {
-          setPushState('on');
-          if (onUserUpdated) onUserUpdated({ ...currentUser, pushSubscription: result.subscription });
-        } else if (result.status === 'denied') {
-          setNotifToggleMessage('Notifications are blocked for this site. Tap the lock icon next to the address, allow Notifications for nooob.xyz, then try again.');
-        } else if (result.status === 'unsupported') {
-          setNotifToggleMessage(result.message || 'This browser cannot show notifications.');
-        } else if (result.status === 'error') {
-          setNotifToggleMessage(
-            result.reason === 'not-set-up'
-              ? 'Notifications aren’t switched on at the server yet. The NOOB admin needs to finish setting them up.'
-              : result.reason === 'save'
-                ? 'Couldn’t save this setting. Check your connection and try again.'
-                : 'Your browser couldn’t turn notifications on. Try again, or check this site’s notification settings.'
-          );
-        }
-      }
-    } finally {
-      setNotifToggleBusy(false);
-    }
-  };
-
   const handleSavePrivacySettings = async () => {
     try {
       const res = await updateCurrentUser({
@@ -740,28 +691,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </button>
               )}
 
-              {/* Universal: Push Notifications on/off */}
+              {/* Own account: Install and Permissions (add-to-home-screen + notifications) */}
               {isOwnProfile && (
                 <button
-                  onClick={handleToggleNotifications}
-                  disabled={notifToggleBusy}
-                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer disabled:opacity-60"
+                  onClick={() => {
+                    setShowThreeDotsMenu(false);
+                    setShowInstallPermissionsPage(true);
+                  }}
+                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                 >
                   <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    {currentUser.pushSubscription ? <Bell className="w-4 h-4 text-cyan-400" /> : <BellOff className="w-4 h-4 text-cyan-400" />}
+                    <Smartphone className="w-4 h-4 text-cyan-400" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
-                      Notifications: {notifToggleBusy ? 'Updating…' : pushState === 'on' ? 'On' : 'Off'}
+                      Install and Permissions
                     </span>
-                    {(() => {
-                      // A message (what went wrong / what to do) is shown in full; the plain hint stays on one line.
-                      const hint = notifToggleMessage
-                        || (pushSupport.supported === false ? pushSupport.message : pushState === 'other-device' ? 'Turned on for another device. Tap to get them on this one instead.' : null);
-                      return hint
-                        ? <span className="text-[10px] text-amber-300/90 block leading-snug whitespace-normal">{hint}</span>
-                        : <span className="text-[10px] text-zinc-400 block truncate">Get notified even when NOOB isn't open</span>;
-                    })()}
+                    <span className="text-[10px] text-zinc-400 block truncate">
+                      Add to Home Screen &amp; notifications
+                    </span>
                   </div>
                 </button>
               )}
@@ -1404,7 +1352,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </p>
 
           {mutualFollowers.length > 0 && (
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMutualFollowersSheet(true)}
+              className="flex items-center gap-2 text-left cursor-pointer group"
+            >
               <div className="flex -space-x-2 shrink-0">
                 {mutualFollowers.slice(0, 3).map((m) => (
                   <img
@@ -1416,7 +1367,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   />
                 ))}
               </div>
-              <p className="text-[11px] text-zinc-400 truncate">
+              <p className="text-[11px] text-zinc-400 truncate group-hover:text-zinc-300 transition-colors">
                 Followed by{' '}
                 <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[0].username}</span>
                 {mutualFollowers.length === 2 && (
@@ -1428,7 +1379,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <> and <span className="text-zinc-200 font-semibold">{mutualFollowers.length - 1} others</span></>
                 )}
               </p>
-            </div>
+            </button>
           )}
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 pt-1">
@@ -2010,6 +1961,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
 
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
+
+      {showInstallPermissionsPage && (
+        <InstallAndPermissionsPage
+          currentUser={currentUser}
+          onUserUpdated={onUserUpdated}
+          onClose={() => setShowInstallPermissionsPage(false)}
+        />
+      )}
+
+      {showMutualFollowersSheet && (
+        <MutualFollowersSheet
+          currentUser={currentUser}
+          mutuals={mutualFollowers}
+          allUsers={allUsers}
+          onClose={() => setShowMutualFollowersSheet(false)}
+          onToggleFollowUser={onToggleFollowUser}
+          onNavigateToUserProfile={onNavigateToUserProfile}
+        />
+      )}
 
       {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}
 

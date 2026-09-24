@@ -242,13 +242,13 @@ body.light .liquid-glass {
    what's behind it — on plenty of real Android browsers/WebViews that blur silently doesn't
    render (no error, it just never applies), leaving only the ~3-20% opacity gradient, i.e. a
    nearly invisible bottom nav / three-dot menu over moving content. iOS renders the blur
-   correctly and is untouched; Android instead gets a solid-enough background that reads fine
-   with or without the blur actually applying. */
+   correctly and is untouched; Android instead gets a background translucent enough to still
+   look like glass but solid enough to read with or without the blur actually applying. */
 body.is-android .liquid-glass {
-  background: rgba(14, 14, 16, 0.97);
+  background: rgba(20, 20, 22, 0.8);
 }
 body.is-android.light .liquid-glass {
-  background: rgba(255, 255, 255, 0.97);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 /* Individual glass buttons — a pill of glass that lights up on hover/press,

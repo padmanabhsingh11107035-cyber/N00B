@@ -238,6 +238,19 @@ body.light .liquid-glass {
     0 1px 0 0 rgba(255, 255, 255, 0.95) inset;
 }
 
+/* Android fallback: the real glass look above depends on backdrop-filter actually blurring
+   what's behind it — on plenty of real Android browsers/WebViews that blur silently doesn't
+   render (no error, it just never applies), leaving only the ~3-20% opacity gradient, i.e. a
+   nearly invisible bottom nav / three-dot menu over moving content. iOS renders the blur
+   correctly and is untouched; Android instead gets a solid-enough background that reads fine
+   with or without the blur actually applying. */
+body.is-android .liquid-glass {
+  background: rgba(14, 14, 16, 0.97);
+}
+body.is-android.light .liquid-glass {
+  background: rgba(255, 255, 255, 0.97);
+}
+
 /* Individual glass buttons — a pill of glass that lights up on hover/press,
    and stays lit (brighter + tinted) while active. */
 .liquid-glass-btn {

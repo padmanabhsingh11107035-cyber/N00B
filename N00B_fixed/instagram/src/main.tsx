@@ -47,6 +47,15 @@ console.log(
 // The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
 void initLanguage();
 
+// Android's browser/WebView renders the "liquid glass" bottom nav and three-dot menus (see
+// .liquid-glass in index.css) almost fully see-through instead of blurred-translucent — that
+// look depends on backdrop-filter, which is unreliable there (still missing on plenty of real
+// Android WebViews) even though the CSS itself is accepted without error. iOS Safari renders it
+// correctly, so only Android gets a solid fallback background (index.css, body.is-android).
+if (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)) {
+  document.body.classList.add('is-android');
+}
+
 // Ask the browser not to evict this site's storage under pressure — where saved logins for "several accounts at once" and offline
 // caches live. Some mobile browsers (notably iOS Safari) can otherwise silently clear a site's storage after a period of no use,
 // which would make a saved account quietly vanish from "Switch account" even though nothing was done wrong. Best-effort only: not

@@ -417,6 +417,8 @@ export interface Story {
   isCloseFriendsOnly: boolean;
   isViewed: boolean;
   viewedBy?: string[];
+  isLiked?: boolean;
+  likesCount?: number;
   filter?: string;
   stickers?: {
     type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music';

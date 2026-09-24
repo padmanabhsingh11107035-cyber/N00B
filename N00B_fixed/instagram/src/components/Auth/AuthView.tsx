@@ -32,7 +32,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile } from '../../services/api';
+import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -253,6 +253,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [errorMessage, setErrorMessage] = useState<string | null>(notice || null);
   const [suspendedNotice, setSuspendedNotice] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // The admin's in-app "pause new sign-ups" switch (Admin Control Panel → Platform) — a fast,
+  // no-dashboard-needed kill switch on top of, not instead of, the Supabase project's own
+  // "Allow new users to sign up" toggle, which stays the deeper backstop.
+  const [signupsEnabled, setSignupsEnabled] = useState(true);
+  useEffect(() => {
+    fetchPublicPlatformSettings().then((s) => setSignupsEnabled(s.signupsEnabled));
+  }, []);
 
   // Legal Modals
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -875,7 +882,23 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           )}
 
           {/* ================= SIGN UP FORM ================= */}
-          {mode === 'signup' && (
+          {mode === 'signup' && !signupsEnabled && (
+            <div className="text-center py-10 space-y-3">
+              <Lock className="w-8 h-8 text-zinc-500 mx-auto" />
+              <p className="text-sm font-bold text-white">New sign-ups are temporarily closed</p>
+              <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                Please check back soon, or log in if you already have an account.
+              </p>
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="text-blue-400 text-xs font-bold hover:underline cursor-pointer"
+              >
+                ← Back to Log In
+              </button>
+            </div>
+          )}
+          {mode === 'signup' && signupsEnabled && (
             <form onSubmit={handleSignupSubmit} className="space-y-4">
               {/* Hidden honeypot field for bot attack protection */}
               <input

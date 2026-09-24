@@ -32,6 +32,7 @@ import { fetchUsers } from '../../services/api';
 import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { POST_FILTERS } from '../../data/mockData';
+import { JoinUsModal } from './JoinUsModal';
 
 // Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
 // exactly the kind of nagging that makes people distrust a permission prompt.
@@ -73,6 +74,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reels'>('users');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showJoinUsModal, setShowJoinUsModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -450,26 +452,22 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         >
           <Shuffle className="w-4 h-4" />
         </button>
+
+        {/* Apply to join the NOOB team */}
+        <button
+          onClick={() => setShowJoinUsModal(true)}
+          className="p-3 rounded-2xl bg-zinc-900 border border-white/10 hover:border-violet-400/50 text-zinc-300 hover:text-violet-300 transition-all cursor-pointer shadow-sm"
+          title="Apply to join the NOOB team"
+        >
+          <Briefcase className="w-4 h-4" />
+        </button>
       </div>
+
+      {showJoinUsModal && <JoinUsModal onClose={() => setShowJoinUsModal(false)} />}
 
       {/* 2. Category & Section Switcher */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
         <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-2xl border border-white/5 shrink-0">
-          <button
-            onClick={() => {
-              setActiveTab('users');
-              setVisibleCount(ITEMS_PER_PAGE);
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'users'
-                ? 'bg-[#00FF66] text-black shadow-md shadow-[#00FF66]/20'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>People ({usersList.length})</span>
-          </button>
-
           <button
             onClick={() => {
               setActiveTab('posts');
@@ -482,7 +480,25 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Posts ({filteredPosts.length})</span>
+            <span>Post</span>
+          </button>
+
+          {/* Every registered account, not an algorithmic subset — "Suggested" just names what this
+              tab is for (finding people), the way the count used to before normal users could read
+              the platform's total member count straight off this label. */}
+          <button
+            onClick={() => {
+              setActiveTab('users');
+              setVisibleCount(ITEMS_PER_PAGE);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-[#00FF66] text-black shadow-md shadow-[#00FF66]/20'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Suggested users for u</span>
           </button>
 
           <button
@@ -497,7 +513,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             }`}
           >
             <Film className="w-3.5 h-3.5" />
-            <span>Reels ({filteredReels.length})</span>
+            <span>Reel</span>
           </button>
         </div>
       </div>

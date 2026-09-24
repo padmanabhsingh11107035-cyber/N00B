@@ -866,6 +866,10 @@ export async function recordStoryView(storyId: string) {
   try { return await rpc('record_story_view', { p_story: storyId }); } catch { return { success: false }; }
 }
 
+export async function toggleStoryLike(storyId: string): Promise<{ success: boolean; isLiked?: boolean; likesCount?: number; error?: string }> {
+  try { return await rpc('toggle_story_like', { p_story: storyId }); } catch (err) { return { success: false, error: errorText(err, 'Could not like this story.') }; }
+}
+
 // Owner-only — the database refuses anyone but the story's own author.
 export async function fetchStoryViewers(storyId: string): Promise<{ users: User[]; error?: string }> {
   try {
@@ -2382,6 +2386,113 @@ export async function takeAdminReportAction(
   suspendTarget: boolean = false
 ): Promise<{ success: boolean; message?: string; report?: any; error?: string }> {
   try { return await rpc('admin_report_action', { p_id: reportId, p_action: action, p_suspend: suspendTarget }); } catch (err) { return failWith(err, 'Could not update the report.'); }
+}
+
+// ---- "Apply to join us" (team_applications) ----
+
+export interface TeamApplication {
+  id: string;
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  fullName: string;
+  roleInterested: string;
+  whyJoin: string;
+  experience?: string;
+  availability?: string;
+  contact?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+const mapTeamApplication = (a: any): TeamApplication => ({ ...a, avatar: resolveMedia(a.avatar) });
+
+export async function submitTeamApplication(payload: {
+  fullName: string;
+  role: string;
+  why: string;
+  experience?: string;
+  availability?: string;
+  contact?: string;
+}): Promise<{ success: boolean; application?: TeamApplication; error?: string }> {
+  try {
+    const res = await rpc<any>('submit_team_application', {
+      p_full_name: payload.fullName,
+      p_role: payload.role,
+      p_why: payload.why,
+      p_experience: payload.experience || '',
+      p_availability: payload.availability || '',
+      p_contact: payload.contact || ''
+    });
+    return { success: true, application: mapTeamApplication(res.application) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not submit your application.') };
+  }
+}
+
+export async function fetchAdminTeamApplications(): Promise<{ success: boolean; applications: TeamApplication[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_applications');
+    return { success: true, applications: (res.applications || []).map(mapTeamApplication) };
+  } catch (err) {
+    return { success: false, applications: [], error: errorText(err, 'Could not load applications.') };
+  }
+}
+
+export async function adminReviewTeamApplication(id: string, status: 'accepted' | 'declined'): Promise<{ success: boolean; application?: TeamApplication; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_review_team_application', { p_id: id, p_status: status });
+    return { success: true, application: mapTeamApplication(res.application) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update this application.') };
+  }
+}
+
+// ---- Platform settings (sign-ups pause, whole-app maintenance lock) ----
+
+export interface PlatformSettings {
+  signupsEnabled: boolean;
+  maintenanceEnabled: boolean;
+  maintenanceMessage: string;
+}
+
+export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
+  try {
+    return await rpc<PlatformSettings>('public_platform_settings');
+  } catch {
+    return { signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '' };
+  }
+}
+
+export async function adminSetPlatformSettings(payload: {
+  signupsEnabled?: boolean;
+  maintenanceEnabled?: boolean;
+  maintenanceMessage?: string;
+}): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
+  try {
+    const settings = await rpc<PlatformSettings>('admin_set_platform_settings', {
+      p_signups_enabled: payload.signupsEnabled ?? null,
+      p_maintenance_enabled: payload.maintenanceEnabled ?? null,
+      p_maintenance_message: payload.maintenanceMessage ?? null
+    });
+    return { success: true, settings };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not save platform settings.') };
+  }
+}
+
+// ---- Admin content browser (every post/reel/story, not scoped to who the admin follows) ----
+
+export async function fetchAdminContentFeed(type: 'posts' | 'reels' | 'stories', limit = 60): Promise<{ success: boolean; items: any[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_content_feed', { p_type: type, p_limit: limit });
+    return { success: true, items: res.items || [] };
+  } catch (err) {
+    return { success: false, items: [], error: errorText(err, 'Could not load content.') };
+  }
 }
 
 // Admin removal of any chat message (a person deleting their own uses deleteMessage).

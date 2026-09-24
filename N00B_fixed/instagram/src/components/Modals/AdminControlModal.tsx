@@ -26,14 +26,24 @@ import {
   History,
   MessageSquareLock,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  LogOut,
+  Image,
+  Film,
+  Camera,
+  Settings,
+  ToggleLeft,
+  ToggleRight,
+  ShoppingBag
 } from 'lucide-react';
 import { User } from '../../types';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
-  fetchAdminStaff, setAdminPermissions, fetchAdminAudit
+  fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
+  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
+  fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings
 } from '../../services/api';
-import type { AdminStaffMember, AdminAuditEntry } from '../../services/api';
+import type { AdminStaffMember, AdminAuditEntry, TeamApplication } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime } from '../../utils/formatTime';
@@ -41,9 +51,13 @@ import { formatExactDateTime } from '../../utils/formatTime';
 interface AdminControlModalProps {
   currentUser: User;
   onClose: () => void;
+  // Rendered as the admin's entire home screen instead of a dialog over the app — see App.tsx,
+  // which routes the main admin account here directly on login rather than into the normal tabs.
+  fullPage?: boolean;
+  onLogout?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -68,11 +82,12 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'product_updated': return `${who} edited a shop product.`;
     case 'product_removed': return `${who} removed a shop product.`;
     case 'message_deleted': return `${who} deleted a chat message.`;
+    case 'platform_settings_changed': return `${who} changed platform settings${d.signupsEnabled != null ? `: sign-ups ${d.signupsEnabled ? 'ON' : 'OFF'}` : ''}${d.maintenanceEnabled != null ? `${d.signupsEnabled == null ? ':' : ','} maintenance ${d.maintenanceEnabled ? 'ON' : 'OFF'}` : ''}.`;
     default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;
   }
 }
 
-export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUser, onClose }) => {
+export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUser, onClose, fullPage = false, onLogout }) => {
   // What this person may do. The database enforces every one of these again — this only decides which buttons appear.
   const main = isMainAdmin(currentUser);
   const canViewAccounts = can(currentUser, 'view_accounts');
@@ -128,15 +143,126 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [pointsInput, setPointsInput] = useState('');
   const [pointsReason, setPointsReason] = useState('');
 
+  // Content browser (posts / reels / stories, admin-wide — not scoped to who the admin follows)
+  const [contentType, setContentType] = useState<'posts' | 'reels' | 'stories'>('posts');
+  const [contentItems, setContentItems] = useState<any[]>([]);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const [deletingContentId, setDeletingContentId] = useState<string | null>(null);
+
+  // "Apply to join us" submissions
+  const [joinRequests, setJoinRequests] = useState<TeamApplication[]>([]);
+  const [loadingJoinRequests, setLoadingJoinRequests] = useState(false);
+
+  // Platform-wide toggles: pause sign-ups, whole-app maintenance lock, shop orders
+  const [signupsEnabled, setSignupsEnabled] = useState(true);
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [storeOrdersEnabled, setStoreOrdersEnabled] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+
   useEffect(() => {
     if (canOpenAccounts) loadUsers(); else setLoading(false);
     if (canHandleReports) loadReports();
-    if (main) loadStaff();
+    if (main) {
+      loadStaff();
+      loadJoinRequests();
+    }
   }, []);
 
   useEffect(() => {
     if (activeTab === 'activity' && main) loadAudit();
+    if (activeTab === 'content' && main) loadContent(contentType);
+    if (activeTab === 'joinRequests' && main) loadJoinRequests();
+    if (activeTab === 'settings' && main) loadSettings();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'content' && main) loadContent(contentType);
+  }, [contentType]);
+
+  const loadContent = async (type: 'posts' | 'reels' | 'stories') => {
+    setLoadingContent(true);
+    const res = await fetchAdminContentFeed(type);
+    if (res.success) setContentItems(res.items);
+    else setStatusMessage({ text: res.error || 'Could not load content.', type: 'error' });
+    setLoadingContent(false);
+  };
+
+  const loadJoinRequests = async () => {
+    setLoadingJoinRequests(true);
+    const res = await fetchAdminTeamApplications();
+    if (res.success) setJoinRequests(res.applications);
+    else setStatusMessage({ text: res.error || 'Could not load applications.', type: 'error' });
+    setLoadingJoinRequests(false);
+  };
+
+  const loadSettings = async () => {
+    setLoadingSettings(true);
+    const [s, shop] = await Promise.all([fetchPublicPlatformSettings(), fetchSettings()]);
+    setSignupsEnabled(s.signupsEnabled);
+    setMaintenanceEnabled(s.maintenanceEnabled);
+    setMaintenanceMessage(s.maintenanceMessage);
+    setStoreOrdersEnabled(shop.storeEnabled);
+    setLoadingSettings(false);
+  };
+
+  const handleToggleStoreOrders = async () => {
+    setSavingSettings(true);
+    try {
+      const next = !storeOrdersEnabled;
+      await updateSettings({ storeEnabled: next });
+      setStoreOrdersEnabled(next);
+    } catch (err: any) {
+      setStatusMessage({ text: err?.message || 'Could not save.', type: 'error' });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleReviewJoinRequest = async (id: string, status: 'accepted' | 'declined') => {
+    const res = await adminReviewTeamApplication(id, status);
+    if (res.success) {
+      setStatusMessage({ text: `Application ${status}.`, type: 'success' });
+      loadJoinRequests();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not update this application.', type: 'error' });
+    }
+  };
+
+  const handleDeleteContent = async (item: any) => {
+    if (!confirm('Permanently remove this?')) return;
+    setDeletingContentId(item.id);
+    const ok =
+      contentType === 'posts' ? await deletePost(item.id) : contentType === 'reels' ? await deleteReel(item.id) : await deleteStory(item.id);
+    if (ok) setContentItems((prev) => prev.filter((x) => x.id !== item.id));
+    else setStatusMessage({ text: 'Could not remove this.', type: 'error' });
+    setDeletingContentId(null);
+  };
+
+  const handleToggleSignups = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ signupsEnabled: !signupsEnabled });
+    if (res.success && res.settings) setSignupsEnabled(res.settings.signupsEnabled);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleToggleMaintenance = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ maintenanceEnabled: !maintenanceEnabled });
+    if (res.success && res.settings) setMaintenanceEnabled(res.settings.maintenanceEnabled);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleSaveMaintenanceMessage = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ maintenanceMessage });
+    if (res.success) setStatusMessage({ text: 'Maintenance message saved.', type: 'success' });
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
 
   const loadStaff = async () => {
     setLoadingStaff(true);
@@ -384,9 +510,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   return (
     <div
       id="admin-control-modal-backdrop"
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      className={
+        fullPage
+          ? 'fixed inset-0 z-50 bg-black flex items-center justify-center'
+          : 'fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200'
+      }
     >
-      <div className="w-full max-w-2xl bg-zinc-950 border border-[#00FF66]/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,255,102,0.15)] flex flex-col max-h-[90vh]">
+      <div
+        className={
+          fullPage
+            ? 'w-full h-full bg-zinc-950 flex flex-col'
+            : 'w-full max-w-2xl bg-zinc-950 border border-[#00FF66]/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,255,102,0.15)] flex flex-col max-h-[90vh]'
+        }
+      >
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -402,12 +538,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {fullPage ? (
+            <button
+              onClick={onLogout}
+              className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-red-950 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+            >
+              <LogOut className="w-4 h-4" /> Log Out
+            </button>
+          ) : (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Status Toast */}
@@ -520,6 +665,45 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <History className="w-4 h-4" /> Activity Log
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('content')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'content'
+                  ? 'border-[#00FF66] text-[#00FF66]'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Image className="w-4 h-4" /> Content
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('joinRequests')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'joinRequests'
+                  ? 'border-violet-400 text-violet-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" /> Join Requests ({joinRequests.filter((a) => a.status === 'pending').length})
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Settings className="w-4 h-4" /> Platform
             </button>
           )}
         </div>
@@ -1039,7 +1223,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 )}
               </div>
             </div>
-          ) : main ? (
+          ) : activeTab === 'activity' && main ? (
             /* Activity Log: what every admin did */
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -1070,6 +1254,211 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               )}
             </div>
+          ) : activeTab === 'content' && main ? (
+            /* Content browser: every post/reel/story on the platform, not just who the admin follows */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-xl border border-zinc-800">
+                  {(['posts', 'reels', 'stories'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setContentType(t)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
+                        contentType === t ? 'bg-[#00FF66] text-black' : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => loadContent(contentType)} className="text-xs text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingContent ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+
+              {loadingContent ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400">Loading {contentType}...</p>
+                </div>
+              ) : contentItems.length === 0 ? (
+                <div className="py-10 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+                  No {contentType} yet.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {contentItems.map((item) => (
+                    <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 flex items-center gap-3">
+                      {item.mediaUrl || item.imageUrl ? (
+                        <img
+                          src={item.mediaUrl || item.imageUrl}
+                          alt=""
+                          className="w-12 h-12 rounded-xl object-cover border border-zinc-800 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
+                          {contentType === 'reels' ? <Film className="w-5 h-5 text-zinc-500" /> : contentType === 'stories' ? <Camera className="w-5 h-5 text-zinc-500" /> : <Image className="w-5 h-5 text-zinc-500" />}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-white block truncate">@{item.username}</span>
+                        <span className="text-[11px] text-zinc-400 block truncate">
+                          {(item.caption || item.text || 'No caption').slice(0, 80)}
+                        </span>
+                        <span className="text-[10px] text-zinc-500">{formatExactDateTime(item.createdAt)}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteContent(item)}
+                        disabled={deletingContentId === item.id}
+                        className="p-2 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'joinRequests' && main ? (
+            /* "Apply to join us" submissions */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-violet-300" /> Team Applications
+                </span>
+                <button onClick={loadJoinRequests} className="text-xs text-violet-300 hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingJoinRequests ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+
+              {loadingJoinRequests ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-violet-300 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400">Loading applications...</p>
+                </div>
+              ) : joinRequests.length === 0 ? (
+                <div className="py-10 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+                  No applications yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {joinRequests.map((app) => (
+                    <div key={app.id} className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <img src={app.avatar || '/noob-logo.svg.jpeg'} alt={app.username} className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0" />
+                          <div>
+                            <span className="text-xs font-bold text-white block">{app.fullName} <span className="text-zinc-500 font-normal">@{app.username}</span></span>
+                            <span className="text-[11px] text-violet-300 font-semibold">{app.roleInterested}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${
+                            app.status === 'accepted'
+                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              : app.status === 'declined'
+                              ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {app.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-300 leading-relaxed">{app.whyJoin}</p>
+                      {app.experience && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Experience: </span>{app.experience}</p>}
+                      {app.availability && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Availability: </span>{app.availability}</p>}
+                      {app.contact && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Contact: </span>{app.contact}</p>}
+                      <span className="text-[10px] text-zinc-500 block">{formatExactDateTime(app.createdAt)}</span>
+                      {app.status === 'pending' && (
+                        <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
+                          <button
+                            onClick={() => handleReviewJoinRequest(app.id, 'accepted')}
+                            className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Accept
+                          </button>
+                          <button
+                            onClick={() => handleReviewJoinRequest(app.id, 'declined')}
+                            className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'settings' && main ? (
+            /* Platform-wide toggles */
+            <div className="space-y-3">
+              {loadingSettings ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto mb-2" />
+                </div>
+              ) : (
+                <>
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-bold text-white block">New sign-ups</span>
+                      <span className="text-[11px] text-zinc-400">
+                        {signupsEnabled ? 'Anyone can create a NOOB account.' : 'New accounts are paused — the sign-up screen shows a notice instead.'}
+                      </span>
+                    </div>
+                    <button onClick={handleToggleSignups} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50">
+                      {signupsEnabled ? <ToggleRight className="w-9 h-9 text-[#00FF66]" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-white block">Whole-app maintenance lock</span>
+                        <span className="text-[11px] text-zinc-400">
+                          {maintenanceEnabled ? 'Everyone but you sees the message below instead of the app.' : 'The app is open to everyone.'}
+                        </span>
+                      </div>
+                      <button onClick={handleToggleMaintenance} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50">
+                        {maintenanceEnabled ? <ToggleRight className="w-9 h-9 text-amber-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-zinc-400 block mb-1.5">Message shown while locked</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={maintenanceMessage}
+                          onChange={(e) => setMaintenanceMessage(e.target.value)}
+                          className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-amber-400"
+                        />
+                        <button
+                          onClick={handleSaveMaintenanceMessage}
+                          disabled={savingSettings}
+                          className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-bold text-white flex items-center gap-2">
+                        <ShoppingBag className="w-4 h-4 text-orange-400" /> Shop NOOB orders
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        {storeOrdersEnabled ? 'Customers can place new orders.' : 'New orders are paused — the delivery charge stays as set in the Shop.'}
+                      </span>
+                    </div>
+                    <button onClick={handleToggleStoreOrders} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50">
+                      {storeOrdersEnabled ? <ToggleRight className="w-9 h-9 text-orange-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <div className="py-12 text-center text-xs text-zinc-500">You do not have access to this section.</div>
           )}
@@ -1078,9 +1467,11 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         {/* Modal Footer */}
         <div className="p-3 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-between text-[11px] text-zinc-400">
           <span>NOOB Admin Engine v2.0 • Real-time Account Oversight</span>
-          <button onClick={onClose} className="text-white hover:underline cursor-pointer font-bold">
-            Close Panel
-          </button>
+          {!fullPage && (
+            <button onClick={onClose} className="text-white hover:underline cursor-pointer font-bold">
+              Close Panel
+            </button>
+          )}
         </div>
       </div>
 

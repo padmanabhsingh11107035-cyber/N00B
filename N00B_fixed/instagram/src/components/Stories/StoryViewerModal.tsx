@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { Story, User } from '../../types';
-import { recordStoryView, fetchStoryViewers, fetchUserById } from '../../services/api';
+import { recordStoryView, toggleStoryLike, fetchStoryViewers, fetchUserById } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
@@ -43,8 +43,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [commentText, setCommentText] = useState('');
   // Keyed by story id (not a single shared boolean) — liking one story must never show as "liked"
-  // on every other story in the same viewing session.
-  const [likedStoryIds, setLikedStoryIds] = useState<Set<string>>(new Set());
+  // on every other story in the same viewing session. Seeded from each story's own persisted
+  // `isLiked` (see toggle_story_like / story_json) so a like survives closing and reopening the
+  // viewer — it used to live only in this Set with nothing behind it, so it reset every time.
+  const [likedStoryIds, setLikedStoryIds] = useState<Set<string>>(
+    () => new Set(stories.filter((s) => s.isLiked).map((s) => s.id))
+  );
   const [isMuted, setIsMuted] = useState(false);
   const [pollVoted, setPollVoted] = useState<number | null>(null);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
@@ -514,14 +518,25 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               onClick={() => {
                 if (!story) return;
                 const id = story.id;
+                const wasLiked = isLiked;
                 setLikedStoryIds((prev) => {
                   const next = new Set(prev);
                   if (next.has(id)) next.delete(id); else next.add(id);
                   return next;
                 });
-                if (!isLiked) {
+                if (!wasLiked) {
                   confetti({ particleCount: 30, spread: 45, origin: { y: 0.85 } });
                 }
+                toggleStoryLike(id).then((res) => {
+                  if (!res.success) {
+                    // Roll back — the server rejected it (story expired, no longer visible, etc.)
+                    setLikedStoryIds((prev) => {
+                      const next = new Set(prev);
+                      if (wasLiked) next.add(id); else next.delete(id);
+                      return next;
+                    });
+                  }
+                });
               }}
               className={`p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
                 isLiked ? 'text-red-500 scale-110' : 'text-white/80 hover:text-white'

@@ -58,6 +58,7 @@ import { ReelsView } from './components/Reels/ReelsView';
 import { ChatView } from './components/Chat/ChatView';
 import { IncomingCallModal } from './components/Chat/IncomingCallModal';
 import { useIncomingCalls } from './components/Chat/useIncomingCalls';
+import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
 import { MusicHubView } from './components/Music/MusicHubView';
@@ -87,6 +88,8 @@ import { readDiag, explainSessionEnd } from './services/authDiag';
 import { installContentProtection } from './utils/contentProtection';
 import { applyAccountLanguage, setSignedIn } from './i18n/account.ts';
 import { isMainAdmin } from './adminAccess';
+import { AdminControlModal } from './components/Modals/AdminControlModal';
+import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -107,13 +110,24 @@ export default function App() {
   // they're currently on — a hook, so it must be called unconditionally, before any early return
   // below. It internally no-ops until currentUser is actually set.
   const { incoming: incomingCall, decline: declineIncomingCall, clearAfterAccept: clearIncomingCallAfterAccept } = useIncomingCalls(currentUser);
+  const unreadChatCount = useUnreadChatCount(currentUser);
+
+  // The admin console's "whole-app maintenance lock" (see AdminControlModal's Platform tab) — checked
+  // once someone is signed in so a non-admin mid-lockdown sees the block screen below instead of the
+  // app; the main admin always gets through regardless, so they can switch it back off.
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
+  useEffect(() => {
+    if (!currentUser) return;
+    let alive = true;
+    fetchPublicPlatformSettings().then((s) => { if (alive) setPlatformSettings(s); });
+    return () => { alive = false; };
+  }, [currentUser?.id]);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [reels, setReels] = useState<Reel[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsState>({
@@ -686,9 +700,6 @@ export default function App() {
         setViewingProfileUser(null);
       }
       setActiveTab(tab);
-      if (tab === 'chat') {
-        setUnreadChatCount(0);
-      }
     }
   };
 
@@ -779,6 +790,43 @@ export default function App() {
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
         <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} />
+      </>
+    );
+  }
+
+  // The NOOB account opens straight into the admin console instead of the normal app — see
+  // AdminControlModal's fullPage mode, which is exactly this same panel with its dialog chrome
+  // swapped for a whole-screen layout and a Log Out button in place of a close button.
+  if (isMainAdmin(currentUser)) {
+    return (
+      <>
+        {isUpdateAvailable && <UpdateAvailableBanner />}
+        <AdminControlModal currentUser={currentUser} fullPage onClose={() => {}} onLogout={handleLogout} />
+      </>
+    );
+  }
+
+  // Whole-app maintenance lock (Admin Control Panel → Platform) — the main admin already returned
+  // above regardless of this, so only a real visitor ever sees this screen.
+  if (platformSettings?.maintenanceEnabled) {
+    return (
+      <>
+        {isUpdateAvailable && <UpdateAvailableBanner />}
+        <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-2xl">
+            🛠️
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-white">NOOB is under maintenance</h2>
+            <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">{platformSettings.maintenanceMessage}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="px-6 py-2.5 bg-zinc-800 text-white font-bold text-sm rounded-2xl hover:bg-zinc-700 transition-colors cursor-pointer"
+          >
+            Log Out
+          </button>
+        </div>
       </>
     );
   }
@@ -1015,7 +1063,6 @@ export default function App() {
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
             onOpenNotifications={handleOpenNotifications}
             onNavigateToChat={() => {
-              setUnreadChatCount(0);
               setActiveTab('chat');
             }}
             onRefreshFeed={loadInitialData}

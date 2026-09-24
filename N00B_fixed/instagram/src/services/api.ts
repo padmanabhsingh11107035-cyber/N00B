@@ -60,6 +60,7 @@ export {
   fetchStories,
   createStory,
   recordStoryView,
+  toggleStoryLike,
   fetchStoryViewers,
   addCommentToStory,
   deleteStory,
@@ -177,6 +178,12 @@ export {
   setAdminPermissions,
   fetchAdminAudit,
   takeAdminReportAction,
+  submitTeamApplication,
+  fetchAdminTeamApplications,
+  adminReviewTeamApplication,
+  fetchPublicPlatformSettings,
+  adminSetPlatformSettings,
+  fetchAdminContentFeed,
   deleteChatMessage,
   registerPushToken,
   fetchVapidPublicKey,
@@ -194,7 +201,9 @@ export type {
   AdminStaffMember,
   AdminAuditEntry,
   HiddenFromUser,
-  MutualFollower
+  MutualFollower,
+  TeamApplication,
+  PlatformSettings
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

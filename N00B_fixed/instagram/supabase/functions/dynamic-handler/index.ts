@@ -56,9 +56,10 @@ const publicKey = () => envKey('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS')
 // Resend.com key). `false` (never thrown) whenever it can't be sent, so a caller can decide for
 // itself whether that failure should stop anything else — an email going out is never load-bearing.
 const escapeHtml = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let lastEmailDebug = '';
 async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
   const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
-  if (!key || !to) return false;
+  if (!key || !to) { lastEmailDebug = !key ? 'no RESEND_API_KEY configured' : 'no recipient address'; return false; }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -66,10 +67,14 @@ async function sendEmail(to: string, subject: string, text: string, html: string
       body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html }),
       signal: AbortSignal.timeout(8000)
     });
-    if (!res.ok) console.warn(`Resend: ${res.status} ${await res.text().catch(() => '')}`.slice(0, 300));
+    if (!res.ok) {
+      lastEmailDebug = `${res.status} ${await res.text().catch(() => '')}`.slice(0, 300);
+      console.warn(`Resend: ${lastEmailDebug}`);
+    }
     return res.ok;
   } catch (err: any) {
-    console.warn('Resend error:', err?.message || err);
+    lastEmailDebug = String(err?.message || err);
+    console.warn('Resend error:', lastEmailDebug);
     return false;
   }
 }
@@ -880,10 +885,13 @@ Deno.serve(async (req) => {
     const passcode = String(body.passcode ?? '').slice(0, 50);
     if (!time || !zoomLink) return json({ error: 'Meeting time and Zoom link are required.' }, 400);
 
-    const { data: apps } = await admin.from('sparkx_applications').select('id, user_id, full_name').in('id', ids);
+    const { data: apps, error: appsErr } = await admin.from('sparkx_applications').select('id, user_id, full_name').in('id', ids);
     const userIds = (apps ?? []).map((a: any) => a.user_id);
-    const { data: privs } = userIds.length ? await admin.from('profile_private').select('user_id, email').in('user_id', userIds) : { data: [] as any[] };
+    const { data: privs, error: privsErr } = userIds.length ? await admin.from('profile_private').select('user_id, email').in('user_id', userIds) : { data: [] as any[], error: null as any };
     const emailByUser = new Map((privs ?? []).map((p: any) => [p.user_id, p.email]));
+    if (body.debug === true) {
+      return json({ success: true, debug: { ids, appsFound: (apps ?? []).length, appsErr: appsErr?.message, privsFound: (privs ?? []).length, privsErr: privsErr?.message, apps, privs } });
+    }
 
     let sent = 0, failed = 0;
     const invitedIds: string[] = [];

@@ -329,6 +329,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     }
   };
 
+  const handleDiagnoseMeetingInvite = async () => {
+    const res = await sendSparkxMeetingInvite({
+      applicationIds: Array.from(selectedSparkxIds),
+      topic: meetingForm.topic.trim() || 'NOOB',
+      time: meetingForm.time.trim() || 'x',
+      zoomLink: meetingForm.zoomLink.trim() || 'x',
+      meetingId: meetingForm.meetingId.trim(),
+      passcode: meetingForm.passcode.trim(),
+      debug: true
+    });
+    setStatusMessage({ text: JSON.stringify(res), type: res.success ? 'success' : 'error' });
+  };
+
   const handleDeleteContent = async (item: any) => {
     if (!confirm('Permanently remove this?')) return;
     setDeletingContentId(item.id);
@@ -1566,6 +1579,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                   >
                     {sendingMeetingInvite && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     {sendingMeetingInvite ? 'Sending…' : `Send invite to ${selectedSparkxIds.size} applicant${selectedSparkxIds.size === 1 ? '' : 's'}`}
+                  </button>
+                  <button onClick={handleDiagnoseMeetingInvite} className="w-full py-2 text-[11px] text-zinc-500 hover:text-zinc-300 cursor-pointer underline">
+                    Diagnose (no email sent)
                   </button>
                 </div>
               )}

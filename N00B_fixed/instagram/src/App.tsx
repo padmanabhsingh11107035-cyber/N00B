@@ -23,8 +23,10 @@ import {
   checkSessionStatus,
   loadSignedInUser,
   fetchPosts,
+  fetchPostById,
   fetchStories,
   fetchReels,
+  fetchReelById,
   fetchUsers,
   toggleFollowUser,
   acceptFollowRequest,
@@ -439,7 +441,18 @@ export default function App() {
     }
   };
 
-  const handleNavigateToReel = (reelId: string) => {
+  // Both handlers only ever searched whatever was ALREADY loaded (the current reels/feed page) —
+  // a reel or post from outside that locally-loaded set silently opened the generic reels/feed
+  // screen instead of the real thing. Fetching it directly and injecting it into local state first
+  // (so ReelsView's own "put the deep-linked reel first" logic, and PostCard's real DOM element,
+  // both have something to find) is what actually fixes that — used by both the "?post=/?reel="
+  // URL deep link and tapping a shared post/reel card in chat.
+  const handleNavigateToReel = async (reelId: string) => {
+    if (!reels.some((r) => r.id === reelId)) {
+      const reel = await fetchReelById(reelId);
+      if (!reel) return; // not found, or not allowed to view — nothing to open
+      setReels((prev) => (prev.some((r) => r.id === reelId) ? prev : [reel, ...prev]));
+    }
     setSelectedReelId(reelId);
     setActiveTab('reels');
   };
@@ -448,7 +461,12 @@ export default function App() {
     setActiveTab(previousTabRef.current);
   };
 
-  const handleNavigateToPost = (postId: string) => {
+  const handleNavigateToPost = async (postId: string) => {
+    if (!posts.some((p) => p.id === postId)) {
+      const post = await fetchPostById(postId);
+      if (!post) return;
+      setPosts((prev) => (prev.some((p) => p.id === postId) ? prev : [post, ...prev]));
+    }
     setActiveTab('feed');
     setTimeout(() => {
       const el = document.getElementById(`post-card-${postId}`);

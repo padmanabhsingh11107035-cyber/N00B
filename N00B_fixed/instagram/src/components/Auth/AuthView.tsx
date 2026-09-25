@@ -1189,15 +1189,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   <label className="text-xs font-bold text-zinc-300">
                     Profile Photo <span className="text-cyan-400 font-bold">* (Compulsory)</span>
                   </label>
-                  <button
-                    type="button"
-                    disabled={isUploadingAvatar}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-wait"
-                  >
-                    <Upload className="w-3 h-3" />
-                    <span>{isUploadingAvatar ? 'Uploading…' : customAvatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
-                  </button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1208,13 +1199,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 </div>
 
                 {customAvatarUrl ? (
-                  <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    disabled={isUploadingAvatar}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2.5 cursor-pointer disabled:cursor-wait"
+                  >
                     <div className="relative shrink-0 w-14 h-14 rounded-2xl overflow-hidden border-2 border-cyan-400 shadow-lg shadow-cyan-500/30">
                       <img src={customAvatarUrl} alt="Your profile photo" className="w-full h-full object-cover" />
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-cyan-400 text-black rounded-tl flex items-center justify-center text-[9px] font-bold">✓</span>
                     </div>
-                    <span className="text-[11px] text-zinc-400">Looking good!</span>
-                  </div>
+                    <span className="text-[11px] text-cyan-400 font-bold">{isUploadingAvatar ? 'Uploading…' : 'Looking good! Tap to change'}</span>
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -1252,7 +1248,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-[#00FF66]" />
-                    <span>Bot Defense Verification</span>
+                    <span>Security Captcha</span>
                     <span className="text-cyan-400">*</span>
                   </label>
                   <button

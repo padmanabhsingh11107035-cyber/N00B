@@ -518,6 +518,18 @@ export async function fetchPosts(_category?: string, _location?: string): Promis
   }
 }
 
+// Used for a "?post=<id>" deep link or a shared-post chat card — the post may not be in whatever
+// feed page happens to already be loaded, so this fetches it directly. Returns null for a post
+// that doesn't exist, is archived, or the viewer isn't allowed to see (treated the same either way).
+export async function fetchPostById(postId: string): Promise<Post | null> {
+  try {
+    const res = await rpc<any>('post_by_id', { p_post: postId });
+    return res ? mapPost(res) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchLikedPosts(): Promise<Post[]> {
   try {
     if (!(await currentSession())) return [];
@@ -1012,6 +1024,16 @@ export async function fetchReels(): Promise<Reel[]> {
     return ((await rpc<any[]>('feed_reels')) || []).map(mapReel);
   } catch {
     return [];
+  }
+}
+
+// Used for a "?reel=<id>" deep link or a shared-reel chat card — see fetchPostById's comment.
+export async function fetchReelById(reelId: string): Promise<Reel | null> {
+  try {
+    const res = await rpc<any>('reel_by_id', { p_reel: reelId });
+    return res ? mapReel(res) : null;
+  } catch {
+    return null;
   }
 }
 

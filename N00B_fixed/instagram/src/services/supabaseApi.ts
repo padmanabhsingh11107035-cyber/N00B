@@ -2476,6 +2476,75 @@ export async function adminReviewTeamApplication(id: string, status: 'accepted' 
   }
 }
 
+// ---- SparkX (IIT Bombay Techfest) team registrations ----
+
+export interface SparkXApplication {
+  id: string;
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  fullName: string;
+  grade: string;
+  schoolName: string;
+  contribution: string;
+  aiKnowledge: string;
+  experience?: string;
+  availability?: string;
+  contact?: string;
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+const mapSparkXApplication = (a: any): SparkXApplication => ({ ...a, avatar: resolveMedia(a.avatar) });
+
+export async function submitSparkXApplication(payload: {
+  fullName: string;
+  grade: string;
+  schoolName: string;
+  contribution: string;
+  aiKnowledge: string;
+  experience?: string;
+  availability?: string;
+  contact?: string;
+}): Promise<{ success: boolean; application?: SparkXApplication; error?: string }> {
+  try {
+    const res = await rpc<any>('submit_sparkx_application', {
+      p_full_name: payload.fullName,
+      p_grade: payload.grade,
+      p_school: payload.schoolName,
+      p_contribution: payload.contribution,
+      p_ai_knowledge: payload.aiKnowledge,
+      p_experience: payload.experience || '',
+      p_availability: payload.availability || '',
+      p_contact: payload.contact || ''
+    });
+    return { success: true, application: mapSparkXApplication(res.application) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not submit your application.') };
+  }
+}
+
+export async function fetchAdminSparkXApplications(): Promise<{ success: boolean; applications: SparkXApplication[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_sparkx_applications');
+    return { success: true, applications: (res.applications || []).map(mapSparkXApplication) };
+  } catch (err) {
+    return { success: false, applications: [], error: errorText(err, 'Could not load applications.') };
+  }
+}
+
+export async function adminReviewSparkXApplication(id: string, status: 'accepted' | 'declined'): Promise<{ success: boolean; application?: SparkXApplication; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_review_sparkx_application', { p_id: id, p_status: status });
+    return { success: true, application: mapSparkXApplication(res.application) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update this application.') };
+  }
+}
+
 // ---- Platform settings (sign-ups pause, whole-app maintenance lock) ----
 
 export interface PlatformSettings {

@@ -16,12 +16,14 @@ import {
   MessageCircle,
   X,
   ArrowDown,
-  Loader2
+  Loader2,
+  Rocket
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
 import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
+import { SparkXApplicationModal } from './SparkXApplicationModal';
 
 interface FeedViewProps {
   currentUser: User;
@@ -86,6 +88,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
+  const [showSparkXModal, setShowSparkXModal] = useState(false);
 
   // Infinite Scroll State
   const [visibleCount, setVisibleCount] = useState(POSTS_PER_PAGE);
@@ -266,6 +269,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
         {/* Action Icons (Notification Bar, Refresh, Chat) */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Apply to join the SparkX team */}
+          <button
+            onClick={() => setShowSparkXModal(true)}
+            className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+            title="Join our SparkX team (IIT Bombay Techfest)"
+          >
+            <Rocket className="w-4 h-4" />
+          </button>
+
           {/* Notifications Bar Trigger */}
           <button
             id="notifications-bar-trigger"
@@ -432,6 +444,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
           onClose={() => setSelectedPostForComments(null)}
         />
       )}
+
+      {showSparkXModal && <SparkXApplicationModal onClose={() => setShowSparkXModal(false)} />}
     </div>
   );
 };

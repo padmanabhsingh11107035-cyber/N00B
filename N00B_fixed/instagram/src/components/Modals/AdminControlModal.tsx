@@ -39,16 +39,17 @@ import {
   Copy,
   Check,
   Link as LinkIcon,
-  Smartphone
+  Smartphone,
+  Rocket
 } from 'lucide-react';
 import { User } from '../../types';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
-  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
+  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings
 } from '../../services/api';
-import type { AdminStaffMember, AdminAuditEntry, TeamApplication } from '../../services/api';
+import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime } from '../../utils/formatTime';
@@ -62,7 +63,7 @@ interface AdminControlModalProps {
   onLogout?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'sparkxRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -158,6 +159,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [joinRequests, setJoinRequests] = useState<TeamApplication[]>([]);
   const [loadingJoinRequests, setLoadingJoinRequests] = useState(false);
 
+  // SparkX (IIT Bombay Techfest) team registrations
+  const [sparkxRequests, setSparkxRequests] = useState<SparkXApplication[]>([]);
+  const [loadingSparkxRequests, setLoadingSparkxRequests] = useState(false);
+
   // Platform-wide toggles: pause sign-ups, whole-app maintenance lock, shop orders
   const [signupsEnabled, setSignupsEnabled] = useState(true);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
@@ -205,6 +210,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (main) {
       loadStaff();
       loadJoinRequests();
+      loadSparkxRequests();
     }
   }, []);
 
@@ -212,6 +218,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (activeTab === 'activity' && main) loadAudit();
     if (activeTab === 'content' && main) loadContent(contentType);
     if (activeTab === 'joinRequests' && main) loadJoinRequests();
+    if (activeTab === 'sparkxRequests' && main) loadSparkxRequests();
     if (activeTab === 'settings' && main) loadSettings();
   }, [activeTab]);
 
@@ -233,6 +240,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (res.success) setJoinRequests(res.applications);
     else setStatusMessage({ text: res.error || 'Could not load applications.', type: 'error' });
     setLoadingJoinRequests(false);
+  };
+
+  const loadSparkxRequests = async () => {
+    setLoadingSparkxRequests(true);
+    const res = await fetchAdminSparkXApplications();
+    if (res.success) setSparkxRequests(res.applications);
+    else setStatusMessage({ text: res.error || 'Could not load applications.', type: 'error' });
+    setLoadingSparkxRequests(false);
   };
 
   const loadSettings = async () => {
@@ -263,6 +278,16 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (res.success) {
       setStatusMessage({ text: `Application ${status}.`, type: 'success' });
       loadJoinRequests();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not update this application.', type: 'error' });
+    }
+  };
+
+  const handleReviewSparkxRequest = async (id: string, status: 'accepted' | 'declined') => {
+    const res = await adminReviewSparkXApplication(id, status);
+    if (res.success) {
+      setStatusMessage({ text: `Application ${status}.`, type: 'success' });
+      loadSparkxRequests();
     } else {
       setStatusMessage({ text: res.error || 'Could not update this application.', type: 'error' });
     }
@@ -729,6 +754,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <Briefcase className="w-4 h-4" /> Join Requests ({joinRequests.filter((a) => a.status === 'pending').length})
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('sparkxRequests')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'sparkxRequests'
+                  ? 'border-orange-400 text-orange-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Rocket className="w-4 h-4" /> SparkX ({sparkxRequests.filter((a) => a.status === 'pending').length})
             </button>
           )}
 
@@ -1417,6 +1455,78 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           </button>
                           <button
                             onClick={() => handleReviewJoinRequest(app.id, 'declined')}
+                            className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'sparkxRequests' && main ? (
+            /* SparkX (IIT Bombay Techfest) team registrations */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <Rocket className="w-4 h-4 text-orange-300" /> SparkX Applications
+                </span>
+                <button onClick={loadSparkxRequests} className="text-xs text-orange-300 hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingSparkxRequests ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+
+              {loadingSparkxRequests ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-orange-300 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400">Loading applications...</p>
+                </div>
+              ) : sparkxRequests.length === 0 ? (
+                <div className="py-10 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+                  No applications yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sparkxRequests.map((app) => (
+                    <div key={app.id} className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <img src={app.avatar || '/noob-logo.svg.jpeg'} alt={app.username} className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0" />
+                          <div>
+                            <span className="text-xs font-bold text-white block">{app.fullName} <span className="text-zinc-500 font-normal">@{app.username}</span></span>
+                            <span className="text-[11px] text-orange-300 font-semibold">{app.grade} · {app.schoolName}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${
+                            app.status === 'accepted'
+                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              : app.status === 'declined'
+                              ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {app.status}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Can contribute: </span>{app.contribution}</p>
+                      <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">AI knowledge: </span>{app.aiKnowledge}</p>
+                      {app.experience && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Experience: </span>{app.experience}</p>}
+                      {app.availability && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Availability: </span>{app.availability}</p>}
+                      {app.contact && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Contact: </span>{app.contact}</p>}
+                      <span className="text-[10px] text-zinc-500 block">{formatExactDateTime(app.createdAt)}</span>
+                      {app.status === 'pending' && (
+                        <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
+                          <button
+                            onClick={() => handleReviewSparkxRequest(app.id, 'accepted')}
+                            className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Accept
+                          </button>
+                          <button
+                            onClick={() => handleReviewSparkxRequest(app.id, 'declined')}
                             className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
                           >
                             Decline

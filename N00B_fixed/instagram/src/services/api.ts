@@ -183,6 +183,9 @@ export {
   submitTeamApplication,
   fetchAdminTeamApplications,
   adminReviewTeamApplication,
+  submitSparkXApplication,
+  fetchAdminSparkXApplications,
+  adminReviewSparkXApplication,
   fetchPublicPlatformSettings,
   adminSetPlatformSettings,
   fetchAdminContentFeed,
@@ -205,6 +208,7 @@ export type {
   HiddenFromUser,
   MutualFollower,
   TeamApplication,
+  SparkXApplication,
   PlatformSettings
 } from './supabaseApi';
 

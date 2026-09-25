@@ -81,6 +81,78 @@ const generateCaptchaCode = (): string => {
   return chars.join('');
 };
 
+// Rendered as pixels on a <canvas>, never as literal DOM text — a scripted or DOM-reading bot
+// (including a text-only AI agent handed the page's HTML) can no longer just read the code out of
+// the element; it would need real image/OCR vision. Per-character rotation, skew and jitter, plus
+// noise curves both behind and in front of the glyphs and speckle dots, are classic CAPTCHA
+// hardening that also degrades OCR and vision-model reading accuracy — not unbeatable against a
+// capable multimodal model, but a meaningfully higher bar than static colored text ever was.
+const CAPTCHA_COLORS = ['#22d3ee', '#00FF66', '#818cf8', '#facc15', '#c084fc'];
+const rand = (min: number, max: number) => min + Math.random() * (max - min);
+
+function drawCaptcha(canvas: HTMLCanvasElement, code: string) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = 168;
+  const H = 52;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = `${W}px`;
+  canvas.style.height = `${H}px`;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+
+  ctx.fillStyle = '#0a0a0d';
+  ctx.fillRect(0, 0, W, H);
+
+  // Noise curves behind the glyphs
+  for (let i = 0; i < 5; i++) {
+    ctx.strokeStyle = `${CAPTCHA_COLORS[i % CAPTCHA_COLORS.length]}33`;
+    ctx.lineWidth = rand(1, 2);
+    ctx.beginPath();
+    ctx.moveTo(rand(0, W), rand(0, H));
+    ctx.quadraticCurveTo(rand(0, W), rand(0, H), rand(0, W), rand(0, H));
+    ctx.stroke();
+  }
+
+  // Each character gets its own random rotation, skew-ish scale and jitter — no two renders
+  // segment the same way, which is what defeats naive per-glyph OCR.
+  const n = code.length;
+  const slot = W / n;
+  for (let i = 0; i < n; i++) {
+    ctx.save();
+    const cx = slot * i + slot / 2 + rand(-4, 4);
+    const cy = H / 2 + rand(-6, 6);
+    ctx.translate(cx, cy);
+    ctx.rotate(rand(-0.45, 0.45));
+    ctx.scale(rand(0.9, 1.15), rand(0.85, 1.25));
+    ctx.font = `${Math.floor(rand(24, 30))}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = CAPTCHA_COLORS[Math.floor(Math.random() * CAPTCHA_COLORS.length)];
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(code[i], 0, 0);
+    ctx.restore();
+  }
+
+  // Noise curves in front of the glyphs, breaking clean OCR segmentation further
+  for (let i = 0; i < 4; i++) {
+    ctx.strokeStyle = `rgba(255,255,255,${rand(0.08, 0.18)})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(rand(0, W), rand(0, H));
+    ctx.quadraticCurveTo(rand(0, W), rand(0, H), rand(0, W), rand(0, H));
+    ctx.stroke();
+  }
+
+  // Speckle
+  for (let i = 0; i < 60; i++) {
+    ctx.fillStyle = `rgba(255,255,255,${rand(0.04, 0.14)})`;
+    ctx.beginPath();
+    ctx.arc(rand(0, W), rand(0, H), rand(0.4, 1.1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 // Country Options with Flag + Name + Number Code
 export const COUNTRY_OPTIONS = [
   { flag: '🇮🇳', code: '+91', name: 'India', fullLabel: '🇮🇳 India (+91)' },
@@ -220,11 +292,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // Captcha state (random captcha only while creating account)
   const [captchaCode, setCaptchaCode] = useState<string>('');
   const [userCaptchaInput, setUserCaptchaInput] = useState<string>('');
+  const captchaCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Generate captcha on mount or when mode changes to signup
   useEffect(() => {
     setCaptchaCode(generateCaptchaCode());
   }, [mode]);
+
+  // Redraws the canvas every time the code changes — the code itself never appears as DOM text.
+  useEffect(() => {
+    if (captchaCode && captchaCanvasRef.current) drawCaptcha(captchaCanvasRef.current, captchaCode);
+  }, [captchaCode]);
 
   const handleRefreshCaptcha = () => {
     setCaptchaCode(generateCaptchaCode());
@@ -1188,30 +1266,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div
+                  <canvas
+                    ref={captchaCanvasRef}
                     onClick={handleRefreshCaptcha}
-                    className="relative px-4 py-2.5 bg-zinc-950 rounded-xl border border-zinc-700/80 select-none cursor-pointer flex items-center justify-center tracking-[0.35em] font-mono text-lg font-black shadow-inner overflow-hidden min-w-[130px]"
+                    className="rounded-xl border border-zinc-700/80 select-none cursor-pointer shadow-inner shrink-0"
                     title="Click to refresh captcha"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-[#00FF66]/10 pointer-events-none" />
-                    <div className="absolute inset-x-0 top-1/2 h-[1px] bg-white/20 -rotate-6 pointer-events-none" />
-                    <div className="absolute inset-x-0 top-1/3 h-[1px] bg-cyan-400/20 rotate-3 pointer-events-none" />
-
-                    <div className="flex items-center gap-1 relative z-10">
-                      {captchaCode.split('').map((char, index) => {
-                        const rotations = ['-rotate-6', 'rotate-3', '-rotate-3', 'rotate-6', '-rotate-12'];
-                        const colors = ['text-cyan-400', 'text-[#00FF66]', 'text-indigo-400', 'text-yellow-400', 'text-purple-400'];
-                        return (
-                          <span
-                            key={index}
-                            className={`inline-block ${rotations[index % rotations.length]} ${colors[index % colors.length]} drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]`}
-                          >
-                            {char}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    aria-label="Security captcha image"
+                  />
 
                   <div className="flex-1">
                     <input

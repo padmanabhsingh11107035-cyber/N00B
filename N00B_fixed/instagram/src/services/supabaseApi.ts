@@ -2496,6 +2496,7 @@ export interface SparkXApplication {
   createdAt: string;
   reviewedBy?: string;
   reviewedAt?: string;
+  meetingInvitedAt?: string;
 }
 
 const mapSparkXApplication = (a: any): SparkXApplication => ({ ...a, avatar: resolveMedia(a.avatar) });
@@ -2542,6 +2543,41 @@ export async function adminReviewSparkXApplication(id: string, status: 'accepted
     return { success: true, application: mapSparkXApplication(res.application) };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not update this application.') };
+  }
+}
+
+// Best-effort emails — never block or fail the caller's real action just because one couldn't be sent.
+export async function notifySparkxRegistered(applicationId: string): Promise<void> {
+  try {
+    await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'sparkx_registered_email', applicationId } });
+  } catch {
+    // best-effort only
+  }
+}
+
+export async function notifySparkxReview(applicationId: string, status: 'accepted' | 'declined'): Promise<void> {
+  try {
+    await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'sparkx_review_email', applicationId, status } });
+  } catch {
+    // best-effort only
+  }
+}
+
+export async function sendSparkxMeetingInvite(payload: {
+  applicationIds: string[];
+  topic: string;
+  time: string;
+  zoomLink: string;
+  meetingId?: string;
+  passcode?: string;
+}): Promise<{ success: boolean; sent?: number; failed?: number; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'sparkx_meeting_email', ...payload } });
+    if (error) throw error;
+    if (data?.error) return { success: false, error: data.error };
+    return { success: true, sent: data?.sent, failed: data?.failed };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not send the meeting invite.') };
   }
 }
 

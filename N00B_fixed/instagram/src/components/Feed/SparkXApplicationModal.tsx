@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Rocket, CheckCircle2, Loader2 } from 'lucide-react';
-import { submitSparkXApplication } from '../../services/api';
+import { submitSparkXApplication, notifySparkxRegistered } from '../../services/api';
 
 interface SparkXApplicationModalProps {
   onClose: () => void;
@@ -31,8 +31,12 @@ export const SparkXApplicationModal: React.FC<SparkXApplicationModalProps> = ({ 
     setError('');
     const res = await submitSparkXApplication({ fullName, grade, schoolName, contribution, aiKnowledge, experience, availability, contact });
     setSubmitting(false);
-    if (res.success) setDone(true);
-    else setError(res.error || 'Could not submit your application.');
+    if (res.success) {
+      setDone(true);
+      if (res.application?.id) void notifySparkxRegistered(res.application.id);
+    } else {
+      setError(res.error || 'Could not submit your application.');
+    }
   };
 
   return (
@@ -58,7 +62,7 @@ export const SparkXApplicationModal: React.FC<SparkXApplicationModalProps> = ({ 
             <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
             <h3 className="text-sm font-bold text-white">Application submitted!</h3>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
-              Thanks for wanting to represent our school at SparkX. We'll review your application and get back to you.
+              Thanks for wanting to represent our school at SparkX. We'll review your application and get back to you — you'll also get an email confirming we received it.
             </p>
             <button
               onClick={onClose}

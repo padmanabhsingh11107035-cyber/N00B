@@ -13,6 +13,10 @@
 //   { action: "record_signup_device" }                    -> stamp the caller's OWN profile_private row with the real IP and
 //                                                           OS platform this request actually arrived from (never trusted from
 //                                                           the client — the whole reason this needs to live server-side)
+//   { action: "sparkx_registered_email", applicationId }  -> emails the caller a "we got your registration" receipt
+//   { action: "sparkx_review_email", applicationId, status } -> admin-only: emails the applicant they were accepted/declined
+//   { action: "sparkx_meeting_email", applicationIds, topic, time, zoomLink, meetingId, passcode }
+//                                                           -> admin-only: emails a Zoom meeting invite to the selected applicants
 //
 // Deploy with "Verify JWT" switched OFF: the person's login token is checked in the code below, and
 // a logged-out visitor simply gets the generic (guest) assistant.
@@ -46,6 +50,36 @@ function envKey(classic: string, listName: string): string {
 }
 const serviceKey = () => envKey('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEYS');
 const publicKey = () => envKey('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS');
+
+// ---------------------------------------------------------------------------- outgoing email (Resend)
+// Same small helper as the "recover-account" function: needs the secret RESEND_API_KEY (a free
+// Resend.com key). `false` (never thrown) whenever it can't be sent, so a caller can decide for
+// itself whether that failure should stop anything else — an email going out is never load-bearing.
+const escapeHtml = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
+  const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
+  if (!key || !to) return false;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) console.warn(`Resend: ${res.status} ${await res.text().catch(() => '')}`.slice(0, 300));
+    return res.ok;
+  } catch (err: any) {
+    console.warn('Resend error:', err?.message || err);
+    return false;
+  }
+}
+function emailShell(title: string, bodyHtml: string): string {
+  return `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111">
+    <p style="font-size:18px;font-weight:800;margin:0 0 14px">${escapeHtml(title)}</p>
+    ${bodyHtml}
+    <p style="font-size:13px;color:#666;margin-top:20px">— The NOOB team</p>
+  </div>`;
+}
 
 // ---------------------------------------------------------------------------- push notifications
 // { action: "push", notificationId } — sent by the DATABASE (a trigger) whenever a notification is created, with the private
@@ -773,6 +807,106 @@ Deno.serve(async (req) => {
       .eq('user_id', userId);
     if (error) return json({ error: 'Could not record device info.' }, 500);
     return json({ success: true });
+  }
+
+  // ------------------------------------------------------------------ SparkX email notifications
+  // Three actions, all best-effort (never fail the caller's real action just because an email
+  // could not be sent): a self-triggered "we got your registration" receipt, and two admin-only
+  // actions (accept/decline, and a Zoom meeting invite) gated by is_master_admin() checked through
+  // the ADMIN'S OWN token — never trust that the client only calls this after a real admin RPC.
+  if (body?.action === 'sparkx_registered_email') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const [{ data: app }, { data: priv }] = await Promise.all([
+      admin.from('sparkx_applications').select('full_name, grade, school_name').eq('id', String(body.applicationId ?? '')).eq('user_id', userId).maybeSingle(),
+      admin.from('profile_private').select('email').eq('user_id', userId).maybeSingle()
+    ]);
+    if (!app || !priv?.email) return json({ success: true, sent: false });
+    const sent = await sendEmail(
+      priv.email,
+      'We’ve received your SparkX registration',
+      `Hi ${app.full_name},\n\nThanks for registering to join NOOB's SparkX team (grade ${app.grade}, ${app.school_name}). Our team will review your application and get back to you with an update soon.\n\n— The NOOB team`,
+      emailShell('Registration received', `
+        <p style="font-size:14px;line-height:1.6">Hi ${escapeHtml(app.full_name)},</p>
+        <p style="font-size:14px;line-height:1.6">Thanks for registering to join NOOB's SparkX team (grade ${escapeHtml(app.grade)}, ${escapeHtml(app.school_name)}). Our team will review your application and get back to you with an update soon.</p>
+      `)
+    );
+    return json({ success: true, sent });
+  }
+
+  if (body?.action === 'sparkx_review_email') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const { data: isAdmin } = await asUser().rpc('is_master_admin');
+    if (!isAdmin) return json({ error: 'Access denied.' }, 403);
+    const status = body.status === 'accepted' || body.status === 'declined' ? body.status : null;
+    if (!status) return json({ error: 'Invalid status.' }, 400);
+    const { data: app } = await admin.from('sparkx_applications').select('user_id, full_name, grade, school_name').eq('id', String(body.applicationId ?? '')).maybeSingle();
+    if (!app) return json({ error: 'Application not found.' }, 404);
+    const { data: priv } = await admin.from('profile_private').select('email').eq('user_id', app.user_id).maybeSingle();
+    if (!priv?.email) return json({ success: true, sent: false });
+    const sent = status === 'accepted'
+      ? await sendEmail(
+          priv.email,
+          'You’re selected for NOOB’s SparkX team!',
+          `Hi ${app.full_name},\n\nGreat news — you've been selected to join NOOB's SparkX team! We were impressed with your application and are excited to have you on board. We'll be in touch shortly with next steps.\n\nCongratulations, and welcome to the team.\n\n— The NOOB team`,
+          emailShell('You’re selected! 🎉', `
+            <p style="font-size:14px;line-height:1.6">Hi ${escapeHtml(app.full_name)},</p>
+            <p style="font-size:14px;line-height:1.6">Great news — you've been selected to join NOOB's SparkX team! We were impressed with your application and are excited to have you on board. We'll be in touch shortly with next steps.</p>
+            <p style="font-size:14px;line-height:1.6">Congratulations, and welcome to the team.</p>
+          `)
+        )
+      : await sendEmail(
+          priv.email,
+          'An update on your SparkX application',
+          `Hi ${app.full_name},\n\nThank you for applying to join NOOB's SparkX team. After careful review, we won't be moving forward with your application this time. This was a competitive process, and we genuinely appreciate the time and effort you put into applying.\n\nWe'd love to see you apply again in the future.\n\n— The NOOB team`,
+          emailShell('An update on your application', `
+            <p style="font-size:14px;line-height:1.6">Hi ${escapeHtml(app.full_name)},</p>
+            <p style="font-size:14px;line-height:1.6">Thank you for applying to join NOOB's SparkX team. After careful review, we won't be moving forward with your application this time. This was a competitive process, and we genuinely appreciate the time and effort you put into applying.</p>
+            <p style="font-size:14px;line-height:1.6">We'd love to see you apply again in the future.</p>
+          `)
+        );
+    return json({ success: true, sent });
+  }
+
+  if (body?.action === 'sparkx_meeting_email') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const { data: isAdmin } = await asUser().rpc('is_master_admin');
+    if (!isAdmin) return json({ error: 'Access denied.' }, 403);
+    const ids = Array.isArray(body.applicationIds) ? body.applicationIds.map(String).slice(0, 100) : [];
+    if (ids.length === 0) return json({ error: 'Select at least one applicant.' }, 400);
+    const topic = String(body.topic ?? 'NOOB').slice(0, 100) || 'NOOB';
+    const time = String(body.time ?? '').slice(0, 200);
+    const zoomLink = String(body.zoomLink ?? '').slice(0, 300);
+    const meetingId = String(body.meetingId ?? '').slice(0, 50);
+    const passcode = String(body.passcode ?? '').slice(0, 50);
+    if (!time || !zoomLink) return json({ error: 'Meeting time and Zoom link are required.' }, 400);
+
+    const { data: apps } = await admin.from('sparkx_applications').select('id, user_id, full_name').in('id', ids);
+    const userIds = (apps ?? []).map((a: any) => a.user_id);
+    const { data: privs } = userIds.length ? await admin.from('profile_private').select('user_id, email').in('user_id', userIds) : { data: [] as any[] };
+    const emailByUser = new Map((privs ?? []).map((p: any) => [p.user_id, p.email]));
+
+    let sent = 0, failed = 0;
+    const invitedIds: string[] = [];
+    for (const a of apps ?? []) {
+      const email = emailByUser.get(a.user_id);
+      if (!email) { failed++; continue; }
+      const ok = await sendEmail(
+        email,
+        `You're invited: ${topic} — Zoom meeting`,
+        `Hi ${a.full_name},\n\nNOOB is inviting you to a scheduled Zoom meeting.\n\nTopic: ${topic}\nTime: ${time}\n\nJoin Zoom Meeting\n${zoomLink}\n\n${meetingId ? `Meeting ID: ${meetingId}\n` : ''}${passcode ? `Passcode: ${passcode}\n` : ''}\nSee you there!\n\n— The NOOB team`,
+        emailShell('You’re invited to a Zoom meeting', `
+          <p style="font-size:14px;line-height:1.6">Hi ${escapeHtml(a.full_name)},</p>
+          <p style="font-size:14px;line-height:1.6">NOOB is inviting you to a scheduled Zoom meeting.</p>
+          <p style="font-size:14px;line-height:1.6;margin:16px 0"><strong>Topic:</strong> ${escapeHtml(topic)}<br/><strong>Time:</strong> ${escapeHtml(time)}</p>
+          <p style="font-size:14px;line-height:1.6"><a href="${escapeHtml(zoomLink)}" style="color:#2563eb">Join Zoom Meeting</a></p>
+          ${meetingId ? `<p style="font-size:13px;color:#444;margin:4px 0">Meeting ID: ${escapeHtml(meetingId)}</p>` : ''}
+          ${passcode ? `<p style="font-size:13px;color:#444;margin:4px 0">Passcode: ${escapeHtml(passcode)}</p>` : ''}
+        `)
+      );
+      if (ok) { sent++; invitedIds.push(a.id); } else failed++;
+    }
+    if (invitedIds.length) await asUser().rpc('admin_mark_sparkx_meeting_invited', { p_ids: invitedIds });
+    return json({ success: true, sent, failed });
   }
 
   // ------------------------------------------------------------------ translate one chat message

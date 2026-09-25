@@ -46,7 +46,7 @@ import { User } from '../../types';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
-  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
+  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings
 } from '../../services/api';
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication } from '../../services/api';
@@ -162,6 +162,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   // SparkX (IIT Bombay Techfest) team registrations
   const [sparkxRequests, setSparkxRequests] = useState<SparkXApplication[]>([]);
   const [loadingSparkxRequests, setLoadingSparkxRequests] = useState(false);
+  const [selectedSparkxIds, setSelectedSparkxIds] = useState<Set<string>>(new Set());
+  const [meetingForm, setMeetingForm] = useState({ topic: 'NOOB', time: '', zoomLink: '', meetingId: '', passcode: '' });
+  const [sendingMeetingInvite, setSendingMeetingInvite] = useState(false);
 
   // Platform-wide toggles: pause sign-ups, whole-app maintenance lock, shop orders
   const [signupsEnabled, setSignupsEnabled] = useState(true);
@@ -286,10 +289,43 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const handleReviewSparkxRequest = async (id: string, status: 'accepted' | 'declined') => {
     const res = await adminReviewSparkXApplication(id, status);
     if (res.success) {
-      setStatusMessage({ text: `Application ${status}.`, type: 'success' });
+      setStatusMessage({ text: `Application ${status}. An email is on its way to the applicant.`, type: 'success' });
       loadSparkxRequests();
+      void notifySparkxReview(id, status);
     } else {
       setStatusMessage({ text: res.error || 'Could not update this application.', type: 'error' });
+    }
+  };
+
+  const toggleSparkxSelection = (id: string) => {
+    setSelectedSparkxIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSendMeetingInvite = async () => {
+    if (selectedSparkxIds.size === 0 || !meetingForm.time.trim() || !meetingForm.zoomLink.trim()) return;
+    setSendingMeetingInvite(true);
+    const res = await sendSparkxMeetingInvite({
+      applicationIds: Array.from(selectedSparkxIds),
+      topic: meetingForm.topic.trim() || 'NOOB',
+      time: meetingForm.time.trim(),
+      zoomLink: meetingForm.zoomLink.trim(),
+      meetingId: meetingForm.meetingId.trim(),
+      passcode: meetingForm.passcode.trim()
+    });
+    setSendingMeetingInvite(false);
+    if (res.success) {
+      setStatusMessage({
+        text: `Meeting invite sent to ${res.sent} applicant${res.sent === 1 ? '' : 's'}.${res.failed ? ` ${res.failed} could not be emailed (no address on file).` : ''}`,
+        type: 'success'
+      });
+      setSelectedSparkxIds(new Set());
+      loadSparkxRequests();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not send the meeting invite.', type: 'error' });
     }
   };
 
@@ -1478,6 +1514,62 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </button>
               </div>
 
+              {selectedSparkxIds.size > 0 && (
+                <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-orange-200 flex items-center gap-1.5">
+                      <Send className="w-3.5 h-3.5" /> Schedule meeting — {selectedSparkxIds.size} selected
+                    </span>
+                    <button onClick={() => setSelectedSparkxIds(new Set())} className="text-[11px] text-zinc-400 hover:text-white cursor-pointer">Clear</button>
+                  </div>
+                  <input
+                    type="text"
+                    value={meetingForm.topic}
+                    onChange={(e) => setMeetingForm((f) => ({ ...f, topic: e.target.value }))}
+                    placeholder="Topic (e.g. NOOB)"
+                    className="w-full bg-zinc-900 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-orange-400"
+                  />
+                  <input
+                    type="text"
+                    value={meetingForm.time}
+                    onChange={(e) => setMeetingForm((f) => ({ ...f, time: e.target.value }))}
+                    placeholder="Time (e.g. Sep 28, 2026 02:30 PM Mumbai, Kolkata, New Delhi) *"
+                    className="w-full bg-zinc-900 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-orange-400"
+                  />
+                  <input
+                    type="text"
+                    value={meetingForm.zoomLink}
+                    onChange={(e) => setMeetingForm((f) => ({ ...f, zoomLink: e.target.value }))}
+                    placeholder="Zoom meeting link *"
+                    className="w-full bg-zinc-900 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-orange-400"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={meetingForm.meetingId}
+                      onChange={(e) => setMeetingForm((f) => ({ ...f, meetingId: e.target.value }))}
+                      placeholder="Meeting ID (optional)"
+                      className="flex-1 bg-zinc-900 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-orange-400"
+                    />
+                    <input
+                      type="text"
+                      value={meetingForm.passcode}
+                      onChange={(e) => setMeetingForm((f) => ({ ...f, passcode: e.target.value }))}
+                      placeholder="Passcode (optional)"
+                      className="flex-1 bg-zinc-900 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-orange-400"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSendMeetingInvite}
+                    disabled={sendingMeetingInvite || !meetingForm.time.trim() || !meetingForm.zoomLink.trim()}
+                    className="w-full py-2.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    {sendingMeetingInvite && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {sendingMeetingInvite ? 'Sending…' : `Send invite to ${selectedSparkxIds.size} applicant${selectedSparkxIds.size === 1 ? '' : 's'}`}
+                  </button>
+                </div>
+              )}
+
               {loadingSparkxRequests ? (
                 <div className="py-12 text-center">
                   <Loader2 className="w-6 h-6 animate-spin text-orange-300 mx-auto mb-2" />
@@ -1489,10 +1581,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {sparkxRequests.map((app) => (
-                    <div key={app.id} className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-2.5">
+                  {sparkxRequests.map((app) => {
+                    const selected = selectedSparkxIds.has(app.id);
+                    return (
+                    <div key={app.id} className={`p-4 rounded-2xl border space-y-2.5 ${selected ? 'bg-orange-500/10 border-orange-400/40' : 'bg-zinc-900/60 border-zinc-800'}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleSparkxSelection(app.id)}
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${selected ? 'bg-orange-500 border-orange-400' : 'border-zinc-600 hover:border-orange-400'}`}
+                            title="Select for a meeting invite"
+                            aria-label="Select for a meeting invite"
+                          >
+                            {selected && <Check className="w-3.5 h-3.5 text-black" />}
+                          </button>
                           <img src={app.avatar || '/noob-logo.svg.jpeg'} alt={app.username} className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0" />
                           <div>
                             <span className="text-xs font-bold text-white block">{app.fullName} <span className="text-zinc-500 font-normal">@{app.username}</span></span>
@@ -1516,7 +1619,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       {app.experience && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Experience: </span>{app.experience}</p>}
                       {app.availability && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Availability: </span>{app.availability}</p>}
                       {app.contact && <p className="text-[11px] text-zinc-400"><span className="text-zinc-500 font-bold">Contact: </span>{app.contact}</p>}
-                      <span className="text-[10px] text-zinc-500 block">{formatExactDateTime(app.createdAt)}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-zinc-500">{formatExactDateTime(app.createdAt)}</span>
+                        {app.meetingInvitedAt && (
+                          <span className="text-[10px] text-orange-300 font-semibold flex items-center gap-1">
+                            <Send className="w-3 h-3" /> Meeting invite sent {formatExactDateTime(app.meetingInvitedAt)}
+                          </span>
+                        )}
+                      </div>
                       {app.status === 'pending' && (
                         <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
                           <button
@@ -1534,7 +1644,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

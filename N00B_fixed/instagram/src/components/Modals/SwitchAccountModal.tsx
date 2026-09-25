@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Trash2, Users, UserPlus, X } from 'lucide-react';
+import { Check, Trash2, UserPlus } from 'lucide-react';
 import { tabSessions } from '../../services/supabase';
 
 interface SwitchAccountModalProps {
@@ -37,21 +37,22 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-[125] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Switch account">
-      <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
-        <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
-            <Users className="w-4 h-4 text-cyan-300" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-black text-white">Accounts on this browser</h3>
-            <p className="text-[11px] text-zinc-400 leading-snug mt-0.5">
-              Every tab can use a different account at the same time. Pick one for this tab, or add another account. Nobody is logged out.
-            </p>
-          </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0" aria-label="Close">
-            <X className="w-4 h-4 text-zinc-400" />
-          </button>
+    <div
+      className="fixed inset-0 z-[125] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Switch account"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md h-[60vh] flex flex-col bg-zinc-950 border-t border-x border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="pt-2.5 pb-1 flex items-center justify-center shrink-0">
+          <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
+        </div>
+        <header className="px-4 pb-3 border-b border-zinc-800 shrink-0">
+          <h3 className="text-sm font-black text-white text-center">Switch account</h3>
         </header>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
@@ -110,7 +111,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
           {accounts.length === 0 && <p className="text-center text-xs text-zinc-500 py-6">No saved accounts on this browser.</p>}
         </div>
 
-        <div className="p-3 border-t border-zinc-800">
+        <div className="p-3 border-t border-zinc-800 shrink-0">
           <button
             type="button"
             onClick={addAnother}

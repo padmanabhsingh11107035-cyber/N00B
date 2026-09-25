@@ -59,7 +59,8 @@ import {
   EyeOff,
   Eye,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  ChevronDown
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
@@ -101,7 +102,7 @@ import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { HideProfileModal } from '../Modals/HideProfileModal';
 import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
-import { Globe as GlobeIcon, KeyRound, Users } from 'lucide-react';
+import { Globe as GlobeIcon, KeyRound } from 'lucide-react';
 import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
@@ -1052,21 +1053,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <button
                         onClick={() => {
                           setShowThreeDotsMenu(false);
-                          setShowSwitchAccount(true);
-                        }}
-                        className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <Users className="w-4 h-4 text-cyan-300" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-white block group-hover:text-cyan-300 transition-colors">Switch account</span>
-                          <span className="text-[10px] text-zinc-400 block truncate">Use another account in this tab</span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowThreeDotsMenu(false);
                           onLogout();
                         }}
                         className="w-full p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-3 text-left transition-colors group cursor-pointer"
@@ -1208,6 +1194,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               @{targetUser.username}
             </h1>
+            {isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => setShowSwitchAccount(true)}
+                className="p-1 -ml-1 rounded-full hover:bg-white/10 cursor-pointer"
+                title="Switch account"
+                aria-label="Switch account"
+              >
+                <ChevronDown className="w-5 h-5 text-white" />
+              </button>
+            )}
             {targetUser.isVerified ? (
               <VerifiedBadge size="md" />
             ) : (

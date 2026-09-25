@@ -515,6 +515,10 @@ export interface Message {
   isViewed?: boolean;
   reactions?: { emoji: string; count: number; users: string[] }[];
   sharedTrack?: { title: string; artist: string; coverUrl?: string; audioUrl?: string };
+  // Send-time only: which account to share — the server looks the account up itself and builds
+  // `sharedProfile` below from the real row, rather than trusting a client-supplied name/avatar.
+  sharedProfileUserId?: string;
+  sharedProfile?: { userId: string; username: string; displayName?: string; avatar?: string; isVerified?: boolean };
   gameInvite?: {
     gameId: string;
     gameTitle: string;

@@ -112,6 +112,9 @@ import { FollowListPage } from './FollowListPage';
 import { StorePage } from '../Store/StorePage';
 import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
 import { MutualFollowersSheet } from './MutualFollowersSheet';
+import { ShareProfileSheet } from './ShareProfileSheet';
+import { ShareToChatModal } from './ShareToChatModal';
+import { ProfileQrModal } from './ProfileQrModal';
 
 interface ProfileViewProps {
   currentUser: User;
@@ -246,6 +249,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [showShareToChatModal, setShowShareToChatModal] = useState(false);
+  const [showProfileQrModal, setShowProfileQrModal] = useState(false);
   const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
   const [reportDetails, setReportDetails] = useState('');
   const [isReporting, setIsReporting] = useState(false);
@@ -1142,7 +1148,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <button
                     onClick={() => {
                       setShowThreeDotsMenu(false);
-                      handleShareProfile(targetUser.username);
+                      setShowShareSheet(true);
                     }}
                     className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                   >
@@ -1151,10 +1157,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
-                        Share Profile Link
+                        Share Profile
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
-                        Copy link to clipboard
+                        Send in chat, QR code, or copy link
                       </span>
                     </div>
                   </button>
@@ -1261,23 +1267,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {isOwnProfile ? (
               <>
                 <button
-                  onClick={() => handleShareProfile(targetUser.username)}
-                  className={`flex-1 py-2 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
-                    shareLinkCopied
-                      ? 'bg-[#00FF66]/15 border-[#00FF66]/40 text-[#00FF66]'
-                      : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white'
-                  }`}
-                  title="Share Profile Link"
+                  onClick={() => setShowShareSheet(true)}
+                  className="flex-1 py-2 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white"
+                  title="Share Profile"
                 >
-                  {shareLinkCopied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" /> Link Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share Profile
-                    </>
-                  )}
+                  <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share Profile
                 </button>
               </>
             ) : (
@@ -1324,19 +1318,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     )}
 
                     <button
-                      onClick={() => handleShareProfile(targetUser.username)}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm ${
-                        shareLinkCopied
-                          ? 'bg-[#00FF66]/15 border-[#00FF66]/40 text-[#00FF66]'
-                          : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white'
-                      }`}
-                      title="Share Profile Link"
+                      onClick={() => setShowShareSheet(true)}
+                      className="py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white"
+                      title="Share Profile"
                     >
-                      {shareLinkCopied ? (
-                        <Check className="w-3.5 h-3.5" />
-                      ) : (
-                        <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-                      )}
+                      <Share2 className="w-3.5 h-3.5 text-cyan-400" />
                     </button>
                   </>
                 )}
@@ -1979,6 +1965,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onToggleFollowUser={onToggleFollowUser}
           onNavigateToUserProfile={onNavigateToUserProfile}
         />
+      )}
+
+      {showShareSheet && (
+        <ShareProfileSheet
+          username={targetUser.username}
+          linkCopied={shareLinkCopied}
+          onCopyLink={() => {
+            handleShareProfile(targetUser.username);
+          }}
+          onSendInChat={() => {
+            setShowShareSheet(false);
+            setShowShareToChatModal(true);
+          }}
+          onShowQrCode={() => {
+            setShowShareSheet(false);
+            setShowProfileQrModal(true);
+          }}
+          onClose={() => setShowShareSheet(false)}
+        />
+      )}
+
+      {showShareToChatModal && (
+        <ShareToChatModal
+          currentUser={currentUser}
+          targetUser={targetUser}
+          onClose={() => setShowShareToChatModal(false)}
+        />
+      )}
+
+      {showProfileQrModal && (
+        <ProfileQrModal targetUser={targetUser} onClose={() => setShowProfileQrModal(false)} />
       )}
 
       {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}

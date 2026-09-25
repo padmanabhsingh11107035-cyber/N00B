@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { Story, User } from '../../types';
-import { recordStoryView, toggleStoryLike, fetchStoryViewers, fetchUserById } from '../../services/api';
+import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
@@ -49,6 +49,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [likedStoryIds, setLikedStoryIds] = useState<Set<string>>(
     () => new Set(stories.filter((s) => s.isLiked).map((s) => s.id))
   );
+  // A highlight's items are a fixed snapshot (media/stickers/when it was posted) with no
+  // comments/likes baked in — those keep changing after the fact, so they're fetched live per item
+  // here and layered on top, keyed by story id so switching pages/reopening the same one is instant.
+  const [liveById, setLiveById] = useState<Record<string, Story>>({});
   const [isMuted, setIsMuted] = useState(false);
   const [pollVoted, setPollVoted] = useState<number | null>(null);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
@@ -65,6 +69,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   const story = stories[currentIndex];
   const nextStory = stories[currentIndex + 1];
+  // Once live data has arrived for this item, it's the source of truth for anything that can
+  // change after the story was posted (comments, likes); everything else (media, stickers, who
+  // posted it) is immutable, so the snapshot already showing it instantly is never overwritten.
+  const effectiveStory = story && liveById[story.id] ? { ...story, ...liveById[story.id] } : story;
   const isOwnStory = !!story && story.userId === currentUser.id;
   const isLiked = !!story && likedStoryIds.has(story.id);
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
@@ -84,6 +92,22 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     if (isHighlight || !story || story.userId === currentUser.id) return;
     recordStoryView(story.id).catch(() => {});
   }, [isHighlight, story?.id, currentUser.id]);
+
+  // Highlights stay likeable/commentable forever (their original story row is kept, never
+  // deleted — see migration 20260925000039), so this is what actually loads that live data; the
+  // snapshot alone has no idea whether the viewer already liked it or what's been said about it.
+  useEffect(() => {
+    if (!isHighlight || !story || liveById[story.id]) return;
+    let alive = true;
+    fetchStoryById(story.id).then((live) => {
+      if (!alive || !live) return;
+      setLiveById((prev) => ({ ...prev, [live.id]: live }));
+      if (live.isLiked) setLikedStoryIds((prev) => (prev.has(live.id) ? prev : new Set(prev).add(live.id)));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [isHighlight, story?.id]);
 
   // Preload the next story's media so advancing to it is instant instead of showing a blank/
   // loading frame while the browser only just starts fetching it.
@@ -153,8 +177,23 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
-    onAddComment(story.id, commentText.trim());
+    const text = commentText.trim();
+    if (!text) return;
+    const id = story.id;
+    if (isHighlight) {
+      // Self-contained rather than routed through the parent's onAddComment (a no-op for
+      // highlights — ProfileView has no live comments cache to append to for these), since this
+      // viewer already holds the live data it just fetched for this exact item.
+      addCommentToStory(id, text).then((newComment) => {
+        if (!newComment || !newComment.id) return;
+        setLiveById((prev) => {
+          const base = prev[id] || story;
+          return { ...prev, [id]: { ...base, comments: [...(base.comments || []), newComment] } };
+        });
+      });
+    } else {
+      onAddComment(id, text);
+    }
     setCommentText('');
     setIsPaused(false);
     setIsCommentFocused(false);
@@ -469,9 +508,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         </div>
 
         {/* Existing Story Comments Overlay List */}
-        {!isHighlight && story.comments && story.comments.length > 0 && (
+        {effectiveStory.comments && effectiveStory.comments.length > 0 && (
           <div className="absolute bottom-16 inset-x-3 z-30 max-h-24 overflow-y-auto space-y-1 pr-2 no-scrollbar">
-            {story.comments.filter(Boolean).map((c) => (
+            {effectiveStory.comments.filter(Boolean).map((c) => (
               <div key={c.id} className="bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-gray-200 flex items-center gap-2">
                 <span className="font-bold text-[#00FF66]">@{c.username}:</span>
                 <span translate="no" className="truncate">{c.text}</span>
@@ -480,9 +519,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           </div>
         )}
 
-        {/* Story Bottom Bar: reply input for a viewer, "Seen by" for the owner — a highlight's
-            older pages have no live `stories` row behind them anymore, so neither applies there. */}
-        {isHighlight ? null : isOwnStory ? (
+        {/* Story Bottom Bar: reply input for a viewer, "Seen by" for the owner — works the same way
+            for a highlight, since its original story row (and every like/comment on it) is kept
+            forever now instead of being deleted with the rest of the live 24h tray. */}
+        {isOwnStory ? (
           <div className="absolute bottom-3 inset-x-3 z-30">
             <button
               onClick={() => {
@@ -492,7 +532,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               className="flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 text-white/90 hover:text-white cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span className="text-xs font-semibold">Seen by {(story.viewedBy?.length || 0).toLocaleString()}</span>
+              <span className="text-xs font-semibold">Seen by {(effectiveStory.viewedBy?.length || 0).toLocaleString()}</span>
             </button>
           </div>
         ) : (

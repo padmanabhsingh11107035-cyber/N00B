@@ -61,6 +61,7 @@ export {
   createStory,
   recordStoryView,
   toggleStoryLike,
+  fetchStoryById,
   fetchStoryViewers,
   addCommentToStory,
   deleteStory,

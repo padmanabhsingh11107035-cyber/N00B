@@ -104,6 +104,10 @@ check(pic.mediaType === 'sticker' && pic.mediaUrl === 'stickers/s.png', 'a stick
 check((await rpc(a, 'send_message', ab.id, { mediaUrl: 'posts/x.jpg' })).message.mediaType === 'image', 'a picture defaults to type "image"');
 const inv = (await rpc(a, 'send_message', ab.id, { gameInvite: { gameId: 'chess', roomCode: 'ABC' } })).message;
 check(inv.mediaType === 'game_invite' && inv.gameInvite.roomCode === 'ABC', 'a game invite is a message');
+const shared = (await rpc(a, 'send_message', ab.id, { sharedProfileUserId: c })).message;
+check(shared.sharedProfile.userId === c && shared.sharedProfile.username === cRaw.username.toLowerCase(), 'sharing a profile (no text) carries the REAL account\'s username, looked up server-side — not treated as an empty message');
+check((await rpc(b, 'my_chats')).find((x) => x.id === ab.id).unreadCount > 0, 'sharing a profile still counts as a real, unread message for the recipient');
+await expectFail(() => rpc(a, 'send_message', ab.id, { sharedProfileUserId: '00000000-0000-0000-0000-000000000000' }), /no longer exists/, 'sharing a made-up account id is refused');
 const rep = (await rpc(b, 'send_message', ab.id, { text: 'again', replyTo: { messageId: pic.id } })).message;
 check(rep.replyTo.textPreview === 'Sticker', 'replying to a sticker quotes "Sticker"');
 await expectFail(() => rpc(a, 'send_message', ab.id, { text: '   ' }), /cannot be empty/, 'an empty message is refused');

@@ -55,7 +55,8 @@ import {
   Smile,
   Reply,
   Paperclip,
-  Film
+  Film,
+  UserCircle2
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
@@ -144,6 +145,7 @@ import {
   MyCustomSticker,
   fetchShopCatalog,
   purchaseShopItem,
+  fetchUserById,
   e2ee
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -2179,6 +2181,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
+                    {/* Shared Profile Card */}
+                    {m.sharedProfile && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!onNavigateToProfile || !m.sharedProfile) return;
+                          const user = await fetchUserById(m.sharedProfile.userId);
+                          if (user) onNavigateToProfile(user);
+                        }}
+                        className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-[#00FF66]/50 transition-colors cursor-pointer text-left"
+                      >
+                        <img
+                          src={m.sharedProfile.avatar || '/noob-logo.svg.jpeg'}
+                          alt={m.sharedProfile.username}
+                          className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-white truncate" translate="no">
+                              {m.sharedProfile.displayName || m.sharedProfile.username}
+                            </span>
+                            {m.sharedProfile.isVerified && <VerifiedBadge size="xs" />}
+                          </div>
+                          <span className="text-[10px] text-zinc-400 truncate block" translate="no">@{m.sharedProfile.username}</span>
+                        </div>
+                        <UserCircle2 className="w-4 h-4 text-[#00FF66] shrink-0" />
+                      </button>
+                    )}
+
                     {/* Voice message: a real playable <audio> element, not just a label — this used to
                         show a hardcoded "Voice Recording (0:14)" badge and then fall through to the
                         <img> branch below (nothing actually sent 'audio' messages, so it never got
@@ -2286,7 +2318,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     ) : m.text ? (
                       <p translate="no" className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
-                    ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite ? (
+                    ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite && !m.sharedProfile ? (
                       <p className="italic text-zinc-400 text-xs flex items-center gap-1">
                         📷 <span>Shared Attachment</span>
                       </p>

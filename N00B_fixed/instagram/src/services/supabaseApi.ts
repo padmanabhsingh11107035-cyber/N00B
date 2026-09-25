@@ -870,6 +870,17 @@ export async function toggleStoryLike(storyId: string): Promise<{ success: boole
   try { return await rpc('toggle_story_like', { p_story: storyId }); } catch (err) { return { success: false, error: errorText(err, 'Could not like this story.') }; }
 }
 
+// Today's real comments/likes for one story, by id, regardless of whether it's still in the live
+// 24h tray — this is what a highlight page calls to layer live data on top of its fixed snapshot.
+export async function fetchStoryById(storyId: string): Promise<Story | null> {
+  try {
+    const s = await rpc<any>('story_by_id', { p_story: storyId });
+    return s ? mapStory(s) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Owner-only — the database refuses anyone but the story's own author.
 export async function fetchStoryViewers(storyId: string): Promise<{ users: User[]; error?: string }> {
   try {
@@ -1227,6 +1238,7 @@ function mapMessage(m: any, keepLocked = false): Message {
       audioUrl: m.sharedTrack.audioUrl ? resolveMedia(m.sharedTrack.audioUrl) : m.sharedTrack.audioUrl
     };
   }
+  if (m.sharedProfile) out.sharedProfile = { ...m.sharedProfile, avatar: resolveMedia(m.sharedProfile.avatar) };
   return out as Message;
 }
 
@@ -1337,6 +1349,7 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
     const storedMedia = toStoredMedia(media);
     const lockedPayload = await prepareSend(chatId, {
       text: payload.text, storedMedia, mediaType: payload.mediaType, sharedTrack: payload.sharedTrack, gameInvite: payload.gameInvite,
+      sharedProfileUserId: payload.sharedProfileUserId,
       audioDuration: payload.audioDuration, scheduledAt: payload.scheduledAt, replyToId: payload.replyTo?.messageId
     });
     if (lockedPayload) {
@@ -1350,6 +1363,7 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
       audioDuration: payload.audioDuration,
       scheduledAt: payload.scheduledAt,
       gameInvite: payload.gameInvite,
+      sharedProfileUserId: payload.sharedProfileUserId,
       // only the id of a quoted message is sent — the database rebuilds the quote from the real message
       replyTo: payload.replyTo?.messageId ? { messageId: payload.replyTo.messageId } : undefined,
       sharedTrack: payload.sharedTrack

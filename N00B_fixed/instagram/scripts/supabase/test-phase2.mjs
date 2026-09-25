@@ -80,12 +80,20 @@ check(sc.comment.text.length === 500 && sc.comment.username, 'a story comment is
 await expectFail(() => rpc(b, 'add_story_comment', st.id, '  '), /cannot be empty/, 'an empty story comment is refused');
 check((await rpc(c, 'active_stories')).find((s) => s.id === st.id).comments.length === 1, 'story comments come with the story');
 await expectFail(() => rpc(c, 'add_story_comment', pst.id, 'hi'), /cannot view this story/, 'you can not comment on a private account\'s story');
-// expiry
+// expiry — a highlight is meant to stay likeable/commentable forever (it's the same row the
+// highlight snapshot points back to for live data), so expiring a story only drops it from the
+// live 24h tray; it does NOT block new interaction on it or get swept up by cleanup anymore.
 await db.query(`update stories set expires_at = now() - interval '2 hours' where id = $1`, [st.id]);
-check(!(await rpc(b, 'active_stories')).some((s) => s.id === st.id), 'an expired story disappears');
-await expectFail(() => rpc(b, 'add_story_comment', st.id, 'late'), /not found or has expired/, 'you can not comment on an expired story');
+check(!(await rpc(b, 'active_stories')).some((s) => s.id === st.id), 'an expired story disappears from the live tray');
+check((await rpc(b, 'add_story_comment', st.id, 'late')).success === true, 'you CAN still comment on an expired story (its highlight keeps this forever)');
+check((await rpc(b, 'toggle_story_like', st.id)).isLiked === true, 'and you can still like it');
+check((await rpc(b, 'toggle_story_like', st.id)).isLiked === false, '(toggling again un-likes it, same as always)');
+await rpc(b, 'toggle_story_like', st.id);
+const byIdForOwner = await rpc(a, 'story_by_id', st.id);
+check(byIdForOwner.id === st.id && byIdForOwner.comments.length === 2 && byIdForOwner.likesCount === 1, 'story_by_id returns full live data (comments/likes) for an expired story, to the owner');
+await expectFail(() => rpc(c, 'story_by_id', pst.id), /cannot see this story/, 'story_by_id still enforces can_view_author — a stranger can not read a private account\'s story this way either');
 await expectFail(() => call(a, 'select public.cleanup_expired_stories()'), /permission denied/, 'the cleanup job can not be run from a browser');
-check((await db.query('select public.cleanup_expired_stories() n')).rows[0].n === 1 && (await n('select count(*)::int n from stories where id = $1', [st.id])) === 0, 'the cleanup job removes stories a while after expiry');
+check((await db.query('select public.cleanup_expired_stories() n')).rows[0].n === 0 && (await n('select count(*)::int n from stories where id = $1', [st.id])) === 1, 'the cleanup job no longer removes anything — expired stories, and everything liked/said about them, are kept for their highlight');
 // delete (now goes through delete_story() — a direct `delete from stories` is refused outright)
 await expectFail(() => run(b, 'delete from stories where id = $1', [st.id]), /permission denied/, 'a direct delete on stories is refused for everyone, not just strangers');
 const st2 = await rpc(a, 'create_story', 'stories/s2.jpg');
@@ -96,11 +104,11 @@ check((await rpc(admin, 'delete_story', st3.id)).success === true, 'the admin ca
 
 // =====================================================================================
 section('1b. Highlights (auto-saved per day — "story and highlight are the same thing" redesign)');
-// `st` expired and was cleaned up above (line ~88); its snapshot must still be sitting in the
-// highlight, created back when `st` was originally posted — that's the entire point.
+// `st` expired above but is no longer deleted by cleanup; its snapshot was created back when it
+// was originally posted regardless, and must still be sitting in the highlight either way.
 const aHl = await rpc(a, 'my_highlights');
 check(aHl.length === 1, 'today\'s stories all land in one highlight, not one each');
-check(aHl[0].items.some((it) => it.id === st.id), 'a highlight keeps a story\'s content after the story itself expires and is deleted');
+check(aHl[0].items.some((it) => it.id === st.id), 'a highlight keeps a story\'s content once the story itself expires out of the live tray');
 check(!aHl[0].items.some((it) => it.id === st2.id), 'deleting a story also removes it from the highlight');
 check(aHl[0].title.length > 0 && aHl[0].dayKey, 'the highlight is titled and keyed by day automatically');
 check((await rpc(b, 'my_highlights')).length === 0, 'my_highlights only ever returns your own');

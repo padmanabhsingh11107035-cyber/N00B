@@ -14,6 +14,7 @@ export interface SendInput {
   mediaType?: string;
   sharedTrack?: unknown;
   gameInvite?: unknown;
+  sharedProfileUserId?: unknown;
   audioDuration?: unknown;
   scheduledAt?: string;
   replyToId?: string;
@@ -50,7 +51,7 @@ export function bindMessages(e2ee: E2ee) {
   // or null when it goes out as before. When the chat SHOULD be locked and this can not be done, this throws: the message fails, it is never
   // sent readable instead. Pictures, video and voice notes are not locked yet.
   async function prepareSend(chatId: string, input: SendInput): Promise<Record<string, unknown> | null> {
-    const lockable = !input.sharedTrack && !input.gameInvite && !input.audioDuration && (!input.storedMedia || /^https:\/\//.test(input.storedMedia));
+    const lockable = !input.sharedTrack && !input.gameInvite && !input.sharedProfileUserId && !input.audioDuration && (!input.storedMedia || /^https:\/\//.test(input.storedMedia));
     if (!lockable) return null;
     let info;
     try { info = await e2ee.chatCryptoForSend(chatId); } catch { throw new Error('Could not check this chat\'s encryption. Please try again.'); }

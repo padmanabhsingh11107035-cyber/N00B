@@ -34,7 +34,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings } from '../../services/api';
+import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -80,132 +80,6 @@ const generateCaptchaCode = (): string => {
   }
   return chars.join('');
 };
-
-// Temporary, on request: hides the preset/random avatar picker on signup, leaving only "Upload
-// Custom". Flip back to true to bring it back — nothing else needs to change, a fresh signup
-// still gets a sensible default avatar (PRESET_2D_AVATARS[0]) either way.
-const SHOW_AVATAR_PRESETS = false;
-
-// Curated 2D Cartoon and 2D Nature avatars. `gender` drives which ones show
-// in the picker for a given selected gender ('unisex' always shows).
-const PRESET_2D_AVATARS = [
-  // --- Male-presenting ---
-  {
-    id: 'm1',
-    category: '2D Cartoon',
-    label: 'Anime Guy',
-    gender: 'male' as const,
-    url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=400&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'm2',
-    category: '2D Cartoon',
-    label: 'Felix',
-    gender: 'male' as const,
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix&backgroundColor=b6e3f4,c0aede,d1d4f9'
-  },
-  {
-    id: 'm3',
-    category: '2D Cartoon',
-    label: 'Liam Cool',
-    gender: 'male' as const,
-    url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam&backgroundColor=b6e3f4'
-  },
-  {
-    id: 'm4',
-    category: '2D Cartoon',
-    label: 'Arjun Bold',
-    gender: 'male' as const,
-    url: 'https://api.dicebear.com/7.x/personas/svg?seed=Arjun&backgroundColor=c0aede'
-  },
-  {
-    id: 'm5',
-    category: '2D Cartoon',
-    label: 'Kai Warrior',
-    gender: 'male' as const,
-    url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Kai&backgroundColor=b6e3f4'
-  },
-  // --- Female-presenting ---
-  {
-    id: 'f1',
-    category: '2D Cartoon',
-    label: 'Aria Girl',
-    gender: 'female' as const,
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Aria&backgroundColor=ffd5dc,d1d4f9'
-  },
-  {
-    id: 'f2',
-    category: '2D Cartoon',
-    label: 'Priya Rose',
-    gender: 'female' as const,
-    url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Priya&backgroundColor=ffd5dc'
-  },
-  {
-    id: 'f3',
-    category: '2D Cartoon',
-    label: 'Zara Chic',
-    gender: 'female' as const,
-    url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zara&backgroundColor=ffdfbf'
-  },
-  {
-    id: 'f4',
-    category: '2D Cartoon',
-    label: 'Maya Bloom',
-    gender: 'female' as const,
-    url: 'https://api.dicebear.com/7.x/personas/svg?seed=Maya&backgroundColor=ffd5dc'
-  },
-  {
-    id: 'f5',
-    category: '2D Cartoon',
-    label: 'Ivy Belle',
-    gender: 'female' as const,
-    url: 'https://api.dicebear.com/7.x/notionists/svg?seed=Ivy&backgroundColor=ffd5dc'
-  },
-  // --- Unisex characters ---
-  {
-    id: 'u1',
-    category: '2D Cartoon',
-    label: 'Cute Bot',
-    gender: 'unisex' as const,
-    url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sparky&backgroundColor=ffdfbf,ffd5dc'
-  },
-  {
-    id: 'u2',
-    category: '2D Cartoon',
-    label: 'Pixel Pro',
-    gender: 'unisex' as const,
-    url: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=GamerNoob'
-  },
-  // --- Nature scenes (not people, always shown) ---
-  {
-    id: 'n1',
-    category: '2D Nature',
-    label: 'Fuji Sunset',
-    gender: 'unisex' as const,
-    url: 'https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=400&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'n2',
-    category: '2D Nature',
-    label: 'Botanical Leaf',
-    gender: 'unisex' as const,
-    url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'n3',
-    category: '2D Nature',
-    label: 'Cherry Blossom',
-    gender: 'unisex' as const,
-    url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'n4',
-    category: '2D Nature',
-    label: 'Aurora Night',
-    gender: 'unisex' as const,
-    url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=400&auto=format&fit=crop&q=80'
-  }
-];
 
 // Country Options with Flag + Name + Number Code
 export const COUNTRY_OPTIONS = [
@@ -328,7 +202,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [bio, setBio] = useState('');
   const [accountType, setAccountType] = useState<AccountType>('public');
   const [businessCategory, setBusinessCategory] = useState(BUSINESS_CATEGORIES[0]);
-  const [selectedAvatar, setSelectedAvatar] = useState(PRESET_2D_AVATARS[0].url);
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   // The durable B2 object key for an uploaded custom photo — sent to signup
   // instead of customAvatarUrl (a presigned URL that expires in an hour, or
@@ -352,34 +225,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   useEffect(() => {
     setCaptchaCode(generateCaptchaCode());
   }, [mode]);
-
-  // If the picked avatar no longer matches the chosen gender's filtered
-  // tray (e.g. a male avatar was selected before switching gender to
-  // Female), fall back to the first avatar that's still visible instead of
-  // leaving a hidden, stale selection.
-  useEffect(() => {
-    if (customAvatarUrl) return;
-    const stillVisible = PRESET_2D_AVATARS.some(
-      (av) =>
-        av.url === selectedAvatar &&
-        (gender === 'Male'
-          ? av.gender === 'male' || av.gender === 'unisex'
-          : gender === 'Female'
-          ? av.gender === 'female' || av.gender === 'unisex'
-          : true)
-    );
-    if (!stillVisible) {
-      const firstMatch = PRESET_2D_AVATARS.find((av) =>
-        gender === 'Male'
-          ? av.gender === 'male' || av.gender === 'unisex'
-          : gender === 'Female'
-          ? av.gender === 'female' || av.gender === 'unisex'
-          : true
-      );
-      if (firstMatch) setSelectedAvatar(firstMatch.url);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gender]);
 
   const handleRefreshCaptcha = () => {
     setCaptchaCode(generateCaptchaCode());
@@ -478,7 +323,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       const result = await uploadMediaFile(file, 'avatars');
       if (result.url) {
         setCustomAvatarUrl(result.url);
-        setSelectedAvatar(result.url);
       }
       setCustomAvatarObjectKey(result.objectKey || '');
     } catch (err) {
@@ -489,7 +333,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         const result = event.target?.result as string;
         if (result) {
           setCustomAvatarUrl(result);
-          setSelectedAvatar(result);
         }
       };
       reader.readAsDataURL(file);
@@ -562,6 +405,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       return;
     }
 
+    if (!customAvatarObjectKey && !customAvatarUrl) {
+      setErrorMessage('Please upload a profile photo. It is required to create a NOOB account.');
+      return;
+    }
+
     // Verify Captcha — case-sensitive now that the code mixes upper/lower
     // case on purpose; matching case-insensitively would make that pointless.
     if (!userCaptchaInput.trim() || userCaptchaInput.trim() !== captchaCode) {
@@ -578,8 +426,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     try {
       setLoading(true);
       // Prefer the durable B2 object key over the presigned/base64 URL —
-      // see the comment on customAvatarObjectKey above.
-      const avatarUrl = (customAvatarObjectKey || customAvatarUrl).trim() || selectedAvatar;
+      // see the comment on customAvatarObjectKey above. A profile photo is
+      // now required (validated above), so this is never empty here.
+      const avatarUrl = (customAvatarObjectKey || customAvatarUrl).trim();
       const res = await signupUser({
         firstName: fullName.trim(),
         displayName: fullName.trim(),
@@ -602,6 +451,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
       if (res.success && res.user) {
         confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+        // Best-effort, never blocks the sign-up succeeding either way — see recordSignupDevice.
+        void recordSignupDevice();
         onAuthSuccess(res.user);
       } else if (res.suspended) {
         setSuspendedNotice(
@@ -1253,14 +1104,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 </div>
               </div>
 
-              {/* Row 8: Avatar Picker */}
+              {/* Row 8: Profile Photo (Compulsory) — every NOOB account needs a real uploaded photo now;
+                  the old preset/random-character picker is gone, and there is no silent default. */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <span>Profile Photo</span>
-                    {SHOW_AVATAR_PRESETS && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-normal">2D Art</span>
-                    )}
+                  <label className="text-xs font-bold text-zinc-300">
+                    Profile Photo <span className="text-cyan-400 font-bold">* (Compulsory)</span>
                   </label>
                   <button
                     type="button"
@@ -1269,7 +1118,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-wait"
                   >
                     <Upload className="w-3 h-3" />
-                    <span>{isUploadingAvatar ? 'Uploading…' : 'Upload Custom'}</span>
+                    <span>{isUploadingAvatar ? 'Uploading…' : customAvatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
                   </button>
                   <input
                     ref={fileInputRef}
@@ -1280,66 +1129,24 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   />
                 </div>
 
-                {/* Avatar Tray */}
-                <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
-                  {customAvatarUrl && (
-                    <div className="relative shrink-0 w-12 h-12 rounded-2xl overflow-hidden border-2 border-cyan-400 shadow-lg shadow-cyan-500/30">
-                      <img src={customAvatarUrl} alt="custom upload" className="w-full h-full object-cover" />
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-cyan-400 text-black rounded-tl flex items-center justify-center text-[8px] font-bold">✓</span>
+                {customAvatarUrl ? (
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative shrink-0 w-14 h-14 rounded-2xl overflow-hidden border-2 border-cyan-400 shadow-lg shadow-cyan-500/30">
+                      <img src={customAvatarUrl} alt="Your profile photo" className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-cyan-400 text-black rounded-tl flex items-center justify-center text-[9px] font-bold">✓</span>
                     </div>
-                  )}
-
-                  {SHOW_AVATAR_PRESETS && PRESET_2D_AVATARS.filter((av) =>
-                    gender === 'Male'
-                      ? av.gender === 'male' || av.gender === 'unisex'
-                      : gender === 'Female'
-                      ? av.gender === 'female' || av.gender === 'unisex'
-                      : true
-                  ).map((av) => (
-                    <button
-                      key={av.id}
-                      type="button"
-                      onClick={() => { setSelectedAvatar(av.url); setCustomAvatarUrl(''); setCustomAvatarObjectKey(''); }}
-                      className={`relative shrink-0 w-12 h-12 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
-                        selectedAvatar === av.url && !customAvatarUrl
-                          ? 'border-cyan-400 scale-110 shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-400/40'
-                          : 'border-white/10 opacity-75 hover:opacity-100 hover:border-white/30'
-                      }`}
-                      title={`${av.label} (${av.category})`}
-                    >
-                      <img
-                        src={av.url}
-                        alt={av.label}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          const img = e.currentTarget;
-                          if (!img.dataset.hasFailed) {
-                            img.dataset.hasFailed = 'true';
-                            img.src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${av.id}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
-                          }
-                        }}
-                      />
-                    </button>
-                  ))}
-
-                  {SHOW_AVATAR_PRESETS && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const seed = Math.random().toString(36).substring(2, 8);
-                        const dicebear = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
-                        setCustomAvatarUrl(dicebear);
-                        setCustomAvatarObjectKey('');
-                        setSelectedAvatar(dicebear);
-                      }}
-                      className="shrink-0 w-12 h-12 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white hover:border-cyan-400 transition-all cursor-pointer"
-                      title="Generate random character"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                    <span className="text-[11px] text-zinc-400">Looking good!</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-4 rounded-2xl border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 bg-[#101014] flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Upload className="w-5 h-5 text-cyan-400" />
+                    <span className="text-[11px] text-zinc-400">Tap to upload a photo of yourself</span>
+                  </button>
+                )}
               </div>
 
               {/* Row 9: Bio / Tagline (Compulsory) */}

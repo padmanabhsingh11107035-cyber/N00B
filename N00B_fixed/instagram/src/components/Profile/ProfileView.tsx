@@ -57,7 +57,9 @@ import {
   Smartphone,
   ShoppingBag,
   EyeOff,
-  Eye
+  Eye,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
@@ -182,6 +184,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [businessCategorySetting, setBusinessCategorySetting] = useState(currentUser.businessCategory || 'Creator & Brand');
   const [followRequests, setFollowRequests] = useState<any[]>(currentUser.followRequests || []);
   const [hideTaggedPhotos, setHideTaggedPhotos] = useState(currentUser.privacySettings?.hideTaggedPhotos ?? false);
+  const [autoAcceptFollowRequests, setAutoAcceptFollowRequests] = useState(currentUser.privacySettings?.autoAcceptFollowRequests ?? false);
   const [blockedWords, setBlockedWords] = useState(currentUser.privacySettings?.blockedWords?.join(', ') || '');
   const [pushFavoritesEnabled, setPushFavoritesEnabled] = useState(true);
 
@@ -510,6 +513,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         privacySettings: {
           ...currentUser.privacySettings,
           hideTaggedPhotos,
+          autoAcceptFollowRequests,
           blockedWords: blockedWords.split(',').map((w) => w.trim()).filter(Boolean)
         }
       });
@@ -2123,6 +2127,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     className="accent-[#00FF66]"
                   />
                 </label>
+
+                {accountTypeSetting === 'private' && (
+                  <button
+                    type="button"
+                    onClick={() => setAutoAcceptFollowRequests((v) => !v)}
+                    className="w-full flex items-center justify-between cursor-pointer pt-1"
+                  >
+                    <div className="text-left">
+                      <span className="block">Auto-Accept Follow Requests</span>
+                      <span className="text-[10px] text-zinc-500 block">
+                        Anyone who requests to follow you is accepted right away — you won't follow them back automatically.
+                      </span>
+                    </div>
+                    {autoAcceptFollowRequests ? (
+                      <ToggleRight className="w-8 h-8 text-[#00FF66] shrink-0" />
+                    ) : (
+                      <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 

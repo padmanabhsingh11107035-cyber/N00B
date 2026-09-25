@@ -110,6 +110,9 @@ export interface User {
     hideTaggedPhotos: boolean;
     blockedWords: string[];
     hiddenStoryUsernames?: string[];
+    // Private accounts only: auto-accept anyone who requests to follow, without following them
+    // back (that stays a separate, manual action either way).
+    autoAcceptFollowRequests?: boolean;
   };
 }
 

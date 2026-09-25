@@ -34,7 +34,12 @@ import {
   Settings,
   ToggleLeft,
   ToggleRight,
-  ShoppingBag
+  ShoppingBag,
+  Share2,
+  Copy,
+  Check,
+  Link as LinkIcon,
+  Smartphone
 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -160,6 +165,39 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [storeOrdersEnabled, setStoreOrdersEnabled] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
+
+  // Shareable links: the app itself, the "apply to join us" form, and any one profile.
+  const [shareProfileInput, setShareProfileInput] = useState('');
+  const [copiedLinkKey, setCopiedLinkKey] = useState<string | null>(null);
+  const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '';
+  const appLink = typeof window !== 'undefined' ? window.location.origin : '';
+  const joinTeamLink = `${baseUrl}?join=team`;
+  const profileLink = shareProfileInput.trim() ? `${baseUrl}?profile=${encodeURIComponent(shareProfileInput.trim())}` : '';
+
+  const copyLink = async (key: string, url: string) => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLinkKey(key);
+      setTimeout(() => setCopiedLinkKey((k) => (k === key ? null : k)), 2000);
+    } catch {
+      // clipboard blocked — nothing more to do
+    }
+  };
+
+  const shareLink = async (key: string, title: string, url: string) => {
+    if (!url) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch {
+        // cancelled — not an error
+        return;
+      }
+    }
+    copyLink(key, url);
+  };
 
   useEffect(() => {
     if (canOpenAccounts) loadUsers(); else setLoading(false);
@@ -1456,6 +1494,89 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       {storeOrdersEnabled ? <ToggleRight className="w-9 h-9 text-orange-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
                     </button>
                   </div>
+
+                  {/* Shareable links */}
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-4">
+                    <span className="text-xs font-bold text-white flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-cyan-400" /> Share Links
+                    </span>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-white block">NOOB App</span>
+                        <span className="text-[10px] text-zinc-500 truncate block">{appLink}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => copyLink('app', appLink)}
+                          className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg cursor-pointer"
+                          title="Copy link"
+                        >
+                          {copiedLinkKey === 'app' ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => shareLink('app', 'NOOB', appLink)}
+                          className="p-2 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 rounded-lg cursor-pointer"
+                          title="Share"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 pt-3 border-t border-zinc-800/60">
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-white block">Apply to Join Us</span>
+                        <span className="text-[10px] text-zinc-500 truncate block">{joinTeamLink}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => copyLink('join', joinTeamLink)}
+                          className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg cursor-pointer"
+                          title="Copy link"
+                        >
+                          {copiedLinkKey === 'join' ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => shareLink('join', 'Join the NOOB team', joinTeamLink)}
+                          className="p-2 bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 rounded-lg cursor-pointer"
+                          title="Share"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-zinc-800/60 space-y-2">
+                      <span className="text-xs font-bold text-white block">Share a Profile</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={shareProfileInput}
+                          onChange={(e) => setShareProfileInput(e.target.value)}
+                          placeholder="@username"
+                          className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-cyan-400"
+                        />
+                        <button
+                          onClick={() => copyLink('profile', profileLink)}
+                          disabled={!profileLink}
+                          className="p-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 rounded-lg cursor-pointer"
+                          title="Copy link"
+                        >
+                          {copiedLinkKey === 'profile' ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => shareLink('profile', `@${shareProfileInput.trim()} on NOOB`, profileLink)}
+                          disabled={!profileLink}
+                          className="p-2 bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-40 text-cyan-300 rounded-lg cursor-pointer"
+                          title="Share"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      {profileLink && <span className="text-[10px] text-zinc-500 truncate block">{profileLink}</span>}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -1754,6 +1875,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       </span>
                       <span className="text-[11px] text-zinc-300 font-mono text-right break-all">
                         {(selectedUserForDetails as any).ipAddress || 'Not recorded'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-zinc-500 shrink-0 flex items-center gap-1">
+                        <Smartphone className="w-3 h-3" /> Sign-up Platform
+                      </span>
+                      <span className="text-[11px] text-zinc-300 text-right">
+                        {(selectedUserForDetails as any).signupPlatform || 'Not recorded'}
                       </span>
                     </div>
                   </div>

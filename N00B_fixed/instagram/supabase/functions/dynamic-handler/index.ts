@@ -10,6 +10,9 @@
 //                                                           (table ui_translations, see the migration "languages")
 //   { action: "push", notificationId }                   -> deliver a notification to the person's phone/browser (called by the
 //                                                           database; needs the secret VAPID_PRIVATE_KEY)
+//   { action: "record_signup_device" }                    -> stamp the caller's OWN profile_private row with the real IP and
+//                                                           OS platform this request actually arrived from (never trusted from
+//                                                           the client — the whole reason this needs to live server-side)
 //
 // Deploy with "Verify JWT" switched OFF: the person's login token is checked in the code below, and
 // a logged-out visitor simply gets the generic (guest) assistant.
@@ -741,6 +744,32 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false }
   });
+
+  // ------------------------------------------------------------------ record the real signup IP + OS platform
+  // Called once, right after a successful sign-up. Both values are read from THIS request's own
+  // headers, not from anything the client claims — a client can lie about its user agent, but not
+  // about the network path this actual HTTP request took to get here.
+  if (body?.action === 'record_signup_device') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const ua = req.headers.get('user-agent') || '';
+    const platform = /Android/i.test(ua)
+      ? 'Android'
+      : /iPhone|iPad|iPod/i.test(ua)
+        ? 'iPhone/iPad'
+        : /Windows/i.test(ua)
+          ? 'Windows'
+          : /Mac OS X/i.test(ua)
+            ? 'Mac'
+            : /Linux/i.test(ua)
+              ? 'Linux'
+              : 'Other';
+    const { error } = await admin
+      .from('profile_private')
+      .update({ ip_address: ip, signup_platform: platform })
+      .eq('user_id', userId);
+    if (error) return json({ error: 'Could not record device info.' }, 500);
+    return json({ success: true });
+  }
 
   // ------------------------------------------------------------------ translate one chat message
   // "translate": the server reads the stored message itself. "translate-text": an end-to-end encrypted message can not be read by the server,

@@ -1752,6 +1752,17 @@ export interface GifItem { id: string; title: string; url: string; preview?: str
 
 // Searches the online GIF library through our server (which holds the library's key). When the library is not switched on for the app
 // (or anything goes wrong) the answer is simply "not configured" and the chat shows its built-in GIFs.
+// Best-effort, fire-and-forget, called once right after a successful sign-up: stamps this account's
+// profile_private row with the real IP/OS platform the edge function's own request arrived from
+// (never trusted from the client). Never blocks or fails a sign-up over this.
+export async function recordSignupDevice(): Promise<void> {
+  try {
+    await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'record_signup_device' } });
+  } catch {
+    // best-effort only
+  }
+}
+
 export async function searchGifs(query: string): Promise<{ configured: boolean; gifs: GifItem[] }> {
   try {
     const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'gifs', q: query, lang: getLanguage() } });

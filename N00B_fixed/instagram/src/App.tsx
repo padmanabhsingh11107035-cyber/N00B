@@ -169,6 +169,7 @@ export default function App() {
     roomCode?: string;
   } | null>(null);
   const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
+  const [pendingJoinTeam, setPendingJoinTeam] = useState(false);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
   const [sessionEndedNotice, setSessionEndedNotice] = useState<string | null>(null);
 
@@ -183,6 +184,7 @@ export default function App() {
         const challengerParam = params.get('challenger');
         const roomParam = params.get('room');
         const profileParam = params.get('profile');
+        const joinParam = params.get('join');
 
         if (gameParam) {
           const matched = ALL_50_MINI_GAMES.find(
@@ -200,6 +202,10 @@ export default function App() {
 
         if (profileParam) {
           setSharedProfileUsername(profileParam);
+        }
+
+        if (joinParam === 'team') {
+          setPendingJoinTeam(true);
         }
       } catch (err) {
         console.error('URL param parse error:', err);
@@ -226,6 +232,18 @@ export default function App() {
     url.searchParams.delete('profile');
     window.history.replaceState({}, '', url.toString());
   }, [sharedProfileUsername, currentUser, registeredUsers]);
+
+  // Same deep-link pattern as the shared-profile one above: only resolved once someone is actually
+  // logged in (a login/signup can happen first), lands on Explore with the "apply to join us" form
+  // already open.
+  useEffect(() => {
+    if (!pendingJoinTeam || !currentUser) return;
+    setActiveTab('explore');
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('join');
+    window.history.replaceState({}, '', url.toString());
+  }, [pendingJoinTeam, currentUser]);
 
   useEffect(() => {
     if (currentUser) {
@@ -1088,6 +1106,8 @@ export default function App() {
             }}
             onNavigateToUserProfile={handleNavigateToUserProfile}
             onToggleFollowUser={handleToggleFollowUser}
+            autoOpenJoinTeam={pendingJoinTeam}
+            onAutoOpenJoinTeamHandled={() => setPendingJoinTeam(false)}
           />
         )}
 

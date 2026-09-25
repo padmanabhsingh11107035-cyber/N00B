@@ -57,6 +57,10 @@ interface ExploreViewProps {
   // Owns the actual follow/unfollow API call and syncs app-wide user state —
   // ExploreView must not call the API itself, only reflect the result here.
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
+  // The admin's "share this link" ?join=team deep link (App.tsx) resolves here — opens the Join Us
+  // modal automatically once this view has actually mounted.
+  autoOpenJoinTeam?: boolean;
+  onAutoOpenJoinTeamHandled?: () => void;
 }
 
 const CATEGORIES = ['All', 'Humor', 'Gaming', 'Music', 'Art & Design', 'Vibes', 'Tech', 'Lifestyle'];
@@ -70,11 +74,20 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onSelectReel,
   onStartChat,
   onNavigateToUserProfile,
-  onToggleFollowUser
+  onToggleFollowUser,
+  autoOpenJoinTeam,
+  onAutoOpenJoinTeamHandled
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reels'>('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
+
+  useEffect(() => {
+    if (!autoOpenJoinTeam) return;
+    setShowJoinUsModal(true);
+    onAutoOpenJoinTeamHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenJoinTeam]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);

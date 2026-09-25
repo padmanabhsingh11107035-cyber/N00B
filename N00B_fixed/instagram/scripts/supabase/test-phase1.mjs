@@ -49,11 +49,12 @@ const j = (v) => JSON.stringify(v);
 
 // =====================================================================================
 section('1. Sign-up');
-const good = { firstName: 'Test', lastName: 'Person', username: 'Brand_New.User', email: 'new@example.com', mobileNumber: '9000000000', dateOfBirth: '2005-05-05', password: 'secret123', bio: 'hello', agreedToTerms: true };
+const good = { firstName: 'Test', lastName: 'Person', username: 'Brand_New.User', email: 'new@example.com', mobileNumber: '9000000000', dateOfBirth: '2005-05-05', password: 'secret123', bio: 'hello', avatar: 'avatars/test-signup.jpg', agreedToTerms: true };
 const chk = (o) => asAnon(db, async () => (await db.query('select public.check_signup($1::jsonb) r', [j(o)])).rows[0].r);
 check((await chk(good)).ok === true, 'a valid sign-up passes the pre-check');
 check((await chk({ ...good, firstName: '' })).error === 'Please enter your name', 'missing name is refused with the old message');
 check((await chk({ ...good, bio: '  ' })).error.startsWith('Bio is compulsory'), 'bio is compulsory');
+check((await chk({ ...good, avatar: '  ' })).error.startsWith('Please upload a profile photo'), 'a profile photo is compulsory');
 check((await chk({ ...good, agreedToTerms: false })).error.includes('agree'), 'terms must be accepted');
 check((await chk({ ...good, dateOfBirth: new Date(Date.now() - 10 * 365.25 * 864e5).toISOString().slice(0, 10) })).error.includes('at least 13'), 'under-13s are refused');
 check((await chk({ ...good, dateOfBirth: '1930-01-01' })).error.includes('82'), 'over-82 is refused');
@@ -72,9 +73,19 @@ for (const ok of ['a@b.co', 'first.last+tag@sub.example.com', 'Weird_But-Valid99
   check(r.suspended === true, 'a suspended person can NOT sign up again with the same email');
   await db.query('update profiles set is_suspended = false where id = $1', [victim.id]);
 }
+// A real sign-up (no avatar in the metadata) must be refused at the trigger itself, not just by
+// the friendly check_signup pre-flight — this is the actual enforcement, check_signup is only
+// what the normal form calls first to give a nicer message before ever reaching this.
+await expectFail(
+  () => db.query(`insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'nophoto@users.nooob.xyz', $1::jsonb)`, [j({ username: 'no.photo.user', first_name: 'No', last_name: 'Photo', bio: 'hello' })]),
+  /profile photo is required/,
+  'a real sign-up with no avatar in its metadata is refused, not just the pre-check'
+);
+check((await n(`select count(*)::int n from profiles where username = 'no.photo.user'`)) === 0, 'and no profile was left behind by the refused attempt');
+
 // GoTrue creates the login account; the trigger must build the profile
 const newAuthId = (await db.query(`select gen_random_uuid() id`)).rows[0].id;
-await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3::jsonb)`, [newAuthId, `${newAuthId}@users.nooob.xyz`, j({ username: 'Brand_New.User', first_name: 'Test', last_name: 'Person', email: 'New@Example.com', mobile_number: '9000000000', date_of_birth: '2005-05-05', bio: 'hello', account_type: 'business', agreed_to_terms: true })]);
+await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3::jsonb)`, [newAuthId, `${newAuthId}@users.nooob.xyz`, j({ username: 'Brand_New.User', first_name: 'Test', last_name: 'Person', email: 'New@Example.com', mobile_number: '9000000000', date_of_birth: '2005-05-05', bio: 'hello', avatar: 'avatars/test-signup.jpg', account_type: 'business', agreed_to_terms: true })]);
 const created = (await db.query('select * from profiles where id = $1', [newAuthId])).rows[0];
 check(created && created.username === 'brand_new.user' && created.display_name === 'Test Person' && created.account_type === 'business' && created.is_business, 'the profile is created automatically (username cleaned, name built, business flag set)');
 check((await n('select count(*)::int n from profile_private where user_id = $1 and email = $2', [newAuthId, 'new@example.com'])) === 1, 'private details are stored privately (email lower-cased)');
@@ -140,6 +151,22 @@ await expectFail(() => call(a, `insert into follows (follower_id, followee_id) v
 await db.query('insert into blocks (blocker_id, blocked_id) values ($1, $2)', [c, a]);
 await expectFail(() => rpc(a, 'toggle_follow', c), /can't follow this account/, 'a blocked person can not follow the blocker');
 await db.query('delete from blocks where blocker_id = $1', [c]);
+
+// Auto-accept follow requests (private accounts only) — off by default, so priv2 behaves exactly
+// like priv did above until it's switched on.
+{
+  let r = await rpc(a, 'toggle_follow', priv2);
+  check(r.isFollowing === false && r.isFollowRequested === true, 'auto-accept is off by default, so a private account still just gets a request');
+  await rpc(a, 'toggle_follow', priv2); // cancel it, back to a clean slate
+  await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": true}'::jsonb where id = $1`, [priv2]);
+  r = await rpc(a, 'toggle_follow', priv2);
+  check(r.isFollowing === true && r.isFollowRequested === false, 'with it on, the request is auto-accepted — a real follow, not a pending one');
+  check((await n('select count(*)::int n from follow_requests where requester_id = $1 and target_id = $2', [a, priv2])) === 0, 'and no follow_requests row is left behind');
+  check((await n(`select count(*)::int n from notifications where type = 'new_follower' and target_user_id = $1 and actor_id = $2`, [priv2, a])) === 1, 'it notifies as a normal new-follower, not a pending request');
+  r = await rpc(a, 'toggle_follow', priv2);
+  check(r.isFollowing === false, 'unfollowing afterwards still works normally');
+  await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": false}'::jsonb where id = $1`, [priv2]);
+}
 
 // =====================================================================================
 section('4. Publishing posts');

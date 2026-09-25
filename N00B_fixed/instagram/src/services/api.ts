@@ -4,6 +4,7 @@ export type { GifItem } from './supabaseApi';
 export {
   e2ee,
   searchGifs,
+  recordSignupDevice,
   fetchHealth,
   signupUser,
   loginUser,

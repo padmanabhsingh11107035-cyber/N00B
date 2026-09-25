@@ -885,13 +885,10 @@ Deno.serve(async (req) => {
     const passcode = String(body.passcode ?? '').slice(0, 50);
     if (!time || !zoomLink) return json({ error: 'Meeting time and Zoom link are required.' }, 400);
 
-    const { data: apps, error: appsErr } = await admin.from('sparkx_applications').select('id, user_id, full_name').in('id', ids);
+    const { data: apps } = await admin.from('sparkx_applications').select('id, user_id, full_name').in('id', ids);
     const userIds = (apps ?? []).map((a: any) => a.user_id);
-    const { data: privs, error: privsErr } = userIds.length ? await admin.from('profile_private').select('user_id, email').in('user_id', userIds) : { data: [] as any[], error: null as any };
+    const { data: privs } = userIds.length ? await admin.from('profile_private').select('user_id, email').in('user_id', userIds) : { data: [] as any[] };
     const emailByUser = new Map((privs ?? []).map((p: any) => [p.user_id, p.email]));
-    if (body.debug === true) {
-      return json({ success: true, debug: { ids, appsFound: (apps ?? []).length, appsErr: appsErr?.message, privsFound: (privs ?? []).length, privsErr: privsErr?.message, apps, privs } });
-    }
 
     let sent = 0, failed = 0;
     const invitedIds: string[] = [];

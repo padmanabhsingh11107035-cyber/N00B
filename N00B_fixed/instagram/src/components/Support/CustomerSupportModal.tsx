@@ -314,15 +314,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     };
   }, []);
 
-  // How long a given line will roughly take speechSynthesis to say out loud, at the same rate
-  // speakText() uses below — needed because the "start listening" fallback timer has to outlast
-  // the actual speech; a fixed short delay fires while the greeting is still audibly playing,
-  // opening the mic onto the AI's own voice instead of the person's.
-  const estimateSpeechMs = (text: string) => {
-    const words = text.trim().split(/\s+/).filter(Boolean).length;
-    return Math.max(3000, (words / 2.2) * 1000 + 1500);
-  };
-
   // Soft Indian-accented FEMALE TTS narrator (used in the voice call)
   const speakText = (text: string, msgId?: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -370,16 +361,40 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     const isMale = (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('male') && !isFemale(v);
 
     const englishVoices = voices.filter((v) => v.lang.startsWith('en') || isIndian(v));
-    const chosenVoice =
-      englishVoices.find((v) => isIndian(v) && isFemale(v) && !isMale(v)) ||
-      englishVoices.find((v) => isFemale(v) && !isMale(v)) ||
-      englishVoices.find((v) => isIndian(v) && !isMale(v)) ||
-      englishVoices.find((v) => !isMale(v)) ||
-      englishVoices[0];
+    // Prefer a network ("remote") voice over a local one: on Windows, Chrome/Edge only expose the
+    // old built-in SAPI voices (e.g. "Microsoft Zira Desktop") as local — these read in a flat,
+    // clipped, syllable-by-syllable cadence that sounds like it's reading word by word. Google's
+    // network voices ("Google UK English Female", etc.) sound like a real, fluent sentence and are
+    // usually reported later in the same voices list, so a plain .find() over the whole list tends
+    // to pick the robotic local one first unless we explicitly prefer non-local voices.
+    const pickFrom = (pool: SpeechSynthesisVoice[]) =>
+      pool.find((v) => isIndian(v) && isFemale(v) && !isMale(v)) ||
+      pool.find((v) => isFemale(v) && !isMale(v)) ||
+      pool.find((v) => isIndian(v) && !isMale(v)) ||
+      pool.find((v) => !isMale(v));
+    const remoteVoices = englishVoices.filter((v) => !v.localService);
+    const localVoices = englishVoices.filter((v) => v.localService);
+    const chosenVoice = pickFrom(remoteVoices) || pickFrom(localVoices) || englishVoices[0];
 
     if (chosenVoice) {
       utterance.voice = chosenVoice;
     }
+
+    // Whichever fires first (the real event, or the poll below) wins; guarded so the mic is
+    // never reopened twice for the same utterance.
+    let settled = false;
+    const afterSpeaking = () => {
+      if (settled) return;
+      settled = true;
+      setIsSpeaking(false);
+      setCurrentlySpeakingMsgId(null);
+      // Auto-resume microphone listening after AI finishes speaking
+      if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current) {
+        setTimeout(() => {
+          startVoiceListening();
+        }, 400);
+      }
+    };
 
     utterance.onstart = () => {
       setIsSpeaking(true);
@@ -394,28 +409,25 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     };
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setCurrentlySpeakingMsgId(null);
-      // Auto-resume microphone listening after AI finishes speaking
-      if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current) {
-        setTimeout(() => {
-          startVoiceListening();
-        }, 400);
-      }
-    };
-
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      setCurrentlySpeakingMsgId(null);
-      if (isCallActiveRef.current && !isMutedRef.current) {
-        setTimeout(() => {
-          startVoiceListening();
-        }, 400);
-      }
-    };
+    utterance.onend = afterSpeaking;
+    utterance.onerror = afterSpeaking;
 
     window.speechSynthesis.speak(utterance);
+
+    // Chrome/Edge sometimes never fire onend/onerror for an utterance queued immediately after a
+    // cancel() — a known engine race, and exactly what happens here every time (this function
+    // always calls cancel() right before speak()). Without a backstop, the mic would just never
+    // reopen and the call would silently need a typed message to "unstick" it. Poll the real
+    // synthesis state as a guarantee, independent of whether the events ever fire.
+    const pollDone = () => {
+      if (settled) return;
+      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+        afterSpeaking();
+      } else {
+        setTimeout(pollDone, 200);
+      }
+    };
+    setTimeout(pollDone, 300);
   };
 
   const stopSpeaking = () => {
@@ -699,15 +711,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     // second, unused raw MediaStream in parallel held the mic device open for
     // the whole call and could starve SpeechRecognition of exclusive access,
     // which showed up as "the mic indicator is on but nothing is transcribed."
-    // Also initiate listening as fallback if speech finishes fast or user interrupts — sized to
-    // the greeting's own length so it can never fire while the greeting is still being read out
-    // loud (a fixed short delay used to open the mic onto the AI's own voice instead of the
-    // person's, which is why the very first turn of a call needed you to type instead of speak).
-    setTimeout(() => {
-      if (isCallActiveRef.current && !isMutedRef.current && !isSpeakingRef.current) {
-        startVoiceListening();
-      }
-    }, estimateSpeechMs(greeting));
+    // speakText() itself now guarantees the mic reopens once the greeting is done (event-driven,
+    // with a polling backstop), so no separate fallback timer is needed here.
   };
 
   // The person asked to end the call (or the assistant understood that they did): say goodbye out loud (asking for the 5-star review),

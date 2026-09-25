@@ -1239,6 +1239,13 @@ function mapMessage(m: any, keepLocked = false): Message {
     };
   }
   if (m.sharedProfile) out.sharedProfile = { ...m.sharedProfile, avatar: resolveMedia(m.sharedProfile.avatar) };
+  if (m.sharedPost) {
+    out.sharedPost = {
+      ...m.sharedPost,
+      authorAvatar: resolveMedia(m.sharedPost.authorAvatar),
+      thumbnailUrl: m.sharedPost.thumbnailUrl ? resolveMedia(m.sharedPost.thumbnailUrl) : m.sharedPost.thumbnailUrl
+    };
+  }
   return out as Message;
 }
 
@@ -1349,7 +1356,7 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
     const storedMedia = toStoredMedia(media);
     const lockedPayload = await prepareSend(chatId, {
       text: payload.text, storedMedia, mediaType: payload.mediaType, sharedTrack: payload.sharedTrack, gameInvite: payload.gameInvite,
-      sharedProfileUserId: payload.sharedProfileUserId,
+      sharedProfileUserId: payload.sharedProfileUserId, sharedPostId: payload.sharedPostId,
       audioDuration: payload.audioDuration, scheduledAt: payload.scheduledAt, replyToId: payload.replyTo?.messageId
     });
     if (lockedPayload) {
@@ -1364,6 +1371,8 @@ export async function sendMessage(chatId: string, payload: Partial<Message>): Pr
       scheduledAt: payload.scheduledAt,
       gameInvite: payload.gameInvite,
       sharedProfileUserId: payload.sharedProfileUserId,
+      sharedPostId: payload.sharedPostId,
+      sharedPostType: payload.sharedPostType,
       // only the id of a quoted message is sent — the database rebuilds the quote from the real message
       replyTo: payload.replyTo?.messageId ? { messageId: payload.replyTo.messageId } : undefined,
       sharedTrack: payload.sharedTrack

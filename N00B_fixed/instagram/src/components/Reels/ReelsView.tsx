@@ -9,7 +9,6 @@ import {
   ExternalLink,
   Sparkles,
   Globe,
-  Share2,
   Check,
   Film,
   Eye,
@@ -38,6 +37,8 @@ import {
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
+import { SharePostSheet } from '../Common/SharePostSheet';
+import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 
@@ -52,7 +53,6 @@ interface ToggleFollowResult {
 interface ReelsViewProps {
   reels: Reel[];
   currentUser: User;
-  onNavigateToChat: () => void;
   initialReelId?: string;
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
   onGoBack?: () => void;
@@ -74,7 +74,6 @@ function shuffleReels<T>(arr: T[]): T[] {
 export const ReelsView: React.FC<ReelsViewProps> = ({
   reels,
   currentUser,
-  onNavigateToChat,
   initialReelId,
   onToggleFollowUser,
   onGoBack,
@@ -90,6 +89,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [showShareToChat, setShowShareToChat] = useState(false);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
   const [localReels, setLocalReels] = useState<Reel[]>(reels);
   const [reelComments, setReelComments] = useState<any[]>([]);
@@ -318,6 +320,29 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const copyReelLink = async () => {
+    if (!currentReel) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?reel=${encodeURIComponent(currentReel.id)}`;
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch {}
+      document.body.removeChild(textarea);
+    }
+    setShareLinkCopied(true);
+    setTimeout(() => setShareLinkCopied(false), 2000);
   };
 
   const handleToggleFollowCreator = async () => {
@@ -907,7 +932,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onNavigateToChat();
+              setShowShareSheet(true);
             }}
             className="flex flex-col items-center gap-1 group cursor-pointer"
           >
@@ -1066,6 +1091,28 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           }
           initialTab={likesViewsInitialTab}
           onClose={() => setShowLikesViewsSheet(false)}
+        />
+      )}
+
+      {showShareSheet && currentReel && (
+        <SharePostSheet
+          type="reel"
+          linkCopied={shareLinkCopied}
+          onCopyLink={copyReelLink}
+          onSendInChat={() => {
+            setShowShareSheet(false);
+            setShowShareToChat(true);
+          }}
+          onClose={() => setShowShareSheet(false)}
+        />
+      )}
+
+      {showShareToChat && currentReel && (
+        <SharePostToChatModal
+          currentUser={currentUser}
+          itemId={currentReel.id}
+          itemType="reel"
+          onClose={() => setShowShareToChat(false)}
         />
       )}
       </div>

@@ -405,7 +405,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onToggleLike={onToggleLike}
                 onToggleSave={onToggleSave}
                 onOpenComments={(p) => setSelectedPostForComments(p)}
-                onSharePost={() => onNavigateToChat()}
                 onToggleArchive={onToggleArchive}
                 onToggleComments={onToggleComments}
                 onToggleLikeCount={onToggleLikeCount}

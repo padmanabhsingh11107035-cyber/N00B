@@ -169,6 +169,8 @@ export default function App() {
     roomCode?: string;
   } | null>(null);
   const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
+  const [sharedPostId, setSharedPostId] = useState<string | null>(null);
+  const [sharedReelId, setSharedReelId] = useState<string | null>(null);
   const [pendingJoinTeam, setPendingJoinTeam] = useState(false);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
   const [sessionEndedNotice, setSessionEndedNotice] = useState<string | null>(null);
@@ -185,6 +187,8 @@ export default function App() {
         const roomParam = params.get('room');
         const profileParam = params.get('profile');
         const joinParam = params.get('join');
+        const postParam = params.get('post');
+        const reelParam = params.get('reel');
 
         if (gameParam) {
           const matched = ALL_50_MINI_GAMES.find(
@@ -206,6 +210,14 @@ export default function App() {
 
         if (joinParam === 'team') {
           setPendingJoinTeam(true);
+        }
+
+        if (postParam) {
+          setSharedPostId(postParam);
+        }
+
+        if (reelParam) {
+          setSharedReelId(reelParam);
         }
       } catch (err) {
         console.error('URL param parse error:', err);
@@ -232,6 +244,25 @@ export default function App() {
     url.searchParams.delete('profile');
     window.history.replaceState({}, '', url.toString());
   }, [sharedProfileUsername, currentUser, registeredUsers]);
+
+  // Same deep-link pattern as the shared-profile one above.
+  useEffect(() => {
+    if (!sharedPostId || !currentUser) return;
+    handleNavigateToPost(sharedPostId);
+    setSharedPostId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('post');
+    window.history.replaceState({}, '', url.toString());
+  }, [sharedPostId, currentUser]);
+
+  useEffect(() => {
+    if (!sharedReelId || !currentUser) return;
+    handleNavigateToReel(sharedReelId);
+    setSharedReelId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('reel');
+    window.history.replaceState({}, '', url.toString());
+  }, [sharedReelId, currentUser]);
 
   // Same deep-link pattern as the shared-profile one above: only resolved once someone is actually
   // logged in (a login/signup can happen first), lands on Explore with the "apply to join us" form
@@ -1080,9 +1111,6 @@ export default function App() {
             onOpenCreateStory={() => setShowCreateStoryModal(true)}
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
             onOpenNotifications={handleOpenNotifications}
-            onNavigateToChat={() => {
-              setActiveTab('chat');
-            }}
             onRefreshFeed={loadInitialData}
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
@@ -1116,7 +1144,6 @@ export default function App() {
             <ReelsView
               reels={reels}
               currentUser={currentUser}
-              onNavigateToChat={() => setActiveTab('chat')}
               initialReelId={selectedReelId}
               onToggleFollowUser={handleToggleFollowUser}
               onGoBack={handleReelsGoBack}
@@ -1157,6 +1184,8 @@ export default function App() {
                 onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
                 onUserUpdated={(u) => setCurrentUser(u)}
                 onNavigateToProfile={handleNavigateToUserProfile}
+                onNavigateToPost={handleNavigateToPost}
+                onNavigateToReel={handleNavigateToReel}
                 onPlayGame={(gameId, challengerUsername, roomCode) => {
                   const matched = ALL_50_MINI_GAMES.find(
                     (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()

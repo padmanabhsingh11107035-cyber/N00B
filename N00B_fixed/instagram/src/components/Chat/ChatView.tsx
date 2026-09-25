@@ -172,6 +172,8 @@ interface ChatViewProps {
   onMobileViewChange?: (view: 'list' | 'chat') => void;
   onUserUpdated?: (user: User) => void;
   onNavigateToProfile?: (user: User) => void;
+  onNavigateToPost?: (postId: string) => void;
+  onNavigateToReel?: (reelId: string) => void;
 }
 
 // Swipe-left-to-reply threshold (mobile), matching WhatsApp's gesture feel.
@@ -226,7 +228,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onPendingCallChatIdHandled,
   onMobileViewChange,
   onUserUpdated,
-  onNavigateToProfile
+  onNavigateToProfile,
+  onNavigateToPost,
+  onNavigateToReel
 }) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -2211,6 +2215,51 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </button>
                     )}
 
+                    {/* Shared Post / Reel Card */}
+                    {m.sharedPost && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!m.sharedPost) return;
+                          if (m.sharedPost.type === 'reel') onNavigateToReel?.(m.sharedPost.id);
+                          else onNavigateToPost?.(m.sharedPost.id);
+                        }}
+                        className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-[#00FF66]/50 transition-colors cursor-pointer text-left"
+                      >
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-700 shrink-0 flex items-center justify-center">
+                          {m.sharedPost.thumbnailUrl ? (
+                            <img
+                              src={m.sharedPost.thumbnailUrl}
+                              alt={m.sharedPost.type}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : m.sharedPost.type === 'reel' ? (
+                            <Film className="w-5 h-5 text-zinc-500" />
+                          ) : (
+                            <Image className="w-5 h-5 text-zinc-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-white truncate" translate="no">
+                              @{m.sharedPost.authorUsername}
+                            </span>
+                            {m.sharedPost.authorIsVerified && <VerifiedBadge size="xs" />}
+                          </div>
+                          <span className="text-[10px] text-zinc-400 truncate block">
+                            {m.sharedPost.type === 'reel' ? 'Reel' : 'Post'}
+                            {m.sharedPost.caption ? ` · ${m.sharedPost.caption}` : ''}
+                          </span>
+                        </div>
+                        {m.sharedPost.type === 'reel' ? (
+                          <Film className="w-4 h-4 text-[#00FF66] shrink-0" />
+                        ) : (
+                          <Image className="w-4 h-4 text-[#00FF66] shrink-0" />
+                        )}
+                      </button>
+                    )}
+
                     {/* Voice message: a real playable <audio> element, not just a label — this used to
                         show a hardcoded "Voice Recording (0:14)" badge and then fall through to the
                         <img> branch below (nothing actually sent 'audio' messages, so it never got
@@ -2318,7 +2367,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     ) : m.text ? (
                       <p translate="no" className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
-                    ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite && !m.sharedProfile ? (
+                    ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite && !m.sharedProfile && !m.sharedPost ? (
                       <p className="italic text-zinc-400 text-xs flex items-center gap-1">
                         📷 <span>Shared Attachment</span>
                       </p>

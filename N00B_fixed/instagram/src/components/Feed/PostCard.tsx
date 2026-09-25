@@ -22,6 +22,8 @@ import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
+import { SharePostSheet } from '../Common/SharePostSheet';
+import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
@@ -33,7 +35,6 @@ interface PostCardProps {
   onToggleLike: (postId: string) => void;
   onToggleSave: (postId: string) => void;
   onOpenComments: (post: Post) => void;
-  onSharePost: (post: Post) => void;
   onToggleArchive: (postId: string) => void;
   onToggleComments: (postId: string) => void;
   onToggleLikeCount: (postId: string) => void;
@@ -50,7 +51,6 @@ export const PostCard: React.FC<PostCardProps> = ({
   onToggleLike,
   onToggleSave,
   onOpenComments,
-  onSharePost,
   onToggleArchive,
   onToggleComments,
   onToggleLikeCount,
@@ -66,6 +66,31 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
   const [showFullscreenAvatar, setShowFullscreenAvatar] = useState(false);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [showShareToChat, setShowShareToChat] = useState(false);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
+
+  const copyPostLink = async () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?post=${encodeURIComponent(post.id)}`;
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch {}
+      document.body.removeChild(textarea);
+    }
+    setShareLinkCopied(true);
+    setTimeout(() => setShareLinkCopied(false), 2000);
+  };
 
   const isOwner = post.userId === currentUser.id || post.username === currentUser.username;
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
@@ -400,7 +425,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               )}
               <button
                 onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
+                  copyPostLink();
                   setShowOptionsMenu(false);
                 }}
                 className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
@@ -581,12 +606,12 @@ export const PostCard: React.FC<PostCardProps> = ({
               </button>
             )}
 
-            {/* Share to Direct Messages */}
+            {/* Share */}
             <button
               id={`share-btn-${post.id}`}
-              onClick={() => onSharePost(post)}
+              onClick={() => setShowShareSheet(true)}
               className="text-white hover:text-zinc-300 transition-colors cursor-pointer"
-              title="Share via Direct Message"
+              title="Share"
             >
               <Send className="w-5 h-5 stroke-current -rotate-12" />
             </button>
@@ -723,6 +748,28 @@ export const PostCard: React.FC<PostCardProps> = ({
           likes={{ label: 'Likes', fetchUsers: () => fetchPostLikers(post.id) }}
           views={isOwner ? { label: 'Views', fetchUsers: () => fetchPostViewers(post.id) } : undefined}
           onClose={() => setShowLikesSheet(false)}
+        />
+      )}
+
+      {showShareSheet && (
+        <SharePostSheet
+          type="post"
+          linkCopied={shareLinkCopied}
+          onCopyLink={copyPostLink}
+          onSendInChat={() => {
+            setShowShareSheet(false);
+            setShowShareToChat(true);
+          }}
+          onClose={() => setShowShareSheet(false)}
+        />
+      )}
+
+      {showShareToChat && (
+        <SharePostToChatModal
+          currentUser={currentUser}
+          itemId={post.id}
+          itemType="post"
+          onClose={() => setShowShareToChat(false)}
         />
       )}
     </article>

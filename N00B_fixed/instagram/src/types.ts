@@ -522,6 +522,20 @@ export interface Message {
   // `sharedProfile` below from the real row, rather than trusting a client-supplied name/avatar.
   sharedProfileUserId?: string;
   sharedProfile?: { userId: string; username: string; displayName?: string; avatar?: string; isVerified?: boolean };
+  // Send-time only: which post/reel to share — the server looks it up itself and builds
+  // `sharedPost` below from the real row, rather than trusting a client-supplied caption/thumbnail.
+  sharedPostId?: string;
+  sharedPostType?: 'post' | 'reel';
+  sharedPost?: {
+    type: 'post' | 'reel';
+    id: string;
+    authorUsername: string;
+    authorAvatar?: string;
+    authorIsVerified?: boolean;
+    caption?: string;
+    thumbnailUrl?: string;
+    thumbnailMediaType?: string;
+  };
   gameInvite?: {
     gameId: string;
     gameTitle: string;

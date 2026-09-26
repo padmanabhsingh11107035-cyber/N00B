@@ -30,6 +30,7 @@ import {
   Github,
   LogOut,
   MoreVertical,
+  Monitor,
   Headphones,
   FileText,
   ShieldCheck,
@@ -141,6 +142,10 @@ interface ProfileViewProps {
   onBackToMyProfile?: () => void;
   onNavigateToChatWithUser?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
+  // Present only for the main NOOB admin while they're using the app in "Use as User" mode (see
+  // App.tsx's viewAsUser + AdminControlModal's "Use as User" button) — switches back to the admin
+  // console. Absent for every other account, so the icon simply never renders for them.
+  onSwitchToAdminPanel?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -162,7 +167,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteReel,
   onBackToMyProfile,
   onNavigateToChatWithUser,
-  onNavigateToUserProfile
+  onNavigateToUserProfile,
+  onSwitchToAdminPanel
 }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved' | 'liked' | 'archive'>('posts');
   const [collections, setCollections] = useState<SavedCollection[]>([]);
@@ -628,6 +634,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             keeps the trigger pinned in place — without it, this absolutely-positioned
             wrapper shrink-to-fits around its widest child, so once the w-72 dropdown
             below mounts as a child, the wrapper (and the button inside it) jumps left. */}
+        {isOwnProfile && onSwitchToAdminPanel && (
+          <button
+            onClick={onSwitchToAdminPanel}
+            className="liquid-glass absolute top-4 right-14 sm:top-6 sm:right-16 z-20 p-2 rounded-xl text-zinc-300 hover:text-[#00FF66] transition-all cursor-pointer"
+            title="Switch back to the Admin Control Panel"
+            aria-label="Switch back to the Admin Control Panel"
+          >
+            <Monitor className="w-5 h-5" />
+          </button>
+        )}
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-9 h-9" ref={menuRef}>
           <button
             onClick={() => setShowThreeDotsMenu(!showThreeDotsMenu)}

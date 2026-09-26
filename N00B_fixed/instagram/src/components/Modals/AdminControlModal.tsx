@@ -40,7 +40,8 @@ import {
   Check,
   Link as LinkIcon,
   Smartphone,
-  Rocket
+  Rocket,
+  UserCircle
 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -61,6 +62,10 @@ interface AdminControlModalProps {
   // which routes the main admin account here directly on login rather than into the normal tabs.
   fullPage?: boolean;
   onLogout?: () => void;
+  // "Use as User" — steps out of the admin console into the real app, exactly as any other member
+  // sees it. Only ever passed (and shown) in fullPage mode; getting back in is a computer icon on
+  // the admin's own profile page (see App.tsx's viewAsUser + ProfileView).
+  onUseAsUser?: () => void;
 }
 
 type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'sparkxRequests' | 'settings';
@@ -93,7 +98,7 @@ function describeAudit(e: AdminAuditEntry): string {
   }
 }
 
-export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUser, onClose, fullPage = false, onLogout }) => {
+export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUser, onClose, fullPage = false, onLogout, onUseAsUser }) => {
   // What this person may do. The database enforces every one of these again — this only decides which buttons appear.
   const main = isMainAdmin(currentUser);
   const canViewAccounts = can(currentUser, 'view_accounts');
@@ -656,12 +661,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           </div>
 
           {fullPage ? (
-            <button
-              onClick={onLogout}
-              className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-red-950 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
-            >
-              <LogOut className="w-4 h-4" /> Log Out
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onUseAsUser}
+                title="Browse NOOB exactly as a normal member sees it — switch back anytime from the computer icon on your profile page"
+                className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-[#00FF66]/20 hover:border-[#00FF66]/40 border border-transparent text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+              >
+                <UserCircle className="w-4 h-4" /> Use as User
+              </button>
+              <button
+                onClick={onLogout}
+                className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-red-950 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+              >
+                <LogOut className="w-4 h-4" /> Log Out
+              </button>
+            </div>
           ) : (
             <button
               onClick={onClose}

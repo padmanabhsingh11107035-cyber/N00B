@@ -3,6 +3,7 @@ import { Trophy, Sparkles, Target, Crown, Radio, Gamepad2, Flame, Users, Gauge, 
 import { MiniGameMeta } from './types';
 import { GameBannerArtwork } from './GameIcons';
 import { renderInsideGamePreview } from './GameInsidePreviews';
+import { navKey, isOnTop } from '../../utils/keyboardNav';
 
 const CATEGORY_META: Record<string, { emoji: string; label: string; gradient: string }> = {
   arcade: { emoji: '🕹️', label: 'Arcade', gradient: 'from-orange-700 to-zinc-950' },
@@ -23,6 +24,7 @@ const AUTO_ADVANCE_MS = 2000;
 export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   const touchStartX = useRef<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   // Was a >=1,000,000 threshold, which worked while only chess paid in the
   // millions — now that every game's generic win is 10M too, that check
   // would mislabel every game as "lose vs bot, balance resets to 0" (only
@@ -154,6 +156,18 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
     return () => clearTimeout(timer);
   }, [activeSlide, slides.length]);
 
+  // On a computer: A / D (or ← / →) move through the posters, like a swipe — only while the carousel is on screen.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const dir = navKey(e);
+      if ((dir !== 'left' && dir !== 'right') || !isOnTop(rootRef.current)) return;
+      e.preventDefault();
+      setActiveSlide((prev) => (dir === 'right' ? prev + 1 : prev - 1 + slides.length) % slides.length);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [slides.length]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   };
@@ -171,7 +185,7 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-zinc-800 shadow-inner relative">
+    <div ref={rootRef} className="rounded-2xl overflow-hidden border border-zinc-800 shadow-inner relative">
       <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className="select-none">
         {slides[activeSlide]}
       </div>

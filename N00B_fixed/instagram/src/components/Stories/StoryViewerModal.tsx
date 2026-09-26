@@ -8,6 +8,7 @@ import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
+import { navKey } from '../../utils/keyboardNav';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -178,6 +179,21 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     return () => clearInterval(interval);
   }, [isPaused, isCommentFocused, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
 
+  // On a computer: A / ← = previous story, D / → = next story (like tapping or swiping on a phone), Esc closes.
+  // The one key listener calls the latest handlers through this ref (they are defined below).
+  const keyActions = useRef({ next: () => {}, prev: () => {}, close: () => {} });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (showViewersSheet || showStoryOptionsMenu) return;
+      if (e.key === 'Escape' && !isCommentFocused) { keyActions.current.close(); return; }
+      const dir = navKey(e);
+      if (dir === 'right') { e.preventDefault(); keyActions.current.next(); }
+      else if (dir === 'left') { e.preventDefault(); keyActions.current.prev(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showViewersSheet, showStoryOptionsMenu, isCommentFocused]);
+
   if (!story) return null;
 
   const handleNext = () => {
@@ -195,6 +211,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       setCurrentIndex(currentIndex - 1);
     }
   };
+
+  keyActions.current = { next: handleNext, prev: handlePrev, close: onClose };
 
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();

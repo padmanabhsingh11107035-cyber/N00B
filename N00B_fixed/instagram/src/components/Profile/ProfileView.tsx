@@ -1267,12 +1267,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
 
-          {/* User ID Display */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-zinc-900 border border-zinc-700/80 text-xs font-mono font-medium -mt-2 shadow-inner">
-            <span className="text-[10px] text-[#00FF66] font-extrabold uppercase tracking-wide">ID:</span>
-            <span className="text-zinc-200 font-bold select-all">{targetUser.id}</span>
-          </div>
-
           {/* 4. Symmetrical Stats Numbers Box */}
           <div className="grid grid-cols-3 divide-x divide-zinc-800 bg-zinc-900/90 border border-zinc-800/80 rounded-2xl py-3.5 px-1 sm:px-6 w-full max-w-md shadow-inner">
             <div className="text-center px-1 sm:px-2 min-w-0">

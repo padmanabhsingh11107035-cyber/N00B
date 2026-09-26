@@ -1284,7 +1284,7 @@ export default function App() {
                   <div
                     onClick={() => handleNavigateToUserProfile(user)}
                     className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
-                    title={`View @${user.username}'s profile (ID: ${user.id})`}
+                    title={`View @${user.username}'s profile`}
                   >
                     <img
                       src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}

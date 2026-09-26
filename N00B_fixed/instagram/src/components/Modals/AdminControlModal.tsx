@@ -191,13 +191,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
-  // Shareable links: the app itself, the "apply to join us" form, and any one profile.
-  const [shareProfileInput, setShareProfileInput] = useState('');
+  // Shareable links: the app itself and the "apply to join us" form (Platform tab); each account's profile link
+  // is copied from its own row in Account Moderation.
   const [copiedLinkKey, setCopiedLinkKey] = useState<string | null>(null);
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '';
   const appLink = typeof window !== 'undefined' ? window.location.origin : '';
   const joinTeamLink = `${baseUrl}?join=team`;
-  const profileLink = shareProfileInput.trim() ? `${baseUrl}?profile=${encodeURIComponent(shareProfileInput.trim())}` : '';
+  const profileLinkFor = (username: string) => `${baseUrl}?profile=${encodeURIComponent(username)}`;
 
   const copyLink = async (key: string, url: string) => {
     if (!url) return;
@@ -964,6 +964,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
                         {/* Action buttons */}
                         <div className="shrink-0 flex items-center gap-1.5">
+                          <button
+                            onClick={() => copyLink(`profile:${user.id}`, profileLinkFor(user.username))}
+                            title={`Copy @${user.username}'s profile link`}
+                            aria-label={`Copy @${user.username}'s profile link`}
+                            className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            {copiedLinkKey === `profile:${user.id}` ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <LinkIcon className="w-3.5 h-3.5" />}
+                            <span className="hidden sm:inline">{copiedLinkKey === `profile:${user.id}` ? 'Copied!' : 'Share'}</span>
+                          </button>
                           {canViewAccounts && (
                             <button
                               onClick={() => setSelectedUserForDetails(user)}
@@ -1835,35 +1844,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-zinc-800/60 space-y-2">
-                      <span className="text-xs font-bold text-white block">Share a Profile</span>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={shareProfileInput}
-                          onChange={(e) => setShareProfileInput(e.target.value)}
-                          placeholder="@username"
-                          className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-cyan-400"
-                        />
-                        <button
-                          onClick={() => copyLink('profile', profileLink)}
-                          disabled={!profileLink}
-                          className="p-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 rounded-lg cursor-pointer"
-                          title="Copy link"
-                        >
-                          {copiedLinkKey === 'profile' ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                          onClick={() => shareLink('profile', `@${shareProfileInput.trim()} on NOOB`, profileLink)}
-                          disabled={!profileLink}
-                          className="p-2 bg-cyan-500/15 hover:bg-cyan-500/25 disabled:opacity-40 text-cyan-300 rounded-lg cursor-pointer"
-                          title="Share"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      {profileLink && <span className="text-[10px] text-zinc-500 truncate block">{profileLink}</span>}
-                    </div>
                   </div>
                 </>
               )}

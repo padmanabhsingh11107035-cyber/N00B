@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { navKey } from '../../utils/keyboardNav';
 import { can } from '../../adminAccess';
 import {
   Heart,
@@ -509,10 +510,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   };
 
   useEffect(() => {
+    // On a computer: S / ↓ = next reel, W / ↑ = previous (like swiping up / down on a phone).
     const handleKeyDown = (e: KeyboardEvent) => {
       if (anyModalOpen) return;
-      if (e.key === 'ArrowDown') navigateWithCooldown('next');
-      else if (e.key === 'ArrowUp') navigateWithCooldown('prev');
+      const dir = navKey(e);
+      if (dir === 'down') { e.preventDefault(); navigateWithCooldown('next'); }
+      else if (dir === 'up') { e.preventDefault(); navigateWithCooldown('prev'); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);

@@ -23,7 +23,6 @@ import {
   Shuffle,
   RefreshCw,
   ArrowDown,
-  ArrowRight,
   User as UserIcon,
   Loader2
 } from 'lucide-react';
@@ -606,19 +605,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                           )}
                         </div>
 
-                        {/* Distinct Prominent User ID Badge + Username */}
+                        {/* Username (account ids are internal and never shown) */}
                         <div className="flex items-center gap-2 flex-wrap mt-1">
-                          <button
-                            type="button"
-                            onClick={() => onNavigateToUserProfile?.(user)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-zinc-900/90 hover:bg-emerald-950/60 border border-zinc-700/80 hover:border-emerald-500/60 text-zinc-300 hover:text-emerald-400 transition-all text-xs font-mono font-semibold cursor-pointer group/uid shadow-sm"
-                            title={`Click to view @${user.username}'s profile (ID: ${user.id})`}
-                          >
-                            <span className="text-[10px] text-[#00FF66] font-extrabold uppercase tracking-wide">ID:</span>
-                            <span className="font-bold text-white group-hover/uid:text-[#00FF66]">{user.id}</span>
-                            <ArrowRight className="w-3 h-3 text-[#00FF66] opacity-70 group-hover/uid:opacity-100 group-hover/uid:translate-x-0.5 transition-all" />
-                          </button>
-
                           <button
                             type="button"
                             onClick={() => onNavigateToUserProfile?.(user)}

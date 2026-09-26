@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
 import { can } from '../../adminAccess';
 import {
   Heart,
@@ -252,6 +253,21 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  // On a computer: A / D (or ← / →) move through the photos of the post in the middle of the screen, like a swipe
+  // (W / S jump between posts — see utils/keyboardNav.ts).
+  const slideCount = post.slides?.length || 0;
+  useEffect(() => {
+    installPostKeys();
+    const el = articleRef.current;
+    if (!el || slideCount < 2) return;
+    const onSlide = (e: Event) => {
+      const dir = (e as CustomEvent<NavDirection>).detail;
+      setCurrentSlideIndex((i) => (dir === 'right' ? Math.min(i + 1, slideCount - 1) : dir === 'left' ? Math.max(i - 1, 0) : i));
+    };
+    el.addEventListener(POST_SLIDE_EVENT, onSlide);
+    return () => el.removeEventListener(POST_SLIDE_EVENT, onSlide);
+  }, [slideCount]);
+
   // Tap the author's name or @handle (on a post or its comments) -> their real, full profile.
   const goToProfile = async (userId: string) => {
     if (!onNavigateToProfile) return;
@@ -278,6 +294,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   return (
     <article
       ref={articleRef}
+      data-post-card=""
       id={`post-card-${post.id}`}
       className="w-full bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden mb-4 shadow-xl backdrop-blur-sm transition-all"
     >

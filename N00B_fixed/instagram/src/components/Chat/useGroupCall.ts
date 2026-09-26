@@ -8,8 +8,8 @@
 // microphone starts on (muteable) the way every call app's does, since joining a call at all implies
 // wanting to be heard.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { joinCallChannel, ICE_SERVERS, MAX_CALL_PARTICIPANTS, type CallChannel, type CallPresence, type SignalMessage } from '../../services/callSignaling';
-import { notifyCallStarted } from '../../services/api';
+import { joinCallChannel, getIceServers, MAX_CALL_PARTICIPANTS, type CallChannel, type CallPresence, type SignalMessage } from '../../services/callSignaling';
+import { notifyCallStarted, logCallEvent } from '../../services/api';
 import type { User } from '../../types';
 
 export interface CallParticipant {
@@ -43,6 +43,13 @@ export function useGroupCall(chatId: string, me: User) {
   const peersRef = useRef<Map<string, PeerState>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const aliveRef = useRef(true);
+  const iceServersRef = useRef<RTCIceServer[]>([{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }]);
+  // Whoever is first to join an otherwise-empty call "owns" reporting it (same convention
+  // notifyCallStarted already used) — set once at join, read once at leave, so exactly one
+  // participant ever writes the "call ended" line into chat history instead of everyone doing it.
+  const isCallOwnerRef = useRef(false);
+  const joinedAtRef = useRef<number | null>(null);
+  const everMultiPartyRef = useRef(false);
 
   const myPresence = useCallback(
     (video: boolean, audio: boolean): CallPresence => ({
@@ -77,7 +84,7 @@ export function useGroupCall(chatId: string, me: User) {
     (peerId: string, initiator: boolean): PeerState => {
       const existing = peersRef.current.get(peerId);
       if (existing) return existing;
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
       const state: PeerState = { pc, pendingCandidates: [], initiator };
       peersRef.current.set(peerId, state);
 
@@ -88,6 +95,18 @@ export function useGroupCall(chatId: string, me: User) {
       };
       pc.ontrack = (e) => {
         setRemoteStreams((prev) => ({ ...prev, [peerId]: e.streams[0] || new MediaStream([e.track]) }));
+      };
+      // A connection that drops to failed/disconnected (very plausible without a hard failover path,
+      // e.g. a brief network handoff) would otherwise just sit there silent/frozen for the rest of the
+      // call — restartIce() triggers a fresh onnegotiationneeded below, which re-offers automatically.
+      pc.oniceconnectionstatechange = () => {
+        if ((pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') && pc.signalingState === 'stable') {
+          try {
+            pc.restartIce();
+          } catch {
+            /* not supported on this browser — the peer just stays down until someone rejoins */
+          }
+        }
       };
       pc.onnegotiationneeded = async () => {
         try {
@@ -154,6 +173,7 @@ export function useGroupCall(chatId: string, me: User) {
     (state: Record<string, CallPresence>) => {
       if (!aliveRef.current) return;
       setPresence(state);
+      if (Object.keys(state).length >= 2) everMultiPartyRef.current = true;
       for (const peerId of Object.keys(state)) {
         if (peerId === me.id || peersRef.current.has(peerId)) continue;
         ensurePeer(peerId, me.id < peerId);
@@ -181,13 +201,17 @@ export function useGroupCall(chatId: string, me: User) {
       setError('Could not use your microphone. Please allow microphone access and try again.');
       return;
     }
+    iceServersRef.current = await getIceServers();
     const chan = joinCallChannel(chatId, me.id, (msg) => void handleSignal(msg), handlePresence);
     chanRef.current = chan;
     await chan.track(myPresence(false, true));
     setJoined(true);
+    joinedAtRef.current = Date.now();
     // Tell the rest of the group once, only when this is the very first person in an otherwise empty
-    // call — not on every later join, which would just be noise for an already-live call.
-    if (Object.keys(chan.presenceState()).length <= 1) void notifyCallStarted(chatId).catch(() => undefined);
+    // call — not on every later join, which would just be noise for an already-live call. That same
+    // first joiner is also the one who'll write the "call ended" log line when they leave (see leave()).
+    isCallOwnerRef.current = Object.keys(chan.presenceState()).length <= 1;
+    if (isCallOwnerRef.current) void notifyCallStarted(chatId).catch(() => undefined);
   }, [chatId, me.id, presence, handleSignal, handlePresence, myPresence]);
 
   const leave = useCallback(() => {
@@ -198,10 +222,19 @@ export function useGroupCall(chatId: string, me: User) {
     const chan = chanRef.current;
     chanRef.current = null;
     void chan?.leave();
+    // Only the call's "owner" (see join()) logs it, and only once it actually connected with someone —
+    // a call nobody else ever joined is a missed call, logged separately from the ring-timeout path.
+    if (isCallOwnerRef.current && everMultiPartyRef.current && joinedAtRef.current) {
+      const durationSeconds = Math.round((Date.now() - joinedAtRef.current) / 1000);
+      void logCallEvent(chatId, 'ended', durationSeconds);
+    }
+    isCallOwnerRef.current = false;
+    joinedAtRef.current = null;
+    everMultiPartyRef.current = false;
     setJoined(false);
     setPresence({});
     setRemoteStreams({});
-  }, [closePeer]);
+  }, [closePeer, chatId]);
 
   const toggleMic = useCallback(() => {
     const track = localStreamRef.current?.getAudioTracks()[0];

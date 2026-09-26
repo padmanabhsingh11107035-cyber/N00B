@@ -81,13 +81,25 @@ export function joinCallChannel(
   };
 }
 
-// Free, public STUN servers only (no TURN/paid relay): enough for most home and phone connections to
-// find a direct path to each other. A small number of people behind strict corporate or carrier NATs
-// may fail to connect to each other specifically — an honest limit of not running paid relay infrastructure,
-// not a bug.
-export const ICE_SERVERS: RTCIceServer[] = [
+// Free, public STUN servers — used as-is when TURN credentials aren't available, and always included
+// alongside TURN as extra fallback options.
+const STUN_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' }
 ];
+
+// STUN alone can't get two devices through many real-world NATs (cellular carrier-grade NAT, some
+// corporate/campus Wi-Fi, some home routers) — this asks the server for short-lived Cloudflare TURN
+// relay credentials (minted per-call so nothing long-lived ever reaches the browser) and falls back to
+// STUN-only if TURN isn't configured yet or is briefly unreachable, so a call still works either way.
+export async function getIceServers(): Promise<RTCIceServer[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke('dynamic-handler', { body: { action: 'get_turn_credentials' } });
+    if (!error && Array.isArray(data?.iceServers) && data.iceServers.length) return data.iceServers as RTCIceServer[];
+  } catch {
+    /* fall through to STUN-only below */
+  }
+  return STUN_SERVERS;
+}
 
 export const MAX_CALL_PARTICIPANTS = 6;

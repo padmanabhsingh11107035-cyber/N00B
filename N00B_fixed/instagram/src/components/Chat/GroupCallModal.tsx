@@ -4,6 +4,12 @@ import type { User } from '../../types';
 import { useGroupCall, type CallParticipant } from './useGroupCall';
 import { MAX_CALL_PARTICIPANTS } from '../../services/callSignaling';
 import { listenForRings, sendRing } from '../../services/ringSignaling';
+import { notifyIncomingRing, logCallEvent } from '../../services/api';
+
+// How long an outgoing call rings before it's treated as unanswered and auto-cancelled — long enough
+// for someone to notice their phone/device and react, short enough that the caller isn't left staring
+// at a ringing screen indefinitely.
+const RING_TIMEOUT_MS = 45_000;
 
 interface RingTarget {
   id: string;
@@ -99,8 +105,25 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName
       isGroup: !!isGroup,
       from: { id: currentUser.id, username: currentUser.username, displayName: currentUser.displayName, avatar: currentUser.avatar }
     };
-    for (const m of ringMembers) void sendRing(m.id, event).catch(() => undefined);
+    for (const m of ringMembers) {
+      void sendRing(m.id, event).catch(() => undefined);
+      // Backup path for a fully closed app — see notify_incoming_ring / dynamic-handler's handlePush.
+      void notifyIncomingRing(chatId, m.id);
+    }
   }, [ringMembers, chatId, chatName, isGroup, currentUser]);
+
+  // An outgoing call that nobody joins within RING_TIMEOUT_MS is treated the same as the caller
+  // hanging up early — handleClose() below already cancels the ring and logs it as missed.
+  const [ringTimedOut, setRingTimedOut] = useState(false);
+  useEffect(() => {
+    if (!ringMembers || ringMembers.length === 0) return;
+    const timer = window.setTimeout(() => setRingTimedOut(true), RING_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [ringMembers]);
+  useEffect(() => {
+    if (ringTimedOut && participants.length <= 1) handleClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ringTimedOut]);
 
   // Only the caller listens for declines — shown as a small notice, never blocks the call (the
   // people who did join keep talking regardless of who else said no).
@@ -115,7 +138,8 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName
   }, [ringMembers, chatId, currentUser.id]);
 
   const handleClose = () => {
-    // Nobody ever picked up — let their phones stop ringing instead of leaving them hanging.
+    // Nobody ever picked up — let their phones stop ringing instead of leaving them hanging, and log
+    // it as a missed call (whether that's because the ring timed out or the caller gave up early).
     if (ringMembers && ringMembers.length > 0 && participants.length <= 1) {
       const event = {
         type: 'cancelled' as const,
@@ -125,6 +149,7 @@ export const GroupCallModal: React.FC<GroupCallModalProps> = ({ chatId, chatName
         from: { id: currentUser.id, username: currentUser.username, displayName: currentUser.displayName, avatar: currentUser.avatar }
       };
       for (const m of ringMembers) void sendRing(m.id, event).catch(() => undefined);
+      void logCallEvent(chatId, 'missed');
     }
     leave();
     onClose();

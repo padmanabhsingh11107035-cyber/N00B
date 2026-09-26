@@ -222,7 +222,35 @@ async function handlePush(req: Request, body: any, admin: any): Promise<Response
     console.error(`push: the VAPID keys are not usable (${oneLine((e as Error)?.message, 120)}) — check VAPID_PRIVATE_KEY matches the public key`);
     return json({ error: 'Push keys are invalid.' }, 500);
   }
-  const payload = te.encode(JSON.stringify({ title: String(data.title ?? 'NOOB'), body: String(data.body ?? ''), url: '/' }));
+  // An incoming call needs to ring even with the app fully closed, with real Accept/Decline right on
+  // the OS notification where the platform supports it (Chrome/Android): `actions` + `requireInteraction`
+  // + a `tag` (so a second ring for the same call replaces the first instead of stacking). Declining is
+  // a direct background fetch from the service worker using the one-time token below — no window, no
+  // session needed. iOS Safari currently ignores `actions` entirely, so its fallback is the plain
+  // notification tap, which opens straight into the same accept/decline screen (see App.tsx + sw.js).
+  const callData = data.type === 'call_ring' && data.data && typeof data.data === 'object' ? data.data : null;
+  const notifPayload: Record<string, unknown> = { title: String(data.title ?? 'NOOB'), body: String(data.body ?? ''), url: '/' };
+  if (callData) {
+    const params = new URLSearchParams({
+      incomingCallChat: String(callData.chatId ?? ''),
+      chatName: String(callData.chatName ?? ''),
+      isGroup: callData.isGroup ? '1' : '0',
+      callerId: String(callData.callerId ?? ''),
+      callerUsername: String(callData.callerUsername ?? ''),
+      callerDisplayName: String(callData.callerDisplayName ?? ''),
+      callerAvatar: String(callData.callerAvatar ?? '')
+    });
+    notifPayload.url = `/?${params.toString()}`;
+    notifPayload.type = 'call_ring';
+    notifPayload.tag = `call:${callData.chatId}`;
+    notifPayload.requireInteraction = true;
+    notifPayload.declineToken = String(callData.token ?? '');
+    notifPayload.actions = [
+      { action: 'accept', title: 'Accept' },
+      { action: 'decline', title: 'Decline' }
+    ];
+  }
+  const payload = te.encode(JSON.stringify(notifPayload));
   const tally = { sent: 0, gone: 0, failed: 0 };
   const dead: { userId: string; endpoint: string }[] = [];
   let next = 0;
@@ -812,6 +840,51 @@ Deno.serve(async (req) => {
       .eq('user_id', userId);
     if (error) return json({ error: 'Could not record device info.' }, 500);
     return json({ success: true });
+  }
+
+  // ------------------------------------------------------------------ call: TURN credentials
+  // STUN alone (callSignaling.ts's ICE_SERVERS) can't get two devices through many real-world NATs
+  // (cellular carrier-grade NAT, some corporate/campus Wi-Fi, some home routers) — a TURN relay is
+  // needed for those. Cloudflare's Realtime TURN service mints short-lived credentials over a plain
+  // REST call using a secret API token that must never reach the browser, so this has to happen here.
+  // Falls back to STUN-only (returns just the two public STUN servers) if the secrets aren't set yet
+  // or Cloudflare's API is unreachable — a call can still work without TURN, just less reliably.
+  if (body?.action === 'get_turn_credentials') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const stunOnly = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+    const keyId = (Deno.env.get('CF_TURN_KEY_ID') || '').trim();
+    const apiToken = (Deno.env.get('CF_TURN_API_TOKEN') || '').trim();
+    if (!keyId || !apiToken) return json({ success: true, iceServers: stunOnly });
+    try {
+      const res = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ttl: 3600 }),
+        signal: AbortSignal.timeout(8_000)
+      });
+      if (!res.ok) {
+        console.warn(`turn: Cloudflare answered ${res.status} ${oneLine(await res.text().catch(() => ''), 160)}`);
+        return json({ success: true, iceServers: stunOnly });
+      }
+      const data: any = await res.json();
+      const turnServer = data?.iceServers;
+      return json({ success: true, iceServers: turnServer ? [turnServer, ...stunOnly] : stunOnly });
+    } catch (e) {
+      console.warn(`turn: could not reach Cloudflare: ${oneLine((e as Error)?.message, 120)}`);
+      return json({ success: true, iceServers: stunOnly });
+    }
+  }
+
+  // ------------------------------------------------------------------ decline an incoming-call push
+  // Tapped from the OS notification's own "Decline" action button — possibly with no NOOB tab open at
+  // all, so this deliberately needs no session: the token itself (minted only by notify_incoming_ring,
+  // single-use, 5-minute expiry) is the proof. See decline_ring_token in the matching migration.
+  if (body?.action === 'decline_call_ring') {
+    const declineToken = String(body?.token ?? '');
+    if (!declineToken) return json({ error: 'Invalid request.' }, 400);
+    const { data, error } = await admin.rpc('decline_ring_token', { p_token: declineToken });
+    if (error) return json({ error: 'Could not decline the call.' }, 500);
+    return json({ success: !!data?.success });
   }
 
   // ------------------------------------------------------------------ SparkX email notifications

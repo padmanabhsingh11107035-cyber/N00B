@@ -3,10 +3,42 @@
 // they accept, at which point they join the same call:<chatId> mesh the caller is already in.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listenForRings, sendRing, type RingEvent } from '../../services/ringSignaling';
+import { logCallEvent } from '../../services/api';
 import type { User } from '../../types';
 
+// Cold-starting the app from an incoming-call push notification (the app was fully closed, so the
+// original ring:<id> broadcast is long gone — see ringSignaling.ts) carries the call's details in the
+// URL instead (?incomingCallChat=...), built by the edge function in dynamic-handler's handlePush and
+// consumed here. Read once and stripped from the URL immediately so a later refresh of the same tab
+// doesn't keep re-showing a call that's probably already over.
+function readIncomingCallFromUrl(): RingEvent | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const chatId = params.get('incomingCallChat');
+  const callerId = params.get('callerId');
+  if (!chatId || !callerId) return null;
+  const event: RingEvent = {
+    type: 'incoming',
+    chatId,
+    chatName: params.get('chatName') || '',
+    isGroup: params.get('isGroup') === '1',
+    from: {
+      id: callerId,
+      username: params.get('callerUsername') || '',
+      displayName: params.get('callerDisplayName') || undefined,
+      avatar: params.get('callerAvatar') || undefined
+    }
+  };
+  for (const key of ['incomingCallChat', 'chatName', 'isGroup', 'callerId', 'callerUsername', 'callerDisplayName', 'callerAvatar']) {
+    params.delete(key);
+  }
+  const rest = params.toString();
+  window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+  return event;
+}
+
 export function useIncomingCalls(me: User | null) {
-  const [incoming, setIncoming] = useState<RingEvent | null>(null);
+  const [incoming, setIncoming] = useState<RingEvent | null>(() => readIncomingCallFromUrl());
   const incomingRef = useRef<RingEvent | null>(null);
   incomingRef.current = incoming;
 
@@ -35,6 +67,7 @@ export function useIncomingCalls(me: User | null) {
       isGroup: cur.isGroup,
       from: { id: me.id, username: me.username, displayName: me.displayName, avatar: me.avatar }
     }).catch(() => undefined);
+    void logCallEvent(cur.chatId, 'declined');
   }, [me]);
 
   // Called once the accept flow has handed the chat off to the real call screen — separate from

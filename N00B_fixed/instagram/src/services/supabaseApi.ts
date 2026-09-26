@@ -1775,6 +1775,25 @@ export async function notifyCallStarted(chatId: string): Promise<void> {
   }
 }
 
+// Unlike the ring:<calleeId> broadcast (only reaches an already-open app), this writes a real
+// notification row so the existing Web Push pipeline can reach a fully closed one too.
+export async function notifyIncomingRing(chatId: string, calleeId: string): Promise<void> {
+  try {
+    await rpc('notify_incoming_ring', { p_chat: chatId, p_callee: calleeId });
+  } catch {
+    // Best-effort — the in-app ring broadcast is the primary path; this is the closed-app backup.
+  }
+}
+
+// Writes a plain "call ended / missed / declined" line into the chat's own message history.
+export async function logCallEvent(chatId: string, kind: 'ended' | 'missed' | 'declined', durationSeconds?: number): Promise<void> {
+  try {
+    await rpc('log_call_event', { p_chat: chatId, p_kind: kind, p_duration_seconds: durationSeconds ?? null });
+  } catch {
+    // Best-effort — never let a logging failure disrupt the call itself.
+  }
+}
+
 // Translation (and the AI support assistant) run in one small Edge Function that holds the AI key.
 // (It was deployed from the dashboard under the name 'dynamic-handler'; the code is supabase/functions/ai.)
 const AI_FUNCTION = 'dynamic-handler';

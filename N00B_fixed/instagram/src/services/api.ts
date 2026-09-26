@@ -124,6 +124,8 @@ export {
   matchContacts,
   sendScreenshotAlert,
   notifyCallStarted,
+  notifyIncomingRing,
+  logCallEvent,
   translateMessage,
   submitSafetyReport,
   submitSupportReview,

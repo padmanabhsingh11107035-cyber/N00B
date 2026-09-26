@@ -17,10 +17,11 @@ interface LudoGameProps {
 // below: Red = top-left, Green = top-right, Yellow = bottom-right, Blue =
 // bottom-left, same as a real Ludo board regardless of player count.
 const PLAYER_COLORS = ['#dc2626', '#16a34a', '#eab308', '#2563eb'];
-const ARM_LENGTH = 8; // shared-path cells per player, kept short for quick mobile games
-const HOME_STRETCH = 4;
+const ARM_LENGTH = 13; // real-board count: 13 shared cells per arm (52 total for 4 players)
+const HOME_STRETCH = 5; // real-board count: 5 colored cells leading into the center triangle
 const TOKENS_PER_PLAYER = 4;
 const MAX_PLAYERS = 4;
+const STEP_ANIM_MS = 150; // per-cell delay so a token visibly hops across every block it passes
 
 export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount }) => {
   const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
@@ -29,8 +30,17 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
     const n = Math.min(initialPlayerCount || MAX_PLAYERS, MAX_PLAYERS);
     return Array.from({ length: n }, (_, i) => (i === 0 ? 'human' : entryMode === 'pass_play' ? 'human' : 'bot'));
   });
-  // tokens[player][tokenIndex] = progress. 0 = in yard.
+  // tokens[player][tokenIndex] = progress. 0 = in yard. This is the
+  // authoritative game state (captures, wins, legal-move checks all read
+  // from this) and updates in one shot per roll.
   const [tokens, setTokens] = useState<number[][]>([]);
+  // displayTokens is what actually gets rendered. It trails `tokens`,
+  // stepping forward one board cell at a time so a moved token visibly
+  // hops across every square it passes instead of teleporting straight to
+  // the landing cell. A captured token (sent home by an opponent landing on
+  // it) snaps back to the yard immediately since it was hit, not walked.
+  const [displayTokens, setDisplayTokens] = useState<number[][]>([]);
+  const animIntervalsRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [diceValue, setDiceValue] = useState<number | null>(null);
   const [isRolling, setIsRolling] = useState(false);
@@ -55,12 +65,45 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
   };
 
   const startGame = () => {
-    setTokens(Array.from({ length: numPlayers }, () => Array(TOKENS_PER_PLAYER).fill(0)));
+    Object.values(animIntervalsRef.current).forEach(clearInterval);
+    animIntervalsRef.current = {};
+    const initial = Array.from({ length: numPlayers }, () => Array(TOKENS_PER_PLAYER).fill(0));
+    setTokens(initial);
+    setDisplayTokens(initial);
     setCurrentPlayer(0);
     setWinner(null);
     setLog('Player 1, roll to get a token out (need a 6)!');
     hasReported.current = false;
     setPhase('playing');
+  };
+
+  // Steps a token's on-screen position forward one board cell at a time from
+  // `from` to `to`, so the player can watch the goti pass over every square
+  // instead of it jumping straight to the destination.
+  const animateTokenStep = (p: number, t: number, from: number, to: number) => {
+    const key = `${p}-${t}`;
+    if (animIntervalsRef.current[key]) clearInterval(animIntervalsRef.current[key]);
+    if (from >= to) {
+      setDisplayTokens((prev) => {
+        const next = prev.map((arr) => [...arr]);
+        next[p][t] = to;
+        return next;
+      });
+      return;
+    }
+    let step = from;
+    animIntervalsRef.current[key] = setInterval(() => {
+      step += 1;
+      setDisplayTokens((prev) => {
+        const next = prev.map((arr) => [...arr]);
+        next[p][t] = step;
+        return next;
+      });
+      if (step >= to) {
+        clearInterval(animIntervalsRef.current[key]);
+        delete animIntervalsRef.current[key];
+      }
+    }, STEP_ANIM_MS);
   };
 
   // Absolute cell on the shared ring for a given player's token progress
@@ -76,6 +119,10 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
   // committed yet.
   const moveToken = (playerIdx: number, tokenIdx: number, roll: number): number[][] => {
     let result = tokens;
+    let moveFrom = 0;
+    let moveTo = 0;
+    let moved = false;
+    const captured: { p: number; t: number }[] = [];
     setTokens((prev) => {
       const next = prev.map((arr) => [...arr]);
       const current = next[playerIdx][tokenIdx];
@@ -85,6 +132,9 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
         return prev;
       }
       next[playerIdx][tokenIdx] = target;
+      moveFrom = current;
+      moveTo = target;
+      moved = true;
 
       // Capture check: only while on the shared ring (not yard, not home stretch)
       if (target > 0 && target <= pathLength) {
@@ -97,6 +147,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
               const otherProgress = next[p][t];
               if (otherProgress > 0 && otherProgress <= pathLength && absoluteCell(p, otherProgress) === cell) {
                 next[p][t] = 0;
+                captured.push({ p, t });
               }
             }
           }
@@ -105,6 +156,20 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
       result = next;
       return next;
     });
+    if (moved) {
+      captured.forEach(({ p, t }) => {
+        if (animIntervalsRef.current[`${p}-${t}`]) {
+          clearInterval(animIntervalsRef.current[`${p}-${t}`]);
+          delete animIntervalsRef.current[`${p}-${t}`];
+        }
+        setDisplayTokens((prev) => {
+          const next = prev.map((arr) => [...arr]);
+          next[p][t] = 0;
+          return next;
+        });
+      });
+      animateTokenStep(playerIdx, tokenIdx, moveFrom, moveTo);
+    }
     return result;
   };
 
@@ -143,16 +208,19 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
   // immediate win, otherwise passes the turn after a short pause (skipped on
   // a 6, which grants another roll).
   const applyRollResult = (playerIdx: number, roll: number, tokenIdx: number | null) => {
+    const wasInYard = tokenIdx !== null && tokens[playerIdx][tokenIdx] === 0;
+    const steps = tokenIdx === null ? 0 : wasInYard ? 1 : roll;
     const updated = tokenIdx !== null ? moveToken(playerIdx, tokenIdx, roll) : tokens;
     if (updated[playerIdx]?.every((p) => p === finishProgress)) {
       setWinner(playerIdx);
       return;
     }
     const rolledSix = roll === 6;
+    const delay = Math.max(800, steps * STEP_ANIM_MS + 350);
     setTimeout(() => {
       setDiceValue(null);
       if (!rolledSix) setCurrentPlayer((prev) => (prev + 1) % numPlayers);
-    }, 800);
+    }, delay);
   };
 
   const rollDice = () => {
@@ -215,6 +283,13 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
     }
   }, [winner, onGameOver]);
 
+  useEffect(() => {
+    const intervals = animIntervalsRef.current;
+    return () => {
+      Object.values(intervals).forEach(clearInterval);
+    };
+  }, []);
+
   if (phase === 'setup') {
     return (
       <div className="w-full flex flex-col items-center gap-4 p-3">
@@ -276,9 +351,9 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
   // of an abstract ring. Player order/colors are fixed to real quadrants
   // (Red TL, Green TR, Yellow BR, Blue BL) regardless of numPlayers, so 2-3
   // player games still sit on real corners rather than re-splitting evenly.
-  const size = 340;
+  const size = 600;
   const center = size / 2;
-  const half = 150; // distance from board center to its outer edge
+  const half = 265; // distance from board center to its outer edge
   const armHalf = half * 0.2; // half-width of each 3-cell-wide arm (= 1.5 of the 15x15 grid's cells)
   const cellPx = (half - armHalf) / 6; // one grid cell in px (each yard/arm is 6 cells deep)
 
@@ -356,10 +431,10 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
   return (
     <div className="w-full flex flex-col items-center gap-3 p-2">
       <div className="flex items-center gap-1.5 flex-wrap justify-center">
-        {tokens.map((toks, i) => (
+        {displayTokens.map((toks, i) => (
           <div
             key={i}
-            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border ${
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border ${
               currentPlayer === i && winner === null ? 'border-white' : 'border-transparent opacity-60'
             }`}
             style={{ backgroundColor: `${PLAYER_COLORS[i]}22`, color: PLAYER_COLORS[i] }}
@@ -370,17 +445,17 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[340px]">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[460px] sm:max-w-[640px]">
         {/* Board backdrop */}
         <rect
-          x={center - half - 10}
-          y={center - half - 10}
-          width={(half + 10) * 2}
-          height={(half + 10) * 2}
-          rx="16"
+          x={center - half - 18}
+          y={center - half - 18}
+          width={(half + 18) * 2}
+          height={(half + 18) * 2}
+          rx="24"
           fill="#f8fafc"
           stroke="#cbd5e1"
-          strokeWidth="2"
+          strokeWidth="3"
         />
 
         {/* 4 big colored corner yards, each with a white inset panel + 2x2 dot grid */}
@@ -404,7 +479,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
                 fill="#ffffff"
               />
               {yardSlotOffsets.map(([dx, dy], slotIdx) => {
-                const hasToken = isActive && tokens[p]?.[slotIdx] === 0;
+                const hasToken = isActive && displayTokens[p]?.[slotIdx] === 0;
                 const isChoosable = p === currentPlayer && hasToken && !!pendingChoice?.options.includes(slotIdx);
                 return (
                   <circle
@@ -442,7 +517,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
                 height={cellPx * 0.92}
                 fill={startPlayer !== undefined ? PLAYER_COLORS[startPlayer] : checker ? '#e2e8f0' : '#ffffff'}
                 stroke="#cbd5e1"
-                strokeWidth="0.6"
+                strokeWidth="1"
               />
               {startPlayer !== undefined && (
                 <text x={x} y={y + cellPx * 0.22} fontSize={cellPx * 0.7} textAnchor="middle" fill="#fff">
@@ -467,7 +542,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
                   height={cellPx * 0.92}
                   fill={PLAYER_COLORS[p]}
                   stroke="#f8fafc"
-                  strokeWidth="0.75"
+                  strokeWidth="1.3"
                 />
               );
             })}
@@ -497,7 +572,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
               d={`M ${center} ${center} L ${a[0]} ${a[1]} L ${b[0]} ${b[1]} Z`}
               fill={PLAYER_COLORS[p]}
               stroke="#f8fafc"
-              strokeWidth="1.5"
+              strokeWidth="2.5"
               opacity={p < numPlayers ? 1 : 0.3}
             />
           ));
@@ -505,7 +580,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
 
         {/* Tokens currently on the shared ring or home stretch (yard tokens
             already show as filled dots in the yard panel above) */}
-        {tokens.map((toks, p) =>
+        {displayTokens.map((toks, p) =>
           toks.map((progress, t) => {
             if (progress === 0 || progress === finishProgress) return null;
             const pos =
@@ -526,7 +601,7 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
                   r={cellPx * (isChoosable ? 0.48 : 0.4)}
                   fill={PLAYER_COLORS[p]}
                   stroke={isChoosable ? '#ffffff' : '#1c1c1f'}
-                  strokeWidth={isChoosable ? 2 : 1.2}
+                  strokeWidth={isChoosable ? 3.5 : 2}
                 />
                 <circle cx={pos.x - cellPx * 0.12} cy={pos.y - cellPx * 0.12} r={cellPx * 0.12} fill="#ffffff" fillOpacity="0.65" />
               </g>
@@ -535,15 +610,15 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
         )}
       </svg>
 
-      <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
+      <p className="text-xs text-zinc-400 text-center min-h-[16px] font-medium">{log}</p>
 
       {winner === null ? (
         <div className="flex items-center gap-3">
-          <AnimatedDice value={diceValue} isRolling={isRolling} size={40} />
+          <AnimatedDice value={diceValue} isRolling={isRolling} size={52} />
           <button
             onClick={rollDice}
             disabled={isRolling || playerTypes[currentPlayer] === 'bot' || !!pendingChoice}
-            className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-[#00FF66] text-black font-bold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {playerTypes[currentPlayer] === 'bot'
               ? `Player ${currentPlayer + 1} is rolling...`

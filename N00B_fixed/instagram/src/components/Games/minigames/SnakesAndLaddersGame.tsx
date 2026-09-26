@@ -201,8 +201,8 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
 
   // --- Board rendering: colorful checkered 10x10 grid with snake/ladder
   // line art overlaid, matching a classic printed board. ---
-  const size = 320;
-  const pad = 6;
+  const size = 600;
+  const pad = 10;
   const cell = (size - pad * 2) / 10;
   const cellCenter = (num: number) => {
     const [row, col] = numberToRowCol(num);
@@ -216,7 +216,7 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
         {positions.map((pos, i) => (
           <div
             key={i}
-            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border ${
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border ${
               currentPlayer === i && winner === null ? 'border-white' : 'border-transparent opacity-60'
             }`}
             style={{ backgroundColor: `${PLAYER_COLORS[i]}22`, color: PLAYER_COLORS[i] }}
@@ -228,7 +228,7 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
       </div>
 
       {/* Board */}
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[320px] rounded-xl border border-zinc-800">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[420px] sm:max-w-[600px] rounded-2xl border-2 border-zinc-800">
         <rect x="0" y="0" width={size} height={size} fill="#0a0a0a" />
 
         {/* Colorful checkered cells */}
@@ -246,7 +246,7 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
               fill={color}
               fillOpacity="0.85"
               stroke="#0a0a0a"
-              strokeWidth="1"
+              strokeWidth="1.5"
             />
           );
         })}
@@ -259,13 +259,13 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const len = Math.hypot(dx, dy) || 1;
-          const nx = (-dy / len) * 4;
-          const ny = (dx / len) * 4;
-          const rungCount = 5;
+          const nx = (-dy / len) * 7;
+          const ny = (dx / len) * 7;
+          const rungCount = 6;
           return (
             <g key={`ladder-${from}`}>
-              <line x1={a.x - nx} y1={a.y - ny} x2={b.x - nx} y2={b.y - ny} stroke="#d4d4d8" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1={a.x + nx} y1={a.y + ny} x2={b.x + nx} y2={b.y + ny} stroke="#d4d4d8" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1={a.x - nx} y1={a.y - ny} x2={b.x - nx} y2={b.y - ny} stroke="#d4d4d8" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1={a.x + nx} y1={a.y + ny} x2={b.x + nx} y2={b.y + ny} stroke="#d4d4d8" strokeWidth="4.5" strokeLinecap="round" />
               {Array.from({ length: rungCount }).map((_, r) => {
                 const t = (r + 1) / (rungCount + 1);
                 const rx = a.x + dx * t;
@@ -278,7 +278,7 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
                     x2={rx + nx}
                     y2={ry + ny}
                     stroke="#a1a1aa"
-                    strokeWidth="2"
+                    strokeWidth="3.5"
                   />
                 );
               })}
@@ -297,45 +297,49 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
           const dy = tail.y - head.y;
           const len = Math.hypot(dx, dy) || 1;
           // Perpendicular offset for the control point gives the snake a curve
-          const curveX = mx + (-dy / len) * 22;
-          const curveY = my + (dx / len) * 22;
+          const curveX = mx + (-dy / len) * 40;
+          const curveY = my + (dx / len) * 40;
           return (
             <g key={`snake-${from}`}>
               <path
                 d={`M ${head.x} ${head.y} Q ${curveX} ${curveY} ${tail.x} ${tail.y}`}
                 fill="none"
                 stroke="#15803d"
-                strokeWidth="5"
+                strokeWidth="9"
                 strokeLinecap="round"
               />
               <path
                 d={`M ${head.x} ${head.y} Q ${curveX} ${curveY} ${tail.x} ${tail.y}`}
                 fill="none"
                 stroke="#4ade80"
-                strokeWidth="1.5"
+                strokeWidth="2.5"
                 strokeLinecap="round"
-                strokeDasharray="1 5"
+                strokeDasharray="1.5 8"
               />
-              <circle cx={head.x} cy={head.y} r="6" fill="#15803d" stroke="#0a0a0a" strokeWidth="1" />
-              <circle cx={head.x - 1.5} cy={head.y - 1.5} r="1.1" fill="#fff" />
-              <circle cx={head.x + 1.5} cy={head.y - 1.5} r="1.1" fill="#fff" />
+              <circle cx={head.x} cy={head.y} r="11" fill="#15803d" stroke="#0a0a0a" strokeWidth="1.5" />
+              <circle cx={head.x - 2.8} cy={head.y - 2.8} r="2" fill="#fff" />
+              <circle cx={head.x + 2.8} cy={head.y - 2.8} r="2" fill="#fff" />
             </g>
           );
         })}
 
-        {/* Cell numbers */}
+        {/* Cell numbers — bold with a stroked outline so they stay legible
+            against every cell color in the palette. */}
         {Array.from({ length: 100 }).map((_, i) => {
           const num = i + 1;
-          const { x, y } = cellCenter(num);
+          const { x } = cellCenter(num);
           return (
             <text
               key={`n-${num}`}
               x={x}
-              y={pad + numberToRowCol(num)[0] * cell + 8}
-              fontSize="6"
-              fill="#00000099"
+              y={pad + numberToRowCol(num)[0] * cell + cell * 0.32}
+              fontSize={cell * 0.34}
+              fill="#ffffff"
+              stroke="#000000"
+              strokeWidth={cell * 0.045}
+              paintOrder="stroke"
               textAnchor="middle"
-              fontWeight="bold"
+              fontWeight="900"
             >
               {num}
             </text>
@@ -348,30 +352,30 @@ export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
           const { x, y } = cellCenter(pos);
           const sameHere = positions.map((p, idx) => (p === pos ? idx : -1)).filter((idx) => idx !== -1);
           const slot = sameHere.indexOf(i);
-          const offset = sameHere.length > 1 ? (slot - (sameHere.length - 1) / 2) * 6 : 0;
+          const offset = sameHere.length > 1 ? (slot - (sameHere.length - 1) / 2) * 11 : 0;
           return (
             <circle
               key={i}
               cx={x + offset}
-              cy={y + 4}
-              r="5.5"
+              cy={y + 8}
+              r="10"
               fill={PLAYER_COLORS[i]}
               stroke="#000"
-              strokeWidth="1.2"
+              strokeWidth="2"
             />
           );
         })}
       </svg>
 
-      <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
+      <p className="text-xs text-zinc-400 text-center min-h-[16px] font-medium">{log}</p>
 
       {winner === null ? (
         <div className="flex items-center gap-3">
-          <AnimatedDice value={diceValue} isRolling={isRolling} size={40} />
+          <AnimatedDice value={diceValue} isRolling={isRolling} size={52} />
           <button
             onClick={rollDice}
             disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
-            className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-[#00FF66] text-black font-bold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {playerTypes[currentPlayer] === 'bot'
               ? `Player ${currentPlayer + 1} is rolling...`

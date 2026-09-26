@@ -13,6 +13,13 @@ interface MonopolyGameProps {
 
 const PLAYER_COLORS = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b'];
 const START_CASH = 1500;
+// Bankruptcy alone (cash < 0) isn't a reliable end condition here — the $200
+// GO bonus on this compressed 20-square board keeps everyone cash-positive
+// far more often than real Monopoly's 40-square economy does, so games could
+// run forever. This hard turn cap guarantees a finish either way; if nobody
+// has gone bankrupt by then, the richest player by net worth (cash + half
+// the buy-in value of what they own) wins, same as calling a timed match.
+const MAX_TURNS = 80;
 
 type SquareType = 'go' | 'property' | 'chance' | 'jail' | 'free_parking' | 'go_to_jail';
 interface Square {
@@ -93,6 +100,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
   const [log, setLog] = useState('');
   const [pendingBuy, setPendingBuy] = useState<number | null>(null);
   const [winner, setWinner] = useState<number | null>(null);
+  const [turnCount, setTurnCount] = useState(0);
   const hasReported = useRef(false);
 
   const updatePlayerCount = (n: number) => {
@@ -112,6 +120,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
     setInJail(Array(numPlayers).fill(0));
     setCurrentPlayer(0);
     setWinner(null);
+    setTurnCount(0);
     setLog('Player 1, roll the dice!');
     hasReported.current = false;
     setPhase('playing');
@@ -131,7 +140,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
   // dice and moves to the next player. Called explicitly at the end of every
   // turn path (roll, buy, pass, jail) so the turn always advances — no reliance
   // on a watcher effect keyed on state that may not change on a given turn.
-  const checkBankruptcyThenAdvance = (cashArr: number[]) => {
+  const checkBankruptcyThenAdvance = (cashArr: number[], ownedArr: Record<number, number> = owned) => {
     const newBankrupt = bankrupt.map((b, i) => b || cashArr[i] < 0);
     setBankrupt(newBankrupt);
     const activeCount = newBankrupt.filter((b) => !b).length;
@@ -144,6 +153,28 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
       setWinner(nextActivePlayer(0, newBankrupt));
       return;
     }
+
+    const turnsSoFar = turnCount + 1;
+    setTurnCount(turnsSoFar);
+    if (turnsSoFar >= MAX_TURNS) {
+      let bestPlayer = 0;
+      let bestWorth = -Infinity;
+      for (let p = 0; p < numPlayers; p++) {
+        if (newBankrupt[p]) continue;
+        const propertyValue = Object.entries(ownedArr)
+          .filter(([, ownerIdx]) => ownerIdx === p)
+          .reduce((sum, [sqIdx]) => sum + (BOARD[Number(sqIdx)].price || 0) * 0.5, 0);
+        const worth = cashArr[p] + propertyValue;
+        if (worth > bestWorth) {
+          bestWorth = worth;
+          bestPlayer = p;
+        }
+      }
+      setLog("Time's up! Richest player wins by net worth.");
+      setWinner(bestPlayer);
+      return;
+    }
+
     setDiceValue(null);
     setPendingBuy(null);
     setCurrentPlayer((prev) => nextActivePlayer(prev, newBankrupt));
@@ -249,7 +280,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         setPendingBuy(newPos);
         return;
       }
-      setTimeout(() => checkBankruptcyThenAdvance(result.cash), 900);
+      setTimeout(() => checkBankruptcyThenAdvance(result.cash, result.owned), 900);
     }, 700);
   };
 
@@ -274,10 +305,11 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
     const square = BOARD[pendingBuy];
     const newCash = [...cash];
     newCash[0] -= square.price || 0;
+    const newOwned = { ...owned, [pendingBuy]: 0 };
     setCash(newCash);
-    setOwned((o) => ({ ...o, [pendingBuy]: 0 }));
+    setOwned(newOwned);
     setLog(`You bought ${square.name}!`);
-    setTimeout(() => checkBankruptcyThenAdvance(newCash), 400);
+    setTimeout(() => checkBankruptcyThenAdvance(newCash, newOwned), 400);
   };
 
   const skipBuy = () => {
@@ -348,7 +380,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         {cash.map((c, i) => (
           <div
             key={i}
-            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border ${
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border ${
               currentPlayer === i && winner === null ? 'border-white' : 'border-transparent opacity-60'
             } ${bankrupt[i] ? 'line-through opacity-30' : ''}`}
             style={{ backgroundColor: `${PLAYER_COLORS[i]}22`, color: PLAYER_COLORS[i] }}
@@ -359,19 +391,20 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         ))}
       </div>
 
-      <div className="grid grid-cols-6 grid-rows-6 gap-1 w-full max-w-[400px] aspect-square bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800 shadow-inner">
+      <div className="grid grid-cols-6 grid-rows-6 gap-1.5 w-full max-w-[460px] sm:max-w-[640px] aspect-square bg-zinc-950 p-2 rounded-2xl border-2 border-zinc-800 shadow-inner">
         {/* Center panel: board wordmark + live turn status, filling the hollow middle */}
         <div
-          className="flex flex-col items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800"
+          className="flex flex-col items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800"
           style={{ gridColumn: '2 / 6', gridRow: '2 / 6' }}
         >
-          <Landmark className="w-6 h-6 text-amber-400/80" />
-          <span className="text-[13px] sm:text-sm font-black tracking-wider text-white">MONOPOLY</span>
-          <span className="text-[9px] text-zinc-500 font-semibold">NOOB Edition</span>
+          <Landmark className="w-9 h-9 sm:w-11 sm:h-11 text-amber-400/80" />
+          <span className="text-xl sm:text-2xl font-black tracking-wider text-white">MONOPOLY</span>
+          <span className="text-[11px] sm:text-xs text-zinc-500 font-semibold">NOOB Edition</span>
+          <span className="text-[10px] sm:text-[11px] text-zinc-600 font-semibold">Turn {turnCount + 1} / {MAX_TURNS}</span>
           {(diceFaces || isRolling) && (
-            <div className="mt-1 flex items-center gap-1">
-              <AnimatedDice value={diceFaces?.[0] ?? null} isRolling={isRolling} size={20} />
-              <AnimatedDice value={diceFaces?.[1] ?? null} isRolling={isRolling} size={20} />
+            <div className="mt-1 flex items-center gap-1.5">
+              <AnimatedDice value={diceFaces?.[0] ?? null} isRolling={isRolling} size={30} />
+              <AnimatedDice value={diceFaces?.[1] ?? null} isRolling={isRolling} size={30} />
             </div>
           )}
         </div>
@@ -385,27 +418,27 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
           return (
             <div
               key={boardIdx}
-              className="relative flex flex-col overflow-hidden rounded-md bg-zinc-900"
+              className="relative flex flex-col overflow-hidden rounded-lg bg-zinc-900"
               style={{
                 gridColumn: col + 1,
                 gridRow: row + 1,
-                boxShadow: ownerIdx !== undefined ? `inset 0 0 0 2px ${PLAYER_COLORS[ownerIdx]}` : 'inset 0 0 0 1px #27272a'
+                boxShadow: ownerIdx !== undefined ? `inset 0 0 0 2.5px ${PLAYER_COLORS[ownerIdx]}` : 'inset 0 0 0 1px #27272a'
               }}
             >
-              <div className="w-full h-[5px] sm:h-2 shrink-0" style={{ backgroundColor: accentColor }} />
+              <div className="w-full h-[7px] sm:h-2.5 shrink-0" style={{ backgroundColor: accentColor }} />
               <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-0.5 text-center gap-0.5">
-                {icon && <span className="text-[9px] leading-none">{icon}</span>}
-                <span className="text-[6.5px] sm:text-[7.5px] font-bold text-zinc-200 leading-[1.05] line-clamp-2">
+                {icon && <span className="text-xs sm:text-sm leading-none">{icon}</span>}
+                <span className="text-[8px] sm:text-[9.5px] font-bold text-zinc-200 leading-[1.1] line-clamp-2">
                   {square.name}
                 </span>
-                {square.price && <span className="text-[6px] sm:text-[6.5px] text-zinc-500 font-semibold">${square.price}</span>}
+                {square.price && <span className="text-[7px] sm:text-[8px] text-zinc-500 font-semibold">${square.price}</span>}
               </div>
               {tokensHere.length > 0 && (
                 <div className="absolute bottom-0.5 left-0 right-0 flex gap-0.5 flex-wrap justify-center px-0.5">
                   {tokensHere.map((i) => (
                     <span
                       key={i}
-                      className="w-2.5 h-2.5 rounded-full border border-black flex items-center justify-center text-[5.5px] font-black text-black leading-none"
+                      className="w-3.5 h-3.5 rounded-full border border-black flex items-center justify-center text-[7px] font-black text-black leading-none"
                       style={{ backgroundColor: PLAYER_COLORS[i] }}
                     >
                       {i === 0 ? 'Y' : i + 1}
@@ -418,7 +451,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         })}
       </div>
 
-      <p className="text-[10px] text-zinc-400 text-center min-h-[14px]">{log}</p>
+      <p className="text-xs text-zinc-400 text-center min-h-[16px] font-medium px-2">{log}</p>
 
       {winner !== null ? (
         <p className="text-sm font-black text-white animate-bounce">
@@ -426,23 +459,23 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         </p>
       ) : pendingBuy !== null ? (
         <div className="flex gap-2">
-          <button onClick={buyCurrentProperty} className="px-4 py-2 rounded-xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer">
+          <button onClick={buyCurrentProperty} className="px-5 py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-sm cursor-pointer">
             Buy ${BOARD[pendingBuy].price}
           </button>
-          <button onClick={skipBuy} className="px-4 py-2 rounded-xl bg-zinc-800 text-white font-bold text-xs cursor-pointer">
+          <button onClick={skipBuy} className="px-5 py-2.5 rounded-xl bg-zinc-800 text-white font-bold text-sm cursor-pointer">
             Pass
           </button>
         </div>
       ) : (
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <AnimatedDice value={diceFaces?.[0] ?? null} isRolling={isRolling} size={36} />
-            <AnimatedDice value={diceFaces?.[1] ?? null} isRolling={isRolling} size={36} />
+            <AnimatedDice value={diceFaces?.[0] ?? null} isRolling={isRolling} size={44} />
+            <AnimatedDice value={diceFaces?.[1] ?? null} isRolling={isRolling} size={44} />
           </div>
           <button
             onClick={rollDice}
             disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
-            className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-[#00FF66] text-black font-bold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {playerTypes[currentPlayer] === 'bot' ? `Player ${currentPlayer + 1} is rolling...` : diceValue !== null ? `Rolled ${diceValue}` : 'Roll Dice'}
           </button>

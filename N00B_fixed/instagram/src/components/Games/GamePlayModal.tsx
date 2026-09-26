@@ -91,8 +91,10 @@ const SINGLE_RESULT_PASS_PLAY_IDS = ['tictactoe', 'rps'];
 
 // Solo-only games with no opponent concept at all — no bot, no friend
 // challenge, no pass-and-play. These skip the mode-select screen entirely
-// and drop straight into gameplay.
-const SOLO_ONLY_GAME_IDS: string[] = [];
+// and drop straight into gameplay. Cyber Snake is a pure high-score arcade
+// game with no real "vs" concept, so "Play with Available Users" / "Play
+// with Bot" / "Play with Friend" / "Pass and Play" never made sense for it.
+const SOLO_ONLY_GAME_IDS: string[] = ['cyber_snake'];
 
 export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   game,
@@ -170,13 +172,24 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const [onlineMatch, setOnlineMatch] = useState<{
     roomCode: string;
     phase: OnlineMatchPhase;
-    opponent?: { username: string; displayName: string; avatar: string };
+    opponent?: { id: string; username: string; displayName: string; avatar: string };
     // Only set for SYNCED_GAME_IDS — which symbol this player is on the
     // shared board (room.players[0] is always 'X').
     mySymbol?: 'X' | 'O';
   } | null>(
     initialRoomCode && !BOARD_GAME_IDS.includes(game.id) ? { roomCode: initialRoomCode, phase: 'joining' } : null
   );
+
+  // What the JUST-FINISHED (or in-progress) match actually was, so "Play Again" repeats the same
+  // mode instead of silently defaulting to a bot — previously it always called either the pass-and-
+  // play or bot starter, no matter how the match was actually started, which is why choosing
+  // "Play with Available Users" or "Play with Friend" and then hitting Play Again always connected
+  // to a bot instead. Stays set until the user explicitly picks a different mode from select_mode.
+  const [lastPlayMode, setLastPlayMode] = useState<'bot' | 'matchmaking' | 'friend' | 'pass_and_play' | null>(
+    initialChallenger || initialRoomCode ? 'friend' : null
+  );
+  const [lastOpponent, setLastOpponent] = useState<{ id: string; username: string } | null>(null);
+  const [rematchRequested, setRematchRequested] = useState(false);
   const matchmakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const matchmakingCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<User | null>(() => {
@@ -187,7 +200,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   });
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [inviteSent, setInviteSent] = useState(false);
-  const [generatedRoomCode] = useState(
+  const [generatedRoomCode, setGeneratedRoomCode] = useState(
     initialRoomCode || `NOOB-${game.id.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
   );
   const [copiedLink, setCopiedLink] = useState(false);
@@ -225,10 +238,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   useEffect(() => clearMatchmakingTimers, []);
 
   // A match was found (either instantly on join, or picked up mid-poll) —
-  // stop searching and drop straight into the actual game.
-  const enterOnlineMatch = (room: GameRoom) => {
+  // stop searching and drop straight into the actual game. `source` records
+  // how this match actually came about, so "Play Again" later can repeat it
+  // instead of guessing.
+  const enterOnlineMatch = (room: GameRoom, source: 'matchmaking' | 'friend') => {
     clearMatchmakingTimers();
     const opponent = room.players.find((p) => p.userId !== currentUser.id);
+    setLastPlayMode(source);
+    setRematchRequested(false);
+    if (opponent) setLastOpponent({ id: opponent.userId, username: opponent.username });
 
     if (SYNCED_GAME_IDS.includes(game.id)) {
       // Real head-to-head: both players move on the SAME server-held board,
@@ -246,7 +264,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       setOnlineMatch({
         roomCode: room.code,
         phase: 'in_progress',
-        opponent: opponent ? { username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined,
+        opponent: opponent ? { id: opponent.userId, username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined,
         mySymbol: myIndex === 0 ? 'X' : 'O'
       });
       return;
@@ -256,7 +274,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setOnlineMatch({
       roomCode: room.code,
       phase: 'in_progress',
-      opponent: opponent ? { username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined
+      opponent: opponent ? { id: opponent.userId, username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined
     });
   };
 
@@ -268,11 +286,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setMatchmakingFailed(false);
     setMatchmakingTimeLeft(30);
     setCurrentMode('matchmaking');
+    setLastPlayMode('matchmaking');
+    setLastOpponent(null);
 
     try {
       const res = await joinMatchmaking(game.id, game.title);
       if (res.matched && res.room) {
-        enterOnlineMatch(res.room);
+        enterOnlineMatch(res.room, 'matchmaking');
         return;
       }
     } catch (err) {
@@ -295,7 +315,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       try {
         const statusRes = await getMatchmakingStatus();
         if (statusRes.matched && statusRes.room) {
-          enterOnlineMatch(statusRes.room);
+          enterOnlineMatch(statusRes.room, 'matchmaking');
         }
       } catch (err) {
         console.error(err);
@@ -337,7 +357,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         if (cancelled) return;
         if (res.success && res.room) {
           if (res.room.status === 'ready') {
-            enterOnlineMatch(res.room);
+            enterOnlineMatch(res.room, 'friend');
           } else {
             // We ended up first in this room (e.g. a stale/expired invite) —
             // nothing to play against yet.
@@ -370,7 +390,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         const res = await getGameRoom(onlineMatch.roomCode);
         if (res.success && res.room && res.room.status !== 'waiting') {
           clearInterval(interval);
-          enterOnlineMatch(res.room);
+          enterOnlineMatch(res.room, 'friend');
         }
       } catch (err) {
         console.error(err);
@@ -523,6 +543,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // clear heads-up before every match instead of jumping straight in.
   const [showChessStakesConfirm, setShowChessStakesConfirm] = useState(false);
   const handleStartBotGame = () => {
+    setLastPlayMode('bot');
+    setLastOpponent(null);
     if (game.id === 'chess_blitz') {
       setShowChessStakesConfirm(true);
       return;
@@ -536,6 +558,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setPassPlayP1Result(null);
     handleStartBotGame();
     setIsPassAndPlay(true);
+    setLastPlayMode('pass_and_play');
   };
 
   // Start round 2, once Player 2 has the device (from the handoff screen)
@@ -767,6 +790,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     if (selectedFriend?.id === friend.id && inviteSent) return;
     setSelectedFriend(friend);
     setInviteSent(true);
+    setLastPlayMode('friend');
+    setLastOpponent({ id: friend.id, username: friend.username });
     try {
       await sendGameInvite(friend.id, game.id, game.title, generatedRoomCode);
       // Join our own room as player 1 and start waiting for them to accept
@@ -803,6 +828,54 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setCurrentMode('play_friend');
   };
 
+  // Re-challenges the SAME friend from the match that just ended, instead of "Play Again" silently
+  // dropping to a bot — needs a fresh room code since the old one is already 'finished' server-side.
+  const handleRematchSameFriend = async () => {
+    if (!lastOpponent) {
+      openPlayFriend();
+      return;
+    }
+    const rematchRoomCode = `NOOB-${game.id.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    setGeneratedRoomCode(rematchRoomCode);
+    setGameResult(null);
+    setRematchRequested(true);
+    setCurrentMode('play_match');
+    try {
+      await sendGameInvite(lastOpponent.id, game.id, game.title, rematchRoomCode);
+      const res = await joinGameRoom(rematchRoomCode, game.id, game.title);
+      if (res.success && res.room) {
+        setOnlineMatch({ roomCode: rematchRoomCode, phase: 'waiting_opponent_join' });
+      } else {
+        setCurrentMode('select_mode');
+      }
+    } catch (err) {
+      console.error(err);
+      setCurrentMode('select_mode');
+    }
+  };
+
+  // "Play Again" repeats whatever mode the last match actually was — set by startMatchmaking,
+  // handleSendFriendInvite, enterOnlineMatch, handleStartBotGame or handleStartPassAndPlay — instead
+  // of always restarting a bot/pass-and-play round regardless of how the previous one was started.
+  // Stays this way until the user goes back to select_mode and picks something else themselves.
+  const handlePlayAgain = () => {
+    if (lastPlayMode === 'pass_and_play') {
+      handleStartPassAndPlay();
+    } else if (lastPlayMode === 'matchmaking') {
+      startMatchmaking();
+    } else if (lastPlayMode === 'friend') {
+      if (isBoardGame) {
+        setInvitedFriendIds(new Set());
+        setBoardInviteStep('invite');
+        setCurrentMode('play_friend');
+      } else {
+        handleRematchSameFriend();
+      }
+    } else {
+      handleStartBotGame();
+    }
+  };
+
   // Copy Match Link
   const handleCopyLink = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -823,8 +896,14 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col relative animate-in fade-in zoom-in duration-200">
+    <div className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center ${
+      isBoardGame && currentMode === 'play_bot' ? 'p-0 sm:p-4' : 'p-4'
+    }`}>
+      <div className={`bg-zinc-950 border border-zinc-800 overflow-hidden shadow-2xl flex flex-col relative animate-in fade-in zoom-in duration-200 ${
+        isBoardGame && currentMode === 'play_bot'
+          ? 'w-full h-full sm:h-auto sm:max-w-3xl rounded-none sm:rounded-3xl'
+          : 'w-full max-w-lg rounded-3xl'
+      }`}>
         {/* Top Header */}
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
           <div className="flex items-center gap-3">
@@ -852,7 +931,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 flex-1 overflow-y-auto max-h-[75vh]">
+        <div className={`flex-1 overflow-y-auto ${
+          isBoardGame && currentMode === 'play_bot' ? 'p-2 sm:p-5 max-h-[calc(100vh-73px)] sm:max-h-[85vh]' : 'p-5 max-h-[75vh]'
+        }`}>
           {!chessLimitChecked ? (
             <div className="py-16 flex flex-col items-center justify-center text-center gap-3">
               <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#00FF66] rounded-full animate-spin" />
@@ -1344,10 +1425,12 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 </div>
               ) : (
                 <div>
-                  <h3 className="text-base font-bold text-white">Waiting for Your Opponent to Join</h3>
+                  <h3 className="text-base font-bold text-white">
+                    {rematchRequested ? 'Rematch Request Sent' : 'Waiting for Your Opponent to Join'}
+                  </h3>
                   <p className="text-xs text-zinc-400 mt-1 max-w-xs">
-                    {selectedFriend
-                      ? `@${selectedFriend.username} needs to accept your challenge from Direct Chat.`
+                    {(selectedFriend || lastOpponent)
+                      ? `@${(selectedFriend || lastOpponent)!.username} needs to accept your ${rematchRequested ? 'rematch request' : 'challenge'} from Direct Chat.`
                       : 'Share your room code or wait for them to accept the invite.'}
                   </p>
                   <div className="mt-3 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 inline-block">
@@ -1360,6 +1443,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               <button
                 onClick={() => {
                   setOnlineMatch(null);
+                  setRematchRequested(false);
                   setCurrentMode('select_mode');
                 }}
                 className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
@@ -1612,10 +1696,10 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
               <div className="flex gap-3 justify-center pt-2">
                 <button
-                  onClick={isPassAndPlay ? handleStartPassAndPlay : handleStartBotGame}
+                  onClick={handlePlayAgain}
                   className="px-5 py-2.5 rounded-2xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-bold text-xs transition-colors cursor-pointer"
                 >
-                  Play Again
+                  {lastPlayMode === 'matchmaking' ? 'Find Another Match' : lastPlayMode === 'friend' && !isBoardGame ? 'Rematch' : 'Play Again'}
                 </button>
                 <button
                   onClick={handleModalClose}

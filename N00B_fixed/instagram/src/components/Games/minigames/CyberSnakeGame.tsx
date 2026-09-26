@@ -26,6 +26,32 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
 
   const directionRef = useRef(direction);
   directionRef.current = direction;
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Swipe-to-steer on phones — same reversal guard as the keyboard/D-pad
+  // controls (a swipe directly back into the snake's own body is ignored
+  // instead of causing an instant, confusing self-collision).
+  const SWIPE_MIN_DISTANCE = 24;
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_MIN_DISTANCE) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0 && directionRef.current !== 'LEFT') setDirection('RIGHT');
+      else if (dx < 0 && directionRef.current !== 'RIGHT') setDirection('LEFT');
+    } else {
+      if (dy > 0 && directionRef.current !== 'UP') setDirection('DOWN');
+      else if (dy < 0 && directionRef.current !== 'DOWN') setDirection('UP');
+    }
+  };
 
   const generateFood = (currentSnake: { x: number; y: number }[]) => {
     let newFood: { x: number; y: number };
@@ -139,7 +165,11 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
       </div>
 
       {/* Snake Canvas Grid */}
-      <div className="relative w-64 h-64 sm:w-72 sm:h-72 bg-zinc-950 border-2 border-[#00FF66]/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(0,255,102,0.15)] grid grid-cols-16 grid-rows-16">
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="relative w-64 h-64 sm:w-72 sm:h-72 bg-zinc-950 border-2 border-[#00FF66]/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(0,255,102,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
+      >
         {/* Render Grid Cells */}
         {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, idx) => {
           const x = idx % GRID_SIZE;
@@ -211,6 +241,9 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
 
       <p className="text-[11px] text-zinc-500 mt-3 text-center hidden sm:block">
         Use <kbd className="px-1.5 py-0.5 bg-zinc-900 rounded border border-zinc-800 text-zinc-300">Arrow Keys</kbd> or <kbd className="px-1.5 py-0.5 bg-zinc-900 rounded border border-zinc-800 text-zinc-300">WASD</kbd> to steer
+      </p>
+      <p className="text-[11px] text-zinc-500 mt-3 text-center sm:hidden">
+        Swipe on the grid, or use the D-pad below, to steer
       </p>
     </div>
   );

@@ -2629,13 +2629,15 @@ export interface PlatformSettings {
   signupsEnabled: boolean;
   maintenanceEnabled: boolean;
   maintenanceMessage: string;
+  // NOOB AI (the voice assistant) maintenance lock — migration 20260927000002
+  noobAiMaintenance?: boolean;
 }
 
 export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
   try {
     return await rpc<PlatformSettings>('public_platform_settings');
   } catch {
-    return { signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '' };
+    return { signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false };
   }
 }
 
@@ -2643,12 +2645,14 @@ export async function adminSetPlatformSettings(payload: {
   signupsEnabled?: boolean;
   maintenanceEnabled?: boolean;
   maintenanceMessage?: string;
+  noobAiMaintenance?: boolean;
 }): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
   try {
     const settings = await rpc<PlatformSettings>('admin_set_platform_settings', {
       p_signups_enabled: payload.signupsEnabled ?? null,
       p_maintenance_enabled: payload.maintenanceEnabled ?? null,
-      p_maintenance_message: payload.maintenanceMessage ?? null
+      p_maintenance_message: payload.maintenanceMessage ?? null,
+      ...(payload.noobAiMaintenance !== undefined ? { p_noob_ai_maintenance: payload.noobAiMaintenance } : {})
     });
     return { success: true, settings };
   } catch (err) {

@@ -109,6 +109,21 @@ check(saved.maintenanceEnabled === true && saved.maintenanceMessage === 'Back so
 saved = await rpc(admin, 'admin_set_platform_settings', true, false, null);
 check(saved.signupsEnabled === true && saved.maintenanceEnabled === false && saved.maintenanceMessage === 'Back soon!', 'turning things back off keeps the message text (only null leaves a field untouched)');
 
+// NOOB AI maintenance lock (migration 20260927000002)
+pub = await rpcAnon('public_platform_settings');
+check(pub.noobAiMaintenance === false, 'NOOB AI starts unlocked, and anyone (even logged out, like the NOOB AI server) can read it');
+await expectFail(() => rpc(a, 'admin_set_platform_settings', null, null, null, true), /Access denied/, 'a non-admin can not lock NOOB AI');
+saved = await rpc(admin, 'admin_set_platform_settings', null, null, null, true);
+check(saved.noobAiMaintenance === true && saved.maintenanceEnabled === false && saved.signupsEnabled === true, 'the admin can lock NOOB AI without touching the other switches');
+pub = await rpcAnon('public_platform_settings');
+check(pub.noobAiMaintenance === true, 'the lock is visible to NOOB AI straight away');
+saved = await rpc(admin, 'admin_set_platform_settings', null, true, null);
+check(saved.maintenanceEnabled === true && saved.noobAiMaintenance === true, 'the old three-switch call still works and leaves the NOOB AI lock as it is');
+saved = await rpc(admin, 'admin_set_platform_settings', null, false, null, false);
+check(saved.maintenanceEnabled === false && saved.noobAiMaintenance === false, 'the admin can unlock NOOB AI again');
+const fnCount = (await db.query(`select count(*)::int as n from pg_proc where proname = 'admin_set_platform_settings'`)).rows[0].n;
+check(fnCount === 1, 'there is exactly one admin_set_platform_settings (no ambiguous old version left)', `(found ${fnCount})`);
+
 // =====================================================================================
 section('4. Admin content browser');
 await expectFail(() => rpc(a, 'admin_content_feed', 'posts', 10), /Access denied/, 'a non-admin can not use the admin content browser');

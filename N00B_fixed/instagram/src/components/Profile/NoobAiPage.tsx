@@ -1,17 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { noobAiIsOnline, noobAiSignInUrl } from '../../utils/noobAi';
+import { fetchPublicPlatformSettings } from '../../services/api';
 import { NoobAiLogo } from './NoobAiLogo';
 import { NoobAiGem } from './NoobAiGem';
 
 interface NoobAiPageProps {
   onClose: () => void;
+  // The main admin can still open NOOB AI while it is locked for maintenance (to test it).
+  isMainAdmin?: boolean;
 }
 
 // NOOB AI inside the NOOB app: the voice assistant opens full-screen here (no new browser tab) and signs this
 // account in automatically. Its brain runs on the owner's PC, so it can be offline when that PC is off.
-export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
-  const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = false }) => {
+  const [status, setStatus] = useState<'checking' | 'online' | 'offline' | 'maintenance'>('checking');
   const [loaded, setLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const src = useMemo(() => (status === 'online' ? noobAiSignInUrl() : ''), [status, attempt]);
@@ -20,10 +23,14 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
     let alive = true;
     setStatus('checking');
     setLoaded(false);
-    // One quick second look before saying it's asleep: a slow phone connection can miss the first check.
-    noobAiIsOnline()
-      .then((online) => online || noobAiIsOnline())
-      .then((online) => { if (alive) setStatus(online ? 'online' : 'offline'); });
+    // Locked for maintenance in the Admin Control Panel? (The main admin may still go in.)
+    // Otherwise one quick second look before saying it's asleep: a slow phone connection can miss the first check.
+    Promise.all([
+      isMainAdmin ? Promise.resolve(false) : fetchPublicPlatformSettings().then((s) => !!s.noobAiMaintenance),
+      noobAiIsOnline().then((online) => online || noobAiIsOnline()),
+    ]).then(([locked, online]) => {
+      if (alive) setStatus(locked ? 'maintenance' : online ? 'online' : 'offline');
+    });
     return () => { alive = false; };
   }, [attempt]);
 
@@ -40,7 +47,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-black tracking-tight leading-tight">NOOB AI</h1>
           <p className="text-[11px] font-semibold text-slate-500 leading-tight">
-            {status === 'online' ? 'Your AI friend · online' : status === 'offline' ? 'Sleeping' : 'Waking up…'}
+            {status === 'online' ? 'Your AI friend · online' : status === 'offline' ? 'Sleeping' : status === 'maintenance' ? 'Under maintenance' : 'Waking up…'}
           </p>
         </div>
         <button onClick={wakeUp} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Reload" title="Reload">
@@ -67,6 +74,21 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
               <p className="text-lg font-black tracking-tight">Waking up NOOB AI…</p>
               <p className="text-sm text-slate-500 mt-1">Your multilingual AI friend</p>
             </div>
+          </div>
+        )}
+        {status === 'maintenance' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
+            <NoobAiGem size={180} sleeping />
+            <div>
+              <h2 className="text-xl font-black tracking-tight">NOOB AI is under maintenance 🛠️</h2>
+              <p className="text-sm text-slate-500 max-w-xs mt-2">We're making NOOB AI even better. Please check back soon!</p>
+            </div>
+            <button
+              onClick={wakeUp}
+              className="px-7 py-3 rounded-2xl bg-slate-900 text-white font-bold text-sm active:scale-95 transition-transform cursor-pointer"
+            >
+              Check again
+            </button>
           </div>
         )}
         {status === 'offline' && (

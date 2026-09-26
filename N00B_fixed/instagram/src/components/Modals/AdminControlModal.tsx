@@ -41,7 +41,8 @@ import {
   Link as LinkIcon,
   Smartphone,
   Rocket,
-  UserCircle
+  UserCircle,
+  Bot
 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -93,7 +94,7 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'product_updated': return `${who} edited a shop product.`;
     case 'product_removed': return `${who} removed a shop product.`;
     case 'message_deleted': return `${who} deleted a chat message.`;
-    case 'platform_settings_changed': return `${who} changed platform settings${d.signupsEnabled != null ? `: sign-ups ${d.signupsEnabled ? 'ON' : 'OFF'}` : ''}${d.maintenanceEnabled != null ? `${d.signupsEnabled == null ? ':' : ','} maintenance ${d.maintenanceEnabled ? 'ON' : 'OFF'}` : ''}.`;
+    case 'platform_settings_changed': return `${who} changed platform settings${d.signupsEnabled != null ? `: sign-ups ${d.signupsEnabled ? 'ON' : 'OFF'}` : ''}${d.maintenanceEnabled != null ? `${d.signupsEnabled == null ? ':' : ','} maintenance ${d.maintenanceEnabled ? 'ON' : 'OFF'}` : ''}${d.noobAiMaintenance != null ? `${d.signupsEnabled == null && d.maintenanceEnabled == null ? ':' : ','} NOOB AI lock ${d.noobAiMaintenance ? 'ON' : 'OFF'}` : ''}.`;
     default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;
   }
 }
@@ -186,6 +187,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [storeOrdersEnabled, setStoreOrdersEnabled] = useState(true);
+  const [noobAiMaintenance, setNoobAiMaintenance] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
@@ -274,6 +276,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setSignupsEnabled(s.signupsEnabled);
     setMaintenanceEnabled(s.maintenanceEnabled);
     setMaintenanceMessage(s.maintenanceMessage);
+    setNoobAiMaintenance(!!s.noobAiMaintenance);
     setStoreOrdersEnabled(shop.storeEnabled);
     setLoadingSettings(false);
   };
@@ -374,6 +377,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setSavingSettings(true);
     const res = await adminSetPlatformSettings({ maintenanceEnabled: !maintenanceEnabled });
     if (res.success && res.settings) setMaintenanceEnabled(res.settings.maintenanceEnabled);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleToggleNoobAiMaintenance = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ noobAiMaintenance: !noobAiMaintenance });
+    if (res.success && res.settings) setNoobAiMaintenance(!!res.settings.noobAiMaintenance);
     else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
     setSavingSettings(false);
   };
@@ -1740,6 +1751,22 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-bold text-white flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-violet-400" /> NOOB AI maintenance lock
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        {noobAiMaintenance
+                          ? 'NOOB AI is locked: everyone but you sees "NOOB AI is under maintenance" (in the app, at ai.nooob.xyz and on NOOB devices).'
+                          : 'NOOB AI (the voice assistant) is open to everyone.'}
+                      </span>
+                    </div>
+                    <button onClick={handleToggleNoobAiMaintenance} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="NOOB AI maintenance lock">
+                      {noobAiMaintenance ? <ToggleRight className="w-9 h-9 text-violet-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                    </button>
                   </div>
 
                   <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">

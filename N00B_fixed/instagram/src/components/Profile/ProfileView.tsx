@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { isStaff } from '../../adminAccess';
+import { isStaff, isMainAdmin } from '../../adminAccess';
 import {
   Grid,
   Film,
@@ -1985,7 +1985,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
 
-      {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} />}
+      {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} />}
 
       {showInstallPermissionsPage && (
         <InstallAndPermissionsPage

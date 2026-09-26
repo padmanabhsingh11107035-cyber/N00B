@@ -843,34 +843,31 @@ Deno.serve(async (req) => {
   }
 
   // ------------------------------------------------------------------ call: TURN credentials
-  // STUN alone (callSignaling.ts's ICE_SERVERS) can't get two devices through many real-world NATs
+  // STUN alone (callSignaling.ts's fallback) can't get two devices through many real-world NATs
   // (cellular carrier-grade NAT, some corporate/campus Wi-Fi, some home routers) — a TURN relay is
-  // needed for those. Cloudflare's Realtime TURN service mints short-lived credentials over a plain
-  // REST call using a secret API token that must never reach the browser, so this has to happen here.
-  // Falls back to STUN-only (returns just the two public STUN servers) if the secrets aren't set yet
-  // or Cloudflare's API is unreachable — a call can still work without TURN, just less reliably.
+  // needed for those. Metered's TURN service (chosen over Cloudflare's specifically because its free
+  // tier needs no card on file) mints geo-nearest credentials over a plain REST call using a secret
+  // API key that must never reach the browser, so this has to happen here. Falls back to STUN-only if
+  // the secrets aren't set yet or Metered's API is unreachable — a call can still work without TURN,
+  // just less reliably.
   if (body?.action === 'get_turn_credentials') {
     if (!userId) return json({ error: 'Please log in.' }, 401);
     const stunOnly = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
-    const keyId = (Deno.env.get('CF_TURN_KEY_ID') || '').trim();
-    const apiToken = (Deno.env.get('CF_TURN_API_TOKEN') || '').trim();
-    if (!keyId || !apiToken) return json({ success: true, iceServers: stunOnly });
+    const appName = (Deno.env.get('METERED_APP_NAME') || '').trim();
+    const apiKey = (Deno.env.get('METERED_API_KEY') || '').trim();
+    if (!appName || !apiKey) return json({ success: true, iceServers: stunOnly });
     try {
-      const res = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ttl: 3600 }),
+      const res = await fetch(`https://${encodeURIComponent(appName)}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`, {
         signal: AbortSignal.timeout(8_000)
       });
       if (!res.ok) {
-        console.warn(`turn: Cloudflare answered ${res.status} ${oneLine(await res.text().catch(() => ''), 160)}`);
+        console.warn(`turn: Metered answered ${res.status} ${oneLine(await res.text().catch(() => ''), 160)}`);
         return json({ success: true, iceServers: stunOnly });
       }
-      const data: any = await res.json();
-      const turnServer = data?.iceServers;
-      return json({ success: true, iceServers: turnServer ? [turnServer, ...stunOnly] : stunOnly });
+      const iceServers = await res.json();
+      return json({ success: true, iceServers: Array.isArray(iceServers) && iceServers.length ? iceServers : stunOnly });
     } catch (e) {
-      console.warn(`turn: could not reach Cloudflare: ${oneLine((e as Error)?.message, 120)}`);
+      console.warn(`turn: could not reach Metered: ${oneLine((e as Error)?.message, 120)}`);
       return json({ success: true, iceServers: stunOnly });
     }
   }

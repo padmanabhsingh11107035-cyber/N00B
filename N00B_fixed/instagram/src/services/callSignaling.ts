@@ -89,8 +89,8 @@ const STUN_SERVERS: RTCIceServer[] = [
 ];
 
 // STUN alone can't get two devices through many real-world NATs (cellular carrier-grade NAT, some
-// corporate/campus Wi-Fi, some home routers) — this asks the server for short-lived Cloudflare TURN
-// relay credentials (minted per-call so nothing long-lived ever reaches the browser) and falls back to
+// corporate/campus Wi-Fi, some home routers) — this asks the server for short-lived TURN relay
+// credentials (minted per-call so nothing long-lived ever reaches the browser) and falls back to
 // STUN-only if TURN isn't configured yet or is briefly unreachable, so a call still works either way.
 export async function getIceServers(): Promise<RTCIceServer[]> {
   try {

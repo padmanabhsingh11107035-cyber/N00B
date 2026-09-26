@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldAlert,
   Send,
@@ -163,8 +163,18 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [sparkxRequests, setSparkxRequests] = useState<SparkXApplication[]>([]);
   const [loadingSparkxRequests, setLoadingSparkxRequests] = useState(false);
   const [selectedSparkxIds, setSelectedSparkxIds] = useState<Set<string>>(new Set());
-  const [meetingForm, setMeetingForm] = useState({ topic: 'NOOB', time: '', zoomLink: '', meetingId: '', passcode: '' });
+  // Defaults to the standing SparkX interview Zoom room so the admin doesn't have
+  // to re-type the same meeting details for every batch — still fully editable
+  // per-invite (e.g. to change just the date/time) before sending.
+  const [meetingForm, setMeetingForm] = useState({
+    topic: 'NOOB',
+    time: 'Sep 28, 2026 02:30 PM Mumbai, Kolkata, New Delhi',
+    zoomLink: 'https://us05web.zoom.us/j/89253144144?pwd=ODdC9BWC4pjusv0qDFEmwDhbGzA4ug.1',
+    meetingId: '892 5314 4144',
+    passcode: 'tV4GCx'
+  });
   const [sendingMeetingInvite, setSendingMeetingInvite] = useState(false);
+  const meetingFormRef = useRef<HTMLDivElement | null>(null);
 
   // Platform-wide toggles: pause sign-ups, whole-app maintenance lock, shop orders
   const [signupsEnabled, setSignupsEnabled] = useState(true);
@@ -303,6 +313,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  // Per-candidate "Invite" button: selects just this one applicant and jumps
+  // to the (already default-filled) meeting form, instead of making the
+  // admin hunt for the checkbox and scroll up themselves.
+  const handleInviteOne = (id: string) => {
+    setSelectedSparkxIds(new Set([id]));
+    setTimeout(() => meetingFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
   const handleSendMeetingInvite = async () => {
@@ -1515,7 +1533,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               </div>
 
               {selectedSparkxIds.size > 0 && (
-                <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl space-y-2.5">
+                <div ref={meetingFormRef} className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-orange-200 flex items-center gap-1.5">
                       <Send className="w-3.5 h-3.5" /> Schedule meeting — {selectedSparkxIds.size} selected
@@ -1627,22 +1645,30 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           </span>
                         )}
                       </div>
-                      {app.status === 'pending' && (
-                        <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
-                          <button
-                            onClick={() => handleReviewSparkxRequest(app.id, 'accepted')}
-                            className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Accept
-                          </button>
-                          <button
-                            onClick={() => handleReviewSparkxRequest(app.id, 'declined')}
-                            className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
-                          >
-                            Decline
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
+                        {app.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleReviewSparkxRequest(app.id, 'accepted')}
+                              className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Accept
+                            </button>
+                            <button
+                              onClick={() => handleReviewSparkxRequest(app.id, 'declined')}
+                              className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
+                            >
+                              Decline
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleInviteOne(app.id)}
+                          className="flex-1 py-2 px-2.5 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Send className="w-3.5 h-3.5" /> Invite
+                        </button>
+                      </div>
                     </div>
                     );
                   })}

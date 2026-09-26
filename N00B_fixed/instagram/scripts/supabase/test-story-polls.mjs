@@ -86,6 +86,13 @@ await expectFail(() => call(b, 'select * from public.story_poll_votes'), /permis
 await expectFail(() => call(b, 'insert into public.story_poll_votes (story_id, sticker_index, user_id, option_index) values ($1, 1, $2, 0)', [story, b]), /permission denied/i, 'nobody can write the votes table directly');
 await expectFail(() => call(b, 'select public.story_poll_json($1, 1, 2, true)', [story]), /permission denied/i, 'the inner results helper (which can list voters) is not callable directly');
 
+section('6b. A poll with 8 answers written by the person who posted it');
+const eight = ['Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Black', 'White', 'Orange'];
+const story8 = (await rpc(a, 'create_story', 'stories/poll8.jpg', 'image', JSON.stringify([{ type: 'poll', x: 50, y: 50, data: { question: 'Favourite colour?', options: eight } }]))).id;
+v = await rpc(b, 'vote_story_poll', story8, 0, 7);
+check(v.poll.counts.length === 8 && v.poll.counts[7] === 1 && v.poll.total === 1 && v.poll.myVote === 7, 'the 8th answer can be voted for and is counted', JSON.stringify(v.poll));
+await expectFail(() => rpc(b, 'vote_story_poll', story8, 0, 8), /Choose one/i, 'there is no 9th answer to vote for');
+
 section('7. Deleting the story removes its votes');
 await db.query('delete from stories where id = $1', [story]);
 const left = (await db.query('select count(*)::int as n from story_poll_votes where story_id = $1', [story])).rows[0].n;

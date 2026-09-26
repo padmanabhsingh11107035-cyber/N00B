@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2 } from 'lucide-react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Story } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 
@@ -11,6 +11,10 @@ interface CreateStoryModalProps {
 }
 
 const POLL_BG_COLORS = ['#00FF66', '#7C3AED', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899', '#000000', '#FFFFFF'];
+// The person posting the poll writes its answers: at least 2, at most 8.
+const MIN_POLL_OPTIONS = 2;
+const MAX_POLL_OPTIONS = 8;
+const MAX_OPTION_LENGTH = 40;
 
 export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
@@ -23,6 +27,14 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [pollQuestion, setPollQuestion] = useState('');
   const [showPollInput, setShowPollInput] = useState(false);
   const [pollBgColor, setPollBgColor] = useState(POLL_BG_COLORS[0]);
+  const [pollOptions, setPollOptions] = useState<string[]>(['Yes 🔥', 'No 👎']);
+  const cleanOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+  const pollOptionsError =
+    cleanOptions.length < MIN_POLL_OPTIONS
+      ? 'Write at least 2 answers for your poll.'
+      : new Set(cleanOptions.map((o) => o.toLowerCase())).size !== cleanOptions.length
+        ? 'Each answer must be different.'
+        : '';
   const [locationTag, setLocationTag] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +84,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
 
   const handlePublish = async () => {
     if (!selectedImage || isPublishing) return;
+    if (pollQuestion.trim() && pollOptionsError) {
+      setUploadError(pollOptionsError);
+      return;
+    }
     setIsPublishing(true);
     setUploadError('');
 
@@ -110,7 +126,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           stickers: [
             {
               type: 'poll',
-              data: { question: pollQuestion.trim(), options: ['Yes 🔥', 'No 👎'] },
+              data: { question: pollQuestion.trim(), options: cleanOptions.slice(0, MAX_POLL_OPTIONS) },
               x: 50,
               y: 50
             }
@@ -272,6 +288,48 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                   onChange={(e) => setPollQuestion(e.target.value)}
                   className="w-full bg-neutral-900 text-xs text-white p-2 rounded-lg border border-neutral-700 focus:border-[#00FF66] outline-none text-center font-bold"
                 />
+                {/* The answers people can vote for: written by you, 2 to 8 of them */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Answers</span>
+                    <span className="text-[10px] text-gray-500">{pollOptions.length}/{MAX_POLL_OPTIONS}</span>
+                  </div>
+                  {pollOptions.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={opt}
+                        maxLength={MAX_OPTION_LENGTH}
+                        placeholder={`Answer ${i + 1}`}
+                        onChange={(e) => setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
+                        className="flex-1 min-w-0 bg-neutral-900 text-xs text-white px-2.5 py-2 rounded-lg border border-neutral-700 focus:border-[#00FF66] outline-none font-semibold"
+                      />
+                      {pollOptions.length > MIN_POLL_OPTIONS && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOptions((prev) => prev.filter((_, j) => j !== i))}
+                          className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-neutral-800 transition-colors cursor-pointer"
+                          aria-label={`Remove answer ${i + 1}`}
+                          title="Remove this answer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {pollOptions.length < MAX_POLL_OPTIONS && (
+                    <button
+                      type="button"
+                      onClick={() => setPollOptions((prev) => [...prev, ''])}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-neutral-700 text-[11px] font-bold text-gray-300 hover:border-[#00FF66] hover:text-[#00FF66] transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add answer
+                    </button>
+                  )}
+                  {pollQuestion.trim() && pollOptionsError && (
+                    <p className="text-[10px] text-red-400">{pollOptionsError}</p>
+                  )}
+                </div>
                 <div>
                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1.5">
                     Poll Page Background Color
@@ -299,8 +357,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     <div className="w-full bg-black/85 border border-[#00FF66]/40 rounded-md p-1.5">
                       <p className="text-[7px] font-bold text-center text-white mb-1 line-clamp-2">{pollQuestion}</p>
                       <div className="space-y-0.5">
-                        <div className="bg-neutral-800 text-white text-[6px] font-semibold text-center py-0.5 rounded">Yes 🔥</div>
-                        <div className="bg-neutral-800 text-white text-[6px] font-semibold text-center py-0.5 rounded">No 👎</div>
+                        {cleanOptions.map((o, i) => (
+                          <div key={i} className="bg-neutral-800 text-white text-[6px] font-semibold text-center py-0.5 rounded truncate px-0.5">{o}</div>
+                        ))}
                       </div>
                     </div>
                   </div>

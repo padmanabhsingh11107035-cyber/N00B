@@ -23,20 +23,20 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
   }, [attempt]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0a0f1e] text-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-[#f6f7fb] text-slate-900 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="relative z-10 flex items-center gap-3 px-3 py-3 sm:px-5 border-b border-white/10 shrink-0 bg-[#0a0f1e]">
-        <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer" aria-label="Back">
+      <div className="relative z-10 flex items-center gap-3 px-3 py-3 sm:px-5 border-b border-slate-200 shrink-0 bg-white">
+        <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Back">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center shrink-0">
           <Bot className="w-4 h-4 text-white" />
         </div>
         <h1 className="text-lg font-black tracking-tight flex-1">NOOB AI</h1>
-        <button onClick={() => setAttempt((n) => n + 1)} className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer" aria-label="Reload" title="Reload">
+        <button onClick={() => setAttempt((n) => n + 1)} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Reload" title="Reload">
           <RefreshCw className="w-5 h-5" />
         </button>
-        <button onClick={openNoobAi} className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer" aria-label="Open in a new tab" title="Open in a new tab">
+        <button onClick={openNoobAi} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Open in a new tab" title="Open in a new tab">
           <ExternalLink className="w-5 h-5" />
         </button>
       </div>
@@ -50,23 +50,23 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
             title="NOOB AI"
             allow="microphone; autoplay; clipboard-write"
             onLoad={() => setLoaded(true)}
-            className="absolute inset-0 w-full h-full border-0 bg-[#0a0f1e]"
+            className="absolute inset-0 w-full h-full border-0 bg-[#f6f7fb]"
           />
         )}
         {(status === 'checking' || (status === 'online' && !loaded)) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#0a0f1e]">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-300 via-cyan-500 to-violet-600 shadow-[0_0_60px_rgba(124,92,255,0.6)] animate-pulse" />
-            <p className="text-sm text-zinc-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Waking up NOOB AI…</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#f6f7fb]">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-cyan-300 via-cyan-500 to-violet-600 shadow-[0_24px_60px_rgba(109,93,252,0.35)] animate-pulse" />
+            <p className="text-sm text-slate-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Waking up NOOB AI…</p>
           </div>
         )}
         {status === 'offline' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
-            <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center">
-              <Bot className="w-9 h-9 text-zinc-500" />
+            <div className="w-20 h-20 rounded-full bg-slate-200 flex items-center justify-center">
+              <Bot className="w-9 h-9 text-slate-400" />
             </div>
             <h2 className="text-lg font-bold">NOOB AI is sleeping</h2>
-            <p className="text-sm text-zinc-400 max-w-xs">Its computer is switched off right now. Please try again a little later.</p>
-            <button onClick={() => setAttempt((n) => n + 1)} className="mt-2 px-5 py-2.5 rounded-xl bg-white text-black font-bold text-sm cursor-pointer">
+            <p className="text-sm text-slate-500 max-w-xs">Its computer is switched off right now. Please try again a little later.</p>
+            <button onClick={() => setAttempt((n) => n + 1)} className="mt-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-sm cursor-pointer">
               Try again
             </button>
           </div>

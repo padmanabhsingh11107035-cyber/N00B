@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil } from 'lucide-react';
 import { Story, User } from '../../types';
-import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById } from '../../services/api';
+import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll } from '../../services/api';
+import type { StoryPollResult } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
@@ -54,7 +55,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // here and layered on top, keyed by story id so switching pages/reopening the same one is instant.
   const [liveById, setLiveById] = useState<Record<string, Story>>({});
   const [isMuted, setIsMuted] = useState(false);
-  const [pollVoted, setPollVoted] = useState<number | null>(null);
+  // Real poll results from the database, keyed `${storyId}:${stickerIndex}` (they used to be made up).
+  const [pollResults, setPollResults] = useState<Record<string, StoryPollResult>>({});
+  const [pollError, setPollError] = useState('');
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [sliderVal, setSliderVal] = useState(75);
   const [showViewersSheet, setShowViewersSheet] = useState(false);
@@ -81,9 +84,27 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   useEffect(() => {
     setProgress(0);
-    setPollVoted(null);
+    setPollError('');
     setQuizSelected(null);
   }, [currentIndex]);
+
+  // Load this story's poll results (your own vote included) whenever a story with a poll comes up.
+  useEffect(() => {
+    if (!story || !story.stickers?.some((s) => s.type === 'poll')) return;
+    let alive = true;
+    const id = story.id;
+    fetchStoryPollResults(id).then((res) => {
+      if (!alive) return;
+      setPollResults((prev) => {
+        const next = { ...prev };
+        for (const [idx, r] of Object.entries(res)) next[`${id}:${idx}`] = r;
+        return next;
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [story?.id]);
 
   // Record a view the moment this story becomes the active one — skipped
   // for the owner's own story, same as the reel view-recording pattern
@@ -201,9 +222,32 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     confetti({ particleCount: 35, spread: 60, origin: { y: 0.8 } });
   };
 
-  const handleVotePoll = (index: number) => {
-    setPollVoted(index);
-    confetti({ particleCount: 40, spread: 50, origin: { y: 0.5 } });
+  const handleVotePoll = (stickerIndex: number, option: number, optionCount: number) => {
+    const id = story.id;
+    const key = `${id}:${stickerIndex}`;
+    const before = pollResults[key];
+    if (before?.myVote === option) return;
+    // Show the vote straight away, then replace it with the saved numbers from the database.
+    const counts = before?.counts?.length === optionCount ? [...before.counts] : new Array(optionCount).fill(0);
+    let total = before?.total || 0;
+    if (before && before.myVote !== null && before.myVote < counts.length) counts[before.myVote] = Math.max(0, counts[before.myVote] - 1);
+    else total += 1;
+    counts[option] += 1;
+    setPollError('');
+    setPollResults((prev) => ({ ...prev, [key]: { counts, total, myVote: option, voters: before?.voters || [] } }));
+    if (!before || before.myVote === null) confetti({ particleCount: 40, spread: 50, origin: { y: 0.5 } });
+    voteStoryPoll(id, stickerIndex, option).then((res) => {
+      if (res.success && res.poll) {
+        setPollResults((prev) => ({ ...prev, [key]: res.poll! }));
+      } else {
+        setPollResults((prev) => {
+          const next = { ...prev };
+          if (before) next[key] = before; else delete next[key];
+          return next;
+        });
+        setPollError(res.error || 'Could not save your vote. Please try again.');
+      }
+    });
   };
 
   const handleQuizAnswer = (index: number) => {
@@ -380,32 +424,63 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           {/* Interactive Stickers Overlay */}
           {story.stickers?.map((sticker, idx) => {
             if (sticker.type === 'poll') {
+              const options: string[] = Array.isArray(sticker.data?.options) ? sticker.data.options : [];
+              const result = pollResults[`${story.id}:${idx}`];
+              const myVote = result?.myVote ?? null;
+              // Real numbers from the database: shown once you've voted (the owner always sees them).
+              const showResults = !!result && (myVote !== null || isOwnStory);
+              const total = result?.total || 0;
+              const voters = isOwnStory ? result?.voters || [] : [];
               return (
                 <div
                   key={idx}
                   className="absolute z-30 max-w-[260px] w-full bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl p-3 shadow-xl pointer-events-auto"
                   style={{ top: `${sticker.y}%`, left: '50%', transform: 'translate(-50%, -50%)' }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <p className="text-xs font-bold text-center text-white mb-2.5">{sticker.data.question}</p>
                   <div className="space-y-1.5">
-                    {sticker.data.options.map((opt: string, optIdx: number) => {
-                      const percentage = pollVoted !== null ? (optIdx === pollVoted ? 68 : 32) : null;
+                    {options.map((opt: string, optIdx: number) => {
+                      const count = result?.counts?.[optIdx] || 0;
+                      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                      const chosen = myVote === optIdx;
                       return (
                         <button
                           key={optIdx}
-                          onClick={() => handleVotePoll(optIdx)}
-                          className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
-                            pollVoted === optIdx
-                              ? 'bg-[#00FF66] text-black ring-1 ring-white'
-                              : 'bg-neutral-800/90 text-white hover:bg-neutral-700'
+                          onClick={() => handleVotePoll(idx, optIdx, options.length)}
+                          className={`relative overflow-hidden w-full py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                            chosen ? 'text-black ring-1 ring-white bg-neutral-800/90' : 'bg-neutral-800/90 text-white hover:bg-neutral-700'
                           }`}
                         >
-                          <span>{opt}</span>
-                          {percentage !== null && <span>{percentage}%</span>}
+                          {showResults && (
+                            <span
+                              aria-hidden
+                              className={`absolute inset-y-0 left-0 transition-all duration-500 ${chosen ? 'bg-[#00FF66]' : 'bg-white/15'}`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          )}
+                          <span className={`relative ${chosen && percentage < 40 ? 'text-white' : ''}`}>{opt}</span>
+                          {showResults && <span className={`relative ${chosen && percentage < 85 ? 'text-white' : ''}`}>{percentage}%</span>}
                         </button>
                       );
                     })}
                   </div>
+                  {showResults && (
+                    <p className="text-[10px] text-center text-white/60 mt-2">
+                      {total === 1 ? '1 vote' : `${total} votes`}
+                    </p>
+                  )}
+                  {voters.length > 0 && (
+                    <div className="mt-2 max-h-24 overflow-y-auto space-y-0.5 border-t border-white/10 pt-1.5">
+                      {voters.map((v, i) => (
+                        <p key={i} className="text-[10px] text-white/80 flex justify-between gap-2">
+                          <span className="truncate">@{v.username}</span>
+                          <span className="text-white/50 truncate">{options[v.option] ?? ''}</span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {pollError && <p className="text-[10px] text-center text-red-400 mt-2">{pollError}</p>}
                 </div>
               );
             }

@@ -882,6 +882,27 @@ export async function toggleStoryLike(storyId: string): Promise<{ success: boole
   try { return await rpc('toggle_story_like', { p_story: storyId }); } catch (err) { return { success: false, error: errorText(err, 'Could not like this story.') }; }
 }
 
+// Story polls (migration 20260927000001): one real vote per person per poll, keyed by the poll
+// sticker's position in the story. `voters` is filled only for the story's own owner.
+export interface StoryPollResult {
+  counts: number[];
+  total: number;
+  myVote: number | null;
+  voters: { username: string; option: number }[];
+}
+
+export async function fetchStoryPollResults(storyId: string): Promise<Record<string, StoryPollResult>> {
+  try { return (await rpc<Record<string, StoryPollResult>>('story_poll_results', { p_story: storyId })) || {}; } catch { return {}; }
+}
+
+export async function voteStoryPoll(storyId: string, stickerIndex: number, option: number): Promise<{ success: boolean; poll?: StoryPollResult; error?: string }> {
+  try {
+    return await rpc('vote_story_poll', { p_story: storyId, p_sticker: stickerIndex, p_option: option });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not save your vote. Please try again.') };
+  }
+}
+
 // Today's real comments/likes for one story, by id, regardless of whether it's still in the live
 // 24h tray — this is what a highlight page calls to layer live data on top of its fixed snapshot.
 export async function fetchStoryById(storyId: string): Promise<Story | null> {

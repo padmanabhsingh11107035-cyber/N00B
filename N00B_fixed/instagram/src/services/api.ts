@@ -1,6 +1,6 @@
 // The app's server calls. Everything now runs on Supabase (see supabaseApi.ts and supabase/migrations);
 // this file only lists them under the names the screens have always imported.
-export type { GifItem } from './supabaseApi';
+export type { GifItem, StoryPollResult } from './supabaseApi';
 export {
   e2ee,
   searchGifs,
@@ -64,6 +64,8 @@ export {
   recordStoryView,
   toggleStoryLike,
   fetchStoryById,
+  fetchStoryPollResults,
+  voteStoryPoll,
   fetchStoryViewers,
   addCommentToStory,
   deleteStory,

@@ -61,7 +61,8 @@ import {
   Eye,
   ToggleLeft,
   ToggleRight,
-  ChevronDown
+  ChevronDown,
+  Bot
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
@@ -89,6 +90,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { CustomerSupportModal } from '../Support/CustomerSupportModal';
+import { openNoobAi } from '../../utils/noobAi';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { HighlightManagerModal } from './HighlightManagerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
@@ -714,6 +716,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">My devices</span>
                     <span className="text-[10px] text-zinc-400 block truncate">Chat encryption keys and backup</span>
+                  </div>
+                </button>
+              )}
+
+              {/* Own account: NOOB AI, the voice assistant (opens in a new tab and signs in automatically) */}
+              {isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setShowThreeDotsMenu(false);
+                    openNoobAi();
+                  }}
+                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Bot className="w-4 h-4 text-violet-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-white block group-hover:text-violet-300 transition-colors">NOOB AI</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Talk to your AI friend by voice</span>
                   </div>
                 </button>
               )}

@@ -1089,6 +1089,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               ? { label: 'Views', fetchUsers: () => fetchReelViewers(currentReel.id) }
               : undefined
           }
+          viewsCount={currentReel.userId === currentUser.id ? currentReel.viewsCount : undefined}
+          ownerUsername={currentReel.username}
+          currentUserId={currentUser.id}
+          onToggleFollowUser={onToggleFollowUser}
+          onNavigateToUser={onNavigateToProfile}
           initialTab={likesViewsInitialTab}
           onClose={() => setShowLikesViewsSheet(false)}
         />

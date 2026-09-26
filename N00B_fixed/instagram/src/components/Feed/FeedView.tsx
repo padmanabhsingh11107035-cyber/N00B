@@ -46,11 +46,11 @@ interface FeedViewProps {
   onOpenStatusNoteModal: () => void;
   onClearStatusNote?: () => void;
   onOpenNotifications: () => void;
-  onNavigateToChat: () => void;
   onRefreshFeed: () => void;
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
   onNavigateToProfile?: (user: User) => void;
+  onToggleFollowUser?: (userId: string) => Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean } | void>;
 }
 
 const POSTS_PER_PAGE = 4;
@@ -76,11 +76,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onOpenCreateStory,
   onOpenStatusNoteModal,
   onOpenNotifications,
-  onNavigateToChat,
   onRefreshFeed,
   onNavigateToPost,
   onNavigateToReel,
-  onNavigateToProfile
+  onNavigateToProfile,
+  onToggleFollowUser
 }) => {
   const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following' | 'favorites'>('foryou');
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
@@ -413,6 +413,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onHideAd={handleHideAd}
                 onSelectCategory={(cat) => setActiveCategory(cat)}
                 onNavigateToProfile={onNavigateToProfile}
+                onToggleFollowUser={onToggleFollowUser}
               />
             ))}
 

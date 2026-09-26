@@ -1133,6 +1133,7 @@ export default function App() {
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
             onNavigateToProfile={handleNavigateToUserProfile}
+            onToggleFollowUser={handleToggleFollowUser}
           />
         )}
 

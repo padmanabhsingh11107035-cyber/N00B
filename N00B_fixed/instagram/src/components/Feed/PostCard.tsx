@@ -29,6 +29,12 @@ import { formatExactDateTime } from '../../utils/formatTime';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { POST_FILTERS } from '../../data/mockData';
 
+interface ToggleFollowResult {
+  success: boolean;
+  isFollowing: boolean;
+  isFollowRequested?: boolean;
+}
+
 interface PostCardProps {
   post: Post;
   currentUser: User;
@@ -43,6 +49,7 @@ interface PostCardProps {
   onHideAd?: (postId: string) => void;
   onSelectCategory?: (category: string) => void;
   onNavigateToProfile?: (user: User) => void;
+  onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -57,6 +64,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDeletePost,
   onDeleteSlide,
   onHideAd,
+  onToggleFollowUser,
   onSelectCategory,
   onNavigateToProfile
 }) => {
@@ -747,6 +755,10 @@ export const PostCard: React.FC<PostCardProps> = ({
         <LikesViewsSheet
           likes={{ label: 'Likes', fetchUsers: () => fetchPostLikers(post.id) }}
           views={isOwner ? { label: 'Views', fetchUsers: () => fetchPostViewers(post.id) } : undefined}
+          ownerUsername={post.username}
+          currentUserId={currentUser.id}
+          onToggleFollowUser={onToggleFollowUser}
+          onNavigateToUser={onNavigateToProfile}
           onClose={() => setShowLikesSheet(false)}
         />
       )}

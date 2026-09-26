@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { noobAiIsOnline, noobAiSignInUrl } from '../../utils/noobAi';
 import { NoobAiLogo } from './NoobAiLogo';
-import { NoobAiCore3D } from './NoobAiCore3D';
+import { NoobAiGem } from './NoobAiGem';
 
 interface NoobAiPageProps {
   onClose: () => void;
@@ -62,7 +62,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
         )}
         {(status === 'checking' || (status === 'online' && !loaded)) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-8 bg-[radial-gradient(800px_500px_at_80%_-10%,rgba(109,93,252,0.10),transparent_60%),radial-gradient(600px_400px_at_10%_110%,rgba(6,182,212,0.08),transparent_60%)] bg-[#f6f7fb]">
-            <NoobAiCore3D size={190} />
+            <NoobAiGem size={200} />
             <div className="text-center">
               <p className="text-lg font-black tracking-tight">Waking up NOOB AI…</p>
               <p className="text-sm text-slate-500 mt-1">Your multilingual AI friend</p>
@@ -71,7 +71,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
         )}
         {status === 'offline' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
-            <NoobAiCore3D size={170} sleeping />
+            <NoobAiGem size={180} sleeping />
             <div>
               <h2 className="text-xl font-black tracking-tight">NOOB is sleeping 💤</h2>
               <p className="text-sm text-slate-500 max-w-xs mt-2">NOOB AI's computer is switched off or offline right now.</p>

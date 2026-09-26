@@ -1,0 +1,20 @@
+# Private data - never upload these
+server/noob_memory.db
+server/noob_memory.db-journal
+server/noob_memory.backup-*.db
+server/noob_settings.json
+server/noob_settings.json.tmp
+server/noob_server.log
+
+# Downloaded / installed automatically
+server/models/
+server/.venv/
+server/tools/
+server/tunnel.yml
+server/noob_tunnel.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

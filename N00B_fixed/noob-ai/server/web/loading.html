@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NOOB</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { margin: 0; height: 100%; background: #f6f7fb; color: #0f172a; overflow: hidden;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  body { display: grid; place-items: center;
+    background: radial-gradient(800px 500px at 80% -10%, rgba(109, 93, 252, .10), transparent 60%),
+                radial-gradient(600px 400px at 10% 110%, rgba(6, 182, 212, .08), transparent 60%), #f6f7fb; }
+  .box { text-align: center; }
+  h1 { font-size: 34px; letter-spacing: 3px; margin: 0 0 8px; }
+  p { color: #64748b; margin: 0; }
+  .bar { width: 240px; height: 4px; margin: 26px auto 0; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+  .bar div { width: 40%; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #6d5dfc, #06b6d4);
+    animation: slide 1.4s ease-in-out infinite; }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="ai3d" aria-hidden="true" style="--s:170px;margin-bottom:34px"><div class="ai3d-glow"></div><div class="ai3d-scene"><div class="ai3d-globe"><i></i><i></i><i></i><i></i><i></i><i></i><b></b><b></b><b></b><b></b><b></b></div><div class="ai3d-orbit o1"><u></u></div><div class="ai3d-orbit o2"><u></u></div><div class="ai3d-orbit o3"><u></u></div></div><div class="ai3d-core"><div class="eyes"><i></i><i></i></div></div><span class="ai3d-spark"></span><span class="ai3d-spark"></span><span class="ai3d-spark"></span></div>
+  <h1>NOOB</h1>
+  <p id="msg">Waking up NOOB…</p>
+  <div class="bar"><div></div></div>
+</div>
+<script>
+  // Waits for the NOOB server to be ready, then opens the app.
+  const started = Date.now();
+  async function check() {
+    try {
+      const r = await fetch("http://localhost:5000/health", { cache: "no-store" });
+      if (r.ok) { location.href = "http://localhost:5000/app"; return; }
+    } catch (e) { /* not ready yet */ }
+    const s = (Date.now() - started) / 1000;
+    document.getElementById("msg").textContent =
+      s < 20 ? "Waking up NOOB…" :
+      s < 120 ? "Loading the speech model… (the first start downloads it, please wait)" :
+      "Still starting… if this takes too long, open server\\noob_server.log to see what happened.";
+    setTimeout(check, 1000);
+  }
+  check();
+</script>
+</body>
+</html>

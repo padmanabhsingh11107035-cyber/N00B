@@ -55,7 +55,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose }) => {
             key={attempt}
             src={src}
             title="NOOB AI"
-            allow="microphone; autoplay; clipboard-write"
+            allow="microphone; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             onLoad={() => setLoaded(true)}
             className="absolute inset-0 w-full h-full border-0 bg-[#f6f7fb]"
           />

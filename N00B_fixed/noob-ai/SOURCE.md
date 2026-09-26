@@ -4,7 +4,7 @@ This folder is the complete code of **NOOB AI**, the multilingual voice assistan
 (**Profile → ⋮ → NOOB AI**) and runs at https://ai.nooob.xyz.
 
 - Main repository (where it is developed): https://github.com/padmanabhsingh11107035-cyber/noobai
-- This copy matches commit `cd6e123` of that repository.
+- This copy matches commit `b0b4d96` of that repository.
 - It does **not** run on Cloudflare with the NOOB website: the server (`server/`, Python) runs on the owner's PC
   and is reached through a Cloudflare Tunnel. The robot's code is `noob_esp32/noob_esp32.ino` (ESP32-S3).
 - The NOOB app side lives in `../instagram/src/components/Profile/NoobAiPage.tsx`, `NoobAiLogo.tsx`,

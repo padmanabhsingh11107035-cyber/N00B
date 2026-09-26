@@ -739,6 +739,7 @@ THE PAGES:
    - Privacy: every person has their own private memory, chats and mood history; nobody else can see them. Your NOOB password is never stored by NOOB AI.
    - Free questions: people signed in with a NOOB account can use it without limit. An account made without NOOB gets 5 free questions, then needs to link a NOOB account (About Me → My account → Link NOOB account).
    - After about 15 questions it asks for a 1 to 5 star rating, like this support chat does.
+   - Music: say "play" and a song, singer or kind of music (in any language, for example "play Kesariya" or "gaana chalao") and NOOB AI plays it from YouTube. In the app it shows YouTube's player on the Talk page with pause, another-video and stop buttons (on some phones the first song needs one tap on play); say "stop the music" to stop it. The NOOB robot plays the song on its own speaker; pressing its button stops it.
    - If NOOB AI shows "NOOB is sleeping", its computer is switched off or offline for now: tap "Wake up NOOB" to check again later. It is free to use.
 
 HOW TO ANSWER:

@@ -2,10 +2,12 @@
 # These narrow what a page is even ALLOWED to do — real hardening against a hijacked or injected
 # script (XSS), not a screenshot deterrent. See src/utils/contentProtection.ts for that, and its own
 # honest limits: no website can block an operating system's screenshot tool.
+# NOOB AI (the voice assistant, https://ai.nooob.xyz) is the only other site the app may show inside it (frame-src)
+# and let use the microphone there; the app itself still cannot be shown inside any other site (frame-ancestors).
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(self), microphone=(self), geolocation=(self), display-capture=(), payment=(), usb=(), serial=()
+  Permissions-Policy: camera=(self), microphone=(self "https://ai.nooob.xyz"), autoplay=(self "https://ai.nooob.xyz"), geolocation=(self), display-capture=(), payment=(), usb=(), serial=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz; frame-src https://ai.nooob.xyz; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'

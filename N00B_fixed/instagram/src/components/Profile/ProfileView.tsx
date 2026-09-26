@@ -90,7 +90,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { CustomerSupportModal } from '../Support/CustomerSupportModal';
-import { openNoobAi } from '../../utils/noobAi';
+import { NoobAiPage } from './NoobAiPage';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { HighlightManagerModal } from './HighlightManagerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
@@ -257,6 +257,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
   const [showInstallPermissionsPage, setShowInstallPermissionsPage] = useState(false);
+  const [showNoobAi, setShowNoobAi] = useState(false);
   const [showMutualFollowersSheet, setShowMutualFollowersSheet] = useState(false);
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -720,12 +721,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </button>
               )}
 
-              {/* Own account: NOOB AI, the voice assistant (opens in a new tab and signs in automatically) */}
+              {/* Own account: NOOB AI, the voice assistant (opens inside the app and signs in automatically) */}
               {isOwnProfile && (
                 <button
                   onClick={() => {
                     setShowThreeDotsMenu(false);
-                    openNoobAi();
+                    setShowNoobAi(true);
                   }}
                   className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                 >
@@ -1985,6 +1986,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
 
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
+
+      {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} />}
 
       {showInstallPermissionsPage && (
         <InstallAndPermissionsPage

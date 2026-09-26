@@ -895,12 +895,17 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         u.displayName.toLowerCase().includes(friendSearchQuery.toLowerCase()))
   );
 
+  // Ludo/Snakes&Ladders/Monopoly (isBoardGame) and Chess all need real screen
+  // real estate to render at a comfortable size — everything else fits fine
+  // in the standard modal width.
+  const useLargeBoard = (isBoardGame || game.id === 'chess_blitz') && currentMode === 'play_bot';
+
   return (
     <div className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center ${
-      isBoardGame && currentMode === 'play_bot' ? 'p-0 sm:p-4' : 'p-4'
+      useLargeBoard ? 'p-0 sm:p-4' : 'p-4'
     }`}>
       <div className={`bg-zinc-950 border border-zinc-800 overflow-hidden shadow-2xl flex flex-col relative animate-in fade-in zoom-in duration-200 ${
-        isBoardGame && currentMode === 'play_bot'
+        useLargeBoard
           ? 'w-full h-full sm:h-auto sm:max-w-3xl rounded-none sm:rounded-3xl'
           : 'w-full max-w-lg rounded-3xl'
       }`}>
@@ -932,7 +937,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
         {/* Modal Body */}
         <div className={`flex-1 overflow-y-auto ${
-          isBoardGame && currentMode === 'play_bot' ? 'p-2 sm:p-5 max-h-[calc(100vh-73px)] sm:max-h-[85vh]' : 'p-5 max-h-[75vh]'
+          useLargeBoard ? 'p-2 sm:p-5 max-h-[calc(100vh-73px)] sm:max-h-[85vh]' : 'p-5 max-h-[75vh]'
         }`}>
           {!chessLimitChecked ? (
             <div className="py-16 flex flex-col items-center justify-center text-center gap-3">

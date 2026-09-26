@@ -340,82 +340,114 @@ export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true, 
     : `Player ${chess.turn() === 'w' ? '1' : '2'}'s move (${chess.turn() === 'w' ? 'White' : 'Black'})`;
 
   return (
-    <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
+    <div className="flex flex-col items-center justify-center p-2 w-full max-w-[460px] sm:max-w-[640px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between w-full mb-3 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
-        <div className={`flex items-center gap-1.5 text-xs font-bold ${chess.turn() === 'w' ? 'text-[#00FF66]' : 'text-zinc-500'}`}>
-          <UserIcon className="w-3.5 h-3.5" />
+      <div className="flex items-center justify-between w-full mb-3 px-4 py-2.5 bg-zinc-900 rounded-xl border border-zinc-800">
+        <div className={`flex items-center gap-1.5 text-xs sm:text-sm font-bold ${chess.turn() === 'w' ? 'text-[#00FF66]' : 'text-zinc-500'}`}>
+          <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>{vsBot ? 'You' : 'Player 1'} (White)</span>
         </div>
-        <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">VS</span>
-        <div className={`flex items-center gap-1.5 text-xs font-bold ${chess.turn() === 'b' ? 'text-pink-400' : 'text-zinc-500'}`}>
-          {vsBot ? <Bot className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+        <span className="text-[10px] sm:text-xs text-zinc-500 font-semibold uppercase tracking-wider">VS</span>
+        <div className={`flex items-center gap-1.5 text-xs sm:text-sm font-bold ${chess.turn() === 'b' ? 'text-pink-400' : 'text-zinc-500'}`}>
+          {vsBot ? <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           <span>{vsBot ? 'Grandmaster Bot' : 'Player 2'} (Black)</span>
         </div>
       </div>
 
       {vsBot && (
-        <div className="w-full mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold text-center flex items-center justify-center gap-1.5">
+        <div className="w-full mb-3 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] sm:text-xs font-bold text-center flex items-center justify-center gap-1.5">
           <Crown className="w-3.5 h-3.5" /> Win: +50,000,000 NOOBs &nbsp;•&nbsp; Lose: your balance resets to 0
         </div>
       )}
 
-      {/* Board */}
-      <div className="grid grid-cols-8 border-2 border-zinc-800 rounded-lg overflow-hidden shadow-xl w-full aspect-square max-w-[340px]">
-        {ranks.map((rank) =>
-          files.map((file) => {
-            const square = `${file}${rank}` as Square;
-            const piece = chess.get(square);
-            const isDark = (files.indexOf(file) + rank) % 2 === 0;
-            const isSelected = selectedSquare === square;
-            const isLegalTarget = legalDestinations.includes(square);
-
-            return (
-              <button
-                key={square}
-                onClick={() => handleSquareClick(square)}
-                className={`relative flex items-center justify-center aspect-square cursor-pointer ${
-                  isDark ? 'bg-black' : 'bg-white'
-                } ${isSelected ? 'ring-2 ring-inset ring-[#00FF66]' : ''}`}
+      {/* Board — a wood-toned frame with rank/file coordinates, like a real
+          tournament set, instead of a flat black/white checker. Coordinate
+          labels and squares share one 9x9 CSS grid so they line up exactly
+          regardless of screen size. */}
+      <div
+        className="w-full rounded-2xl p-2 sm:p-3 shadow-2xl"
+        style={{ background: 'linear-gradient(135deg, #9c6b3f, #5c3a21)' }}
+      >
+        <div
+          className="grid aspect-square rounded-lg overflow-hidden shadow-inner"
+          style={{ gridTemplateColumns: '5.5% repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr) 5.5%' }}
+        >
+          {ranks.map((rank, rowIdx) => (
+            <React.Fragment key={`row-${rank}`}>
+              <div
+                className="flex items-center justify-center text-[9px] sm:text-xs font-bold select-none"
+                style={{ color: '#e9d9c3', gridColumn: 1, gridRow: rowIdx + 1 }}
               >
-                {piece && (
-                  // A piece needs to read clearly on BOTH a black and a white
-                  // square, so its own color alone isn't enough contrast — a
-                  // black piece would vanish entirely on a black square
-                  // without a light outline (and likewise white-on-white).
-                  <svg
-                    viewBox="0 0 45 45"
-                    className="w-[75%] h-[75%]"
-                    style={{
-                      fill: piece.color === 'w' ? '#ffffff' : '#101010',
-                      stroke: piece.color === 'w' ? '#000000' : '#ffffff',
-                      strokeWidth: 1.5,
-                      strokeLinejoin: 'round'
-                    }}
+                {rank}
+              </div>
+              {files.map((file, colIdx) => {
+                const square = `${file}${rank}` as Square;
+                const piece = chess.get(square);
+                const isDark = (colIdx + rowIdx) % 2 === 1;
+                const isSelected = selectedSquare === square;
+                const isLegalTarget = legalDestinations.includes(square);
+
+                return (
+                  <button
+                    key={square}
+                    onClick={() => handleSquareClick(square)}
+                    style={{ gridColumn: colIdx + 2, gridRow: rowIdx + 1, backgroundColor: isDark ? '#b58863' : '#f0d9b5' }}
+                    className={`relative flex items-center justify-center cursor-pointer ${
+                      isSelected ? 'ring-4 ring-inset ring-[#00FF66]' : ''
+                    }`}
                   >
-                    {/* `color` here only feeds the knight's eye/mouth via
-                        currentColor — it never touches the body's own
-                        fill/stroke, which come from the <svg> above. */}
-                    <g style={{ color: piece.color === 'w' ? '#000000' : '#ffffff' }}>
-                      {PIECE_SVG[piece.type]}
-                    </g>
-                  </svg>
-                )}
-                {isLegalTarget && (
-                  <span className={`absolute w-3 h-3 rounded-full ${piece ? 'ring-2 ring-[#00FF66] w-full h-full rounded-none' : 'bg-[#00FF66]/70'}`} />
-                )}
-              </button>
-            );
-          })
-        )}
+                    {piece && (
+                      // A piece needs to read clearly on BOTH the cream and
+                      // walnut squares, so its own color alone isn't enough
+                      // contrast — a light stroke keeps a dark piece crisp
+                      // and vice versa, and the drop-shadow gives it a
+                      // slightly raised, physical feel.
+                      <svg
+                        viewBox="0 0 45 45"
+                        className="w-[78%] h-[78%]"
+                        style={{
+                          fill: piece.color === 'w' ? '#f8f5f0' : '#1a1a1a',
+                          stroke: piece.color === 'w' ? '#1a1a1a' : '#f8f5f0',
+                          strokeWidth: 1.5,
+                          strokeLinejoin: 'round',
+                          filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.35))'
+                        }}
+                      >
+                        {/* `color` here only feeds the knight's eye/mouth via
+                            currentColor — it never touches the body's own
+                            fill/stroke, which come from the <svg> above. */}
+                        <g style={{ color: piece.color === 'w' ? '#1a1a1a' : '#f8f5f0' }}>
+                          {PIECE_SVG[piece.type]}
+                        </g>
+                      </svg>
+                    )}
+                    {isLegalTarget && (
+                      <span className={`absolute w-1/4 h-1/4 rounded-full ${piece ? 'ring-4 ring-[#00FF66] w-full h-full rounded-none' : 'bg-[#00FF66]/70'}`} />
+                    )}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))}
+          <div style={{ gridColumn: 1, gridRow: 9 }} />
+          {files.map((file, colIdx) => (
+            <div
+              key={`file-${file}`}
+              className="flex items-center justify-center text-[9px] sm:text-xs font-bold select-none"
+              style={{ color: '#e9d9c3', gridColumn: colIdx + 2, gridRow: 9 }}
+            >
+              {file}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Status */}
       <div className="mt-4 text-center min-h-[24px]">
         {gameOverText ? (
-          <p className="text-sm font-black text-white animate-bounce">{gameOverText}</p>
+          <p className="text-base font-black text-white animate-bounce">{gameOverText}</p>
         ) : (
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs sm:text-sm text-zinc-400 font-medium">
             {chess.inCheck() ? '⚠️ Check! ' : ''}
             {turnLabel}
           </p>

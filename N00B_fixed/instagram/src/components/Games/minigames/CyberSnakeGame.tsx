@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCcw, Trophy, Play, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { RotateCcw, Trophy, Play } from 'lucide-react';
 
 interface CyberSnakeGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -168,7 +168,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative w-64 h-64 sm:w-72 sm:h-72 bg-zinc-950 border-2 border-[#00FF66]/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(0,255,102,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
+        className="relative w-full aspect-square max-w-[340px] sm:max-w-[400px] bg-zinc-950 border-2 border-[#00FF66]/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(0,255,102,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
       >
         {/* Render Grid Cells */}
         {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, idx) => {
@@ -209,41 +209,11 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
         )}
       </div>
 
-      {/* Mobile Touch D-Pad */}
-      <div className="mt-4 flex flex-col items-center gap-1.5 sm:hidden">
-        <button
-          onClick={() => directionRef.current !== 'DOWN' && setDirection('UP')}
-          className="p-3 bg-zinc-900 active:bg-[#00FF66] active:text-black rounded-xl border border-zinc-800 text-white font-bold"
-        >
-          <ArrowUp className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => directionRef.current !== 'RIGHT' && setDirection('LEFT')}
-            className="p-3 bg-zinc-900 active:bg-[#00FF66] active:text-black rounded-xl border border-zinc-800 text-white font-bold"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => directionRef.current !== 'UP' && setDirection('DOWN')}
-            className="p-3 bg-zinc-900 active:bg-[#00FF66] active:text-black rounded-xl border border-zinc-800 text-white font-bold"
-          >
-            <ArrowDown className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => directionRef.current !== 'LEFT' && setDirection('RIGHT')}
-            className="p-3 bg-zinc-900 active:bg-[#00FF66] active:text-black rounded-xl border border-zinc-800 text-white font-bold"
-          >
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
       <p className="text-[11px] text-zinc-500 mt-3 text-center hidden sm:block">
         Use <kbd className="px-1.5 py-0.5 bg-zinc-900 rounded border border-zinc-800 text-zinc-300">Arrow Keys</kbd> or <kbd className="px-1.5 py-0.5 bg-zinc-900 rounded border border-zinc-800 text-zinc-300">WASD</kbd> to steer
       </p>
       <p className="text-[11px] text-zinc-500 mt-3 text-center sm:hidden">
-        Swipe on the grid, or use the D-pad below, to steer
+        Swipe on the grid to steer
       </p>
     </div>
   );

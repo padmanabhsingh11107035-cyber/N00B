@@ -2698,7 +2698,8 @@ export async function adminSetExplorePin(userId: string, pinned: boolean): Promi
 export async function fetchAdminContentFeed(type: 'posts' | 'reels' | 'stories', limit = 60): Promise<{ success: boolean; items: any[]; error?: string }> {
   try {
     const res = await rpc<any>('admin_content_feed', { p_type: type, p_limit: limit });
-    return { success: true, items: res.items || [] };
+    const map = type === 'reels' ? mapReel : type === 'stories' ? mapStory : mapPost;
+    return { success: true, items: (res.items || []).map(map) };
   } catch (err) {
     return { success: false, items: [], error: errorText(err, 'Could not load content.') };
   }

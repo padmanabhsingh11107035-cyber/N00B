@@ -43,14 +43,8 @@ import { RockPaperScissorsGame } from './minigames/RockPaperScissorsGame';
 import { SpeedMathGame } from './minigames/SpeedMathGame';
 import { MemoryMatchGame } from './minigames/MemoryMatchGame';
 import { ReactionTapGame } from './minigames/ReactionTapGame';
-import { BrickBreakerGame } from './minigames/BrickBreakerGame';
-import { CyberDroneGame } from './minigames/CyberDroneGame';
 import { ColorRushGame } from './minigames/ColorRushGame';
-import { WordleGuessGame } from './minigames/WordleGuessGame';
 import { GenericArcadeGame } from './minigames/GenericArcadeGame';
-import { ScribbleGame } from './minigames/ScribbleGame';
-import { MoleSmashGame } from './minigames/MoleSmashGame';
-import { FusionBlocksGame } from './minigames/FusionBlocksGame';
 import { ChessGame } from './minigames/ChessGame';
 import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
 import { LudoGame } from './minigames/LudoGame';
@@ -1583,32 +1577,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <ReactionTapGame onGameOver={handleGameOver} />
               )}
 
-              {game.id === 'brick_breaker' && (
-                <BrickBreakerGame onGameOver={handleGameOver} />
-              )}
-
-              {game.id === 'cyber_drone' && (
-                <CyberDroneGame onGameOver={handleGameOver} targetScore={5} />
-              )}
-
               {game.id === 'bubble_blitz' && (
                 <ColorRushGame onGameOver={handleGameOver} targetScore={8} />
-              )}
-
-              {game.id === 'wordle_quest' && (
-                <WordleGuessGame onGameOver={handleGameOver} />
-              )}
-
-              {game.id === 'scribble' && (
-                <ScribbleGame onGameOver={handleGameOver} />
-              )}
-
-              {game.id === 'mole_smash' && (
-                <MoleSmashGame onGameOver={handleGameOver} targetScore={14} />
-              )}
-
-              {game.id === 'fusion_blocks' && (
-                <FusionBlocksGame onGameOver={handleGameOver} targetTile={128} />
               )}
 
               {/* Every catalog id above maps to a dedicated game; this generic
@@ -1625,13 +1595,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'speed_math',
                 'memory_match',
                 'reaction_tap',
-                'brick_breaker',
-                'cyber_drone',
-                'bubble_blitz',
-                'wordle_quest',
-                'scribble',
-                'mole_smash',
-                'fusion_blocks'
+                'bubble_blitz'
               ].includes(game.id) && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}

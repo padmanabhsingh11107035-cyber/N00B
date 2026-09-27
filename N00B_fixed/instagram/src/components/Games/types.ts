@@ -90,32 +90,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     tags: ['Retro', 'Arcade', 'Reflex']
   },
   {
-    id: 'cyber_drone',
-    title: 'Cyber Drone Dash',
-    category: 'arcade',
-    description: 'Fly a neon drone through electric laser barriers without crashing.',
-    bannerBg: 'from-[#1e3a5f] to-[#0c192e]',
-    badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'drone',
-    tags: ['Flappy', 'Physics', 'Action']
-  },
-  {
-    id: 'brick_breaker',
-    title: 'Neon Brick Smasher',
-    category: 'arcade',
-    description: 'Launch energetic lasers and smash all falling cosmic blocks.',
-    bannerBg: 'from-[#4a1c5e] to-[#2d123b]',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Easy',
-    players: 'vs Bot',
-    iconType: 'bricks',
-    tags: ['Breakout', 'Retro', 'Classic']
-  },
-  {
     id: 'bubble_blitz',
     title: 'Bubble Pop Blitz',
     category: 'arcade',
@@ -156,19 +130,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     iconType: 'cards',
     tags: ['Memory', 'Cards', 'Focus']
   },
-  {
-    id: 'wordle_quest',
-    title: '5-Letter Wordle',
-    category: 'puzzle',
-    description: 'Guess the secret 5-letter word in 6 tries with color clues.',
-    bannerBg: 'from-[#14532d] to-[#052e16]',
-    badgeColor: 'bg-green-600/20 text-green-300 border-green-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'wordle',
-    tags: ['Wordle', 'Vocab', 'Puzzle']
-  },
 
   // --- REFLEX & ACTION ---
   {
@@ -200,19 +161,6 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
 
   // --- BRAIN & STRATEGY ---
   {
-    id: 'scribble',
-    title: 'Scribble & Guess',
-    category: 'brain',
-    description: 'Draw, sketch, and guess the secret word against the clock with friends.',
-    bannerBg: 'from-[#4a1c5e] to-[#2d123b]',
-    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'pencil',
-    tags: ['Drawing', 'Creative', 'Words']
-  },
-  {
     id: 'speed_math',
     title: 'Speed Math Sprint',
     category: 'brain',
@@ -224,31 +172,5 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     players: '1v1 Online',
     iconType: 'calculator',
     tags: ['Math', 'Timer', 'Brain']
-  },
-  {
-    id: 'mole_smash',
-    title: 'Neon Mole Smash',
-    category: 'reflex',
-    description: 'Whack glowing moles the instant they pop up — dodge the bombs, chase the high score.',
-    bannerBg: 'from-[#0f3d24] to-[#04150c]',
-    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Easy',
-    players: '1v1 Online',
-    iconType: 'mole',
-    tags: ['Reflex', 'Timer', 'Arcade']
-  },
-  {
-    id: 'fusion_blocks',
-    title: 'Fusion Blocks',
-    category: 'puzzle',
-    description: 'Slide and merge glowing number tiles — chain fusions to reach the target tile before the board fills up.',
-    bannerBg: 'from-[#3d2a0f] to-[#150e04]',
-    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Medium',
-    players: '1v1 Online',
-    iconType: 'fusion',
-    tags: ['Puzzle', 'Numbers', 'Brain']
   }
 ];

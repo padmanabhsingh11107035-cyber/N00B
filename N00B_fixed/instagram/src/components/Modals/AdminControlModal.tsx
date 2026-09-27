@@ -45,7 +45,11 @@ import {
   Bot,
   Pin,
   PinOff,
-  Handshake
+  Handshake,
+  ShieldPlus,
+  ChevronLeft,
+  ChevronRight,
+  Play
 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -465,10 +469,34 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setLoadingAudit(false);
   };
 
-  const openStaffEditor = (who: { userId: string; username: string; displayName?: string; avatar?: string }, current: string[] = []) => {
-    setStaffEditor({ ...who, existing: current.length > 0 });
+  const openStaffEditor = (
+    who: { userId: string; username: string; displayName?: string; avatar?: string },
+    current: string[] = [],
+    existing: boolean = current.length > 0
+  ) => {
+    setStaffEditor({ ...who, existing });
     setEditorPerms(current);
   };
+
+  // From an account's row: make this person an admin (every power ticked, untick what they shouldn't have),
+  // or change the access they already have. Many people can be admins at the same time.
+  const openAdminAccessFor = (user: User) => {
+    const member = staffList.find((m) => m.userId === user.id);
+    openStaffEditor(
+      { userId: user.id, username: user.username, displayName: user.displayName, avatar: user.avatar },
+      member ? member.permissions : ADMIN_PERMISSIONS.map((p) => p.key),
+      !!member
+    );
+  };
+
+  // Content browser: the post / reel / story shown full size
+  const [contentPreview, setContentPreview] = useState<{ item: any; index: number } | null>(null);
+  const mediaOf = (item: any): { url: string; type: string; poster?: string }[] =>
+    contentType === 'posts'
+      ? (item.slides || []).map((s: any) => ({ url: s.mediaUrl, type: s.mediaType }))
+      : contentType === 'reels'
+        ? [{ url: item.videoUrl, type: 'video', poster: item.thumbnailUrl }]
+        : [{ url: item.mediaUrl, type: item.mediaType || 'image' }];
 
   const togglePerm = (key: string) =>
     setEditorPerms((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -713,7 +741,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.4)] bg-black p-0.5">
-              <img src="/noob-logo.svg.jpeg" alt="NOOB Logo" className="w-full h-full object-cover" />
+              <img src="/noob-logo-circle.png" alt="NOOB Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -1026,6 +1054,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             {copiedLinkKey === `profile:${user.id}` ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <LinkIcon className="w-3.5 h-3.5" />}
                             <span className="hidden sm:inline">{copiedLinkKey === `profile:${user.id}` ? 'Copied!' : 'Share'}</span>
                           </button>
+                          {main && !isMainRow && user.id !== currentUser.id && (
+                            <button
+                              onClick={() => openAdminAccessFor(user)}
+                              title={user.isStaff ? 'Change this admin\'s access' : 'Give admin panel access'}
+                              aria-label={user.isStaff ? `Change @${user.username}'s admin access` : `Make @${user.username} an admin`}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                                user.isStaff
+                                  ? 'bg-sky-500/25 text-sky-200 border-sky-400/50 hover:bg-sky-500/35'
+                                  : 'bg-sky-500/10 text-sky-300 border-sky-500/30 hover:bg-sky-500/20'
+                              }`}
+                            >
+                              {user.isStaff ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldPlus className="w-3.5 h-3.5" />}
+                              <span className="hidden sm:inline">{user.isStaff ? 'Admin' : 'Make admin'}</span>
+                            </button>
+                          )}
                           {main && (
                             <button
                               onClick={() => handleTogglePin(user)}
@@ -1519,36 +1562,61 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                   No {contentType} yet.
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {contentItems.map((item) => (
-                    <div key={item.id} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 flex items-center gap-3">
-                      {item.mediaUrl || item.imageUrl ? (
-                        <img
-                          src={item.mediaUrl || item.imageUrl}
-                          alt=""
-                          className="w-12 h-12 rounded-xl object-cover border border-zinc-800 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          {contentType === 'reels' ? <Film className="w-5 h-5 text-zinc-500" /> : contentType === 'stories' ? <Camera className="w-5 h-5 text-zinc-500" /> : <Image className="w-5 h-5 text-zinc-500" />}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {contentItems.map((item) => {
+                    const media = mediaOf(item);
+                    const first = media[0];
+                    return (
+                      <div key={item.id} className="rounded-2xl bg-zinc-900/60 border border-zinc-800/80 overflow-hidden flex flex-col">
+                        {/* the picture / video itself — tap to see it full size */}
+                        <button
+                          type="button"
+                          onClick={() => first?.url && setContentPreview({ item, index: 0 })}
+                          className={`relative w-full bg-black cursor-pointer group ${contentType === 'posts' ? 'aspect-[4/5]' : 'aspect-[9/16]'}`}
+                          title="Open full size"
+                        >
+                          {!first?.url ? (
+                            <span className="absolute inset-0 flex items-center justify-center text-zinc-600">
+                              {contentType === 'reels' ? <Film className="w-7 h-7" /> : contentType === 'stories' ? <Camera className="w-7 h-7" /> : <Image className="w-7 h-7" />}
+                            </span>
+                          ) : first.type === 'video' ? (
+                            <>
+                              {first.poster ? (
+                                <img src={first.poster} alt="" className="absolute inset-0 w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                <video src={`${first.url}#t=0.5`} muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
+                              )}
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center"><Play className="w-5 h-5 text-white fill-white ml-0.5" /></span>
+                              </span>
+                            </>
+                          ) : first.type === 'code' ? (
+                            <span className="absolute inset-0 p-3 text-[10px] text-emerald-300 font-mono text-left overflow-hidden">{'</>'} Code post</span>
+                          ) : (
+                            <img src={first.url} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform" referrerPolicy="no-referrer" />
+                          )}
+                          {media.length > 1 && (
+                            <span className="absolute top-2 right-2 text-[10px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded-full">1/{media.length}</span>
+                          )}
+                        </button>
+                        <div className="p-2.5 flex items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-bold text-white block truncate">@{item.username}</span>
+                            <span className="text-[11px] text-zinc-400 block truncate">{(item.caption || item.text || 'No caption').slice(0, 80)}</span>
+                            <span className="text-[10px] text-zinc-500">{formatExactDateTime(item.createdAt)}</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteContent(item)}
+                            disabled={deletingContentId === item.id}
+                            title="Remove"
+                            className="p-2 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-bold text-white block truncate">@{item.username}</span>
-                        <span className="text-[11px] text-zinc-400 block truncate">
-                          {(item.caption || item.text || 'No caption').slice(0, 80)}
-                        </span>
-                        <span className="text-[10px] text-zinc-500">{formatExactDateTime(item.createdAt)}</span>
                       </div>
-                      <button
-                        onClick={() => handleDeleteContent(item)}
-                        disabled={deletingContentId === item.id}
-                        className="p-2 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2343,6 +2411,50 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       )}
 
       {/* Admin access editor: tick exactly what this person may do */}
+      {contentPreview && (() => {
+        const media = mediaOf(contentPreview.item);
+        const m = media[contentPreview.index];
+        const go = (d: number) => setContentPreview((p) => (p ? { ...p, index: (p.index + d + media.length) % media.length } : p));
+        return (
+          <div className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4" onClick={() => setContentPreview(null)}>
+            <div className="w-full max-w-lg flex items-center justify-between mb-3" onClick={(e) => e.stopPropagation()}>
+              <div className="min-w-0">
+                <span className="text-sm font-bold text-white block truncate">@{contentPreview.item.username}</span>
+                <span className="text-[11px] text-zinc-400">{formatExactDateTime(contentPreview.item.createdAt)}</span>
+              </div>
+              <button onClick={() => setContentPreview(null)} className="p-2 rounded-full bg-zinc-800 text-white cursor-pointer" aria-label="Close">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="relative w-full max-w-lg max-h-[75vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+              {m?.type === 'video' ? (
+                <video key={m.url} src={m.url} controls autoPlay playsInline className="max-h-[75vh] max-w-full rounded-2xl bg-black" />
+              ) : m?.url ? (
+                <img src={m.url} alt="" className="max-h-[75vh] max-w-full rounded-2xl object-contain" referrerPolicy="no-referrer" />
+              ) : null}
+              {media.length > 1 && (
+                <>
+                  <button onClick={() => go(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white cursor-pointer" aria-label="Previous">
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => go(1)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 text-white cursor-pointer" aria-label="Next">
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-bold bg-black/70 text-white px-2 py-0.5 rounded-full">
+                    {contentPreview.index + 1}/{media.length}
+                  </span>
+                </>
+              )}
+            </div>
+            {(contentPreview.item.caption || contentPreview.item.text) && (
+              <p className="w-full max-w-lg text-xs text-zinc-300 mt-3" onClick={(e) => e.stopPropagation()}>
+                {contentPreview.item.caption || contentPreview.item.text}
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
       {staffEditor && (
         <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-zinc-950 border border-sky-500/40 rounded-3xl shadow-2xl flex flex-col max-h-[88vh]">

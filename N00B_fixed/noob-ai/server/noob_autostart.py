@@ -4,9 +4,11 @@ Keeps NOOB AI running while Windows is on.
 "Start with Windows.bat" adds this to Windows' startup programs (a shortcut in the Startup folder, so it can be
 switched off any time in Task Manager > Startup apps, or with "Don't start with Windows.bat"). After you log in it:
   - starts the NOOB server in the background (no window) if it isn't running,
-  - checks every minute and starts it again if it stopped unexpectedly (a crash, or after Windows restarts),
+  - checks it every 15 seconds and starts it again if it stopped unexpectedly (a crash, a restart...),
   - leaves it off if you stopped it on purpose (NOOB App > Settings > Stop NOOB server) until you open
-    NOOB App.bat again or log in to Windows again.
+    NOOB App.bat again or log in to Windows again,
+  - starts it when someone taps "Wake up NOOB" in the NOOB app (anyone signed in can wake it, nobody can
+    stop it that way). This only works while this computer is on.
 
     pythonw noob_autostart.py             keep NOOB running (what the Startup shortcut runs)
     python  noob_autostart.py --install   add the Startup shortcut and start keeping NOOB running now
@@ -19,11 +21,16 @@ import subprocess
 import sys
 import time
 
+import requests
+
 import noob_launcher as launcher
+import noob_network
+from noob_social import NOOB_SOCIAL_KEY, NOOB_SOCIAL_URL
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHORTCUT_NAME = "NOOB AI.lnk"
-CHECK_EVERY = 60           # seconds between checks
+CHECK_EVERY = 15           # seconds between checks (is NOOB running? did anyone tap "Wake up NOOB"?)
+DOWN_CHECKS = 3            # down this many checks in a row (about 45 s) = stopped unexpectedly: start it again
 START_GRACE = 120          # seconds a fresh start gets before it is checked again (loading, Wi-Fi, tunnel)
 LOCK_PORT = 5098           # only one keeper runs at a time
 
@@ -57,6 +64,18 @@ def remove():
         print("NOOB AI was not set to start with Windows.")
 
 
+def wake_requested_at():
+    """When someone last tapped "Wake up NOOB" in the NOOB app (None if NOOB can't be reached right now)."""
+    try:
+        r = requests.post(f"{NOOB_SOCIAL_URL}/rest/v1/rpc/public_platform_settings", json={}, timeout=(5, 8),
+                          headers={"apikey": NOOB_SOCIAL_KEY, "Content-Type": "application/json"})
+        if r.status_code == 200 and isinstance(r.json(), dict):
+            return r.json().get("noobAiWakeRequestedAt")
+    except Exception:
+        pass
+    return None
+
+
 def keep_running():
     lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -66,19 +85,30 @@ def keep_running():
     if os.path.exists(launcher.STOP_FLAG):
         os.remove(launcher.STOP_FLAG)                  # a fresh Windows login: NOOB should be on again
     time.sleep(15)                                     # a moment for Windows and Wi-Fi after logging in
-    misses = 1                                         # not running at login: start it straight away
+    noob_network.prefer_ipv4()                         # quick connections on phone hotspots
+    last_wake = wake_requested_at()                    # taps from before now don't count
+    misses = DOWN_CHECKS - 1                           # not running at login: start it straight away
     while True:
-        if launcher.server_running():
+        running = launcher.server_running()
+        wake = wake_requested_at()
+        woken = bool(wake) and wake != last_wake
+        if wake:
+            last_wake = wake
+        if running:
             misses = 0
+        elif woken:                                    # someone tapped "Wake up NOOB"
+            if os.path.exists(launcher.STOP_FLAG):
+                os.remove(launcher.STOP_FLAG)
+            misses = DOWN_CHECKS
         elif os.path.exists(launcher.STOP_FLAG):
             misses = 0                                 # the owner switched it off on purpose
         else:
             misses += 1
-            if misses >= 2:                            # down twice in a row: start it again
-                launcher.start_server()
-                misses = 0
-                time.sleep(START_GRACE)
-                continue
+        if not running and misses >= DOWN_CHECKS:
+            launcher.start_server()
+            misses = 0
+            time.sleep(START_GRACE)
+            continue
         time.sleep(CHECK_EVERY)
 
 

@@ -137,6 +137,19 @@ saved = await rpc(admin, 'admin_set_platform_settings', null, null, null, null, 
 check(saved.sparkxOpen === true && saved.joinTeamOpen === true, 'the admin can open both again');
 const sx = await rpc(b, 'submit_sparkx_application', 'Someone', 'Grade 9', 'School', 'Ideas', 'Some AI', '', '', '');
 check(sx.success === true, 'SparkX registration works again once open');
+// Waking NOOB AI up (migration 20260927000004): anyone signed in can ask; nobody logged out; at most once per 10 s
+pub = await rpcAnon('public_platform_settings');
+check(pub.noobAiWakeRequestedAt === null && pub.sparkxOpen === true, 'no wake request at first (and the other settings are still there)');
+await expectFail(() => rpcAnon('request_noob_ai_wake'), /permission denied|log in/i, 'a logged-out visitor can not wake NOOB AI');
+const w1 = await rpc(b, 'request_noob_ai_wake');
+check(w1.success === true && !!w1.requestedAt, 'a signed-in person can wake NOOB AI');
+pub = await rpcAnon('public_platform_settings');
+check(pub.noobAiWakeRequestedAt !== null, 'the NOOB AI computer can read the wake request without logging in');
+const w2 = await rpc(a, 'request_noob_ai_wake');
+check(w2.requestedAt === w1.requestedAt, 'tapping again within 10 seconds changes nothing');
+await db.query(`update platform_settings set noob_ai_wake_requested_at = now() - interval '1 minute'`);
+const w3 = await rpc(a, 'request_noob_ai_wake');
+check(new Date(w3.requestedAt) > new Date(w1.requestedAt), 'a later tap records a new request');
 const fnCount2 = (await db.query(`select count(*)::int as n from pg_proc where proname = 'admin_set_platform_settings'`)).rows[0].n;
 check(fnCount2 === 1, 'still exactly one admin_set_platform_settings', `(found ${fnCount2})`);
 

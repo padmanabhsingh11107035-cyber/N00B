@@ -2667,6 +2667,17 @@ export async function adminSetPlatformSettings(payload: {
   }
 }
 
+// ---- "Wake up NOOB": anyone signed in can ask the NOOB AI computer to start NOOB AI (migration 20260927000004) ----
+
+export async function requestNoobAiWake(): Promise<{ success: boolean; error?: string }> {
+  try {
+    await rpc('request_noob_ai_wake');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not wake NOOB right now.') };
+  }
+}
+
 // ---- Explore pins (main admin): pinned accounts come first in Explore's people list, newest pin on top ----
 
 export async function fetchAdminExplorePins(): Promise<{ userId: string; pinnedAt: string }[]> {

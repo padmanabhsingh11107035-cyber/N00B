@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { noobAiIsOnline, noobAiSignInUrl } from '../../utils/noobAi';
-import { fetchPublicPlatformSettings } from '../../services/api';
+import { fetchPublicPlatformSettings, requestNoobAiWake } from '../../services/api';
 import { NoobAiLogo } from './NoobAiLogo';
 import { NoobAiGem } from './NoobAiGem';
 
@@ -14,7 +14,9 @@ interface NoobAiPageProps {
 // NOOB AI inside the NOOB app: the voice assistant opens full-screen here (no new browser tab) and signs this
 // account in automatically. Its brain runs on the owner's PC, so it can be offline when that PC is off.
 export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = false }) => {
-  const [status, setStatus] = useState<'checking' | 'online' | 'offline' | 'maintenance'>('checking');
+  const [status, setStatus] = useState<'checking' | 'online' | 'offline' | 'maintenance' | 'waking'>('checking');
+  // true after a wake-up attempt that didn't work (then NOOB AI's computer itself is off)
+  const [wakeFailed, setWakeFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const src = useMemo(() => (status === 'online' ? noobAiSignInUrl() : ''), [status, attempt]);
@@ -34,7 +36,26 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
     return () => { alive = false; };
   }, [attempt]);
 
-  const wakeUp = () => setAttempt((n) => n + 1);
+  const reload = () => setAttempt((n) => n + 1);
+
+  // "Wake up NOOB": asks the NOOB AI computer to start NOOB AI (its keeper checks every 15 seconds), then waits
+  // for it to come online. Anyone can wake it; nobody can switch it off from here.
+  const wakeUp = async () => {
+    setStatus('waking');
+    setWakeFailed(false);
+    await requestNoobAiWake();
+    const started = Date.now();
+    while (Date.now() - started < 100_000) {
+      await new Promise((r) => setTimeout(r, 4000));
+      if (await noobAiIsOnline()) {
+        setLoaded(false);
+        setStatus('online');
+        return;
+      }
+    }
+    setWakeFailed(true);
+    setStatus('offline');
+  };
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#f6f7fb] text-slate-900 flex flex-col overflow-hidden">
@@ -50,7 +71,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
             {status === 'online' ? 'Your AI friend · online' : status === 'offline' ? 'Sleeping' : status === 'maintenance' ? 'Under maintenance' : 'Waking up…'}
           </p>
         </div>
-        <button onClick={wakeUp} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Reload" title="Reload">
+        <button onClick={reload} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Reload" title="Reload">
           <RefreshCw className="w-5 h-5" />
         </button>
       </div>
@@ -91,12 +112,25 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
             </button>
           </div>
         )}
+        {status === 'waking' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
+            <NoobAiGem size={180} />
+            <div>
+              <h2 className="text-xl font-black tracking-tight">Waking NOOB up…</h2>
+              <p className="text-sm text-slate-500 max-w-xs mt-2">This usually takes under a minute.</p>
+            </div>
+          </div>
+        )}
         {status === 'offline' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 p-8 text-center">
             <NoobAiGem size={180} sleeping />
             <div>
               <h2 className="text-xl font-black tracking-tight">NOOB is sleeping 💤</h2>
-              <p className="text-sm text-slate-500 max-w-xs mt-2">NOOB AI's computer is switched off or offline right now.</p>
+              <p className="text-sm text-slate-500 max-w-xs mt-2">
+                {wakeFailed
+                  ? "NOOB couldn't wake up — its computer is switched off right now. Please try again later."
+                  : 'Tap below to wake NOOB up.'}
+              </p>
             </div>
             <button
               onClick={wakeUp}

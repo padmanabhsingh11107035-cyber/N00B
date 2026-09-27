@@ -238,6 +238,10 @@ unexpectedly (a crash, a power cut, a Windows update restart). If you stop it on
 off until you open `NOOB App.bat` or log in again. Undo it with **`Don't start with Windows.bat`** (or Task
 Manager → Startup apps → NOOB AI → Disable).
 
+**Wake up NOOB:** when NOOB AI is asleep, anyone signed in to the NOOB app can tap **Wake up NOOB** on the NOOB AI
+page. The keeper on this PC checks for that every 15 seconds and starts NOOB AI (usually awake in under a minute).
+People can only wake it, never switch it off. This needs "Start with Windows" and the PC to be on.
+
 Try: *"Mujhe do din se bukhar hai, kya karun?"*, *"Remember that my blood group is B positive"*,
 *"What's today's date?"*, *"Who won yesterday's cricket match?"*, *"தலைவலிக்கு என்ன செய்யலாம்?"*,
 *"Play Kesariya by Arijit Singh"*, *"Stop the music"*

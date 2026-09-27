@@ -195,6 +195,7 @@ export {
   fetchPublicPlatformSettings,
   adminSetPlatformSettings,
   fetchAdminExplorePins,
+  requestNoobAiWake,
   adminSetExplorePin,
   fetchAdminContentFeed,
   deleteChatMessage,

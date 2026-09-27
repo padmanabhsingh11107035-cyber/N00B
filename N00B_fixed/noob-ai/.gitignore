@@ -5,6 +5,7 @@ server/noob_memory.backup-*.db
 server/noob_settings.json
 server/noob_settings.json.tmp
 server/noob_server.log
+server/stopped-by-owner.flag
 
 # Downloaded / installed automatically
 server/models/

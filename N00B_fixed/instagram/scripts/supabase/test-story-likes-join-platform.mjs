@@ -124,6 +124,22 @@ check(saved.maintenanceEnabled === false && saved.noobAiMaintenance === false, '
 const fnCount = (await db.query(`select count(*)::int as n from pg_proc where proname = 'admin_set_platform_settings'`)).rows[0].n;
 check(fnCount === 1, 'there is exactly one admin_set_platform_settings (no ambiguous old version left)', `(found ${fnCount})`);
 
+// SparkX registration + "join the NOOB team" switches (migration 20260927000003)
+pub = await rpcAnon('public_platform_settings');
+check(pub.sparkxOpen === true && pub.joinTeamOpen === true, 'SparkX registration and team applications start open');
+await expectFail(() => rpc(a, 'admin_set_platform_settings', null, null, null, null, false, null), /Access denied/, 'a non-admin can not close SparkX registration');
+saved = await rpc(admin, 'admin_set_platform_settings', null, null, null, null, false, false);
+check(saved.sparkxOpen === false && saved.joinTeamOpen === false && saved.noobAiMaintenance === false && saved.signupsEnabled === true,
+  'the admin can close both without touching the other switches');
+await expectFail(() => rpc(b, 'submit_team_application', 'Someone', 'Moderator', 'why not', '', '', ''), /closed/i, 'no team applications while closed');
+await expectFail(() => rpc(b, 'submit_sparkx_application', 'Someone', 'Grade 9', 'School', 'Ideas', 'Some AI', '', '', ''), /closed/i, 'no SparkX registrations while closed');
+saved = await rpc(admin, 'admin_set_platform_settings', null, null, null, null, true, true);
+check(saved.sparkxOpen === true && saved.joinTeamOpen === true, 'the admin can open both again');
+const sx = await rpc(b, 'submit_sparkx_application', 'Someone', 'Grade 9', 'School', 'Ideas', 'Some AI', '', '', '');
+check(sx.success === true, 'SparkX registration works again once open');
+const fnCount2 = (await db.query(`select count(*)::int as n from pg_proc where proname = 'admin_set_platform_settings'`)).rows[0].n;
+check(fnCount2 === 1, 'still exactly one admin_set_platform_settings', `(found ${fnCount2})`);
+
 // =====================================================================================
 section('4. Admin content browser');
 await expectFail(() => rpc(a, 'admin_content_feed', 'posts', 10), /Access denied/, 'a non-admin can not use the admin content browser');

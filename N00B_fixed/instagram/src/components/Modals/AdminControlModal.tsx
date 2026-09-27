@@ -42,14 +42,18 @@ import {
   Smartphone,
   Rocket,
   UserCircle,
-  Bot
+  Bot,
+  Pin,
+  PinOff,
+  Handshake
 } from 'lucide-react';
 import { User } from '../../types';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
-  fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings
+  fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
+  fetchAdminExplorePins, adminSetExplorePin
 } from '../../services/api';
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
@@ -94,7 +98,18 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'product_updated': return `${who} edited a shop product.`;
     case 'product_removed': return `${who} removed a shop product.`;
     case 'message_deleted': return `${who} deleted a chat message.`;
-    case 'platform_settings_changed': return `${who} changed platform settings${d.signupsEnabled != null ? `: sign-ups ${d.signupsEnabled ? 'ON' : 'OFF'}` : ''}${d.maintenanceEnabled != null ? `${d.signupsEnabled == null ? ':' : ','} maintenance ${d.maintenanceEnabled ? 'ON' : 'OFF'}` : ''}${d.noobAiMaintenance != null ? `${d.signupsEnabled == null && d.maintenanceEnabled == null ? ':' : ','} NOOB AI lock ${d.noobAiMaintenance ? 'ON' : 'OFF'}` : ''}.`;
+    case 'platform_settings_changed': {
+      const parts = [
+        d.signupsEnabled != null && `sign-ups ${d.signupsEnabled ? 'ON' : 'OFF'}`,
+        d.maintenanceEnabled != null && `maintenance ${d.maintenanceEnabled ? 'ON' : 'OFF'}`,
+        d.noobAiMaintenance != null && `NOOB AI lock ${d.noobAiMaintenance ? 'ON' : 'OFF'}`,
+        d.sparkxOpen != null && `SparkX registration ${d.sparkxOpen ? 'OPEN' : 'CLOSED'}`,
+        d.joinTeamOpen != null && `team applications ${d.joinTeamOpen ? 'OPEN' : 'CLOSED'}`,
+      ].filter(Boolean);
+      return `${who} changed platform settings${parts.length ? ': ' + parts.join(', ') : ''}.`;
+    }
+    case 'explore_pin': return `${who} pinned ${target || 'an account'} to the top of Explore.`;
+    case 'explore_unpin': return `${who} unpinned ${target || 'an account'} from Explore.`;
     default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;
   }
 }
@@ -188,6 +203,11 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [storeOrdersEnabled, setStoreOrdersEnabled] = useState(true);
   const [noobAiMaintenance, setNoobAiMaintenance] = useState(false);
+  const [sparkxOpen, setSparkxOpen] = useState(true);
+  const [joinTeamOpen, setJoinTeamOpen] = useState(true);
+  // Explore pins (main admin): userId -> when it was pinned. Pinned accounts come first in Explore, newest on top.
+  const [explorePins, setExplorePins] = useState<Record<string, string>>({});
+  const [pinBusyId, setPinBusyId] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
@@ -277,6 +297,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setMaintenanceEnabled(s.maintenanceEnabled);
     setMaintenanceMessage(s.maintenanceMessage);
     setNoobAiMaintenance(!!s.noobAiMaintenance);
+    setSparkxOpen(s.sparkxOpen !== false);
+    setJoinTeamOpen(s.joinTeamOpen !== false);
     setStoreOrdersEnabled(shop.storeEnabled);
     setLoadingSettings(false);
   };
@@ -381,6 +403,36 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setSavingSettings(false);
   };
 
+  const handleToggleSparkx = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ sparkxOpen: !sparkxOpen });
+    if (res.success && res.settings) setSparkxOpen(res.settings.sparkxOpen !== false);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleToggleJoinTeam = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ joinTeamOpen: !joinTeamOpen });
+    if (res.success && res.settings) setJoinTeamOpen(res.settings.joinTeamOpen !== false);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const pinsToMap = (pins: { userId: string; pinnedAt: string }[]) => Object.fromEntries(pins.map((x) => [x.userId, x.pinnedAt]));
+  const handleTogglePin = async (user: User) => {
+    const pinned = !!explorePins[user.id];
+    setPinBusyId(user.id);
+    const res = await adminSetExplorePin(user.id, !pinned);
+    if (res.success && res.pins) {
+      setExplorePins(pinsToMap(res.pins));
+      setStatusMessage({ text: pinned ? `@${user.username} unpinned from Explore.` : `@${user.username} is now first in Explore.`, type: 'success' });
+    } else {
+      setStatusMessage({ text: res.error || 'Could not update the pin.', type: 'error' });
+    }
+    setPinBusyId(null);
+  };
+
   const handleToggleNoobAiMaintenance = async () => {
     setSavingSettings(true);
     const res = await adminSetPlatformSettings({ noobAiMaintenance: !noobAiMaintenance });
@@ -466,7 +518,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetchAdminUsersList();
+      const [res, pins] = await Promise.all([fetchAdminUsersList(), main ? fetchAdminExplorePins() : Promise.resolve([])]);
+      setExplorePins(pinsToMap(pins));
       if (res.success && res.users) {
         setUsersList(res.users);
       } else if (!res.success) {
@@ -973,6 +1026,22 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             {copiedLinkKey === `profile:${user.id}` ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <LinkIcon className="w-3.5 h-3.5" />}
                             <span className="hidden sm:inline">{copiedLinkKey === `profile:${user.id}` ? 'Copied!' : 'Share'}</span>
                           </button>
+                          {main && (
+                            <button
+                              onClick={() => handleTogglePin(user)}
+                              disabled={pinBusyId === user.id}
+                              title={explorePins[user.id] ? 'Unpin from the top of Explore' : 'Pin to the top of Explore (people never see that it is pinned)'}
+                              aria-label={explorePins[user.id] ? `Unpin @${user.username} from Explore` : `Pin @${user.username} to the top of Explore`}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border disabled:opacity-50 ${
+                                explorePins[user.id]
+                                  ? 'bg-violet-500/25 text-violet-200 border-violet-400/50 hover:bg-violet-500/35'
+                                  : 'bg-violet-500/10 text-violet-300 border-violet-500/30 hover:bg-violet-500/20'
+                              }`}
+                            >
+                              {explorePins[user.id] ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                              <span className="hidden sm:inline">{explorePins[user.id] ? 'Pinned' : 'Pin'}</span>
+                            </button>
+                          )}
                           {canViewAccounts && (
                             <button
                               onClick={() => setSelectedUserForDetails(user)}
@@ -1775,6 +1844,34 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     </div>
                     <button onClick={handleToggleNoobAiMaintenance} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="NOOB AI maintenance lock">
                       {noobAiMaintenance ? <ToggleRight className="w-9 h-9 text-violet-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-bold text-white flex items-center gap-2">
+                        <Rocket className="w-4 h-4 text-orange-300" /> SparkX registration
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        {sparkxOpen ? 'Open: the rocket on the feed opens the SparkX registration form.' : 'Closed: the rocket shows "Registration closed".'}
+                      </span>
+                    </div>
+                    <button onClick={handleToggleSparkx} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="SparkX registration">
+                      {sparkxOpen ? <ToggleRight className="w-9 h-9 text-orange-300" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-bold text-white flex items-center gap-2">
+                        <Handshake className="w-4 h-4 text-violet-300" /> Join the NOOB team
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        {joinTeamOpen ? 'Open: the join button shows on the feed and Explore.' : 'Closed: the join button is hidden; shared join links say "Applications closed".'}
+                      </span>
+                    </div>
+                    <button onClick={handleToggleJoinTeam} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="Join the NOOB team applications">
+                      {joinTeamOpen ? <ToggleRight className="w-9 h-9 text-violet-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
                     </button>
                   </div>
 

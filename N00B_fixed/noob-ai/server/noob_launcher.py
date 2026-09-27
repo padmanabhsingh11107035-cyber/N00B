@@ -17,6 +17,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 APP_URL = "http://localhost:5000/app"
 LOADING_PAGE = os.path.join(HERE, "web", "loading.html")
 LOG_FILE = os.path.join(HERE, "noob_server.log")
+# Written when the owner stops NOOB from the app (Settings > Stop NOOB server), so the auto-start
+# (noob_autostart.py) doesn't switch it straight back on. Opening NOOB App.bat removes it.
+STOP_FLAG = os.path.join(HERE, "stopped-by-owner.flag")
 
 
 def server_running():
@@ -49,6 +52,8 @@ def open_window(url):
 
 
 if __name__ == "__main__":
+    if os.path.exists(STOP_FLAG):
+        os.remove(STOP_FLAG)                                  # opened on purpose: NOOB may run again
     if server_running():
         open_window(APP_URL)
     else:

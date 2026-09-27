@@ -25,6 +25,7 @@ import os
 import queue
 import re
 import secrets
+import socket
 import threading
 import time
 import wave
@@ -1275,6 +1276,8 @@ def api_log():
 @owner_only
 def api_shutdown():
     log("NOOB server stopped from the app.")
+    with open(os.path.join(HERE, "stopped-by-owner.flag"), "w") as flag:     # the auto-start leaves it off
+        flag.write(datetime.now().isoformat())
     threading.Timer(0.5, stop_everything).start()
     return jsonify(ok=True)
 
@@ -1355,7 +1358,19 @@ def stop_everything():
     os._exit(0)
 
 
+def port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("0.0.0.0", port))
+            return False
+        except OSError:
+            return True
+
+
 if __name__ == "__main__":
+    if port_in_use(PORT):                              # already running (e.g. started twice at once): nothing to do
+        print("NOOB server is already running.", flush=True)
+        raise SystemExit(0)
     noob_devices.start_server_responder(PORT, log)
     noob_social.watch_platform(log)                    # the NOOB admin's maintenance lock for NOOB AI
     tunnel = noob_tunnel.start(log)

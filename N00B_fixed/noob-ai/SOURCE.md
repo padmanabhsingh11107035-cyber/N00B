@@ -1,14 +1,13 @@
-# NOOB AI — the voice assistant (copy inside the NOOB repository)
+# NOOB AI — the voice assistant
 
 This folder is the complete code of **NOOB AI**, the multilingual voice assistant that opens from the NOOB app
-(**Profile → ⋮ → NOOB AI**) and runs at https://ai.nooob.xyz.
+(**Profile → ⋮ → NOOB AI**) and runs at https://ai.nooob.xyz. It is developed here, in the NOOB repository.
 
-- Main repository (where it is developed): https://github.com/padmanabhsingh11107035-cyber/noobai
-- This copy matches commit `95a4b08` of that repository.
 - It does **not** run on Cloudflare with the NOOB website: the server (`server/`, Python) runs on the owner's PC
   and is reached through a Cloudflare Tunnel. The robot's code is `noob_esp32/noob_esp32.ino` (ESP32-S3).
-- The NOOB app side (on the live branch `supabase-migration`) lives in `../instagram/src/components/Profile/NoobAiPage.tsx`, `NoobAiLogo.tsx`,
-  `NoobAiCore3D.tsx` and `../instagram/src/utils/noobAi.ts`.
+- The NOOB app side (on the live branch `supabase-migration`) lives in `../instagram/src/components/Profile/NoobAiPage.tsx`,
+  `NoobAiLogo.tsx`, `NoobAiGem.tsx` and `../instagram/src/utils/noobAi.ts`.
+- The older separate repository (github.com/padmanabhsingh11107035-cyber/noobai) is no longer updated.
 
 Start with [README.md](README.md) for what it does, the parts list, the wiring and the setup.
 Private data (the memory database, settings with the Gemini key, logs) is never part of this code (see `.gitignore`).

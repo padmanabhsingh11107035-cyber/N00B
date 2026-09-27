@@ -232,6 +232,12 @@ Press the button once while NOOB is talking or playing a song to stop it.
 The server keeps running after you close the app window, so the NOOB device keeps working.
 Stop it in **Settings → Stop NOOB server**. Open the app again with `NOOB App.bat`.
 
+**Keep NOOB AI always on:** double-click **`Start with Windows.bat`** once. From then on NOOB AI starts by itself
+(no window) whenever you log in to Windows, and starts again within about two minutes if it ever stops
+unexpectedly (a crash, a power cut, a Windows update restart). If you stop it on purpose in Settings, it stays
+off until you open `NOOB App.bat` or log in again. Undo it with **`Don't start with Windows.bat`** (or Task
+Manager → Startup apps → NOOB AI → Disable).
+
 Try: *"Mujhe do din se bukhar hai, kya karun?"*, *"Remember that my blood group is B positive"*,
 *"What's today's date?"*, *"Who won yesterday's cricket match?"*, *"தலைவலிக்கு என்ன செய்யலாம்?"*,
 *"Play Kesariya by Arijit Singh"*, *"Stop the music"*
@@ -377,6 +383,7 @@ noob-esp32-assistant/
     ├── NOOB App.bat           ← double-click to open the NOOB App
     ├── start_noob.bat         ← runs the server in a visible window (to see errors)
     ├── noob_launcher.py       ← starts the server and opens the app window
+    ├── noob_autostart.py      ← keeps NOOB running (Start with Windows.bat / Don't start with Windows.bat)
     ├── noob_server.py         ← speech → AI → voice, and the app's API (Python)
     ├── noob_memory.py         ← permanent memory (SQLite database)
     ├── noob_devices.py        ← "Connect to nearby devices" (UDP discovery + pairing)

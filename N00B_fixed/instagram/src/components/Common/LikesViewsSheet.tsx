@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Eye, Search, UserPlus, UserCheck, Clock } from 'lucide-react';
+import { X, Loader2, Eye, Search, UserPlus, UserCheck, Clock, Heart } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from './VerifiedBadge';
 
@@ -16,10 +16,9 @@ interface ToggleFollowResult {
 }
 
 interface LikesViewsSheetProps {
-  // At least one of these must be given. When both are given, the sheet shows a fixed
-  // "Likes and views" title with the view count as a headline stat, and the likes list below
-  // (matching Instagram's real reel-insights layout — views are a count, not a browsable list).
-  // With only one given, it just shows that single list under its own label.
+  // At least one of these must be given. When both are given (the owner looking at their own post or
+  // reel), the sheet is titled "Likes and views" and lists everyone who viewed it, with the people who
+  // liked it first and a heart next to them. With only one given, it shows that single list.
   likes?: ListSource;
   views?: ListSource;
   // The raw view count to show as the headline stat — separate from views.fetchUsers's list
@@ -55,12 +54,12 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
   onToggleFollowUser
 }) => {
   const hasBoth = !!likes && !!views;
-  // With both given, the browsable list is always the likes list (views is summary-only, above).
-  // With only one given, that one is what's shown.
+  // With only one given, that one is what's shown (with both, the two lists are merged below).
   const activeSource = hasBoth ? likes : initialTab === 'views' ? views || likes : likes || views;
-  const listLabel = hasBoth ? 'Liked by' : activeSource?.label || 'Liked by';
 
   const [users, setUsers] = useState<User[]>([]);
+  // Who liked it (shown first, with a heart).
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -80,10 +79,25 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
     setError(null);
     (async () => {
       try {
-        const res = await activeSource.fetchUsers();
+        let res: { users?: User[]; error?: string };
+        let liked = new Set<string>();
+        if (hasBoth) {
+          // Everyone who viewed it, the people who liked it first. If the viewers can't be loaded,
+          // the likes are still shown.
+          const [likeRes, viewRes] = await Promise.all([likes!.fetchUsers(), views!.fetchUsers().catch(() => ({ users: undefined }))]);
+          if (!likeRes.users) res = likeRes;
+          else {
+            liked = new Set(likeRes.users.map((u) => u.id));
+            res = { users: [...likeRes.users, ...(viewRes.users || []).filter((u) => !liked.has(u.id))] };
+          }
+        } else {
+          res = await activeSource.fetchUsers();
+          if (activeSource === likes && res.users) liked = new Set(res.users.map((u) => u.id));
+        }
         if (cancelled) return;
         if (res.users) {
           setUsers(res.users);
+          setLikedIds(liked);
           setFollowState(
             Object.fromEntries(res.users.map((u) => [u.id, { isFollowing: !!u.isFollowing, isFollowRequested: !!u.isFollowRequested }]))
           );
@@ -206,11 +220,9 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
           </div>
         )}
 
-        {/* "Liked by" section header (only needed when it'd say something the title above
-            doesn't already say — the single-list title already names the list). + search */}
+        {/* Search */}
         {!loading && !error && (
-          <div className="px-4 pt-3 pb-2 shrink-0 space-y-2.5">
-            {hasBoth && <h4 className="text-sm font-bold text-white">{listLabel}</h4>}
+          <div className="px-4 pt-3 pb-2 shrink-0">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -259,6 +271,9 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
                       {u.displayName && <span className="text-[11px] text-zinc-500 truncate block">{u.displayName}</span>}
                     </div>
                   </button>
+                  {likedIds.has(u.id) && (
+                    <Heart className="w-4 h-4 text-red-500 fill-red-500 shrink-0" aria-label="Liked" />
+                  )}
                   {onToggleFollowUser && !isSelf && (
                     <button
                       onClick={() => handleFollowClick(u)}

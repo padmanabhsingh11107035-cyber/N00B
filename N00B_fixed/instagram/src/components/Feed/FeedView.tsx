@@ -17,13 +17,15 @@ import {
   X,
   ArrowDown,
   Loader2,
-  Rocket
+  Rocket,
+  Handshake
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
 import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
+import { JoinUsModal } from '../Explore/JoinUsModal';
 
 interface FeedViewProps {
   currentUser: User;
@@ -51,6 +53,9 @@ interface FeedViewProps {
   onNavigateToReel?: (reelId: string) => void;
   onNavigateToProfile?: (user: User) => void;
   onToggleFollowUser?: (userId: string) => Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean } | void>;
+  // Admin Control Panel → Platform switches (both open unless switched off)
+  sparkxOpen?: boolean;
+  joinTeamOpen?: boolean;
 }
 
 const POSTS_PER_PAGE = 4;
@@ -80,9 +85,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToPost,
   onNavigateToReel,
   onNavigateToProfile,
-  onToggleFollowUser
+  onToggleFollowUser,
+  sparkxOpen = true,
+  joinTeamOpen = true
 }) => {
-  const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following' | 'favorites'>('foryou');
+  const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following'>('foryou');
+  const [showJoinUsModal, setShowJoinUsModal] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [hiddenAdIds, setHiddenAdIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -128,8 +136,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   if (activeFeedFilter === 'following') {
     filteredPosts = filteredPosts.filter((p) => p.username !== 'antigravity_dev');
-  } else if (activeFeedFilter === 'favorites') {
-    filteredPosts = filteredPosts.filter((p) => p.isSaved || p.isLiked);
   }
 
   const paginatedPosts = filteredPosts.slice(0, visibleCount);
@@ -235,6 +241,17 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
         {/* Feed Switcher — centered in the header regardless of the logo/icons widths on either side */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] shrink-0">
+          {/* Apply to join the NOOB team — just left of the switcher (the switcher itself stays centred) */}
+          {joinTeamOpen && (
+            <button
+              onClick={() => setShowJoinUsModal(true)}
+              className="absolute right-full mr-1.5 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-violet-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+              title="Join the NOOB team"
+              aria-label="Join the NOOB team"
+            >
+              <Handshake className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={() => setActiveFeedFilter('foryou')}
             className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
@@ -254,16 +271,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
             }`}
           >
             Following
-          </button>
-          <button
-            onClick={() => setActiveFeedFilter('favorites')}
-            className={`px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer hidden sm:inline ${
-              activeFeedFilter === 'favorites'
-                ? 'bg-rose-600 text-white shadow-sm font-bold'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Starred
           </button>
         </div>
 
@@ -445,7 +452,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
         />
       )}
 
-      {showSparkXModal && <SparkXApplicationModal onClose={() => setShowSparkXModal(false)} />}
+      {showSparkXModal && <SparkXApplicationModal closed={!sparkxOpen} onClose={() => setShowSparkXModal(false)} />}
+      {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
     </div>
   );
 };

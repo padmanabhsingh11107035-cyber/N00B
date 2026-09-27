@@ -915,8 +915,8 @@ export default function App() {
         <div className="space-y-7">
           {/* Logo & Brand Header */}
           <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-full overflow-hidden shadow-[0_0_20px_rgba(239,68,68,0.35)]">
-              <img src="/noob-logo.svg.jpeg" alt="NOOB" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/15 shadow-[0_0_20px_rgba(255,255,255,0.12)]">
+              <img src="/noob-logo-circle.png" alt="NOOB" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
@@ -1032,28 +1032,16 @@ export default function App() {
               <span>Music Hub</span>
             </button>
 
-            <button
-              onClick={() => setShowProfessionalDashboardModal(true)}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-            >
-              <BarChart3 className="w-4 h-4 text-purple-400" />
-              <span>Account Insights</span>
-            </button>
-
-            <button
-              onClick={() => setShowCustomerSupportModal(true)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-3.5">
-                <img
-                  src="/noob-support-logo.png"
-                  alt=""
-                  className="w-5 h-5 object-contain group-hover:rotate-12 transition-transform"
-                />
-                <span>AI Customer Support</span>
-              </div>
-              <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
-            </button>
+            {/* Insights are for business accounts only. (Customer support is the round button at the bottom right.) */}
+            {currentUser.isBusiness && (
+              <button
+                onClick={() => setShowProfessionalDashboardModal(true)}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+              >
+                <BarChart3 className="w-4 h-4 text-purple-400" />
+                <span>Account Insights</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -1130,6 +1118,8 @@ export default function App() {
             onNavigateToReel={handleNavigateToReel}
             onNavigateToProfile={handleNavigateToUserProfile}
             onToggleFollowUser={handleToggleFollowUser}
+            sparkxOpen={platformSettings?.sparkxOpen !== false}
+            joinTeamOpen={platformSettings?.joinTeamOpen !== false}
           />
         )}
 
@@ -1151,6 +1141,7 @@ export default function App() {
             onToggleFollowUser={handleToggleFollowUser}
             autoOpenJoinTeam={pendingJoinTeam}
             onAutoOpenJoinTeamHandled={() => setPendingJoinTeam(false)}
+            joinTeamOpen={platformSettings?.joinTeamOpen !== false}
           />
         )}
 

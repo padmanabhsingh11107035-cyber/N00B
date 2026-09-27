@@ -4,11 +4,13 @@ import { submitSparkXApplication, notifySparkxRegistered } from '../../services/
 
 interface SparkXApplicationModalProps {
   onClose: () => void;
+  // Registration switched off in the Admin Control Panel → shows "Registration closed" instead of the form.
+  closed?: boolean;
 }
 
 const GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 
-export const SparkXApplicationModal: React.FC<SparkXApplicationModalProps> = ({ onClose }) => {
+export const SparkXApplicationModal: React.FC<SparkXApplicationModalProps> = ({ onClose, closed = false }) => {
   const [fullName, setFullName] = useState('');
   const [grade, setGrade] = useState(GRADES[0]);
   const [schoolName, setSchoolName] = useState('');
@@ -57,7 +59,16 @@ export const SparkXApplicationModal: React.FC<SparkXApplicationModalProps> = ({ 
           </button>
         </div>
 
-        {done ? (
+        {closed ? (
+          <div className="p-8 text-center space-y-2">
+            <div className="w-11 h-11 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-xl">🔒</div>
+            <h3 className="text-sm font-bold text-white">Registration closed</h3>
+            <p className="text-xs text-zinc-400 max-w-xs mx-auto">SparkX registration has ended. Thank you for your interest.</p>
+            <button onClick={onClose} className="mt-3 px-5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold cursor-pointer">
+              Close
+            </button>
+          </div>
+        ) : done ? (
           <div className="p-8 text-center space-y-3">
             <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
             <h3 className="text-sm font-bold text-white">Application submitted!</h3>

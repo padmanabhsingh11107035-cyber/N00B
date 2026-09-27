@@ -2631,13 +2631,16 @@ export interface PlatformSettings {
   maintenanceMessage: string;
   // NOOB AI (the voice assistant) maintenance lock — migration 20260927000002
   noobAiMaintenance?: boolean;
+  // SparkX registration and "join the NOOB team" applications — migration 20260927000003
+  sparkxOpen?: boolean;
+  joinTeamOpen?: boolean;
 }
 
 export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
   try {
     return await rpc<PlatformSettings>('public_platform_settings');
   } catch {
-    return { signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false };
+    return { signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false, sparkxOpen: true, joinTeamOpen: true };
   }
 }
 
@@ -2646,17 +2649,36 @@ export async function adminSetPlatformSettings(payload: {
   maintenanceEnabled?: boolean;
   maintenanceMessage?: string;
   noobAiMaintenance?: boolean;
+  sparkxOpen?: boolean;
+  joinTeamOpen?: boolean;
 }): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
   try {
     const settings = await rpc<PlatformSettings>('admin_set_platform_settings', {
       p_signups_enabled: payload.signupsEnabled ?? null,
       p_maintenance_enabled: payload.maintenanceEnabled ?? null,
       p_maintenance_message: payload.maintenanceMessage ?? null,
-      ...(payload.noobAiMaintenance !== undefined ? { p_noob_ai_maintenance: payload.noobAiMaintenance } : {})
+      ...(payload.noobAiMaintenance !== undefined ? { p_noob_ai_maintenance: payload.noobAiMaintenance } : {}),
+      ...(payload.sparkxOpen !== undefined ? { p_sparkx_open: payload.sparkxOpen } : {}),
+      ...(payload.joinTeamOpen !== undefined ? { p_join_team_open: payload.joinTeamOpen } : {})
     });
     return { success: true, settings };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not save platform settings.') };
+  }
+}
+
+// ---- Explore pins (main admin): pinned accounts come first in Explore's people list, newest pin on top ----
+
+export async function fetchAdminExplorePins(): Promise<{ userId: string; pinnedAt: string }[]> {
+  try { return (await rpc<{ userId: string; pinnedAt: string }[]>('admin_explore_pins')) || []; } catch { return []; }
+}
+
+export async function adminSetExplorePin(userId: string, pinned: boolean): Promise<{ success: boolean; pins?: { userId: string; pinnedAt: string }[]; error?: string }> {
+  try {
+    const pins = await rpc<{ userId: string; pinnedAt: string }[]>('admin_set_explore_pin', { p_user: userId, p_pinned: pinned });
+    return { success: true, pins: pins || [] };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update the pin.') };
   }
 }
 

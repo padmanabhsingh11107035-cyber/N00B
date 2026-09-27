@@ -1225,11 +1225,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
 
-          {/* 2. Centered Username & Verified Badge (Clean, No Public Tag) */}
-          <div className="flex items-center justify-center gap-2 flex-wrap pt-1">
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          {/* 2. Username, exactly centred on the page (like the name below it): the verified tick and the
+                switch-account arrow hang off its right side without pushing it off centre. */}
+          <div className="w-full flex justify-center pt-1 px-14">
+            <div className="relative min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight text-center break-all">
               @{targetUser.username}
             </h1>
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-1.5 flex items-center gap-1">
             {isOwnProfile && (
               <button
                 type="button"
@@ -1246,17 +1249,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             ) : (
               <CheckCircle2 className="w-4 h-4 text-[#00FF66] fill-[#00FF66]/20" />
             )}
-
-            {/* Account Type Badge (Only show if Business or Private; No Public tag) */}
-            {isBusiness ? (
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30 flex items-center gap-1 whitespace-nowrap">
-                <Briefcase className="w-3 h-3" /> Business
-              </span>
-            ) : isPrivate ? (
-              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-1 whitespace-nowrap">
-                <Lock className="w-3 h-3" /> Private
-              </span>
-            ) : null}
+            </div>
+            </div>
           </div>
 
           {/* 3. Display Name in Perfect Line */}
@@ -1266,6 +1260,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-xs text-zinc-500 font-normal">({targetUser.pronouns})</span>
             )}
           </div>
+
+          {/* Account type (Business or Private; no "Public" tag), centred under the name */}
+          {(isBusiness || isPrivate) && (
+            <div className="flex justify-center -mt-2">
+              {isBusiness ? (
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30 flex items-center gap-1 whitespace-nowrap">
+                  <Briefcase className="w-3 h-3" /> Business
+                </span>
+              ) : (
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-1 whitespace-nowrap">
+                  <Lock className="w-3 h-3" /> Private
+                </span>
+              )}
+            </div>
+          )}
 
           {/* 4. Symmetrical Stats Numbers Box */}
           <div className="grid grid-cols-3 divide-x divide-zinc-800 bg-zinc-900/90 border border-zinc-800/80 rounded-2xl py-3.5 px-1 sm:px-6 w-full max-w-md shadow-inner">

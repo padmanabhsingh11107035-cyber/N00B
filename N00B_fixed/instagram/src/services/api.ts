@@ -194,6 +194,8 @@ export {
   sendSparkxMeetingInvite,
   fetchPublicPlatformSettings,
   adminSetPlatformSettings,
+  fetchAdminExplorePins,
+  adminSetExplorePin,
   fetchAdminContentFeed,
   deleteChatMessage,
   registerPushToken,

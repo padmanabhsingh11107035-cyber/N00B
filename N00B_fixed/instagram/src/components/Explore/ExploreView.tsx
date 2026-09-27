@@ -23,6 +23,7 @@ import {
   Shuffle,
   RefreshCw,
   ArrowDown,
+  Handshake,
   User as UserIcon,
   Loader2
 } from 'lucide-react';
@@ -60,6 +61,8 @@ interface ExploreViewProps {
   // modal automatically once this view has actually mounted.
   autoOpenJoinTeam?: boolean;
   onAutoOpenJoinTeamHandled?: () => void;
+  // Admin Control Panel → Platform: "join the NOOB team" applications open?
+  joinTeamOpen?: boolean;
 }
 
 const CATEGORIES = ['All', 'Humor', 'Gaming', 'Music', 'Art & Design', 'Vibes', 'Tech', 'Lifestyle'];
@@ -75,7 +78,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onNavigateToUserProfile,
   onToggleFollowUser,
   autoOpenJoinTeam,
-  onAutoOpenJoinTeamHandled
+  onAutoOpenJoinTeamHandled,
+  joinTeamOpen = true
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reels'>('users');
   const [searchQuery, setSearchQuery] = useState('');
@@ -173,7 +177,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
       const rawRes = await fetchUsers(query);
       const res = (rawRes || []).filter((u: any) => !u.isAi && u.username !== 'noob_ai' && u.id !== 'u_noob_ai');
       if (shouldShuffle) {
-        setUsersList([...res].sort(() => Math.random() - 0.5));
+        // Accounts the admin pinned stay first (in their order); everyone else is shuffled.
+        const pinned = res.filter((u: any) => u.pinned);
+        const others = res.filter((u: any) => !u.pinned).sort(() => Math.random() - 0.5);
+        setUsersList([...pinned, ...others]);
       } else {
         setUsersList(res);
       }
@@ -465,17 +472,20 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           <Shuffle className="w-4 h-4" />
         </button>
 
-        {/* Apply to join the NOOB team */}
-        <button
-          onClick={() => setShowJoinUsModal(true)}
-          className="p-3 rounded-2xl bg-zinc-900 border border-white/10 hover:border-violet-400/50 text-zinc-300 hover:text-violet-300 transition-all cursor-pointer shadow-sm"
-          title="Apply to join the NOOB team"
-        >
-          <Briefcase className="w-4 h-4" />
-        </button>
+        {/* Apply to join the NOOB team (hidden while applications are closed) */}
+        {joinTeamOpen && (
+          <button
+            onClick={() => setShowJoinUsModal(true)}
+            className="p-3 rounded-2xl bg-zinc-900 border border-white/10 hover:border-violet-400/50 text-zinc-300 hover:text-violet-300 transition-all cursor-pointer shadow-sm"
+            title="Join the NOOB team"
+            aria-label="Join the NOOB team"
+          >
+            <Handshake className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {showJoinUsModal && <JoinUsModal onClose={() => setShowJoinUsModal(false)} />}
+      {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
 
       {/* 2. Category & Section Switcher */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">

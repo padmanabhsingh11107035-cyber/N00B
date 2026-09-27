@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { X, Briefcase, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Handshake, CheckCircle2, Loader2 } from 'lucide-react';
 import { submitTeamApplication } from '../../services/api';
 
 interface JoinUsModalProps {
   onClose: () => void;
+  // Applications switched off in the Admin Control Panel → shows "Applications closed" instead of the form.
+  closed?: boolean;
 }
 
 const ROLES = ['Moderator', 'Community Manager', 'Developer', 'Designer', 'Content Creator', 'Other'];
 
-export const JoinUsModal: React.FC<JoinUsModalProps> = ({ onClose }) => {
+export const JoinUsModal: React.FC<JoinUsModalProps> = ({ onClose, closed = false }) => {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState(ROLES[0]);
   const [why, setWhy] = useState('');
@@ -39,7 +41,7 @@ export const JoinUsModal: React.FC<JoinUsModalProps> = ({ onClose }) => {
         <div className="p-5 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-950 z-10">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center">
-              <Briefcase className="w-4.5 h-4.5 text-violet-300" />
+              <Handshake className="w-4.5 h-4.5 text-violet-300" />
             </div>
             <h2 className="text-sm font-bold text-white">Apply to Join the NOOB Team</h2>
           </div>
@@ -48,7 +50,16 @@ export const JoinUsModal: React.FC<JoinUsModalProps> = ({ onClose }) => {
           </button>
         </div>
 
-        {done ? (
+        {closed ? (
+          <div className="p-8 text-center space-y-2">
+            <div className="w-11 h-11 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-xl">🔒</div>
+            <h3 className="text-sm font-bold text-white">Applications closed</h3>
+            <p className="text-xs text-zinc-400 max-w-xs mx-auto">We aren't taking applications to join the NOOB team right now. Please check back later.</p>
+            <button onClick={onClose} className="mt-3 px-5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold cursor-pointer">
+              Close
+            </button>
+          </div>
+        ) : done ? (
           <div className="p-8 text-center space-y-3">
             <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
             <h3 className="text-sm font-bold text-white">Application submitted!</h3>

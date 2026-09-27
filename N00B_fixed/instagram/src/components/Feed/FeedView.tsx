@@ -134,8 +134,10 @@ export const FeedView: React.FC<FeedViewProps> = ({
     );
   }
 
+  // Following: only posts from the accounts you follow.
   if (activeFeedFilter === 'following') {
-    filteredPosts = filteredPosts.filter((p) => p.username !== 'antigravity_dev');
+    const following = new Set(currentUser.followingIds || []);
+    filteredPosts = filteredPosts.filter((p) => following.has(p.userId));
   }
 
   const paginatedPosts = filteredPosts.slice(0, visibleCount);
@@ -400,7 +402,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
             <Sparkles className="w-10 h-10 text-[#00FF66] mx-auto mb-2 opacity-60" />
             <h3 className="text-sm font-bold text-white">No Posts in this feed</h3>
-            <p className="text-xs text-zinc-400 mt-1">Try selecting another topic filter or refreshing.</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              {activeFeedFilter === 'following'
+                ? (currentUser.followingIds || []).length === 0
+                  ? 'Follow people to see their posts here.'
+                  : 'The people you follow haven’t posted anything here yet.'
+                : 'Try selecting another topic filter or refreshing.'}
+            </p>
           </div>
         ) : (
           <>

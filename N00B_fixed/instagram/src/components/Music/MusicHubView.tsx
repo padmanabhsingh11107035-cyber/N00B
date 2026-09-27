@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import {
+import React, { useState, useRef, useEffect } from 'react';
+import { Heart,
   Music,
   Play,
   Pause,
@@ -39,8 +39,14 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     togglePlay,
     toggleMute,
     refreshTracks,
-    seekTo
+    seekTo,
+    toggleLike
   } = useMusicPlayer();
+
+  useEffect(() => {
+    refreshTracks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -400,6 +406,23 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
+                {/* Like (saved) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLike(track.id);
+                  }}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold transition-colors cursor-pointer ${
+                    track.isLiked ? 'text-rose-400 hover:text-rose-300' : 'text-zinc-500 hover:text-white'
+                  }`}
+                  title={track.isLiked ? 'Unlike' : 'Like'}
+                  aria-label={track.isLiked ? `Unlike ${track.title}` : `Like ${track.title}`}
+                  aria-pressed={!!track.isLiked}
+                >
+                  <Heart className={`w-4 h-4 ${track.isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
+                  {track.likesCount > 0 && <span>{track.likesCount}</span>}
+                </button>
                 <span className="text-xs font-mono text-zinc-500">{track.duration}</span>
                 <button
                   type="button"

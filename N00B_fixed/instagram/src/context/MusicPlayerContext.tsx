@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { MusicTrack } from '../types';
-import { fetchMusicTracks } from '../services/api';
+import { fetchMusicTracks, toggleLikeMusicTrack } from '../services/api';
 
 interface MusicPlayerContextType {
   tracks: MusicTrack[];
@@ -17,6 +17,8 @@ interface MusicPlayerContextType {
   toggleMute: () => void;
   refreshTracks: () => Promise<void>;
   seekTo: (percentage: number) => void;
+  // Like / unlike a track (saved in the database — one like per person per track).
+  toggleLike: (trackId: string) => Promise<void>;
 }
 
 const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(undefined);
@@ -45,6 +47,22 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     } catch (err) {
       console.error('Failed to fetch tracks in global player:', err);
     }
+  };
+
+  // Shows the like straight away, then keeps the saved state (or goes back if it couldn't be saved).
+  const toggleLike = async (trackId: string) => {
+    const before = tracks.find((t) => t.id === trackId);
+    if (!before) return;
+    const patchTrack = (liked: boolean, count: number) => {
+      const upd = (t: MusicTrack) => (t.id === trackId ? { ...t, isLiked: liked, likesCount: count } : t);
+      setTracks((prev) => prev.map(upd));
+      setCurrentTrack((prev) => (prev ? upd(prev) : prev));
+    };
+    const wasLiked = !!before.isLiked;
+    patchTrack(!wasLiked, Math.max(0, (before.likesCount || 0) + (wasLiked ? -1 : 1)));
+    const res = await toggleLikeMusicTrack(trackId);
+    if (res && res.success) patchTrack(!!res.isLiked, res.likesCount ?? 0);
+    else patchTrack(wasLiked, before.likesCount || 0);
   };
 
   const playTrack = (track: MusicTrack) => {
@@ -140,7 +158,8 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         prevTrack,
         toggleMute,
         refreshTracks: loadTracks,
-        seekTo
+        seekTo,
+        toggleLike
       }}
     >
       {children}

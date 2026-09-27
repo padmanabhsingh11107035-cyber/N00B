@@ -10,6 +10,8 @@ Speed tricks (measured on a laptop on a phone hotspot):
   after a few seconds, a second model is asked at the same time and the first one to answer wins.
 - A model that is out of its free daily quota (429), overloaded (503) or unavailable is rested for a while,
   so NOOB never wastes time on it again and again.
+- The connection to Google stays open between questions (and is kept warm), so a question doesn't first
+  wait for a new secure connection.
 """
 
 import json
@@ -18,17 +20,38 @@ import threading
 import time
 
 import requests
+from requests.adapters import HTTPAdapter
 
 GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.8-flash",
                  "gemini-3.6-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.5-flash"]
 REST_SECONDS = {429: 15 * 60, 503: 60, 500: 60, 404: 24 * 3600}
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse"
-HEDGE_AFTER = 3.0                 # seconds without an answer before a second model is asked as well
+HEDGE_AFTER = 2.2                 # seconds without an answer before a second model is asked as well
+KEEP_WARM_EVERY = 40              # seconds between tiny "still there?" calls that keep the connection open
 THINKING_LEVELS = ["minimal", "low", None]      # least thinking first; remembered once a model refuses one
 
 _rest_until = {}
 _thinking = {}
 last_model = GEMINI_MODELS[0]
+
+# One shared, reusable connection pool to Google (two answers can stream at once when a second model is asked).
+_http = requests.Session()
+_http.mount("https://", HTTPAdapter(pool_connections=2, pool_maxsize=6))
+
+
+def keep_warm(get_key):
+    """Keeps the connection to Google open in the background (a free models list call, no quota used)."""
+    def loop():
+        while True:
+            key = get_key()
+            if key:
+                try:
+                    _http.get("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
+                              headers={"x-goog-api-key": key}, timeout=(5, 8)).close()
+                except requests.RequestException:
+                    pass
+            time.sleep(KEEP_WARM_EVERY)
+    threading.Thread(target=loop, daemon=True).start()
 
 
 class BrainUnavailable(Exception):
@@ -66,8 +89,8 @@ def _ask_model(model, key, system, contents, out, stop):
             body = {"system_instruction": {"parts": [{"text": system}]}, "contents": contents}
             if level:
                 body["generationConfig"] = {"thinkingConfig": {"thinkingLevel": level}}
-            response = requests.post(GEMINI_URL.format(model=model), headers={"x-goog-api-key": key}, json=body,
-                                     stream=True, timeout=(8, 20))
+            response = _http.post(GEMINI_URL.format(model=model), headers={"x-goog-api-key": key}, json=body,
+                                  stream=True, timeout=(8, 20))
             if response.status_code == 400 and level and "thinking" in response.text.lower():
                 _thinking[model] = THINKING_LEVELS[THINKING_LEVELS.index(level) + 1]
                 continue

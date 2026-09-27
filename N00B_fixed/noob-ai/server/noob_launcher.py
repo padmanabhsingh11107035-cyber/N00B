@@ -8,6 +8,7 @@ Stop it from the app: Settings > Stop NOOB server.
 """
 
 import os
+import socket
 import subprocess
 import sys
 import urllib.request
@@ -20,6 +21,20 @@ LOG_FILE = os.path.join(HERE, "noob_server.log")
 # Written when the owner stops NOOB from the app (Settings > Stop NOOB server), so the auto-start
 # (noob_autostart.py) doesn't switch it straight back on. Opening NOOB App.bat removes it.
 STOP_FLAG = os.path.join(HERE, "stopped-by-owner.flag")
+
+
+SERVER_LOCK_PORT = 5099     # held by the running NOOB server: a second copy sees it taken and quits at once
+
+
+def claim_server_lock():
+    """Returns a socket held for as long as this NOOB server runs, or None if another one is already running."""
+    lock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        lock.bind(("127.0.0.1", SERVER_LOCK_PORT))
+        return lock
+    except OSError:
+        lock.close()
+        return None
 
 
 def server_running():

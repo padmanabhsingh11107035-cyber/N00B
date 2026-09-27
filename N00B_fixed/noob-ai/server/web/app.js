@@ -265,6 +265,7 @@ paintMusic();
 // ---------------------------------------------------------------- TALK
 const orb = $("orb");
 let state = "idle";                 // idle / listening / thinking / speaking
+let conversationOn = true;          // keeps listening after each spoken answer (tap the orb while NOOB talks to stop)
 let audioCtx = null, recorder = null, rafId = 0;
 
 // One audio player for NOOB's voice. Phones (iPhone especially) only play sound that starts from a tap,
@@ -529,15 +530,17 @@ async function streamAnswer(path, request, fromVoice) {
   if (currentReply === reply) currentReply = null;
   setState("idle");
   const musicOn = afterAnswer(musicAction);
-  if (wantSurvey) { $("convMode").checked = false; setTimeout(showSurvey, 600); return; }
-  if (fromVoice && ok && !blocked && !cancelled && !musicOn && $("convMode").checked) setTimeout(startListening, 400);  // keep talking
+  if (wantSurvey) { conversationOn = false; setTimeout(showSurvey, 600); return; }
+  // Always a conversation: after a spoken answer NOOB listens again, like a friend. It stops when you tap the
+  // orb while NOOB is talking, when nothing was heard, or while music plays.
+  if (fromVoice && ok && !blocked && !cancelled && !musicOn && conversationOn) setTimeout(startListening, 400);
 }
 
 $("orbBtn").onclick = () => {
   unlockAudio();
-  if (state === "idle") startListening();
+  if (state === "idle") { conversationOn = true; startListening(); }
   else if (state === "listening") stopListening();
-  else if (state === "speaking") { $("convMode").checked = false; stopSpeaking(); }
+  else if (state === "speaking") { conversationOn = false; stopSpeaking(); }
 };
 $("composer").onsubmit = (e) => { e.preventDefault(); unlockAudio(); const t = $("typeBox").value; $("typeBox").value = ""; sendText(t); };
 document.querySelectorAll(".chip").forEach((c) => (c.onclick = () => { unlockAudio(); sendText(c.textContent); }));

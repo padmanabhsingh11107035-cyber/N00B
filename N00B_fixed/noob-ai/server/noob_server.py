@@ -15,6 +15,17 @@ remembers after switch-off.
 Start: double-click "NOOB App.bat"   (or run:  python noob_server.py)
 """
 
+if __name__ == "__main__":
+    # Wake up fast: make sure NOOB isn't already running, then start the online connection (Cloudflare Tunnel)
+    # at once so it connects while the rest of NOOB loads.
+    import noob_launcher as _launcher
+    import noob_tunnel as _tunnel_module
+    _SERVER_LOCK = _launcher.claim_server_lock()
+    if _SERVER_LOCK is None:
+        print("NOOB server is already running.", flush=True)
+        raise SystemExit(0)
+    _EARLY_TUNNEL = _tunnel_module.start(lambda message: print(message, flush=True))
+
 import asyncio
 import base64
 import collections
@@ -25,7 +36,6 @@ import os
 import queue
 import re
 import secrets
-import socket
 import threading
 import time
 import wave
@@ -34,7 +44,6 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 import av
-import edge_tts
 import numpy as np
 import requests
 from ddgs import DDGS
@@ -76,7 +85,8 @@ Your answers are converted to speech, so:
 - Write every language in its own script (Hindi and Marathi in Devanagari, Tamil in Tamil script, and so on), never in English
   letters, so the voice pronounces it correctly.
 - Speak naturally in plain sentences. No markdown, no bullet symbols, no emojis, no URLs, no tables.
-- Keep answers short (1 to 4 sentences) unless the user asks for more detail. For casual chat, answer briefly and ask a friendly follow-up question sometimes.
+- Keep answers short (1 to 4 sentences) unless the user asks for more detail. Keep the FIRST sentence short
+  (under about 10 words), so your voice can start straight away. For casual chat, answer briefly and ask a friendly follow-up question sometimes.
 - The user's words come from speech recognition, so they may contain small mistakes or be written in another
   script (for example Hindi written in Urdu script). Understand the intended meaning.
 - If the question is unclear, ask one short clarifying question.
@@ -209,7 +219,11 @@ def settings():
         return noob_settings.load()
 
 
+VOICES_CACHE = os.path.join(HERE, "voices_cache.json")
+
+
 def load_voices():
+    import edge_tts                                    # loaded when needed (it takes over a second to load)
     voices = asyncio.run(asyncio.wait_for(edge_tts.list_voices(), timeout=10))     # never hang the start-up
     by_lang = {}
     names = {v["ShortName"] for v in voices}
@@ -223,11 +237,24 @@ def load_voices():
     return by_lang
 
 
+def refresh_voices():
+    """Gets Microsoft's current list of voices in the background and saves it for the next start."""
+    try:
+        fresh = load_voices()
+        VOICES.update(fresh)
+        with open(VOICES_CACHE, "w", encoding="utf-8") as f:
+            json.dump(fresh, f)
+    except Exception as e:                             # no internet: the saved or built-in list keeps working
+        log(f"!! Could not refresh the voice list ({e})")
+
+
+# Start in a moment: the voice list saved last time (or the built-in one), refreshed in the background.
 try:
-    VOICES = load_voices()
-except Exception as e:                                 # no internet at start-up: use the preferred list
-    log(f"!! Could not load the voice list ({e}); using the built-in list")
+    with open(VOICES_CACHE, encoding="utf-8") as f:
+        VOICES = {**PREFERRED_VOICES, **json.load(f)}
+except (OSError, ValueError):
     VOICES = dict(PREFERRED_VOICES)
+threading.Thread(target=refresh_voices, daemon=True).start()
 log(f"{len(VOICES)} speech languages ready. Accounts: {memory.user_count()}.")
 
 
@@ -432,6 +459,10 @@ class AnswerStream:
         cut = 0
         for match in SENTENCE_END.finditer(pending):
             cut = match.end()
+        if not cut and self.spoken == 0:               # the very first words: start speaking at the first comma
+            comma = pending.find(", ", 12)
+            if 0 < comma <= 120:
+                cut = comma + 2
         if not cut and len(pending) > 160:            # a very long sentence: speak it in parts
             comma = pending.rfind(", ", 60, 160)
             cut = comma + 2 if comma > 0 else pending.rfind(" ", 60, 160) + 1
@@ -630,6 +661,7 @@ def clean_for_speech(text):
 
 def text_to_speech(text, lang):
     """Returns NOOB's voice as 16 kHz, 16-bit, mono PCM."""
+    import edge_tts
     voice = VOICES.get(lang) or VOICES.get("en")
 
     async def synthesize():
@@ -660,7 +692,9 @@ LIMIT_REACHED = (f"You have used your {FREE_QUESTIONS} free questions. To keep t
 
 
 def voice_mp3(text, lang):
-    """NOOB's voice for one sentence (MP3)."""
+    """NOOB's voice for one sentence (MP3). Microsoft's voice service normally answers in about a second; if a
+    request stalls (it happens on a weak connection), it is asked again instead of freezing the answer."""
+    import edge_tts
     voice = VOICES.get(lang) or VOICES.get("en")
 
     async def synthesize():
@@ -670,6 +704,11 @@ def voice_mp3(text, lang):
                 mp3 += chunk["data"]
         return bytes(mp3)
 
+    for limit in (5, 8):
+        try:
+            return asyncio.run(asyncio.wait_for(synthesize(), timeout=limit))
+        except asyncio.TimeoutError:
+            log(f"   [voice] slow answer from the voice service, asking again ({limit} s)")
     return asyncio.run(synthesize())
 
 
@@ -1358,22 +1397,13 @@ def stop_everything():
     os._exit(0)
 
 
-def port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.bind(("0.0.0.0", port))
-            return False
-        except OSError:
-            return True
-
-
 if __name__ == "__main__":
-    if port_in_use(PORT):                              # already running (e.g. started twice at once): nothing to do
-        print("NOOB server is already running.", flush=True)
-        raise SystemExit(0)
     noob_devices.start_server_responder(PORT, log)
     noob_social.watch_platform(log)                    # the NOOB admin's maintenance lock for NOOB AI
-    tunnel = noob_tunnel.start(log)
+    noob_brain.keep_warm(gemini_key)                   # keep the connection to Google open: quicker answers
+    tunnel = _EARLY_TUNNEL                             # started at the very top, while NOOB was loading
+    if tunnel:
+        log(f"Online access on: {noob_tunnel.public_url()}")
     log(f"NOOB server running. Open the NOOB App: http://localhost:{PORT}  "
         f"(other devices on this Wi-Fi: http://{noob_devices.local_ip()}:{PORT})")
     app.run(host="0.0.0.0", port=PORT, threaded=True)

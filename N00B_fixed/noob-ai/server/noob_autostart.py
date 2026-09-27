@@ -4,7 +4,7 @@ Keeps NOOB AI running while Windows is on.
 "Start with Windows.bat" adds this to Windows' startup programs (a shortcut in the Startup folder, so it can be
 switched off any time in Task Manager > Startup apps, or with "Don't start with Windows.bat"). After you log in it:
   - starts the NOOB server in the background (no window) if it isn't running,
-  - checks it every 15 seconds and starts it again if it stopped unexpectedly (a crash, a restart...),
+  - checks it every 3 seconds and starts it again if it stopped unexpectedly (a crash, a restart...),
   - leaves it off if you stopped it on purpose (NOOB App > Settings > Stop NOOB server) until you open
     NOOB App.bat again or log in to Windows again,
   - starts it when someone taps "Wake up NOOB" in the NOOB app (anyone signed in can wake it, nobody can
@@ -29,9 +29,9 @@ from noob_social import NOOB_SOCIAL_KEY, NOOB_SOCIAL_URL
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHORTCUT_NAME = "NOOB AI.lnk"
-CHECK_EVERY = 15           # seconds between checks (is NOOB running? did anyone tap "Wake up NOOB"?)
-DOWN_CHECKS = 3            # down this many checks in a row (about 45 s) = stopped unexpectedly: start it again
-START_GRACE = 120          # seconds a fresh start gets before it is checked again (loading, Wi-Fi, tunnel)
+CHECK_EVERY = 3            # seconds between checks (is NOOB running? did anyone tap "Wake up NOOB"?)
+DOWN_CHECKS = 5            # down this many checks in a row (about 15 s) = stopped unexpectedly: start it again
+START_GRACE = 30           # seconds a fresh start gets before it is checked again (loading, Wi-Fi, tunnel)
 LOCK_PORT = 5098           # only one keeper runs at a time
 
 
@@ -90,7 +90,8 @@ def keep_running():
     misses = DOWN_CHECKS - 1                           # not running at login: start it straight away
     while True:
         running = launcher.server_running()
-        wake = wake_requested_at()
+        # "Wake up NOOB" only matters while NOOB is asleep, so NOOB's server is only asked then (saves data)
+        wake = None if running else wake_requested_at()
         woken = bool(wake) and wake != last_wake
         if wake:
             last_wake = wake

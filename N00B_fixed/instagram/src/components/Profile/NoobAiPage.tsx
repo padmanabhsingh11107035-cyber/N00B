@@ -46,7 +46,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
     await requestNoobAiWake();
     const started = Date.now();
     while (Date.now() - started < 100_000) {
-      await new Promise((r) => setTimeout(r, 4000));
+      await new Promise((r) => setTimeout(r, 1500));
       if (await noobAiIsOnline()) {
         setLoaded(false);
         setStatus('online');
@@ -117,7 +117,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
             <NoobAiGem size={180} />
             <div>
               <h2 className="text-xl font-black tracking-tight">Waking NOOB up…</h2>
-              <p className="text-sm text-slate-500 max-w-xs mt-2">This usually takes under a minute.</p>
+              <p className="text-sm text-slate-500 max-w-xs mt-2">This takes a few seconds.</p>
             </div>
           </div>
         )}

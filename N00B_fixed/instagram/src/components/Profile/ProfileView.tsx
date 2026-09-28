@@ -96,6 +96,7 @@ import { HighlightManagerModal } from './HighlightManagerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { AvatarMedia } from '../Common/AvatarMedia';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { GetVerifiedModal } from './GetVerifiedModal';
 import { AdminControlModal } from '../Modals/AdminControlModal';
@@ -1209,11 +1210,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   : 'bg-gradient-to-tr from-[#ff4e6a] via-[#ff758c] to-[#ff9966] shadow-[0_0_20px_rgba(255,78,106,0.3)]'
               }`}
             >
-              <img
+              <AvatarMedia
                 src={targetUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                isLiveAvatar={targetUser.isLiveAvatar}
+                liveAvatarVideoUrl={targetUser.liveAvatarVideoUrl}
                 alt={targetUser.username}
                 className="w-full h-full rounded-full object-cover p-0.5 bg-black"
-                referrerPolicy="no-referrer"
               />
             </div>
             {/* Status Note Floating Pill */}

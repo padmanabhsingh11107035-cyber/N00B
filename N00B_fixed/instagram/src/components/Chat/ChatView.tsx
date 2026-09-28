@@ -148,6 +148,12 @@ import {
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
+import { InstantsStack } from './InstantsStack';
+import { InstantCamera } from './InstantCamera';
+import { InstantViewer } from './InstantViewer';
+import { InstantsArchive } from './InstantsArchive';
+import { CloseFriendsPicker } from './CloseFriendsPicker';
+import type { InstantInboxItem } from '../../services/api';
 import { safeJsonStringify, safeLocalStorageSet } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { formatClockTime } from '../../utils/formatTime';
@@ -230,6 +236,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>('all');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupDetails, setShowGroupDetails] = useState(false);
+
+  // Instants — camera-only photos shared with Friends/Close Friends, view once, gone in 24h
+  const [showInstantCamera, setShowInstantCamera] = useState(false);
+  const [instantViewerQueue, setInstantViewerQueue] = useState<InstantInboxItem[] | null>(null);
+  const [showInstantsArchive, setShowInstantsArchive] = useState(false);
+  const [showCloseFriendsPicker, setShowCloseFriendsPicker] = useState(false);
+  const [instantsRefreshKey, setInstantsRefreshKey] = useState(0);
   const [inputText, setInputText] = useState('');
   // Why the last message could not be sent (shown above the message box for a few seconds).
   const [sendError, setSendError] = useState('');
@@ -1460,6 +1473,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             </div>
           </div>
+
+          <InstantsStack
+            currentUser={currentUser}
+            onOpenCamera={() => setShowInstantCamera(true)}
+            onOpenViewer={(queue) => setInstantViewerQueue(queue)}
+            onOpenArchive={() => setShowInstantsArchive(true)}
+            refreshKey={instantsRefreshKey}
+          />
 
           {/* Search Bar matching screenshot ("Search or start a new chat") */}
           <div className="px-3 py-2 border-b border-zinc-900">
@@ -2894,6 +2915,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       {/* MODALS */}
+      {showInstantCamera && (
+        <InstantCamera
+          currentUser={currentUser}
+          onClose={() => setShowInstantCamera(false)}
+          onSent={() => setInstantsRefreshKey((k) => k + 1)}
+        />
+      )}
+      {instantViewerQueue && (
+        <InstantViewer
+          queue={instantViewerQueue}
+          onDone={() => {
+            setInstantViewerQueue(null);
+            setInstantsRefreshKey((k) => k + 1);
+          }}
+        />
+      )}
+      {showInstantsArchive && (
+        <InstantsArchive
+          onClose={() => setShowInstantsArchive(false)}
+          onOpenCloseFriends={() => setShowCloseFriendsPicker(true)}
+        />
+      )}
+      {showCloseFriendsPicker && <CloseFriendsPicker onClose={() => setShowCloseFriendsPicker(false)} />}
+
       {/* 1. Create Group Chat Modal */}
       <CreateGroupModal
         isOpen={showCreateGroup}

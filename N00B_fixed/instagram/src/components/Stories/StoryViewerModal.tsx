@@ -11,6 +11,7 @@ import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { navKey } from '../../utils/keyboardNav';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
+import { AvatarMedia } from '../Common/AvatarMedia';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -346,11 +347,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             disabled={!onNavigateToProfile}
             className={`flex items-center gap-2.5 text-left ${onNavigateToProfile ? 'cursor-pointer' : ''}`}
           >
-            <img
+            <AvatarMedia
               src={story.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+              isLiveAvatar={story.authorIsLiveAvatar}
+              liveAvatarVideoUrl={story.authorLiveAvatarVideoUrl}
               alt={story.username}
               className="w-9 h-9 rounded-full object-cover ring-2 ring-[#00FF66]"
-              referrerPolicy="no-referrer"
             />
             <div>
               <div className="flex items-center gap-1.5">

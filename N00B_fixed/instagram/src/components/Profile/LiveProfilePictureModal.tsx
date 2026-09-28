@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X, Zap, Upload, Check, Loader2, Sparkles } from 'lucide-react';
 import { User } from '../../types';
 import { fetchLiveAvatarPresets, applyLiveAvatar, uploadMediaFile, LiveAvatarPreset } from '../../services/api';
+import { AvatarAdjustEditor } from '../Common/AvatarAdjustEditor';
 
 interface LiveProfilePictureModalProps {
   currentUser: User;
@@ -23,6 +24,7 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -63,27 +65,32 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
     }
   };
 
-  const handleCustomUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
     e.target.value = '';
+    if (!file) return;
     setError('');
     setSuccessMsg('');
+    setPickedFile(file);
+  };
 
+  const handleAdjustDone = async ({ blob, posterBlob }: { blob: Blob; posterBlob?: Blob }) => {
+    setPickedFile(null);
+    setIsUploading(true);
     try {
-      setIsUploading(true);
-      // Routes through the same invisible client-side compression every
-      // other upload uses — it already leaves GIF/WebP untouched (a static
-      // re-encode would flatten the animation), so this is safe for an
-      // animated live avatar while still compressing a plain photo someone
-      // uploads by mistake.
-      const uploadData = await uploadMediaFile(file, 'avatars');
-      if (!uploadData.success || !uploadData.url) {
-        setError('Upload failed. Please try again.');
-        return;
+      const stamp = Date.now();
+      const videoFile = new File([blob], `live-${stamp}.webm`, { type: blob.type || 'video/webm' });
+      const uploadedVideo = await uploadMediaFile(videoFile, 'avatars');
+      if (!uploadedVideo.success || !uploadedVideo.url) { setError('Upload failed. Please try again.'); return; }
+
+      let posterUrl = uploadedVideo.url;
+      if (posterBlob) {
+        const posterFile = new File([posterBlob], `live-${stamp}.jpg`, { type: 'image/jpeg' });
+        const uploadedPoster = await uploadMediaFile(posterFile, 'avatars');
+        if (uploadedPoster.success && uploadedPoster.url) posterUrl = uploadedPoster.url;
       }
 
-      const res = await applyLiveAvatar({ customUrl: uploadData.url });
+      const res = await applyLiveAvatar({ customUrl: posterUrl, customVideoUrl: uploadedVideo.url });
       if (res.success && res.user) {
         onUserUpdated?.(res.user);
         setSuccessMsg('Your custom live profile picture is live!');
@@ -98,7 +105,16 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <>
+      {pickedFile && (
+        <AvatarAdjustEditor
+          file={pickedFile}
+          mediaType="video"
+          onCancel={() => setPickedFile(null)}
+          onDone={handleAdjustDone}
+        />
+      )}
+      <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-zinc-950 border border-cyan-500/30 rounded-3xl shadow-2xl max-h-[88vh] flex flex-col overflow-hidden">
         <div className="p-5 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -127,7 +143,7 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
               <h4 className="text-base font-bold text-white">Unlock Live Profile Pictures</h4>
               <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">
                 NOOB Pro members can apply an animated profile picture from our curated presets, or upload their own
-                custom animated image — free accounts get a standard static photo.
+                short video — free accounts get a standard static photo.
               </p>
             </div>
             <button
@@ -190,12 +206,12 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
             </div>
 
             <div className="space-y-2 pt-1">
-              <span className="text-xs font-bold text-zinc-300 block">Or Create Your Own</span>
+              <span className="text-xs font-bold text-zinc-300 block">Or Upload Your Own Video</span>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/gif,image/webp,image/*"
-                onChange={handleCustomUpload}
+                accept="video/*"
+                onChange={handlePickFile}
                 className="hidden"
               />
               <button
@@ -210,15 +226,19 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
                   </>
                 ) : (
                   <>
-                    <Upload className="w-4 h-4 text-cyan-400" /> Upload Custom Animated Image
+                    <Upload className="w-4 h-4 text-cyan-400" /> Upload a Short Video
                   </>
                 )}
               </button>
-              <p className="text-[10px] text-zinc-500">Animated GIF or WebP works best — it'll play automatically everywhere your profile picture shows.</p>
+              <p className="text-[10px] text-zinc-500">
+                A real video, not a picture — you'll adjust the framing next. It plays on loop, muted, wherever your
+                profile picture shows.
+              </p>
             </div>
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };

@@ -75,6 +75,7 @@ import { TermsAndConditions } from './components/Legal/TermsAndConditions';
 import { PrivacyPolicy } from './components/Legal/PrivacyPolicy';
 import { CustomerSupportModal } from './components/Support/CustomerSupportModal';
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
+import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { GamePlayModal } from './components/Games/GamePlayModal';
 import { FindFriendsModal } from './components/Modals/FindFriendsModal';
@@ -1052,11 +1053,12 @@ export default function App() {
               onClick={() => handleSelectNavTab('profile')}
               className="relative cursor-pointer"
             >
-              <img
+              <AvatarMedia
                 src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                isLiveAvatar={currentUser.isLiveAvatar}
+                liveAvatarVideoUrl={currentUser.liveAvatarVideoUrl}
                 alt={currentUser.username}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-red-500/60"
-                referrerPolicy="no-referrer"
               />
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black" />
             </div>

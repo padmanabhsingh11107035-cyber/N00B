@@ -223,6 +223,9 @@ await db.query(`update profiles set pro_tier = 'starter' where id = $1`, [a]);
 const la = await rpc(a, 'apply_live_avatar', 'aurora_wave');
 check(la.user.avatar === '/live-avatars/aurora-wave.svg' && la.user.isLiveAvatar === true, 'a Pro account can pick a preset');
 check((await rpc(a, 'apply_live_avatar', null, '  avatars/mine.svg ')).user.avatar === 'avatars/mine.svg', 'or use their own animated picture');
+const laVideo = await rpc(a, 'apply_live_avatar', null, 'avatars/mine.jpg', 'avatars/mine.webm');
+check(laVideo.user.avatar === 'avatars/mine.jpg' && laVideo.user.liveAvatarVideoUrl === 'avatars/mine.webm', '...with a real video, poster and clip are both kept');
+check((await rpc(a, 'apply_live_avatar', 'aurora_wave')).user.liveAvatarVideoUrl == null, 'switching to a preset clears any earlier custom video');
 await expectFail(() => rpc(a, 'apply_live_avatar', 'nope'), /Unknown preset/, 'an unknown preset is refused');
 await expectFail(() => rpc(a, 'apply_live_avatar'), /Choose a preset/, 'choosing nothing is refused');
 

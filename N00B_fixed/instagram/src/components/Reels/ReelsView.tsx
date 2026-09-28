@@ -25,6 +25,7 @@ import {
 import { Reel, User } from '../../types';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
+import { AvatarMedia } from '../Common/AvatarMedia';
 import {
   toggleLikeReel,
   toggleSaveReel,
@@ -758,11 +759,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 goToProfile(currentReel.userId);
               }}
             >
-              <img
+              <AvatarMedia
                 src={currentReel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                isLiveAvatar={currentReel.authorIsLiveAvatar}
+                liveAvatarVideoUrl={currentReel.authorLiveAvatarVideoUrl}
                 alt={currentReel.username}
                 className="w-9 h-9 rounded-full object-cover ring-2 ring-[#00FF66]"
-                referrerPolicy="no-referrer"
               />
               {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
                 <div className="relative -ml-3 mt-2 w-6 h-6 rounded-full ring-2 ring-black bg-zinc-800 overflow-hidden shadow-md">

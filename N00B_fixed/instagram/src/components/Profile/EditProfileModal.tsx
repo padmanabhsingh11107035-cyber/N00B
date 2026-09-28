@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { User as UserType, AccountType } from '../../types';
 import { updateFullProfile, updateCurrentUser, uploadMediaFile } from '../../services/api';
+import { AvatarAdjustEditor, AvatarAdjustResult } from '../Common/AvatarAdjustEditor';
 import { COUNTRY_OPTIONS, GENDER_OPTIONS } from '../Auth/AuthView';
 import { BirthdayWheelPicker } from '../Auth/BirthdayWheelPicker';
 import confetti from 'canvas-confetti';
@@ -84,6 +85,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [passwordSuccess, setPasswordSuccess] = useState('');
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [pickedAvatarFile, setPickedAvatarFile] = useState<File | null>(null);
 
   const handleChangePassword = async () => {
     setPasswordError('');
@@ -109,11 +111,19 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     }
   };
 
-  // Handle Avatar file selection
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Avatar file selection — just picks the file; the actual upload happens once it's been
+  // adjusted (see handleAvatarAdjustDone below).
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    setErrorMessage('');
+    setPickedAvatarFile(file);
+  };
 
+  const handleAvatarAdjustDone = async ({ blob }: AvatarAdjustResult) => {
+    setPickedAvatarFile(null);
+    const file = new File([blob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' });
     try {
       setIsUploadingAvatar(true);
       setErrorMessage('');
@@ -271,7 +281,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
             <div className="flex-1 text-center sm:text-left space-y-2">
               <span className="text-xs font-bold text-white block">Profile Picture</span>
-              <p className="text-[11px] text-zinc-400">Upload high-res JPG, PNG, or WebP</p>
+              <p className="text-[11px] text-zinc-400">Upload a photo — you'll adjust the framing next</p>
               <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                 <button
                   type="button"
@@ -728,6 +738,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </div>
         </form>
       </div>
+
+      {pickedAvatarFile && (
+        <AvatarAdjustEditor
+          file={pickedAvatarFile}
+          mediaType="image"
+          onCancel={() => setPickedAvatarFile(null)}
+          onDone={handleAvatarAdjustDone}
+        />
+      )}
 
       {showBirthdayPicker && (
         <BirthdayWheelPicker

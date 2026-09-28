@@ -61,7 +61,7 @@ function invalidateCache(key: string) {
 
 function mapUser<U extends Partial<User> | null | undefined>(u: U): U {
   if (!u) return u;
-  const out: any = { ...u, avatar: resolveMedia((u as any).avatar) };
+  const out: any = { ...u, avatar: resolveMedia((u as any).avatar), liveAvatarVideoUrl: (u as any).liveAvatarVideoUrl ? resolveMedia((u as any).liveAvatarVideoUrl) : (u as any).liveAvatarVideoUrl };
   if (Array.isArray(out.followRequests)) {
     out.followRequests = out.followRequests.map((r: any) => ({ ...r, avatar: resolveMedia(r.avatar) }));
   }
@@ -72,6 +72,7 @@ function mapPost(p: any): Post {
   return {
     ...p,
     userAvatar: resolveMedia(p.userAvatar),
+    authorLiveAvatarVideoUrl: p.authorLiveAvatarVideoUrl ? resolveMedia(p.authorLiveAvatarVideoUrl) : p.authorLiveAvatarVideoUrl,
     slides: (p.slides || []).map((s: any) => ({ ...s, mediaUrl: resolveMedia(s.mediaUrl) }))
   };
 }
@@ -79,7 +80,7 @@ function mapPost(p: any): Post {
 const mapPosts = (list: any[] | null | undefined): Post[] => (Array.isArray(list) ? list.map(mapPost) : []);
 
 function mapComment(c: any) {
-  return c ? { ...c, userAvatar: resolveMedia(c.userAvatar) } : c;
+  return c ? { ...c, userAvatar: resolveMedia(c.userAvatar), authorLiveAvatarVideoUrl: c.authorLiveAvatarVideoUrl ? resolveMedia(c.authorLiveAvatarVideoUrl) : c.authorLiveAvatarVideoUrl } : c;
 }
 
 function mapNotification(n: any): AppNotification {
@@ -809,7 +810,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -862,6 +863,7 @@ function mapStory(s: any): Story {
     ...s,
     mediaUrl: resolveMedia(s.mediaUrl),
     userAvatar: resolveMedia(s.userAvatar),
+    authorLiveAvatarVideoUrl: s.authorLiveAvatarVideoUrl ? resolveMedia(s.authorLiveAvatarVideoUrl) : s.authorLiveAvatarVideoUrl,
     comments: (s.comments || []).map(mapComment)
   };
 }
@@ -1046,6 +1048,7 @@ function mapReel(r: any): Reel {
   return {
     ...r,
     userAvatar: resolveMedia(r.userAvatar),
+    authorLiveAvatarVideoUrl: r.authorLiveAvatarVideoUrl ? resolveMedia(r.authorLiveAvatarVideoUrl) : r.authorLiveAvatarVideoUrl,
     videoUrl: resolveMedia(r.videoUrl),
     thumbnailUrl: resolveMedia(r.thumbnailUrl),
     audioTrack: r.audioTrack
@@ -1763,8 +1766,10 @@ export async function fetchLiveAvatarPresets(): Promise<{ presets: LiveAvatarPre
   try { return await rpc('live_avatar_presets_list'); } catch { return { presets: [] }; }
 }
 
-// NOOB Pro only — the database refuses this for a free account.
-export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: string }): Promise<{
+// NOOB Pro only — the database refuses this for a free account. A custom upload's own video (not a
+// curated preset) also carries customVideoUrl — the poster (customUrl) is what every existing "just
+// show <img avatar>" spot keeps rendering; the video is what AvatarMedia plays instead, where it's wired in.
+export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: string; customVideoUrl?: string }): Promise<{
   success: boolean;
   user?: User;
   error?: string;
@@ -1772,7 +1777,8 @@ export async function applyLiveAvatar(payload: { presetId?: string; customUrl?: 
   try {
     const res = await rpc<{ user: User }>('apply_live_avatar', {
       p_preset: payload.presetId || null,
-      p_custom_url: payload.customUrl ? toStoredMedia(payload.customUrl) : null
+      p_custom_url: payload.customUrl ? toStoredMedia(payload.customUrl) : null,
+      p_custom_video_url: payload.customVideoUrl ? toStoredMedia(payload.customVideoUrl) : null
     });
     return { success: true, user: mapUser(res.user) };
   } catch (err) {
@@ -2815,4 +2821,116 @@ export async function fetchMyPushEndpoint(): Promise<string | null> {
 
 export async function unsubscribeFromPush(): Promise<boolean> {
   try { return !!(await rpc<{ success: boolean }>('remove_push_subscription'))?.success; } catch { return false; }
+}
+
+// ---- Instants: camera-only photos shared from the Chat page with Friends (people you follow who follow you
+// back) or Close Friends. Each friend can open one once; unopened ones expire after 24h. ----
+
+export interface CloseFriend {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  isVerified?: boolean;
+  isCloseFriend: boolean;
+}
+
+export async function fetchCloseFriends(): Promise<{ success: boolean; friends: CloseFriend[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('my_close_friends')) || [];
+    return { success: true, friends: list.map((f) => ({ ...f, avatar: resolveMedia(f.avatar) })) };
+  } catch (err) {
+    return { success: false, friends: [], error: errorText(err, 'Could not load your friends.') };
+  }
+}
+
+export async function setCloseFriend(userId: string, on: boolean): Promise<{ success: boolean; count?: number; error?: string }> {
+  try { return await rpc('set_close_friend', { p_user: userId, p_on: on }); } catch (err) { return failWith(err, 'Could not update your Close Friends.'); }
+}
+
+export interface InstantSender {
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  isVerified?: boolean;
+}
+
+export interface InstantInboxItem {
+  id: string;
+  caption: string;
+  createdAt: string;
+  sender: InstantSender;
+}
+
+export interface OpenedInstant {
+  id: string;
+  mediaUrl: string;
+  caption: string;
+  createdAt: string;
+  sender: InstantSender;
+}
+
+export interface InstantArchiveItem {
+  id: string;
+  mediaUrl: string;
+  caption: string;
+  audience: 'friends' | 'close_friends';
+  createdAt: string;
+  expiresAt: string;
+  sentTo: number;
+  reactions: { username: string; emoji: string }[];
+}
+
+const mapInstantSender = (s: any): InstantSender => ({ ...s, avatar: resolveMedia(s?.avatar) });
+
+// Takes a photo just captured with the camera (never the gallery) and shares it with Friends or Close Friends.
+export async function sendInstant(file: File, caption: string, audience: 'friends' | 'close_friends'): Promise<{
+  success: boolean; id?: string; recipients?: number; createdAt?: string; error?: string;
+}> {
+  try {
+    const uploaded = await uploadMediaFile(file, 'instants');
+    return await rpc('send_instant', { p_media_url: uploaded.objectKey, p_caption: caption, p_audience: audience });
+  } catch (err) {
+    return failWith(err, 'Could not send your instant.');
+  }
+}
+
+// The "undo" — deletes it from your own archive and takes it back from anyone who has not opened it yet.
+export async function deleteInstant(id: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('delete_instant', { p_id: id }); } catch (err) { return failWith(err, 'Could not remove this instant.'); }
+}
+
+// Instants waiting for me — no photo yet, that only comes from openInstant() (each can be opened once).
+export async function fetchInstantInbox(): Promise<{ success: boolean; instants: InstantInboxItem[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('my_instant_inbox')) || [];
+    return { success: true, instants: list.map((i) => ({ ...i, sender: mapInstantSender(i.sender) })) };
+  } catch (err) {
+    return { success: false, instants: [], error: errorText(err, 'Could not load your instants.') };
+  }
+}
+
+export async function openInstant(id: string): Promise<{ success: boolean; instant?: OpenedInstant; error?: string }> {
+  try {
+    const res = await rpc<{ success: boolean; instant: any }>('open_instant', { p_id: id });
+    const instant = res.instant;
+    return { success: true, instant: { ...instant, mediaUrl: resolveMedia(instant.mediaUrl), sender: mapInstantSender(instant.sender) } };
+  } catch (err) {
+    return failWith(err, 'This instant is no longer available.');
+  }
+}
+
+export async function reactToInstant(id: string, emoji: string): Promise<{ success: boolean; reaction?: string; error?: string }> {
+  try { return await rpc('react_instant', { p_id: id, p_emoji: emoji }); } catch (err) { return failWith(err, 'Could not send your reaction.'); }
+}
+
+// Your own private archive ("Your Instants") — nobody else can see this.
+export async function fetchInstantsArchive(): Promise<{ success: boolean; instants: InstantArchiveItem[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('my_instants_archive')) || [];
+    return { success: true, instants: list.map((i) => ({ ...i, mediaUrl: resolveMedia(i.mediaUrl) })) };
+  } catch (err) {
+    return { success: false, instants: [], error: errorText(err, 'Could not load your instants.') };
+  }
 }

@@ -26,6 +26,9 @@ export interface User {
   password?: string;
   avatar: string;
   isLiveAvatar?: boolean;
+  // Set only when isLiveAvatar is a real uploaded video (not a curated GIF/WebP preset) — `avatar` is
+  // that video's poster frame, this is the matching clip to actually play. See AvatarMedia.
+  liveAvatarVideoUrl?: string;
   bio: string;
   accountType: AccountType;
   agreedToTerms?: boolean;
@@ -355,6 +358,8 @@ export interface PostComment {
   userId: string;
   username: string;
   userAvatar: string;
+  authorIsLiveAvatar?: boolean;
+  authorLiveAvatarVideoUrl?: string;
   isVerified?: boolean;
   text: string;
   createdAt: string;
@@ -376,6 +381,8 @@ export interface Post {
   username: string;
   displayName?: string;
   userAvatar: string;
+  authorIsLiveAvatar?: boolean;
+  authorLiveAvatarVideoUrl?: string;
   isVerified: boolean;
   caption: string;
   location?: string;
@@ -411,6 +418,8 @@ export interface Story {
   userId: string;
   username: string;
   userAvatar: string;
+  authorIsLiveAvatar?: boolean;
+  authorLiveAvatarVideoUrl?: string;
   isVerified: boolean;
   mediaUrl: string;
   mediaType: 'image' | 'video';
@@ -466,6 +475,8 @@ export interface Reel {
   userId: string;
   username: string;
   userAvatar: string;
+  authorIsLiveAvatar?: boolean;
+  authorLiveAvatarVideoUrl?: string;
   thumbnailUrl?: string;
   isVerified: boolean;
   videoUrl: string;

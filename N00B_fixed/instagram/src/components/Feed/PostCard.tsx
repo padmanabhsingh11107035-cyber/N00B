@@ -28,6 +28,7 @@ import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
+import { AvatarMedia } from '../Common/AvatarMedia';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { POST_FILTERS } from '../../data/mockData';
@@ -313,11 +314,12 @@ export const PostCard: React.FC<PostCardProps> = ({
               className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-tr from-green-500 via-blue-500 to-purple-500 cursor-pointer hover:scale-105 transition-transform"
               title="View full-size avatar"
             >
-              <img
+              <AvatarMedia
                 src={post.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                isLiveAvatar={post.authorIsLiveAvatar}
+                liveAvatarVideoUrl={post.authorLiveAvatarVideoUrl}
                 alt={post.username}
                 className="w-full h-full rounded-full object-cover"
-                referrerPolicy="no-referrer"
               />
             </div>
 

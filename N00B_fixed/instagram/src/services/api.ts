@@ -205,7 +205,15 @@ export {
   registerPushToken,
   fetchVapidPublicKey,
   subscribeToPush,
-  unsubscribeFromPush
+  unsubscribeFromPush,
+  fetchCloseFriends,
+  setCloseFriend,
+  sendInstant,
+  deleteInstant,
+  fetchInstantInbox,
+  openInstant,
+  reactToInstant,
+  fetchInstantsArchive
 } from './supabaseApi';
 
 export type {
@@ -222,7 +230,12 @@ export type {
   TeamApplication,
   SparkXApplication,
   PlatformSettings,
-  AccountActionRequest
+  AccountActionRequest,
+  CloseFriend,
+  InstantSender,
+  InstantInboxItem,
+  OpenedInstant,
+  InstantArchiveItem
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

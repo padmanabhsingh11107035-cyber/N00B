@@ -23,6 +23,8 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { Reel, User } from '../../types';
+import { LikeReactionBurst } from '../Common/LikeReactionBurst';
+import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import {
   toggleLikeReel,
   toggleSaveReel,
@@ -86,6 +88,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [isVideoBuffering, setIsVideoBuffering] = useState(true);
   const [videoFailed, setVideoFailed] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
+  const [likeBurstKey, setLikeBurstKey] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [showReelOptionsMenu, setShowReelOptionsMenu] = useState(false);
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
@@ -256,6 +259,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const handleToggleLike = async () => {
     if (!currentReel) return;
+    if (!currentReel.isLiked) setLikeBurstKey((k) => k + 1);
     try {
       const res = await toggleLikeReel(currentReel.id);
       setLocalReels(
@@ -870,11 +874,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 e.stopPropagation();
                 handleToggleLike();
               }}
-              className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform cursor-pointer ${
+              className={`relative p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform cursor-pointer ${
                 currentReel.isLiked ? 'text-red-500' : 'text-white'
               }`}
             >
               <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'fill-current' : ''}`} />
+              <LikeReactionBurst emoji={reactionEmojiForCategory(currentReel.category)} burstKey={likeBurstKey} />
             </button>
             {!currentReel.isLikeCountHidden && (
               <button

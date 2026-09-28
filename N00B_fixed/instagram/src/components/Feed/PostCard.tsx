@@ -27,6 +27,8 @@ import { SharePostSheet } from '../Common/SharePostSheet';
 import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
 import { formatExactDateTime } from '../../utils/formatTime';
+import { LikeReactionBurst } from '../Common/LikeReactionBurst';
+import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { POST_FILTERS } from '../../data/mockData';
 
@@ -72,6 +74,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
+  const [likeBurstKey, setLikeBurstKey] = useState(0);
+  const reactionEmoji = reactionEmojiForCategory(post.category);
   const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
   const [showFullscreenAvatar, setShowFullscreenAvatar] = useState(false);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
@@ -206,6 +210,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleDoubleTap = () => {
     if (!post.isLiked) {
       onToggleLike(post.id);
+      setLikeBurstKey((k) => k + 1);
     }
     setShowDoubleTapHeart(true);
     confetti({ particleCount: 25, spread: 50, origin: { y: 0.6 } });
@@ -610,13 +615,17 @@ export const PostCard: React.FC<PostCardProps> = ({
             {/* Like */}
             <button
               id={`like-btn-${post.id}`}
-              onClick={() => onToggleLike(post.id)}
-              className={`transition-transform active:scale-125 cursor-pointer ${
+              onClick={() => {
+                if (!post.isLiked) setLikeBurstKey((k) => k + 1);
+                onToggleLike(post.id);
+              }}
+              className={`relative transition-transform active:scale-125 cursor-pointer ${
                 post.isLiked ? 'text-red-500' : 'text-white hover:text-zinc-300'
               }`}
               title={post.isLiked ? 'Unlike' : 'Like'}
             >
               <Heart className={`w-6 h-6 ${post.isLiked ? 'fill-current stroke-red-500' : 'stroke-current'}`} />
+              <LikeReactionBurst emoji={reactionEmoji} burstKey={likeBurstKey} />
             </button>
 
             {/* Comment */}

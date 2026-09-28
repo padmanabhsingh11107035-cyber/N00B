@@ -9,6 +9,8 @@ import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { navKey } from '../../utils/keyboardNav';
+import { LikeReactionBurst } from '../Common/LikeReactionBurst';
+import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -51,6 +53,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [likedStoryIds, setLikedStoryIds] = useState<Set<string>>(
     () => new Set(stories.filter((s) => s.isLiked).map((s) => s.id))
   );
+  // Stories/highlights carry no content category, so this always bursts a plain heart — still the
+  // same YouTube-Shorts-style delight on liking, just without a category to key the emoji off.
+  const [likeBurstKey, setLikeBurstKey] = useState(0);
   // A highlight's items are a fixed snapshot (media/stickers/when it was posted) with no
   // comments/likes baked in — those keep changing after the fact, so they're fetched live per item
   // here and layered on top, keyed by story id so switching pages/reopening the same one is instant.
@@ -659,6 +664,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 });
                 if (!wasLiked) {
                   confetti({ particleCount: 30, spread: 45, origin: { y: 0.85 } });
+                  setLikeBurstKey((k) => k + 1);
                 }
                 toggleStoryLike(id).then((res) => {
                   if (!res.success) {
@@ -671,11 +677,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   }
                 });
               }}
-              className={`p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
+              className={`relative p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
                 isLiked ? 'text-red-500 scale-110' : 'text-white/80 hover:text-white'
               }`}
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+              <LikeReactionBurst emoji={reactionEmojiForCategory(undefined)} burstKey={likeBurstKey} />
             </button>
           </div>
         )}

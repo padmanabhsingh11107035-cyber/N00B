@@ -300,6 +300,33 @@ body.is-android.light .liquid-glass {
   animation: dice-tumble 0.4s ease-in-out infinite;
 }
 
+/* Like reaction burst — a handful of a matching emoji floating up and fading out when someone likes a
+   post/reel/story/highlight (see components/Common/LikeReactionBurst.tsx). The host element needs
+   position: relative for this absolutely-positioned layer to sit over it correctly. */
+.like-reaction-burst-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 40;
+}
+.like-reaction-particle {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0;
+  animation: like-reaction-float 0.95s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes like-reaction-float {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(calc(var(--scale, 1) * 0.4)) rotate(0deg); }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -78px) scale(var(--scale, 1)) rotate(var(--rot, 0deg)); }
+}
+
 /* ============================================
    Chat wallpaper — a subtle repeating doodle
    pattern (chat bubbles, hearts, notes, stars…)

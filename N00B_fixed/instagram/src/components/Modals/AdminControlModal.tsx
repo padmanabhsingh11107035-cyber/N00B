@@ -49,17 +49,22 @@ import {
   ShieldPlus,
   ChevronLeft,
   ChevronRight,
-  Play
+  Play,
+  Inbox,
+  KeyRound,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { User } from '../../types';
 import {
-  fetchAdminUsersList, suspendUserAccount, deleteUserAccount, sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
+  fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
+  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
   fetchAdminExplorePins, adminSetExplorePin
 } from '../../services/api';
-import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication } from '../../services/api';
+import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime } from '../../utils/formatTime';
@@ -77,7 +82,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'sparkxRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -160,8 +165,28 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [selectedUserForSuspend, setSelectedUserForSuspend] = useState<User | null>(null);
   const [suspendReason, setSuspendReason] = useState('Violation of NOOB Community Guidelines');
 
-  // Delete-account confirmation state
-  const [selectedUserForDelete, setSelectedUserForDelete] = useState<User | null>(null);
+  // Delete-account confirmation state — deleting always needs the main admin's own NOOB password (nothing
+  // else on this panel does); the same small prompt is reused for one account, several selected at once, or
+  // approving a delegate's delete request.
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: 'single'; user: User }
+    | { kind: 'bulk'; ids: string[] }
+    | { kind: 'request'; request: AccountActionRequest }
+    | null
+  >(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // Selecting several accounts at once in the Account Moderation list, to delete them together
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+
+  // Suspend/delete requests filed by a delegate, waiting on the main admin — this queue, and the page that
+  // shows it, is visible and operable only here: not even another admin with every other permission ticked
+  // can see or act on it.
+  const [accountRequests, setAccountRequests] = useState<AccountActionRequest[]>([]);
+  const [loadingAccountRequests, setLoadingAccountRequests] = useState(false);
+  const [resolvingRequestId, setResolvingRequestId] = useState<string | null>(null);
 
   // Full account-details view (email, phone, DOB/age, etc.) — never shows
   // the password, which the server already strips before this data ever
@@ -255,6 +280,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       loadStaff();
       loadJoinRequests();
       loadSparkxRequests();
+      loadAccountRequests();
     }
   }, []);
 
@@ -263,6 +289,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (activeTab === 'content' && main) loadContent(contentType);
     if (activeTab === 'joinRequests' && main) loadJoinRequests();
     if (activeTab === 'sparkxRequests' && main) loadSparkxRequests();
+    if (activeTab === 'accountRequests' && main) loadAccountRequests();
     if (activeTab === 'settings' && main) loadSettings();
   }, [activeTab]);
 
@@ -292,6 +319,34 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (res.success) setSparkxRequests(res.applications);
     else setStatusMessage({ text: res.error || 'Could not load applications.', type: 'error' });
     setLoadingSparkxRequests(false);
+  };
+
+  const loadAccountRequests = async () => {
+    setLoadingAccountRequests(true);
+    const res = await fetchAdminActionRequests();
+    if (res.success) setAccountRequests(res.requests);
+    else setStatusMessage({ text: res.error || 'Could not load the approval queue.', type: 'error' });
+    setLoadingAccountRequests(false);
+  };
+
+  const requestActionLabel = (a: 'suspend' | 'unsuspend' | 'delete') => (a === 'delete' ? 'delete' : a === 'unsuspend' ? 'restore' : 'suspend');
+
+  const handleResolveAccountRequest = async (request: AccountActionRequest, approve: boolean) => {
+    if (approve && request.action === 'delete') {
+      // deleting still needs the main admin's own password, even when it's really a delegate's request
+      setDeleteTarget({ kind: 'request', request });
+      return;
+    }
+    setResolvingRequestId(request.id);
+    const res = await resolveAdminActionRequest(request.id, approve);
+    if (res.success) {
+      setStatusMessage({ text: approve ? `${requestActionLabel(request.action)} approved for @${request.target.username}.` : 'Request declined.', type: 'success' });
+      loadAccountRequests();
+      if (approve) loadUsers();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not resolve this request.', type: 'error' });
+    }
+    setResolvingRequestId(null);
   };
 
   const loadSettings = async () => {
@@ -621,25 +676,43 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     }
   };
 
-  const handleDeleteUser = async (targetUser: User) => {
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setDeletePasswordError('');
     try {
-      setActionLoading(targetUser.id);
-      const res = await deleteUserAccount(targetUser.id);
-      if (res.success) {
-        setStatusMessage({
-          text: res.message || `Account @${targetUser.username} has been permanently deleted.`,
-          type: 'success'
-        });
-        setSelectedUserForDelete(null);
+      if (deleteTarget.kind === 'single') {
+        const res = await deleteUserAccount(deleteTarget.user.id, deletePassword);
+        if (!res.success) { setDeletePasswordError(res.error || 'Could not delete this account.'); return; }
+        setStatusMessage({ text: res.pending ? (res.message || 'Your request has been sent for approval.') : (res.message || `Account @${deleteTarget.user.username} has been permanently deleted.`), type: 'success' });
+        await loadUsers();
+      } else if (deleteTarget.kind === 'bulk') {
+        const res = await bulkDeleteUserAccounts(deleteTarget.ids, deletePassword);
+        if (!res.success) { setDeletePasswordError(res.error || 'Could not delete these accounts.'); return; }
+        setStatusMessage({ text: res.message || `${res.deletedCount || 0} accounts deleted.`, type: 'success' });
+        setSelectedUserIds(new Set());
         await loadUsers();
       } else {
-        setStatusMessage({ text: res.error || 'Failed to delete account.', type: 'error' });
+        const res = await resolveAdminActionRequest(deleteTarget.request.id, true, deletePassword);
+        if (!res.success) { setDeletePasswordError(res.error || 'Could not approve this delete.'); return; }
+        setStatusMessage({ text: res.message || `@${deleteTarget.request.target.username} deleted.`, type: 'success' });
+        await Promise.all([loadUsers(), loadAccountRequests()]);
       }
+      setDeleteTarget(null);
+      setDeletePassword('');
     } catch (err: any) {
-      setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
+      setDeletePasswordError(err?.message || 'Error communicating with server.');
     } finally {
-      setActionLoading(null);
+      setDeleteBusy(false);
     }
+  };
+
+  const toggleUserSelected = (id: string) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   const handleAdjustPoints = async (targetUser: User, setTo: number) => {
@@ -932,6 +1005,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('accountRequests')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'accountRequests'
+                  ? 'border-rose-400 text-rose-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Inbox className="w-4 h-4" /> Approvals ({accountRequests.filter((r) => r.status === 'pending').length})
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('settings')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -979,6 +1065,23 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </button>
               </div>
 
+              {main && selectedUserIds.size > 0 && (
+                <div className="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-red-500/10 border border-red-500/30">
+                  <span className="text-xs font-bold text-red-300">{selectedUserIds.size} selected</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setSelectedUserIds(new Set())} className="text-xs text-zinc-400 hover:text-white cursor-pointer px-2">
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget({ kind: 'bulk', ids: Array.from(selectedUserIds) })}
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete Selected
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Users List */}
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center gap-2 text-zinc-400">
@@ -1007,6 +1110,16 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
+                          {main && !isMainRow && (
+                            <button
+                              type="button"
+                              onClick={() => toggleUserSelected(user.id)}
+                              title={selectedUserIds.has(user.id) ? 'Deselect' : 'Select for bulk delete'}
+                              className="p-0.5 text-zinc-500 hover:text-white cursor-pointer shrink-0"
+                            >
+                              {selectedUserIds.has(user.id) ? <CheckSquare className="w-4 h-4 text-red-400" /> : <Square className="w-4 h-4" />}
+                            </button>
+                          )}
                           <img
                             src={user.avatar || '/noob-logo.svg.jpeg'}
                             alt={user.username}
@@ -1135,10 +1248,17 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                               ))}
                               {canDelete && (
                                 <button
-                                  onClick={() => setSelectedUserForDelete(user)}
+                                  onClick={() => {
+                                    if (main) { setDeleteTarget({ kind: 'single', user }); return; }
+                                    // a delegate never deletes directly — this files a request for the main admin, no password needed
+                                    setActionLoading(user.id);
+                                    deleteUserAccount(user.id).then((res) => {
+                                      setStatusMessage({ text: res.message || (res.success ? 'Request sent.' : 'Could not send the request.'), type: res.success ? 'success' : 'error' });
+                                    }).finally(() => setActionLoading(null));
+                                  }}
                                   disabled={actionLoading === user.id}
-                                  title="Permanently delete this account and their content"
-                                  className="p-1.5 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer"
+                                  title={main ? 'Permanently delete this account and their content' : 'Ask the NOOB administrator to delete this account'}
+                                  className="p-1.5 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer disabled:opacity-50"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1846,6 +1966,82 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               )}
             </div>
+          ) : activeTab === 'accountRequests' && main ? (
+            /* Suspend/delete requests filed by a delegate — only the main admin can see or act on this, even
+               another admin with every other permission ticked has no access to this tab at all */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <Inbox className="w-4 h-4 text-rose-300" /> Approval Requests
+                </span>
+                <button onClick={loadAccountRequests} className="text-xs text-rose-300 hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAccountRequests ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+
+              {loadingAccountRequests ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-rose-300 mx-auto mb-2" />
+                  <p className="text-xs text-zinc-400">Loading requests...</p>
+                </div>
+              ) : accountRequests.length === 0 ? (
+                <div className="py-10 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 text-xs text-zinc-500">
+                  Nothing waiting on you right now.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {accountRequests.map((r) => (
+                    <div key={r.id} className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <img src={r.target.avatar || '/noob-logo.svg.jpeg'} alt={r.target.username} className="w-9 h-9 rounded-full object-cover border border-zinc-700 shrink-0" referrerPolicy="no-referrer" />
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-white block truncate">
+                              {requestActionLabel(r.action)} @{r.target.username}
+                            </span>
+                            <span className="text-[11px] text-zinc-400 block truncate">Asked by @{r.requestedBy.username}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${
+                            r.status === 'approved'
+                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              : r.status === 'rejected'
+                              ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                              : r.action === 'delete'
+                              ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          }`}
+                        >
+                          {r.status === 'pending' ? r.action : r.status}
+                        </span>
+                      </div>
+                      {r.reason && <p className="text-xs text-zinc-300 leading-relaxed">Reason: {r.reason}</p>}
+                      <span className="text-[10px] text-zinc-500 block">{formatExactDateTime(r.createdAt)}</span>
+                      {r.status === 'pending' && (
+                        <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
+                          <button
+                            onClick={() => handleResolveAccountRequest(r, true)}
+                            disabled={resolvingRequestId === r.id}
+                            className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {r.action === 'delete' && <KeyRound className="w-3.5 h-3.5" />}
+                            {resolvingRequestId === r.id ? 'Working...' : 'Approve'}
+                          </button>
+                          <button
+                            onClick={() => handleResolveAccountRequest(r, false)}
+                            disabled={resolvingRequestId === r.id}
+                            className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : activeTab === 'settings' && main ? (
             /* Platform-wide toggles */
             <div className="space-y-3">
@@ -2377,38 +2573,63 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         </div>
       )}
 
-      {/* Confirmation Sub-Modal for Permanent Deletion */}
-      {selectedUserForDelete && (
-        <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-zinc-950 border border-red-500/50 rounded-3xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-red-400">
-              <Trash2 className="w-6 h-6" />
-              <h3 className="text-base font-black text-white">Delete @{selectedUserForDelete.username}?</h3>
-            </div>
+      {/* Delete confirmation — one account, several selected, or approving a delegate's request. Deleting is
+          the only action on this panel that asks for the NOOB account's own password; nothing else does. */}
+      {deleteTarget && (() => {
+        const needsPassword = deleteTarget.kind !== 'single' || main;
+        const title =
+          deleteTarget.kind === 'single' ? `Delete @${deleteTarget.user.username}?` :
+          deleteTarget.kind === 'bulk' ? `Delete ${deleteTarget.ids.length} accounts?` :
+          `Approve deleting @${deleteTarget.request.target.username}?`;
+        const body =
+          deleteTarget.kind === 'request'
+            ? `@${deleteTarget.request.requestedBy.username} asked for this. Approving permanently deletes the account along with everything it made — this cannot be undone.`
+            : 'This permanently deletes the account along with every post, reel, and comment it authored. This cannot be undone — suspend the account instead if you just want to block their access.';
+        const close = () => { setDeleteTarget(null); setDeletePassword(''); setDeletePasswordError(''); };
+        return (
+          <div className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-zinc-950 border border-red-500/50 rounded-3xl p-5 space-y-4 shadow-2xl">
+              <div className="flex items-center gap-3 text-red-400">
+                <Trash2 className="w-6 h-6" />
+                <h3 className="text-base font-black text-white">{title}</h3>
+              </div>
 
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              This permanently deletes the account along with every post, reel, and comment it authored. This
-              cannot be undone — suspend the account instead if you just want to block their access.
-            </p>
+              <p className="text-xs text-zinc-400 leading-relaxed">{body}</p>
 
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setSelectedUserForDelete(null)}
-                className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteUser(selectedUserForDelete)}
-                disabled={actionLoading === selectedUserForDelete.id}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-lg cursor-pointer"
-              >
-                {actionLoading === selectedUserForDelete.id ? 'Deleting...' : 'Permanently Delete'}
-              </button>
+              {needsPassword && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-zinc-400 flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5" /> Your NOOB account password
+                  </label>
+                  <input
+                    type="password"
+                    autoFocus
+                    value={deletePassword}
+                    onChange={(e) => { setDeletePassword(e.target.value); setDeletePasswordError(''); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && deletePassword && !deleteBusy) handleConfirmDelete(); }}
+                    placeholder="Password"
+                    className="w-full bg-zinc-900 text-xs text-white px-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-red-500"
+                  />
+                  {deletePasswordError && <p className="text-[11px] text-red-400">{deletePasswordError}</p>}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 pt-2">
+                <button onClick={close} className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold cursor-pointer">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteBusy || (needsPassword && !deletePassword)}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-lg cursor-pointer"
+                >
+                  {deleteBusy ? 'Working...' : deleteTarget.kind === 'request' ? 'Approve & Delete' : 'Permanently Delete'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Admin access editor: tick exactly what this person may do */}
       {contentPreview && (() => {

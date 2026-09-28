@@ -128,6 +128,9 @@ await expectFail(() => asAnon(db, () => db.query('select public.get_my_user()'))
 section('3. Follows');
 // start from a clean slate between the people used below (real data may already link them)
 { const ids = [a, b, c, priv, priv2, author].map((x) => `'${x}'`).join(','); await db.query(`delete from follows where follower_id in (${ids}) or followee_id in (${ids})`); await db.query(`delete from follow_requests where requester_id in (${ids}) or target_id in (${ids})`); await db.query(`delete from notifications where actor_id in (${ids}) and type in ('new_follower','follow_request_received','follow_request_accepted')`); }
+// auto-accept now defaults ON (tested below with priv2) — priv keeps it explicitly OFF so the
+// request/accept/decline mechanics below are exercised the way this section actually tests them.
+await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": false}'::jsonb where id = $1`, [priv]);
 await expectFail(() => rpc(a, 'toggle_follow', a), /can't follow yourself/, 'you can not follow yourself');
 let f = await rpc(a, 'toggle_follow', b);
 check(f.isFollowing === true && f.followersCount === (await n('select followers_count n from profiles where id = $1', [b])), 'following a public account works');
@@ -152,20 +155,24 @@ await db.query('insert into blocks (blocker_id, blocked_id) values ($1, $2)', [c
 await expectFail(() => rpc(a, 'toggle_follow', c), /can't follow this account/, 'a blocked person can not follow the blocker');
 await db.query('delete from blocks where blocker_id = $1', [c]);
 
-// Auto-accept follow requests (private accounts only) — off by default, so priv2 behaves exactly
-// like priv did above until it's switched on.
+// Auto-accept follow requests (private accounts only) — ON by default for every account now, so
+// priv2 (which has never touched this setting) auto-accepts without anyone switching anything on.
 {
   let r = await rpc(a, 'toggle_follow', priv2);
-  check(r.isFollowing === false && r.isFollowRequested === true, 'auto-accept is off by default, so a private account still just gets a request');
-  await rpc(a, 'toggle_follow', priv2); // cancel it, back to a clean slate
-  await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": true}'::jsonb where id = $1`, [priv2]);
-  r = await rpc(a, 'toggle_follow', priv2);
-  check(r.isFollowing === true && r.isFollowRequested === false, 'with it on, the request is auto-accepted — a real follow, not a pending one');
+  check(r.isFollowing === true && r.isFollowRequested === false, 'auto-accept is ON by default, so a private account that never touched the setting still auto-follows');
   check((await n('select count(*)::int n from follow_requests where requester_id = $1 and target_id = $2', [a, priv2])) === 0, 'and no follow_requests row is left behind');
   check((await n(`select count(*)::int n from notifications where type = 'new_follower' and target_user_id = $1 and actor_id = $2`, [priv2, a])) === 1, 'it notifies as a normal new-follower, not a pending request');
   r = await rpc(a, 'toggle_follow', priv2);
   check(r.isFollowing === false, 'unfollowing afterwards still works normally');
+
+  // Switching it off is sticky: it stays off (even across an unrelated profile edit) until switched back on.
   await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": false}'::jsonb where id = $1`, [priv2]);
+  r = await rpc(a, 'toggle_follow', priv2);
+  check(r.isFollowing === false && r.isFollowRequested === true, 'switched off, the same account now just gets a request');
+  await rpc(priv2, 'update_my_profile', { bio: 'unrelated edit' });
+  check((await n(`select count(*)::int n from profiles where id = $1 and (privacy_settings->>'autoAcceptFollowRequests')::boolean = false`, [priv2])) === 1, '...and an unrelated profile edit does not turn it back on');
+  await rpc(a, 'toggle_follow', priv2); // cancel the request, back to a clean slate
+  await db.query(`update profiles set privacy_settings = privacy_settings || '{"autoAcceptFollowRequests": true}'::jsonb where id = $1`, [priv2]);
 }
 
 // =====================================================================================

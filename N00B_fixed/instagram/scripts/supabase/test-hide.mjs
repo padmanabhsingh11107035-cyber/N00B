@@ -26,7 +26,9 @@ await runImport(buildImportPlan(raw, {}), makePgAdapter(db), { log: () => {} });
 const profByLegacy = Object.fromEntries((await db.query('select * from profiles')).rows.map((p) => [p.legacy_id, p]));
 const idOf = (u) => profByLegacy[u.id].id;
 const adminRaw = raw.users.find((u) => u.isAdmin);
-const publicRaw = raw.users.filter((u) => !u.isAdmin && u.accountType !== 'private' && (u.password || '').length > 0);
+// @NOOB and @padmanabh can see everyone's content no matter what (they're the two super viewers), so they
+// must never land in "hidden" here, or hiding from them would look broken when it is working exactly as designed.
+const publicRaw = raw.users.filter((u) => !u.isAdmin && u.accountType !== 'private' && (u.password || '').length > 0 && u.username.toLowerCase() !== 'padmanabh');
 const privateRaw = raw.users.filter((u) => u.accountType === 'private');
 const admin = idOf(adminRaw);
 const [owner, hidden, other, owner2] = publicRaw.slice(0, 4).map(idOf);

@@ -177,6 +177,9 @@ export {
   suspendUserAccount,
   adjustUserPoints,
   deleteUserAccount,
+  bulkDeleteUserAccounts,
+  fetchAdminActionRequests,
+  resolveAdminActionRequest,
   fetchAdminUsersList,
   fetchAdminReports,
   fetchAdminStaff,
@@ -218,7 +221,8 @@ export type {
   MutualFollower,
   TeamApplication,
   SparkXApplication,
-  PlatformSettings
+  PlatformSettings,
+  AccountActionRequest
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

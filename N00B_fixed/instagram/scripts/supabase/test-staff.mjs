@@ -145,10 +145,18 @@ await expectFail(() => rpc(s, 'create_coupon', { title: 'X', discountPercent: 5 
 await expectFail(() => rpc(s, 'create_store_product', { price: 5, description: 'x', media: [{ type: 'photo', url: 'p' }] }), /Only the NOOB admin account can add products/, 'the store was NOT ticked: refused');
 await expectFail(() => rpc(s, 'admin_delete_message', '00000000-0000-0000-0000-000000000001'), /Access denied/, 'chat moderation was NOT ticked: refused');
 check((await rpc(s, 'my_coupons', true)).every((k) => k.active), '(and the coupon "manage" view shows a delegate only the normal wallet coupons)');
-const sus = await rpc(s, 'admin_suspend_user', names[t], '  spamming  ', true);
-check(sus.success && sus.user.isSuspended === true && sus.user.email === undefined, 'suspend WAS ticked: it works (and the answer holds no private details)');
+// Delegates no longer act at once — a tap FILES a request, and only the main admin's approval does anything
+// (full coverage of the request/approve/reject queue lives in test-account-requests.mjs).
+const susReq = await rpc(s, 'admin_suspend_user', names[t], '  spamming  ', true);
+check(susReq.success && susReq.pending === true && !susReq.user, 'suspend WAS ticked, but a delegate only FILES a request: nothing happens yet');
+check((await db.query('select is_suspended from profiles where id = $1', [t])).rows[0].is_suspended === false, 'the account is untouched until the main admin approves');
+let reqRow = (await rpc(admin, 'admin_action_requests_list')).requests.find((r) => r.target.id === t && r.status === 'pending');
+const sus = await rpc(admin, 'admin_resolve_action_request', reqRow.id, true);
+check(sus.success && sus.user.isSuspended === true, 'once approved: it works');
 check((await db.query('select p.is_suspended, u.banned_until is not null as banned from profiles p join auth.users u on u.id = p.id where p.id = $1', [t])).rows[0].banned === true, 'the account really is stopped');
-check((await rpc(s, 'admin_suspend_user', names[t], null, false)).message.includes('unsuspended'), 'and it can be restored');
+const restoreReq = await rpc(s, 'admin_suspend_user', names[t], null, false);
+reqRow = (await rpc(admin, 'admin_action_requests_list')).requests.find((r) => r.target.id === t && r.status === 'pending');
+check((await rpc(admin, 'admin_resolve_action_request', reqRow.id, true)).message.includes('unsuspended'), 'and it can be restored, once approved');
 await expectFail(() => rpc(s, 'admin_suspend_user', names[admin], 'x', true), /primary NOOB administrator account cannot be suspended/, 'the main admin can not be suspended');
 await expectFail(() => rpc(s, 'admin_suspend_user', names[s], 'x', true), /can't do this to your own account/, 'a delegate can not suspend themselves');
 await rpc(admin, 'admin_set_permissions', v, ['suspend_accounts', 'delete_accounts', 'adjust_points']);
@@ -187,8 +195,14 @@ check(prod.success && (await rpc(s, 'delete_store_product', prod.product.id)).su
 await rpc(admin, 'admin_set_permissions', s, ['delete_accounts']);
 const victim = idOf(xRaw);
 const vName = names[victim];
-const del = await rpc(s, 'admin_delete_user', vName);
-check(del.success && (await n('select count(*)::int n from profiles where id = $1', [victim])) === 0 && (await n('select count(*)::int n from auth.users where id = $1', [victim])) === 0, '"delete accounts" removes the account, its login and everything they made');
+const delReq = await rpc(s, 'admin_delete_user', vName);
+check(delReq.success && delReq.pending === true, '"delete accounts" still just files a request from a delegate — no password asked of them either');
+check((await n('select count(*)::int n from profiles where id = $1', [victim])) === 1, 'the account is untouched until the main admin approves');
+await db.query(`update auth.users set encrypted_password = extensions.crypt('noob-master-pw', extensions.gen_salt('bf')) where id = $1`, [admin]);
+const delReqRow = (await rpc(admin, 'admin_action_requests_list')).requests.find((r) => r.target.id === victim && r.status === 'pending');
+await expectFail(() => rpc(admin, 'admin_resolve_action_request', delReqRow.id, true, 'wrong-password'), /Incorrect password/, 'approving a DELETE still needs the main admin\'s own password, even wrong ones are refused');
+const del = await rpc(admin, 'admin_resolve_action_request', delReqRow.id, true, 'noob-master-pw');
+check(del.success && (await n('select count(*)::int n from profiles where id = $1', [victim])) === 0 && (await n('select count(*)::int n from auth.users where id = $1', [victim])) === 0, 'with the right password: the account, its login and everything they made are gone');
 await expectFail(() => rpc(s, 'admin_delete_user', names[admin]), /primary NOOB administrator account cannot be deleted/, 'but never the main admin');
 
 section('7. Moderating content and chats');
@@ -232,8 +246,10 @@ const acts = new Set(log.map((e) => e.action));
 for (const a of ['admin_access_set', 'admin_access_removed', 'account_suspended', 'account_restored', 'account_deleted', 'points_adjusted', 'notification_sent', 'coupon_created', 'coupon_removed', 'product_added', 'product_removed', 'message_deleted', 'report_resolved']) {
   check(acts.has(a), `the log recorded: ${a}`);
 }
-const one = log.find((e) => e.action === 'account_suspended' && e.actor === names[s]);
-check(one && one.target === names[t] && one.details.reason === 'spamming' && new Date(one.at) > new Date(Date.now() - 600000), 'each entry says who, what, to whom, when (and why)');
+const req = log.find((e) => e.action === 'action_requested' && e.actor === names[s] && e.target === names[t] && e.details.action === 'suspend');
+check(!!req, 'the log records who ASKED for a suspend');
+const one = log.find((e) => e.action === 'account_suspended' && e.target === names[t] && e.details.reason === 'spamming');
+check(one && one.actor === names[admin] && new Date(one.at) > new Date(Date.now() - 600000), 'and a separate entry says who actually approved it, to whom, when and why');
 check(log.find((e) => e.action === 'points_adjusted').details.to === 12345 && log.find((e) => e.action === 'account_deleted').details.username === vName, 'amounts and names are kept (even for an account that no longer exists)');
 check(log[0].at >= log[log.length - 1].at, 'newest first');
 await expectFail(() => rpc(s, 'admin_audit_log'), /Only the main NOOB administrator/, 'a delegate can NOT read the log');

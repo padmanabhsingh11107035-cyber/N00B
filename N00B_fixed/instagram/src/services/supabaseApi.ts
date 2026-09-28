@@ -169,7 +169,7 @@ export async function signupUser(payload: {
 
     // Login addresses are private, random ones: the person's real email lives in their private profile
     // (so one email can be used on many accounts) and they log in by username or real email via a lookup.
-    const { data, error } = await supabase.auth.signUp({
+    const signUpOnce = () => supabase.auth.signUp({
       email: `${crypto.randomUUID()}@users.nooob.xyz`,
       password: payload.password,
       options: {
@@ -195,10 +195,25 @@ export async function signupUser(payload: {
         }
       }
     });
+    let { data, error } = await signUpOnce();
+    // A generic "Database error ..." from Supabase Auth wraps ANY failure inside our sign-up trigger — it is
+    // NOT necessarily a username clash (check_signup, just above, already confirmed the username was free a
+    // moment ago). It's most often just a transient hiccup, so retry the exact same sign-up once — a failure
+    // here rolls the whole insert back, so retrying never creates a duplicate or double-charges anything.
+    if (error && !/password/i.test(error.message) && /database error/i.test(error.message)) {
+      ({ data, error } = await signUpOnce());
+    }
     if (error) {
-      const msg = /password/i.test(error.message) ? error.message : /database error/i.test(error.message)
-        ? 'User ID is already taken. Please choose another.'
-        : error.message;
+      const msg = /password/i.test(error.message)
+        ? error.message
+        : /database error/i.test(error.message)
+          ? await (async () => {
+              // Only claim "already taken" if a fresh check says it actually is — never guess that from a
+              // generic error string, which could just as easily be an unrelated, transient failure.
+              const recheck = await rpc<{ error?: string }>('check_signup', { p: payload }).catch(() => null);
+              return recheck?.error || 'Something went wrong creating your account. Please try again in a moment.';
+            })()
+          : error.message;
       return { success: false, error: msg };
     }
     if (!data.session) {
@@ -2369,8 +2384,60 @@ export async function adjustUserPoints(
   }
 }
 
-export async function deleteUserAccount(targetUserId: string): Promise<{ success: boolean; message?: string; error?: string }> {
-  try { return await rpc('admin_delete_user', { p_target: targetUserId }); } catch (err) { return failWith(err, 'Could not delete the account.'); }
+// The main admin's own delete needs their NOOB account password; a delegate's tap files a request instead
+// (see AccountActionRequest below) and never needs one, since they never actually delete anything themselves.
+export async function deleteUserAccount(targetUserId: string, password?: string): Promise<{ success: boolean; pending?: boolean; message?: string; error?: string }> {
+  try { return await rpc('admin_delete_user', { p_target: targetUserId, p_password: password || null }); } catch (err) { return failWith(err, 'Could not delete the account.'); }
+}
+
+// Select as many accounts as you like and delete them together — one password prompt either way.
+export async function bulkDeleteUserAccounts(targetUserIds: string[], password: string): Promise<{
+  success: boolean; deletedCount?: number; deleted?: string[]; skipped?: { username: string; reason: string }[]; message?: string; error?: string;
+}> {
+  try { return await rpc('admin_bulk_delete_users', { p_targets: targetUserIds, p_password: password }); }
+  catch (err) { return failWith(err, 'Could not delete the selected accounts.'); }
+}
+
+// ---- suspend/delete requests from a delegate, waiting on the main administrator ----
+
+export interface AccountActionRequest {
+  id: string;
+  action: 'suspend' | 'unsuspend' | 'delete';
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  resolvedAt?: string;
+  target: { id: string; username: string; displayName?: string; avatar?: string; isVerified?: boolean };
+  requestedBy: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+const mapAccountActionRequest = (r: any): AccountActionRequest => ({
+  ...r,
+  target: { ...r.target, avatar: resolveMedia(r.target?.avatar) },
+  requestedBy: { ...r.requestedBy, avatar: resolveMedia(r.requestedBy?.avatar) }
+});
+
+// Main admin only — nobody else, even with every other permission ticked, can see this.
+export async function fetchAdminActionRequests(): Promise<{ success: boolean; requests: AccountActionRequest[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_action_requests_list');
+    return { success: true, requests: (res.requests || []).map(mapAccountActionRequest) };
+  } catch (err) {
+    return { success: false, requests: [], error: errorText(err, 'Could not load the approval queue.') };
+  }
+}
+
+export async function resolveAdminActionRequest(
+  id: string,
+  approve: boolean,
+  password?: string
+): Promise<{ success: boolean; message?: string; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_resolve_action_request', { p_id: id, p_approve: approve, p_password: password || null });
+    return { ...res, user: res.user ? mapUser(res.user) : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not resolve this request.');
+  }
 }
 
 export async function fetchAdminUsersList(): Promise<{ success: boolean; users: User[]; error?: string }> {

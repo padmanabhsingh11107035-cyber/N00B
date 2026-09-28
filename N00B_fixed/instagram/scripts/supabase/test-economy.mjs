@@ -558,7 +558,9 @@ await expectFail(() => rpc(admin, 'admin_delete_user', adminName), /cannot be de
 await expectFail(() => rpc(admin, 'admin_delete_user', 'zzz_nobody'), /Target account not found/, 'an unknown account is refused');
 const before = await n('select count(*)::int n from profiles');
 const postsOfD = await n('select count(*)::int n from posts where user_id = $1', [d]);
-const del = await rpc(admin, 'admin_delete_user', d);
+await db.query(`update auth.users set encrypted_password = extensions.crypt('main-admin-pw', extensions.gen_salt('bf')) where id = $1`, [admin]);
+await expectFail(() => rpc(admin, 'admin_delete_user', d), /Incorrect password/, 'deleting needs the main admin\'s own password, even for the main admin');
+const del = await rpc(admin, 'admin_delete_user', d, 'main-admin-pw');
 check(del.success && del.message.includes('permanently deleted') && (await n('select count(*)::int n from profiles')) === before - 1 && (await n('select count(*)::int n from auth.users where id = $1', [d])) === 0 && (await n('select count(*)::int n from posts where user_id = $1', [d])) === 0, `deleting an account removes the login, the profile and everything they made (${postsOfD} posts)`);
 
 // =====================================================================================
@@ -643,7 +645,9 @@ const ins = (await rpc(a, 'my_insights')).insights;
 check(['accountsReached', 'accountsEngaged', 'totalFollowers', 'profileActivity', 'skipRate', 'shareRate', 'likeRate', 'saveRate', 'repostRate', 'commentRate'].every((k) => typeof ins[k] === 'number') && ins.reachHistory.length === 7 && ins.reachHistory.every((x) => x.date && typeof x.value === 'number') && Array.isArray(ins.audienceDemographics), 'the insights have every number the dashboard shows, and a 7-day reach chart');
 const someOwner = (await db.query(`select p.user_id id from posts p join post_likes l on l.post_id = p.id group by p.user_id order by count(*) desc limit 1`)).rows[0];
 if (someOwner) {
-  await db.query(`insert into post_views (post_id, user_id) select p.id, $2 from posts p where p.user_id = $1 on conflict do nothing`, [someOwner.id, b]);
+  // "on conflict ... do update" (not "do nothing") guarantees a fresh view lands in TODAY's bucket even if
+  // b already had an older view on one of these posts from the imported backup data.
+  await db.query(`insert into post_views (post_id, user_id) select p.id, $2 from posts p where p.user_id = $1 on conflict (post_id, user_id) do update set created_at = now()`, [someOwner.id, b]);
   const i2 = (await rpc(someOwner.id, 'my_insights')).insights;
   check(i2.accountsReached >= 1 && i2.accountsEngaged >= 1 && i2.likeRate > 0 && i2.reachHistory.reduce((s, x) => s + x.value, 0) >= 1, 'a creator with likes and views sees real numbers');
 }

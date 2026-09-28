@@ -193,7 +193,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [businessCategorySetting, setBusinessCategorySetting] = useState(currentUser.businessCategory || 'Creator & Brand');
   const [followRequests, setFollowRequests] = useState<any[]>(currentUser.followRequests || []);
   const [hideTaggedPhotos, setHideTaggedPhotos] = useState(currentUser.privacySettings?.hideTaggedPhotos ?? false);
-  const [autoAcceptFollowRequests, setAutoAcceptFollowRequests] = useState(currentUser.privacySettings?.autoAcceptFollowRequests ?? false);
+  const [autoAcceptFollowRequests, setAutoAcceptFollowRequests] = useState(currentUser.privacySettings?.autoAcceptFollowRequests ?? true);
   const [blockedWords, setBlockedWords] = useState(currentUser.privacySettings?.blockedWords?.join(', ') || '');
   const [pushFavoritesEnabled, setPushFavoritesEnabled] = useState(true);
 

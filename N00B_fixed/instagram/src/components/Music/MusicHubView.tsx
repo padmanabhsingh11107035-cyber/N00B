@@ -22,7 +22,7 @@ import { MusicTrack, User } from '../../types';
 import { uploadMusicTrack, uploadMediaFile, renameMusicTrack } from '../../services/api';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { getAudioDuration } from '../../utils/mediaCompressor';
-import { isVideoFile, extractAudioFromVideoFile } from '../../utils/extractAudioFromVideo';
+import { isVideoFile, extractAudioFromVideoFile, MAX_MUSIC_UPLOAD_SECONDS } from '../../utils/extractAudioFromVideo';
 import confetti from 'canvas-confetti';
 
 interface MusicHubViewProps {
@@ -64,6 +64,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const [detectedDuration, setDetectedDuration] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isExtractingAudio, setIsExtractingAudio] = useState(false);
+  const [audioUploadError, setAudioUploadError] = useState('');
 
   // Renaming — publisher-only, so this is only ever offered on tracks the
   // current account itself uploaded (checked against track.uploaderId).
@@ -129,10 +130,9 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     let file = e.target.files?.[0];
     if (!file) return;
+    setAudioUploadError('');
     try {
-      // The picker's "audio/*" accept is only a hint — some browsers still let a video file through.
-      // Pulling just the audio out here means the track that gets stored is a real audio file, not
-      // the whole video's bytes.
+      // Video files are welcome here too — only the audio track ends up in the uploaded track.
       if (isVideoFile(file)) {
         setIsExtractingAudio(true);
         try {
@@ -142,6 +142,11 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
         }
       }
       const duration = await getAudioDuration(file);
+      const [mm, ss] = duration.split(':').map(Number);
+      if (mm * 60 + ss > MAX_MUSIC_UPLOAD_SECONDS) {
+        setAudioUploadError('That track is longer than 20 minutes — please upload something shorter.');
+        return;
+      }
       setDetectedDuration(duration);
 
       const res = await uploadMediaFile(file, 'music');
@@ -151,6 +156,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       setAudioObjectKey(res.objectKey || '');
     } catch (err) {
       console.error(err);
+      setAudioUploadError(err instanceof Error ? err.message : 'Could not process that file.');
     }
   };
 
@@ -180,6 +186,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       setCoverObjectKey('');
       setAudioObjectKey('');
       setDetectedDuration('');
+      setAudioUploadError('');
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
     } catch (err) {
       console.error(err);
@@ -534,7 +541,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                     <><Upload className="w-3 h-3 text-[#00FF66]" /> Audio File</>
                   )}
                 </button>
-                <input ref={audioFileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" onChange={handleAudioUpload} className="hidden" />
+                <input ref={audioFileRef} type="file" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.m4v,.webm,.mkv" onChange={handleAudioUpload} className="hidden" />
               </div>
 
               {/* Auto Duration Status */}
@@ -547,6 +554,12 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                   {detectedDuration || 'Upload audio…'}
                 </span>
               </div>
+
+              {audioUploadError && (
+                <p className="text-[11px] text-rose-400 font-semibold text-center bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-1.5">
+                  {audioUploadError}
+                </p>
+              )}
 
               <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
                 <button

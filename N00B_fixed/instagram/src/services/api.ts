@@ -248,8 +248,7 @@ export {
   fetchLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
-  subscribeToLiveLoungeWhiteboard,
-  broadcastLiveLoungeWhiteboard
+  connectLiveLoungeWhiteboard
 } from './supabaseApi';
 
 export type {

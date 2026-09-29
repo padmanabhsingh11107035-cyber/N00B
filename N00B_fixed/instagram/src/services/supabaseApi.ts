@@ -3322,14 +3322,16 @@ export function subscribeToLiveLoungeRoomParticipants(roomId: string, onChange: 
 
 // The DIY whiteboard is purely ephemeral (broadcast, never stored) — a fresh join just sees a blank
 // board, same as walking up to a real whiteboard mid-meeting.
-export function subscribeToLiveLoungeWhiteboard(roomId: string, onEvent: (payload: any) => void): () => void {
+// One channel instance handles both directions: a broadcast message sent on a channel that was never
+// itself subscribed/joined can be silently dropped by Realtime, which is exactly what made strokes
+// visible to the person drawing (drawn locally, synchronously) but invisible to everyone else.
+export function connectLiveLoungeWhiteboard(roomId: string, onEvent: (payload: any) => void): { send: (payload: any) => void; disconnect: () => void } {
   const channel = supabase
     .channel(`lounge-whiteboard-${roomId}`, { config: { broadcast: { self: false } } })
     .on('broadcast', { event: 'draw' }, ({ payload }) => onEvent(payload))
     .subscribe();
-  return () => { supabase.removeChannel(channel); };
-}
-
-export function broadcastLiveLoungeWhiteboard(roomId: string, payload: any): void {
-  supabase.channel(`lounge-whiteboard-${roomId}`, { config: { broadcast: { self: false } } }).send({ type: 'broadcast', event: 'draw', payload });
+  return {
+    send: (payload: any) => { void channel.send({ type: 'broadcast', event: 'draw', payload }); },
+    disconnect: () => { supabase.removeChannel(channel); }
+  };
 }

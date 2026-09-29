@@ -24,8 +24,7 @@ import {
   fetchLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
-  subscribeToLiveLoungeWhiteboard,
-  broadcastLiveLoungeWhiteboard
+  connectLiveLoungeWhiteboard
 } from '../../services/api';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
@@ -105,6 +104,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
   const [sharingScreen, setSharingScreen] = useState(false);
+  const [screenShareError, setScreenShareError] = useState('');
   const [panel, setPanel] = useState<'none' | 'chat' | 'people'>('none');
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
 
@@ -117,6 +117,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const whiteboardChannelRef = useRef<{ send: (payload: any) => void; disconnect: () => void } | null>(null);
 
   const myUid = agoraUidFor(currentUser.id);
 
@@ -289,11 +290,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       ctx.stroke();
     };
 
-    const unsub = subscribeToLiveLoungeWhiteboard(roomId, (payload) => {
+    const channel = connectLiveLoungeWhiteboard(roomId, (payload) => {
       if (payload?.clear) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
       if (payload) drawSegment(payload.x0, payload.y0, payload.x1, payload.y1);
     });
-    return () => { window.removeEventListener('resize', resize); unsub(); };
+    whiteboardChannelRef.current = channel;
+    return () => { window.removeEventListener('resize', resize); channel.disconnect(); whiteboardChannelRef.current = null; };
   }, [whiteboardOpen, roomId]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -315,7 +317,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     ctx.moveTo(lastPointRef.current.x * canvas.width, lastPointRef.current.y * canvas.height);
     ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
     ctx.stroke();
-    broadcastLiveLoungeWhiteboard(roomId, { x0: lastPointRef.current.x, y0: lastPointRef.current.y, x1: point.x, y1: point.y });
+    whiteboardChannelRef.current?.send({ x0: lastPointRef.current.x, y0: lastPointRef.current.y, x1: point.x, y1: point.y });
     lastPointRef.current = point;
   };
   const handlePointerUp = () => { drawingRef.current = false; lastPointRef.current = null; };
@@ -323,7 +325,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (roomId) broadcastLiveLoungeWhiteboard(roomId, { clear: true });
+    whiteboardChannelRef.current?.send({ clear: true });
   };
 
   const cleanup = useCallback(async () => {
@@ -354,6 +356,15 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const client = clientRef.current;
     if (!client) return;
     if (!sharingScreen) {
+      setScreenShareError('');
+      if (typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
+        setScreenShareError(
+          isIosStandalonePwa() || /iPhone|iPad|iPod/.test(navigator.userAgent)
+            ? 'Screen sharing is not available on iPhone/iPad browsers — this is an Apple restriction, not something the app controls. Share from a laptop or desktop instead.'
+            : 'This browser does not support screen sharing.'
+        );
+        return;
+      }
       try {
         const screenTrack = await AgoraRTC.createScreenVideoTrack({}, 'disable');
         if (camTrackRef.current) await client.unpublish(camTrackRef.current);
@@ -361,7 +372,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         screenTrackRef.current = screenTrack;
         screenTrack.on('track-ended', () => { void handleToggleScreenShare(); });
         setSharingScreen(true);
-      } catch { /* the person cancelled the share picker */ }
+      } catch (err) {
+        const name = (err as { name?: string })?.name;
+        if (name !== 'NotAllowedError' && name !== 'AbortError') {   // those two just mean "cancelled the picker"
+          setScreenShareError(friendlyAgoraError(err, 'Could not start screen sharing.'));
+        }
+      }
     } else {
       try {
         if (screenTrackRef.current) { await client.unpublish(screenTrackRef.current); screenTrackRef.current.close(); screenTrackRef.current = null; }
@@ -498,9 +514,19 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         </button>
       )}
 
+      {screenShareError && (
+        <button
+          onClick={() => setScreenShareError('')}
+          className="shrink-0 mx-3 mt-3 flex items-center justify-between gap-2 bg-red-500/15 border border-red-500/40 rounded-2xl px-4 py-2.5 text-left"
+        >
+          <span className="text-red-300 text-xs font-semibold">{screenShareError}</span>
+          <X className="w-3.5 h-3.5 text-red-300 shrink-0" />
+        </button>
+      )}
+
       <div className="flex-1 overflow-y-auto p-3">
         <div className="grid grid-cols-2 gap-2 max-w-2xl mx-auto">
-          <VideoTile videoTrack={camTrackRef.current || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={cameraOn && !sharingScreen} muted={!micOn} />
+          <VideoTile videoTrack={(sharingScreen ? screenTrackRef.current : camTrackRef.current) || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={sharingScreen || cameraOn} muted={!micOn} />
           {remoteList.map((r) => {
             const p = participants.admitted.find((a) => agoraUidFor(a.userId) === r.uid);
             return (

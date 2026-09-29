@@ -33,7 +33,13 @@ import {
   LogOut
 } from 'lucide-react';
 import { User } from '../../types';
-import { askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary, fetchUsers } from '../../services/api';
+import {
+  askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary, fetchUsers,
+  fetchMyWalletTransfers, fetchWalletTransferDetail
+} from '../../services/api';
+import type { WalletTransferSummary, WalletTransferDetail } from '../../services/api';
+import { formatPaymentId } from '../../utils/formatPoints';
+import { ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
 import { wantsToEndSession, goodbyeMessage, goodbyeSpoken } from './supportIntents';
 import confetti from 'canvas-confetti';
 
@@ -50,6 +56,10 @@ interface ChatMessage {
   text: string;
   time: string;
   model?: string;
+  // "Payment Issue" quick action: a real, un-invented list of the user's own past NOOB Points payments to
+  // pick from, or the full detail of the one they picked.
+  transactions?: WalletTransferSummary[];
+  transactionDetail?: WalletTransferDetail;
 }
 
 export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
@@ -197,6 +207,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  // Set the moment someone picks a payment from "Payment Issue" — the very next message they send carries
+  // its real details along to the AI (once), so it can actually help with that specific payment instead of
+  // guessing or inventing one.
+  const [activePaymentContext, setActivePaymentContext] = useState<WalletTransferDetail | null>(null);
 
   // Ticket form state
   const [ticketSubject, setTicketSubject] = useState('');
@@ -609,6 +624,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
+    const paymentContext = activePaymentContext;
+    setActivePaymentContext(null);
+    const messageForAssistant = paymentContext
+      ? `[Regarding payment ${formatPaymentId(paymentContext.transferId)}: ${paymentContext.direction === 'sent' ? 'sent' : 'received'} ${paymentContext.amount.toLocaleString()} NOOB Points ${paymentContext.direction === 'sent' ? 'to' : 'from'} @${paymentContext.otherParty.username} on ${new Date(paymentContext.createdAt).toLocaleString()}]\n${userText}`
+      : userText;
 
     // "end chat", "bye", ...: say goodbye, ask for the 5-star review, and end the session (no need to ask the AI)
     if (wantsToEndSession(userText)) {
@@ -625,7 +645,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
     try {
       const history = messages.map((m) => ({ sender: m.sender, text: m.text }));
-      const response = await askAiSupportAssistant(userText, history);
+      const response = await askAiSupportAssistant(messageForAssistant, history);
 
       if (response && response.reply) {
         const botMsgId = `msg_bot_${Date.now()}`;
@@ -656,6 +676,49 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     } finally {
       setIsTyping(false);
     }
+  };
+
+  // "Payment Issue" quick action — a real, un-invented list of the person's own NOOB Points payments to
+  // pick from. Never goes through the AI: fetched straight from the wallet, so there is nothing to hallucinate.
+  const handlePaymentIssueQuickAction = async () => {
+    if (loadingTransactions) return;
+    setLoadingTransactions(true);
+    try {
+      const res = await fetchMyWalletTransfers(20);
+      const text = res.transfers.length
+        ? 'Here are your recent NOOB Points payments — tap the one you need help with.'
+        : "You don't have any NOOB Points payments yet — nothing to show here.";
+      setMessages((prev) => [
+        ...prev,
+        { id: `msg_bot_${Date.now()}`, sender: 'bot', text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), transactions: res.transfers }
+      ]);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  // Picking one payment from that list: show its full detail, then ask what went wrong — the reply to
+  // that question carries the same real detail along to the AI (see handleSendMessage above).
+  const handleSelectTransaction = async (t: WalletTransferSummary) => {
+    const res = await fetchWalletTransferDetail(t.transferId);
+    if (!res.success || !res.transfer) {
+      setMessages((prev) => [
+        ...prev,
+        { id: `msg_bot_${Date.now()}`, sender: 'bot', text: res.error || 'Could not load that payment.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      ]);
+      return;
+    }
+    setActivePaymentContext(res.transfer);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg_bot_${Date.now()}`,
+        sender: 'bot',
+        text: 'What\'s the issue with this payment?',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        transactionDetail: res.transfer
+      }
+    ]);
   };
 
   // Quick prompt chip clicked
@@ -1123,6 +1186,14 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={handlePaymentIssueQuickAction}
+                  disabled={loadingTransactions}
+                  className="px-2.5 py-1 rounded-full bg-amber-950/40 hover:bg-amber-900/40 border border-amber-500/30 text-[11px] text-amber-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
+                >
+                  💳 {loadingTransactions ? 'Loading...' : 'Payment Issue'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveSupportTab('safety_report')}
                   className="px-2.5 py-1 rounded-full bg-rose-950/40 hover:bg-rose-900/40 border border-rose-500/30 text-[11px] text-rose-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                 >
@@ -1168,6 +1239,45 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                       }`}
                     >
                       <div className="whitespace-pre-wrap">{m.text}</div>
+
+                      {m.transactions && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {m.transactions.map((t) => (
+                            <button
+                              key={t.transferId}
+                              type="button"
+                              onClick={() => handleSelectTransaction(t)}
+                              className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-black/20 hover:bg-black/35 border border-white/10 text-left transition-colors cursor-pointer"
+                            >
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${t.direction === 'sent' ? 'bg-rose-500/20 text-rose-300' : 'bg-[#00FF66]/20 text-[#00FF66]'}`}>
+                                {t.direction === 'sent' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownLeft className="w-3.5 h-3.5" />}
+                              </div>
+                              <img src={t.otherParty.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[11px] font-bold block truncate">
+                                  {t.direction === 'sent' ? 'To' : 'From'} @{t.otherParty.username}
+                                </span>
+                                <span className="text-[10px] opacity-70 block">{formatPaymentId(t.transferId)} • {new Date(t.createdAt).toLocaleDateString()}</span>
+                              </div>
+                              <span className={`text-xs font-black shrink-0 ${t.direction === 'sent' ? 'text-rose-300' : 'text-[#00FF66]'}`}>
+                                {t.direction === 'sent' ? '-' : '+'}{t.amount.toLocaleString()}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {m.transactionDetail && (
+                        <div className="mt-2.5 p-3 rounded-xl bg-black/20 border border-white/10 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold opacity-90">
+                            <Receipt className="w-3.5 h-3.5" /> {formatPaymentId(m.transactionDetail.transferId)}
+                          </div>
+                          <div className="text-[11px] flex justify-between"><span className="opacity-70">{m.transactionDetail.direction === 'sent' ? 'To' : 'From'}</span><span className="font-bold">@{m.transactionDetail.otherParty.username}</span></div>
+                          <div className="text-[11px] flex justify-between"><span className="opacity-70">Amount</span><span className="font-bold">{m.transactionDetail.amount.toLocaleString()} pts</span></div>
+                          <div className="text-[11px] flex justify-between"><span className="opacity-70">When</span><span className="font-bold">{new Date(m.transactionDetail.createdAt).toLocaleString()}</span></div>
+                          {m.transactionDetail.reason && <div className="text-[11px] flex justify-between gap-2"><span className="opacity-70 shrink-0">Reason</span><span className="font-bold text-right truncate">{m.transactionDetail.reason}</span></div>}
+                        </div>
+                      )}
 
                       <div
                         className={`flex items-center justify-between gap-2 mt-2 pt-1 border-t ${

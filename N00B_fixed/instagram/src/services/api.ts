@@ -150,6 +150,8 @@ export {
   upgradeProTier,
   toggleProAutoRenew,
   transferNoobPoints,
+  fetchMyWalletTransfers,
+  fetchWalletTransferDetail,
   fetchShopCatalog,
   purchaseShopItem,
   revealScratchCard,
@@ -235,7 +237,9 @@ export type {
   InstantSender,
   InstantInboxItem,
   OpenedInstant,
-  InstantArchiveItem
+  InstantArchiveItem,
+  WalletTransferSummary,
+  WalletTransferDetail
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

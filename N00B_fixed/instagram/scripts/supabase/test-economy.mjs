@@ -43,7 +43,7 @@ const rpc = async (uid, fn, ...args) => (await call(uid, `select public.${fn}(${
 const n = async (sql, params = []) => (await db.query(sql, params)).rows[0].n;
 const pts = async (u) => Number((await db.query('select noob_points::text p from profiles where id = $1', [u])).rows[0].p);
 const setPts = (u, v) => db.query('update profiles set noob_points = $2 where id = $1', [u, v]);
-const txs = async (u) => (await db.query('select amount::text amount, reason, balance_after::text balance_after from noob_transactions where user_id = $1 order by created_at, id', [u])).rows;
+const txs = async (u) => (await db.query('select amount::text amount, reason, balance_after::text balance_after, transfer_id from noob_transactions where user_id = $1 order by created_at, id', [u])).rows;
 const resetPeople = async () => {
   await db.query(`update profiles set noob_points = 0, pro_tier = null, pro_billing = null, pro_auto_renew = false, pro_renews_at = null,
                   is_verified = false, verification_tier = null, purchased_item_ids = '{}', is_suspended = false, games_played_count = 0, games_won_count = 0
@@ -69,12 +69,26 @@ await expectFail(() => rpc(a, 'wallet_transfer', b, 1000, 'wrong-pw'), /Incorrec
 check((await pts(a)) === 5000 && (await pts(b)) === 100, 'and neither balance moved from either attempt');
 const t1 = await rpc(a, 'wallet_transfer', b, 1000, 'secret-pw', '  thanks for the help  ');
 check(t1.success && t1.message.includes('1,000 points') && t1.user.noobPoints === 4000, 'the right password: a transfer moves the points and answers with the sender\'s new balance');
+check(!!t1.transferId && /^[0-9a-f-]{36}$/i.test(t1.transferId), 'and every payment gets its own unique Payment ID');
 check((await pts(a)) === 4000 && (await pts(b)) === 1100, 'the sender lost 1,000 and the friend gained 1,000');
 const ta = await txs(a), tb = await txs(b);
-check(ta.length === 1 && ta[0].amount === '-1000' && ta[0].reason.startsWith('Sent to @') && ta[0].reason.endsWith(': thanks for the help') && ta[0].balance_after === '4000', 'the sender\'s wallet history has the line');
-check(tb.length === 1 && tb[0].amount === '1000' && tb[0].reason.startsWith('Received from @') && tb[0].balance_after === '1100', 'so does the friend\'s');
+check(ta.length === 1 && ta[0].amount === '-1000' && ta[0].reason.startsWith('Sent to @') && ta[0].reason.endsWith(': thanks for the help') && ta[0].balance_after === '4000' && ta[0].transfer_id === t1.transferId, 'the sender\'s wallet history has the line, tagged with that same Payment ID');
+check(tb.length === 1 && tb[0].amount === '1000' && tb[0].reason.startsWith('Received from @') && tb[0].balance_after === '1100' && tb[0].transfer_id === t1.transferId, 'so does the friend\'s — same Payment ID, both sides');
 const nt = (await db.query(`select * from notifications where type = 'points_transfer' and target_user_id = $1`, [b])).rows;
 check(nt.length === 1 && nt[0].actor_id === a && nt[0].title === '💰 NOOB Points Received' && nt[0].message.includes('1,000 NOOB Points: "thanks for the help"'), 'the friend gets a notification');
+
+// Both sides can look this one payment up by its Payment ID — nobody else can.
+const mineList = await rpc(a, 'my_wallet_transfers');
+check(mineList.length === 1 && mineList[0].transferId === t1.transferId && mineList[0].direction === 'sent' && mineList[0].amount === 1000 && mineList[0].otherParty.id === b, 'my_wallet_transfers shows the sender their own payment, with who they sent it to');
+const theirList = await rpc(b, 'my_wallet_transfers');
+check(theirList.length === 1 && theirList[0].transferId === t1.transferId && theirList[0].direction === 'received' && theirList[0].otherParty.id === a, '...and the receiver theirs, from the other side');
+const detailForSender = await rpc(a, 'wallet_transfer_detail', t1.transferId);
+check(detailForSender.direction === 'sent' && detailForSender.amount === 1000 && detailForSender.otherParty.id === b, 'the sender can pull the full detail of their own payment');
+const detailForReceiver = await rpc(b, 'wallet_transfer_detail', t1.transferId);
+check(detailForReceiver.direction === 'received' && detailForReceiver.otherParty.id === a, '...and so can the receiver');
+await expectFail(() => rpc(c, 'wallet_transfer_detail', t1.transferId), /not found/, 'nobody else can look up a payment they were not part of');
+await expectFail(() => rpc(a, 'wallet_transfer_detail', '00000000-0000-0000-0000-000000000000'), /not found/, 'an unknown Payment ID is refused');
+await expectFail(() => asAnon(db, () => db.query('select public.my_wallet_transfers()')), /permission denied/, 'a logged-out visitor can not list anyone\'s payments');
 await expectFail(() => rpc(a, 'wallet_transfer', b, 999999, 'secret-pw'), /Insufficient NOOB Points/, 'you cannot send more than you have');
 await expectFail(() => rpc(a, 'wallet_transfer', a, 10, 'secret-pw'), /cannot send points to yourself/, 'you cannot send points to yourself');
 await expectFail(() => rpc(a, 'wallet_transfer', b, 0, 'secret-pw'), /valid whole number/, 'zero is refused');

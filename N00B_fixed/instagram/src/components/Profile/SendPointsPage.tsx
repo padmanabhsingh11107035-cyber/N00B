@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle, QrCode, Lock } from 'lucide-react';
+import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle, QrCode, Lock, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { User } from '../../types';
 import { transferNoobPoints, fetchUsers } from '../../services/api';
-import { formatNoobPoints } from '../../utils/formatPoints';
+import { formatNoobPoints, formatPaymentId } from '../../utils/formatPoints';
 import { QrScannerModal } from '../Common/QrScannerModal';
 import confetti from 'canvas-confetti';
 
@@ -27,6 +27,14 @@ function usernameFromScannedQr(text: string): string | null {
   }
 }
 
+interface SentPayment {
+  recipient: User;
+  amount: number;
+  note: string;
+  transferId?: string;
+  at: string;
+}
+
 export const SendPointsPage: React.FC<SendPointsPageProps> = ({
   currentUser,
   allUsers,
@@ -39,13 +47,15 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
   const [note, setNote] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [successState, setSuccessState] = useState<{ recipient: User; amount: number } | null>(null);
+  const [successState, setSuccessState] = useState<SentPayment | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [resolvingQr, setResolvingQr] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   // The UPI-style final step — amount and recipient are locked in; only the sender's own password
   // confirms the payment.
   const [confirmingWithPassword, setConfirmingWithPassword] = useState(false);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const balance = currentUser.noobPoints || 0;
   const query = searchQuery.trim().toLowerCase();
@@ -102,9 +112,10 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
       if (res.success && res.user) {
         onUserUpdated?.(res.user);
         confetti({ particleCount: 40, spread: 65, origin: { y: 0.6 } });
-        setSuccessState({ recipient, amount: parsedAmount });
+        setSuccessState({ recipient, amount: parsedAmount, note: note.trim(), transferId: res.transferId, at: new Date().toISOString() });
         setConfirmingWithPassword(false);
         setPassword('');
+        setShowPassword(false);
       } else {
         setErrorMessage(res.error || 'Could not send points. Please try again.');
       }
@@ -124,6 +135,15 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
     setSearchQuery('');
     setConfirmingWithPassword(false);
     setPassword('');
+    setShowPassword(false);
+  };
+
+  const copyPaymentId = () => {
+    if (!successState?.transferId) return;
+    navigator.clipboard?.writeText(formatPaymentId(successState.transferId)).then(() => {
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    }).catch(() => undefined);
   };
 
   return (
@@ -145,17 +165,63 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 max-w-lg w-full mx-auto space-y-5">
         {successState ? (
-          <div className="flex flex-col items-center text-center gap-4 py-10">
-            <div className="w-16 h-16 rounded-full bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-[#00FF66]" />
+          <div className="space-y-5 py-4">
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-[#00FF66]" />
+              </div>
+              <div>
+                <h3 className="text-white text-lg font-bold">Payment Successful</h3>
+                <p className="text-zinc-400 text-xs mt-1">
+                  {successState.amount.toLocaleString()} NOOB Points sent to @{successState.recipient.username}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white text-lg font-bold">Points Sent!</h3>
-              <p className="text-zinc-400 text-xs mt-1">
-                {successState.amount.toLocaleString()} NOOB Points sent to @{successState.recipient.username}
-              </p>
+
+            {/* Receipt */}
+            <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl overflow-hidden">
+              {successState.transferId && (
+                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900">
+                  <span className="text-[11px] text-zinc-400 font-bold">Payment ID</span>
+                  <button
+                    onClick={copyPaymentId}
+                    className="flex items-center gap-1.5 text-[11px] font-bold text-[#00FF66] hover:underline cursor-pointer"
+                  >
+                    {formatPaymentId(successState.transferId)}
+                    {copiedId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
+              )}
+              <div className="p-4 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">To</span>
+                  <div className="flex items-center gap-1.5">
+                    <img src={successState.recipient.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-4 h-4 rounded-full object-cover" referrerPolicy="no-referrer" />
+                    <span className="text-white font-bold">{successState.recipient.displayName || successState.recipient.username}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">Amount</span>
+                  <span className="text-[#00FF66] font-black">{successState.amount.toLocaleString()} pts</span>
+                </div>
+                {successState.note && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-zinc-400 shrink-0">Note</span>
+                    <span className="text-white text-right truncate">{successState.note}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">Date &amp; Time</span>
+                  <span className="text-white">{new Date(successState.at).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
+                  <span className="text-zinc-400">Status</span>
+                  <span className="text-[#00FF66] font-bold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Success</span>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2.5 w-full max-w-xs pt-2">
+
+            <div className="flex gap-2.5 w-full pt-1">
               <button
                 onClick={resetForAnother}
                 className="flex-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs font-bold hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -187,17 +253,26 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Lock className="w-3 h-3" /> Enter your password to confirm
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Lock className="w-3 h-3" /> Enter your password to confirm
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="text-[10px] font-bold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />} {showPassword ? 'HIDE' : 'SHOW'}
+                </button>
+              </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setErrorMessage(''); }}
                 onKeyDown={(e) => { if (e.key === 'Enter' && password && !isSending) handleSend(); }}
                 placeholder="Password"
                 autoFocus
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-lg tracking-widest text-white placeholder:text-sm placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
               />
             </div>
 

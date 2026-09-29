@@ -2123,13 +2123,13 @@ export async function toggleProAutoRenew(enabled: boolean): Promise<{ success: b
 }
 
 // UPI-style: the sender's own password confirms every transfer, on top of everything else already
-// checked (balance, recipient, amount).
+// checked (balance, recipient, amount). Every payment gets its own transferId (its "Payment ID").
 export async function transferNoobPoints(payload: {
   recipientId: string;
   amount: number;
   password: string;
   note?: string;
-}): Promise<{ success: boolean; user?: User; message?: string; error?: string }> {
+}): Promise<{ success: boolean; user?: User; message?: string; transferId?: string; error?: string }> {
   try {
     const res = await rpc<any>('wallet_transfer', {
       p_recipient: payload.recipientId, p_amount: payload.amount, p_password: payload.password, p_note: payload.note || null
@@ -2137,6 +2137,37 @@ export async function transferNoobPoints(payload: {
     return { ...res, user: mapUser(res.user) };
   } catch (err) {
     return failWith(err, 'Could not send the points.');
+  }
+}
+
+export interface WalletTransferSummary {
+  transferId: string;
+  direction: 'sent' | 'received';
+  amount: number;
+  createdAt: string;
+  otherParty: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+export interface WalletTransferDetail extends WalletTransferSummary {
+  reason: string;
+}
+
+// The account's own NOOB Points payment history — what the support chat's "Payment Issue" flow lists.
+export async function fetchMyWalletTransfers(limit = 30): Promise<{ success: boolean; transfers: WalletTransferSummary[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('my_wallet_transfers', { p_limit: limit })) || [];
+    return { success: true, transfers: list.map((t) => ({ ...t, otherParty: { ...t.otherParty, avatar: resolveMedia(t.otherParty?.avatar) } })) };
+  } catch (err) {
+    return { success: false, transfers: [], error: errorText(err, 'Could not load your payments.') };
+  }
+}
+
+export async function fetchWalletTransferDetail(transferId: string): Promise<{ success: boolean; transfer?: WalletTransferDetail; error?: string }> {
+  try {
+    const t = await rpc<any>('wallet_transfer_detail', { p_transfer_id: transferId });
+    return { success: true, transfer: { ...t, otherParty: { ...t.otherParty, avatar: resolveMedia(t.otherParty?.avatar) } } };
+  } catch (err) {
+    return failWith(err, 'Could not load that payment.');
   }
 }
 

@@ -166,6 +166,11 @@ class NoobMemory:
             row = self.db.execute("SELECT id FROM users WHERE noob_id = ?", (noob_id,)).fetchone()
         return row[0] if row else None
 
+    def noob_id_for(self, user_id):
+        with self.lock:
+            row = self.db.execute("SELECT noob_id FROM users WHERE id = ?", (user_id,)).fetchone()
+        return row[0] if row else None
+
     def link_noob(self, user_id, noob_id, noob_username):
         """Links a NOOB social account. Returns False if it is already linked to another account."""
         with self.lock, self.db:

@@ -2571,6 +2571,39 @@ export async function takeAdminReportAction(
   try { return await rpc('admin_report_action', { p_id: reportId, p_action: action, p_suspend: suspendTarget }); } catch (err) { return failWith(err, 'Could not update the report.'); }
 }
 
+// ---- NOOB AI feedback (reports/suggestions submitted from inside NOOB AI) ----
+
+export interface NoobAiFeedbackItem {
+  id: string;
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  category: 'issue' | 'suggestion';
+  message: string;
+  status: 'open' | 'replied' | 'closed';
+  adminReply?: string;
+  repliedAt?: string;
+  createdAt: string;
+}
+
+export async function fetchNoobAiFeedback(status?: 'open' | 'replied' | 'closed'): Promise<{ success: boolean; items: NoobAiFeedbackItem[]; error?: string }> {
+  try {
+    const items = await rpc<any[]>('admin_noob_ai_feedback_list', { p_status: status ?? null });
+    return { success: true, items: (items || []).map((f) => ({ ...f, avatar: resolveMedia(f.avatar) })) };
+  } catch (err) {
+    return { success: false, items: [], error: errorText(err, 'Could not load NOOB AI feedback.') };
+  }
+}
+
+export async function replyNoobAiFeedback(feedbackId: string, reply: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('admin_reply_noob_ai_feedback', { p_feedback_id: feedbackId, p_reply: reply }); } catch (err) { return failWith(err, 'Could not send that reply.'); }
+}
+
+export async function closeNoobAiFeedback(feedbackId: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('admin_close_noob_ai_feedback', { p_feedback_id: feedbackId }); } catch (err) { return failWith(err, 'Could not close that.'); }
+}
+
 // ---- "Apply to join us" (team_applications) ----
 
 export interface TeamApplication {

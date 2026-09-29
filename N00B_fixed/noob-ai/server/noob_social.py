@@ -79,6 +79,36 @@ class NoobSocialError(Exception):
     """A message that can be shown to the person signing in."""
 
 
+# ---------------- NOOB AI feedback (report an issue / suggest a change) ----------------
+# NOOB AI never keeps a login session for the linked NOOB account (the whole point of "Continue with
+# NOOB" is that the password is never kept), so submitting/reading feedback on that account's behalf
+# proves who it's speaking for with this shared secret instead of a session token. Matches the value
+# inserted into internal_config by migration 20260929000010 — the two must stay in sync.
+FEEDBACK_SECRET = "a40b659d969249189021ac1ca6c9c99a3e071a2fad654cd4aac5133b1ebdcc02"
+
+
+def submit_feedback(noob_id, category, message):
+    """Saves a report/suggestion against the linked NOOB account so it shows up in the NOOB admin panel."""
+    try:
+        r = _http.post(f"{NOOB_SOCIAL_URL}/rest/v1/rpc/submit_noob_ai_feedback", headers=_headers(),
+                       json={"p_secret": FEEDBACK_SECRET, "p_noob_user_id": noob_id,
+                             "p_category": category, "p_message": message}, timeout=TIMEOUT)
+        if r.status_code != 200:
+            raise NoobSocialError("Could not send that to NOOB right now. Please try again.")
+    except requests.RequestException:
+        raise NoobSocialError("Could not reach NOOB right now. Check the internet and try again.")
+
+
+def list_feedback(noob_id):
+    """This account's own past reports/suggestions, newest first, with any admin reply."""
+    try:
+        r = _http.post(f"{NOOB_SOCIAL_URL}/rest/v1/rpc/noob_ai_feedback_for_user", headers=_headers(),
+                       json={"p_secret": FEEDBACK_SECRET, "p_noob_user_id": noob_id}, timeout=TIMEOUT)
+        return r.json() if r.status_code == 200 and isinstance(r.json(), list) else []
+    except (requests.RequestException, ValueError):
+        return []
+
+
 # ---------------- NOOB AI maintenance lock ----------------
 # The NOOB admin can lock NOOB AI for maintenance (NOOB app → Admin Control Panel → Platform). NOOB AI reads that
 # switch from NOOB every 15 seconds in the background, so answering a question never waits for it.

@@ -580,6 +580,7 @@ loaders.about = async () => {
   loadAccount();
   const profile = await api("/api/profile");
   document.querySelectorAll("#profileForm [data-field]").forEach((i) => (i.value = profile[i.dataset.field] || ""));
+  loadFeedback();
 };
 $("saveProfile").onclick = async () => {
   const data = {};
@@ -587,6 +588,51 @@ $("saveProfile").onclick = async () => {
   await api("/api/profile", { method: "PUT", json: data });
   toast("Saved! NOOB will use your details from now on.");
   refreshStatus();
+};
+
+// Report an issue / suggest a change — goes to the NOOB admin panel, replies come back here too.
+async function loadFeedback() {
+  const res = await api("/api/feedback").catch(() => ({ linked: true, items: [] }));
+  const list = $("feedbackList");
+  list.replaceChildren();
+  $("feedbackForm").hidden = res.linked === false;
+  if (res.linked === false) {
+    list.append(el("div", "empty", "Link your NOOB account above first — that's where this shows up and where you'll get a reply."));
+    return;
+  }
+  (res.items || []).slice(0, 10).forEach((f) => {
+    const item = el("div", "item");
+    const grow = el("div", "grow");
+    grow.append(el("div", "title", f.message));
+    const meta = el("div", "meta", `${f.category === "issue" ? "Issue" : "Suggestion"} · ${new Date(f.createdAt).toLocaleDateString()}`);
+    grow.append(meta);
+    if (f.adminReply) {
+      const reply = el("div", "meta");
+      reply.append(el("b", "", "NOOB replied: "), document.createTextNode(f.adminReply));
+      grow.append(reply);
+    } else {
+      grow.append(el("div", "meta", "Waiting for a reply…"));
+    }
+    item.append(grow);
+    list.append(item);
+  });
+}
+$("feedbackForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const category = $("feedbackCategory").value;
+  const message = $("feedbackMessage").value.trim();
+  if (!message) return;
+  const btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true;
+  const res = await api("/api/feedback", { method: "POST", json: { category, message } }).catch((err) => ({ ok: false, error: err.message }));
+  btn.disabled = false;
+  if (res.ok) {
+    $("feedbackMessage").value = "";
+    toast("Sent to NOOB — you'll get a notification in the NOOB app when they reply.");
+    loadFeedback();
+  } else {
+    toast(res.error || "Could not send that. Please try again.", true);
+  }
 };
 
 // ---------------------------------------------------------------- MEMORY

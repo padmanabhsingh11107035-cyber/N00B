@@ -102,6 +102,19 @@
         <div class="row"><input id="newPw" type="password" placeholder="New password (6+ characters)" autocomplete="new-password"><button class="btn primary" id="changePw">Change</button></div>
         <div class="row end"><button class="btn ghost" id="signOut2">Sign out</button></div>
       </div>
+    <div class="card" id="feedbackCard">
+      <h2>Report an issue or suggest a change</h2>
+      <p class="muted small">Goes straight to the NOOB admin — you'll get a notification in the NOOB app when they reply. Needs your NOOB account linked above.</p>
+      <form id="feedbackForm">
+        <select id="feedbackCategory">
+          <option value="issue">Something's wrong</option>
+          <option value="suggestion">I have a suggestion</option>
+        </select>
+        <textarea id="feedbackMessage" maxlength="2000" placeholder="Tell NOOB what happened, or what you'd like changed…" rows="3"></textarea>
+        <button class="btn primary" type="submit">Send</button>
+      </form>
+      <div class="list" id="feedbackList"></div>
+    </div>
   </section>
 
   <!-- ============ MEMORY ============ -->

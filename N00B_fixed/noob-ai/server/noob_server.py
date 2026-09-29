@@ -78,13 +78,18 @@ SURVEY_AFTER = 15                # after this many questions NOOB asks for a 5-s
 HINDI_HINT = "नमस्ते, यह बातचीत हिंदी में है।"
 
 SYSTEM_PROMPT = """You are NOOB, a warm, cheerful female AI friend who talks with the user by voice, like a smart speaker.
-Talk like a caring friend: natural, kind, a little playful, and use the user's name now and then if you know it.
+Talk like a caring friend: natural, kind, a little playful. You know the user's name, but a real friend does not
+say it in every sentence — say it only occasionally (greeting them, checking in on something serious, celebrating
+something), never as a habitual sentence-filler. Most replies should not contain their name at all.
 Remember what they told you and bring it up when it helps ("How is your knee today?").
 Your answers are converted to speech, so:
 - Start EVERY reply with the language code of the language you are replying in, in square brackets, e.g. [en], [hi], [ta], [es]. This tag is removed before speaking.
 - Reply in the same language the user spoke, unless they ask for another language. If they mix Hindi and English, reply in Hindi.
 - Write every language in its own script (Hindi and Marathi in Devanagari, Tamil in Tamil script, and so on), never in English
-  letters, so the voice pronounces it correctly.
+  letters, so the voice pronounces it correctly. The one exception is Hinglish: if the user asks you to speak Hinglish
+  (or is themselves mixing Hindi and English written in English/Roman letters, not Devanagari), reply the same way —
+  natural Hindi-English code-mixing in Roman script, tagged [en] (the Indian-English voice reads code-mixed Roman text
+  correctly; the Hindi voice would not). Once they ask for Hinglish, stay in it until they ask for something else.
 - Speak naturally in plain sentences. No markdown, no bullet symbols, no emojis, no URLs, no tables.
 - Keep answers short (1 to 4 sentences) unless the user asks for more detail. Keep the FIRST sentence short
   (under about 10 words), so your voice can start straight away. For casual chat, answer briefly and ask a friendly follow-up question sometimes.
@@ -1241,6 +1246,37 @@ def api_profile_get():
 @signed_in
 def api_profile_put():
     memory.set_profile(g.user["id"], {str(k)[:60]: str(v)[:1000] for k, v in body().items()})
+    return jsonify(ok=True)
+
+
+@app.get("/api/feedback")
+@signed_in
+def api_feedback_get():
+    """This account's own past reports/suggestions, with any reply from the NOOB admin panel."""
+    noob_id = memory.noob_id_for(g.user["id"])
+    if not noob_id:
+        return jsonify(linked=False, items=[])
+    return jsonify(linked=True, items=noob_social.list_feedback(noob_id))
+
+
+@app.post("/api/feedback")
+@signed_in
+def api_feedback_post():
+    noob_id = memory.noob_id_for(g.user["id"])
+    if not noob_id:
+        return jsonify(ok=False, error="Link your NOOB account first (About Me) — that's where this shows up and where you'll get a reply."), 400
+    data = body()
+    category = str(data.get("category", "")).strip().lower()
+    message = str(data.get("message", "")).strip()[:2000]
+    if category not in ("issue", "suggestion"):
+        return jsonify(ok=False, error="Choose whether this is an issue or a suggestion."), 400
+    if not message:
+        return jsonify(ok=False, error="Write what you'd like to report or suggest."), 400
+    try:
+        noob_social.submit_feedback(noob_id, category, message)
+    except noob_social.NoobSocialError as e:
+        return jsonify(ok=False, error=str(e)), 502
+    log(f"[feedback] {g.user['username']} ({category}): {said(g.user['id'], message)}")
     return jsonify(ok=True)
 
 

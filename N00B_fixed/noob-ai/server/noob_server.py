@@ -645,6 +645,8 @@ def converse(user_id, text=None, pcm=None):
         yield event
 
     answer = stream.answer()
+    if re.search(r"\bHEARD\s*:", answer, re.IGNORECASE):     # a leak slipped through: capture the exact
+        log(f"!! HEARD leak (model={noob_brain.last_model}, voice={stream.voice}): raw={stream.raw!r}")
     commands = stream.raw[stream.text_start:] if stream.text_start is not None else ""
     music, music_note = None, ""
     request_ = music_request(commands)

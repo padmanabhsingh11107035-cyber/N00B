@@ -386,10 +386,15 @@ def web_search(query, user_id=None):
 
 VOICE_NOTE = """
 
-The user's newest message is a voice recording (the attached audio). Start your reply with exactly one line:
+The user's newest message is a voice recording (the attached audio). Your reply must start with EXACTLY one
+line, nothing before it and nothing else on it:
 HEARD: <the user's words exactly as spoken, in their own language and script>
-Then write your reply on the next line, starting with the language tag. If the recording has no clear speech,
-write "HEARD:" with nothing after it, and ask the user to say it again."""
+Then a line break, then your actual reply, starting with the language tag. That HEARD line is never read aloud —
+it only shows as a caption — so your SPOKEN reply must go straight to answering. Never repeat, restate, paraphrase
+or acknowledge what the user just said (for example "You asked how I am..." or "I heard you say..." or starting
+your answer by echoing their question back) — that line already captured it, so saying it again out loud is
+wrong and annoying. If the recording has no clear speech, write "HEARD:" with nothing after it, and ask the user
+to say it again."""
 
 SENTENCE_END = re.compile(r"[.!?।॥]+[\"'”’)\]]*(?:\s+|$)|\n+")
 MEMORY_MARK = re.compile(r"\b(?:REMEMBER|FORGET|MOOD|PLAY|MUSIC|BYE)\s*:")

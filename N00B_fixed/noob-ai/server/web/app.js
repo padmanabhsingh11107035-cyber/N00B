@@ -369,7 +369,7 @@ async function startListening() {
       if (total < 350) noise = Math.max(noise, level);              // measure room noise first
       if (level > Math.max(0.02, noise * 2.2)) { heardSpeech = true; lastLoud = now; }
       orb.style.setProperty("--level", Math.min(1, level * 6).toFixed(3));
-      if (heardSpeech && now - lastLoud > 800) return stopListening();          // you stopped talking
+      if (heardSpeech && now - lastLoud > 1100) return stopListening();          // you stopped talking
       if (!heardSpeech && total > 8000) { rec.cancelled = true; toast("I didn't hear anything."); return stopListening(); }
     }
     if (total > 20000) return stopListening();                                    // never record forever

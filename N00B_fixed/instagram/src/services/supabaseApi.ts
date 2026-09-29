@@ -2750,13 +2750,19 @@ export interface PlatformSettings {
   // SparkX registration and "join the NOOB team" applications — migration 20260927000003
   sparkxOpen?: boolean;
   joinTeamOpen?: boolean;
+  // Live Lounge (the meeting room, not Live Streaming) maintenance lock — migration 20260929000009
+  liveLoungeMaintenance?: boolean;
+  liveLoungeMaintenanceMessage?: string;
 }
 
 export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
   try {
     return await rpc<PlatformSettings>('public_platform_settings');
   } catch {
-    return { signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false, sparkxOpen: true, joinTeamOpen: true };
+    return {
+      signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false, sparkxOpen: true, joinTeamOpen: true,
+      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: ''
+    };
   }
 }
 
@@ -2767,6 +2773,8 @@ export async function adminSetPlatformSettings(payload: {
   noobAiMaintenance?: boolean;
   sparkxOpen?: boolean;
   joinTeamOpen?: boolean;
+  liveLoungeMaintenance?: boolean;
+  liveLoungeMaintenanceMessage?: string;
 }): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
   try {
     const settings = await rpc<PlatformSettings>('admin_set_platform_settings', {
@@ -2775,7 +2783,9 @@ export async function adminSetPlatformSettings(payload: {
       p_maintenance_message: payload.maintenanceMessage ?? null,
       ...(payload.noobAiMaintenance !== undefined ? { p_noob_ai_maintenance: payload.noobAiMaintenance } : {}),
       ...(payload.sparkxOpen !== undefined ? { p_sparkx_open: payload.sparkxOpen } : {}),
-      ...(payload.joinTeamOpen !== undefined ? { p_join_team_open: payload.joinTeamOpen } : {})
+      ...(payload.joinTeamOpen !== undefined ? { p_join_team_open: payload.joinTeamOpen } : {}),
+      ...(payload.liveLoungeMaintenance !== undefined ? { p_live_lounge_maintenance: payload.liveLoungeMaintenance } : {}),
+      ...(payload.liveLoungeMaintenanceMessage !== undefined ? { p_live_lounge_maintenance_message: payload.liveLoungeMaintenanceMessage } : {})
     });
     return { success: true, settings };
   } catch (err) {

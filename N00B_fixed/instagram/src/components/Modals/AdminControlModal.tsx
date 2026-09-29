@@ -56,7 +56,8 @@ import {
   Square,
   Sparkles,
   Ticket,
-  Plus
+  Plus,
+  Radio
 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -238,6 +239,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [noobAiMaintenance, setNoobAiMaintenance] = useState(false);
   const [sparkxOpen, setSparkxOpen] = useState(true);
   const [joinTeamOpen, setJoinTeamOpen] = useState(true);
+  const [liveLoungeMaintenance, setLiveLoungeMaintenance] = useState(false);
+  const [liveLoungeMaintenanceMessage, setLiveLoungeMaintenanceMessage] = useState('');
   // Explore pins (main admin): userId -> when it was pinned. Pinned accounts come first in Explore, newest on top.
   const [explorePins, setExplorePins] = useState<Record<string, string>>({});
   const [pinBusyId, setPinBusyId] = useState<string | null>(null);
@@ -369,6 +372,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setNoobAiMaintenance(!!s.noobAiMaintenance);
     setSparkxOpen(s.sparkxOpen !== false);
     setJoinTeamOpen(s.joinTeamOpen !== false);
+    setLiveLoungeMaintenance(!!s.liveLoungeMaintenance);
+    setLiveLoungeMaintenanceMessage(s.liveLoungeMaintenanceMessage || '');
     setStoreOrdersEnabled(shop.storeEnabled);
     setLoadingSettings(false);
   };
@@ -539,6 +544,22 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setSavingSettings(true);
     const res = await adminSetPlatformSettings({ maintenanceMessage });
     if (res.success) setStatusMessage({ text: 'Maintenance message saved.', type: 'success' });
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleToggleLiveLoungeMaintenance = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ liveLoungeMaintenance: !liveLoungeMaintenance });
+    if (res.success && res.settings) setLiveLoungeMaintenance(!!res.settings.liveLoungeMaintenance);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleSaveLiveLoungeMaintenanceMessage = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ liveLoungeMaintenanceMessage });
+    if (res.success) setStatusMessage({ text: 'Live Lounge lock message saved.', type: 'success' });
     else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
     setSavingSettings(false);
   };
@@ -2144,6 +2165,42 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     <button onClick={handleToggleNoobAiMaintenance} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="NOOB AI maintenance lock">
                       {noobAiMaintenance ? <ToggleRight className="w-9 h-9 text-violet-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
                     </button>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-white flex items-center gap-2">
+                          <Radio className="w-4 h-4 text-rose-400" /> NOOB Live Room lock
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          {liveLoungeMaintenance
+                            ? 'Locked: hosting or joining a Live Lounge room shows the message below instead (you\'re exempt). Live Streaming ("Go Live") is unaffected.'
+                            : 'Live Lounge (the meeting room) is open to everyone with access.'}
+                        </span>
+                      </div>
+                      <button onClick={handleToggleLiveLoungeMaintenance} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="NOOB Live Room lock">
+                        {liveLoungeMaintenance ? <ToggleRight className="w-9 h-9 text-rose-400" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-zinc-400 block mb-1.5">Message shown while locked</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={liveLoungeMaintenanceMessage}
+                          onChange={(e) => setLiveLoungeMaintenanceMessage(e.target.value)}
+                          className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-rose-400"
+                        />
+                        <button
+                          onClick={handleSaveLiveLoungeMaintenanceMessage}
+                          disabled={savingSettings}
+                          className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">

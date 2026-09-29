@@ -24,7 +24,8 @@ import {
   fetchLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
-  connectLiveLoungeWhiteboard
+  connectLiveLoungeWhiteboard,
+  fetchPublicPlatformSettings
 } from '../../services/api';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
@@ -95,6 +96,13 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [loungeLock, setLoungeLock] = useState<{ locked: boolean; message: string }>({ locked: false, message: '' });
+
+  useEffect(() => {
+    fetchPublicPlatformSettings().then((s) =>
+      setLoungeLock({ locked: !!s.liveLoungeMaintenance, message: s.liveLoungeMaintenanceMessage || 'NOOB Live Room is down. It will be back soon.' })
+    );
+  }, []);
 
   const [participants, setParticipants] = useState<{ admitted: LiveLoungeParticipant[]; waiting: LiveLoungeParticipant[] }>({ admitted: [], waiting: [] });
   const [remotes, setRemotes] = useState<Map<number, RemoteEntry>>(new Map());
@@ -122,8 +130,14 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const myUid = agoraUidFor(currentUser.id);
 
   const refreshParticipants = useCallback((id: string) => {
-    fetchLiveLoungeRoomParticipants(id).then(setParticipants);
-  }, []);
+    fetchLiveLoungeRoomParticipants(id).then((res) => {
+      // Left in deliberately: the only way to tell "the fetch is quietly returning empty" apart from
+      // "nobody's actually waiting" without a live two-account repro — check this if the waiting-room
+      // banner still doesn't show up despite someone being in the room.
+      console.log('[lounge] participants', { roomId: id, isHost, admitted: res.admitted.length, waiting: res.waiting.length });
+      setParticipants(res);
+    });
+  }, [isHost]);
 
   const connectAgora = useCallback(async (id: string) => {
     const join = await joinLiveLoungeRoom(id);
@@ -416,10 +430,24 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     );
   }
 
+  if (phase === 'lobby' && loungeLock.locked && !currentUser.isAdmin) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-4 text-center">
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        <Radio className="w-10 h-10 text-white/40" />
+        <h2 className="text-white text-base font-semibold">NOOB Live Room is locked</h2>
+        <p className="text-white/60 text-sm max-w-sm">{loungeLock.message}</p>
+      </div>
+    );
+  }
+
   if (phase === 'lobby') {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-5">
         <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        {loungeLock.locked && currentUser.isAdmin && (
+          <p className="text-amber-400 text-[11px] text-center max-w-sm">Locked for everyone else right now — you can still host/join as admin.</p>
+        )}
         <Radio className="w-10 h-10 text-purple-400" />
         <h2 className="text-white text-lg font-semibold">{mode === 'host' ? 'Start a Live Lounge room' : 'Join a Live Lounge room'}</h2>
         {mode === 'host' ? (

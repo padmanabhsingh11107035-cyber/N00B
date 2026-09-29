@@ -421,6 +421,13 @@ def bye_requested(reply):
     return False
 LANG_TAG = re.compile(r"\s*\[([a-zA-Z]{2,3})(?:-[a-zA-Z]+)?\]\s*")
 OLLAMA_HEARD_ECHO = re.compile(r"^\s*HEARD\s*:.*?(?:\n|$)", re.IGNORECASE)
+# The offline backup model (no BYE: true training like Gemini gets) can't be trusted to write that line
+# itself, so when it is the one answering, we decide from the user's own words instead — English/Hindi
+# only, unlike the Gemini path which judges this in any language.
+OFFLINE_BYE_WORDS = re.compile(
+    r"\b(bye+|good\s*bye|end\s*(the\s+|this\s+)?call|hang\s*up|band\s*(kar|karo)|"
+    r"see\s*you\s*(later|soon)?|talk\s*(to\s*you\s*)?later|i\s*am\s*done|that'?s\s*all)\b",
+    re.IGNORECASE)
 
 
 def split_sentences(text):
@@ -611,6 +618,10 @@ def converse(user_id, text=None, pcm=None):
             # Whisper/typed text above), but a small local model sometimes echoes it anyway by copying the
             # shape of its own conversation history. Strip it so it never leaks into the spoken reply.
             reply = OLLAMA_HEARD_ECHO.sub("", reply, count=1)
+            # And it can't be relied on to write "BYE: true" itself, so detect a goodbye from what the
+            # user actually said and add the line ourselves — same signal the Gemini path already acts on.
+            if not bye_requested(reply) and OFFLINE_BYE_WORDS.search(stream.heard or ""):
+                reply += "\nBYE: true"
             for event in stream.feed(reply, final=True):
                 yield event
     heard = stream.heard if voice else text

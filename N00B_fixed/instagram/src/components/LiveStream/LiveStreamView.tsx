@@ -55,7 +55,9 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   const videoRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const localTracksRef = useRef<[IMicrophoneAudioTrack, ICameraVideoTrack | ILocalVideoTrack] | null>(null);
+  // Audio is nullable — a device with no working microphone still streams video-only rather than
+  // failing outright, which needs the two acquisitions to be independently recoverable (see below).
+  const localTracksRef = useRef<[IMicrophoneAudioTrack | null, ICameraVideoTrack | ILocalVideoTrack] | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const cleanedUpRef = useRef(false);
 
@@ -96,7 +98,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
       await withTimeout(client.join(join.appId, join.channelName, join.token, null));
 
       if (isHostRole) {
-        let audioTrack: IMicrophoneAudioTrack;
+        let audioTrack: IMicrophoneAudioTrack | null;
         let videoTrack: ICameraVideoTrack | ILocalVideoTrack;
         if (videoSource === 'screen') {
           [audioTrack, videoTrack] = await withTimeout(Promise.all([
@@ -107,10 +109,23 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
           // like tapping the in-app end button, instead of leaving a dead, silent stream running.
           videoTrack.on('track-ended', () => { void handleCloseTap(); });
         } else {
-          [audioTrack, videoTrack] = await withTimeout(AgoraRTC.createMicrophoneAndCameraTracks());
+          // Acquired separately (not via createMicrophoneAndCameraTracks) so a mic-less laptop can
+          // still go live with camera only — Agora's combined call rejects the whole pair on a single
+          // missing device, which also left the camera indicator on (nothing had closed it) since
+          // this JS side never got a track reference back to close.
+          const [micResult, camResult] = await withTimeout(Promise.allSettled([
+            AgoraRTC.createMicrophoneAudioTrack(),
+            AgoraRTC.createCameraVideoTrack()
+          ]));
+          if (camResult.status === 'rejected') {
+            if (micResult.status === 'fulfilled') micResult.value.close();
+            throw camResult.reason;
+          }
+          videoTrack = camResult.value;
+          audioTrack = micResult.status === 'fulfilled' ? micResult.value : null;
         }
         localTracksRef.current = [audioTrack, videoTrack];
-        await withTimeout(client.publish([audioTrack, videoTrack]));
+        await withTimeout(client.publish(audioTrack ? [audioTrack, videoTrack] : [videoTrack]));
         if (videoRef.current) videoTrack.play(videoRef.current, { fit: videoSource === 'screen' ? 'contain' : 'cover' });
       }
       setPhase('live');
@@ -176,7 +191,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     cleanedUpRef.current = true;
     try {
       if (localTracksRef.current) {
-        localTracksRef.current[0].close();
+        localTracksRef.current[0]?.close();
         localTracksRef.current[1].close();
       }
       await clientRef.current?.leave();
@@ -308,7 +323,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
             <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1 text-white text-xs">
               <Users className="w-3.5 h-3.5" /> {viewerCount}
             </div>
-            {mode === 'host' && (
+            {mode === 'host' && localTracksRef.current?.[0] && (
               <button
                 onClick={() => { localTracksRef.current?.[0]?.setEnabled(!micOn); setMicOn((v) => !v); }}
                 className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white"

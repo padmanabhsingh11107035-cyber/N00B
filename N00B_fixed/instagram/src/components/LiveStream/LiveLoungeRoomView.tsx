@@ -175,13 +175,20 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
 
       await withTimeout(client.join(join.appId, join.channelName, join.token, myUid));
 
-      const [micTrack, camTrack] = await withTimeout(Promise.all([
+      // Acquired separately with allSettled (not Promise.all) so a device with no working microphone
+      // still joins camera-only — Promise.all's rejection would have made the successfully-acquired
+      // camera track unreachable to close, leaving the camera indicator lit for no reason.
+      const [micResult, camResult] = await withTimeout(Promise.allSettled([
         AgoraRTC.createMicrophoneAudioTrack(),
         AgoraRTC.createCameraVideoTrack()
       ]));
-      micTrackRef.current = micTrack;
-      camTrackRef.current = camTrack;
-      await withTimeout(client.publish([micTrack, camTrack]));
+      if (camResult.status === 'rejected') {
+        if (micResult.status === 'fulfilled') micResult.value.close();
+        throw camResult.reason;
+      }
+      camTrackRef.current = camResult.value;
+      micTrackRef.current = micResult.status === 'fulfilled' ? micResult.value : null;
+      await withTimeout(client.publish(micTrackRef.current ? [micTrackRef.current, camTrackRef.current] : [camTrackRef.current]));
 
       setPhase('live');
       refreshParticipants(id);

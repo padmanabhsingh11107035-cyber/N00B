@@ -1256,7 +1256,7 @@ def api_feedback_get():
     noob_id = memory.noob_id_for(g.user["id"])
     if not noob_id:
         return jsonify(linked=False, items=[])
-    return jsonify(linked=True, items=noob_social.list_feedback(noob_id))
+    return jsonify(linked=True, items=noob_social.list_feedback(settings()["noob_ai_feedback_secret"], noob_id))
 
 
 @app.post("/api/feedback")
@@ -1273,7 +1273,7 @@ def api_feedback_post():
     if not message:
         return jsonify(ok=False, error="Write what you'd like to report or suggest."), 400
     try:
-        noob_social.submit_feedback(noob_id, category, message)
+        noob_social.submit_feedback(settings()["noob_ai_feedback_secret"], noob_id, category, message)
     except noob_social.NoobSocialError as e:
         return jsonify(ok=False, error=str(e)), 502
     log(f"[feedback] {g.user['username']} ({category}): {said(g.user['id'], message)}")

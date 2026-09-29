@@ -15,6 +15,7 @@ DEFAULTS = {
     "invite_code": "",       # new accounts need this code (shown to the owner in Settings)
     "open_to_noob_users": True,   # people who sign in with a NOOB social account don't need the invite code
     "devices": [],           # paired NOOB devices: [{"name", "mac", "ip", "key", "user_id", "paired_at"}]
+    "noob_ai_feedback_secret": "",   # proves feedback/reports really came from this server, not a browser
 }
 
 

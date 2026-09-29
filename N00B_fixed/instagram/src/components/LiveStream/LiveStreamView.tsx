@@ -72,9 +72,14 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
       Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('This is taking too long — check your camera/microphone permissions and try again.')), ms))]);
     try {
-      const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+      // "rtc" (communication) mode instead of "live" (broadcast) mode — who publishes is already
+      // controlled by the token's own role (set server-side in agora-token) and by this app's own
+      // logic only ever calling client.publish() for the host; "live" mode adds Agora-side host/
+      // audience enforcement on top of that, which isn't needed here and was the one concrete
+      // difference between a real Go Live attempt (failing with NETWORK_ERROR) and an isolated test
+      // client that only ever used "rtc" mode (which connected successfully on the same network).
+      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       clientRef.current = client;
-      await client.setClientRole(isHostRole ? 'host' : 'audience');
 
       if (!isHostRole) {
         client.on('user-published', async (user, mediaType) => {

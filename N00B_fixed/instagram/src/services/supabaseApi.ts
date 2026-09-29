@@ -3190,3 +3190,141 @@ export async function fetchMyPaymentRequests(): Promise<{ success: boolean; requ
 export async function respondPaymentRequest(requestId: string, approve: boolean, password?: string): Promise<{ success: boolean; approved?: boolean; error?: string }> {
   try { return await rpc('respond_payment_request', { p_request_id: requestId, p_approve: approve, p_password: password || null }); } catch (err) { return failWith(err, 'Could not respond to that request.'); }
 }
+
+// ----------------------------------------------------------------------------- NOOB Live Lounge room (Zoom-style)
+
+export interface LiveLoungeParticipant {
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  role?: 'host' | 'participant';
+}
+
+export interface LiveLoungeRoomChatMessage {
+  id: string;
+  roomId: string;
+  text: string;
+  createdAt: string;
+  sender: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+export async function startLiveLoungeRoom(title?: string): Promise<{ success: boolean; roomId?: string; roomCode?: string; channelName?: string; title?: string; error?: string }> {
+  try {
+    const res = await rpc<any>('start_live_lounge_room', { p_title: title || '' });
+    return { success: true, ...res };
+  } catch (err) {
+    return failWith(err, 'Could not start the room.');
+  }
+}
+
+export async function joinLiveLoungeRoomByCode(code: string): Promise<{ success: boolean; roomId?: string; title?: string; error?: string }> {
+  try {
+    const res = await rpc<any>('join_live_lounge_room_by_code', { p_code: code });
+    return { success: true, ...res };
+  } catch (err) {
+    return failWith(err, 'Could not join that room.');
+  }
+}
+
+export async function fetchLiveLoungeRoomMyStatus(roomId: string): Promise<{ status?: string; role?: string; roomStatus?: string; title?: string; roomCode?: string } | null> {
+  try { return await rpc('live_lounge_room_my_status', { p_room_id: roomId }); } catch { return null; }
+}
+
+export async function fetchLiveLoungeRoomParticipants(roomId: string): Promise<{ admitted: LiveLoungeParticipant[]; waiting: LiveLoungeParticipant[] }> {
+  try {
+    const res = await rpc<any>('live_lounge_room_participants_list', { p_room_id: roomId });
+    const map = (u: any): LiveLoungeParticipant => ({ ...u, avatar: resolveMedia(u.avatar) });
+    return { admitted: (res.admitted || []).map(map), waiting: (res.waiting || []).map(map) };
+  } catch {
+    return { admitted: [], waiting: [] };
+  }
+}
+
+export async function admitLiveLoungeParticipant(roomId: string, userId: string, admit: boolean): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('live_lounge_room_admit', { p_room_id: roomId, p_user_id: userId, p_admit: admit }); } catch (err) { return failWith(err, 'Could not update that person.'); }
+}
+
+// Mints an Agora RTC token via the same "agora-token" Edge Function as Live Streaming, passing roomId
+// instead of streamId — live_lounge_room_join() is the one place that checks admission.
+export async function joinLiveLoungeRoom(roomId: string): Promise<{ success: boolean; token?: string; channelName?: string; appId?: string; isHost?: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('agora-token', { body: { roomId } });
+    if (error) return { success: false, error: await functionError(error, 'Could not join this room.') };
+    if (!data?.token) return { success: false, error: data?.error || 'Could not join this room.' };
+    return { success: true, ...data };
+  } catch (err) {
+    return failWith(err, 'Could not join this room.');
+  }
+}
+
+export async function endLiveLoungeRoom(roomId: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('end_live_lounge_room', { p_room_id: roomId }); } catch (err) { return failWith(err, 'Could not end the room.'); }
+}
+
+export async function leaveLiveLoungeRoom(roomId: string): Promise<void> {
+  try { await rpc('leave_live_lounge_room', { p_room_id: roomId }); } catch { /* best-effort — leaving anyway */ }
+}
+
+export async function sendLiveLoungeRoomChat(roomId: string, text: string): Promise<{ success: boolean; message?: LiveLoungeRoomChatMessage; error?: string }> {
+  try {
+    const res = await rpc<any>('live_lounge_room_chat_send', { p_room_id: roomId, p_text: text });
+    return { success: true, message: { ...res, sender: { ...res.sender, avatar: resolveMedia(res.sender?.avatar) } } };
+  } catch (err) {
+    return failWith(err, 'Could not send that message.');
+  }
+}
+
+export async function fetchLiveLoungeRoomChat(roomId: string, limit = 50): Promise<{ success: boolean; messages: LiveLoungeRoomChatMessage[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('live_lounge_room_chat_recent', { p_room_id: roomId, p_limit: limit })) || [];
+    return { success: true, messages: list.map((m) => ({ ...m, sender: { ...m.sender, avatar: resolveMedia(m.sender?.avatar) } })) };
+  } catch (err) {
+    return { success: false, messages: [], error: errorText(err, 'Could not load chat.') };
+  }
+}
+
+export function subscribeToLiveLoungeRoomChat(roomId: string, onInsert: (message: LiveLoungeRoomChatMessage) => void): () => void {
+  const channel = supabase
+    .channel(`lounge-chat-${roomId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_lounge_room_chat', filter: `room_id=eq.${roomId}` },
+      async (payload) => {
+        const row = payload.new as any;
+        const sender = await fetchLiveStreamCommentSender(row.sender_id);
+        onInsert({ id: row.id, roomId: row.room_id, text: row.text, createdAt: row.created_at, sender });
+      })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// Participant/waiting-room changes (someone joins the waiting room, gets admitted, or leaves) — the
+// caller re-fetches the participants list on every change rather than trying to patch it in place.
+export function subscribeToLiveLoungeRoomParticipants(roomId: string, onChange: () => void): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const fire = () => {
+    if (timer) return;
+    timer = setTimeout(() => { timer = null; onChange(); }, 300);
+  };
+  const channel = supabase
+    .channel(`lounge-participants-${roomId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'live_lounge_room_participants', filter: `room_id=eq.${roomId}` }, fire)
+    .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
+  return () => {
+    if (timer) clearTimeout(timer);
+    supabase.removeChannel(channel);
+  };
+}
+
+// The DIY whiteboard is purely ephemeral (broadcast, never stored) — a fresh join just sees a blank
+// board, same as walking up to a real whiteboard mid-meeting.
+export function subscribeToLiveLoungeWhiteboard(roomId: string, onEvent: (payload: any) => void): () => void {
+  const channel = supabase
+    .channel(`lounge-whiteboard-${roomId}`, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'draw' }, ({ payload }) => onEvent(payload))
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+export function broadcastLiveLoungeWhiteboard(roomId: string, payload: any): void {
+  supabase.channel(`lounge-whiteboard-${roomId}`, { config: { broadcast: { self: false } } }).send({ type: 'broadcast', event: 'draw', payload });
+}

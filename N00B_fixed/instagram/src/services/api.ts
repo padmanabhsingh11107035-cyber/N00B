@@ -235,7 +235,21 @@ export {
   adminFetchLiveLoungeCoupons,
   requestFriendPayment,
   fetchMyPaymentRequests,
-  respondPaymentRequest
+  respondPaymentRequest,
+  startLiveLoungeRoom,
+  joinLiveLoungeRoomByCode,
+  fetchLiveLoungeRoomMyStatus,
+  fetchLiveLoungeRoomParticipants,
+  admitLiveLoungeParticipant,
+  joinLiveLoungeRoom,
+  endLiveLoungeRoom,
+  leaveLiveLoungeRoom,
+  sendLiveLoungeRoomChat,
+  fetchLiveLoungeRoomChat,
+  subscribeToLiveLoungeRoomChat,
+  subscribeToLiveLoungeRoomParticipants,
+  subscribeToLiveLoungeWhiteboard,
+  broadcastLiveLoungeWhiteboard
 } from './supabaseApi';
 
 export type {
@@ -263,7 +277,9 @@ export type {
   LiveStreamSummary,
   LiveStreamComment,
   LiveLoungeCoupon,
-  PaymentRequestSummary
+  PaymentRequestSummary,
+  LiveLoungeParticipant,
+  LiveLoungeRoomChatMessage
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

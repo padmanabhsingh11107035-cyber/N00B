@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Sparkles, Ticket, Coins, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Users, Search, HeartHandshake } from 'lucide-react';
+import { ArrowLeft, Sparkles, Ticket, Coins, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Users, Search, HeartHandshake, Radio, KeyRound } from 'lucide-react';
 import { User } from '../../types';
 import { LIVE_LOUNGE_PRICE, purchaseLiveLounge, redeemLiveLoungeCoupon, requestFriendPayment } from '../../services/api';
 import { formatNoobPoints } from '../../utils/formatPoints';
+import { LiveLoungeRoomView } from '../LiveStream/LiveLoungeRoomView';
 import confetti from 'canvas-confetti';
 
 interface LiveLoungePageProps {
@@ -28,6 +29,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
   const [friendQuery, setFriendQuery] = useState('');
   const [friend, setFriend] = useState<User | null>(null);
   const [askSent, setAskSent] = useState(false);
+  const [roomFlow, setRoomFlow] = useState<'host' | 'join' | null>(null);
 
   const balance = currentUser.noobPoints || 0;
   const candidates = allUsers
@@ -87,6 +89,10 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
     }
   };
 
+  if (roomFlow) {
+    return <LiveLoungeRoomView currentUser={currentUser} mode={roomFlow} onClose={() => setRoomFlow(null)} />;
+  }
+
   if (unlocked || alreadyUnlocked) {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-4">
@@ -96,8 +102,18 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
         </div>
         <h2 className="text-white text-lg font-bold">NOOB Live Lounge is unlocked!</h2>
         <p className="text-zinc-400 text-xs max-w-xs">
-          You can now go live from Reels, and the Live Lounge meeting room is coming very soon — this unlock is forever, so you won't need to pay again.
+          Go live from the + page any time, or start/join a Live Lounge meeting room below — this unlock is forever, so you won't need to pay again.
         </p>
+        <div className="w-full max-w-sm grid grid-cols-2 gap-3 mt-2">
+          <button onClick={() => setRoomFlow('host')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-purple-500/15 border border-purple-500/30">
+            <Radio className="w-5 h-5 text-purple-300" />
+            <span className="text-xs font-bold text-white">Start a Room</span>
+          </button>
+          <button onClick={() => setRoomFlow('join')} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
+            <KeyRound className="w-5 h-5 text-zinc-300" />
+            <span className="text-xs font-bold text-white">Join with Code</span>
+          </button>
+        </div>
         <button onClick={onClose} className="mt-2 bg-white text-black rounded-xl px-6 py-2.5 text-sm font-bold">Done</button>
       </div>
     );

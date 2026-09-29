@@ -182,7 +182,6 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
             <span className="text-xs font-bold text-white">Join with Code</span>
           </button>
         </div>
-        <button onClick={onClose} className="mt-2 bg-white text-black rounded-xl px-6 py-2.5 text-sm font-bold">Done</button>
       </div>
     );
   }
@@ -336,7 +335,6 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
               <CheckCircle2 className="w-10 h-10 text-[#00FF66]" />
               <p className="text-white text-sm font-bold">Request sent to @{friend?.username}</p>
               <p className="text-zinc-400 text-xs max-w-xs">They'll see it in their Wallet's Payment Requests. Live Lounge unlocks the moment they approve it.</p>
-              <button onClick={onClose} className="mt-2 bg-white text-black rounded-xl px-6 py-2.5 text-sm font-bold">Done</button>
             </div>
           ) : (
             <div className="space-y-4">

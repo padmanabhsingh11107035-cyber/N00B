@@ -260,7 +260,10 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     fetchLiveLoungeRoomChat(roomId).then((res) => { if (alive && res.success) setMessages(res.messages); });
     const unsubChat = subscribeToLiveLoungeRoomChat(roomId, (m) => setMessages((prev) => [...prev, m]));
     const unsubParticipants = subscribeToLiveLoungeRoomParticipants(roomId, () => refreshParticipants(roomId));
-    return () => { alive = false; unsubChat(); unsubParticipants(); };
+    // A poll on top of realtime, not instead of it — someone reaching the waiting room is exactly the
+    // moment a host needs to know about reliably, so this doesn't lean on realtime alone for it.
+    const interval = setInterval(() => refreshParticipants(roomId), 4000);
+    return () => { alive = false; unsubChat(); unsubParticipants(); clearInterval(interval); };
   }, [phase, roomId, refreshParticipants]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);

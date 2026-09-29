@@ -3237,7 +3237,11 @@ export async function fetchLiveLoungeRoomParticipants(roomId: string): Promise<{
     const res = await rpc<any>('live_lounge_room_participants_list', { p_room_id: roomId });
     const map = (u: any): LiveLoungeParticipant => ({ ...u, avatar: resolveMedia(u.avatar) });
     return { admitted: (res.admitted || []).map(map), waiting: (res.waiting || []).map(map) };
-  } catch {
+  } catch (err) {
+    // Never surfaced to the host as an error (the panel just shows nobody waiting instead), which
+    // previously made a real failure here indistinguishable from "no one has joined yet" — at least
+    // log it so a silent break like that shows up in the console instead of looking like normal quiet.
+    console.error('fetchLiveLoungeRoomParticipants failed:', err);
     return { admitted: [], waiting: [] };
   }
 }

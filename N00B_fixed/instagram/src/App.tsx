@@ -158,6 +158,7 @@ export default function App() {
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [showGoLiveHost, setShowGoLiveHost] = useState(false);
   const [showLiveLoungeUpsell, setShowLiveLoungeUpsell] = useState(false);
+  const [liveLoungeInviteRoomId, setLiveLoungeInviteRoomId] = useState<string | null>(null);
   const [showProfessionalDashboardModal, setShowProfessionalDashboardModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showStatusNoteModal, setShowStatusNoteModal] = useState(false);
@@ -1438,7 +1439,8 @@ export default function App() {
         <LiveLoungePage
           currentUser={currentUser}
           allUsers={registeredUsers}
-          onClose={() => setShowLiveLoungeUpsell(false)}
+          initialRoomId={liveLoungeInviteRoomId || undefined}
+          onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); }}
           onUserUpdated={(u) => setCurrentUser(u)}
         />
       )}
@@ -1468,6 +1470,11 @@ export default function App() {
           onOpenChat={(chatId) => {
             setPendingChatId(chatId);
             setActiveTab('chat');
+            setShowNotificationsModal(false);
+          }}
+          onOpenLiveLoungeInvite={(roomId) => {
+            setLiveLoungeInviteRoomId(roomId);
+            setShowLiveLoungeUpsell(true);
             setShowNotificationsModal(false);
           }}
         />

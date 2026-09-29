@@ -21,7 +21,9 @@ import {
   BellRing,
   Coins,
   Gift,
-  Camera
+  Camera,
+  Radio,
+  Bot
 } from 'lucide-react';
 import { ShoppingBag, Phone } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
@@ -50,6 +52,7 @@ interface NotificationsModalProps {
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
   onOpenChat?: (chatId: string) => void;
+  onOpenLiveLoungeInvite?: (roomId: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -64,7 +67,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onClearAll,
   onNavigateToUser,
   onOpenScratchCard,
-  onOpenChat
+  onOpenChat,
+  onOpenLiveLoungeInvite
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'settings'>('all');
   const [filterType, setFilterType] = useState<string>('all');
@@ -159,6 +163,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Camera className="w-3.5 h-3.5 text-orange-400" />;
       case 'store_order':
         return <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />;
+      case 'live_lounge_invite':
+        return <Radio className="w-3.5 h-3.5 text-purple-400" />;
+      case 'ai_feedback_reply':
+        return <Bot className="w-3.5 h-3.5 text-violet-400" />;
       default:
         return <Sparkles className="w-3.5 h-3.5 text-[#00FF66]" />;
     }
@@ -312,13 +320,15 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       onClick={() => {
                         if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {
                           onOpenChat?.(notif.chatId);
+                        } else if (notif.type === 'live_lounge_invite' && notif.message) {
+                          onOpenLiveLoungeInvite?.(notif.message);
                         } else {
                           const username = notif.senderUsername || notif.actorUsername;
                           if (username) onNavigateToUser?.(username);
                         }
                       }}
                       className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                        ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || notif.senderUsername || notif.actorUsername
+                        ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || notif.senderUsername || notif.actorUsername
                           ? 'cursor-pointer'
                           : ''
                       } ${

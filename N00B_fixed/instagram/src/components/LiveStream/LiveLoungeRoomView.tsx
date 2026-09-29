@@ -25,7 +25,8 @@ import {
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
   connectLiveLoungeWhiteboard,
-  fetchPublicPlatformSettings
+  fetchPublicPlatformSettings,
+  inviteToLiveLoungeRoom
 } from '../../services/api';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
@@ -34,6 +35,8 @@ interface LiveLoungeRoomViewProps {
   currentUser: User;
   mode: 'host' | 'join';
   onClose: () => void;
+  allUsers?: User[];
+  initialRoomId?: string;
 }
 
 type Phase = 'lobby' | 'waiting-room' | 'connecting' | 'live' | 'ended';
@@ -86,17 +89,20 @@ const VideoTile: React.FC<{
   );
 };
 
-export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentUser, mode, onClose }) => {
-  const [phase, setPhase] = useState<Phase>('lobby');
+export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentUser, mode, onClose, allUsers, initialRoomId }) => {
+  const [phase, setPhase] = useState<Phase>(initialRoomId ? 'waiting-room' : 'lobby');
   const [title, setTitle] = useState('');
   const [codeInput, setCodeInput] = useState('');
-  const [roomId, setRoomId] = useState<string | undefined>();
+  const [roomId, setRoomId] = useState<string | undefined>(initialRoomId);
   const [roomCode, setRoomCode] = useState<string | undefined>();
   const [isHost, setIsHost] = useState(mode === 'host');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [loungeLock, setLoungeLock] = useState<{ locked: boolean; message: string }>({ locked: false, message: '' });
+  const [invitePanelOpen, setInvitePanelOpen] = useState(false);
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchPublicPlatformSettings().then((s) =>
@@ -257,6 +263,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const tick = async () => {
       const status = await fetchLiveLoungeRoomMyStatus(roomId);
       if (!alive) return;
+      if (status?.title) setTitle(status.title);
+      if (status?.roomCode) setRoomCode(status.roomCode);
       if (status?.status === 'admitted') { setPhase('connecting'); connectAgora(roomId); }
       else if (status?.status === 'removed' || status?.roomStatus === 'ended') {
         setError(status?.roomStatus === 'ended' ? 'This room has ended.' : 'The host removed you from this room.');
@@ -272,8 +280,14 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   useEffect(() => {
     if (phase !== 'live' || !roomId) return;
     let alive = true;
-    fetchLiveLoungeRoomChat(roomId).then((res) => { if (alive && res.success) setMessages(res.messages); });
-    const unsubChat = subscribeToLiveLoungeRoomChat(roomId, (m) => setMessages((prev) => [...prev, m]));
+    fetchLiveLoungeRoomChat(roomId).then((res) => {
+      console.log('[lounge] chat history', { roomId, success: res.success, count: res.messages?.length, error: res.error });
+      if (alive && res.success) setMessages(res.messages);
+    });
+    const unsubChat = subscribeToLiveLoungeRoomChat(roomId, (m) => {
+      console.log('[lounge] chat realtime message', m);
+      setMessages((prev) => [...prev, m]);
+    });
     const unsubParticipants = subscribeToLiveLoungeRoomParticipants(roomId, () => refreshParticipants(roomId));
     // A poll on top of realtime, not instead of it — someone reaching the waiting room is exactly the
     // moment a host needs to know about reliably, so this doesn't lean on realtime alone for it.
@@ -363,6 +377,25 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     onClose();
   };
 
+  // The waiting-room screen checks its own admission every few seconds, but once someone is actually
+  // in the call nothing did — a host removing them, or ending the room for everyone, previously only
+  // ever changed the database; the removed person's own screen just kept running the call forever.
+  useEffect(() => {
+    if (phase !== 'live' || !roomId || isHost) return;
+    let alive = true;
+    const tick = async () => {
+      const status = await fetchLiveLoungeRoomMyStatus(roomId);
+      if (!alive) return;
+      if (status?.roomStatus === 'ended' || status?.status === 'removed') {
+        await cleanup();
+        setError(status?.roomStatus === 'ended' ? 'The host ended this room.' : 'The host removed you from this room.');
+        setPhase('ended');
+      }
+    };
+    const interval = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(interval); };
+  }, [phase, roomId, isHost, cleanup]);
+
   const handleToggleMic = () => { micTrackRef.current?.setEnabled(!micOn); setMicOn((v) => !v); };
   const handleToggleCamera = () => { camTrackRef.current?.setEnabled(!cameraOn); setCameraOn((v) => !v); };
 
@@ -387,8 +420,11 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         screenTrack.on('track-ended', () => { void handleToggleScreenShare(); });
         setSharingScreen(true);
       } catch (err) {
-        const name = (err as { name?: string })?.name;
-        if (name !== 'NotAllowedError' && name !== 'AbortError') {   // those two just mean "cancelled the picker"
+        // Agora wraps the browser's own error, so the DOM exception name (NotAllowedError/AbortError —
+        // "cancelled the picker") shows up in .message or a nested .name, not always the top-level one.
+        const e = err as { name?: string; code?: string; message?: string };
+        const text = `${e?.name || ''} ${e?.code || ''} ${e?.message || ''}`;
+        if (!/NotAllowedError|AbortError|PERMISSION_DENIED/i.test(text)) {
           setScreenShareError(friendlyAgoraError(err, 'Could not start screen sharing.'));
         }
       }
@@ -406,6 +442,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     if (!text || !roomId) return;
     setChatInput('');
     const res = await sendLiveLoungeRoomChat(roomId, text);
+    console.log('[lounge] chat send', { roomId, success: res.success, error: res.error });
     if (!res.success) setError(res.error || 'Could not send that message.');
   };
 
@@ -413,6 +450,17 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     if (!roomCode) return;
     navigator.clipboard?.writeText(roomCode).then(() => { setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000); }).catch(() => undefined);
   };
+
+  const handleInvite = async (userId: string) => {
+    if (!roomId) return;
+    const res = await inviteToLiveLoungeRoom(roomId, userId);
+    if (res.success) setInvitedIds((prev) => new Set(prev).add(userId));
+    else setError(res.error || 'Could not send that invite.');
+  };
+  const inviteCandidates = (allUsers || [])
+    .filter((u) => u.id !== currentUser.id && !u.isAi && !participants.admitted.some((p) => p.userId === u.id))
+    .filter((u) => (inviteQuery.trim() ? u.username.toLowerCase().includes(inviteQuery.trim().toLowerCase()) : true))
+    .slice(0, 30);
 
   // ---------------------------------------------------------------- lobby / waiting / connecting / ended
 
@@ -518,15 +566,22 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="min-w-0">
           <p className="text-white text-sm font-bold truncate">{title || 'Live Lounge'}</p>
-          {isHost && roomCode && (
+          {roomCode && (
             <button onClick={copyRoomCode} className="flex items-center gap-1 text-[11px] text-purple-300">
               Code: <span className="font-mono font-bold">{roomCode}</span> {codeCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
             </button>
           )}
         </div>
-        <button onClick={handleEndOrLeave} className="flex items-center gap-1.5 bg-red-500/15 text-red-300 border border-red-500/30 rounded-full px-3 py-1.5 text-xs font-semibold">
-          {isHost ? 'End' : <LogOut className="w-3.5 h-3.5" />} {isHost ? '' : 'Leave'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {isHost && (
+            <button onClick={() => setInvitePanelOpen(true)} className="flex items-center gap-1.5 bg-white/10 text-white rounded-full px-3 py-1.5 text-xs font-semibold">
+              <Users className="w-3.5 h-3.5" /> Invite
+            </button>
+          )}
+          <button onClick={handleEndOrLeave} className="flex items-center gap-1.5 bg-red-500/15 text-red-300 border border-red-500/30 rounded-full px-3 py-1.5 text-xs font-semibold">
+            {isHost ? 'End' : <LogOut className="w-3.5 h-3.5" />} {isHost ? '' : 'Leave'}
+          </button>
+        </div>
       </div>
 
       {/* Hard to miss even if the host never opens People — a badge on a 6-icon toolbar is easy to overlook. */}
@@ -676,6 +731,39 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite panel (host only) */}
+      {invitePanelOpen && (
+        <div className="absolute inset-x-0 bottom-0 z-10 h-2/3 bg-zinc-950 border-t border-white/10 rounded-t-2xl flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
+            <span className="text-white text-xs font-bold">Invite to this room</span>
+            <button onClick={() => setInvitePanelOpen(false)} className="text-white/70"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="px-3 pt-2">
+            <input
+              value={inviteQuery}
+              onChange={(e) => setInviteQuery(e.target.value)}
+              placeholder="Search by username"
+              autoFocus
+              className="w-full bg-white/10 text-white placeholder-white/40 rounded-full px-4 py-2 text-xs outline-none"
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+            {inviteCandidates.length === 0 && <p className="text-[11px] text-white/40 py-2 text-center">No matching users.</p>}
+            {inviteCandidates.map((u) => (
+              <div key={u.id} className="flex items-center gap-2 p-2 rounded-xl bg-white/5">
+                <AvatarMedia src={u.avatar} alt={u.username} className="w-8 h-8 rounded-full object-cover" />
+                <span className="flex-1 text-xs text-white truncate">{u.username}</span>
+                {invitedIds.has(u.id) ? (
+                  <span className="text-[10px] text-[#00FF66] font-bold px-2">Invited</span>
+                ) : (
+                  <button onClick={() => handleInvite(u.id)} className="p-1.5 bg-purple-500/20 text-purple-300 rounded-lg text-[10px] font-bold px-2">Invite</button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

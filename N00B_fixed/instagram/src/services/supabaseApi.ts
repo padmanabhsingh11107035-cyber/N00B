@@ -3262,6 +3262,46 @@ export async function startLiveLoungeRoom(title?: string): Promise<{ success: bo
   }
 }
 
+export async function inviteToLiveLoungeRoom(roomId: string, targetUserId: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('invite_to_live_lounge_room', { p_room_id: roomId, p_target_user_id: targetUserId }); } catch (err) { return failWith(err, 'Could not send that invite.'); }
+}
+
+export interface LiveLoungePendingInvite {
+  roomId: string;
+  title: string;
+  roomCode: string;
+  hostUsername: string;
+  hostAvatar?: string;
+  joinedAt: string;
+}
+
+export async function fetchPendingLiveLoungeInvites(): Promise<LiveLoungePendingInvite[]> {
+  try {
+    const list = (await rpc<any[]>('my_pending_live_lounge_invites')) || [];
+    return list.map((i) => ({ ...i, hostAvatar: resolveMedia(i.hostAvatar) }));
+  } catch {
+    return [];
+  }
+}
+
+export interface LiveLoungeHistoryEntry {
+  roomId: string;
+  title: string;
+  roomCode: string;
+  role: 'host' | 'participant';
+  roomStatus: 'active' | 'ended';
+  joinedAt: string;
+  endedAt?: string;
+}
+
+export async function fetchLiveLoungeHistory(limit = 30): Promise<LiveLoungeHistoryEntry[]> {
+  try {
+    return (await rpc<LiveLoungeHistoryEntry[]>('my_live_lounge_history', { p_limit: limit })) || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function joinLiveLoungeRoomByCode(code: string): Promise<{ success: boolean; roomId?: string; title?: string; error?: string }> {
   try {
     const res = await rpc<any>('join_live_lounge_room_by_code', { p_code: code });

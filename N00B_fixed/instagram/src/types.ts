@@ -138,6 +138,8 @@ export type NotificationType =
   | 'screenshot_alert'
   | 'store_order'
   | 'call_started'
+  | 'live_lounge_invite'
+  | 'ai_feedback_reply'
   | 'system';
 
 export interface AppNotification {

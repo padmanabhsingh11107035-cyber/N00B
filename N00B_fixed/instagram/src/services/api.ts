@@ -1,6 +1,6 @@
 // The app's server calls. Everything now runs on Supabase (see supabaseApi.ts and supabase/migrations);
 // this file only lists them under the names the screens have always imported.
-export type { GifItem, StoryPollResult, NoobAiFeedbackItem } from './supabaseApi';
+export type { GifItem, StoryPollResult, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry } from './supabaseApi';
 export {
   e2ee,
   searchGifs,
@@ -240,6 +240,9 @@ export {
   fetchMyPaymentRequests,
   respondPaymentRequest,
   startLiveLoungeRoom,
+  inviteToLiveLoungeRoom,
+  fetchPendingLiveLoungeInvites,
+  fetchLiveLoungeHistory,
   joinLiveLoungeRoomByCode,
   fetchLiveLoungeRoomMyStatus,
   fetchLiveLoungeRoomParticipants,

@@ -64,26 +64,29 @@ const adminName = (await db.query('select username from profiles where id = $1',
 // =====================================================================================
 section('1. Sending points to a friend');
 await setPts(a, 5000); await setPts(b, 100);
-const t1 = await rpc(a, 'wallet_transfer', b, 1000, '  thanks for the help  ');
-check(t1.success && t1.message.includes('1,000 points') && t1.user.noobPoints === 4000, 'a transfer moves the points and answers with the sender\'s new balance');
+await expectFail(() => rpc(a, 'wallet_transfer', b, 1000, ''), /Incorrect password/, 'no password: refused, nothing moves');
+await expectFail(() => rpc(a, 'wallet_transfer', b, 1000, 'wrong-pw'), /Incorrect password/, 'the wrong password: refused too');
+check((await pts(a)) === 5000 && (await pts(b)) === 100, 'and neither balance moved from either attempt');
+const t1 = await rpc(a, 'wallet_transfer', b, 1000, 'secret-pw', '  thanks for the help  ');
+check(t1.success && t1.message.includes('1,000 points') && t1.user.noobPoints === 4000, 'the right password: a transfer moves the points and answers with the sender\'s new balance');
 check((await pts(a)) === 4000 && (await pts(b)) === 1100, 'the sender lost 1,000 and the friend gained 1,000');
 const ta = await txs(a), tb = await txs(b);
 check(ta.length === 1 && ta[0].amount === '-1000' && ta[0].reason.startsWith('Sent to @') && ta[0].reason.endsWith(': thanks for the help') && ta[0].balance_after === '4000', 'the sender\'s wallet history has the line');
 check(tb.length === 1 && tb[0].amount === '1000' && tb[0].reason.startsWith('Received from @') && tb[0].balance_after === '1100', 'so does the friend\'s');
 const nt = (await db.query(`select * from notifications where type = 'points_transfer' and target_user_id = $1`, [b])).rows;
 check(nt.length === 1 && nt[0].actor_id === a && nt[0].title === '💰 NOOB Points Received' && nt[0].message.includes('1,000 NOOB Points: "thanks for the help"'), 'the friend gets a notification');
-await expectFail(() => rpc(a, 'wallet_transfer', b, 999999), /Insufficient NOOB Points/, 'you cannot send more than you have');
-await expectFail(() => rpc(a, 'wallet_transfer', a, 10), /cannot send points to yourself/, 'you cannot send points to yourself');
-await expectFail(() => rpc(a, 'wallet_transfer', b, 0), /valid whole number/, 'zero is refused');
-await expectFail(() => rpc(a, 'wallet_transfer', b, -50), /valid whole number/, 'a negative amount (stealing) is refused');
-await expectFail(() => rpc(a, 'wallet_transfer', '00000000-0000-0000-0000-000000000001', 5), /Recipient account not found/, 'an unknown recipient is refused');
-await expectFail(() => rpc(a, 'wallet_transfer', null, 5), /Choose someone/, 'no recipient is refused');
-check((await rpc(a, 'wallet_transfer', b, 1.9)).message.includes('1 points'), 'a fractional amount is rounded down');
+await expectFail(() => rpc(a, 'wallet_transfer', b, 999999, 'secret-pw'), /Insufficient NOOB Points/, 'you cannot send more than you have');
+await expectFail(() => rpc(a, 'wallet_transfer', a, 10, 'secret-pw'), /cannot send points to yourself/, 'you cannot send points to yourself');
+await expectFail(() => rpc(a, 'wallet_transfer', b, 0, 'secret-pw'), /valid whole number/, 'zero is refused');
+await expectFail(() => rpc(a, 'wallet_transfer', b, -50, 'secret-pw'), /valid whole number/, 'a negative amount (stealing) is refused');
+await expectFail(() => rpc(a, 'wallet_transfer', '00000000-0000-0000-0000-000000000001', 5, 'secret-pw'), /Recipient account not found/, 'an unknown recipient is refused');
+await expectFail(() => rpc(a, 'wallet_transfer', null, 5, 'secret-pw'), /Choose someone/, 'no recipient is refused');
+check((await rpc(a, 'wallet_transfer', b, 1.9, 'secret-pw')).message.includes('1 points'), 'a fractional amount is rounded down');
 check((await pts(a)) === 3999 && (await pts(b)) === 1101, 'balances are exact after that');
-check((await rpc(a, 'wallet_transfer', b, 1, 'x'.repeat(300))).success && (await txs(a)).at(-1).reason.length <= 'Sent to @'.length + 60 + 2 + 140, 'a very long note is cut to 140 characters');
-await expectFail(() => asAnon(db, () => db.query('select public.wallet_transfer($1, 5, null)', [b])), /permission denied/, 'a logged-out visitor can not send points');
+check((await rpc(a, 'wallet_transfer', b, 1, 'secret-pw', 'x'.repeat(300))).success && (await txs(a)).at(-1).reason.length <= 'Sent to @'.length + 60 + 2 + 140, 'a very long note is cut to 140 characters');
+await expectFail(() => asAnon(db, () => db.query('select public.wallet_transfer($1, 5, $2, null)', [b, 'secret-pw'])), /permission denied/, 'a logged-out visitor can not send points');
 await db.query('update profiles set is_suspended = true where id = $1', [a]);
-await expectFail(() => rpc(a, 'wallet_transfer', b, 5), /Unauthorized/, 'a suspended account can not send points');
+await expectFail(() => rpc(a, 'wallet_transfer', b, 5, 'secret-pw'), /Unauthorized/, 'a suspended account can not send points');
 await db.query('update profiles set is_suspended = false where id = $1', [a]);
 await expectFail(() => call(a, 'update profiles set noob_points = 999999999 where id = $1', [a]), /protected profile fields/, 'points can not be edited straight in the table');
 check((await call(a, 'select count(*)::int n from noob_transactions where user_id = $1', [a]))[0].n === (await txs(a)).length, 'the wallet history is readable by its owner');
@@ -524,7 +527,7 @@ const sus = await rpc(admin, 'admin_suspend_user', aName.toUpperCase(), '  spamm
 const sus1 = (await db.query('select p.is_suspended, pp.suspended_reason, (u.banned_until > now() + interval \'50 years\') as banned from profiles p join profile_private pp on pp.user_id = p.id join auth.users u on u.id = p.id where p.id = $1', [a])).rows[0];
 check(sus.success && sus.user.isSuspended === true && sus1.is_suspended && sus1.suspended_reason === 'spamming' && sus1.banned === true, 'suspending (by name, any capitals) flags the account, records the reason and stops sign-in');
 check((await db.query(`select message from notifications where target_user_id = $1 and title = '⚠️ Account Suspended'`, [a])).rows[0].message.endsWith('Reason: spamming'), 'the person is told why');
-await expectFail(() => rpc(a, 'wallet_transfer', b, 1), /Unauthorized/, 'a suspended account can no longer act');
+await expectFail(() => rpc(a, 'wallet_transfer', b, 1, 'secret-pw'), /Unauthorized/, 'a suspended account can no longer act');
 const uns = await rpc(admin, 'admin_suspend_user', a, null, false);
 const uns1 = (await db.query('select p.is_suspended, pp.suspended_reason, u.banned_until from profiles p join profile_private pp on pp.user_id = p.id join auth.users u on u.id = p.id where p.id = $1', [a])).rows[0];
 check(uns.message.includes('unsuspended') && uns1.is_suspended === false && uns1.suspended_reason === null && uns1.banned_until === null, 'unsuspending restores everything');
@@ -666,7 +669,7 @@ const internal = [
 for (const [fn, args] of internal) await expectFail(() => call(a, `select public.${fn}${args}`), /permission denied/, `a browser can not call the internal ${fn}()`);
 const G0 = '00000000-0000-0000-0000-000000000001';
 const publicFns = {
-  wallet_transfer: `('${b}', 5, null)`, record_match: `('snake', 'x', 'win')`, submit_survival_score: `('runner', 'x', 5)`,
+  wallet_transfer: `('${b}', 5, 'x', null)`, record_match: `('snake', 'x', 'win')`, submit_survival_score: `('runner', 'x', 5)`,
   upgrade_pro: `('starter')`, verify_account: `('pw', 'points_monthly')`, purchase_shop_item: `('shop_fire_king')`,
   reveal_scratch_card: `('${G0}')`, admin_adjust_points: `('${a}', 5)`, admin_users_list: '()', game_leaderboard: '()',
   admin_delete_user: `('${a}')`, admin_suspend_user: `('${a}')`, admin_send_notification: `('all', 'x', 'y')`, admin_reports: '()',

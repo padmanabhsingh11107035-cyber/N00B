@@ -16,13 +16,15 @@ import {
   ChevronRight,
   Info,
   Ticket,
-  Send
+  Send,
+  QrCode
 } from 'lucide-react';
 import { User } from '../../types';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import confetti from 'canvas-confetti';
 import { CouponsModal } from './CouponsModal';
 import { SendPointsPage } from './SendPointsPage';
+import { ProfileQrModal } from './ProfileQrModal';
 
 interface AccountsStatisticsModalProps {
   currentUser: User;
@@ -53,6 +55,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'badges' | 'history'>('overview');
   const [showCoupons, setShowCoupons] = useState(false);
   const [showSendPoints, setShowSendPoints] = useState(false);
+  const [showMyQr, setShowMyQr] = useState(false);
   const exactPoints = currentUser.noobPoints ?? 150;
   const gamesWon = currentUser.gamesWonCount ?? 0;
   const gamesPlayed = currentUser.gamesPlayedCount ?? 0;
@@ -174,6 +177,14 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setShowMyQr(true)}
+              title="Your QR code — let someone scan it to send you NOOB Points"
+              aria-label="Show your QR code"
+              className="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#00FF66]/50 flex items-center justify-center text-zinc-300 hover:text-[#00FF66] shrink-0 cursor-pointer transition-colors"
+            >
+              <QrCode className="w-4.5 h-4.5" />
+            </button>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500/20 to-yellow-400/30 border border-yellow-500/40 flex items-center justify-center text-yellow-400 shadow-sm">
               <Trophy className="w-5 h-5" />
             </div>
@@ -505,6 +516,8 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
           onUserUpdated={onUserUpdated}
         />
       )}
+
+      {showMyQr && <ProfileQrModal targetUser={currentUser} onClose={() => setShowMyQr(false)} />}
     </div>
   );
 };

@@ -2122,13 +2122,18 @@ export async function toggleProAutoRenew(enabled: boolean): Promise<{ success: b
   try { return await rpc('toggle_pro_auto_renew', { p_enabled: enabled }); } catch (err) { return failWith(err, 'Could not change auto-renew.'); }
 }
 
+// UPI-style: the sender's own password confirms every transfer, on top of everything else already
+// checked (balance, recipient, amount).
 export async function transferNoobPoints(payload: {
   recipientId: string;
   amount: number;
+  password: string;
   note?: string;
 }): Promise<{ success: boolean; user?: User; message?: string; error?: string }> {
   try {
-    const res = await rpc<any>('wallet_transfer', { p_recipient: payload.recipientId, p_amount: payload.amount, p_note: payload.note || null });
+    const res = await rpc<any>('wallet_transfer', {
+      p_recipient: payload.recipientId, p_amount: payload.amount, p_password: payload.password, p_note: payload.note || null
+    });
     return { ...res, user: mapUser(res.user) };
   } catch (err) {
     return failWith(err, 'Could not send the points.');

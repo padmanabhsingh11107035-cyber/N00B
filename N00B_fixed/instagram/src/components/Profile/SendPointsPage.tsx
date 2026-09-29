@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle, QrCode, Lock } from 'lucide-react';
 import { User } from '../../types';
-import { transferNoobPoints } from '../../services/api';
+import { transferNoobPoints, fetchUsers } from '../../services/api';
 import { formatNoobPoints } from '../../utils/formatPoints';
+import { QrScannerModal } from '../Common/QrScannerModal';
 import confetti from 'canvas-confetti';
 
 interface SendPointsPageProps {
@@ -13,6 +14,18 @@ interface SendPointsPageProps {
 }
 
 const QUICK_AMOUNTS = [50, 100, 500, 1000];
+
+// Reads the username out of a scanned NOOB profile QR code — the exact link ProfileQrModal.tsx generates,
+// "<origin><path>?profile=<username>" — so this only ever accepts a real NOOB profile QR, not just anything.
+function usernameFromScannedQr(text: string): string | null {
+  try {
+    const url = new URL(text);
+    const username = url.searchParams.get('profile');
+    return username ? username.trim() : null;
+  } catch {
+    return null;
+  }
+}
 
 export const SendPointsPage: React.FC<SendPointsPageProps> = ({
   currentUser,
@@ -27,6 +40,12 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successState, setSuccessState] = useState<{ recipient: User; amount: number } | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [resolvingQr, setResolvingQr] = useState(false);
+  // The UPI-style final step — amount and recipient are locked in; only the sender's own password
+  // confirms the payment.
+  const [confirmingWithPassword, setConfirmingWithPassword] = useState(false);
+  const [password, setPassword] = useState('');
 
   const balance = currentUser.noobPoints || 0;
   const query = searchQuery.trim().toLowerCase();
@@ -43,20 +62,49 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
   const isValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
   const exceedsBalance = isValidAmount && parsedAmount > balance;
 
+  const handleScanned = async (decodedText: string) => {
+    setShowScanner(false);
+    const username = usernameFromScannedQr(decodedText);
+    if (!username) {
+      setErrorMessage("That doesn't look like a NOOB profile QR code.");
+      return;
+    }
+    if (username.toLowerCase() === currentUser.username.toLowerCase()) {
+      setErrorMessage('That\'s your own QR code — choose someone else to send points to.');
+      return;
+    }
+    setErrorMessage('');
+    setResolvingQr(true);
+    try {
+      const cached = allUsers.find((u) => u.username.toLowerCase() === username.toLowerCase());
+      const found = cached || (await fetchUsers(username)).find((u) => u.username.toLowerCase() === username.toLowerCase());
+      if (!found) {
+        setErrorMessage(`Could not find @${username} on NOOB.`);
+        return;
+      }
+      setRecipient(found);
+    } finally {
+      setResolvingQr(false);
+    }
+  };
+
   const handleSend = async () => {
-    if (!recipient || !isValidAmount || exceedsBalance) return;
+    if (!recipient || !isValidAmount || exceedsBalance || !password) return;
     setIsSending(true);
     setErrorMessage('');
     try {
       const res = await transferNoobPoints({
         recipientId: recipient.id,
         amount: parsedAmount,
+        password,
         note: note.trim() || undefined
       });
       if (res.success && res.user) {
         onUserUpdated?.(res.user);
         confetti({ particleCount: 40, spread: 65, origin: { y: 0.6 } });
         setSuccessState({ recipient, amount: parsedAmount });
+        setConfirmingWithPassword(false);
+        setPassword('');
       } else {
         setErrorMessage(res.error || 'Could not send points. Please try again.');
       }
@@ -74,6 +122,8 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
     setAmount('');
     setNote('');
     setSearchQuery('');
+    setConfirmingWithPassword(false);
+    setPassword('');
   };
 
   return (
@@ -81,7 +131,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
         <button
-          onClick={onClose}
+          onClick={() => (confirmingWithPassword ? setConfirmingWithPassword(false) : onClose())}
           aria-label="Go back"
           className="p-2 -ml-2 rounded-full hover:bg-zinc-900 text-white transition-colors cursor-pointer"
         >
@@ -120,13 +170,70 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
               </button>
             </div>
           </div>
+        ) : confirmingWithPassword && recipient ? (
+          <div className="space-y-5">
+            <div className="flex flex-col items-center text-center gap-3 py-4">
+              <img
+                src={recipient.avatar || '/noob-logo.svg.jpeg'}
+                alt={recipient.username}
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#00FF66]"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <p className="text-xs text-zinc-400">You're sending</p>
+                <p className="text-3xl font-black text-white">{parsedAmount.toLocaleString()} <span className="text-sm font-bold text-amber-400">pts</span></p>
+                <p className="text-xs text-zinc-400">to @{recipient.username}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Lock className="w-3 h-3" /> Enter your password to confirm
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setErrorMessage(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && password && !isSending) handleSend(); }}
+                placeholder="Password"
+                autoFocus
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
+              />
+            </div>
+
+            {errorMessage && (
+              <p className="text-[11px] text-rose-400 flex items-center gap-1.5 bg-rose-950/30 border border-rose-900/40 rounded-xl p-2.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errorMessage}
+              </p>
+            )}
+
+            <button
+              onClick={handleSend}
+              disabled={!password || isSending}
+              className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Send className="w-4 h-4" />
+              {isSending ? 'Sending...' : 'Confirm & Send'}
+            </button>
+          </div>
         ) : (
           <>
             {/* Recipient */}
             <div className="space-y-2">
-              <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
-                Send To
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                  Send To
+                </label>
+                {!recipient && (
+                  <button
+                    onClick={() => setShowScanner(true)}
+                    disabled={resolvingQr}
+                    className="text-[11px] font-bold text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <QrCode className="w-3.5 h-3.5" /> {resolvingQr ? 'Looking up...' : 'Scan QR'}
+                  </button>
+                )}
+              </div>
               {recipient ? (
                 <div className="flex items-center gap-3 p-3 bg-zinc-900 border border-[#00FF66]/40 rounded-2xl">
                   <img
@@ -251,16 +358,18 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
             )}
 
             <button
-              onClick={handleSend}
-              disabled={!recipient || !isValidAmount || exceedsBalance || isSending}
+              onClick={() => setConfirmingWithPassword(true)}
+              disabled={!recipient || !isValidAmount || exceedsBalance}
               className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
-              {isSending ? 'Sending...' : recipient ? `Send to @${recipient.username}` : 'Send Points'}
+              {recipient ? `Send to @${recipient.username}` : 'Send Points'}
             </button>
           </>
         )}
       </div>
+
+      {showScanner && <QrScannerModal onClose={() => setShowScanner(false)} onScanned={handleScanned} />}
     </div>
   );
 };

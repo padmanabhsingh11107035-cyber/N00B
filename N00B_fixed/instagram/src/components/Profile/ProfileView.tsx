@@ -2168,25 +2168,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   />
                 </label>
 
-                {accountTypeSetting === 'private' && (
-                  <button
-                    type="button"
-                    onClick={() => setAutoAcceptFollowRequests((v) => !v)}
-                    className="w-full flex items-center justify-between cursor-pointer pt-1"
-                  >
-                    <div className="text-left">
-                      <span className="block">Auto-Accept Follow Requests</span>
-                      <span className="text-[10px] text-zinc-500 block">
-                        Anyone who requests to follow you is accepted right away — you won't follow them back automatically.
-                      </span>
-                    </div>
-                    {autoAcceptFollowRequests ? (
-                      <ToggleRight className="w-8 h-8 text-[#00FF66] shrink-0" />
-                    ) : (
-                      <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
-                    )}
-                  </button>
-                )}
+                {/* Shown for every account, not just private ones — it only has an effect once the account
+                    IS private, but it's on by default for everyone, so this lets anyone see and, if they
+                    want, turn it off ahead of time rather than only once they've already switched. */}
+                <button
+                  type="button"
+                  onClick={() => setAutoAcceptFollowRequests((v) => !v)}
+                  className="w-full flex items-center justify-between cursor-pointer pt-1"
+                >
+                  <div className="text-left">
+                    <span className="block">Auto-Accept Follow Requests</span>
+                    <span className="text-[10px] text-zinc-500 block">
+                      {accountTypeSetting === 'private'
+                        ? "Anyone who requests to follow you is accepted right away — you won't follow them back automatically."
+                        : 'Only applies if your account is private — on by default. Switch it off now if you don’t want it, even before going private.'}
+                    </span>
+                  </div>
+                  {autoAcceptFollowRequests ? (
+                    <ToggleRight className="w-8 h-8 text-[#00FF66] shrink-0" />
+                  ) : (
+                    <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
+                  )}
+                </button>
               </div>
             </div>
 

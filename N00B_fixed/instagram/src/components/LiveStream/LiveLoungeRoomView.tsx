@@ -27,6 +27,7 @@ import {
   subscribeToLiveLoungeWhiteboard,
   broadcastLiveLoungeWhiteboard
 } from '../../services/api';
+import { isIosStandalonePwa } from '../../utils/platformDetect';
 
 interface LiveLoungeRoomViewProps {
   currentUser: User;
@@ -373,6 +374,20 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   };
 
   // ---------------------------------------------------------------- lobby / waiting / connecting / ended
+
+  if (phase === 'lobby' && isIosStandalonePwa()) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-4 text-center">
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        <VideoIcon className="w-10 h-10 text-white/40" />
+        <h2 className="text-white text-base font-semibold">Open NOOB in Safari for Live Lounge</h2>
+        <p className="text-white/60 text-sm max-w-sm">
+          iPhone blocks camera/microphone access for apps opened from the home screen icon. Open Safari, go to
+          <span className="text-white font-semibold"> {window.location.origin}</span>, and try again from there.
+        </p>
+      </div>
+    );
+  }
 
   if (phase === 'lobby') {
     return (

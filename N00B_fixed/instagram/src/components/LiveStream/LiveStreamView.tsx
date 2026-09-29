@@ -21,6 +21,7 @@ import {
   broadcastLiveStreamHeart,
   fetchLiveStreams
 } from '../../services/api';
+import { isIosStandalonePwa } from '../../utils/platformDetect';
 
 interface LiveStreamViewProps {
   currentUser: User;
@@ -211,6 +212,20 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     const res = await giftLiveStream(streamId, amount);
     if (!res.success) setError(res.error || 'Could not send that gift.');
   };
+
+  if (phase === 'setup' && isIosStandalonePwa()) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-4 text-center">
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        <Camera className="w-10 h-10 text-white/40" />
+        <h2 className="text-white text-base font-semibold">Open NOOB in Safari to go live</h2>
+        <p className="text-white/60 text-sm max-w-sm">
+          iPhone blocks camera/microphone access for apps opened from the home screen icon. Open Safari, go to
+          <span className="text-white font-semibold"> {window.location.origin}</span>, and go live from there instead.
+        </p>
+      </div>
+    );
+  }
 
   if (phase === 'setup') {
     return (

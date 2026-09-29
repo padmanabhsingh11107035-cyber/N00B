@@ -29,6 +29,7 @@ if __name__ == "__main__":
 import asyncio
 import base64
 import collections
+import concurrent.futures
 import io
 import json
 import logging
@@ -279,6 +280,8 @@ def speech_to_text(pcm_bytes):
 
 def any_audio_to_pcm(data):
     """Converts audio from the app's microphone (webm, ogg, wav, mp3...) to 16 kHz 16-bit mono PCM."""
+    if not data:
+        return b""
     pcm = bytearray()
     resampler = av.AudioResampler(format="s16", layout="mono", rate=SAMPLE_RATE)
     with av.open(io.BytesIO(data)) as container:
@@ -355,10 +358,19 @@ def search_request(reply):
     return match.group(1).strip() if match else None
 
 
+_search_pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
+
 def web_search(query, user_id=None):
+    # Every second here is dead air for whoever is listening — DDGS has no reliable timeout of its
+    # own across versions, so this bounds it from the outside instead of trusting the library.
     log(f"   [search] {said(user_id, query)}")
     try:
-        results = DDGS().text(query, region="in-en", max_results=5)
+        future = _search_pool.submit(lambda: DDGS().text(query, region="in-en", max_results=5))
+        results = future.result(timeout=5)
+    except concurrent.futures.TimeoutError:
+        return (f"The web search for '{query}' took too long and was skipped. Answer from your own "
+                f"knowledge and say that you could not check the latest information right now.")
     except Exception as e:
         return (f"The web search for '{query}' failed ({e}). Answer from your own knowledge and say "
                 f"that you could not check the latest information.")
@@ -704,12 +716,12 @@ def voice_mp3(text, lang):
                 mp3 += chunk["data"]
         return bytes(mp3)
 
-    for limit in (5, 8):
+    for limit in (5, 8, 10):
         try:
             return asyncio.run(asyncio.wait_for(synthesize(), timeout=limit))
         except asyncio.TimeoutError:
             log(f"   [voice] slow answer from the voice service, asking again ({limit} s)")
-    return asyncio.run(synthesize())
+    return b""     # every attempt stalled — silence beats an answer that never comes
 
 
 voice_workers = ThreadPoolExecutor(max_workers=4)      # makes the next sentences' voice while one is playing
@@ -1129,7 +1141,7 @@ def api_status():
     devices = my_devices()
     return jsonify(version=VERSION, ip=ip, server_url=f"http://{ip}:{PORT}/ask", whisper=WHISPER_SIZE,
                    gemini=bool(s["gemini_api_key"] or os.environ.get("GEMINI_API_KEY")), gemini_model=noob_brain.last_model,
-                   facts=len(memory.all_facts(g.user["id"])), messages=len(memory.recent_log(g.user["id"], 100000)),
+                   facts=len(memory.all_facts(g.user["id"])), messages=memory.count_messages(g.user["id"]),
                    user={"name": g.user["name"], "username": g.user["username"], "is_owner": bool(g.user["is_owner"]),
                          "noob_username": g.user.get("noob_username") or ""},
                    questions_left=questions_left(g.user["id"]), free_questions=FREE_QUESTIONS,

@@ -280,6 +280,11 @@ class NoobMemory:
             messages.pop(0)
         return messages
 
+    def count_messages(self, user_id):
+        with self.lock:
+            row = self.db.execute("SELECT COUNT(*) FROM conversation WHERE user_id = ?", (user_id,)).fetchone()
+        return row[0] if row else 0
+
     def recent_log(self, user_id, limit):
         with self.lock:
             rows = self.db.execute("SELECT said_at, role, text FROM conversation WHERE user_id = ? "

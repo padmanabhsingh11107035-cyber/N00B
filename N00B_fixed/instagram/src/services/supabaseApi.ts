@@ -129,6 +129,36 @@ function dataUriToFile(uri: string, name = 'photo'): File | null {
   }
 }
 
+// Before an account is created: a 6-digit code emailed to the address just typed in, proving it's
+// really theirs and really reachable. Verifying does not sign anyone in by itself — check_signup /
+// handle_new_user on the database side refuse to create the account at all unless this specific
+// email was verified in the last 30 minutes, so this can't be skipped by calling signupUser directly.
+export async function requestSignupOtp(email: string): Promise<{ success: boolean; error?: string; notConfigured?: boolean }> {
+  const unavailable = 'Could not send a verification code right now. Please try again later.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'signup-otp-request', email } });
+    if (error) {
+      let body: any = null;
+      try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
+      return { success: false, error: body?.error || unavailable, notConfigured: body?.notConfigured === true };
+    }
+    return { success: !!data?.success, error: data?.success ? undefined : unavailable };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
+export async function verifySignupOtp(email: string, code: string): Promise<{ success: boolean; error?: string }> {
+  const unavailable = 'Could not verify that code right now. Please try again later.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'signup-otp-verify', email, code } });
+    if (error) return { success: false, error: await functionError(error, unavailable) };
+    return { success: !!data?.success, error: data?.success ? undefined : unavailable };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
 export async function signupUser(payload: {
   firstName: string;
   lastName?: string;
@@ -3415,6 +3445,27 @@ export function connectLiveLoungeWhiteboard(roomId: string, onEvent: (payload: a
     .subscribe();
   return {
     send: (payload: any) => { void channel.send({ type: 'broadcast', event: 'draw', payload }); },
+    disconnect: () => { supabase.removeChannel(channel); }
+  };
+}
+
+// Lets everyone's screen auto-switch to full-screen the moment anyone starts sharing theirs — Agora
+// itself has no "this track is a screen share" flag a remote viewer can read, so this is announced
+// explicitly. A fresh joiner sends 'query' once on connecting and the current sharer (if any) answers
+// with their own 'share' broadcast, so late joiners still see it full-screen without polling.
+export function connectLiveLoungeScreenShare(
+  roomId: string,
+  onShare: (payload: { uid: number; sharing: boolean }) => void,
+  onQuery: () => void
+): { send: (payload: { uid: number; sharing: boolean }) => void; query: () => void; disconnect: () => void } {
+  const channel = supabase
+    .channel(`lounge-screenshare-${roomId}`, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'share' }, ({ payload }) => onShare(payload))
+    .on('broadcast', { event: 'query' }, () => onQuery())
+    .subscribe();
+  return {
+    send: (payload) => { void channel.send({ type: 'broadcast', event: 'share', payload }); },
+    query: () => { void channel.send({ type: 'broadcast', event: 'query', payload: {} }); },
     disconnect: () => { supabase.removeChannel(channel); }
   };
 }

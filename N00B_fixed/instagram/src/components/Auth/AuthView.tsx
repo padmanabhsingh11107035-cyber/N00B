@@ -34,7 +34,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice } from '../../services/api';
+import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice } from '../../services/api';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -286,6 +286,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Email verification, the step between "Join NOOB" and the account actually being created: the
+  // whole form is validated first (unchanged), then a code is emailed to it instead of signing up
+  // right away — signupUser() only runs after that code is entered correctly.
+  const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
+  const [signupOtpCode, setSignupOtpCode] = useState('');
+  const [signupOtpError, setSignupOtpError] = useState<string | null>(null);
+  const [signupOtpLoading, setSignupOtpLoading] = useState(false);
+  const [signupOtpResending, setSignupOtpResending] = useState(false);
+  const [signupOtpSuccess, setSignupOtpSuccess] = useState(false);
+  // Always start back at the form when the sign-up screen is left and re-entered, however that happens.
+  useEffect(() => { if (mode !== 'signup') setSignupStep('form'); }, [mode]);
+
   // Honeypot field for bot attack proofing (invisible to humans, bots will fill it)
   const [honeypotValue, setHoneypotValue] = useState('');
 
@@ -501,12 +513,32 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       return;
     }
 
+    // Everything above is unchanged validation. From here, email verification comes first — the
+    // account itself is only created once the code sent to it is entered correctly, in
+    // handleVerifySignupOtp below.
+    setLoading(true);
+    const otpRes = await requestSignupOtp(email.trim());
+    setLoading(false);
+    if (!otpRes.success) {
+      setErrorMessage(otpRes.error || 'Could not send a verification code. Please try again.');
+      return;
+    }
+    setSignupOtpCode('');
+    setSignupOtpError(null);
+    setSignupOtpSuccess(false);
+    setSignupStep('otp');
+  };
+
+  // Creates the account itself — split out of handleSignupSubmit so handleVerifySignupOtp can call
+  // it once the email is verified, using the same still-filled-in form state.
+  const completeSignup = async () => {
     try {
       setLoading(true);
       // Prefer the durable B2 object key over the presigned/base64 URL —
       // see the comment on customAvatarObjectKey above. A profile photo is
       // now required (validated above), so this is never empty here.
       const avatarUrl = (customAvatarObjectKey || customAvatarUrl).trim();
+      const cleanUsername = userId.trim().toLowerCase().replace(/[^a-z0-9_.]/g, '');
       const res = await signupUser({
         firstName: fullName.trim(),
         displayName: fullName.trim(),
@@ -533,18 +565,49 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         void recordSignupDevice();
         onAuthSuccess(res.user);
       } else if (res.suspended) {
+        setSignupStep('form');
         setSuspendedNotice(
           res.message ||
             'We have detected that your account is suspended, and attempting to create a new account could result in further action against you. Please wait — our team will contact you.'
         );
       } else {
+        // The email was verified but something else about the form failed (a username taken in the
+        // meantime, say) — back to the form with the error, rather than stranding them on the OTP
+        // screen with no way to fix it.
+        setSignupStep('form');
         setErrorMessage(res.error || 'Account creation failed. User ID may already exist.');
       }
     } catch (err: any) {
+      setSignupStep('form');
       setErrorMessage(err.message || 'Error communicating with server.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifySignupOtp = async () => {
+    if (!signupOtpCode.trim()) {
+      setSignupOtpError('Please enter the code from your email.');
+      return;
+    }
+    setSignupOtpLoading(true);
+    setSignupOtpError(null);
+    const res = await verifySignupOtp(email.trim(), signupOtpCode.trim());
+    setSignupOtpLoading(false);
+    if (!res.success) {
+      setSignupOtpError(res.error || 'That code is not right. Please check your email and try again.');
+      return;
+    }
+    setSignupOtpSuccess(true);
+    await completeSignup();
+  };
+
+  const handleResendSignupOtp = async () => {
+    setSignupOtpResending(true);
+    setSignupOtpError(null);
+    const res = await requestSignupOtp(email.trim());
+    setSignupOtpResending(false);
+    if (!res.success) setSignupOtpError(res.error || 'Could not send a new code. Please try again.');
   };
 
   // Handle Login submission
@@ -887,7 +950,68 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               </button>
             </div>
           )}
-          {mode === 'signup' && signupsEnabled && (
+          {mode === 'signup' && signupsEnabled && signupStep === 'otp' && (
+            <div className="space-y-3.5">
+              {signupOtpSuccess ? (
+                <div className="py-8 text-center space-y-3">
+                  <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
+                  <p className="text-sm font-bold text-white">Email verified!</p>
+                  <p className="text-xs text-zinc-400">Creating your account…</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    We emailed a 6-digit code to <span className="text-white font-semibold" translate="no">{email.trim()}</span>. Enter it below to create your account.
+                  </p>
+                  {signupOtpError && (
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+                      {signupOtpError}
+                    </div>
+                  )}
+                  <form onSubmit={(e) => { e.preventDefault(); void handleVerifySignupOtp(); }} className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-300 block mb-1.5">6-digit code</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        value={signupOtpCode}
+                        onChange={(e) => setSignupOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] outline-none transition-all placeholder:text-zinc-700"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={signupOtpLoading}
+                      className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-emerald-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {signupOtpLoading ? 'Verifying…' : 'Verify & Create Account'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={signupOtpResending}
+                      onClick={() => void handleResendSignupOtp()}
+                      className="w-full py-2 text-xs font-bold text-[#00FF66] hover:opacity-80 disabled:text-zinc-600 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      {signupOtpResending ? 'Sending…' : 'Resend code'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSignupStep('form'); setSignupOtpError(null); }}
+                      className="w-full text-xs font-bold text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      ← Back to the form
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+          )}
+          {mode === 'signup' && signupsEnabled && signupStep === 'form' && (
             <form onSubmit={handleSignupSubmit} className="space-y-4">
               {/* Hidden honeypot field for bot attack protection */}
               <input

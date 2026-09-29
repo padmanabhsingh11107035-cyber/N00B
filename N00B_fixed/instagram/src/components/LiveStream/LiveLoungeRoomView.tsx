@@ -25,6 +25,7 @@ import {
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
   connectLiveLoungeWhiteboard,
+  connectLiveLoungeScreenShare,
   fetchPublicPlatformSettings,
   inviteToLiveLoungeRoom
 } from '../../services/api';
@@ -64,26 +65,27 @@ const VideoTile: React.FC<{
   isSelf?: boolean;
   hasVideo: boolean;
   muted?: boolean;
-}> = ({ videoTrack, name, avatar, isSelf, hasVideo, muted }) => {
+  full?: boolean;
+}> = ({ videoTrack, name, avatar, isSelf, hasVideo, muted, full }) => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (hasVideo && videoTrack && ref.current) {
-      videoTrack.play(ref.current, { fit: 'cover', mirror: false });
+      videoTrack.play(ref.current, { fit: full ? 'contain' : 'cover', mirror: false });
     }
     return () => { try { videoTrack?.stop(); } catch { /* already stopped */ } };
-  }, [videoTrack, hasVideo]);
+  }, [videoTrack, hasVideo, full]);
 
   return (
-    <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-neutral-900 border border-white/10">
+    <div className={full ? 'relative w-full h-full bg-black' : 'relative aspect-[3/4] rounded-xl overflow-hidden bg-neutral-900 border border-white/10'}>
       <div ref={ref} className="absolute inset-0 w-full h-full" />
       {!hasVideo && (
         <div className="absolute inset-0 flex items-center justify-center">
           <AvatarMedia src={avatar} alt={name} className="w-14 h-14 rounded-full object-cover" />
         </div>
       )}
-      <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5">
+      <div className={`absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5 ${full ? 'bottom-4 left-4' : ''}`}>
         {muted && <MicOff className="w-3 h-3 text-red-400" />}
-        <span className="text-white text-[10px] font-semibold truncate max-w-[90px]">{isSelf ? 'You' : name}</span>
+        <span className="text-white text-[10px] font-semibold truncate max-w-[90px]">{isSelf ? 'You' : name}{full ? "'s screen" : ''}</span>
       </div>
     </div>
   );
@@ -119,6 +121,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [cameraOn, setCameraOn] = useState(true);
   const [sharingScreen, setSharingScreen] = useState(false);
   const [screenShareError, setScreenShareError] = useState('');
+  const [screenSharingUid, setScreenSharingUid] = useState<number | null>(null);
+  const sharingScreenRef = useRef(false);
   const [panel, setPanel] = useState<'none' | 'chat' | 'people'>('none');
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
 
@@ -132,6 +136,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const whiteboardChannelRef = useRef<{ send: (payload: any) => void; disconnect: () => void } | null>(null);
+  const screenShareChannelRef = useRef<{ send: (payload: { uid: number; sharing: boolean }) => void; query: () => void; disconnect: () => void } | null>(null);
 
   const myUid = agoraUidFor(currentUser.id);
 
@@ -184,6 +189,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           next.set(uid, entry);
           return next;
         });
+        // Safety net for "the sharer's screen-share ended without a clean stop broadcast" (a crash, a
+        // dropped connection) — their video going away is the one signal that can't be missed either way.
+        if (mediaType === 'video') setScreenSharingUid((prevUid) => (prevUid === uid ? null : prevUid));
       });
       client.on('user-left', (user: IAgoraRTCRemoteUser) => {
         const uid = user.uid as number;
@@ -192,6 +200,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           next.delete(uid);
           return next;
         });
+        setScreenSharingUid((prevUid) => (prevUid === uid ? null : prevUid));
       });
 
       await withTimeout(client.join(join.appId, join.channelName, join.token, myUid));
@@ -296,6 +305,23 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   }, [phase, roomId, refreshParticipants]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
+
+  // Whoever is sharing their screen fills the whole call for everyone — announced explicitly since
+  // Agora gives a remote viewer no way to tell a screen track from a camera track on its own.
+  useEffect(() => {
+    if (phase !== 'live' || !roomId) return;
+    const channel = connectLiveLoungeScreenShare(
+      roomId,
+      (payload) => {
+        if (payload.sharing) setScreenSharingUid(payload.uid);
+        else setScreenSharingUid((prev) => (prev === payload.uid ? null : prev));
+      },
+      () => { if (sharingScreenRef.current) channel.send({ uid: myUid, sharing: true }); }
+    );
+    screenShareChannelRef.current = channel;
+    channel.query();
+    return () => { channel.disconnect(); screenShareChannelRef.current = null; };
+  }, [phase, roomId, myUid]);
 
   // Whiteboard drawing (local + broadcast receive).
   useEffect(() => {
@@ -419,6 +445,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         screenTrackRef.current = screenTrack;
         screenTrack.on('track-ended', () => { void handleToggleScreenShare(); });
         setSharingScreen(true);
+        sharingScreenRef.current = true;
+        setScreenSharingUid(myUid);
+        screenShareChannelRef.current?.send({ uid: myUid, sharing: true });
       } catch (err) {
         // Agora wraps the browser's own error, so the DOM exception name (NotAllowedError/AbortError —
         // "cancelled the picker") shows up in .message or a nested .name, not always the top-level one.
@@ -434,6 +463,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         if (camTrackRef.current) await client.publish(camTrackRef.current);
       } catch { /* best-effort revert */ }
       setSharingScreen(false);
+      sharingScreenRef.current = false;
+      setScreenSharingUid((prev) => (prev === myUid ? null : prev));
+      screenShareChannelRef.current?.send({ uid: myUid, sharing: false });
     }
   };
 
@@ -607,16 +639,28 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         </button>
       )}
 
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="grid grid-cols-2 gap-2 max-w-2xl mx-auto">
-          <VideoTile videoTrack={(sharingScreen ? screenTrackRef.current : camTrackRef.current) || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={sharingScreen || cameraOn} muted={!micOn} />
-          {remoteList.map((r) => {
-            const p = participants.admitted.find((a) => agoraUidFor(a.userId) === r.uid);
-            return (
-              <VideoTile key={r.uid} videoTrack={r.videoTrack} name={p?.username || 'Guest'} avatar={p?.avatar} hasVideo={r.hasVideo} muted={!r.hasAudio} />
-            );
-          })}
-        </div>
+      <div className={screenSharingUid !== null ? 'flex-1 overflow-hidden' : 'flex-1 overflow-y-auto p-3'}>
+        {screenSharingUid !== null ? (
+          screenSharingUid === myUid ? (
+            <VideoTile videoTrack={screenTrackRef.current || undefined} name={currentUser.username} isSelf hasVideo full muted={!micOn} />
+          ) : (
+            (() => {
+              const r = remotes.get(screenSharingUid);
+              const p = participants.admitted.find((a) => agoraUidFor(a.userId) === screenSharingUid);
+              return <VideoTile videoTrack={r?.videoTrack} name={p?.username || 'Guest'} hasVideo={!!r?.hasVideo} full muted={!r?.hasAudio} />;
+            })()
+          )
+        ) : (
+          <div className="grid grid-cols-2 gap-2 max-w-2xl mx-auto">
+            <VideoTile videoTrack={(sharingScreen ? screenTrackRef.current : camTrackRef.current) || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={sharingScreen || cameraOn} muted={!micOn} />
+            {remoteList.map((r) => {
+              const p = participants.admitted.find((a) => agoraUidFor(a.userId) === r.uid);
+              return (
+                <VideoTile key={r.uid} videoTrack={r.videoTrack} name={p?.username || 'Guest'} avatar={p?.avatar} hasVideo={r.hasVideo} muted={!r.hasAudio} />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Bottom toolbar */}

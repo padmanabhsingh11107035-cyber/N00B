@@ -7,6 +7,8 @@ export {
   recordSignupDevice,
   fetchHealth,
   signupUser,
+  requestSignupOtp,
+  verifySignupOtp,
   loginUser,
   verifyUsernameExists,
   recoverAccountAccess,
@@ -254,7 +256,8 @@ export {
   fetchLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
-  connectLiveLoungeWhiteboard
+  connectLiveLoungeWhiteboard,
+  connectLiveLoungeScreenShare
 } from './supabaseApi';
 
 export type {

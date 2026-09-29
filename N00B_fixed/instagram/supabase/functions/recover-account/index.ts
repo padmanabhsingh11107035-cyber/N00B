@@ -1,4 +1,5 @@
-// NOOB — Edge Function "recover-account".
+// NOOB — Edge Function "recover-account". Despite the name, this now also handles the welcome email
+// and signup email verification — every auth-adjacent email the app sends, in one place.
 //
 // Two ways in when a password is forgotten:
 //   1. (default, unchanged) the person proves three details (mobile number, date of birth, email on file). The check itself (and its
@@ -9,10 +10,17 @@
 // Either way, once the database says "ok" this function creates a one-time sign-in token for that account — the app then exchanges
 // it for a normal session. No password is ever seen or set here.
 //
+// (action: "signup-otp-request" / "signup-otp-verify") the same idea, but BEFORE an account exists: a 6-digit code emailed to
+// whatever address was just typed into the sign-up form, checked against signup_otp_request/verify. No account and no sign-in token
+// here — the app calls signupUser() itself once verified, and the database (check_signup / handle_new_user) refuses to create the
+// account at all unless that specific email was verified in the last 30 minutes.
+//
+// (action: "welcome") sends the "Welcome to NOOB" email right after a brand new account's own first session exists.
+//
 // Deploy with "Verify JWT" switched OFF (a logged-out visitor calls this; the database checks are the gate).
 // The keys it uses (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are provided to every Edge Function automatically.
-// Secret this function also needs for the emailed code (optional — without it, "otp-request" simply answers "not configured" and the
-// app falls back to the security-question check): RESEND_API_KEY (a free Resend.com API key).
+// Secret this function also needs for every emailed code (optional — without it, otp-request/signup-otp-request answer "not
+// configured", the login one falling back to the security-question check, signup itself becoming unavailable): RESEND_API_KEY.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -88,6 +96,18 @@ const sendOtpEmail = (email: string, code: string) =>
     </div>`
   );
 
+const sendSignupOtpEmail = (email: string, code: string) =>
+  sendEmail(
+    email,
+    `${code} is your NOOB signup code`,
+    `Your NOOB signup verification code is ${code}. Enter it in the app to finish creating your account. It expires in 10 minutes. If you did not try to create a NOOB account, you can ignore this email.`,
+    `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
+      <p style="font-size:15px">Your NOOB signup verification code is:</p>
+      <p style="font-size:32px;font-weight:800;letter-spacing:6px;margin:12px 0">${code}</p>
+      <p style="font-size:13px;color:#555">Enter it in the app to finish creating your account. It expires in 10 minutes. If you did not try to create a NOOB account, you can ignore this email.</p>
+    </div>`
+  );
+
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 const sendWelcomeEmail = (email: string, name: string, username: string) =>
@@ -135,6 +155,46 @@ Deno.serve(async (req) => {
     if (!prof?.username || !priv?.email) return json({ success: true, sent: false });
     const sent = await sendWelcomeEmail(priv.email, prof.display_name || prof.username, prof.username);
     return json({ success: true, sent });
+  }
+
+  // -------------------------------------------------------------- signup email verification
+  // Called BEFORE an account exists, so there is no username/suspension to check yet — only whether
+  // the email itself looks real and isn't already on another account. check_signup / handle_new_user
+  // are what actually refuse to create the account without this having succeeded.
+  if (body?.action === 'signup-otp-request') {
+    const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
+    if (!key) return json({ error: 'Sign-ups are temporarily unavailable. Please try again later.', notConfigured: true }, 503);
+    const { data: check, error } = await admin.rpc('signup_otp_request', { p_ip: ip, p_email: String(body?.email ?? '') });
+    if (error || !check) return json(unavailable, 500);
+    switch (check.status) {
+      case 'invalid_email': return json({ error: 'Please enter a valid email address.' }, 400);
+      case 'rate_limited': return json({ error: 'Too many attempts. Please try again later.' }, 429);
+      case 'cooldown': return json({ error: 'A code was just sent. Please wait a moment before asking for another.' }, 429);
+      case 'already_registered': return json({ error: 'An account already exists with this email address.' }, 409);
+      case 'ok': break;
+      default: return json(unavailable, 500);
+    }
+    const sent = await sendSignupOtpEmail(String(body.email), String(check.code));
+    if (!sent) return json(unavailable, 502);
+    return json({ success: true });
+  }
+
+  if (body?.action === 'signup-otp-verify') {
+    const { data: check, error } = await admin.rpc('signup_otp_verify', {
+      p_ip: ip, p_email: String(body?.email ?? ''), p_code: String(body?.code ?? '')
+    });
+    if (error || !check) return json(unavailable, 500);
+    switch (check.status) {
+      case 'missing_email': return json({ error: 'Email is required.' }, 400);
+      case 'missing': return json({ error: 'Please enter the code from your email.' }, 400);
+      case 'rate_limited': return json({ error: 'Too many attempts. Please try again later.' }, 429);
+      case 'expired': return json({ error: 'That code has expired or was already used. Please ask for a new one.' }, 401);
+      case 'too_many_attempts': return json({ error: 'Too many wrong codes. Please ask for a new one.' }, 401);
+      case 'mismatch': return json({ error: 'That code is not right. Please check your email and try again.' }, 401);
+      case 'ok': break;
+      default: return json(unavailable, 500);
+    }
+    return json({ success: true });
   }
 
   // -------------------------------------------------------------- emailed one-time code

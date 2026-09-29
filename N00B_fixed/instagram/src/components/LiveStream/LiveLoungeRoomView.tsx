@@ -485,6 +485,19 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         </button>
       </div>
 
+      {/* Hard to miss even if the host never opens People — a badge on a 6-icon toolbar is easy to overlook. */}
+      {isHost && participants.waiting.length > 0 && (
+        <button
+          onClick={() => setPanel('people')}
+          className="shrink-0 mx-3 mt-3 flex items-center justify-between gap-2 bg-amber-500/15 border border-amber-500/40 rounded-2xl px-4 py-2.5 animate-pulse"
+        >
+          <span className="text-amber-300 text-xs font-semibold">
+            🔔 {participants.waiting.length} {participants.waiting.length === 1 ? 'person' : 'people'} waiting to join
+          </span>
+          <span className="text-amber-300 text-xs font-bold">Review →</span>
+        </button>
+      )}
+
       <div className="flex-1 overflow-y-auto p-3">
         <div className="grid grid-cols-2 gap-2 max-w-2xl mx-auto">
           <VideoTile videoTrack={camTrackRef.current || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={cameraOn && !sharingScreen} muted={!micOn} />
@@ -583,9 +596,10 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
             <button onClick={() => setPanel('none')} className="text-white/70"><X className="w-4 h-4" /></button>
           </div>
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
-            {isHost && participants.waiting.length > 0 && (
+            {isHost && (
               <div className="space-y-1.5">
-                <p className="text-[10px] text-amber-400 font-bold uppercase">Waiting room</p>
+                <p className="text-[10px] text-amber-400 font-bold uppercase">Waiting room ({participants.waiting.length})</p>
+                {participants.waiting.length === 0 && <p className="text-[11px] text-white/40 py-1">No one waiting right now.</p>}
                 {participants.waiting.map((p) => (
                   <div key={p.userId} className="flex items-center gap-2 p-2 rounded-xl bg-white/5">
                     <AvatarMedia src={p.avatar} alt={p.username} className="w-8 h-8 rounded-full object-cover" />

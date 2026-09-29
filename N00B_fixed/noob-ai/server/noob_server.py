@@ -143,6 +143,12 @@ Music and YouTube (you can play any song, music or video from YouTube):
   For the next song or another song, choose one yourself and use PLAY again.
 - PLAY and MUSIC lines are never spoken.
 
+Ending the conversation:
+- If the user clearly means to end the conversation — goodbye, bye, see you, that's all, I'm done, ok thanks bye,
+  or the same idea in any language — reply with ONE short warm farewell sentence in their language, then on a new line:
+  BYE: true
+  This line is never spoken; it tells the app to stop listening and take the user back to their profile.
+
 Permanent memory (survives power-off):
 - When the user tells you something worth remembering about themselves, their family or friends (name, age, birthday,
   health conditions, allergies, medicines, doctor, likes and dislikes, plans, important dates, or anything they ask you
@@ -386,8 +392,8 @@ Then write your reply on the next line, starting with the language tag. If the r
 write "HEARD:" with nothing after it, and ask the user to say it again."""
 
 SENTENCE_END = re.compile(r"[.!?।॥]+[\"'”’)\]]*(?:\s+|$)|\n+")
-MEMORY_MARK = re.compile(r"\b(?:REMEMBER|FORGET|MOOD|PLAY|MUSIC)\s*:")
-COMMAND_LINE = r"\b(REMEMBER|FORGET|MOOD|PLAY|MUSIC)\s*:\s*(.+?)\s*(?=\b(?:REMEMBER|FORGET|MOOD|PLAY|MUSIC)\s*:|$)"
+MEMORY_MARK = re.compile(r"\b(?:REMEMBER|FORGET|MOOD|PLAY|MUSIC|BYE)\s*:")
+COMMAND_LINE = r"\b(REMEMBER|FORGET|MOOD|PLAY|MUSIC|BYE)\s*:\s*(.+?)\s*(?=\b(?:REMEMBER|FORGET|MOOD|PLAY|MUSIC|BYE)\s*:|$)"
 
 
 def music_request(reply):
@@ -399,6 +405,15 @@ def music_request(reply):
         if kind == "MUSIC" and value.lower().split()[:1] in (["stop"], ["pause"], ["resume"], ["next"]):
             return (value.lower().split()[0], "")
     return None
+
+
+def bye_requested(reply):
+    """True once the answer's own BYE: line says so — the AI decides this from the user's words, in any language,
+    not a fixed list of English goodbye phrases matched here."""
+    for kind, value in re.findall(COMMAND_LINE, reply, flags=re.DOTALL):
+        if kind == "BYE" and value.strip().lower().startswith("true"):
+            return True
+    return False
 LANG_TAG = re.compile(r"\s*\[([a-zA-Z]{2,3})(?:-[a-zA-Z]+)?\]\s*")
 
 
@@ -641,6 +656,8 @@ def converse(user_id, text=None, pcm=None):
     extra = {"questions_left": questions_left(user_id)}
     if music:
         extra["music"] = music
+    if bye_requested(commands):
+        extra["bye"] = True
     if (asked == SURVEY_AFTER or (asked > SURVEY_AFTER and (asked - SURVEY_AFTER) % 25 == 0)) \
             and not memory.has_reviewed(user_id):
         extra["survey"] = True                        # the app shows the 5-star rating card

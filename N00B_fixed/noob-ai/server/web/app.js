@@ -425,7 +425,7 @@ function stopSpeaking() {
 async function streamAnswer(path, request, fromVoice) {
   setState("thinking");
   const typing = typingBubble();
-  let bubble = null, ok = false, blocked = false, streamDone = false, playing = false, cancelled = false, wantSurvey = false;
+  let bubble = null, ok = false, blocked = false, streamDone = false, playing = false, cancelled = false, wantSurvey = false, wantBye = false;
   let musicAction = null;
   if (music.playing) music.player.setVolume(20);                       // NOOB's voice over the music
   const queue = [], clips = [];
@@ -478,6 +478,7 @@ async function streamAnswer(path, request, fromVoice) {
       if (ev.maintenance) refreshStatus();
       if (ev.music) musicAction = ev.music;
       if (ev.survey) wantSurvey = true;
+      if (ev.bye) wantBye = true;
       const b = noobBubble();
       if (!b.textContent) b.textContent = ev.answer;
       if (!ev.ok) b.classList.add("error");
@@ -530,6 +531,9 @@ async function streamAnswer(path, request, fromVoice) {
   if (currentReply === reply) currentReply = null;
   setState("idle");
   const musicOn = afterAnswer(musicAction);
+  // A goodbye wins over everything else that might normally happen next (the conversation loop, a
+  // survey prompt) — the user just said they're done, so NOOB stops listening and steps out of Talk.
+  if (wantBye) { conversationOn = false; setTimeout(() => { location.hash = "#about"; }, 600); return; }
   if (wantSurvey) { conversationOn = false; setTimeout(showSurvey, 600); return; }
   // Always a conversation: after a spoken answer NOOB listens again, like a friend. It stops when you tap the
   // orb while NOOB is talking, when nothing was heard, or while music plays.

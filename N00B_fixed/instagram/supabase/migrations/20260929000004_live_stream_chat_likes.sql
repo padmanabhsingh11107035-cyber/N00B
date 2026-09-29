@@ -49,7 +49,7 @@ grant execute on function public.live_stream_comment(uuid, text) to authenticate
 -- Recent chat history so someone joining mid-stream isn't dropped into an empty chat.
 create or replace function public.live_stream_comments_recent(p_stream_id uuid, p_limit int default 50) returns jsonb
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(row_to_json(t) order by t.created_at), '[]'::jsonb) from (
+  select coalesce(jsonb_agg(row_to_json(t) order by t."createdAt"), '[]'::jsonb) from (
     select c.id, c.stream_id as "streamId", c.text, c.gift_amount as "giftAmount", c.created_at as "createdAt",
            jsonb_build_object('id', p.id, 'username', p.username, 'displayName', p.display_name, 'avatar', p.avatar) as sender
     from public.live_stream_comments c

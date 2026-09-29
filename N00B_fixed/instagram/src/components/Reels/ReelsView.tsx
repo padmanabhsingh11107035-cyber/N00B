@@ -27,7 +27,9 @@ import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { LiveStreamBar } from '../LiveStream/LiveStreamBar';
-import { LiveStreamView } from '../LiveStream/LiveStreamView';
+// Lazy-loaded: pulls in the Agora SDK, only needed once someone actually opens a live stream —
+// shares the same chunk as App.tsx's own dynamic import() of this component.
+const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 import type { LiveStreamSummary } from '../../services/api';
 import {
   toggleLikeReel,
@@ -1140,12 +1142,18 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     </div>
 
     {liveOverlay && (
-      <LiveStreamView
-        currentUser={currentUser}
-        mode="view"
-        stream={liveOverlay.stream}
-        onClose={() => setLiveOverlay(null)}
-      />
+      <React.Suspense fallback={
+        <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+        </div>
+      }>
+        <LiveStreamView
+          currentUser={currentUser}
+          mode="view"
+          stream={liveOverlay.stream}
+          onClose={() => setLiveOverlay(null)}
+        />
+      </React.Suspense>
     )}
     </>
   );

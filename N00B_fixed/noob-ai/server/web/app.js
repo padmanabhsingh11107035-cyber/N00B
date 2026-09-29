@@ -533,7 +533,19 @@ async function streamAnswer(path, request, fromVoice) {
   const musicOn = afterAnswer(musicAction);
   // A goodbye wins over everything else that might normally happen next (the conversation loop, a
   // survey prompt) — the user just said they're done, so NOOB stops listening and steps out of Talk.
-  if (wantBye) { conversationOn = false; setTimeout(() => { location.hash = "#about"; }, 600); return; }
+  if (wantBye) {
+    conversationOn = false;
+    setTimeout(() => {
+      // Opened inside the NOOB app? Let it take over instead of just switching our own page — the
+      // app closes this and jumps straight to the main feed. "*" is fine here: the message carries
+      // nothing sensitive, and NOOB AI itself doesn't get to choose which app embeds it.
+      if (window.parent && window.parent !== window) {
+        try { window.parent.postMessage({ type: "noob-ai-bye" }, "*"); } catch { /* not embedded after all */ }
+      }
+      location.hash = "#about";
+    }, 600);
+    return;
+  }
   if (wantSurvey) { conversationOn = false; setTimeout(showSurvey, 600); return; }
   // Always a conversation: after a spoken answer NOOB listens again, like a friend. It stops when you tap the
   // orb while NOOB is talking, when nothing was heard, or while music plays.

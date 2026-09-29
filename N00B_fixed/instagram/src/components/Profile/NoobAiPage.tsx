@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
-import { noobAiIsOnline, noobAiSignInUrl } from '../../utils/noobAi';
+import { noobAiIsOnline, noobAiSignInUrl, NOOB_AI_URL } from '../../utils/noobAi';
 import { fetchPublicPlatformSettings, requestNoobAiWake } from '../../services/api';
 import { NoobAiLogo } from './NoobAiLogo';
 import { NoobAiGem } from './NoobAiGem';
@@ -9,11 +9,14 @@ interface NoobAiPageProps {
   onClose: () => void;
   // The main admin can still open NOOB AI while it is locked for maintenance (to test it).
   isMainAdmin?: boolean;
+  // Saying bye inside NOOB AI should land back on the main feed, not just close this overlay onto
+  // whatever screen was open before — see the postMessage listener below.
+  onBye?: () => void;
 }
 
 // NOOB AI inside the NOOB app: the voice assistant opens full-screen here (no new browser tab) and signs this
 // account in automatically. Its brain runs on the owner's PC, so it can be offline when that PC is off.
-export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = false }) => {
+export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = false, onBye }) => {
   const [status, setStatus] = useState<'checking' | 'online' | 'offline' | 'maintenance' | 'waking'>('checking');
   // true after a wake-up attempt that didn't work (then NOOB AI's computer itself is off)
   const [wakeFailed, setWakeFailed] = useState(false);
@@ -35,6 +38,20 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
     });
     return () => { alive = false; };
   }, [attempt]);
+
+  // "Bye" said inside NOOB AI posts this from the iframe (its own hash-based pages have no way to
+  // reach outside themselves) — closing straight to the main feed, not back to whatever screen under
+  // this overlay happened to be open before.
+  useEffect(() => {
+    const expectedOrigin = new URL(NOOB_AI_URL).origin;
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== expectedOrigin || event.data?.type !== 'noob-ai-bye') return;
+      onClose();
+      onBye?.();
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [onClose, onBye]);
 
   const reload = () => setAttempt((n) => n + 1);
 

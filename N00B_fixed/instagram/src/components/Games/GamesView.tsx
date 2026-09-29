@@ -21,7 +21,9 @@ import {
 } from 'lucide-react';
 import { MiniGameMeta, ALL_50_MINI_GAMES, GameCategory } from './types';
 import { GameBannerArtwork } from './GameIcons';
-import { GamePlayModal } from './GamePlayModal';
+// Lazy-loaded: ~1700 lines nobody needs until they actually open a game — shares the same chunk as
+// App.tsx's own dynamic import() of this component.
+const GamePlayModal = React.lazy(() => import('./GamePlayModal').then((m) => ({ default: m.GamePlayModal })));
 import { User, GameLeaderboardEntry } from '../../types';
 import { fetchGameLeaderboard } from '../../services/api';
 
@@ -457,13 +459,19 @@ export const GamesView: React.FC<GamesViewProps> = ({
 
       {/* Interactive Game Play Modal */}
       {selectedGameForPlay && (
-        <GamePlayModal
-          game={selectedGameForPlay}
-          currentUser={currentUser}
-          allUsers={allUsers}
-          onClose={() => setSelectedGameForPlay(null)}
-          onPointsUpdated={handlePointsUpdated}
-        />
+        <React.Suspense fallback={
+          <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+          </div>
+        }>
+          <GamePlayModal
+            game={selectedGameForPlay}
+            currentUser={currentUser}
+            allUsers={allUsers}
+            onClose={() => setSelectedGameForPlay(null)}
+            onPointsUpdated={handlePointsUpdated}
+          />
+        </React.Suspense>
       )}
     </div>
   );

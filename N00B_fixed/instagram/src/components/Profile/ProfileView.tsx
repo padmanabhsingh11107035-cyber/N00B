@@ -88,8 +88,6 @@ import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
-import { CustomerSupportModal } from '../Support/CustomerSupportModal';
-import { LiveLoungePage } from './LiveLoungePage';
 import { NoobAiPage } from './NoobAiPage';
 import { NoobAiLogo } from './NoobAiLogo';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
@@ -100,7 +98,6 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { GetVerifiedModal } from './GetVerifiedModal';
-import { AdminControlModal } from '../Modals/AdminControlModal';
 import { AccountsStatisticsModal } from './AccountsStatisticsModal';
 import { ProFeaturesModal } from './ProFeaturesModal';
 import { LiveProfilePictureModal } from './LiveProfilePictureModal';
@@ -123,6 +120,18 @@ import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareProfileSheet } from './ShareProfileSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
+
+// Lazy-loaded: large, rarely-opened screens pulled out of the main bundle rather than loaded on
+// every visit — dynamic import() here and in App.tsx (which also renders LiveLoungePage/
+// AdminControlModal) share the same underlying chunk, so this doesn't double-load anything.
+const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
+const LiveLoungePage = React.lazy(() => import('./LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
+const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
+const LazyFallback: React.FC = () => (
+  <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+  </div>
+);
 
 interface ProfileViewProps {
   currentUser: User;
@@ -150,6 +159,9 @@ interface ProfileViewProps {
   // App.tsx's viewAsUser + AdminControlModal's "Use as User" button) — switches back to the admin
   // console. Absent for every other account, so the icon simply never renders for them.
   onSwitchToAdminPanel?: () => void;
+  // Saying bye inside NOOB AI takes the user to the main feed, not back to whatever screen NOOB AI
+  // happened to be opened over — see NoobAiPage's postMessage listener.
+  onNoobAiBye?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -172,7 +184,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onBackToMyProfile,
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
-  onSwitchToAdminPanel
+  onSwitchToAdminPanel,
+  onNoobAiBye
 }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved' | 'liked' | 'archive'>('posts');
   const [collections, setCollections] = useState<SavedCollection[]>([]);
@@ -2014,15 +2027,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
 
       {showLiveLoungePage && (
-        <LiveLoungePage
-          currentUser={currentUser}
-          allUsers={allUsers}
-          onClose={() => setShowLiveLoungePage(false)}
-          onUserUpdated={onUserUpdated}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <LiveLoungePage
+            currentUser={currentUser}
+            allUsers={allUsers}
+            onClose={() => setShowLiveLoungePage(false)}
+            onUserUpdated={onUserUpdated}
+          />
+        </React.Suspense>
       )}
 
-      {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} />}
+      {showNoobAi && (
+        <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={onNoobAiBye} />
+      )}
 
       {showInstallPermissionsPage && (
         <InstallAndPermissionsPage
@@ -2370,18 +2387,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showTermsModal && <TermsAndConditions onClose={() => setShowTermsModal(false)} />}
       {showPrivacyModal && <PrivacyPolicy onClose={() => setShowPrivacyModal(false)} />}
       {showSupportModal && (
-        <CustomerSupportModal
-          currentUser={currentUser}
-          onClose={() => setShowSupportModal(false)}
-          onOpenTerms={() => {
-            setShowSupportModal(false);
-            setShowTermsModal(true);
-          }}
-          onOpenPrivacy={() => {
-            setShowSupportModal(false);
-            setShowPrivacyModal(true);
-          }}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <CustomerSupportModal
+            currentUser={currentUser}
+            onClose={() => setShowSupportModal(false)}
+            onOpenTerms={() => {
+              setShowSupportModal(false);
+              setShowTermsModal(true);
+            }}
+            onOpenPrivacy={() => {
+              setShowSupportModal(false);
+              setShowPrivacyModal(true);
+            }}
+          />
+        </React.Suspense>
       )}
 
       {/* 11. Highlight Viewer — the same story viewer, in playback-only mode (see the 22 Sep
@@ -2455,10 +2474,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 14. NOOB Admin Control Modal */}
       {showAdminControlModal && (
-        <AdminControlModal
-          currentUser={currentUser}
-          onClose={() => setShowAdminControlModal(false)}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <AdminControlModal
+            currentUser={currentUser}
+            onClose={() => setShowAdminControlModal(false)}
+          />
+        </React.Suspense>
       )}
 
       {/* 14.5 Report User Modal */}

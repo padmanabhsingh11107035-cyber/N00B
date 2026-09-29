@@ -66,20 +66,15 @@ import { ProfileView } from './components/Profile/ProfileView';
 import { StoryViewerModal } from './components/Stories/StoryViewerModal';
 import { CreateStoryModal } from './components/Stories/CreateStoryModal';
 import { PostCreationModal } from './components/PostCreation/PostCreationModal';
-import { LiveStreamView } from './components/LiveStream/LiveStreamView';
-import { LiveLoungePage } from './components/Profile/LiveLoungePage';
-import { ProfessionalDashboardModal } from './components/Modals/ProfessionalDashboardModal';
 import { NotificationsModal, NotificationSettingsState } from './components/Modals/NotificationsModal';
 import { ScratchCardModal } from './components/Modals/ScratchCardModal';
 import { StatusNoteModal } from './components/Modals/StatusNoteModal';
 import { AuthView } from './components/Auth/AuthView';
 import { TermsAndConditions } from './components/Legal/TermsAndConditions';
 import { PrivacyPolicy } from './components/Legal/PrivacyPolicy';
-import { CustomerSupportModal } from './components/Support/CustomerSupportModal';
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
-import { GamePlayModal } from './components/Games/GamePlayModal';
 import { FindFriendsModal } from './components/Modals/FindFriendsModal';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
@@ -91,8 +86,26 @@ import { readDiag, explainSessionEnd } from './services/authDiag';
 import { installContentProtection } from './utils/contentProtection';
 import { applyAccountLanguage, setSignedIn } from './i18n/account.ts';
 import { isMainAdmin } from './adminAccess';
-import { AdminControlModal } from './components/Modals/AdminControlModal';
 import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
+
+// Lazy-loaded: each of these pulls a large, rarely-needed chunk out of the main bundle (the admin
+// console alone is ~3000 lines nobody but the admin ever opens; Live Streaming/Lounge additionally
+// drag in the Agora SDK) — loaded on first use instead of on every visit, no matter who's using the app.
+const AdminControlModal = React.lazy(() => import('./components/Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
+const CustomerSupportModal = React.lazy(() => import('./components/Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
+const GamePlayModal = React.lazy(() => import('./components/Games/GamePlayModal').then((m) => ({ default: m.GamePlayModal })));
+const ProfessionalDashboardModal = React.lazy(() => import('./components/Modals/ProfessionalDashboardModal').then((m) => ({ default: m.ProfessionalDashboardModal })));
+const LiveStreamView = React.lazy(() => import('./components/LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
+const LiveLoungePage = React.lazy(() => import('./components/Profile/LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
+
+// Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
+// full loading screen, since by the time it appears the user already tapped something and expects
+// a response right away.
+const LazyFallback: React.FC = () => (
+  <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+  </div>
+);
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
@@ -881,13 +894,15 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
-        <AdminControlModal
-          currentUser={currentUser}
-          fullPage
-          onClose={() => {}}
-          onLogout={handleLogout}
-          onUseAsUser={() => setViewAsUser(true)}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <AdminControlModal
+            currentUser={currentUser}
+            fullPage
+            onClose={() => {}}
+            onLogout={handleLogout}
+            onUseAsUser={() => setViewAsUser(true)}
+          />
+        </React.Suspense>
       </>
     );
   }
@@ -1256,6 +1271,7 @@ export default function App() {
             }}
             onNavigateToUserProfile={handleNavigateToUserProfile}
             onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
+            onNoobAiBye={() => setActiveTab('feed')}
           />
         )}
       </main>
@@ -1374,12 +1390,14 @@ export default function App() {
       {/* --- MODALS --- */}
       {/* 0. AI Customer Support Modal */}
       {showCustomerSupportModal && (
-        <CustomerSupportModal
-          currentUser={currentUser}
-          onClose={() => setShowCustomerSupportModal(false)}
-          onOpenTerms={() => setShowTermsModal(true)}
-          onOpenPrivacy={() => setShowPrivacyModal(true)}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <CustomerSupportModal
+            currentUser={currentUser}
+            onClose={() => setShowCustomerSupportModal(false)}
+            onOpenTerms={() => setShowTermsModal(true)}
+            onOpenPrivacy={() => setShowPrivacyModal(true)}
+          />
+        </React.Suspense>
       )}
 
       {/* 0.5 Find Friends from Contacts (native app only, shown once per install) */}
@@ -1428,30 +1446,36 @@ export default function App() {
       )}
 
       {showGoLiveHost && (
-        <LiveStreamView
-          currentUser={currentUser}
-          mode="host"
-          onClose={() => setShowGoLiveHost(false)}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <LiveStreamView
+            currentUser={currentUser}
+            mode="host"
+            onClose={() => setShowGoLiveHost(false)}
+          />
+        </React.Suspense>
       )}
 
       {showLiveLoungeUpsell && (
-        <LiveLoungePage
-          currentUser={currentUser}
-          allUsers={registeredUsers}
-          initialRoomId={liveLoungeInviteRoomId || undefined}
-          onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); }}
-          onUserUpdated={(u) => setCurrentUser(u)}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <LiveLoungePage
+            currentUser={currentUser}
+            allUsers={registeredUsers}
+            initialRoomId={liveLoungeInviteRoomId || undefined}
+            onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); }}
+            onUserUpdated={(u) => setCurrentUser(u)}
+          />
+        </React.Suspense>
       )}
 
       {/* 4. Professional Dashboard Modal */}
       {showProfessionalDashboardModal && (
-        <ProfessionalDashboardModal
-          currentUser={currentUser}
-          onClose={() => setShowProfessionalDashboardModal(false)}
-          onUserUpdated={(u) => setCurrentUser(u)}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <ProfessionalDashboardModal
+            currentUser={currentUser}
+            onClose={() => setShowProfessionalDashboardModal(false)}
+            onUserUpdated={(u) => setCurrentUser(u)}
+          />
+        </React.Suspense>
       )}
 
       {/* 6. Notifications & Following Activity Modal */}
@@ -1507,17 +1531,19 @@ export default function App() {
 
       {/* 9. Direct 1v1 Game Play Modal */}
       {gameToPlay && (
-        <GamePlayModal
-          game={gameToPlay.game}
-          currentUser={currentUser}
-          allUsers={registeredUsers}
-          initialChallenger={gameToPlay.challenger}
-          initialRoomCode={gameToPlay.roomCode}
-          onClose={() => setGameToPlay(null)}
-          onPointsUpdated={(_pointsEarned, totalPoints) => {
-            setCurrentUser((prev) => (prev ? { ...prev, noobPoints: totalPoints } : prev));
-          }}
-        />
+        <React.Suspense fallback={<LazyFallback />}>
+          <GamePlayModal
+            game={gameToPlay.game}
+            currentUser={currentUser}
+            allUsers={registeredUsers}
+            initialChallenger={gameToPlay.challenger}
+            initialRoomCode={gameToPlay.roomCode}
+            onClose={() => setGameToPlay(null)}
+            onPointsUpdated={(_pointsEarned, totalPoints) => {
+              setCurrentUser((prev) => (prev ? { ...prev, noobPoints: totalPoints } : prev));
+            }}
+          />
+        </React.Suspense>
       )}
     </div>
   );

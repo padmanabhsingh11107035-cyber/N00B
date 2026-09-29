@@ -148,18 +148,7 @@ export async function requestSignupOtp(email: string): Promise<{ success: boolea
   }
 }
 
-export async function verifySignupOtp(email: string, code: string): Promise<{ success: boolean; error?: string }> {
-  const unavailable = 'Could not verify that code right now. Please try again later.';
-  try {
-    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'signup-otp-verify', email, code } });
-    if (error) return { success: false, error: await functionError(error, unavailable) };
-    return { success: !!data?.success, error: data?.success ? undefined : unavailable };
-  } catch (err) {
-    return { success: false, error: errorText(err, unavailable) };
-  }
-}
-
-export async function signupUser(payload: {
+export interface SignupPayload {
   firstName: string;
   lastName?: string;
   username: string;
@@ -179,31 +168,81 @@ export async function signupUser(payload: {
   businessAddress?: string;
   agreedToTerms: boolean;
   language?: string; // the preferred language chosen on the sign-up form (English when not given)
-}): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string }> {
+}
+
+// Verifying the code and creating the account used to be two separate round trips (verify, then
+// signupUser's own check_signup + auth.signUp) — now the edge function does both once the code is
+// right, in the same request, cutting one full network hop off what used to feel like a long
+// "Creating account…" wait. The avatar's pending-upload handling (see signupUser below) stays
+// client-side either way, since the file itself only ever lives in this tab's memory pre-login.
+export async function verifySignupOtp(code: string, payload: SignupPayload): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string; stage?: 'code' | 'form' }> {
+  const unavailable = 'Could not verify that code right now. Please try again later.';
+  try {
+    const { avatar, pendingKey } = prepareSignupAvatar(payload.avatar);
+    const { data, error } = await supabase.functions.invoke('recover-account', {
+      body: { action: 'signup-otp-verify', email: payload.email, code, signup: { ...payload, avatar, language: cleanLanguageCode(payload.language) } }
+    });
+    if (error) {
+      let body: any = null;
+      try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
+      return { success: false, error: body?.error || unavailable, suspended: body?.suspended, message: body?.message, stage: body?.stage };
+    }
+    if (!data?.success) return { success: false, error: data?.error || unavailable, suspended: data?.suspended, message: data?.message, stage: data?.stage };
+    if (!data.tokenHash) return { success: false, error: unavailable };
+    const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
+    if (signInError) return { success: false, error: 'Could not sign you in. Please try again.' };
+
+    await uploadPendingSignupAvatar(pendingKey);
+    const user = await rpc<any>('get_my_user');
+    void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
+    return { success: true, user: startChatKeys(mapUser(user), payload.password) as User };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
+// Shared by signupUser and verifySignupOtp: a data: URI (the upload-failed fallback) can't be sent
+// to the account-creation step directly, so it's stashed in memory under a "pending:" key and
+// swapped for a real upload once a session exists (see uploadPendingSignupAvatar).
+function prepareSignupAvatar(avatarInput: string | undefined): { avatar: string; pendingKey: string } {
+  let input = avatarInput || '';
+  if (input.startsWith('data:')) {
+    const file = dataUriToFile(input, 'avatar');
+    if (file) {
+      input = `pending:${crypto.randomUUID()}`;
+      pendingAvatarFiles.set(input, file);
+    } else {
+      input = '';
+    }
+  }
+  const pendingKey = input.startsWith('pending:') ? input : '';
+  // The database requires a non-empty avatar to create an account — the placeholder key itself is
+  // harmless and self-explanatory (overwritten within moments by the real upload below); if that
+  // upload ever fails, the account still exists with this as a visibly broken avatar instead of the
+  // account never having been created at all.
+  return { avatar: pendingKey || toStoredMedia(input), pendingKey };
+}
+
+async function uploadPendingSignupAvatar(pendingKey: string): Promise<void> {
+  if (!pendingKey) return;
+  const file = pendingAvatarFiles.get(pendingKey);
+  pendingAvatarFiles.delete(pendingKey);
+  if (!file) return;
+  try {
+    const uploaded = await uploadToStorage(file, 'avatars');
+    await rpc('update_my_profile', { p: { avatar: uploaded.objectKey } });
+  } catch (err) {
+    console.error('Profile photo upload after sign-up failed — the account keeps the default photo:', err);
+  }
+}
+
+export async function signupUser(payload: SignupPayload): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string }> {
   try {
     // Friendly, specific messages first (the old server's exact wording); Auth alone would just say "database error".
     const check = await rpc<{ ok?: boolean; error?: string; suspended?: boolean; message?: string }>('check_signup', { p: payload });
     if (!check?.ok) return { success: false, error: check?.error || 'Could not create the account.', suspended: check?.suspended, message: check?.message };
 
-    let avatarInput = payload.avatar || '';
-    if (avatarInput.startsWith('data:')) {
-      const file = dataUriToFile(avatarInput, 'avatar');
-      if (file) {
-        avatarInput = `pending:${crypto.randomUUID()}`;
-        pendingAvatarFiles.set(avatarInput, file);
-      } else {
-        avatarInput = '';
-      }
-    }
-    const pendingKey = avatarInput.startsWith('pending:') ? avatarInput : '';
-    // The database now REQUIRES a non-empty avatar to create an account (closes the gap where
-    // someone bypassing this form entirely could make a photo-less account) — sending '' here for
-    // the pending-upload case (any photo chosen before an account/session exists, e.g. a camera
-    // capture on this very form) made every one of THOSE sign-ups fail outright. The placeholder
-    // key itself is harmless and self-explanatory (it's overwritten within moments by the real
-    // upload below); if that upload ever fails, the account still exists with this as a visibly
-    // broken avatar instead of the account never having been created at all.
-    const avatar = pendingKey || toStoredMedia(avatarInput);
+    const { avatar, pendingKey } = prepareSignupAvatar(payload.avatar);
 
     // Login addresses are private, random ones: the person's real email lives in their private profile
     // (so one email can be used on many accounts) and they log in by username or real email via a lookup.
@@ -258,18 +297,7 @@ export async function signupUser(payload: {
       return { success: false, error: 'Your account was created but needs confirmation before you can log in. Please contact support.' };
     }
 
-    if (pendingKey) {
-      const file = pendingAvatarFiles.get(pendingKey);
-      pendingAvatarFiles.delete(pendingKey);
-      if (file) {
-        try {
-          const uploaded = await uploadToStorage(file, 'avatars');
-          await rpc('update_my_profile', { p: { avatar: uploaded.objectKey } });
-        } catch (err) {
-          console.error('Profile photo upload after sign-up failed — the account keeps the default photo:', err);
-        }
-      }
-    }
+    await uploadPendingSignupAvatar(pendingKey);
     const user = await rpc<User>('get_my_user');
     // Never awaited, never lets a slow or failed email hold up or fail the signup itself.
     void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);

@@ -38,6 +38,7 @@ import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernam
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
+import { AvatarAdjustEditor, AvatarAdjustResult } from '../Common/AvatarAdjustEditor';
 import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
 import { LanguagePicker } from '../Common/LanguagePicker';
@@ -284,6 +285,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   // every future save of the users collection would silently fail.
   const [customAvatarObjectKey, setCustomAvatarObjectKey] = useState('');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  // Picked but not yet cropped — the actual upload happens once AvatarAdjustEditor bakes the crop,
+  // same "Move and Scale" step Edit Profile already uses.
+  const [pickedAvatarFile, setPickedAvatarFile] = useState<File | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Email verification, the step between "Join NOOB" and the account actually being created: the
@@ -396,18 +400,26 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     return () => clearInterval(t);
   }, [showForgotPassword, forgotMode, otpCooldownUntil, otpNow]);
 
-  // Handle local file upload — uploads to B2 (this endpoint doesn't require
-  // an existing session, so it works fine pre-signup) and keeps only the
-  // durable object key + a short-lived preview URL, instead of embedding
-  // the photo itself in the signup payload.
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Picks the file only — the actual upload happens once it's been cropped, in
+  // handleAvatarAdjustDone below (same "Move and Scale" step Edit Profile already uses).
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       setErrorMessage('Uploaded image must be under 5MB.');
       return;
     }
+    setErrorMessage(null);
+    setPickedAvatarFile(file);
+  };
 
+  // Uploads to B2 (this endpoint doesn't require an existing session, so it works fine pre-signup)
+  // and keeps only the durable object key + a short-lived preview URL, instead of embedding the
+  // photo itself in the signup payload.
+  const handleAvatarAdjustDone = async ({ blob }: AvatarAdjustResult) => {
+    setPickedAvatarFile(null);
+    const file = new File([blob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' });
     try {
       setIsUploadingAvatar(true);
       const result = await uploadMediaFile(file, 'avatars');
@@ -529,62 +541,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     setSignupStep('otp');
   };
 
-  // Creates the account itself — split out of handleSignupSubmit so handleVerifySignupOtp can call
-  // it once the email is verified, using the same still-filled-in form state.
-  const completeSignup = async () => {
-    try {
-      setLoading(true);
-      // Prefer the durable B2 object key over the presigned/base64 URL —
-      // see the comment on customAvatarObjectKey above. A profile photo is
-      // now required (validated above), so this is never empty here.
-      const avatarUrl = (customAvatarObjectKey || customAvatarUrl).trim();
-      const cleanUsername = userId.trim().toLowerCase().replace(/[^a-z0-9_.]/g, '');
-      const res = await signupUser({
-        firstName: fullName.trim(),
-        displayName: fullName.trim(),
-        username: cleanUsername,
-        email: email.trim(),
-        countryCode,
-        mobileNumber: mobileNumber.trim(),
-        dateOfBirth,
-        gender,
-        password,
-        avatar: avatarUrl,
-        bio: bio.trim(),
-        accountType,
-        businessCategory: accountType === 'business' ? businessCategory : undefined,
-        businessEmail: accountType === 'business' ? email.trim() : undefined,
-        businessPhone: accountType === 'business' ? mobileNumber.trim() : undefined,
-        agreedToTerms: true,
-        language
-      });
-
-      if (res.success && res.user) {
-        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
-        // Best-effort, never blocks the sign-up succeeding either way — see recordSignupDevice.
-        void recordSignupDevice();
-        onAuthSuccess(res.user);
-      } else if (res.suspended) {
-        setSignupStep('form');
-        setSuspendedNotice(
-          res.message ||
-            'We have detected that your account is suspended, and attempting to create a new account could result in further action against you. Please wait — our team will contact you.'
-        );
-      } else {
-        // The email was verified but something else about the form failed (a username taken in the
-        // meantime, say) — back to the form with the error, rather than stranding them on the OTP
-        // screen with no way to fix it.
-        setSignupStep('form');
-        setErrorMessage(res.error || 'Account creation failed. User ID may already exist.');
-      }
-    } catch (err: any) {
-      setSignupStep('form');
-      setErrorMessage(err.message || 'Error communicating with server.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Verifying the code and creating the account are now a single round trip (see verifySignupOtp) —
+  // the edge function checks the code, runs the same checks signupUser used to run separately, and
+  // creates the account itself, instead of the app doing a second full request after the first one
+  // just to find out the code was right.
   const handleVerifySignupOtp = async () => {
     if (!signupOtpCode.trim()) {
       setSignupOtpError('Please enter the code from your email.');
@@ -592,14 +552,54 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
     setSignupOtpLoading(true);
     setSignupOtpError(null);
-    const res = await verifySignupOtp(email.trim(), signupOtpCode.trim());
+    // Prefer the durable B2 object key over the presigned/base64 URL —
+    // see the comment on customAvatarObjectKey above. A profile photo is
+    // now required (validated above), so this is never empty here.
+    const avatarUrl = (customAvatarObjectKey || customAvatarUrl).trim();
+    const cleanUsername = userId.trim().toLowerCase().replace(/[^a-z0-9_.]/g, '');
+    const res = await verifySignupOtp(signupOtpCode.trim(), {
+      firstName: fullName.trim(),
+      displayName: fullName.trim(),
+      username: cleanUsername,
+      email: email.trim(),
+      countryCode,
+      mobileNumber: mobileNumber.trim(),
+      dateOfBirth,
+      gender,
+      password,
+      avatar: avatarUrl,
+      bio: bio.trim(),
+      accountType,
+      businessCategory: accountType === 'business' ? businessCategory : undefined,
+      businessEmail: accountType === 'business' ? email.trim() : undefined,
+      businessPhone: accountType === 'business' ? mobileNumber.trim() : undefined,
+      agreedToTerms: true,
+      language
+    });
     setSignupOtpLoading(false);
-    if (!res.success) {
+
+    if (res.success && res.user) {
+      setSignupOtpSuccess(true);
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+      // Best-effort, never blocks the sign-up succeeding either way — see recordSignupDevice.
+      void recordSignupDevice();
+      onAuthSuccess(res.user);
+    } else if (res.suspended) {
+      setSignupStep('form');
+      setSuspendedNotice(
+        res.message ||
+          'We have detected that your account is suspended, and attempting to create a new account could result in further action against you. Please wait — our team will contact you.'
+      );
+    } else if (res.stage !== 'form') {
+      // A wrong/expired code specifically — stay on this screen so they can just retry it.
       setSignupOtpError(res.error || 'That code is not right. Please check your email and try again.');
-      return;
+    } else {
+      // The code was right but something else about the form failed (a username taken in the
+      // meantime, say) — back to the form with the error, rather than stranding them here with no
+      // way to fix it (and no code left to retry with, since it's already used).
+      setSignupStep('form');
+      setErrorMessage(res.error || 'Account creation failed. User ID may already exist.');
     }
-    setSignupOtpSuccess(true);
-    await completeSignup();
   };
 
   const handleResendSignupOtp = async () => {
@@ -1779,6 +1779,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             )}
           </div>
         </div>
+      )}
+
+      {pickedAvatarFile && (
+        <AvatarAdjustEditor
+          file={pickedAvatarFile}
+          mediaType="image"
+          onCancel={() => setPickedAvatarFile(null)}
+          onDone={handleAvatarAdjustDone}
+        />
       )}
 
       {showForgotBirthdayPicker && (

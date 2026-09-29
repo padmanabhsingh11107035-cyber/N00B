@@ -185,16 +185,60 @@ Deno.serve(async (req) => {
     });
     if (error || !check) return json(unavailable, 500);
     switch (check.status) {
-      case 'missing_email': return json({ error: 'Email is required.' }, 400);
-      case 'missing': return json({ error: 'Please enter the code from your email.' }, 400);
-      case 'rate_limited': return json({ error: 'Too many attempts. Please try again later.' }, 429);
-      case 'expired': return json({ error: 'That code has expired or was already used. Please ask for a new one.' }, 401);
-      case 'too_many_attempts': return json({ error: 'Too many wrong codes. Please ask for a new one.' }, 401);
-      case 'mismatch': return json({ error: 'That code is not right. Please check your email and try again.' }, 401);
+      case 'missing_email': return json({ error: 'Email is required.', stage: 'code' }, 400);
+      case 'missing': return json({ error: 'Please enter the code from your email.', stage: 'code' }, 400);
+      case 'rate_limited': return json({ error: 'Too many attempts. Please try again later.', stage: 'code' }, 429);
+      case 'expired': return json({ error: 'That code has expired or was already used. Please ask for a new one.', stage: 'code' }, 401);
+      case 'too_many_attempts': return json({ error: 'Too many wrong codes. Please ask for a new one.', stage: 'code' }, 401);
+      case 'mismatch': return json({ error: 'That code is not right. Please check your email and try again.', stage: 'code' }, 401);
       case 'ok': break;
       default: return json(unavailable, 500);
     }
-    return json({ success: true });
+
+    // The code is right. If the rest of the sign-up form came along with it (the normal case —
+    // see verifySignupOtp), create the account right here instead of making the app do a second
+    // full request just to find out the code was right: same check_signup pre-flight, then the
+    // account itself, both server-side in one go.
+    const p = body?.signup;
+    if (!p) return json({ success: true });
+
+    const { data: precheck } = await admin.rpc('check_signup', { p });
+    if (!precheck?.ok) {
+      return json({ error: precheck?.error || 'Could not create the account.', suspended: precheck?.suspended, message: precheck?.message, stage: 'form' }, 400);
+    }
+
+    const metadata = {
+      username: p.username, display_name: p.displayName, first_name: p.firstName, last_name: p.lastName,
+      email: p.email, country_code: p.countryCode, mobile_number: p.mobileNumber, date_of_birth: p.dateOfBirth,
+      gender: p.gender, avatar: p.avatar, bio: p.bio, account_type: p.accountType,
+      business_category: p.businessCategory, business_email: p.businessEmail, business_phone: p.businessPhone,
+      business_address: p.businessAddress, agreed_to_terms: p.agreedToTerms, language: p.language
+    };
+    // Login addresses are private, random ones: the person's real email lives in their private
+    // profile (so one email can be used on many accounts) — same as the client-side auth.signUp()
+    // this replaces. email_confirm is set because this is a server-side admin creation, not the
+    // normal signup flow Supabase's own "Confirm email" setting was written to gate.
+    const createOnce = () => admin.auth.admin.createUser({
+      email: `${crypto.randomUUID()}@users.nooob.xyz`, password: String(p.password ?? ''),
+      email_confirm: true, user_metadata: metadata
+    });
+    let { data: created, error: createErr } = await createOnce();
+    // Same reasoning as the client's old retry: a generic "Database error" wraps ANY failure inside
+    // the sign-up trigger, most often a transient hiccup rather than a real conflict (check_signup,
+    // just above, already confirmed the username was free a moment ago).
+    if (createErr && !/password/i.test(createErr.message || '') && /database error/i.test(createErr.message || '')) {
+      ({ data: created, error: createErr } = await createOnce());
+    }
+    if (createErr || !created?.user) {
+      const msg = createErr && /password/i.test(createErr.message || '')
+        ? createErr.message
+        : 'Something went wrong creating your account. Please try again in a moment.';
+      return json({ error: msg, stage: 'form' }, 400);
+    }
+
+    const tokenHash = await issueSignInToken(admin, created.user.id);
+    if (!tokenHash) return json(unavailable, 500);
+    return json({ success: true, tokenHash });
   }
 
   // -------------------------------------------------------------- emailed one-time code

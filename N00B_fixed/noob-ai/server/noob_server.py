@@ -420,6 +420,7 @@ def bye_requested(reply):
             return True
     return False
 LANG_TAG = re.compile(r"\s*\[([a-zA-Z]{2,3})(?:-[a-zA-Z]+)?\]\s*")
+OLLAMA_HEARD_ECHO = re.compile(r"^\s*HEARD\s*:.*?(?:\n|$)", re.IGNORECASE)
 
 
 def split_sentences(text):
@@ -606,6 +607,10 @@ def converse(user_id, text=None, pcm=None):
                 yield ("sentence", NO_BRAIN, "en")
                 yield ("done", NO_BRAIN, "en", False)
                 return
+            # The backup model never gets told about the HEARD: protocol (stream.heard already came from
+            # Whisper/typed text above), but a small local model sometimes echoes it anyway by copying the
+            # shape of its own conversation history. Strip it so it never leaks into the spoken reply.
+            reply = OLLAMA_HEARD_ECHO.sub("", reply, count=1)
             for event in stream.feed(reply, final=True):
                 yield event
     heard = stream.heard if voice else text

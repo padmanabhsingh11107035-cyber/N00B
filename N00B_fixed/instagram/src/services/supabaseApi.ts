@@ -166,7 +166,14 @@ export async function signupUser(payload: {
       }
     }
     const pendingKey = avatarInput.startsWith('pending:') ? avatarInput : '';
-    const avatar = pendingKey ? '' : toStoredMedia(avatarInput);
+    // The database now REQUIRES a non-empty avatar to create an account (closes the gap where
+    // someone bypassing this form entirely could make a photo-less account) — sending '' here for
+    // the pending-upload case (any photo chosen before an account/session exists, e.g. a camera
+    // capture on this very form) made every one of THOSE sign-ups fail outright. The placeholder
+    // key itself is harmless and self-explanatory (it's overwritten within moments by the real
+    // upload below); if that upload ever fails, the account still exists with this as a visibly
+    // broken avatar instead of the account never having been created at all.
+    const avatar = pendingKey || toStoredMedia(avatarInput);
 
     // Login addresses are private, random ones: the person's real email lives in their private profile
     // (so one email can be used on many accounts) and they log in by username or real email via a lookup.

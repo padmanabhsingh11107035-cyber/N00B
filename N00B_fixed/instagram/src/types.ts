@@ -64,6 +64,7 @@ export interface User {
   followingCount: number;
   postsCount: number;
   noobPoints?: number;
+  hasLiveLounge?: boolean;
   noobTransactions?: NoobTransaction[];
   purchasedItemIds?: string[];
   gamesWonCount?: number;

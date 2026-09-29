@@ -53,7 +53,10 @@ import {
   Inbox,
   KeyRound,
   CheckSquare,
-  Square
+  Square,
+  Sparkles,
+  Ticket,
+  Plus
 } from 'lucide-react';
 import { User } from '../../types';
 import {
@@ -62,9 +65,10 @@ import {
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
-  fetchAdminExplorePins, adminSetExplorePin
+  fetchAdminExplorePins, adminSetExplorePin,
+  adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons
 } from '../../services/api';
-import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest } from '../../services/api';
+import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime } from '../../utils/formatTime';
@@ -240,6 +244,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
 
+  // NOOB Live Lounge coupons (Platform tab)
+  const [liveLoungeCoupons, setLiveLoungeCoupons] = useState<LiveLoungeCoupon[]>([]);
+  const [loadingLoungeCoupons, setLoadingLoungeCoupons] = useState(false);
+  const [loungeGenerateCount, setLoungeGenerateCount] = useState('1');
+  const [generatingLoungeCoupons, setGeneratingLoungeCoupons] = useState(false);
+  const [justGeneratedCodes, setJustGeneratedCodes] = useState<string[]>([]);
+
   // Shareable links: the app itself and the "apply to join us" form (Platform tab); each account's profile link
   // is copied from its own row in Account Moderation.
   const [copiedLinkKey, setCopiedLinkKey] = useState<string | null>(null);
@@ -290,7 +301,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (activeTab === 'joinRequests' && main) loadJoinRequests();
     if (activeTab === 'sparkxRequests' && main) loadSparkxRequests();
     if (activeTab === 'accountRequests' && main) loadAccountRequests();
-    if (activeTab === 'settings' && main) loadSettings();
+    if (activeTab === 'settings' && main) { loadSettings(); loadLiveLoungeCoupons(); }
   }, [activeTab]);
 
   useEffect(() => {
@@ -360,6 +371,30 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setJoinTeamOpen(s.joinTeamOpen !== false);
     setStoreOrdersEnabled(shop.storeEnabled);
     setLoadingSettings(false);
+  };
+
+  const loadLiveLoungeCoupons = async () => {
+    setLoadingLoungeCoupons(true);
+    const res = await adminFetchLiveLoungeCoupons();
+    if (res.success) setLiveLoungeCoupons(res.coupons);
+    setLoadingLoungeCoupons(false);
+  };
+
+  const handleGenerateLoungeCoupons = async () => {
+    const count = Math.min(100, Math.max(1, Math.floor(Number(loungeGenerateCount)) || 1));
+    setGeneratingLoungeCoupons(true);
+    setJustGeneratedCodes([]);
+    try {
+      const res = await adminGenerateLiveLoungeCoupons(count);
+      if (res.success) {
+        setJustGeneratedCodes(res.codes);
+        loadLiveLoungeCoupons();
+      } else {
+        setStatusMessage({ text: res.error || 'Could not generate coupons.', type: 'error' });
+      }
+    } finally {
+      setGeneratingLoungeCoupons(false);
+    }
   };
 
   const handleToggleStoreOrders = async () => {
@@ -2205,6 +2240,59 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       </div>
                     </div>
 
+                  </div>
+
+                  {/* NOOB Live Lounge coupons */}
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                    <span className="text-xs font-bold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400" /> NOOB Live Lounge coupons
+                    </span>
+                    <p className="text-[11px] text-zinc-400">
+                      Each code gives one account a free, forever unlock of Live Streaming + the Live Lounge meeting room — a one-time 20,000,000,000-point purchase otherwise.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={loungeGenerateCount}
+                        onChange={(e) => setLoungeGenerateCount(e.target.value)}
+                        className="w-20 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-purple-400"
+                      />
+                      <button
+                        onClick={handleGenerateLoungeCoupons}
+                        disabled={generatingLoungeCoupons}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> {generatingLoungeCoupons ? 'Generating…' : 'Generate'}
+                      </button>
+                    </div>
+
+                    {justGeneratedCodes.length > 0 && (
+                      <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl space-y-1">
+                        <span className="text-[10px] font-bold text-purple-300 uppercase">Just generated — copy these now</span>
+                        {justGeneratedCodes.map((c) => (
+                          <p key={c} className="text-xs font-mono text-white">{c}</p>
+                        ))}
+                      </div>
+                    )}
+
+                    {loadingLoungeCoupons ? (
+                      <div className="py-4 text-center"><Loader2 className="w-4 h-4 animate-spin text-purple-400 mx-auto" /></div>
+                    ) : liveLoungeCoupons.length > 0 && (
+                      <div className="max-h-48 overflow-y-auto space-y-1 pt-1 border-t border-zinc-800/60">
+                        {liveLoungeCoupons.map((c) => (
+                          <div key={c.code} className="flex items-center justify-between text-[11px] py-1">
+                            <span className="font-mono text-zinc-300">{c.code}</span>
+                            {c.redeemedBy ? (
+                              <span className="text-zinc-500">used by @{c.redeemedBy}</span>
+                            ) : (
+                              <span className="text-[#00FF66] font-bold flex items-center gap-1"><Ticket className="w-3 h-3" /> unused</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

@@ -227,7 +227,15 @@ export {
   giftLiveStream,
   subscribeToLiveStreamComments,
   subscribeToLiveStreamHearts,
-  broadcastLiveStreamHeart
+  broadcastLiveStreamHeart,
+  LIVE_LOUNGE_PRICE,
+  purchaseLiveLounge,
+  redeemLiveLoungeCoupon,
+  adminGenerateLiveLoungeCoupons,
+  adminFetchLiveLoungeCoupons,
+  requestFriendPayment,
+  fetchMyPaymentRequests,
+  respondPaymentRequest
 } from './supabaseApi';
 
 export type {
@@ -253,7 +261,9 @@ export type {
   WalletTransferSummary,
   WalletTransferDetail,
   LiveStreamSummary,
-  LiveStreamComment
+  LiveStreamComment,
+  LiveLoungeCoupon,
+  PaymentRequestSummary
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

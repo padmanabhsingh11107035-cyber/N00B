@@ -3116,3 +3116,77 @@ export function subscribeToLiveStreamHearts(streamId: string, onHeart: () => voi
 export function broadcastLiveStreamHeart(streamId: string): void {
   supabase.channel(`live-hearts-${streamId}`, { config: { broadcast: { self: false } } }).send({ type: 'broadcast', event: 'heart', payload: {} });
 }
+
+// ----------------------------------------------------------------------------- NOOB Live Lounge
+
+export const LIVE_LOUNGE_PRICE = 20_000_000_000;
+
+export async function purchaseLiveLounge(password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('purchase_live_lounge', { p_password: password });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not complete the purchase.');
+  }
+}
+
+export async function redeemLiveLoungeCoupon(code: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('redeem_live_lounge_coupon', { p_code: code, p_password: password });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return failWith(err, 'Could not redeem that coupon.');
+  }
+}
+
+export interface LiveLoungeCoupon {
+  code: string;
+  createdAt: string;
+  redeemedAt?: string | null;
+  redeemedBy?: string | null;
+}
+
+export async function adminGenerateLiveLoungeCoupons(count: number): Promise<{ success: boolean; codes: string[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_generate_live_lounge_coupons', { p_count: count });
+    return { success: true, codes: res.codes || [] };
+  } catch (err) {
+    return { success: false, codes: [], error: errorText(err, 'Could not generate coupons.') };
+  }
+}
+
+export async function adminFetchLiveLoungeCoupons(): Promise<{ success: boolean; coupons: LiveLoungeCoupon[]; error?: string }> {
+  try {
+    const coupons = (await rpc<any[]>('admin_live_lounge_coupons_list')) || [];
+    return { success: true, coupons };
+  } catch (err) {
+    return { success: false, coupons: [], error: errorText(err, 'Could not load coupons.') };
+  }
+}
+
+// "Ask a friend to pay" — purchaseType currently only supports 'live_lounge'; more will be added here
+// as they're wired up server-side.
+export async function requestFriendPayment(payerId: string, purchaseType: 'live_lounge'): Promise<{ success: boolean; requestId?: string; error?: string }> {
+  try { return await rpc('request_friend_payment', { p_payer: payerId, p_purchase_type: purchaseType }); } catch (err) { return failWith(err, 'Could not send that request.'); }
+}
+
+export interface PaymentRequestSummary {
+  id: string;
+  purchaseType: 'live_lounge';
+  amount: number;
+  createdAt: string;
+  requester: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+export async function fetchMyPaymentRequests(): Promise<{ success: boolean; requests: PaymentRequestSummary[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('my_payment_requests')) || [];
+    return { success: true, requests: list.map((r) => ({ ...r, requester: { ...r.requester, avatar: resolveMedia(r.requester?.avatar) } })) };
+  } catch (err) {
+    return { success: false, requests: [], error: errorText(err, 'Could not load payment requests.') };
+  }
+}
+
+export async function respondPaymentRequest(requestId: string, approve: boolean, password?: string): Promise<{ success: boolean; approved?: boolean; error?: string }> {
+  try { return await rpc('respond_payment_request', { p_request_id: requestId, p_approve: approve, p_password: password || null }); } catch (err) { return failWith(err, 'Could not respond to that request.'); }
+}

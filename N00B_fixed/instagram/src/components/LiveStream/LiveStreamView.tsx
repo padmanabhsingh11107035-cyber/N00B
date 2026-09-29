@@ -22,6 +22,7 @@ import {
   fetchLiveStreams
 } from '../../services/api';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
+import { friendlyAgoraError } from '../../utils/agoraError';
 
 interface LiveStreamViewProps {
   currentUser: User;
@@ -117,7 +118,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
         localTracksRef.current?.[1]?.close();
         await clientRef.current?.leave();
       } catch { /* best-effort teardown of a connection that never fully came up */ }
-      setError(err instanceof Error ? err.message : 'Could not start the camera/microphone.');
+      setError(friendlyAgoraError(err, 'Could not start the camera/microphone.'));
       setPhase('ended');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

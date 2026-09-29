@@ -28,6 +28,7 @@ import {
   broadcastLiveLoungeWhiteboard
 } from '../../services/api';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
+import { friendlyAgoraError } from '../../utils/agoraError';
 
 interface LiveLoungeRoomViewProps {
   currentUser: User;
@@ -191,7 +192,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         camTrackRef.current?.close();
         await clientRef.current?.leave();
       } catch { /* best-effort teardown of a connection that never fully came up */ }
-      setError(err instanceof Error ? err.message : 'Could not start your camera/microphone.');
+      setError(friendlyAgoraError(err, 'Could not start your camera/microphone.'));
       setPhase('ended');
     }
   }, [myUid, refreshParticipants, isHost]);

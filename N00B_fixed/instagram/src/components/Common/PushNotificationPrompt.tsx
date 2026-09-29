@@ -16,6 +16,9 @@ export function shouldShowPushPrompt(): boolean {
   if (typeof window === 'undefined') return false;
   if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
   if (Notification.permission !== 'default') return false;
+  // Only for people who installed the app (Home Screen on iOS, "Install app" on Android/desktop) —
+  // never someone just visiting the website in an ordinary browser tab.
+  if (!currentPushEnv(Capacitor.isNativePlatform()).standalone) return false;
   try {
     if (localStorage.getItem(DISMISSED_KEY)) return false;
   } catch {

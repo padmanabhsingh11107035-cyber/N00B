@@ -387,12 +387,12 @@ export default function App() {
     };
   }, [currentUser?.id]);
 
-  // Soft-ask for push notification permission a few seconds after login —
-  // only on the website (the Push API isn't reliably available inside the
-  // Capacitor native-app WebView, which has its own native push path this
-  // doesn't cover), and only once per browser (shouldShowPushPrompt checks
-  // both actual Notification.permission and a localStorage "already asked"
-  // flag, so this never nags someone who already answered).
+  // Soft-ask for push notification permission a few seconds after login — only on the website (the
+  // Push API isn't reliably available inside the Capacitor native-app WebView, which has its own
+  // native push path this doesn't cover), only for someone who installed it (shouldShowPushPrompt
+  // checks it's running standalone — Home Screen on iOS, "Install app" on Android/desktop — never an
+  // ordinary browser tab), and only once per browser (it also checks actual Notification.permission
+  // and a localStorage "already asked" flag, so this never nags someone who already answered).
   useEffect(() => {
     if (!currentUser || Capacitor.isNativePlatform()) return;
     if (!shouldShowPushPrompt()) return;

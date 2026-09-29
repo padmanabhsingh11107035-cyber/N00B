@@ -26,6 +26,9 @@ import { Reel, User } from '../../types';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { LiveStreamBar } from '../LiveStream/LiveStreamBar';
+import { LiveStreamView } from '../LiveStream/LiveStreamView';
+import type { LiveStreamSummary } from '../../services/api';
 import {
   toggleLikeReel,
   toggleSaveReel,
@@ -108,6 +111,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [replyingToComment, setReplyingToComment] = useState<{ topLevelId: string; username: string } | null>(null);
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<string[]>([]);
   const [commentError, setCommentError] = useState('');
+  const [liveOverlay, setLiveOverlay] = useState<{ mode: 'host' | 'view'; stream?: LiveStreamSummary } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
@@ -551,16 +555,22 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   }
 
   return (
-    // `fixed inset-0` anchors to the true viewport regardless of where this
-    // component happens to sit in the page's normal flow — a height like
-    // `calc(100vh-80px)` on a normally-flowing element only avoids the
-    // floating bottom nav if that element starts at y=0, which it doesn't
-    // here, so it still overlapped the nav until this switched to `fixed`.
+    <>
+    {/* `fixed inset-0` anchors to the true viewport regardless of where this
+        component happens to sit in the page's normal flow — a height like
+        `calc(100vh-80px)` on a normally-flowing element only avoids the
+        floating bottom nav if that element starts at y=0, which it doesn't
+        here, so it still overlapped the nav until this switched to `fixed`. */}
     <div className="fixed inset-0 z-30 bg-black flex items-center justify-center pb-20">
       <div
         id="reels-page-container"
         className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
       >
+      <LiveStreamBar
+        onOpenLive={(s) => setLiveOverlay({ mode: 'view', stream: s })}
+        onGoLive={() => setLiveOverlay({ mode: 'host' })}
+      />
+
       {/* 1. Main Vertical Video Player */}
       <div
         ref={playerRef}
@@ -1131,5 +1141,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       )}
       </div>
     </div>
+
+    {liveOverlay && (
+      <LiveStreamView
+        currentUser={currentUser}
+        mode={liveOverlay.mode}
+        stream={liveOverlay.stream}
+        onClose={() => setLiveOverlay(null)}
+      />
+    )}
+    </>
   );
 };

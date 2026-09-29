@@ -215,7 +215,19 @@ export {
   fetchInstantInbox,
   openInstant,
   reactToInstant,
-  fetchInstantsArchive
+  fetchInstantsArchive,
+  fetchLiveStreams,
+  startLiveStream,
+  endLiveStream,
+  leaveLiveStream,
+  joinLiveStream,
+  sendLiveStreamComment,
+  fetchLiveStreamComments,
+  likeLiveStream,
+  giftLiveStream,
+  subscribeToLiveStreamComments,
+  subscribeToLiveStreamHearts,
+  broadcastLiveStreamHeart
 } from './supabaseApi';
 
 export type {
@@ -239,7 +251,9 @@ export type {
   OpenedInstant,
   InstantArchiveItem,
   WalletTransferSummary,
-  WalletTransferDetail
+  WalletTransferDetail,
+  LiveStreamSummary,
+  LiveStreamComment
 } from './supabaseApi';
 
 // The logged-in user id is cached in memory after its first read so that logging into a DIFFERENT account in

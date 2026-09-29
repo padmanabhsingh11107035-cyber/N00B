@@ -2977,3 +2977,142 @@ export async function fetchInstantsArchive(): Promise<{ success: boolean; instan
     return { success: false, instants: [], error: errorText(err, 'Could not load your instants.') };
   }
 }
+
+// ----------------------------------------------------------------------------- live streaming
+
+export interface LiveStreamSummary {
+  id: string;
+  title: string;
+  viewerCount: number;
+  startedAt: string;
+  host: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+export interface LiveStreamComment {
+  id: string;
+  streamId: string;
+  text: string;
+  giftAmount?: number | null;
+  createdAt: string;
+  sender: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+function mapLiveStream(s: any): LiveStreamSummary {
+  return { ...s, host: { ...s.host, avatar: resolveMedia(s.host?.avatar) } };
+}
+
+function mapLiveStreamComment(c: any): LiveStreamComment {
+  return { ...c, sender: { ...c.sender, avatar: resolveMedia(c.sender?.avatar) } };
+}
+
+export async function fetchLiveStreams(): Promise<{ success: boolean; streams: LiveStreamSummary[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('list_live_streams')) || [];
+    return { success: true, streams: list.map(mapLiveStream) };
+  } catch (err) {
+    return { success: false, streams: [], error: errorText(err, 'Could not load live streams.') };
+  }
+}
+
+export async function startLiveStream(title?: string): Promise<{ success: boolean; id?: string; channelName?: string; title?: string; startedAt?: string; error?: string }> {
+  try {
+    const res = await rpc<any>('start_live_stream', { p_title: title || '' });
+    return { success: true, ...res };
+  } catch (err) {
+    return failWith(err, 'Could not go live.');
+  }
+}
+
+export async function endLiveStream(streamId: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('end_live_stream', { p_stream_id: streamId }); } catch (err) { return failWith(err, 'Could not end the stream.'); }
+}
+
+export async function leaveLiveStream(streamId: string): Promise<void> {
+  try { await rpc('live_stream_leave', { p_id: streamId }); } catch { /* best-effort — the viewer is leaving anyway */ }
+}
+
+// Mints an Agora RTC token via the "agora-token" Edge Function, which itself calls live_stream_join()
+// so privacy and viewer-counting happen in exactly one place (the database), never duplicated here.
+export async function joinLiveStream(streamId: string): Promise<{ success: boolean; token?: string; channelName?: string; appId?: string; isHost?: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('agora-token', { body: { streamId } });
+    if (error) return { success: false, error: await functionError(error, 'Could not join this stream.') };
+    if (!data?.token) return { success: false, error: data?.error || 'Could not join this stream.' };
+    return { success: true, ...data };
+  } catch (err) {
+    return failWith(err, 'Could not join this stream.');
+  }
+}
+
+export async function sendLiveStreamComment(streamId: string, text: string): Promise<{ success: boolean; comment?: LiveStreamComment; error?: string }> {
+  try {
+    const res = await rpc<any>('live_stream_comment', { p_stream_id: streamId, p_text: text });
+    return { success: true, comment: mapLiveStreamComment(res) };
+  } catch (err) {
+    return failWith(err, 'Could not send that message.');
+  }
+}
+
+export async function fetchLiveStreamComments(streamId: string, limit = 50): Promise<{ success: boolean; comments: LiveStreamComment[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('live_stream_comments_recent', { p_stream_id: streamId, p_limit: limit })) || [];
+    return { success: true, comments: list.map(mapLiveStreamComment) };
+  } catch (err) {
+    return { success: false, comments: [], error: errorText(err, 'Could not load chat.') };
+  }
+}
+
+export async function likeLiveStream(streamId: string): Promise<{ success: boolean; totalLikes?: number; error?: string }> {
+  try { return await rpc('live_stream_like', { p_stream_id: streamId }); } catch (err) { return failWith(err, 'Could not like this stream.'); }
+}
+
+export async function giftLiveStream(streamId: string, amount: number): Promise<{ success: boolean; transferId?: string; error?: string }> {
+  try { return await rpc('live_stream_gift', { p_stream_id: streamId, p_amount: amount }); } catch (err) { return failWith(err, 'Could not send that gift.'); }
+}
+
+// New chat messages as they arrive — appended directly (each row is add-only, so there's nothing to
+// merge or dedupe against, unlike notifications where a debounce-then-refetch is safer).
+export function subscribeToLiveStreamComments(streamId: string, onInsert: (comment: LiveStreamComment) => void): () => void {
+  const channel = supabase
+    .channel(`live-comments-${streamId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_stream_comments', filter: `stream_id=eq.${streamId}` },
+      async (payload) => {
+        const row = payload.new as any;
+        onInsert(mapLiveStreamComment({
+          id: row.id, streamId: row.stream_id, text: row.text, giftAmount: row.gift_amount, createdAt: row.created_at,
+          sender: await fetchLiveStreamCommentSender(row.sender_id)
+        }));
+      })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// Realtime only hands back the raw row (no join), so the sender's display name/avatar is looked up once per
+// message here — cached briefly since the same person tends to send several messages in a row.
+const liveSenderCache = new Map<string, { id: string; username: string; displayName?: string; avatar?: string }>();
+async function fetchLiveStreamCommentSender(userId: string) {
+  const hit = liveSenderCache.get(userId);
+  if (hit) return hit;
+  try {
+    const u = await fetchUserById(userId);
+    const sender = { id: userId, username: u?.username || '', displayName: u?.displayName, avatar: u?.avatar };
+    liveSenderCache.set(userId, sender);
+    return sender;
+  } catch {
+    return { id: userId, username: '' };
+  }
+}
+
+// Purely ephemeral — every viewer's heart-tap animation, decoupled from the durable total_likes counter
+// (likeLiveStream() above already persists the count; this is only "make the heart fly for everyone now").
+export function subscribeToLiveStreamHearts(streamId: string, onHeart: () => void): () => void {
+  const channel = supabase
+    .channel(`live-hearts-${streamId}`, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'heart' }, onHeart)
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+export function broadcastLiveStreamHeart(streamId: string): void {
+  supabase.channel(`live-hearts-${streamId}`, { config: { broadcast: { self: false } } }).send({ type: 'broadcast', event: 'heart', payload: {} });
+}

@@ -422,11 +422,17 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   return { success: true };
 }
 
+// Routed through the Edge Function (not called as a plain RPC) so it can email a deletion receipt
+// to whatever address was on the account, grabbed from delete_my_account's own return value before
+// the row is gone — see recover-account's "delete-account" action. Invoked BEFORE signing out
+// locally: supabase-js attaches the current session's token automatically, and that token is what
+// lets the function run the RPC as this account in the first place.
 export async function deleteMyAccount(password: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const res = await rpc<{ success: boolean; message?: string }>('delete_my_account', { p_password: password });
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'delete-account', password } });
     await supabase.auth.signOut({ scope: 'local' });
-    return res;
+    if (error) return { success: false, error: await functionError(error, 'Could not delete the account.') };
+    return { success: !!data?.success, message: data?.message, error: data?.success ? undefined : (data?.error || 'Could not delete the account.') };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not delete the account.') };
   }

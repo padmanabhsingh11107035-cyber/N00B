@@ -11,14 +11,19 @@
 // it for a normal session. No password is ever seen or set here.
 //
 // (action: "signup-otp-request" / "signup-otp-verify") the same idea, but BEFORE an account exists: a 6-digit code emailed to
-// whatever address was just typed into the sign-up form, checked against signup_otp_request/verify. No account and no sign-in token
-// here — the app calls signupUser() itself once verified, and the database (check_signup / handle_new_user) refuses to create the
-// account at all unless that specific email was verified in the last 30 minutes.
+// whatever address was just typed into the sign-up form, checked against signup_otp_request/verify. Once the code is right,
+// signup-otp-verify ALSO creates the account itself server-side (check_signup, then admin.createUser()) and hands back a sign-in
+// token, the same way password recovery does — one round trip instead of the app making a second one to call signupUser() itself.
+// The database (check_signup / handle_new_user) still refuses to create any account at all unless that specific email was verified
+// in the last 30 minutes, so this can't be bypassed by calling auth.signUp() directly either.
 //
 // (action: "welcome") sends the "Welcome to NOOB" email right after a brand new account's own first session exists.
 //
+// (action: "delete-account") runs delete_my_account as the caller (their own bearer token) and, once it succeeds, emails a
+// deletion receipt to the address that was on the account — grabbed from the RPC's own return value before the row is gone.
+//
 // Deploy with "Verify JWT" switched OFF (a logged-out visitor calls this; the database checks are the gate).
-// The keys it uses (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are provided to every Edge Function automatically.
+// The keys it uses (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY) are provided to every Edge Function automatically.
 // Secret this function also needs for every emailed code (optional — without it, otp-request/signup-otp-request answer "not
 // configured", the login one falling back to the security-question check, signup itself becoming unavailable): RESEND_API_KEY.
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -31,18 +36,19 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-// Supabase provides the service key automatically — under the classic name, or (on newer projects) inside the
-// SUPABASE_SECRET_KEYS list.
-function serviceKey(): string {
-  const classic = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (classic) return classic;
+// Supabase provides both keys automatically — under the classic name, or (on newer projects) inside a list.
+function envKey(classic: string, listName: string): string {
+  const direct = Deno.env.get(classic);
+  if (direct) return direct;
   try {
-    const keys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}');
+    const keys = JSON.parse(Deno.env.get(listName) || '{}');
     return keys.default || (Object.values(keys)[0] as string) || '';
   } catch {
     return '';
   }
 }
+const serviceKey = () => envKey('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEYS');
+const publicKey = () => envKey('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS');
 
 // Turns a verified account id into a one-time sign-in token, the same way for both recovery paths.
 async function issueSignInToken(admin: ReturnType<typeof createClient>, userId: string) {
@@ -122,6 +128,19 @@ const sendWelcomeEmail = (email: string, name: string, username: string) =>
     </div>`
   );
 
+const sendAccountDeletedEmail = (email: string, name: string, username: string) =>
+  sendEmail(
+    email,
+    'Your NOOB account has been deleted',
+    `Hi ${name},\n\nThis confirms that your NOOB account (@${username}) and everything in it — posts, reels, messages, followers — have been permanently deleted, just now.\n\nIf you didn't do this yourself, someone else had access to your account. There's nothing to undo (deletion is permanent), but change any reused password elsewhere right away.\n\n— The NOOB team`,
+    `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
+      <p style="font-size:16px;font-weight:800;margin:0 0 12px">Your NOOB account has been deleted</p>
+      <p style="font-size:14px;line-height:1.6">Hi ${escapeHtml(name)}, this confirms that your account <strong>@${escapeHtml(username)}</strong> and everything in it — posts, reels, messages, followers — have been permanently deleted, just now.</p>
+      <p style="font-size:13px;color:#555;line-height:1.6">If you didn't do this yourself, someone else had access to your account. There's nothing to undo (deletion is permanent), but change any reused password elsewhere right away.</p>
+      <p style="font-size:14px;line-height:1.6">— The NOOB team</p>
+    </div>`
+  );
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -133,7 +152,8 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid request.' }, 400);
   }
 
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey(), {
+  const url = Deno.env.get('SUPABASE_URL')!;
+  const admin = createClient(url, serviceKey(), {
     auth: { persistSession: false, autoRefreshToken: false }
   });
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || (req.headers.get('cf-connecting-ip') ?? 'unknown');
@@ -155,6 +175,25 @@ Deno.serve(async (req) => {
     if (!prof?.username || !priv?.email) return json({ success: true, sent: false });
     const sent = await sendWelcomeEmail(priv.email, prof.display_name || prof.username, prof.username);
     return json({ success: true, sent });
+  }
+
+  // -------------------------------------------------------------- account deletion confirmation
+  // Runs delete_my_account as the caller (their own bearer token, not the admin key — the RPC's own
+  // password check is the real gate either way) so it can grab the email/username the RPC returns
+  // BEFORE the row is gone, then email a "this just happened" receipt to the address that was on the
+  // account. The email never blocks the deletion result the app gets back.
+  if (body?.action === 'delete-account') {
+    const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return json({ error: 'Please log in.' }, 401);
+    const asUser = createClient(url, publicKey(), {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    const { data: result, error } = await asUser.rpc('delete_my_account', { p_password: String(body?.password ?? '') });
+    if (error) return json({ error: error.message || 'Could not delete the account.' }, 400);
+    if (!result?.success) return json({ error: result?.error || 'Could not delete the account.' }, 400);
+    if (result.email) void sendAccountDeletedEmail(result.email, result.displayName || result.username || 'there', result.username || '');
+    return json({ success: true, message: result.message });
   }
 
   // -------------------------------------------------------------- signup email verification

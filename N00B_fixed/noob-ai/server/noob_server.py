@@ -387,7 +387,8 @@ def web_search(query, user_id=None):
 VOICE_NOTE = """
 
 The user's newest message is a voice recording (the attached audio). Your reply must start with EXACTLY one
-line, nothing before it and nothing else on it:
+line, nothing before it and nothing else on it — NOT even the [language] tag, which only belongs on the line
+after this one:
 HEARD: <the user's words exactly as spoken, in their own language and script>
 Then a line break, then your actual reply, starting with the language tag. That HEARD line is never read aloud —
 it only shows as a caption — so your SPOKEN reply must go straight to answering. Never repeat, restate, paraphrase
@@ -463,13 +464,20 @@ class AnswerStream:
         if self.answer_start is None:                 # voice: first comes "HEARD: ..."
             start = len(self.raw) - len(self.raw.lstrip())
             head = self.raw[start:]
-            if head[:5].upper() == "HEARD":
-                if "\n" not in head and not final:
+            # The general "start every reply with [lang]" instruction sometimes wins over the voice
+            # instructions and the model puts the tag before HEARD: instead of after it — tolerate
+            # that ordering too, rather than mistaking the tag for "the AI skipped the HEARD line"
+            # (which used to leave the raw HEARD: line stuck in the spoken/displayed answer).
+            tag = LANG_TAG.match(head)
+            probe_at = tag.end() if tag else 0
+            probe = head[probe_at:]
+            if probe[:5].upper() == "HEARD":
+                if "\n" not in probe and not final:
                     return events
-                line = head.split("\n", 1)[0]
+                line = probe.split("\n", 1)[0]
                 self.heard = line.split(":", 1)[1].strip() if ":" in line else ""
-                self.answer_start = start + len(line) + 1
-            elif len(head) >= 6 or final:             # the AI skipped the HEARD line
+                self.answer_start = start + probe_at + len(line) + 1
+            elif len(probe) >= 6 or final:             # the AI skipped the HEARD line
                 self.heard = ""
                 self.answer_start = start
             else:

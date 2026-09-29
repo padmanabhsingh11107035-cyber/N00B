@@ -66,6 +66,8 @@ import { ProfileView } from './components/Profile/ProfileView';
 import { StoryViewerModal } from './components/Stories/StoryViewerModal';
 import { CreateStoryModal } from './components/Stories/CreateStoryModal';
 import { PostCreationModal } from './components/PostCreation/PostCreationModal';
+import { LiveStreamView } from './components/LiveStream/LiveStreamView';
+import { LiveLoungePage } from './components/Profile/LiveLoungePage';
 import { ProfessionalDashboardModal } from './components/Modals/ProfessionalDashboardModal';
 import { NotificationsModal, NotificationSettingsState } from './components/Modals/NotificationsModal';
 import { ScratchCardModal } from './components/Modals/ScratchCardModal';
@@ -154,6 +156,8 @@ export default function App() {
   const [activeScratchCardId, setActiveScratchCardId] = useState<string | null>(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
+  const [showGoLiveHost, setShowGoLiveHost] = useState(false);
+  const [showLiveLoungeUpsell, setShowLiveLoungeUpsell] = useState(false);
   const [showProfessionalDashboardModal, setShowProfessionalDashboardModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showStatusNoteModal, setShowStatusNoteModal] = useState(false);
@@ -756,6 +760,12 @@ export default function App() {
     } catch (err) {
       console.error('Failed to decline follow request:', err);
     }
+  };
+
+  const handleGoLiveTap = () => {
+    setShowPostCreationModal(false);
+    if (currentUser.hasLiveLounge) setShowGoLiveHost(true);
+    else setShowLiveLoungeUpsell(true);
   };
 
   const handleSelectNavTab = (tab: NavTab) => {
@@ -1412,6 +1422,24 @@ export default function App() {
           allUsers={registeredUsers}
           onClose={() => setShowPostCreationModal(false)}
           onSubmitPost={handleCreatePostOrReel}
+          onGoLive={handleGoLiveTap}
+        />
+      )}
+
+      {showGoLiveHost && (
+        <LiveStreamView
+          currentUser={currentUser}
+          mode="host"
+          onClose={() => setShowGoLiveHost(false)}
+        />
+      )}
+
+      {showLiveLoungeUpsell && (
+        <LiveLoungePage
+          currentUser={currentUser}
+          allUsers={registeredUsers}
+          onClose={() => setShowLiveLoungeUpsell(false)}
+          onUserUpdated={(u) => setCurrentUser(u)}
         />
       )}
 

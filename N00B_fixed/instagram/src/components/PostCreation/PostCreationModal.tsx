@@ -23,7 +23,8 @@ import {
   Link2,
   Calendar,
   Layers,
-  Heart
+  Heart,
+  Radio
 } from 'lucide-react';
 import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
@@ -38,6 +39,7 @@ interface PostCreationModalProps {
   allUsers?: User[];
   onClose: () => void;
   onSubmitPost: (data: { isReel?: boolean; reelData?: Partial<Reel>; postData?: Partial<Post> }) => Promise<void>;
+  onGoLive?: () => void;
 }
 
 const FILTERS = POST_FILTERS;
@@ -54,7 +56,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   currentUser,
   allUsers = [],
   onClose,
-  onSubmitPost
+  onSubmitPost,
+  onGoLive
 }) => {
   // Creation Mode: Post (Image Only) vs Reel (Video Only)
   const [creationType, setCreationType] = useState<'post' | 'reel'>('post');
@@ -427,6 +430,17 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
             <Film className="w-4 h-4" />
             <span>Create Reel (Video Only)</span>
           </button>
+
+          {onGoLive && (
+            <button
+              type="button"
+              onClick={onGoLive}
+              className="flex-1 py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer bg-neutral-900 border border-neutral-800 text-zinc-400 hover:text-white hover:border-red-500/50"
+            >
+              <Radio className="w-4 h-4 text-red-500" />
+              <span>Go Live</span>
+            </button>
+          )}
         </div>
 
         {/* Scrollable Unified Body */}

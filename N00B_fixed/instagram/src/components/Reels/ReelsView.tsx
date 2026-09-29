@@ -111,7 +111,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [replyingToComment, setReplyingToComment] = useState<{ topLevelId: string; username: string } | null>(null);
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<string[]>([]);
   const [commentError, setCommentError] = useState('');
-  const [liveOverlay, setLiveOverlay] = useState<{ mode: 'host' | 'view'; stream?: LiveStreamSummary } | null>(null);
+  const [liveOverlay, setLiveOverlay] = useState<{ stream: LiveStreamSummary } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
@@ -566,10 +566,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         id="reels-page-container"
         className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
       >
-      <LiveStreamBar
-        onOpenLive={(s) => setLiveOverlay({ mode: 'view', stream: s })}
-        onGoLive={() => setLiveOverlay({ mode: 'host' })}
-      />
+      <LiveStreamBar onOpenLive={(s) => setLiveOverlay({ stream: s })} />
 
       {/* 1. Main Vertical Video Player */}
       <div
@@ -1145,7 +1142,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     {liveOverlay && (
       <LiveStreamView
         currentUser={currentUser}
-        mode={liveOverlay.mode}
+        mode="view"
         stream={liveOverlay.stream}
         onClose={() => setLiveOverlay(null)}
       />

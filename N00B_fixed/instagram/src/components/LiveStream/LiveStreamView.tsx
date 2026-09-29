@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Heart, Gift, Send, Users, Mic, MicOff, Radio } from 'lucide-react';
-import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
+import { X, Heart, Gift, Send, Users, Mic, MicOff, Radio, Camera, MonitorUp } from 'lucide-react';
+import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack } from 'agora-rtc-sdk-ng';
 import { User } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
@@ -38,6 +38,7 @@ type Phase = 'setup' | 'connecting' | 'live' | 'ended';
 export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mode, stream, onClose }) => {
   const [phase, setPhase] = useState<Phase>(mode === 'host' ? 'setup' : 'connecting');
   const [title, setTitle] = useState('');
+  const [videoSource, setVideoSource] = useState<'camera' | 'screen'>('camera');
   const [streamId, setStreamId] = useState<string | undefined>(stream?.id);
   const [hostInfo] = useState(
     stream?.host ?? { id: currentUser.id, username: currentUser.username, displayName: currentUser.displayName, avatar: currentUser.avatar }
@@ -52,7 +53,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   const videoRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<IAgoraRTCClient | null>(null);
-  const localTracksRef = useRef<[IMicrophoneAudioTrack, ICameraVideoTrack] | null>(null);
+  const localTracksRef = useRef<[IMicrophoneAudioTrack, ICameraVideoTrack | ILocalVideoTrack] | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const cleanedUpRef = useRef(false);
 
@@ -83,17 +84,30 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
       await client.join(join.appId, join.channelName, join.token, null);
 
       if (isHostRole) {
-        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        let audioTrack: IMicrophoneAudioTrack;
+        let videoTrack: ICameraVideoTrack | ILocalVideoTrack;
+        if (videoSource === 'screen') {
+          [audioTrack, videoTrack] = await Promise.all([
+            AgoraRTC.createMicrophoneAudioTrack(),
+            AgoraRTC.createScreenVideoTrack({}, 'disable')
+          ]);
+          // The browser's own "Stop sharing" control ends the track directly — treat that exactly
+          // like tapping the in-app end button, instead of leaving a dead, silent stream running.
+          videoTrack.on('track-ended', () => { void handleCloseTap(); });
+        } else {
+          [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        }
         localTracksRef.current = [audioTrack, videoTrack];
         await client.publish([audioTrack, videoTrack]);
-        if (videoRef.current) videoTrack.play(videoRef.current, { fit: 'cover' });
+        if (videoRef.current) videoTrack.play(videoRef.current, { fit: videoSource === 'screen' ? 'contain' : 'cover' });
       }
       setPhase('live');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the camera/microphone.');
       setPhase('ended');
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoSource]);
 
   const handleGoLive = async () => {
     setError('');
@@ -198,6 +212,27 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
           placeholder="Add a title (optional)"
           className="w-full max-w-sm bg-white/10 text-white placeholder-white/40 rounded-full px-4 py-3 text-sm outline-none"
         />
+        <div className="w-full max-w-sm grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setVideoSource('camera')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition ${
+              videoSource === 'camera' ? 'bg-white text-black' : 'bg-white/10 text-white/70'
+            }`}
+          >
+            <Camera className="w-4 h-4" /> Camera
+          </button>
+          <button
+            onClick={() => setVideoSource('screen')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition ${
+              videoSource === 'screen' ? 'bg-white text-black' : 'bg-white/10 text-white/70'
+            }`}
+          >
+            <MonitorUp className="w-4 h-4" /> Screen
+          </button>
+        </div>
+        {videoSource === 'screen' && (
+          <p className="text-white/50 text-[11px] max-w-sm text-center">Your browser will ask which screen, window, or tab to share — your mic stays on so you can talk over it.</p>
+        )}
         {error && <p className="text-red-400 text-xs">{error}</p>}
         <button onClick={handleGoLive} className="w-full max-w-sm bg-red-600 text-white font-semibold rounded-full py-3 active:scale-95 transition">
           Start Streaming

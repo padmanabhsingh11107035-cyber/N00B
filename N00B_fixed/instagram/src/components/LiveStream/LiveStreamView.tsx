@@ -64,6 +64,11 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
       setPhase('ended');
       return;
     }
+    // Camera/mic permission prompts (and a bad Agora config) can otherwise hang this forever with no
+    // feedback — a real host once got stuck on "Connecting…" indefinitely. Racing every risky step
+    // against a timeout guarantees SOME outcome even if the browser's own promise never settles.
+    const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
+      Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('This is taking too long — check your camera/microphone permissions and try again.')), ms))]);
     try {
       const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
       clientRef.current = client;
@@ -81,28 +86,36 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
         });
       }
 
-      await client.join(join.appId, join.channelName, join.token, null);
+      await withTimeout(client.join(join.appId, join.channelName, join.token, null));
 
       if (isHostRole) {
         let audioTrack: IMicrophoneAudioTrack;
         let videoTrack: ICameraVideoTrack | ILocalVideoTrack;
         if (videoSource === 'screen') {
-          [audioTrack, videoTrack] = await Promise.all([
+          [audioTrack, videoTrack] = await withTimeout(Promise.all([
             AgoraRTC.createMicrophoneAudioTrack(),
             AgoraRTC.createScreenVideoTrack({}, 'disable')
-          ]);
+          ]));
           // The browser's own "Stop sharing" control ends the track directly — treat that exactly
           // like tapping the in-app end button, instead of leaving a dead, silent stream running.
           videoTrack.on('track-ended', () => { void handleCloseTap(); });
         } else {
-          [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+          [audioTrack, videoTrack] = await withTimeout(AgoraRTC.createMicrophoneAndCameraTracks());
         }
         localTracksRef.current = [audioTrack, videoTrack];
-        await client.publish([audioTrack, videoTrack]);
+        await withTimeout(client.publish([audioTrack, videoTrack]));
         if (videoRef.current) videoTrack.play(videoRef.current, { fit: videoSource === 'screen' ? 'contain' : 'cover' });
       }
       setPhase('live');
     } catch (err) {
+      // A host whose connection failed shouldn't leave the stream marked live for everyone else —
+      // this is exactly what silently orphaned the "LIVE" rail chip before this fix.
+      if (isHostRole) void endLiveStream(id);
+      try {
+        localTracksRef.current?.[0]?.close();
+        localTracksRef.current?.[1]?.close();
+        await clientRef.current?.leave();
+      } catch { /* best-effort teardown of a connection that never fully came up */ }
       setError(err instanceof Error ? err.message : 'Could not start the camera/microphone.');
       setPhase('ended');
     }

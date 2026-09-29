@@ -3,7 +3,6 @@ import {
   X,
   Trophy,
   Award,
-  Sparkles,
   TrendingUp,
   ShieldCheck,
   Gamepad2,
@@ -26,7 +25,6 @@ import confetti from 'canvas-confetti';
 import { CouponsModal } from './CouponsModal';
 import { SendPointsPage } from './SendPointsPage';
 import { ProfileQrModal } from './ProfileQrModal';
-import { LiveLoungePage } from './LiveLoungePage';
 import { PaymentRequestsModal } from './PaymentRequestsModal';
 
 interface AccountsStatisticsModalProps {
@@ -59,7 +57,6 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
   const [showCoupons, setShowCoupons] = useState(false);
   const [showSendPoints, setShowSendPoints] = useState(false);
   const [showMyQr, setShowMyQr] = useState(false);
-  const [showLiveLounge, setShowLiveLounge] = useState(false);
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
   const exactPoints = currentUser.noobPoints ?? 150;
   const gamesWon = currentUser.gamesWonCount ?? 0;
@@ -284,25 +281,6 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF66] transition-colors" />
-        </button>
-
-        {/* NOOB Live Lounge */}
-        <button
-          onClick={() => setShowLiveLounge(true)}
-          className="w-full p-3 rounded-2xl bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/30 flex items-center justify-between transition-colors cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-bold text-white block group-hover:text-purple-300 transition-colors">
-                NOOB Live Lounge{currentUser.hasLiveLounge ? ' — Unlocked' : ''}
-              </span>
-              <span className="text-[10px] text-zinc-400 block">Go Live + the meeting room, one-time unlock</span>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-purple-400 transition-colors" />
         </button>
 
         {/* Payment Requests (friends asking you to pay for something) */}
@@ -561,15 +539,6 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
       )}
 
       {showMyQr && <ProfileQrModal targetUser={currentUser} onClose={() => setShowMyQr(false)} />}
-
-      {showLiveLounge && (
-        <LiveLoungePage
-          currentUser={currentUser}
-          allUsers={allUsers}
-          onClose={() => setShowLiveLounge(false)}
-          onUserUpdated={onUserUpdated}
-        />
-      )}
 
       {showPaymentRequests && (
         <PaymentRequestsModal

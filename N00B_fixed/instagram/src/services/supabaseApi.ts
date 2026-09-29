@@ -3175,6 +3175,7 @@ export interface PaymentRequestSummary {
   purchaseType: 'live_lounge';
   amount: number;
   createdAt: string;
+  expiresAt: string;
   requester: { id: string; username: string; displayName?: string; avatar?: string };
 }
 

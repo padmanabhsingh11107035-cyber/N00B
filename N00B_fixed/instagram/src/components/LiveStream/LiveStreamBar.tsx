@@ -24,7 +24,9 @@ export const LiveStreamBar: React.FC<LiveStreamBarProps> = ({ onOpenLive }) => {
   if (streams.length === 0) return null;
 
   return (
-    <div className="absolute top-3 left-0 right-0 z-20 flex items-center gap-3 px-3 overflow-x-auto no-scrollbar">
+    // top-14: Reels' own back-button/title bar already sits at top-3, so this rail is placed
+    // just below it instead of overlapping the same row.
+    <div className="absolute top-14 left-0 right-0 z-20 flex items-center gap-3 px-3 overflow-x-auto no-scrollbar">
       {streams.map((s) => (
         <button key={s.id} onClick={() => onOpenLive(s)} className="flex flex-col items-center gap-1 shrink-0 active:scale-95 transition">
           <div className="relative w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-red-600 via-red-500 to-orange-400">

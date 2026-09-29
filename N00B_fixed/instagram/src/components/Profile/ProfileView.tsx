@@ -89,6 +89,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { CustomerSupportModal } from '../Support/CustomerSupportModal';
+import { LiveLoungePage } from './LiveLoungePage';
 import { NoobAiPage } from './NoobAiPage';
 import { NoobAiLogo } from './NoobAiLogo';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
@@ -257,6 +258,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
+  const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
   const [showInstallPermissionsPage, setShowInstallPermissionsPage] = useState(false);
   const [showNoobAi, setShowNoobAi] = useState(false);
   const [showMutualFollowersSheet, setShowMutualFollowersSheet] = useState(false);
@@ -866,6 +868,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         Browse products &amp; your cart
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option: NOOB Live Lounge */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowLiveLoungePage(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-purple-400 transition-colors">
+                        NOOB Live Lounge{currentUser.hasLiveLounge ? ' — Unlocked' : ''}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        Private meeting rooms — screen share, whiteboard &amp; chat
                       </span>
                     </div>
                   </button>
@@ -1989,6 +2012,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
 
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
+
+      {showLiveLoungePage && (
+        <LiveLoungePage
+          currentUser={currentUser}
+          allUsers={allUsers}
+          onClose={() => setShowLiveLoungePage(false)}
+          onUserUpdated={onUserUpdated}
+        />
+      )}
 
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} />}
 

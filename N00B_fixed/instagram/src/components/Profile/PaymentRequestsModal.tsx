@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { X, HeartHandshake, Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, HeartHandshake, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Timer } from 'lucide-react';
 import { User } from '../../types';
 import { PaymentRequestSummary, fetchMyPaymentRequests, respondPaymentRequest } from '../../services/api';
 import { formatNoobPoints } from '../../utils/formatPoints';
+
+function formatCountdown(expiresAt: string, now: number): string {
+  const remainingMs = new Date(expiresAt).getTime() - now;
+  if (remainingMs <= 0) return 'Expired';
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
 
 interface PaymentRequestsModalProps {
   currentUser: User;
@@ -22,9 +29,21 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
   const [error, setError] = useState('');
   const [doneMessage, setDoneMessage] = useState('');
   const isMasterAdmin = currentUser.username?.toLowerCase() === 'noob';
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     fetchMyPaymentRequests().then((res) => { if (res.success) setRequests(res.requests); setLoading(false); });
+  }, []);
+
+  // Ticks the countdown and quietly drops a request the moment its 7 minutes run out — approving it
+  // past that point fails server-side anyway, so there's no point leaving a dead "Approve" button up.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      setRequests((prev) => prev.filter((r) => new Date(r.expiresAt).getTime() > t));
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleDecline = async (id: string) => {
@@ -92,7 +111,10 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
                     <p className="text-xs text-white"><span className="font-bold">@{r.requester.username}</span> is asking you to pay for</p>
                     <p className="text-xs font-bold text-amber-400">{PURCHASE_LABEL[r.purchaseType] || r.purchaseType}</p>
                   </div>
-                  <span className="text-sm font-black text-white shrink-0">{formatNoobPoints(r.amount)} pts</span>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-black text-white block">{formatNoobPoints(r.amount)} pts</span>
+                    <span className="text-[10px] text-amber-400 font-semibold flex items-center gap-1 justify-end"><Timer className="w-3 h-3" /> {formatCountdown(r.expiresAt, now)}</span>
+                  </div>
                 </div>
 
                 {activeId === r.id ? (

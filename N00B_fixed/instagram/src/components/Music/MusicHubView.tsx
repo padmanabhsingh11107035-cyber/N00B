@@ -22,6 +22,7 @@ import { MusicTrack, User } from '../../types';
 import { uploadMusicTrack, uploadMediaFile, renameMusicTrack } from '../../services/api';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { getAudioDuration } from '../../utils/mediaCompressor';
+import { isVideoFile, extractAudioFromVideoFile } from '../../utils/extractAudioFromVideo';
 import confetti from 'canvas-confetti';
 
 interface MusicHubViewProps {
@@ -62,6 +63,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const [audioObjectKey, setAudioObjectKey] = useState('');
   const [detectedDuration, setDetectedDuration] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isExtractingAudio, setIsExtractingAudio] = useState(false);
 
   // Renaming — publisher-only, so this is only ever offered on tracks the
   // current account itself uploaded (checked against track.uploaderId).
@@ -125,21 +127,30 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   };
 
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        // Auto calculate duration from uploaded audio
-        const duration = await getAudioDuration(file);
-        setDetectedDuration(duration);
-
-        const res = await uploadMediaFile(file, 'music');
-        if (res.url) {
-          setAudioUrlInput(res.url);
+    let file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      // The picker's "audio/*" accept is only a hint — some browsers still let a video file through.
+      // Pulling just the audio out here means the track that gets stored is a real audio file, not
+      // the whole video's bytes.
+      if (isVideoFile(file)) {
+        setIsExtractingAudio(true);
+        try {
+          file = await extractAudioFromVideoFile(file);
+        } finally {
+          setIsExtractingAudio(false);
         }
-        setAudioObjectKey(res.objectKey || '');
-      } catch (err) {
-        console.error(err);
       }
+      const duration = await getAudioDuration(file);
+      setDetectedDuration(duration);
+
+      const res = await uploadMediaFile(file, 'music');
+      if (res.url) {
+        setAudioUrlInput(res.url);
+      }
+      setAudioObjectKey(res.objectKey || '');
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -508,13 +519,20 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 <button
                   type="button"
                   onClick={() => audioFileRef.current?.click()}
-                  className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                  disabled={isExtractingAudio}
+                  className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                     audioUrlInput
                       ? 'bg-[#00FF66]/10 border-[#00FF66]/40 text-[#00FF66]'
                       : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300'
                   }`}
                 >
-                  {audioUrlInput ? <Check className="w-3 h-3 text-[#00FF66]" /> : <Upload className="w-3 h-3 text-[#00FF66]" />} Audio File
+                  {isExtractingAudio ? (
+                    <>Extracting audio…</>
+                  ) : audioUrlInput ? (
+                    <><Check className="w-3 h-3 text-[#00FF66]" /> Audio File</>
+                  ) : (
+                    <><Upload className="w-3 h-3 text-[#00FF66]" /> Audio File</>
+                  )}
                 </button>
                 <input ref={audioFileRef} type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" onChange={handleAudioUpload} className="hidden" />
               </div>

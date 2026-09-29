@@ -129,6 +129,10 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       setPhase('ended');
       return;
     }
+    // Camera/mic permission prompts (and a bad Agora config) can otherwise hang this forever with no
+    // feedback — racing every risky step against a timeout guarantees SOME outcome either way.
+    const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
+      Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('This is taking too long — check your camera/microphone permissions and try again.')), ms))]);
     try {
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       clientRef.current = client;
@@ -167,21 +171,29 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         });
       });
 
-      await client.join(join.appId, join.channelName, join.token, myUid);
+      await withTimeout(client.join(join.appId, join.channelName, join.token, myUid));
 
-      const micTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      const camTrack = await AgoraRTC.createCameraVideoTrack();
+      const [micTrack, camTrack] = await withTimeout(Promise.all([
+        AgoraRTC.createMicrophoneAudioTrack(),
+        AgoraRTC.createCameraVideoTrack()
+      ]));
       micTrackRef.current = micTrack;
       camTrackRef.current = camTrack;
-      await client.publish([micTrack, camTrack]);
+      await withTimeout(client.publish([micTrack, camTrack]));
 
       setPhase('live');
       refreshParticipants(id);
     } catch (err) {
+      if (isHost) void endLiveLoungeRoom(id);
+      try {
+        micTrackRef.current?.close();
+        camTrackRef.current?.close();
+        await clientRef.current?.leave();
+      } catch { /* best-effort teardown of a connection that never fully came up */ }
       setError(err instanceof Error ? err.message : 'Could not start your camera/microphone.');
       setPhase('ended');
     }
-  }, [myUid, refreshParticipants]);
+  }, [myUid, refreshParticipants, isHost]);
 
   const handleStartRoom = async () => {
     setError('');

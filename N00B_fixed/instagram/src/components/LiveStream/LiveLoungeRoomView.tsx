@@ -124,6 +124,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [screenSharingUid, setScreenSharingUid] = useState<number | null>(null);
   const sharingScreenRef = useRef(false);
   const [panel, setPanel] = useState<'none' | 'chat' | 'people'>('none');
+  const panelRef = useRef(panel);
+  const [unreadChat, setUnreadChat] = useState(0);
+  useEffect(() => { panelRef.current = panel; if (panel === 'chat') setUnreadChat(0); }, [panel]);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -291,20 +294,36 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   useEffect(() => {
     if (phase !== 'live' || !roomId) return;
     let alive = true;
+    // Adds only messages this client doesn't already have (its own just-sent ones included) and
+    // badges the chat icon for anyone else's message that arrives while the panel isn't open.
+    const mergeMessages = (incoming: LiveLoungeRoomChatMessage[]) => {
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        const fresh = incoming.filter((m) => !known.has(m.id));
+        if (fresh.length === 0) return prev;
+        const fromOthers = fresh.filter((m) => m.sender.id !== currentUser.id).length;
+        if (fromOthers > 0 && panelRef.current !== 'chat') setUnreadChat((n) => n + fromOthers);
+        return [...prev, ...fresh];
+      });
+    };
     fetchLiveLoungeRoomChat(roomId).then((res) => {
       console.log('[lounge] chat history', { roomId, success: res.success, count: res.messages?.length, error: res.error });
       if (alive && res.success) setMessages(res.messages);
     });
     const unsubChat = subscribeToLiveLoungeRoomChat(roomId, (m) => {
       console.log('[lounge] chat realtime message', m);
-      setMessages((prev) => [...prev, m]);
+      mergeMessages([m]);
     });
     const unsubParticipants = subscribeToLiveLoungeRoomParticipants(roomId, () => refreshParticipants(roomId));
-    // A poll on top of realtime, not instead of it — someone reaching the waiting room is exactly the
-    // moment a host needs to know about reliably, so this doesn't lean on realtime alone for it.
-    const interval = setInterval(() => refreshParticipants(roomId), 4000);
+    // A poll on top of realtime, not instead of it — someone reaching the waiting room, or another
+    // participant's chat message, is exactly the moment people need to know about reliably, so this
+    // doesn't lean on realtime alone for either.
+    const interval = setInterval(() => {
+      refreshParticipants(roomId);
+      fetchLiveLoungeRoomChat(roomId).then((res) => { if (alive && res.success) mergeMessages(res.messages); });
+    }, 4000);
     return () => { alive = false; unsubChat(); unsubParticipants(); clearInterval(interval); };
-  }, [phase, roomId, refreshParticipants]);
+  }, [phase, roomId, refreshParticipants, currentUser.id]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
 
@@ -713,8 +732,11 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         <button onClick={() => handleToggleWhiteboard(!whiteboardOpen)} className={`p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <PenTool className="w-5 h-5" />
         </button>
-        <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`relative p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MessageCircle className="w-5 h-5" />
+          {unreadChat > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{unreadChat > 9 ? '9+' : unreadChat}</span>
+          )}
         </button>
         <button onClick={() => setPanel(panel === 'people' ? 'none' : 'people')} className={`relative p-3 rounded-full ${panel === 'people' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <Users className="w-5 h-5" />

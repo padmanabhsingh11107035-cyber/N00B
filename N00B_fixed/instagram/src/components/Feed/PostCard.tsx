@@ -16,7 +16,8 @@ import {
   Archive,
   MessageSquareOff,
   EyeOff,
-  Trash2
+  Trash2,
+  Link2
 } from 'lucide-react';
 import { Post, User } from '../../types';
 import confetti from 'canvas-confetti';
@@ -473,7 +474,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       {hasSlides && currentSlide ? (
         <div
           className="relative w-full bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
-          style={{ aspectRatio: boxAspect }}
+          style={{ aspectRatio: boxAspect, containerType: 'inline-size' }}
           onDoubleClick={handleDoubleTap}
           onTouchStart={post.slides && post.slides.length > 1 ? handleCarouselTouchStart : undefined}
           onTouchMove={post.slides && post.slides.length > 1 ? handleCarouselTouchMove : undefined}
@@ -492,6 +493,89 @@ export const PostCard: React.FC<PostCardProps> = ({
             }}
           />
 
+          {/* Text / sticker / mention / hashtag / link layers placed in the Post creator — same
+              declarative shape as Story.stickers, same EditableStickerLayer engine to create them. */}
+          {currentSlide.stickers?.map((sticker, idx) => {
+            const layerStyle: React.CSSProperties = {
+              top: `${sticker.y}%`,
+              left: `${sticker.x}%`,
+              width: sticker.width ? `${sticker.width}%` : undefined,
+              transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`
+            };
+            if (sticker.type === 'text') {
+              return (
+                <div key={idx} className="absolute z-20 pointer-events-none" style={layerStyle}>
+                  <p
+                    className="font-extrabold text-center whitespace-pre-wrap break-words"
+                    style={{ color: sticker.data?.color, fontSize: `${(sticker.width || 55) * 0.12}cqw`, textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.85)' }}
+                  >
+                    {sticker.data?.text}
+                  </p>
+                </div>
+              );
+            }
+            if (sticker.type === 'sticker') {
+              const w = sticker.width || (sticker.data?.kind === 'emoji' ? 26 : 42);
+              return (
+                <div key={idx} className="absolute z-20 pointer-events-none" style={layerStyle}>
+                  {sticker.data?.kind === 'emoji' ? (
+                    <span className="block text-center leading-none" style={{ fontSize: `${w * 0.22}cqw` }}>{sticker.data?.content}</span>
+                  ) : (
+                    <img src={sticker.data?.content} alt="" className="w-full h-auto rounded-lg" />
+                  )}
+                </div>
+              );
+            }
+            if (sticker.type === 'mention') {
+              return (
+                <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); goToProfile(sticker.data?.userId); }}
+                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap cursor-pointer"
+                      style={{ fontSize: `${(sticker.width || 42) * 0.1}cqw` }}
+                    >
+                      <img src={sticker.data?.avatar} alt="" className="rounded-full object-cover shrink-0" style={{ width: '1.8em', height: '1.8em' }} referrerPolicy="no-referrer" />
+                      <span className="font-semibold text-white" style={{ fontSize: '1em' }}>@{sticker.data?.username}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            if (sticker.type === 'hashtag') {
+              return (
+                <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSelectCategory && onSelectCategory(sticker.data?.tag); }}
+                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                      style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}
+                    >
+                      <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            if (sticker.type === 'link') {
+              return (
+                <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); window.open(sticker.data?.url, '_blank', 'noopener,noreferrer'); }}
+                      className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                      style={{ fontSize: `${(sticker.width || 46) * 0.09}cqw` }}
+                    >
+                      <Link2 className="shrink-0" style={{ width: '1.1em', height: '1.1em' }} />
+                      <span className="font-bold" style={{ fontSize: '1em' }}>{sticker.data?.label}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })}
+
           {/* Double-tap animated heart pop */}
           {showDoubleTapHeart && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
@@ -499,8 +583,56 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* Tagged user floating button (Instagram style) */}
-          {primaryTaggedUser && (
+          {/* Tagged-people floating indicator, bottom-left. A slide can carry up to 68 point-tagged
+              people (currentSlide.taggedUsers, set from PostCreationModal's Tag People tool) — when
+              present, this stacked-avatar button replaces the older single-collaborator pill below,
+              which only ever supported one person and stays as the fallback for older posts. */}
+          {currentSlide?.taggedUsers && currentSlide.taggedUsers.length > 0 ? (
+            <div className="absolute bottom-3 left-3 z-20">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTagPill(!showTagPill);
+                }}
+                className="flex items-center bg-black/70 hover:bg-black/90 backdrop-blur-md rounded-full pl-1 pr-2 py-1 border border-white/20 shadow-lg transition-transform hover:scale-105"
+              >
+                <div className="flex items-center -space-x-2">
+                  {currentSlide.taggedUsers.slice(0, 3).map((t) => (
+                    <img
+                      key={t.userId}
+                      src={t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                      alt={t.username}
+                      className="w-5 h-5 rounded-full object-cover ring-2 ring-black"
+                      referrerPolicy="no-referrer"
+                    />
+                  ))}
+                  {currentSlide.taggedUsers.length > 3 && (
+                    <span className="w-5 h-5 rounded-full bg-neutral-800 ring-2 ring-black flex items-center justify-center text-[8px] font-bold text-white">
+                      +{currentSlide.taggedUsers.length - 3}
+                    </span>
+                  )}
+                </div>
+                <Tag className="w-3 h-3 text-[#00FF66] ml-1.5" />
+              </button>
+
+              {showTagPill && (
+                <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-[#00FF66]/50 shadow-2xl backdrop-blur-xl min-w-[160px] max-h-48 overflow-y-auto space-y-1.5 animate-in zoom-in-90 duration-150">
+                  {currentSlide.taggedUsers.map((t) => (
+                    <div key={t.userId} className="flex items-center gap-2">
+                      <img
+                        src={t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                        alt={t.username}
+                        className="w-6 h-6 rounded-full object-cover ring-1 ring-[#00FF66]"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="text-[11px] font-bold truncate">{t.displayName || t.username}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : primaryTaggedUser && (
             <div className="absolute bottom-3 left-3 z-20">
               <button
                 type="button"

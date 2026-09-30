@@ -24,7 +24,11 @@ import {
   Calendar,
   Layers,
   Heart,
-  Radio
+  Radio,
+  Type,
+  Sticker as StickerIcon,
+  AtSign,
+  Hash
 } from 'lucide-react';
 import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
@@ -33,6 +37,15 @@ import { captureVideoThumbnail } from '../../utils/videoThumbnail';
 import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { EditableStickerLayer } from '../Stories/EditableStickerLayer';
+import { EmojiPanel } from '../Chat/EmojiPanel';
+import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
+import { AvatarMedia } from '../Common/AvatarMedia';
+
+type PostSticker = NonNullable<PostSlide['stickers']>[number];
+type PostTaggedPerson = NonNullable<PostSlide['taggedUsers']>[number];
+const STICKER_TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
+const MAX_TAGGED_PEOPLE = 68;
 
 interface PostCreationModalProps {
   currentUser: User;
@@ -110,6 +123,141 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const activeSlide = slides[activeSlideIndex] || slides[0];
+
+  // Layered photo editor (text / stickers / mention / hashtag / link), same drag/pinch-resize/
+  // rotate engine as Stories (EditableStickerLayer), stored directly on the active slide.
+  const postCanvasRef = useRef<HTMLDivElement>(null);
+  const activeStickers: PostSticker[] = activeSlide?.stickers || [];
+  const [activeStickerIndex, setActiveStickerIndex] = useState<number | null>(null);
+  const [isDraggingStickerLayer, setIsDraggingStickerLayer] = useState(false);
+  const [isStickerOverTrash, setIsStickerOverTrash] = useState(false);
+
+  const updateActiveSlide = (patch: Partial<PostSlide>) => {
+    if (!activeSlide) return;
+    setSlides((prev) => prev.map((s) => (s.id === activeSlide.id ? { ...s, ...patch } : s)));
+  };
+  const addSticker = (sticker: PostSticker) => {
+    updateActiveSlide({ stickers: [...activeStickers, sticker] });
+    setActiveStickerIndex(activeStickers.length);
+  };
+  const updateStickerAt = (index: number, patch: Partial<PostSticker>) => {
+    updateActiveSlide({ stickers: activeStickers.map((s, i) => (i === index ? { ...s, ...patch } : s)) });
+  };
+  const deleteStickerAt = (index: number) => {
+    updateActiveSlide({ stickers: activeStickers.filter((_, i) => i !== index) });
+    setActiveStickerIndex((cur) => (cur === index ? null : cur));
+  };
+
+  const [textEditor, setTextEditor] = useState<number | 'new' | null>(null);
+  const [draftPostText, setDraftPostText] = useState('');
+  const [draftPostTextColor, setDraftPostTextColor] = useState(STICKER_TEXT_COLORS[0]);
+  const openNewPostText = () => { setDraftPostText(''); setDraftPostTextColor(STICKER_TEXT_COLORS[0]); setTextEditor('new'); };
+  const openEditPostText = (index: number, sticker: PostSticker) => {
+    setDraftPostText(sticker.data?.text || ''); setDraftPostTextColor(sticker.data?.color || STICKER_TEXT_COLORS[0]); setTextEditor(index);
+  };
+  const commitPostText = () => {
+    const text = draftPostText.trim();
+    if (!text) { setTextEditor(null); return; }
+    if (textEditor === 'new') {
+      addSticker({ type: 'text', data: { text, color: draftPostTextColor }, x: 50, y: 40 + Math.min(activeStickers.length * 6, 24), width: 55, rotation: 0 });
+    } else if (typeof textEditor === 'number') {
+      updateStickerAt(textEditor, { data: { text, color: draftPostTextColor } });
+    }
+    setTextEditor(null);
+  };
+
+  const [hashtagEditor, setHashtagEditor] = useState<number | 'new' | null>(null);
+  const [draftPostHashtag, setDraftPostHashtag] = useState('');
+  const openNewPostHashtag = () => { setDraftPostHashtag(''); setHashtagEditor('new'); };
+  const openEditPostHashtag = (index: number, sticker: PostSticker) => { setDraftPostHashtag(sticker.data?.tag || ''); setHashtagEditor(index); };
+  const commitPostHashtag = () => {
+    const tag = draftPostHashtag.trim().replace(/^#+/, '').replace(/\s+/g, '');
+    if (!tag) { setHashtagEditor(null); return; }
+    if (hashtagEditor === 'new') {
+      addSticker({ type: 'hashtag', data: { tag }, x: 50, y: 40 + Math.min(activeStickers.length * 6, 24), width: 40, rotation: 0 });
+    } else if (typeof hashtagEditor === 'number') {
+      updateStickerAt(hashtagEditor, { data: { tag } });
+    }
+    setHashtagEditor(null);
+  };
+
+  const [linkEditor, setLinkEditor] = useState<number | 'new' | null>(null);
+  const [draftPostLinkUrl, setDraftPostLinkUrl] = useState('');
+  const [draftPostLinkLabel, setDraftPostLinkLabel] = useState('');
+  const openNewPostLink = () => { setDraftPostLinkUrl(''); setDraftPostLinkLabel(''); setLinkEditor('new'); };
+  const openEditPostLink = (index: number, sticker: PostSticker) => {
+    setDraftPostLinkUrl(sticker.data?.url || ''); setDraftPostLinkLabel(sticker.data?.label || ''); setLinkEditor(index);
+  };
+  const commitPostLink = () => {
+    let url = draftPostLinkUrl.trim();
+    if (!url) { setLinkEditor(null); return; }
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    let label = draftPostLinkLabel.trim();
+    if (!label) { try { label = new URL(url).hostname.replace(/^www\./, ''); } catch { label = 'Visit link'; } }
+    if (linkEditor === 'new') {
+      addSticker({ type: 'link', data: { url, label }, x: 50, y: 40 + Math.min(activeStickers.length * 6, 24), width: 46, rotation: 0 });
+    } else if (typeof linkEditor === 'number') {
+      updateStickerAt(linkEditor, { data: { url, label } });
+    }
+    setLinkEditor(null);
+  };
+
+  const [showPostStickerPicker, setShowPostStickerPicker] = useState(false);
+  const [postStickerTab, setPostStickerTab] = useState<'emoji' | 'animated' | 'gif'>('emoji');
+  const addEmojiOrImageSticker = (kind: 'emoji' | 'image', content: string) => {
+    addSticker({ type: 'sticker', data: { kind, content }, x: 50, y: 45, width: kind === 'emoji' ? 26 : 42, rotation: 0 });
+    setShowPostStickerPicker(false);
+  };
+
+  const [showPostMentionPicker, setShowPostMentionPicker] = useState(false);
+  const [postMentionQuery, setPostMentionQuery] = useState('');
+  const postMentionResults = allUsers
+    .filter((u) => {
+      const q = postMentionQuery.trim().toLowerCase();
+      if (!q) return true;
+      return u.username.toLowerCase().includes(q) || u.displayName?.toLowerCase().includes(q);
+    })
+    .slice(0, 30);
+  const addMentionSticker = (u: User) => {
+    addSticker({
+      type: 'mention',
+      data: { userId: u.id, username: u.username, displayName: u.displayName, avatar: u.avatar },
+      x: 50, y: 45, width: 42, rotation: 0
+    });
+    setShowPostMentionPicker(false);
+    setPostMentionQuery('');
+  };
+
+  // Tag People — up to 68 pins per slide, separate from the sticker layers above (a distinct
+  // post feature, matching Instagram's tap-to-tag rather than the visible "Mention" sticker).
+  const [showTagPeoplePicker, setShowTagPeoplePicker] = useState(false);
+  const [tagPeopleQuery, setTagPeopleQuery] = useState('');
+  const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null);
+  const activeTaggedPeople: PostTaggedPerson[] = activeSlide?.taggedUsers || [];
+  const tagPeopleResults = allUsers
+    .filter((u) => {
+      if (activeTaggedPeople.some((t) => t.userId === u.id)) return false;
+      const q = tagPeopleQuery.trim().toLowerCase();
+      if (!q) return true;
+      return u.username.toLowerCase().includes(q) || u.displayName?.toLowerCase().includes(q);
+    })
+    .slice(0, 30);
+  const addTaggedPerson = (u: User) => {
+    if (activeTaggedPeople.length >= MAX_TAGGED_PEOPLE) return;
+    updateActiveSlide({
+      taggedUsers: [
+        ...activeTaggedPeople,
+        { userId: u.id, username: u.username, displayName: u.displayName, avatar: u.avatar, x: 50, y: 45 + Math.min(activeTaggedPeople.length * 5, 30) }
+      ]
+    });
+  };
+  const updateTaggedPersonAt = (index: number, patch: Partial<PostTaggedPerson>) => {
+    updateActiveSlide({ taggedUsers: activeTaggedPeople.map((t, i) => (i === index ? { ...t, ...patch } : t)) });
+  };
+  const deleteTaggedPersonAt = (index: number) => {
+    updateActiveSlide({ taggedUsers: activeTaggedPeople.filter((_, i) => i !== index) });
+    setActiveTagIndex((cur) => (cur === index ? null : cur));
+  };
 
   // Filter users for tagging
   const availableUsersToTag = allUsers.filter(
@@ -752,7 +900,12 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               </div>
 
               {/* Active Image Preview with Filter */}
-              <div className="relative aspect-video max-h-60 w-full rounded-xl overflow-hidden bg-black flex items-center justify-center border border-neutral-800">
+              <div
+                ref={postCanvasRef}
+                className="relative aspect-video max-h-60 w-full rounded-xl overflow-hidden bg-black flex items-center justify-center border border-neutral-800"
+                style={{ containerType: 'inline-size' }}
+                onPointerDown={() => { setActiveStickerIndex(null); setActiveTagIndex(null); }}
+              >
                 <img
                   src={activeSlide?.mediaUrl}
                   alt="Slide preview"
@@ -767,6 +920,256 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                   title="Remove this photo"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Draggable / resizable / rotatable sticker layers on this slide */}
+                {activeStickers.map((sticker, idx) => (
+                  <EditableStickerLayer
+                    key={idx}
+                    x={sticker.x}
+                    y={sticker.y}
+                    width={sticker.width || 40}
+                    rotation={sticker.rotation || 0}
+                    canvasRef={postCanvasRef}
+                    active={activeStickerIndex === idx}
+                    onSelect={() => setActiveStickerIndex(idx)}
+                    onChange={(next) => updateStickerAt(idx, next)}
+                    onTap={() => {
+                      if (sticker.type === 'text') openEditPostText(idx, sticker);
+                      else if (sticker.type === 'hashtag') openEditPostHashtag(idx, sticker);
+                      else if (sticker.type === 'link') openEditPostLink(idx, sticker);
+                    }}
+                    onDelete={() => deleteStickerAt(idx)}
+                    onDragStateChange={(dragging, overTrash) => { setIsDraggingStickerLayer(dragging); setIsStickerOverTrash(overTrash); }}
+                    minWidthPct={16}
+                    maxWidthPct={90}
+                  >
+                    {sticker.type === 'text' && (
+                      <p
+                        className="font-extrabold text-center whitespace-pre-wrap break-words px-1"
+                        style={{ color: sticker.data?.color, fontSize: `${(sticker.width || 55) * 0.12}cqw`, textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.85)' }}
+                      >
+                        {sticker.data?.text}
+                      </p>
+                    )}
+                    {sticker.type === 'sticker' && sticker.data?.kind === 'emoji' && (
+                      <span className="block text-center leading-none select-none" style={{ fontSize: `${(sticker.width || 26) * 0.22}cqw` }}>
+                        {sticker.data?.content}
+                      </span>
+                    )}
+                    {sticker.type === 'sticker' && sticker.data?.kind === 'image' && (
+                      <img src={sticker.data?.content} alt="" draggable={false} className="w-full h-auto pointer-events-none select-none rounded-lg" />
+                    )}
+                    {sticker.type === 'mention' && (
+                      <div className="w-full flex items-center justify-center">
+                        <div className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap" style={{ fontSize: `${(sticker.width || 42) * 0.1}cqw` }}>
+                          <div className="rounded-full overflow-hidden shrink-0" style={{ width: '1.8em', height: '1.8em' }}>
+                            <AvatarMedia src={sticker.data?.avatar} className="w-full h-full object-cover" />
+                          </div>
+                          <span className="font-semibold text-white" style={{ fontSize: '1em' }}>@{sticker.data?.username}</span>
+                        </div>
+                      </div>
+                    )}
+                    {sticker.type === 'hashtag' && (
+                      <div className="w-full flex items-center justify-center">
+                        <div className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap" style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}>
+                          <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                        </div>
+                      </div>
+                    )}
+                    {sticker.type === 'link' && (
+                      <div className="w-full flex items-center justify-center">
+                        <div className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap" style={{ fontSize: `${(sticker.width || 46) * 0.09}cqw` }}>
+                          <Link2 className="shrink-0" style={{ width: '1.1em', height: '1.1em' }} />
+                          <span className="font-bold" style={{ fontSize: '1em' }}>{sticker.data?.label}</span>
+                        </div>
+                      </div>
+                    )}
+                  </EditableStickerLayer>
+                ))}
+
+                {/* Draggable tagged-people pins */}
+                {activeTaggedPeople.map((person, idx) => (
+                  <EditableStickerLayer
+                    key={`tag-${idx}`}
+                    x={person.x}
+                    y={person.y}
+                    width={12}
+                    rotation={0}
+                    canvasRef={postCanvasRef}
+                    active={activeTagIndex === idx}
+                    onSelect={() => setActiveTagIndex(idx)}
+                    onChange={(next) => updateTaggedPersonAt(idx, { x: next.x, y: next.y })}
+                    onDelete={() => deleteTaggedPersonAt(idx)}
+                    onDragStateChange={(dragging, overTrash) => { setIsDraggingStickerLayer(dragging); setIsStickerOverTrash(overTrash); }}
+                    minWidthPct={12}
+                    maxWidthPct={12}
+                  >
+                    <div className="w-6 h-6 rounded-full border-2 border-white bg-black/60 shadow-lg flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    </div>
+                  </EditableStickerLayer>
+                ))}
+
+                {/* Trash drop zone — shown only while dragging a layer or pin */}
+                {isDraggingStickerLayer && (
+                  <div className={`absolute inset-x-0 bottom-0 h-16 z-40 flex items-end justify-center pb-2 pointer-events-none transition-colors ${isStickerOverTrash ? 'bg-red-500/25' : 'bg-black/40'}`}>
+                    <div className={`p-2 rounded-full transition-transform ${isStickerOverTrash ? 'bg-red-500 scale-110' : 'bg-black/70'}`}>
+                      <Trash2 className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Text composer */}
+                {textEditor !== null && (
+                  <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <button onClick={() => setTextEditor(null)} className="p-1 rounded-full bg-black/60 text-white cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                      {textEditor !== 'new' && (
+                        <button onClick={() => { deleteStickerAt(textEditor as number); setTextEditor(null); }} className="p-1 rounded-full bg-black/60 text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      )}
+                      <button onClick={commitPostText} disabled={!draftPostText.trim()} className="px-2.5 py-0.5 bg-[#00FF66] text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center p-3">
+                      <textarea
+                        autoFocus
+                        value={draftPostText}
+                        onChange={(e) => setDraftPostText(e.target.value)}
+                        placeholder="Type something..."
+                        maxLength={200}
+                        rows={2}
+                        className="w-full bg-transparent text-center font-extrabold text-sm resize-none focus:outline-none placeholder:text-white/40"
+                        style={{ color: draftPostTextColor }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-center gap-1.5 pb-2">
+                      {STICKER_TEXT_COLORS.map((c) => (
+                        <button key={c} type="button" onClick={() => setDraftPostTextColor(c)} className={`w-4 h-4 rounded-full border-2 cursor-pointer ${draftPostTextColor === c ? 'border-white scale-110' : 'border-neutral-600'}`} style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hashtag composer */}
+                {hashtagEditor !== null && (
+                  <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <button onClick={() => setHashtagEditor(null)} className="p-1 rounded-full bg-black/60 text-white cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                      {hashtagEditor !== 'new' && (
+                        <button onClick={() => { deleteStickerAt(hashtagEditor as number); setHashtagEditor(null); }} className="p-1 rounded-full bg-black/60 text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      )}
+                      <button onClick={commitPostHashtag} disabled={!draftPostHashtag.trim()} className="px-2.5 py-0.5 bg-[#00FF66] text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center gap-1 text-lg font-extrabold text-[#00FF66]">
+                      <span>#</span>
+                      <input
+                        autoFocus
+                        value={draftPostHashtag}
+                        onChange={(e) => setDraftPostHashtag(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                        placeholder="hashtag"
+                        maxLength={40}
+                        className="bg-transparent text-center focus:outline-none placeholder:text-[#00FF66]/40 min-w-0"
+                        style={{ width: `${Math.max(3, draftPostHashtag.length || 6)}ch` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Link composer */}
+                {linkEditor !== null && (
+                  <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <button onClick={() => setLinkEditor(null)} className="p-1 rounded-full bg-black/60 text-white cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                      {linkEditor !== 'new' && (
+                        <button onClick={() => { deleteStickerAt(linkEditor as number); setLinkEditor(null); }} className="p-1 rounded-full bg-black/60 text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      )}
+                      <button onClick={commitPostLink} disabled={!draftPostLinkUrl.trim()} className="px-2.5 py-0.5 bg-[#00FF66] text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center gap-2 p-3">
+                      <input autoFocus value={draftPostLinkUrl} onChange={(e) => setDraftPostLinkUrl(e.target.value)} placeholder="https://example.com" className="w-full bg-white/10 text-center text-xs text-white p-1.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none" />
+                      <input value={draftPostLinkLabel} onChange={(e) => setDraftPostLinkLabel(e.target.value)} placeholder="Label (optional)" maxLength={30} className="w-full bg-white/10 text-center text-xs text-white p-1.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Sticker / emoji / GIF picker */}
+                {showPostStickerPicker && (
+                  <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <button onClick={() => setShowPostStickerPicker(false)} className="p-1 rounded-full bg-black/60 text-white cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                      <div className="flex items-center gap-1 bg-black/60 rounded-full p-0.5">
+                        {(['emoji', 'animated', 'gif'] as const).map((tab) => (
+                          <button key={tab} onClick={() => setPostStickerTab(tab)} className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase cursor-pointer ${postStickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300'}`}>
+                            {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : 'GIF'}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="w-5" />
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-2 pb-2">
+                      {postStickerTab === 'emoji' && <EmojiPanel onPick={(emoji) => addEmojiOrImageSticker('emoji', emoji)} />}
+                      {postStickerTab === 'animated' && <AnimatedStickerPanel onPick={(url) => addEmojiOrImageSticker('image', url)} />}
+                      {postStickerTab === 'gif' && <GifPanel curated={[]} onPick={(url) => addEmojiOrImageSticker('image', url)} />}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mention picker */}
+                {showPostMentionPicker && (
+                  <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 px-2 py-1.5">
+                      <button onClick={() => { setShowPostMentionPicker(false); setPostMentionQuery(''); }} className="p-1 rounded-full bg-black/60 text-white cursor-pointer shrink-0"><X className="w-3.5 h-3.5" /></button>
+                      <div className="relative flex-1">
+                        <Search className="w-3 h-3 text-zinc-500 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input autoFocus value={postMentionQuery} onChange={(e) => setPostMentionQuery(e.target.value)} placeholder="Search people" className="w-full bg-zinc-900 text-[11px] text-white pl-6 pr-2 py-1.5 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none" />
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
+                      {postMentionResults.map((u) => (
+                        <button key={u.id} onClick={() => addMentionSticker(u)} className="w-full flex items-center gap-2 p-1.5 rounded-xl hover:bg-zinc-900 cursor-pointer text-left">
+                          <div className="w-6 h-6 rounded-full overflow-hidden shrink-0"><AvatarMedia src={u.avatar} className="w-full h-full object-cover" /></div>
+                          <p className="text-[11px] font-bold text-white truncate">{u.username}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tag People picker */}
+                {showTagPeoplePicker && (
+                  <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5 px-2 py-1.5">
+                      <button onClick={() => { setShowTagPeoplePicker(false); setTagPeopleQuery(''); }} className="p-1 rounded-full bg-black/60 text-white cursor-pointer shrink-0"><X className="w-3.5 h-3.5" /></button>
+                      <div className="relative flex-1">
+                        <Search className="w-3 h-3 text-zinc-500 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input autoFocus value={tagPeopleQuery} onChange={(e) => setTagPeopleQuery(e.target.value)} placeholder="Search people to tag" className="w-full bg-zinc-900 text-[11px] text-white pl-6 pr-2 py-1.5 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none" />
+                      </div>
+                      <span className="text-[10px] text-zinc-400 shrink-0">{activeTaggedPeople.length}/{MAX_TAGGED_PEOPLE}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
+                      {activeTaggedPeople.length >= MAX_TAGGED_PEOPLE && (
+                        <p className="text-center text-[10px] text-amber-400 py-1">You've tagged the max of {MAX_TAGGED_PEOPLE} people.</p>
+                      )}
+                      {tagPeopleResults.map((u) => (
+                        <button key={u.id} onClick={() => addTaggedPerson(u)} disabled={activeTaggedPeople.length >= MAX_TAGGED_PEOPLE} className="w-full flex items-center gap-2 p-1.5 rounded-xl hover:bg-zinc-900 cursor-pointer text-left disabled:opacity-40 disabled:cursor-not-allowed">
+                          <div className="w-6 h-6 rounded-full overflow-hidden shrink-0"><AvatarMedia src={u.avatar} className="w-full h-full object-cover" /></div>
+                          <p className="text-[11px] font-bold text-white truncate">{u.username}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Layer Tools */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <button type="button" onClick={openNewPostText} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 bg-neutral-800 text-gray-300 hover:bg-neutral-700 shrink-0"><Type className="w-3.5 h-3.5" /> Text</button>
+                <button type="button" onClick={() => setShowPostStickerPicker(true)} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 bg-neutral-800 text-gray-300 hover:bg-neutral-700 shrink-0"><StickerIcon className="w-3.5 h-3.5" /> Stickers</button>
+                <button type="button" onClick={() => setShowPostMentionPicker(true)} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 bg-neutral-800 text-gray-300 hover:bg-neutral-700 shrink-0"><AtSign className="w-3.5 h-3.5" /> Mention</button>
+                <button type="button" onClick={openNewPostHashtag} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 bg-neutral-800 text-gray-300 hover:bg-neutral-700 shrink-0"><Hash className="w-3.5 h-3.5" /> Hashtag</button>
+                <button type="button" onClick={openNewPostLink} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 bg-neutral-800 text-gray-300 hover:bg-neutral-700 shrink-0"><Link2 className="w-3.5 h-3.5" /> Link</button>
+                <button type="button" onClick={() => setShowTagPeoplePicker(true)} className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 bg-neutral-800 text-gray-300 hover:bg-neutral-700 shrink-0">
+                  <UserPlus className="w-3.5 h-3.5" /> Tag People {activeTaggedPeople.length > 0 && `(${activeTaggedPeople.length})`}
                 </button>
               </div>
 

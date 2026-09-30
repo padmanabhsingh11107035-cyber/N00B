@@ -350,8 +350,15 @@ export interface PostSlide {
   mediaType: 'image' | 'video' | 'code';
   caption?: string;
   filter?: string;
-  taggedUsers?: string[];
+  // Point-based people tags (up to 68) — a pin at (x, y) on this slide, distinct from the
+  // post-level single "collaborator" tag (Post.taggedUsers). Was previously typed as string[]
+  // but never populated by any UI, so safe to give it the richer shape point-tagging needs.
+  taggedUsers?: { userId: string; username: string; displayName?: string; avatar?: string; x: number; y: number }[];
   productTags?: { id: string; name: string; price: string; link: string }[];
+  // Same draggable/resizable/rotatable layer system as Story.stickers (text, emoji/GIF stickers,
+  // mentions, hashtags, links, location — no per-slide backend for poll/questions, so those two
+  // Story-only sticker types are never created here even though the shared type allows them).
+  stickers?: Story['stickers'];
 }
 
 export interface PostComment {

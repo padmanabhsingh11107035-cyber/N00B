@@ -95,6 +95,7 @@ export {
   uploadMusicTrack,
   toggleLikeMusicTrack,
   renameMusicTrack,
+  deleteMusicTrack,
   fetchMyStickers,
   uploadCustomSticker,
   deleteCustomSticker,
@@ -259,7 +260,8 @@ export {
   subscribeToLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomParticipants,
   connectLiveLoungeWhiteboard,
-  connectLiveLoungeScreenShare
+  connectLiveLoungeScreenShare,
+  connectLiveLoungeControls
 } from './supabaseApi';
 
 export type {

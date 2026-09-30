@@ -1303,6 +1303,30 @@ export async function renameMusicTrack(trackId: string, title: string): Promise<
   }
 }
 
+// Admin-only, permanent: removes the row (delete_music_track, which also verifies admin rights
+// server-side — the client-side check gating the button is not real security on its own) and
+// then the actual audio/cover files from storage. The RPC hands back which storage keys to
+// remove; a track uploaded without its own cover just falls back to an external placeholder URL
+// (never a real bucket key), so that's skipped rather than mistakenly asked to delete someone
+// else's URL. The row is already gone by the time storage cleanup runs, so a storage failure
+// here is surfaced but doesn't leave the track resurrected — same trade-off already accepted
+// everywhere else in this app that deletes content (nothing else cleans up storage at all today).
+export async function deleteMusicTrack(trackId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await rpc<{ success: boolean; audioUrl?: string; coverUrl?: string }>('delete_music_track', { p_track: trackId });
+    const keys = [toStoredMedia(res.audioUrl), toStoredMedia(res.coverUrl)].filter(
+      (k) => k && !/^https?:\/\//i.test(k)
+    ) as string[];
+    if (keys.length > 0) {
+      const { error } = await supabase.storage.from(MEDIA_BUCKET).remove(keys);
+      if (error) return { success: true, error: 'Track deleted, but its file could not be cleared from storage.' };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not delete this track.') };
+  }
+}
+
 // ----------------------------------------------------------------------------- custom stickers
 
 export interface MyCustomSticker {
@@ -3522,6 +3546,27 @@ export function connectLiveLoungeWhiteboard(
 // itself has no "this track is a screen share" flag a remote viewer can read, so this is announced
 // explicitly. A fresh joiner sends 'query' once on connecting and the current sharer (if any) answers
 // with their own 'share' broadcast, so late joiners still see it full-screen without polling.
+// Two lightweight, ephemeral host/participant signals sharing one channel: the host muting someone
+// (or everyone) and a participant raising their hand. Neither is persisted — same trust model as the
+// whiteboard/screen-share broadcasts above (no server-side enforcement; the mute button is only
+// exposed to the host in the UI, not blocked at the channel level).
+export function connectLiveLoungeControls(
+  roomId: string,
+  onMute: (payload: { targetUid: number | 'all' }) => void,
+  onHand: (payload: { uid: number; raised: boolean }) => void
+): { mute: (targetUid: number | 'all') => void; hand: (uid: number, raised: boolean) => void; disconnect: () => void } {
+  const channel = supabase
+    .channel(`lounge-controls-${roomId}`, { config: { broadcast: { self: false } } })
+    .on('broadcast', { event: 'mute' }, ({ payload }) => onMute(payload))
+    .on('broadcast', { event: 'hand' }, ({ payload }) => onHand(payload))
+    .subscribe();
+  return {
+    mute: (targetUid) => { void channel.send({ type: 'broadcast', event: 'mute', payload: { targetUid } }); },
+    hand: (uid, raised) => { void channel.send({ type: 'broadcast', event: 'hand', payload: { uid, raised } }); },
+    disconnect: () => { supabase.removeChannel(channel); }
+  };
+}
+
 export function connectLiveLoungeScreenShare(
   roomId: string,
   onShare: (payload: { uid: number; sharing: boolean }) => void,

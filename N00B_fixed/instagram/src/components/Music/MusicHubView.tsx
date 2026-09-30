@@ -16,13 +16,15 @@ import { Heart,
   Check,
   Clock,
   Pencil,
-  X as XIcon
+  X as XIcon,
+  Trash2
 } from 'lucide-react';
 import { MusicTrack, User } from '../../types';
-import { uploadMusicTrack, uploadMediaFile, renameMusicTrack } from '../../services/api';
+import { uploadMusicTrack, uploadMediaFile, renameMusicTrack, deleteMusicTrack } from '../../services/api';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { getAudioDuration } from '../../utils/mediaCompressor';
 import { isVideoFile, extractAudioFromVideoFile, MAX_MUSIC_UPLOAD_SECONDS } from '../../utils/extractAudioFromVideo';
+import { isMainAdmin } from '../../adminAccess';
 import confetti from 'canvas-confetti';
 
 interface MusicHubViewProps {
@@ -41,7 +43,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     toggleMute,
     refreshTracks,
     seekTo,
-    toggleLike
+    toggleLike,
+    pauseTrack
   } = useMusicPlayer();
 
   useEffect(() => {
@@ -83,6 +86,32 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     setEditingTrackId(null);
     setEditTitleDraft('');
     setRenameError('');
+  };
+
+  // Admin-only, permanent delete — removes the row and the actual audio/cover files from
+  // storage (see deleteMusicTrack). Gated on isMainAdmin specifically, matching the server-side
+  // check the RPC itself enforces, so the button never offers something the backend will refuse.
+  const isMasterAdmin = isMainAdmin(currentUser);
+  const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+
+  const confirmDeleteTrack = async (track: MusicTrack) => {
+    setDeletingTrackId(track.id);
+    setDeleteError('');
+    try {
+      const res = await deleteMusicTrack(track.id);
+      if (res.success) {
+        if (currentPlayingTrack?.id === track.id) pauseTrack();
+        await refreshTracks();
+        if (res.error) setDeleteError(res.error);
+      } else {
+        setDeleteError(res.error || 'Could not delete this track.');
+      }
+    } catch {
+      setDeleteError('Could not delete this track.');
+    } finally {
+      setDeletingTrackId(null);
+    }
   };
 
   const submitRename = async (trackId: string) => {
@@ -456,11 +485,30 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                     <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                   )}
                 </button>
+                {isMasterAdmin && (
+                  <button
+                    type="button"
+                    disabled={deletingTrackId === track.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Permanently delete "${track.title}"? This removes it from NOOB's servers for everyone and cannot be undone.`)) {
+                        confirmDeleteTrack(track);
+                      }
+                    }}
+                    className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Permanently delete this track (admin)"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+      )}
+      {isMasterAdmin && deleteError && (
+        <p className="text-[11px] text-rose-400 text-center mt-2">{deleteError}</p>
       )}
 
       {/* Upload Track Modal */}

@@ -99,15 +99,20 @@ commercial smart speakers.
 | 3 | **MAX98357A** I2S 3 W class-D amplifier module | 1 | Drives the speaker | 250 – 350 |
 | 4 | Speaker **4 Ω or 8 Ω, 3 W** (40–50 mm) | 1 | Voice output | 80 – 150 |
 | 5 | **SSD1306 0.96" OLED**, 128×64, **I2C, 4-pin** | 1 | Status display + pairing code | 200 – 250 |
-| 6 | Tactile push button (6 mm or 12 mm) | 1 | Push-to-talk | 10 |
-| 7 | 470 µF – 1000 µF, 10 V (or higher) electrolytic capacitor | 1 | Stops voltage dips when the speaker is loud | 10 |
-| 8 | 830-point breadboard | 2 | The ESP32-S3 board is wide — place it across two | 160 |
-| 9 | Jumper wires (male-to-male) | 30 | Connections | 100 |
-| 10 | USB-C **data** cable | 1 | Programming + power | 100 |
-| 11 | 5 V / 2 A USB charger or power bank | 1 | Power | — |
+| 6 | Tactile push button (6 mm or 12 mm) | 1 | Push-to-talk (uses the ESP32's internal pull-up — no resistor needed) | 10 |
+| 7 | 830-point breadboard | 2 | The ESP32-S3 board is wide — place it across two | 160 |
+| 8 | Jumper wires (male-to-male) | 30 | Connections | 100 |
+| 9 | USB-C **data** cable | 1 | Programming + power | 100 |
+| 10 | 5 V / 2 A USB charger or power bank | 1 | Power | — |
 
-Approximate total: **₹2,000 – 2,500**. Tools: soldering iron + solder (the mic and amplifier modules usually
+Approximate total: **₹1,800 – 2,300**. Tools: soldering iron + solder (the mic and amplifier modules usually
 come with loose header pins that must be soldered).
+
+> **No capacitor, no resistor by design.** The push button uses the ESP32's own internal pull-up, so it was
+> never wired with a resistor. The smoothing capacitor across the amplifier's power pins (which older builds
+> used to stop voltage dips when the speaker gets loud) has been dropped too — use a solid **5 V / 2 A or
+> better** supply with short, thick wiring instead. If the board still resets or the audio distorts at high
+> volume on a weaker supply, lower `VOLUME_PERCENT` in `noob_esp32.ino` (line ~56, default 60).
 
 > **Buying tips.** The ESP32 board **must say N16R8 or N8R8** (the "R8" = 8 MB PSRAM, needed to hold the recording).
 > Buy the **I2C** OLED (4 pins: GND, VCC, SCL, SDA), not the 7-pin SPI version.
@@ -131,7 +136,6 @@ come with loose header pins that must be soldered).
 | | LRC | **GPIO 16** | purple |
 | | GAIN, SD | not connected | — |
 | | + / − (speaker terminals) | Speaker wires | grey |
-| C1 470 µF capacitor | + (long leg) → amplifier VIN, − (striped side) → GND | | |
 | SSD1306 OLED | VCC | **3V3** | orange |
 | | GND | GND | black |
 | | SDA | **GPIO 8** | green |
@@ -142,7 +146,6 @@ come with loose header pins that must be soldered).
 **Safety checks before powering on**
 
 - The INMP441 and the OLED are **3.3 V parts** — never connect them to 5V.
-- The capacitor is polarised: the stripe side goes to **GND**.
 - Use the pin **names printed on your board** (e.g. "5", "15", "5V"), not the position — some clone boards shift pins.
 - All GND pins are connected together.
 
@@ -366,7 +369,7 @@ NOOB is an **information** assistant, not a doctor. Its instructions make it:
 | App microphone does not work | Allow the microphone for the NOOB App window (click the lock icon in the address bar). |
 | NOOB says it heard nothing (device) | Speak closer; raise mic gain: `MIC_GAIN_SHIFT` 12 → 11. Check mic wiring (L/R to GND). |
 | NOOB can't reach its brain | Check the internet and the Gemini key in Settings, or install the offline brain (5.1 step 6). |
-| Sound too loud / distorted / board resets | Lower `VOLUME_PERCENT`, check capacitor C1, use a 2 A supply. |
+| Sound too loud / distorted / board resets | Lower `VOLUME_PERCENT`, use a 5V/2A+ supply with short wires (no capacitor in this build). |
 | No sound | Check DIN/BCLK/LRC wiring and speaker wires; amplifier VIN must be on 5V. |
 | Upload fails | Hold **BOOT**, press **RST**, release BOOT, then upload again. Use a data (not charge-only) cable. |
 

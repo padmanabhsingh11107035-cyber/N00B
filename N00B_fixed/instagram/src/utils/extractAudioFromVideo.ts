@@ -9,18 +9,47 @@ import type { Mp3Encoder as Mp3EncoderType } from 'lamejs';
 
 export const MAX_MUSIC_UPLOAD_SECONDS = 20 * 60;
 
-// lamejs 1.2.1's npm entry point (src/js/index.js) is broken: Lame.js, Encoder.js and
-// PsyModel.js all reference the MPEGMode module without requiring it, so importing the
-// package normally throws "Can't find variable: MPEGMode" (Safari) / "MPEGMode is not
-// defined" (Chrome) the moment encoding starts. Its lame.all.js bundle concatenates every
-// file into one shared function scope instead — the classic <script>-tag distribution,
-// where that missing reference resolves fine — so we run that source directly.
+// lamejs 1.2.1's npm entry point (src/js/index.js) is broken: Lame.js, Encoder.js, PsyModel.js,
+// BitStream.js, Presets.js, Quantize.js, QuantizePVT.js and VBRTag.js all reference other lamejs
+// modules (MPEGMode, GainAnalysis, Lame itself, ATH, L3Side, ...) as bare globals without
+// requiring them — the classic <script>-tag distribution's file-concatenation-into-one-scope
+// pattern, broken apart by any real module bundler. Patching each file's missing require is not
+// a safe fix on its own either: Lame.js/BitStream.js/Presets.js form a real circular dependency,
+// and a naive top-level `require('./Lame.js')` inside BitStream.js would silently capture Node's
+// placeholder {} mid-circular-require instead of the real module — no crash, just a corrupt
+// encode (confirmed while investigating this: `new_byte(undefined)` from a stale
+// `Lame.LAME_MAXMP3BUFFER` read). Correctly untangling that is real surgery across ~10 files, far
+// riskier for a media pipeline than the alternative below.
+//
+// So instead we run the library's own lame.all.js bundle — correctly ordered by its author,
+// battle-tested in production elsewhere — via a blob-URL <script src> (a real external script
+// load, same as any other <script src="...">) rather than eval/new Function(). This needs `blob:`
+// in the CSP's script-src (see public/_headers) instead of the far broader 'unsafe-eval', and
+// mirrors how img-src/media-src in that same policy already trust blob: for this app's other
+// client-generated media.
 let lamejsPromise: Promise<{ Mp3Encoder: typeof Mp3EncoderType }> | null = null;
 function loadLamejs(): Promise<{ Mp3Encoder: typeof Mp3EncoderType }> {
   if (!lamejsPromise) {
     lamejsPromise = import('lamejs/lame.all.js?raw').then(({ default: source }) => {
-      const factory = new Function(`${source}\nreturn lamejs;`);
-      return factory() as { Mp3Encoder: typeof Mp3EncoderType };
+      return new Promise((resolve, reject) => {
+        const blob = new Blob([source], { type: 'text/javascript' });
+        const url = URL.createObjectURL(blob);
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = () => {
+          URL.revokeObjectURL(url);
+          script.remove();
+          const lamejs = (window as any).lamejs;
+          if (lamejs?.Mp3Encoder) resolve(lamejs as { Mp3Encoder: typeof Mp3EncoderType });
+          else reject(new Error('lamejs did not load correctly.'));
+        };
+        script.onerror = () => {
+          URL.revokeObjectURL(url);
+          script.remove();
+          reject(new Error('Could not load the MP3 encoder.'));
+        };
+        document.head.appendChild(script);
+      });
     });
   }
   return lamejsPromise;

@@ -145,6 +145,9 @@ export default function App() {
   const [stories, setStories] = useState<Story[]>([]);
   const [reels, setReels] = useState<Reel[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+  // A hashtag story sticker tap sets this, then switches to Explore — consumed once and cleared,
+  // mirroring the existing autoOpenJoinTeam "arrive with a pending action" pattern below.
+  const [pendingExploreSearch, setPendingExploreSearch] = useState<string | null>(null);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsState>({
@@ -1170,6 +1173,8 @@ export default function App() {
             autoOpenJoinTeam={pendingJoinTeam}
             onAutoOpenJoinTeamHandled={() => setPendingJoinTeam(false)}
             joinTeamOpen={platformSettings?.joinTeamOpen !== false}
+            initialSearchQuery={pendingExploreSearch || undefined}
+            onInitialSearchQueryHandled={() => setPendingExploreSearch(null)}
           />
         )}
 
@@ -1423,6 +1428,11 @@ export default function App() {
           onAddComment={handleAddStoryComment}
           onDeleteStory={handleDeleteStory}
           onNavigateToProfile={handleNavigateToUserProfile}
+          onNavigateToHashtag={(tag) => {
+            setActiveStoryViewerIndex(null);
+            setPendingExploreSearch(tag);
+            setActiveTab('explore');
+          }}
         />
       )}
 
@@ -1431,6 +1441,7 @@ export default function App() {
         <CreateStoryModal
           onClose={() => setShowCreateStoryModal(false)}
           onSubmitStory={handleCreateStory}
+          allUsers={registeredUsers}
         />
       )}
 

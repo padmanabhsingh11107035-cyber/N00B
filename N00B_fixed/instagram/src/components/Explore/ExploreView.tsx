@@ -63,6 +63,10 @@ interface ExploreViewProps {
   onAutoOpenJoinTeamHandled?: () => void;
   // Admin Control Panel → Platform: "join the NOOB team" applications open?
   joinTeamOpen?: boolean;
+  // A Story hashtag sticker's tap-through arrives here — prefills the search and jumps to the
+  // Posts tab, mirroring autoOpenJoinTeam's "arrive with a pending action" pattern above.
+  initialSearchQuery?: string;
+  onInitialSearchQueryHandled?: () => void;
 }
 
 const CATEGORIES = ['All', 'Humor', 'Gaming', 'Music', 'Art & Design', 'Vibes', 'Tech', 'Lifestyle'];
@@ -79,7 +83,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onToggleFollowUser,
   autoOpenJoinTeam,
   onAutoOpenJoinTeamHandled,
-  joinTeamOpen = true
+  joinTeamOpen = true,
+  initialSearchQuery,
+  onInitialSearchQueryHandled
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reels'>('users');
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,6 +97,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     onAutoOpenJoinTeamHandled?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenJoinTeam]);
+
+  useEffect(() => {
+    if (!initialSearchQuery) return;
+    setSearchQuery(initialSearchQuery);
+    setActiveTab('posts');
+    onInitialSearchQueryHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSearchQuery]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [usersList, setUsersList] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);

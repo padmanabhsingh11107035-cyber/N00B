@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
-import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2 } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll } from '../../services/api';
 import type { StoryPollResult } from '../../services/api';
@@ -21,6 +21,9 @@ interface StoryViewerModalProps {
   onAddComment: (storyId: string, text: string) => void;
   onDeleteStory?: (storyId: string) => void;
   onNavigateToProfile?: (user: User) => void;
+  // A hashtag sticker's tap-through — no dedicated hashtag page exists yet, so the caller is
+  // expected to close this viewer and open Explore pre-filtered by the tag.
+  onNavigateToHashtag?: (tag: string) => void;
   // True when playing back a Highlight instead of a live 24h story: same viewer, same sticker
   // rendering ("story and highlight are the same thing" per the 22 Sep redesign), but no view
   // recording, "seen by", comments or delete menu — those all need a live `stories` row, which a
@@ -40,6 +43,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   onAddComment,
   onDeleteStory,
   onNavigateToProfile,
+  onNavigateToHashtag,
   isHighlight = false,
   onEditHighlight
 }) => {
@@ -486,6 +490,58 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   ) : (
                     <img src={sticker.data?.content} alt="" className="w-full h-auto rounded-lg" />
                   )}
+                </div>
+              );
+            }
+
+            if (sticker.type === 'mention') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); goToProfile(sticker.data?.userId); }}
+                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap cursor-pointer"
+                      style={{ fontSize: `${(sticker.width || 42) * 0.1}cqw` }}
+                    >
+                      <div className="rounded-full overflow-hidden shrink-0" style={{ width: '1.8em', height: '1.8em' }}>
+                        <AvatarMedia src={sticker.data?.avatar} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="font-semibold text-white" style={{ fontSize: '1em' }}>@{sticker.data?.username}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            if (sticker.type === 'hashtag') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onNavigateToHashtag?.(sticker.data?.tag); }}
+                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                      style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}
+                    >
+                      <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            if (sticker.type === 'link') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); window.open(sticker.data?.url, '_blank', 'noopener,noreferrer'); }}
+                      className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                      style={{ fontSize: `${(sticker.width || 46) * 0.09}cqw` }}
+                    >
+                      <Link2 className="shrink-0" style={{ width: '1.1em', height: '1.1em' }} />
+                      <span className="font-bold" style={{ fontSize: '1em' }}>{sticker.data?.label}</span>
+                    </button>
+                  </div>
                 </div>
               );
             }

@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon } from 'lucide-react';
-import { Story } from '../../types';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search } from 'lucide-react';
+import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
+import { AvatarMedia } from '../Common/AvatarMedia';
 
 const TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
 
@@ -28,11 +29,43 @@ interface StickerLayer {
   rotation: number;
 }
 
+interface MentionLayer {
+  id: string;
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
+
+interface HashtagLayer {
+  id: string;
+  tag: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
+
+interface LinkLayer {
+  id: string;
+  url: string;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
+
 interface CreateStoryModalProps {
   onClose: () => void;
   // An array because a poll turns into its own second story "page" (a plain colour
   // background) that must be created right after the main one — see handlePublish.
   onSubmitStory: (storyData: Partial<Story>[]) => void;
+  allUsers?: User[];
 }
 
 const POLL_BG_COLORS = ['#00FF66', '#7C3AED', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899', '#000000', '#FFFFFF'];
@@ -41,7 +74,7 @@ const MIN_POLL_OPTIONS = 2;
 const MAX_POLL_OPTIONS = 8;
 const MAX_OPTION_LENGTH = 40;
 
-export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory }) => {
+export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory, allUsers = [] }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedImageObjectKey, setSelectedImageObjectKey] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -104,6 +137,132 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
 
   const deleteStickerLayer = (id: string) => {
     setStickerLayers((prev) => prev.filter((s) => s.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
+
+  // Mention layers — search the app's real users and drop an @username pill.
+  const [mentionLayers, setMentionLayers] = useState<MentionLayer[]>([]);
+  const [showMentionPicker, setShowMentionPicker] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const mentionResults = allUsers
+    .filter((u) => {
+      const q = mentionQuery.trim().toLowerCase();
+      if (!q) return true;
+      return u.username.toLowerCase().includes(q) || u.displayName?.toLowerCase().includes(q);
+    })
+    .slice(0, 30);
+
+  const addMentionLayer = (user: User) => {
+    const id = `mention-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setMentionLayers((prev) => [
+      ...prev,
+      {
+        id,
+        userId: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        x: 50,
+        y: 45 + Math.min(prev.length * 6, 20),
+        width: 42,
+        rotation: 0
+      }
+    ]);
+    setActiveLayerId(id);
+    setShowMentionPicker(false);
+    setMentionQuery('');
+  };
+
+  const deleteMentionLayer = (id: string) => {
+    setMentionLayers((prev) => prev.filter((m) => m.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
+
+  // Hashtag layers.
+  const [hashtagLayers, setHashtagLayers] = useState<HashtagLayer[]>([]);
+  const [hashtagEditorId, setHashtagEditorId] = useState<string | 'new' | null>(null);
+  const [draftHashtag, setDraftHashtag] = useState('');
+
+  const openNewHashtagLayer = () => {
+    setDraftHashtag('');
+    setHashtagEditorId('new');
+  };
+
+  const openEditHashtagLayer = (layer: HashtagLayer) => {
+    setDraftHashtag(layer.tag);
+    setHashtagEditorId(layer.id);
+  };
+
+  const commitHashtagEditor = () => {
+    const tag = draftHashtag.trim().replace(/^#+/, '').replace(/\s+/g, '');
+    if (!tag) {
+      setHashtagEditorId(null);
+      return;
+    }
+    if (hashtagEditorId === 'new') {
+      const id = `hashtag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setHashtagLayers((prev) => [
+        ...prev,
+        { id, tag, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 40, rotation: 0 }
+      ]);
+      setActiveLayerId(id);
+    } else if (hashtagEditorId) {
+      setHashtagLayers((prev) => prev.map((h) => (h.id === hashtagEditorId ? { ...h, tag } : h)));
+      setActiveLayerId(hashtagEditorId);
+    }
+    setHashtagEditorId(null);
+  };
+
+  const deleteHashtagLayer = (id: string) => {
+    setHashtagLayers((prev) => prev.filter((h) => h.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
+
+  // Link layers.
+  const [linkLayers, setLinkLayers] = useState<LinkLayer[]>([]);
+  const [linkEditorId, setLinkEditorId] = useState<string | 'new' | null>(null);
+  const [draftLinkUrl, setDraftLinkUrl] = useState('');
+  const [draftLinkLabel, setDraftLinkLabel] = useState('');
+
+  const openNewLinkLayer = () => {
+    setDraftLinkUrl('');
+    setDraftLinkLabel('');
+    setLinkEditorId('new');
+  };
+
+  const openEditLinkLayer = (layer: LinkLayer) => {
+    setDraftLinkUrl(layer.url);
+    setDraftLinkLabel(layer.label);
+    setLinkEditorId(layer.id);
+  };
+
+  const commitLinkEditor = () => {
+    let url = draftLinkUrl.trim();
+    if (!url) {
+      setLinkEditorId(null);
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    let label = draftLinkLabel.trim();
+    if (!label) {
+      try { label = new URL(url).hostname.replace(/^www\./, ''); } catch { label = 'Visit link'; }
+    }
+    if (linkEditorId === 'new') {
+      const id = `link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setLinkLayers((prev) => [
+        ...prev,
+        { id, url, label, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 46, rotation: 0 }
+      ]);
+      setActiveLayerId(id);
+    } else if (linkEditorId) {
+      setLinkLayers((prev) => prev.map((l) => (l.id === linkEditorId ? { ...l, url, label } : l)));
+      setActiveLayerId(linkEditorId);
+    }
+    setLinkEditorId(null);
+  };
+
+  const deleteLinkLayer = (id: string) => {
+    setLinkLayers((prev) => prev.filter((l) => l.id !== id));
     setActiveLayerId((cur) => (cur === id ? null : cur));
   };
 
@@ -222,6 +381,36 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         mainStickers.push({
           type: 'sticker',
           data: { kind: layer.kind, content: layer.content },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
+      mentionLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'mention',
+          data: { userId: layer.userId, username: layer.username, displayName: layer.displayName, avatar: layer.avatar },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
+      hashtagLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'hashtag',
+          data: { tag: layer.tag },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
+      linkLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'link',
+          data: { url: layer.url, label: layer.label },
           x: layer.x,
           y: layer.y,
           width: layer.width,
@@ -492,6 +681,114 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </EditableStickerLayer>
             ))}
 
+          {/* Draggable / resizable / rotatable mention layers */}
+          {selectedImage &&
+            mentionLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setMentionLayers((prev) => prev.map((m) => (m.id === layer.id ? { ...m, ...next } : m)))
+                }
+                onDelete={() => deleteMentionLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+                minWidthPct={20}
+                maxWidthPct={80}
+              >
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap"
+                    style={{ fontSize: `${layer.width * 0.1}cqw` }}
+                  >
+                    <div className="rounded-full overflow-hidden shrink-0" style={{ width: '1.8em', height: '1.8em' }}>
+                      <AvatarMedia src={layer.avatar} className="w-full h-full object-cover" />
+                    </div>
+                    <span className="font-semibold text-white" style={{ fontSize: '1em' }}>@{layer.username}</span>
+                  </div>
+                </div>
+              </EditableStickerLayer>
+            ))}
+
+          {/* Draggable / resizable / rotatable hashtag layers */}
+          {selectedImage &&
+            hashtagLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setHashtagLayers((prev) => prev.map((h) => (h.id === layer.id ? { ...h, ...next } : h)))
+                }
+                onTap={() => openEditHashtagLayer(layer)}
+                onDelete={() => deleteHashtagLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+                minWidthPct={18}
+                maxWidthPct={80}
+              >
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                    style={{ fontSize: `${layer.width * 0.1}cqw` }}
+                  >
+                    <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{layer.tag}</span>
+                  </div>
+                </div>
+              </EditableStickerLayer>
+            ))}
+
+          {/* Draggable / resizable / rotatable link layers */}
+          {selectedImage &&
+            linkLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setLinkLayers((prev) => prev.map((l) => (l.id === layer.id ? { ...l, ...next } : l)))
+                }
+                onTap={() => openEditLinkLayer(layer)}
+                onDelete={() => deleteLinkLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+                minWidthPct={20}
+                maxWidthPct={85}
+              >
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                    style={{ fontSize: `${layer.width * 0.09}cqw` }}
+                  >
+                    <Link2 className="shrink-0" style={{ width: '1.1em', height: '1.1em' }} />
+                    <span className="font-bold" style={{ fontSize: '1em' }}>{layer.label}</span>
+                  </div>
+                </div>
+              </EditableStickerLayer>
+            ))}
+
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
             <div
@@ -608,6 +905,149 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </div>
             </div>
           )}
+
+          {/* Mention picker */}
+          {showMentionPicker && (
+            <div
+              className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <button
+                  onClick={() => { setShowMentionPicker(false); setMentionQuery(''); }}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    autoFocus
+                    value={mentionQuery}
+                    onChange={(e) => setMentionQuery(e.target.value)}
+                    placeholder="Search people to mention"
+                    className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none placeholder:text-zinc-600"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
+                {mentionResults.length === 0 && (
+                  <p className="text-center text-[11px] text-zinc-500 py-6">No one found.</p>
+                )}
+                {mentionResults.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => addMentionLayer(u)}
+                    className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-zinc-900 cursor-pointer text-left"
+                  >
+                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                      <AvatarMedia src={u.avatar} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{u.username}</p>
+                      {u.displayName && <p className="text-[10px] text-zinc-400 truncate">{u.displayName}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hashtag composer */}
+          {hashtagEditorId !== null && (
+            <div
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setHashtagEditorId(null)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                {hashtagEditorId !== 'new' && (
+                  <button
+                    onClick={() => { deleteHashtagLayer(hashtagEditorId); setHashtagEditorId(null); }}
+                    className="p-1.5 rounded-full bg-black/60 text-red-400 cursor-pointer"
+                    title="Delete hashtag"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={commitHashtagEditor}
+                  disabled={!draftHashtag.trim()}
+                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-6">
+                <div className="w-full flex items-center justify-center gap-1 text-2xl font-extrabold text-[#00FF66]">
+                  <span>#</span>
+                  <input
+                    autoFocus
+                    value={draftHashtag}
+                    onChange={(e) => setDraftHashtag(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                    placeholder="hashtag"
+                    maxLength={40}
+                    className="bg-transparent text-center focus:outline-none placeholder:text-[#00FF66]/40 min-w-0"
+                    style={{ width: `${Math.max(3, draftHashtag.length || 8)}ch` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Link composer */}
+          {linkEditorId !== null && (
+            <div
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setLinkEditorId(null)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                {linkEditorId !== 'new' && (
+                  <button
+                    onClick={() => { deleteLinkLayer(linkEditorId); setLinkEditorId(null); }}
+                    className="p-1.5 rounded-full bg-black/60 text-red-400 cursor-pointer"
+                    title="Delete link"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={commitLinkEditor}
+                  disabled={!draftLinkUrl.trim()}
+                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
+                <input
+                  autoFocus
+                  value={draftLinkUrl}
+                  onChange={(e) => setDraftLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none placeholder:text-white/40"
+                />
+                <input
+                  value={draftLinkLabel}
+                  onChange={(e) => setDraftLinkLabel(e.target.value)}
+                  placeholder="Label shown on the sticker (optional)"
+                  maxLength={30}
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none placeholder:text-white/40"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -631,6 +1071,24 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <StickerIcon className="w-3.5 h-3.5" /> Stickers
+              </button>
+              <button
+                onClick={() => setShowMentionPicker(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <AtSign className="w-3.5 h-3.5" /> Mention
+              </button>
+              <button
+                onClick={openNewHashtagLayer}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <Hash className="w-3.5 h-3.5" /> Hashtag
+              </button>
+              <button
+                onClick={openNewLinkLayer}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <Link2 className="w-3.5 h-3.5" /> Link
               </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}

@@ -436,10 +436,12 @@ export interface Story {
   likesCount?: number;
   filter?: string;
   stickers?: {
-    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music';
+    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text';
     data: any;
-    x: number; // percentage
+    x: number; // percentage, center-anchored
     y: number;
+    width?: number; // percentage of canvas width — layer size, used by draggable/resizable stickers
+    rotation?: number; // degrees
   }[];
   comments?: {
     id: string;

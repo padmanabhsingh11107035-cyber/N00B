@@ -1,7 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type } from 'lucide-react';
 import { Story } from '../../types';
 import { uploadMediaFile } from '../../services/api';
+import { EditableStickerLayer } from './EditableStickerLayer';
+
+const TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
+
+interface TextLayer {
+  id: string;
+  text: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
 
 interface CreateStoryModalProps {
   onClose: () => void;
@@ -38,6 +51,55 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [locationTag, setLocationTag] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Draggable/resizable/rotatable text layers placed on the photo (the first of the
+  // "layered editor" sticker types — Stickers/Draw/Link/Mention/etc. build on the same
+  // EditableStickerLayer engine in later passes).
+  const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
+  const [activeLayerId, setActiveLayerId] = useState<string | null>(null);
+  const [isDraggingLayer, setIsDraggingLayer] = useState(false);
+  const [isOverTrash, setIsOverTrash] = useState(false);
+  const [textEditorId, setTextEditorId] = useState<string | 'new' | null>(null);
+  const [draftText, setDraftText] = useState('');
+  const [draftColor, setDraftColor] = useState(TEXT_COLORS[0]);
+
+  const openNewTextLayer = () => {
+    setDraftText('');
+    setDraftColor(TEXT_COLORS[0]);
+    setTextEditorId('new');
+  };
+
+  const openEditTextLayer = (layer: TextLayer) => {
+    setDraftText(layer.text);
+    setDraftColor(layer.color);
+    setTextEditorId(layer.id);
+  };
+
+  const commitTextEditor = () => {
+    const text = draftText.trim();
+    if (!text) {
+      setTextEditorId(null);
+      return;
+    }
+    if (textEditorId === 'new') {
+      const id = `text-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setTextLayers((prev) => [
+        ...prev,
+        { id, text, color: draftColor, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 60, rotation: 0 }
+      ]);
+      setActiveLayerId(id);
+    } else if (textEditorId) {
+      setTextLayers((prev) => prev.map((l) => (l.id === textEditorId ? { ...l, text, color: draftColor } : l)));
+      setActiveLayerId(textEditorId);
+    }
+    setTextEditorId(null);
+  };
+
+  const deleteTextLayer = (id: string) => {
+    setTextLayers((prev) => prev.filter((l) => l.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
 
   const handlePickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,6 +163,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           y: 75
         });
       }
+      textLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'text',
+          data: { text: layer.text, color: layer.color },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
 
       const mainStory: Partial<Story> = {
         mediaUrl: selectedImageObjectKey || selectedImage,
@@ -179,7 +251,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         </div>
 
         {/* Story Preview Area */}
-        <div className="relative w-full aspect-[9/14] bg-black overflow-hidden flex items-center justify-center">
+        <div
+          ref={canvasRef}
+          className="relative w-full aspect-[9/14] bg-black overflow-hidden flex items-center justify-center"
+          style={{ containerType: 'inline-size' }}
+          onPointerDown={() => setActiveLayerId(null)}
+        >
           {selectedImage ? (
             <img
               src={selectedImage}
@@ -236,6 +313,120 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               <ImagePlus className="w-4 h-4" />
             </button>
           )}
+
+          {/* Draggable / resizable / rotatable text layers */}
+          {selectedImage &&
+            textLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setTextLayers((prev) => prev.map((l) => (l.id === layer.id ? { ...l, ...next } : l)))
+                }
+                onTap={() => openEditTextLayer(layer)}
+                onDelete={() => deleteTextLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+              >
+                <p
+                  className="font-extrabold text-center whitespace-pre-wrap break-words px-1"
+                  style={{
+                    color: layer.color,
+                    fontSize: `${layer.width * 0.12}cqw`,
+                    textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.85)'
+                  }}
+                >
+                  {layer.text}
+                </p>
+              </EditableStickerLayer>
+            ))}
+
+          {/* Trash drop zone — shown only while dragging a layer */}
+          {isDraggingLayer && (
+            <div
+              className={`absolute inset-x-0 bottom-0 h-24 z-40 flex items-end justify-center pb-4 pointer-events-none transition-colors ${
+                isOverTrash ? 'bg-red-500/25' : 'bg-black/40'
+              }`}
+            >
+              <div
+                className={`p-3 rounded-full transition-transform ${
+                  isOverTrash ? 'bg-red-500 scale-110' : 'bg-black/70'
+                }`}
+              >
+                <Trash2 className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          )}
+
+          {/* Full-screen text composer */}
+          {textEditorId !== null && (
+            <div
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setTextEditorId(null)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                {textEditorId !== 'new' && (
+                  <button
+                    onClick={() => {
+                      deleteTextLayer(textEditorId);
+                      setTextEditorId(null);
+                    }}
+                    className="p-1.5 rounded-full bg-black/60 text-red-400 cursor-pointer"
+                    title="Delete text"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={commitTextEditor}
+                  disabled={!draftText.trim()}
+                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex-1 flex items-center justify-center p-6">
+                <textarea
+                  autoFocus
+                  value={draftText}
+                  onChange={(e) => setDraftText(e.target.value)}
+                  placeholder="Type something..."
+                  maxLength={200}
+                  rows={3}
+                  className="w-full bg-transparent text-center font-extrabold text-2xl resize-none focus:outline-none placeholder:text-white/40"
+                  style={{ color: draftColor, textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}
+                />
+              </div>
+              <div className="flex items-center justify-center gap-2.5 pb-6">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setDraftColor(c)}
+                    title={c}
+                    className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
+                      draftColor === c ? 'border-white scale-110' : 'border-neutral-600 hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -248,6 +439,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             )}
             {/* Quick Interactive Sticker Toggles */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button
+                onClick={openNewTextLayer}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <Type className="w-3.5 h-3.5" /> Text
+              </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${

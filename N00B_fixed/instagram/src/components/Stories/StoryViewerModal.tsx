@@ -438,7 +438,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         </div>
 
         {/* Story Media */}
-        <div className="relative w-full h-full flex items-center justify-center bg-black">
+        <div className="relative w-full h-full flex items-center justify-center bg-black" style={{ containerType: 'inline-size' }}>
           <img
             src={story.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
             alt="Story content"
@@ -448,6 +448,33 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
           {/* Interactive Stickers Overlay */}
           {story.stickers?.map((sticker, idx) => {
+            // Shared position/size/rotation for every layer type. `x` was previously ignored
+            // (every sticker forced to left: 50%) — safe to switch on, since every sticker ever
+            // saved before this used x: 50 anyway.
+            const layerStyle: React.CSSProperties = {
+              top: `${sticker.y}%`,
+              left: `${sticker.x}%`,
+              width: sticker.width ? `${sticker.width}%` : undefined,
+              transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`,
+            };
+
+            if (sticker.type === 'text') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>
+                  <p
+                    className="font-extrabold text-center whitespace-pre-wrap break-words"
+                    style={{
+                      color: sticker.data?.color || '#FFFFFF',
+                      fontSize: `${(sticker.width || 60) * 0.12}cqw`,
+                      textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.85)',
+                    }}
+                  >
+                    {sticker.data?.text}
+                  </p>
+                </div>
+              );
+            }
+
             if (sticker.type === 'poll') {
               const options: string[] = Array.isArray(sticker.data?.options) ? sticker.data.options : [];
               const result = pollResults[`${story.id}:${idx}`];
@@ -460,7 +487,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div
                   key={idx}
                   className="absolute z-30 max-w-[260px] w-full bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl p-3 shadow-xl pointer-events-auto"
-                  style={{ top: `${sticker.y}%`, left: '50%', transform: 'translate(-50%, -50%)' }}
+                  style={layerStyle}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <p className="text-xs font-bold text-center text-white mb-2.5">{sticker.data.question}</p>
@@ -515,7 +542,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div
                   key={idx}
                   className="absolute z-30 max-w-[260px] w-full bg-black/85 backdrop-blur-md border border-purple-500/40 rounded-xl p-3 shadow-xl pointer-events-auto"
-                  style={{ top: `${sticker.y}%`, left: '50%', transform: 'translate(-50%, -50%)' }}
+                  style={layerStyle}
                 >
                   <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block text-center mb-1">
                     Quiz Challenge
@@ -547,7 +574,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div
                   key={idx}
                   className="absolute z-30 bg-black/80 backdrop-blur-md border border-pink-500/40 rounded-xl px-3.5 py-2 shadow-lg flex items-center gap-2 pointer-events-auto"
-                  style={{ top: `${sticker.y}%`, left: '50%', transform: 'translate(-50%, -50%)' }}
+                  style={layerStyle}
                 >
                   <Sparkles className="w-4 h-4 text-pink-400 animate-pulse" />
                   <div>
@@ -563,7 +590,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div
                   key={idx}
                   className="absolute z-30 max-w-[220px] w-full bg-black/85 backdrop-blur-md border border-orange-500/40 rounded-xl p-3 shadow-xl pointer-events-auto text-center"
-                  style={{ top: `${sticker.y}%`, left: '50%', transform: 'translate(-50%, -50%)' }}
+                  style={layerStyle}
                 >
                   <p className="text-xs font-bold text-white mb-2">{sticker.data.question}</p>
                   <input
@@ -584,7 +611,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div
                   key={idx}
                   className="absolute z-30 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1 shadow-lg flex items-center gap-1.5 pointer-events-auto"
-                  style={{ top: `${sticker.y}%`, left: '50%', transform: 'translate(-50%, -50%)' }}
+                  style={layerStyle}
                 >
                   <MapPin className="w-3.5 h-3.5 text-[#00FF66]" />
                   <span className="text-xs font-semibold text-white">{sticker.data.name}</span>

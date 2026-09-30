@@ -502,7 +502,16 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     setChatInput('');
     const res = await sendLiveLoungeRoomChat(roomId, text);
     console.log('[lounge] chat send', { roomId, success: res.success, error: res.error });
-    if (!res.success) setError(res.error || 'Could not send that message.');
+    if (!res.success) {
+      setError(res.error || 'Could not send that message.');
+      return;
+    }
+    // Shows the sender their own message right away instead of waiting on the realtime echo
+    // (which other participants still rely on) — a dropped/delayed socket shouldn't make a
+    // successfully-sent message look like it vanished.
+    if (res.message) {
+      setMessages((prev) => (prev.some((m) => m.id === res.message!.id) ? prev : [...prev, res.message!]));
+    }
   };
 
   const copyRoomCode = () => {

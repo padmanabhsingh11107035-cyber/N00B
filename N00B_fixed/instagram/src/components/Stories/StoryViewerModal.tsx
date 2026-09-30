@@ -622,15 +622,23 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             }
 
             if (sticker.type === 'location') {
+              const locWidth = sticker.width || 44;
               return (
-                <div
-                  key={idx}
-                  className="absolute z-30 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1 shadow-lg flex items-center gap-1.5 pointer-events-auto"
-                  style={layerStyle}
-                >
-                  <MapPin className="w-3.5 h-3.5 text-[#00FF66]" />
-                  <span className="text-xs font-semibold text-white">{sticker.data.name}</span>
-                  {sticker.data.weather && <span className="text-[10px] text-gray-300">({sticker.data.weather})</span>}
+                <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <div
+                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                      style={{ fontSize: `${locWidth * 0.1}cqw` }}
+                    >
+                      <MapPin className="shrink-0 text-[#00FF66]" style={{ width: '1.1em', height: '1.1em' }} />
+                      <span className="font-semibold text-white" style={{ fontSize: '1em' }}>
+                        {sticker.data.name}
+                      </span>
+                      {sticker.data.weather && (
+                        <span className="text-gray-300" style={{ fontSize: '0.8em' }}>({sticker.data.weather})</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             }

@@ -62,8 +62,11 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         : '';
   const [locationTag, setLocationTag] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
+  const [locationGeo, setLocationGeo] = useState({ x: 50, y: 75, width: 44, rotation: 0 });
+  const [pollGeo, setPollGeo] = useState({ x: 50, y: 50, width: 70, rotation: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const pollCanvasRef = useRef<HTMLDivElement>(null);
 
   // Draggable/resizable/rotatable text layers placed on the photo (the first of the
   // "layered editor" sticker types — Stickers/Draw/Link/Mention/etc. build on the same
@@ -199,8 +202,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         mainStickers.push({
           type: 'location',
           data: { name: locationTag.trim(), weather: '24°C Sunny' },
-          x: 50,
-          y: 75
+          x: locationGeo.x,
+          y: locationGeo.y,
+          width: locationGeo.width,
+          rotation: locationGeo.rotation
         });
       }
       textLayers.forEach((layer) => {
@@ -249,8 +254,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             {
               type: 'poll',
               data: { question: pollQuestion.trim(), options: cleanOptions.slice(0, MAX_POLL_OPTIONS) },
-              x: 50,
-              y: 50
+              x: pollGeo.x,
+              y: pollGeo.y,
+              width: pollGeo.width,
+              rotation: pollGeo.rotation
             }
           ]
         });
@@ -339,10 +346,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             className="hidden"
           />
 
-          {/* Location Sticker Preview */}
+          {/* Location Tag Editor */}
           {selectedImage && showLocationInput && (
-            <div className="absolute bottom-1/4 inset-x-8 bg-black/85 backdrop-blur-md border border-[#00FF66] rounded-xl p-2 shadow-2xl z-20 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-[#00FF66]" />
+            <div
+              className="absolute top-14 inset-x-8 bg-black/85 backdrop-blur-md border border-[#00FF66] rounded-xl p-2 shadow-2xl z-20 flex items-center gap-2"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <MapPin className="w-4 h-4 text-[#00FF66] shrink-0" />
               <input
                 type="text"
                 placeholder="Enter Location Tag..."
@@ -351,7 +361,51 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="w-full bg-transparent text-xs text-white focus:outline-none"
                 autoFocus
               />
+              <button
+                onClick={() => setShowLocationInput(false)}
+                className="shrink-0 px-2 py-1 rounded-full bg-[#00FF66] text-black text-[10px] font-bold cursor-pointer"
+              >
+                Done
+              </button>
             </div>
+          )}
+
+          {/* Draggable / resizable / rotatable location pill */}
+          {selectedImage && locationTag.trim() && (
+            <EditableStickerLayer
+              x={locationGeo.x}
+              y={locationGeo.y}
+              width={locationGeo.width}
+              rotation={locationGeo.rotation}
+              canvasRef={canvasRef}
+              active={activeLayerId === 'location'}
+              onSelect={() => setActiveLayerId('location')}
+              onChange={(next) => setLocationGeo(next)}
+              onTap={() => setShowLocationInput(true)}
+              onDelete={() => {
+                setLocationTag('');
+                setShowLocationInput(false);
+                setLocationGeo({ x: 50, y: 75, width: 44, rotation: 0 });
+              }}
+              onDragStateChange={(dragging, overTrash) => {
+                setIsDraggingLayer(dragging);
+                setIsOverTrash(overTrash);
+              }}
+              minWidthPct={20}
+              maxWidthPct={80}
+            >
+              <div className="w-full flex items-center justify-center">
+                <div
+                  className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                  style={{ fontSize: `${locationGeo.width * 0.1}cqw` }}
+                >
+                  <MapPin className="shrink-0 text-[#00FF66]" style={{ width: '1.1em', height: '1.1em' }} />
+                  <span className="font-semibold text-white" style={{ fontSize: '1em' }}>
+                    {locationTag.trim()}
+                  </span>
+                </div>
+              </div>
+            </EditableStickerLayer>
           )}
 
           {selectedImage && !isUploading && (
@@ -680,18 +734,49 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                   </div>
                 </div>
                 {pollQuestion.trim() && (
-                  <div
-                    className="aspect-[9/16] w-24 mx-auto rounded-lg flex items-center justify-center p-2 shadow-lg"
-                    style={{ backgroundColor: pollBgColor }}
-                  >
-                    <div className="w-full bg-black/85 border border-[#00FF66]/40 rounded-md p-1.5">
-                      <p className="text-[7px] font-bold text-center text-white mb-1 line-clamp-2">{pollQuestion}</p>
-                      <div className="space-y-0.5">
-                        {cleanOptions.map((o, i) => (
-                          <div key={i} className="bg-neutral-800 text-white text-[6px] font-semibold text-center py-0.5 rounded truncate px-0.5">{o}</div>
-                        ))}
-                      </div>
+                  <div className="mx-auto w-56">
+                    <div
+                      ref={pollCanvasRef}
+                      className="relative aspect-[9/16] w-full rounded-lg shadow-lg overflow-hidden"
+                      style={{ backgroundColor: pollBgColor, containerType: 'inline-size' }}
+                      onPointerDown={() => setActiveLayerId(null)}
+                    >
+                      <EditableStickerLayer
+                        x={pollGeo.x}
+                        y={pollGeo.y}
+                        width={pollGeo.width}
+                        rotation={pollGeo.rotation}
+                        canvasRef={pollCanvasRef}
+                        active={activeLayerId === 'poll'}
+                        onSelect={() => setActiveLayerId('poll')}
+                        onChange={(next) => setPollGeo(next)}
+                        minWidthPct={40}
+                        maxWidthPct={95}
+                      >
+                        <div
+                          className="w-full bg-black/85 border border-[#00FF66]/40 rounded-md p-1.5"
+                          style={{ fontSize: `${pollGeo.width * 0.045}cqw` }}
+                        >
+                          <p className="font-bold text-center text-white mb-1 line-clamp-2" style={{ fontSize: '1em' }}>
+                            {pollQuestion}
+                          </p>
+                          <div className="space-y-0.5">
+                            {cleanOptions.map((o, i) => (
+                              <div
+                                key={i}
+                                className="bg-neutral-800 text-white font-semibold text-center py-0.5 rounded truncate px-0.5"
+                                style={{ fontSize: '0.82em' }}
+                              >
+                                {o}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </EditableStickerLayer>
                     </div>
+                    <p className="text-[9px] text-gray-500 text-center mt-1.5">
+                      Drag to position on its page · use the handle to resize/rotate
+                    </p>
                   </div>
                 )}
               </div>

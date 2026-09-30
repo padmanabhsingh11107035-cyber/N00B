@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer } from 'lucide-react';
 import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { formatCountdown } from '../../utils/countdown';
 
 const TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
 
@@ -74,6 +75,16 @@ const DRAW_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F5
 const DRAW_SIZES = [0.6, 1.4, 2.6];
 const ERASE_RADIUS = 4; // percentage units
 
+interface CountdownLayer {
+  id: string;
+  label: string;
+  targetIso: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
+
 interface CreateStoryModalProps {
   onClose: () => void;
   // An array because a poll turns into its own second story "page" (a plain colour
@@ -114,6 +125,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const pollCanvasRef = useRef<HTMLDivElement>(null);
+
+  // Re-renders every second so any Countdown layer's live "time left" text keeps ticking.
+  const [, forceCountdownTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceCountdownTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Draggable/resizable/rotatable text layers placed on the photo (the first of the
   // "layered editor" sticker types — Stickers/Draw/Link/Mention/etc. build on the same
@@ -355,6 +373,59 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const strokeToPath = (s: DrawStroke) =>
     s.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
 
+  // Countdown layers — a visual "counting down to X" sticker. No reminder/notify backend
+  // exists yet, so this is display-only (matches how Location's "weather" is also decorative).
+  const [countdownLayers, setCountdownLayers] = useState<CountdownLayer[]>([]);
+  const [countdownEditorId, setCountdownEditorId] = useState<string | 'new' | null>(null);
+  const [draftCountdownLabel, setDraftCountdownLabel] = useState('');
+  const [draftCountdownTarget, setDraftCountdownTarget] = useState('');
+
+  const defaultCountdownTarget = () => {
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  };
+
+  const openNewCountdownLayer = () => {
+    setDraftCountdownLabel('');
+    setDraftCountdownTarget(defaultCountdownTarget());
+    setCountdownEditorId('new');
+  };
+
+  const openEditCountdownLayer = (layer: CountdownLayer) => {
+    setDraftCountdownLabel(layer.label);
+    const d = new Date(layer.targetIso);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    setDraftCountdownTarget(d.toISOString().slice(0, 16));
+    setCountdownEditorId(layer.id);
+  };
+
+  const commitCountdownEditor = () => {
+    if (!draftCountdownTarget) {
+      setCountdownEditorId(null);
+      return;
+    }
+    const targetIso = new Date(draftCountdownTarget).toISOString();
+    const label = draftCountdownLabel.trim() || 'Countdown';
+    if (countdownEditorId === 'new') {
+      const id = `countdown-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setCountdownLayers((prev) => [
+        ...prev,
+        { id, label, targetIso, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 50, rotation: 0 }
+      ]);
+      setActiveLayerId(id);
+    } else if (countdownEditorId) {
+      setCountdownLayers((prev) => prev.map((c) => (c.id === countdownEditorId ? { ...c, label, targetIso } : c)));
+      setActiveLayerId(countdownEditorId);
+    }
+    setCountdownEditorId(null);
+  };
+
+  const deleteCountdownLayer = (id: string) => {
+    setCountdownLayers((prev) => prev.filter((c) => c.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
+
   const openNewTextLayer = () => {
     setDraftText('');
     setDraftColor(TEXT_COLORS[0]);
@@ -516,6 +587,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           rotation: 0
         });
       }
+      countdownLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'countdown',
+          data: { label: layer.label, targetIso: layer.targetIso },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
 
       const mainStory: Partial<Story> = {
         mediaUrl: selectedImageObjectKey || selectedImage,
@@ -907,6 +988,46 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </EditableStickerLayer>
             ))}
 
+          {/* Draggable / resizable / rotatable countdown layers */}
+          {selectedImage &&
+            countdownLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setCountdownLayers((prev) => prev.map((c) => (c.id === layer.id ? { ...c, ...next } : c)))
+                }
+                onTap={() => openEditCountdownLayer(layer)}
+                onDelete={() => deleteCountdownLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+                minWidthPct={30}
+                maxWidthPct={90}
+              >
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    className="flex flex-col items-center gap-0.5 bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
+                    style={{ fontSize: `${layer.width * 0.075}cqw` }}
+                  >
+                    <span className="font-bold text-[#00FF66] uppercase tracking-wide" style={{ fontSize: '0.6em' }}>
+                      {layer.label}
+                    </span>
+                    <span className="font-extrabold text-white tabular-nums" style={{ fontSize: '1em' }}>
+                      {formatCountdown(layer.targetIso)}
+                    </span>
+                  </div>
+                </div>
+              </EditableStickerLayer>
+            ))}
+
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
             <div
@@ -1274,6 +1395,58 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </div>
             </div>
           )}
+
+          {/* Countdown composer */}
+          {countdownEditorId !== null && (
+            <div
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setCountdownEditorId(null)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                {countdownEditorId !== 'new' && (
+                  <button
+                    onClick={() => { deleteCountdownLayer(countdownEditorId); setCountdownEditorId(null); }}
+                    className="p-1.5 rounded-full bg-black/60 text-red-400 cursor-pointer"
+                    title="Delete countdown"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={commitCountdownEditor}
+                  disabled={!draftCountdownTarget}
+                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
+                <input
+                  autoFocus
+                  value={draftCountdownLabel}
+                  onChange={(e) => setDraftCountdownLabel(e.target.value)}
+                  placeholder="What's counting down? (e.g. New Year)"
+                  maxLength={30}
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none placeholder:text-white/40"
+                />
+                <input
+                  type="datetime-local"
+                  value={draftCountdownTarget}
+                  onChange={(e) => setDraftCountdownTarget(e.target.value)}
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none [color-scheme:dark]"
+                />
+                {draftCountdownTarget && (
+                  <p className="text-[#00FF66] text-xs font-bold">{formatCountdown(new Date(draftCountdownTarget).toISOString())}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -1321,6 +1494,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <Pencil className="w-3.5 h-3.5" /> Draw
+              </button>
+              <button
+                onClick={openNewCountdownLayer}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <Timer className="w-3.5 h-3.5" /> Countdown
               </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}

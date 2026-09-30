@@ -12,6 +12,7 @@ import { navKey } from '../../utils/keyboardNav';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { formatCountdown } from '../../utils/countdown';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -47,6 +48,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   isHighlight = false,
   onEditHighlight
 }) => {
+  // Re-renders every second so any Countdown sticker's "time left" keeps ticking.
+  const [, forceCountdownTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceCountdownTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -481,6 +489,26 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     />
                   ))}
                 </svg>
+              );
+            }
+
+            if (sticker.type === 'countdown') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <div
+                      className="flex flex-col items-center gap-0.5 bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
+                      style={{ fontSize: `${(sticker.width || 50) * 0.075}cqw` }}
+                    >
+                      <span className="font-bold text-[#00FF66] uppercase tracking-wide" style={{ fontSize: '0.6em' }}>
+                        {sticker.data?.label}
+                      </span>
+                      <span className="font-extrabold text-white tabular-nums" style={{ fontSize: '1em' }}>
+                        {formatCountdown(sticker.data?.targetIso)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               );
             }
 

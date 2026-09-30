@@ -95,6 +95,7 @@ export {
   uploadMusicTrack,
   toggleLikeMusicTrack,
   renameMusicTrack,
+  updateMusicTrackCover,
   deleteMusicTrack,
   fetchMyStickers,
   uploadCustomSticker,

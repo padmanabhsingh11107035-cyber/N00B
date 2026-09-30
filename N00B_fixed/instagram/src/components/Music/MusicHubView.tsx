@@ -17,10 +17,11 @@ import { Heart,
   Clock,
   Pencil,
   X as XIcon,
-  Trash2
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { MusicTrack, User } from '../../types';
-import { uploadMusicTrack, uploadMediaFile, renameMusicTrack, deleteMusicTrack } from '../../services/api';
+import { uploadMusicTrack, uploadMediaFile, renameMusicTrack, updateMusicTrackCover, deleteMusicTrack } from '../../services/api';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { getAudioDuration } from '../../utils/mediaCompressor';
 import { isVideoFile, extractAudioFromVideoFile, MAX_MUSIC_UPLOAD_SECONDS } from '../../utils/extractAudioFromVideo';
@@ -86,6 +87,51 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     setEditingTrackId(null);
     setEditTitleDraft('');
     setRenameError('');
+  };
+
+  // Changing a track's cover — uploader-only, same as renaming. Picking a new image uploads it,
+  // then swaps the track over to it; the old cover file is permanently deleted from storage as
+  // part of that (see updateMusicTrackCover).
+  const coverEditFileRef = useRef<HTMLInputElement>(null);
+  const coverEditTrackIdRef = useRef<string | null>(null);
+  const [updatingCoverTrackId, setUpdatingCoverTrackId] = useState<string | null>(null);
+  const [coverUpdateError, setCoverUpdateError] = useState('');
+  const [coverUpdateErrorTrackId, setCoverUpdateErrorTrackId] = useState<string | null>(null);
+
+  const startChangeCover = (track: MusicTrack) => {
+    coverEditTrackIdRef.current = track.id;
+    setCoverUpdateError('');
+    setCoverUpdateErrorTrackId(null);
+    coverEditFileRef.current?.click();
+  };
+
+  const handleCoverFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const trackId = coverEditTrackIdRef.current;
+    e.target.value = '';
+    if (!file || !trackId) return;
+    setUpdatingCoverTrackId(trackId);
+    try {
+      const uploaded = await uploadMediaFile(file, 'posts');
+      if (!uploaded.url) {
+        setCoverUpdateError('Could not upload that image.');
+        setCoverUpdateErrorTrackId(trackId);
+        return;
+      }
+      const res = await updateMusicTrackCover(trackId, uploaded.objectKey || uploaded.url);
+      if (res.success) {
+        await refreshTracks();
+      } else {
+        setCoverUpdateError(res.error || 'Could not update the cover image.');
+        setCoverUpdateErrorTrackId(trackId);
+      }
+    } catch {
+      setCoverUpdateError('Could not update the cover image.');
+      setCoverUpdateErrorTrackId(trackId);
+    } finally {
+      setUpdatingCoverTrackId(null);
+      coverEditTrackIdRef.current = null;
+    }
   };
 
   // Admin-only, permanent delete — removes the row and the actual audio/cover files from
@@ -237,6 +283,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 pb-28 pt-2">
+      <input ref={coverEditFileRef} type="file" accept="image/*" onChange={handleCoverFileChosen} className="hidden" />
       {/* Music Header */}
       <div className="flex items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
         <div className="flex items-center gap-3.5 min-w-0">
@@ -441,10 +488,30 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                           <Pencil className="w-3 h-3" />
                         </button>
                       )}
+                      {track.uploaderId === currentUser.id && (
+                        <button
+                          type="button"
+                          disabled={updatingCoverTrackId === track.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startChangeCover(track);
+                          }}
+                          className="shrink-0 text-zinc-500 hover:text-purple-300 cursor-pointer disabled:opacity-50"
+                          title="Change cover image"
+                        >
+                          <ImageIcon className="w-3 h-3" />
+                        </button>
+                      )}
                     </h4>
                   )}
                   {editingTrackId === track.id && renameError && (
                     <p className="text-[10px] text-rose-400 mt-0.5">{renameError}</p>
+                  )}
+                  {updatingCoverTrackId === track.id && (
+                    <p className="text-[10px] text-purple-300 mt-0.5">Updating cover...</p>
+                  )}
+                  {coverUpdateErrorTrackId === track.id && coverUpdateError && (
+                    <p className="text-[10px] text-rose-400 mt-0.5">{coverUpdateError}</p>
                   )}
                   <p className="text-[11px] text-zinc-400 truncate">
                     {track.artist} • <span className="text-zinc-500">{track.genre}</span>

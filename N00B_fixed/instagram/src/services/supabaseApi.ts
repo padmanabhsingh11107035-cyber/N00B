@@ -1303,6 +1303,26 @@ export async function renameMusicTrack(trackId: string, title: string): Promise<
   }
 }
 
+// Changing a track's cover is uploader-only, same as renaming — and permanently deletes the
+// previous cover file from storage right after the new one is saved (the RPC hands back the old
+// cover_url; skipped if it isn't a real bucket key, e.g. an older track still on its original
+// external placeholder image from before covers were required).
+export async function updateMusicTrackCover(trackId: string, newCoverUrl: string): Promise<{ success: boolean; track?: MusicTrack; error?: string }> {
+  try {
+    const res = await rpc<{ success: boolean; track: any; oldCoverUrl?: string }>('update_music_track_cover', {
+      p_track: trackId,
+      p_cover_url: toStoredMedia(newCoverUrl)
+    });
+    const oldKey = toStoredMedia(res.oldCoverUrl);
+    if (oldKey && !/^https?:\/\//i.test(oldKey)) {
+      await supabase.storage.from(MEDIA_BUCKET).remove([oldKey]);
+    }
+    return { success: true, track: mapTrack(res.track) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update the cover image.') };
+  }
+}
+
 // Admin-only, permanent: removes the row (delete_music_track, which also verifies admin rights
 // server-side — the client-side check gating the button is not real security on its own) and
 // then the actual audio/cover files from storage. The RPC hands back which storage keys to

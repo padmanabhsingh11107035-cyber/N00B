@@ -3,6 +3,10 @@
 // worker up whenever a push arrives (regardless of whether any NOOB tab is
 // open) and it's this code, not the React app, that actually renders it.
 
+// An installable PWA needs a service worker that handles 'fetch' — without this, Chrome never
+// fires beforeinstallprompt, so the in-app "Install" button silently has nothing to trigger.
+self.addEventListener('fetch', () => {});
+
 self.addEventListener('push', (event) => {
   let data = { title: 'NOOB', body: 'You have a new notification.' };
   try {

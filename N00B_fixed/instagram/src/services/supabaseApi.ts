@@ -3472,13 +3472,26 @@ export function subscribeToLiveLoungeRoomParticipants(roomId: string, onChange: 
 // One channel instance handles both directions: a broadcast message sent on a channel that was never
 // itself subscribed/joined can be silently dropped by Realtime, which is exactly what made strokes
 // visible to the person drawing (drawn locally, synchronously) but invisible to everyone else.
-export function connectLiveLoungeWhiteboard(roomId: string, onEvent: (payload: any) => void): { send: (payload: any) => void; disconnect: () => void } {
+// Opening the whiteboard broadcasts to everyone in the room so it appears full-screen for all of
+// them, not just the person who clicked it — mirrors the screen-share full-screen/query pattern
+// below. A fresh joiner sends 'query' once on connecting; whoever already has it open answers with
+// their own 'toggle' broadcast so late joiners see it without polling.
+export function connectLiveLoungeWhiteboard(
+  roomId: string,
+  onDraw: (payload: any) => void,
+  onToggle: (open: boolean) => void,
+  onQuery: () => void
+): { send: (payload: any) => void; toggle: (open: boolean) => void; query: () => void; disconnect: () => void } {
   const channel = supabase
     .channel(`lounge-whiteboard-${roomId}`, { config: { broadcast: { self: false } } })
-    .on('broadcast', { event: 'draw' }, ({ payload }) => onEvent(payload))
+    .on('broadcast', { event: 'draw' }, ({ payload }) => onDraw(payload))
+    .on('broadcast', { event: 'toggle' }, ({ payload }) => onToggle(!!payload?.open))
+    .on('broadcast', { event: 'query' }, () => onQuery())
     .subscribe();
   return {
     send: (payload: any) => { void channel.send({ type: 'broadcast', event: 'draw', payload }); },
+    toggle: (open: boolean) => { void channel.send({ type: 'broadcast', event: 'toggle', payload: { open } }); },
+    query: () => { void channel.send({ type: 'broadcast', event: 'query', payload: {} }); },
     disconnect: () => { supabase.removeChannel(channel); }
   };
 }

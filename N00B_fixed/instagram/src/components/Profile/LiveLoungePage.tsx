@@ -45,6 +45,19 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
     if (mode === 'history') { setLoadingHistory(true); fetchLiveLoungeHistory().then((h) => { setHistory(h); setLoadingHistory(false); }); }
   }, [mode]);
 
+  // Duration is this participant's own joinedAt→endedAt span, not a separate stored field — the room
+  // never tracks per-participant leave times, so "how long since I joined until the room ended" is the
+  // most honest number available without a new column.
+  const formatDuration = (joinedAt: string, endedAt?: string) => {
+    if (!endedAt) return null;
+    const ms = new Date(endedAt).getTime() - new Date(joinedAt).getTime();
+    if (!Number.isFinite(ms) || ms <= 0) return null;
+    const totalMinutes = Math.round(ms / 60000);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
   const balance = currentUser.noobPoints || 0;
   const candidates = allUsers
     .filter((u) => u.id !== currentUser.id && !u.isAi)
@@ -128,17 +141,21 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
           ) : history.length === 0 ? (
             <p className="text-xs text-zinc-500 text-center py-8">No Live Lounge rooms hosted or joined yet.</p>
           ) : (
-            history.map((h) => (
-              <div key={h.roomId + h.joinedAt} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">{h.title || 'Live Lounge room'}</p>
-                  <p className="text-[10px] text-zinc-500">{h.role === 'host' ? 'You hosted' : 'You joined'} · {new Date(h.joinedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
+            history.map((h) => {
+              const duration = formatDuration(h.joinedAt, h.endedAt);
+              return (
+                <div key={h.roomId + h.joinedAt} className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{h.title || 'Live Lounge room'}</p>
+                    <p className="text-[10px] text-zinc-500">{h.role === 'host' ? 'You hosted' : 'You joined'} · {new Date(h.joinedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                    {duration && <p className="text-[10px] text-zinc-600">Duration: {duration}</p>}
+                  </div>
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${h.roomStatus === 'active' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-zinc-800 text-zinc-400'}`}>
+                    {h.roomStatus === 'active' ? 'Live' : 'Ended'}
+                  </span>
                 </div>
-                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${h.roomStatus === 'active' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-zinc-800 text-zinc-400'}`}>
-                  {h.roomStatus === 'active' ? 'Live' : 'Ended'}
-                </span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

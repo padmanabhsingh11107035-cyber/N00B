@@ -135,7 +135,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
-  const whiteboardChannelRef = useRef<{ send: (payload: any) => void; disconnect: () => void } | null>(null);
+  const whiteboardChannelRef = useRef<{ send: (payload: any) => void; toggle: (open: boolean) => void; query: () => void; disconnect: () => void } | null>(null);
+  const whiteboardOpenRef = useRef(false);
+  const drawHandlerRef = useRef<((payload: any) => void) | null>(null);
   const screenShareChannelRef = useRef<{ send: (payload: { uid: number; sharing: boolean }) => void; query: () => void; disconnect: () => void } | null>(null);
 
   const myUid = agoraUidFor(currentUser.id);
@@ -323,9 +325,35 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     return () => { channel.disconnect(); screenShareChannelRef.current = null; };
   }, [phase, roomId, myUid]);
 
-  // Whiteboard drawing (local + broadcast receive).
+  // Whiteboard visibility: connected for the whole call (not just while open) so anyone toggling it
+  // on/off is reflected for every participant, and a late joiner learns it's already open.
   useEffect(() => {
-    if (!whiteboardOpen || !roomId) return;
+    if (phase !== 'live' || !roomId) return;
+    const channel = connectLiveLoungeWhiteboard(
+      roomId,
+      (payload) => drawHandlerRef.current?.(payload),
+      (open) => setWhiteboardOpen(open),
+      () => { if (whiteboardOpenRef.current) channel.toggle(true); }
+    );
+    whiteboardChannelRef.current = channel;
+    channel.query();
+    return () => { channel.disconnect(); whiteboardChannelRef.current = null; };
+  }, [phase, roomId]);
+
+  // Kept in sync regardless of whether the state change came from this device's own toggle or a
+  // broadcast from someone else — read inside the query handler above, which fires on a network
+  // event and can't rely on the latest render's closure.
+  useEffect(() => { whiteboardOpenRef.current = whiteboardOpen; }, [whiteboardOpen]);
+
+  const handleToggleWhiteboard = (open: boolean) => {
+    setWhiteboardOpen(open);
+    whiteboardChannelRef.current?.toggle(open);
+  };
+
+  // Whiteboard drawing (local canvas setup + broadcast receive) — separate from the effect above
+  // because the <canvas> only exists in the DOM once whiteboardOpen is true.
+  useEffect(() => {
+    if (!whiteboardOpen) { drawHandlerRef.current = null; return; }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -344,13 +372,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       ctx.stroke();
     };
 
-    const channel = connectLiveLoungeWhiteboard(roomId, (payload) => {
+    drawHandlerRef.current = (payload) => {
       if (payload?.clear) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
       if (payload) drawSegment(payload.x0, payload.y0, payload.x1, payload.y1);
-    });
-    whiteboardChannelRef.current = channel;
-    return () => { window.removeEventListener('resize', resize); channel.disconnect(); whiteboardChannelRef.current = null; };
-  }, [whiteboardOpen, roomId]);
+    };
+    return () => { window.removeEventListener('resize', resize); drawHandlerRef.current = null; };
+  }, [whiteboardOpen]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     drawingRef.current = true;
@@ -674,7 +701,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         <button onClick={handleToggleScreenShare} className={`p-3 rounded-full ${sharingScreen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MonitorUp className="w-5 h-5" />
         </button>
-        <button onClick={() => setWhiteboardOpen((v) => !v)} className={`p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={() => handleToggleWhiteboard(!whiteboardOpen)} className={`p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <PenTool className="w-5 h-5" />
         </button>
         <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
@@ -697,7 +724,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
               <button onClick={handleClearWhiteboard} className="flex items-center gap-1 text-[11px] text-white/70 px-2 py-1 rounded-lg bg-white/10">
                 <Eraser className="w-3.5 h-3.5" /> Clear
               </button>
-              <button onClick={() => setWhiteboardOpen(false)} className="text-white/70 p-1"><X className="w-4 h-4" /></button>
+              <button onClick={() => handleToggleWhiteboard(false)} className="text-white/70 p-1"><X className="w-4 h-4" /></button>
             </div>
           </div>
           <canvas

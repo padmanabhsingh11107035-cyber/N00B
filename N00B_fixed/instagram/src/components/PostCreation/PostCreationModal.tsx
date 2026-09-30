@@ -29,7 +29,8 @@ import {
   Sticker as StickerIcon,
   AtSign,
   Hash,
-  Music as MusicIcon
+  Music as MusicIcon,
+  Loader2
 } from 'lucide-react';
 import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
@@ -210,10 +211,29 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   };
 
   const [showPostStickerPicker, setShowPostStickerPicker] = useState(false);
-  const [postStickerTab, setPostStickerTab] = useState<'emoji' | 'animated' | 'gif'>('emoji');
+  const [postStickerTab, setPostStickerTab] = useState<'emoji' | 'animated' | 'gif' | 'upload'>('emoji');
+  const [isUploadingPostSticker, setIsUploadingPostSticker] = useState(false);
+  const [postStickerUploadError, setPostStickerUploadError] = useState('');
+  const postStickerUploadInputRef = useRef<HTMLInputElement>(null);
   const addEmojiOrImageSticker = (kind: 'emoji' | 'image', content: string) => {
     addSticker({ type: 'sticker', data: { kind, content }, x: 50, y: 45, width: kind === 'emoji' ? 26 : 42, rotation: 0 });
     setShowPostStickerPicker(false);
+  };
+  const handleUploadCustomPostSticker = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setIsUploadingPostSticker(true);
+    setPostStickerUploadError('');
+    try {
+      const res = await uploadMediaFile(file, 'stickers');
+      if (res.url) addEmojiOrImageSticker('image', res.url);
+      else setPostStickerUploadError('Upload failed. Please try again.');
+    } catch {
+      setPostStickerUploadError('Upload failed. Please try again.');
+    } finally {
+      setIsUploadingPostSticker(false);
+    }
   };
 
   const [showPostMentionPicker, setShowPostMentionPicker] = useState(false);
@@ -1121,10 +1141,10 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                   <div className="absolute inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between px-2 py-1.5">
                       <button onClick={() => setShowPostStickerPicker(false)} className="p-1 rounded-full bg-black/60 text-white cursor-pointer"><X className="w-3.5 h-3.5" /></button>
-                      <div className="flex items-center gap-1 bg-black/60 rounded-full p-0.5">
-                        {(['emoji', 'animated', 'gif'] as const).map((tab) => (
-                          <button key={tab} onClick={() => setPostStickerTab(tab)} className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase cursor-pointer ${postStickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300'}`}>
-                            {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : 'GIF'}
+                      <div className="flex items-center gap-1 bg-black/60 rounded-full p-0.5 overflow-x-auto no-scrollbar max-w-[75%]">
+                        {(['emoji', 'animated', 'gif', 'upload'] as const).map((tab) => (
+                          <button key={tab} onClick={() => setPostStickerTab(tab)} className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase cursor-pointer shrink-0 ${postStickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300'}`}>
+                            {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : tab === 'gif' ? 'GIF' : 'Upload'}
                           </button>
                         ))}
                       </div>
@@ -1134,6 +1154,29 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       {postStickerTab === 'emoji' && <EmojiPanel onPick={(emoji) => addEmojiOrImageSticker('emoji', emoji)} />}
                       {postStickerTab === 'animated' && <AnimatedStickerPanel onPick={(url) => addEmojiOrImageSticker('image', url)} />}
                       {postStickerTab === 'gif' && <GifPanel curated={[]} onPick={(url) => addEmojiOrImageSticker('image', url)} />}
+                      {postStickerTab === 'upload' && (
+                        <div className="flex flex-col items-center justify-center h-full gap-2.5 py-8">
+                          <button
+                            type="button"
+                            onClick={() => postStickerUploadInputRef.current?.click()}
+                            disabled={isUploadingPostSticker}
+                            className="flex flex-col items-center gap-2 px-5 py-6 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {isUploadingPostSticker ? <Loader2 className="w-7 h-7 animate-spin" /> : <ImageIcon className="w-7 h-7" />}
+                            <span className="text-[11px] font-bold">
+                              {isUploadingPostSticker ? 'Uploading...' : 'Upload your own sticker or GIF'}
+                            </span>
+                          </button>
+                          {postStickerUploadError && <p className="text-[10px] text-red-400 text-center">{postStickerUploadError}</p>}
+                          <input
+                            ref={postStickerUploadInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadCustomPostSticker}
+                            className="hidden"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

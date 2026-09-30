@@ -163,7 +163,27 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   // Emoji / animated-sticker / GIF layers — same drag/resize/rotate engine as text layers.
   const [stickerLayers, setStickerLayers] = useState<StickerLayer[]>([]);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
-  const [stickerTab, setStickerTab] = useState<'emoji' | 'animated' | 'gif'>('emoji');
+  const [stickerTab, setStickerTab] = useState<'emoji' | 'animated' | 'gif' | 'upload'>('emoji');
+  const [isUploadingSticker, setIsUploadingSticker] = useState(false);
+  const [stickerUploadError, setStickerUploadError] = useState('');
+  const stickerUploadInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadCustomSticker = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setIsUploadingSticker(true);
+    setStickerUploadError('');
+    try {
+      const res = await uploadMediaFile(file, 'stickers');
+      if (res.url) addStickerLayer('image', res.url);
+      else setStickerUploadError('Upload failed. Please try again.');
+    } catch {
+      setStickerUploadError('Upload failed. Please try again.');
+    } finally {
+      setIsUploadingSticker(false);
+    }
+  };
 
   const addStickerLayer = (kind: StickerLayer['kind'], content: string) => {
     const id = `sticker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1273,16 +1293,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <div className="flex items-center gap-1.5 bg-black/60 rounded-full p-1">
-                  {(['emoji', 'animated', 'gif'] as const).map((tab) => (
+                <div className="flex items-center gap-1.5 bg-black/60 rounded-full p-1 overflow-x-auto no-scrollbar max-w-[70%]">
+                  {(['emoji', 'animated', 'gif', 'upload'] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setStickerTab(tab)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors cursor-pointer shrink-0 ${
                         stickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300 hover:text-white'
                       }`}
                     >
-                      {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : 'GIF'}
+                      {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : tab === 'gif' ? 'GIF' : 'Upload'}
                     </button>
                   ))}
                 </div>
@@ -1294,6 +1314,29 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                   <AnimatedStickerPanel onPick={(url) => addStickerLayer('image', url)} />
                 )}
                 {stickerTab === 'gif' && <GifPanel curated={[]} onPick={(url) => addStickerLayer('image', url)} />}
+                {stickerTab === 'upload' && (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 py-10">
+                    <button
+                      type="button"
+                      onClick={() => stickerUploadInputRef.current?.click()}
+                      disabled={isUploadingSticker}
+                      className="flex flex-col items-center gap-2.5 px-6 py-8 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {isUploadingSticker ? <Loader2 className="w-8 h-8 animate-spin" /> : <ImagePlus className="w-8 h-8" />}
+                      <span className="text-xs font-bold">
+                        {isUploadingSticker ? 'Uploading...' : 'Upload your own sticker or GIF'}
+                      </span>
+                    </button>
+                    {stickerUploadError && <p className="text-[11px] text-red-400 text-center">{stickerUploadError}</p>}
+                    <input
+                      ref={stickerUploadInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleUploadCustomSticker}
+                      className="hidden"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

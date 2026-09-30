@@ -9,6 +9,23 @@ import type { Mp3Encoder as Mp3EncoderType } from 'lamejs';
 
 export const MAX_MUSIC_UPLOAD_SECONDS = 20 * 60;
 
+// lamejs 1.2.1's npm entry point (src/js/index.js) is broken: Lame.js, Encoder.js and
+// PsyModel.js all reference the MPEGMode module without requiring it, so importing the
+// package normally throws "Can't find variable: MPEGMode" (Safari) / "MPEGMode is not
+// defined" (Chrome) the moment encoding starts. Its lame.all.js bundle concatenates every
+// file into one shared function scope instead — the classic <script>-tag distribution,
+// where that missing reference resolves fine — so we run that source directly.
+let lamejsPromise: Promise<{ Mp3Encoder: typeof Mp3EncoderType }> | null = null;
+function loadLamejs(): Promise<{ Mp3Encoder: typeof Mp3EncoderType }> {
+  if (!lamejsPromise) {
+    lamejsPromise = import('lamejs/lame.all.js?raw').then(({ default: source }) => {
+      const factory = new Function(`${source}\nreturn lamejs;`);
+      return factory() as { Mp3Encoder: typeof Mp3EncoderType };
+    });
+  }
+  return lamejsPromise;
+}
+
 function floatTo16BitPCM(input: Float32Array): Int16Array {
   const output = new Int16Array(input.length);
   for (let i = 0; i < input.length; i++) {
@@ -19,7 +36,7 @@ function floatTo16BitPCM(input: Float32Array): Int16Array {
 }
 
 async function encodeMp3(buffer: AudioBuffer): Promise<Blob> {
-  const { Mp3Encoder }: { Mp3Encoder: typeof Mp3EncoderType } = await import('lamejs');
+  const { Mp3Encoder } = await loadLamejs();
   const numChannels = Math.min(buffer.numberOfChannels, 2);
   const left = floatTo16BitPCM(buffer.getChannelData(0));
   const right = numChannels > 1 ? floatTo16BitPCM(buffer.getChannelData(1)) : left;

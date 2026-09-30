@@ -17,7 +17,8 @@ import {
   MessageSquareOff,
   EyeOff,
   Trash2,
-  Link2
+  Link2,
+  Pause
 } from 'lucide-react';
 import { Post, User } from '../../types';
 import confetti from 'canvas-confetti';
@@ -113,6 +114,23 @@ export const PostCard: React.FC<PostCardProps> = ({
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
   const [showTagPill, setShowTagPill] = useState(false);
+  const [isAudioTrackPlaying, setIsAudioTrackPlaying] = useState(false);
+  const audioTrackPlayerRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => () => { audioTrackPlayerRef.current?.pause(); }, []);
+  const toggleAudioTrackPreview = () => {
+    if (!post.audioTrack?.audioUrl) return;
+    if (isAudioTrackPlaying) {
+      audioTrackPlayerRef.current?.pause();
+      setIsAudioTrackPlaying(false);
+      return;
+    }
+    const audio = audioTrackPlayerRef.current || new Audio();
+    audio.src = post.audioTrack.audioUrl;
+    audio.onended = () => setIsAudioTrackPlaying(false);
+    audio.play().catch(() => setIsAudioTrackPlaying(false));
+    audioTrackPlayerRef.current = audio;
+    setIsAudioTrackPlaying(true);
+  };
 
   // The whole picture, never a hard crop — like Instagram's feed: the box takes the shape of whatever was uploaded, only nudged
   // toward its 4:5 (portrait) / 1.91:1 (landscape) limits when a picture is more extreme than that. 4:5 while the real shape isn't
@@ -877,10 +895,16 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Audio Track Tag */}
         {post.audioTrack && (
-          <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 mt-2 bg-zinc-900/80 rounded-full px-2.5 py-1 w-fit border border-white/5">
-            <Volume2 className="w-3 h-3 text-[#00FF66] animate-pulse" />
-            <span className="truncate max-w-[220px]">{post.audioTrack}</span>
-          </div>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); toggleAudioTrackPreview(); }}
+            className="flex items-center gap-1.5 text-[10px] text-zinc-400 mt-2 bg-zinc-900/80 hover:bg-zinc-800 rounded-full px-2.5 py-1 w-fit border border-white/5 cursor-pointer transition-colors"
+          >
+            {isAudioTrackPlaying ? <Pause className="w-3 h-3 text-[#00FF66]" /> : <Volume2 className="w-3 h-3 text-[#00FF66] animate-pulse" />}
+            <span className="truncate max-w-[220px]">
+              {post.audioTrack.title}{post.audioTrack.artist ? ` · ${post.audioTrack.artist}` : ''}
+            </span>
+          </button>
         )}
 
         {/* Comments Preview Button */}

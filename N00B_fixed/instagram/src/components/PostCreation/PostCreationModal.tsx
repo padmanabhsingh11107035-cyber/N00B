@@ -28,7 +28,8 @@ import {
   Type,
   Sticker as StickerIcon,
   AtSign,
-  Hash
+  Hash,
+  Music as MusicIcon
 } from 'lucide-react';
 import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
@@ -41,6 +42,7 @@ import { EditableStickerLayer } from '../Stories/EditableStickerLayer';
 import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { MusicPicker, MusicSelection } from '../Common/MusicPicker';
 
 type PostSticker = NonNullable<PostSlide['stickers']>[number];
 type PostTaggedPerson = NonNullable<PostSlide['taggedUsers']>[number];
@@ -89,7 +91,12 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [videoObjectKey, setVideoObjectKey] = useState<string>('');
   const [thumbnailObjectKey, setThumbnailObjectKey] = useState<string>('');
-  const [musicTitle, setMusicTitle] = useState('Original Sound • ' + (currentUser.displayName || currentUser.username));
+  // Shared between Post and Reel mode (mutually exclusive) — pick from NOOB's song library or
+  // record your own clip. Fixes a real bug: the old free-text musicTitle field was never actually
+  // read by createReel/createPost (both expect an audioTrack object), so anything typed there was
+  // silently discarded and every reel got "Original Sound" regardless of user input.
+  const [audioSelection, setAudioSelection] = useState<MusicSelection | null>(null);
+  const [showMusicPicker, setShowMusicPicker] = useState(false);
   
   // User Tagging / Instagram-style Collaboration
   const [taggedUser, setTaggedUser] = useState<User | null>(null);
@@ -431,7 +438,15 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           caption: caption.trim() || 'New Reel ✨',
           hashtags: parsedHashtags,
           category: category as any,
-          musicTitle,
+          audioTrack: audioSelection
+            ? {
+                title: audioSelection.title,
+                artist: audioSelection.artist || currentUser.displayName || currentUser.username,
+                coverUrl: audioSelection.coverUrl,
+                audioUrl: audioSelection.audioUrl,
+                trackId: audioSelection.trackId
+              }
+            : undefined,
           likesCount: 0,
           commentsCount: 0,
           viewsCount: 1,
@@ -469,6 +484,15 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           hashtags: parsedHashtags,
           category: category as any,
           textBgStyle: mediaMode === 'text' ? selectedTextBg : undefined,
+          audioTrack: audioSelection
+            ? {
+                title: audioSelection.title,
+                artist: audioSelection.artist || currentUser.displayName || currentUser.username,
+                coverUrl: audioSelection.coverUrl,
+                audioUrl: audioSelection.audioUrl,
+                trackId: audioSelection.trackId
+              }
+            : undefined,
           webLink: webLink.trim() || undefined,
           isCollab: !!taggedUser,
           collabUsername: taggedUser?.username,
@@ -510,7 +534,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       id="post-creation-modal"
       className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto"
     >
-      <div className="w-full max-w-2xl bg-[#0f0f0f] border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200 my-auto">
+      <div className="relative w-full max-w-2xl bg-[#0f0f0f] border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200 my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800/80 bg-neutral-900/60 sticky top-0 z-20 backdrop-blur-md">
           <button
@@ -1241,15 +1265,24 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
               <div>
                 <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">
-                  Audio / Music Sound Name
+                  Music
                 </label>
-                <input
-                  type="text"
-                  value={musicTitle}
-                  onChange={(e) => setMusicTitle(e.target.value)}
-                  placeholder="e.g. Cyberpunk Drill Beat"
-                  className="w-full bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 focus:border-rose-500 outline-none"
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowMusicPicker(true)}
+                  className="w-full flex items-center gap-2.5 bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 hover:border-rose-500 outline-none cursor-pointer text-left"
+                >
+                  {audioSelection?.coverUrl ? (
+                    <img src={audioSelection.coverUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center shrink-0">
+                      <MusicIcon className="w-3.5 h-3.5 text-rose-400" />
+                    </div>
+                  )}
+                  <span className="truncate">
+                    {audioSelection ? `${audioSelection.title}${audioSelection.artist ? ` · ${audioSelection.artist}` : ''}` : 'Original Sound (choose a song or record audio)'}
+                  </span>
+                </button>
               </div>
             </div>
           )}
@@ -1301,6 +1334,31 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
             onChange={(e) => handleDeviceMediaUpload(e, 'video')}
             className="hidden"
           />
+
+          {/* Music (Post mode only — Reel mode has its own Music field next to the video) */}
+          {creationType === 'post' && (
+            <div className="pt-2 border-t border-neutral-800/80">
+              <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">
+                Music (Optional)
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowMusicPicker(true)}
+                className="w-full flex items-center gap-2.5 bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 hover:border-[#00FF66] outline-none cursor-pointer text-left"
+              >
+                {audioSelection?.coverUrl ? (
+                  <img src={audioSelection.coverUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center shrink-0">
+                    <MusicIcon className="w-3.5 h-3.5 text-[#00FF66]" />
+                  </div>
+                )}
+                <span className="truncate">
+                  {audioSelection ? `${audioSelection.title}${audioSelection.artist ? ` · ${audioSelection.artist}` : ''}` : 'Choose a song or record audio'}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Location & Category Section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-800/80">
@@ -1454,6 +1512,18 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Music picker */}
+        {showMusicPicker && (
+          <MusicPicker
+            currentUsername={currentUser.displayName || currentUser.username}
+            onClose={() => setShowMusicPicker(false)}
+            onSelect={(selection) => {
+              setAudioSelection(selection);
+              setShowMusicPicker(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

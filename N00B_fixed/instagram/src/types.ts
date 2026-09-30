@@ -416,7 +416,9 @@ export interface Post {
   taggedUsers?: { userId?: string; username: string; displayName?: string; avatar?: string }[];
   hasAiLabel?: boolean;
   hashtags: string[];
-  audioTrack?: string;
+  // Was a plain string, never actually populated by the DB (posts.audio_track is jsonb and always
+  // this richer shape) — fixed to match, since nothing read the stale string type.
+  audioTrack?: { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string };
   category?: 'robotics' | 'code' | 'cad' | 'gaming' | 'fashion' | 'art' | 'tech' | 'others';
   textBgStyle?: string;
   webLink?: string; // For verified links in posts
@@ -497,6 +499,8 @@ export interface Reel {
     title: string;
     artist: string;
     coverUrl?: string;
+    audioUrl?: string;
+    trackId?: string;
   };
   likesCount: number;
   commentsCount: number;

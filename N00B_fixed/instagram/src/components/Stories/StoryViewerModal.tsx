@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
-import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
@@ -184,6 +184,35 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     const user = await fetchUserById(userId);
     if (user) onNavigateToProfile(user);
   };
+
+  // Music sticker playback — at most one per story, muted/paused in step with the story's own
+  // mute toggle and press-to-pause gesture (same isMuted/isPaused this file already drives the
+  // video element with).
+  const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const url = story?.stickers?.find((s) => s.type === 'music')?.data?.audioUrl;
+    if (!url) return;
+    const audio = new Audio(url);
+    audio.loop = true;
+    audio.muted = isMuted;
+    audio.play().catch(() => undefined);
+    musicAudioRef.current = audio;
+    return () => {
+      audio.pause();
+      musicAudioRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id]);
+
+  useEffect(() => {
+    if (musicAudioRef.current) musicAudioRef.current.muted = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    if (!musicAudioRef.current) return;
+    if (isPaused) musicAudioRef.current.pause();
+    else musicAudioRef.current.play().catch(() => undefined);
+  }, [isPaused]);
 
   useEffect(() => {
     if (isPaused || isCommentFocused || !story || showViewersSheet || showStoryOptionsMenu) return;
@@ -545,6 +574,31 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       </span>
                       <span className="font-extrabold text-white tabular-nums" style={{ fontSize: '1em' }}>
                         {formatCountdown(sticker.data?.targetIso)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (sticker.type === 'music') {
+              const width = sticker.width || 46;
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <div
+                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-white/20 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap"
+                      style={{ fontSize: `${width * 0.08}cqw` }}
+                    >
+                      {sticker.data?.coverUrl ? (
+                        <img src={sticker.data.coverUrl} alt="" className="rounded-full object-cover shrink-0" style={{ width: '1.8em', height: '1.8em' }} />
+                      ) : (
+                        <div className="rounded-full bg-neutral-800 flex items-center justify-center shrink-0" style={{ width: '1.8em', height: '1.8em' }}>
+                          <Music style={{ width: '1em', height: '1em' }} className="text-white" />
+                        </div>
+                      )}
+                      <span className="font-semibold text-white truncate" style={{ fontSize: '1em', maxWidth: '14em' }}>
+                        {sticker.data?.title}{sticker.data?.artist ? ` · ${sticker.data.artist}` : ''}
                       </span>
                     </div>
                   </div>

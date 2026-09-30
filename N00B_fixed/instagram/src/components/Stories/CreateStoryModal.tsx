@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion } from 'lucide-react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon } from 'lucide-react';
 import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
@@ -7,6 +7,7 @@ import { EmojiPanel } from '../Chat/EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
+import { MusicPicker, MusicSelection } from '../Common/MusicPicker';
 
 const TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
 
@@ -130,6 +131,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [locationTag, setLocationTag] = useState('');
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [locationGeo, setLocationGeo] = useState({ x: 50, y: 75, width: 44, rotation: 0 });
+
+  // Music sticker — one per story, like Instagram's real music sticker. Pick from NOOB's library
+  // or record your own clip (MusicPicker); the viewer actually plays it while this story is shown.
+  const [musicSelection, setMusicSelection] = useState<MusicSelection | null>(null);
+  const [musicGeo, setMusicGeo] = useState({ x: 50, y: 80, width: 46, rotation: 0 });
+  const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [pollGeo, setPollGeo] = useState({ x: 50, y: 50, width: 70, rotation: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -657,6 +664,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           rotation: layer.rotation
         });
       });
+      if (musicSelection) {
+        mainStickers.push({
+          type: 'music',
+          data: musicSelection,
+          x: musicGeo.x,
+          y: musicGeo.y,
+          width: musicGeo.width,
+          rotation: musicGeo.rotation
+        });
+      }
 
       const mainStory: Partial<Story> = {
         mediaUrl: selectedImageObjectKey || selectedImage,
@@ -1123,6 +1140,46 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 </div>
               </EditableStickerLayer>
             ))}
+
+          {/* Draggable / resizable / rotatable music sticker (at most one, like Instagram's) */}
+          {selectedImage && musicSelection && (
+            <EditableStickerLayer
+              x={musicGeo.x}
+              y={musicGeo.y}
+              width={musicGeo.width}
+              rotation={musicGeo.rotation}
+              canvasRef={canvasRef}
+              active={activeLayerId === 'music'}
+              onSelect={() => setActiveLayerId('music')}
+              onChange={(next) => setMusicGeo(next)}
+              onTap={() => setShowMusicPicker(true)}
+              onDelete={() => setMusicSelection(null)}
+              onDragStateChange={(dragging, overTrash) => {
+                setIsDraggingLayer(dragging);
+                setIsOverTrash(overTrash);
+              }}
+              minWidthPct={30}
+              maxWidthPct={80}
+            >
+              <div className="w-full flex items-center justify-center">
+                <div
+                  className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-white/20 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap"
+                  style={{ fontSize: `${musicGeo.width * 0.08}cqw` }}
+                >
+                  {musicSelection.coverUrl ? (
+                    <img src={musicSelection.coverUrl} alt="" className="rounded-full object-cover shrink-0" style={{ width: '1.8em', height: '1.8em' }} />
+                  ) : (
+                    <div className="rounded-full bg-neutral-800 flex items-center justify-center shrink-0" style={{ width: '1.8em', height: '1.8em' }}>
+                      <MusicIcon style={{ width: '1em', height: '1em' }} className="text-white" />
+                    </div>
+                  )}
+                  <span className="font-semibold text-white truncate" style={{ fontSize: '1em', maxWidth: '14em' }}>
+                    {musicSelection.title}{musicSelection.artist ? ` · ${musicSelection.artist}` : ''}
+                  </span>
+                </div>
+              </div>
+            </EditableStickerLayer>
+          )}
 
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
@@ -1591,6 +1648,17 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </div>
             </div>
           )}
+
+          {/* Music picker */}
+          {showMusicPicker && (
+            <MusicPicker
+              onClose={() => setShowMusicPicker(false)}
+              onSelect={(selection) => {
+                setMusicSelection(selection);
+                setShowMusicPicker(false);
+              }}
+            />
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -1650,6 +1718,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <MessageCircleQuestion className="w-3.5 h-3.5" /> Questions
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMusicPicker(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <MusicIcon className="w-3.5 h-3.5" /> Music
               </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}

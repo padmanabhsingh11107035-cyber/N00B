@@ -2631,7 +2631,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         ref={stickerFileInputRef}
                         type="file"
                         accept="image/*"
-                        className="hidden"
+                        className="sr-only"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) handleUploadSticker(file);
@@ -2867,8 +2867,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </button>
                   </div>
                 )}
-                <input ref={chatPhotoInputRef} type="file" accept="image/*" onChange={(e) => handleAttachFile(e, 'image')} className="hidden" />
-                <input ref={chatVideoInputRef} type="file" accept="video/*" onChange={(e) => handleAttachFile(e, 'video')} className="hidden" />
+                <input ref={chatPhotoInputRef} type="file" accept="image/*" onChange={(e) => handleAttachFile(e, 'image')} className="sr-only" />
+                <input ref={chatVideoInputRef} type="file" accept="video/*" onChange={(e) => handleAttachFile(e, 'video')} className="sr-only" />
               </div>
 
               <div className="flex-1 flex items-center bg-black/80 border border-zinc-700/80 rounded-2xl px-3.5 py-2 focus-within:border-[#00FF66] transition-colors shadow-inner">

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search } from 'lucide-react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2 } from 'lucide-react';
 import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
@@ -59,6 +59,20 @@ interface LinkLayer {
   width: number;
   rotation: number;
 }
+
+// A freehand ink stroke. Points are percentages of the canvas (0-100), so they map straight
+// onto an SVG viewBox="0 0 100 100" — no pixel-baking/re-upload needed, and it scales with
+// whatever size the photo renders at, same as every other sticker's x/y.
+interface DrawStroke {
+  points: { x: number; y: number }[];
+  color: string;
+  width: number; // viewBox units
+  mode: 'pen' | 'highlighter';
+}
+
+const DRAW_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
+const DRAW_SIZES = [0.6, 1.4, 2.6];
+const ERASE_RADIUS = 4; // percentage units
 
 interface CreateStoryModalProps {
   onClose: () => void;
@@ -266,6 +280,81 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
     setActiveLayerId((cur) => (cur === id ? null : cur));
   };
 
+  // Freehand drawing — pen/highlighter/eraser on a full-canvas SVG overlay.
+  const [drawStrokes, setDrawStrokes] = useState<DrawStroke[]>([]);
+  const [isDrawMode, setIsDrawMode] = useState(false);
+  const [drawTool, setDrawTool] = useState<'pen' | 'highlighter' | 'eraser'>('pen');
+  const [drawColor, setDrawColor] = useState(DRAW_COLORS[2]);
+  const [drawSize, setDrawSize] = useState(DRAW_SIZES[1]);
+  const [currentStroke, setCurrentStroke] = useState<DrawStroke | null>(null);
+  const drawSurfaceRef = useRef<HTMLDivElement>(null);
+
+  const pointFromClient = (clientX: number, clientY: number): { x: number; y: number } | null => {
+    const rect = drawSurfaceRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return {
+      x: Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100)),
+      y: Math.min(100, Math.max(0, ((clientY - rect.top) / rect.height) * 100))
+    };
+  };
+
+  const eraseAt = (p: { x: number; y: number }) => {
+    setDrawStrokes((prev) =>
+      prev.filter((s) => !s.points.some((sp) => Math.hypot(sp.x - p.x, sp.y - p.y) < ERASE_RADIUS))
+    );
+  };
+
+  // Window-level pointermove/pointerup (not element-bound handlers or setPointerCapture, which
+  // throws for a pointer the browser doesn't consider "active") — same pattern as
+  // EditableStickerLayer's drag, so a stroke keeps extending even if the pointer briefly leaves
+  // the drawing surface mid-gesture.
+  const handleDrawPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    const p = pointFromClient(e.clientX, e.clientY);
+    if (!p) return;
+
+    if (drawTool === 'eraser') {
+      eraseAt(p);
+      const handleMove = (ev: PointerEvent) => {
+        const q = pointFromClient(ev.clientX, ev.clientY);
+        if (q) eraseAt(q);
+      };
+      const handleUp = () => {
+        window.removeEventListener('pointermove', handleMove);
+        window.removeEventListener('pointerup', handleUp);
+      };
+      window.addEventListener('pointermove', handleMove);
+      window.addEventListener('pointerup', handleUp);
+      return;
+    }
+
+    let stroke: DrawStroke = {
+      points: [p],
+      color: drawColor,
+      width: drawTool === 'highlighter' ? drawSize * 2.2 : drawSize,
+      mode: drawTool
+    };
+    setCurrentStroke(stroke);
+
+    const handleMove = (ev: PointerEvent) => {
+      const q = pointFromClient(ev.clientX, ev.clientY);
+      if (!q) return;
+      stroke = { ...stroke, points: [...stroke.points, q] };
+      setCurrentStroke(stroke);
+    };
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      if (stroke.points.length > 1) setDrawStrokes((prev) => [...prev, stroke]);
+      setCurrentStroke(null);
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  };
+
+  const strokeToPath = (s: DrawStroke) =>
+    s.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+
   const openNewTextLayer = () => {
     setDraftText('');
     setDraftColor(TEXT_COLORS[0]);
@@ -417,6 +506,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           rotation: layer.rotation
         });
       });
+      if (drawStrokes.length > 0) {
+        mainStickers.push({
+          type: 'draw',
+          data: { strokes: drawStrokes },
+          x: 50,
+          y: 50,
+          width: 100,
+          rotation: 0
+        });
+      }
 
       const mainStory: Partial<Story> = {
         mediaUrl: selectedImageObjectKey || selectedImage,
@@ -605,6 +704,25 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             >
               <ImagePlus className="w-4 h-4" />
             </button>
+          )}
+
+          {/* Committed freehand drawing — always visible, like ink baked onto the photo */}
+          {selectedImage && drawStrokes.length > 0 && !isDrawMode && (
+            <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full z-10 pointer-events-none">
+              {drawStrokes.map((s, i) => (
+                <path
+                  key={i}
+                  d={strokeToPath(s)}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={s.width}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity={s.mode === 'highlighter' ? 0.45 : 1}
+                  style={s.mode === 'highlighter' ? { mixBlendMode: 'multiply' } : undefined}
+                />
+              ))}
+            </svg>
           )}
 
           {/* Draggable / resizable / rotatable text layers */}
@@ -1048,6 +1166,114 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </div>
             </div>
           )}
+
+          {/* Draw mode — pen / highlighter / eraser on a full-canvas SVG surface */}
+          {isDrawMode && (
+            <div className="absolute inset-0 z-50 bg-black/40 flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setIsDrawMode(false)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setDrawStrokes((prev) => prev.slice(0, -1))}
+                    disabled={drawStrokes.length === 0}
+                    className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Undo last stroke"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                  {(['pen', 'highlighter', 'eraser'] as const).map((tool) => (
+                    <button
+                      key={tool}
+                      onClick={() => setDrawTool(tool)}
+                      className={`p-1.5 rounded-full cursor-pointer ${
+                        drawTool === tool ? 'bg-[#00FF66] text-black' : 'bg-black/60 text-white'
+                      }`}
+                      title={tool}
+                    >
+                      {tool === 'pen' && <Pencil className="w-4 h-4" />}
+                      {tool === 'highlighter' && <Highlighter className="w-4 h-4" />}
+                      {tool === 'eraser' && <Eraser className="w-4 h-4" />}
+                    </button>
+                  ))}
+                </div>
+                <div className="w-7" />
+              </div>
+
+              <div
+                ref={drawSurfaceRef}
+                className="flex-1 relative touch-none"
+                onPointerDown={handleDrawPointerDown}
+              >
+                <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
+                  {drawStrokes.map((s, i) => (
+                    <path
+                      key={i}
+                      d={strokeToPath(s)}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={s.width}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={s.mode === 'highlighter' ? 0.45 : 1}
+                      style={s.mode === 'highlighter' ? { mixBlendMode: 'multiply' } : undefined}
+                    />
+                  ))}
+                  {currentStroke && (
+                    <path
+                      d={strokeToPath(currentStroke)}
+                      fill="none"
+                      stroke={currentStroke.color}
+                      strokeWidth={currentStroke.width}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={currentStroke.mode === 'highlighter' ? 0.45 : 1}
+                      style={currentStroke.mode === 'highlighter' ? { mixBlendMode: 'multiply' } : undefined}
+                    />
+                  )}
+                </svg>
+              </div>
+
+              {drawTool !== 'eraser' && (
+                <div className="flex items-center justify-center gap-2.5 py-3">
+                  {DRAW_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setDrawColor(c)}
+                      title={c}
+                      className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
+                        drawColor === c ? 'border-white scale-110' : 'border-neutral-600 hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-3 pb-5">
+                {DRAW_SIZES.map((sz, i) => (
+                  <button
+                    key={sz}
+                    onClick={() => setDrawSize(sz)}
+                    className={`rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                      drawSize === sz ? 'bg-[#00FF66]' : 'bg-neutral-700'
+                    }`}
+                    style={{ width: '32px', height: '32px' }}
+                    title={['Thin', 'Medium', 'Thick'][i]}
+                  >
+                    <span
+                      className="rounded-full bg-white"
+                      style={{ width: `${4 + i * 4}px`, height: `${4 + i * 4}px` }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -1089,6 +1315,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <Link2 className="w-3.5 h-3.5" /> Link
+              </button>
+              <button
+                onClick={() => setIsDrawMode(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Draw
               </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}

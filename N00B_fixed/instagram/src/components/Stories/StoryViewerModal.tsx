@@ -462,6 +462,28 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`,
             };
 
+            if (sticker.type === 'draw') {
+              const strokes: { points: { x: number; y: number }[]; color: string; width: number; mode: string }[] =
+                Array.isArray(sticker.data?.strokes) ? sticker.data.strokes : [];
+              return (
+                <svg key={idx} viewBox="0 0 100 100" className="absolute inset-0 w-full h-full z-10 pointer-events-none">
+                  {strokes.map((s, i) => (
+                    <path
+                      key={i}
+                      d={s.points.map((p, j) => `${j === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={s.width}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity={s.mode === 'highlighter' ? 0.45 : 1}
+                      style={s.mode === 'highlighter' ? { mixBlendMode: 'multiply' } : undefined}
+                    />
+                  ))}
+                </svg>
+              );
+            }
+
             if (sticker.type === 'text') {
               return (
                 <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>

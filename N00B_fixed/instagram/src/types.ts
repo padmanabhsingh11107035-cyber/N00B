@@ -436,7 +436,7 @@ export interface Story {
   likesCount?: number;
   filter?: string;
   stickers?: {
-    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text' | 'sticker' | 'hashtag' | 'link';
+    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text' | 'sticker' | 'hashtag' | 'link' | 'draw';
     data: any;
     x: number; // percentage, center-anchored
     y: number;

@@ -40,6 +40,10 @@ export const EditableStickerLayer: React.FC<EditableStickerLayerProps> = ({
   const [dragging, setDragging] = useState(false);
   const [overTrash, setOverTrash] = useState(false);
   const dragMovedRef = useRef(false);
+  // handleUp is a long-lived closure bound once per gesture at pointerdown time — it must read
+  // this ref, not the `overTrash` state value, which would otherwise stay frozen at whatever it
+  // was when the closure was created (a stale-closure bug that silently broke drag-to-delete).
+  const overTrashRef = useRef(false);
 
   const handleBodyPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
@@ -47,6 +51,7 @@ export const EditableStickerLayer: React.FC<EditableStickerLayerProps> = ({
     if (!rect) return;
     onSelect();
     dragMovedRef.current = false;
+    overTrashRef.current = false;
     setDragging(true);
     onDragStateChange?.(true, false);
 
@@ -62,6 +67,7 @@ export const EditableStickerLayer: React.FC<EditableStickerLayerProps> = ({
       const nx = Math.min(100, Math.max(0, startX + dx));
       const ny = Math.min(100, Math.max(0, startY + dy));
       const trashActive = ny > 87;
+      overTrashRef.current = trashActive;
       setOverTrash(trashActive);
       onDragStateChange?.(true, trashActive);
       onChange({ x: nx, y: ny, width, rotation });
@@ -71,7 +77,7 @@ export const EditableStickerLayer: React.FC<EditableStickerLayerProps> = ({
       window.removeEventListener('pointerup', handleUp);
       setDragging(false);
       onDragStateChange?.(false, false);
-      if (overTrash) {
+      if (overTrashRef.current) {
         onDelete?.();
       } else if (!dragMovedRef.current) {
         onTap?.();

@@ -475,6 +475,21 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               );
             }
 
+            if (sticker.type === 'sticker') {
+              const width = sticker.width || (sticker.data?.kind === 'emoji' ? 26 : 42);
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>
+                  {sticker.data?.kind === 'emoji' ? (
+                    <span className="block text-center leading-none" style={{ fontSize: `${width * 0.22}cqw` }}>
+                      {sticker.data?.content}
+                    </span>
+                  ) : (
+                    <img src={sticker.data?.content} alt="" className="w-full h-auto rounded-lg" />
+                  )}
+                </div>
+              );
+            }
+
             if (sticker.type === 'poll') {
               const options: string[] = Array.isArray(sticker.data?.options) ? sticker.data.options : [];
               const result = pollResults[`${story.id}:${idx}`];

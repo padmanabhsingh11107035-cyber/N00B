@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type } from 'lucide-react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon } from 'lucide-react';
 import { Story } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
+import { EmojiPanel } from '../Chat/EmojiPanel';
+import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 
 const TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
 
@@ -10,6 +12,16 @@ interface TextLayer {
   id: string;
   text: string;
   color: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
+
+interface StickerLayer {
+  id: string;
+  kind: 'emoji' | 'image';
+  content: string; // an emoji character, or an image/GIF url
   x: number;
   y: number;
   width: number;
@@ -63,6 +75,34 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [textEditorId, setTextEditorId] = useState<string | 'new' | null>(null);
   const [draftText, setDraftText] = useState('');
   const [draftColor, setDraftColor] = useState(TEXT_COLORS[0]);
+
+  // Emoji / animated-sticker / GIF layers — same drag/resize/rotate engine as text layers.
+  const [stickerLayers, setStickerLayers] = useState<StickerLayer[]>([]);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [stickerTab, setStickerTab] = useState<'emoji' | 'animated' | 'gif'>('emoji');
+
+  const addStickerLayer = (kind: StickerLayer['kind'], content: string) => {
+    const id = `sticker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setStickerLayers((prev) => [
+      ...prev,
+      {
+        id,
+        kind,
+        content,
+        x: 50,
+        y: 45 + Math.min(prev.length * 6, 20),
+        width: kind === 'emoji' ? 26 : 42,
+        rotation: 0
+      }
+    ]);
+    setActiveLayerId(id);
+    setShowStickerPicker(false);
+  };
+
+  const deleteStickerLayer = (id: string) => {
+    setStickerLayers((prev) => prev.filter((s) => s.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
 
   const openNewTextLayer = () => {
     setDraftText('');
@@ -167,6 +207,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         mainStickers.push({
           type: 'text',
           data: { text: layer.text, color: layer.color },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
+      stickerLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'sticker',
+          data: { kind: layer.kind, content: layer.content },
           x: layer.x,
           y: layer.y,
           width: layer.width,
@@ -349,6 +399,45 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </EditableStickerLayer>
             ))}
 
+          {/* Draggable / resizable / rotatable emoji, animated-sticker & GIF layers */}
+          {selectedImage &&
+            stickerLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setStickerLayers((prev) => prev.map((s) => (s.id === layer.id ? { ...s, ...next } : s)))
+                }
+                onDelete={() => deleteStickerLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+              >
+                {layer.kind === 'emoji' ? (
+                  <span
+                    className="block text-center leading-none select-none"
+                    style={{ fontSize: `${layer.width * 0.22}cqw` }}
+                  >
+                    {layer.content}
+                  </span>
+                ) : (
+                  <img
+                    src={layer.content}
+                    alt=""
+                    draggable={false}
+                    className="w-full h-auto pointer-events-none select-none rounded-lg"
+                  />
+                )}
+              </EditableStickerLayer>
+            ))}
+
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
             <div
@@ -427,6 +516,44 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </div>
             </div>
           )}
+
+          {/* Sticker / emoji / GIF picker */}
+          {showStickerPicker && (
+            <div
+              className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setShowStickerPicker(false)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1.5 bg-black/60 rounded-full p-1">
+                  {(['emoji', 'animated', 'gif'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setStickerTab(tab)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+                        stickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300 hover:text-white'
+                      }`}
+                    >
+                      {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : 'GIF'}
+                    </button>
+                  ))}
+                </div>
+                <div className="w-7" />
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 pb-4">
+                {stickerTab === 'emoji' && <EmojiPanel onPick={(emoji) => addStickerLayer('emoji', emoji)} />}
+                {stickerTab === 'animated' && (
+                  <AnimatedStickerPanel onPick={(url) => addStickerLayer('image', url)} />
+                )}
+                {stickerTab === 'gif' && <GifPanel curated={[]} onPick={(url) => addStickerLayer('image', url)} />}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -444,6 +571,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <Type className="w-3.5 h-3.5" /> Text
+              </button>
+              <button
+                onClick={() => setShowStickerPicker(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <StickerIcon className="w-3.5 h-3.5" /> Stickers
               </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}

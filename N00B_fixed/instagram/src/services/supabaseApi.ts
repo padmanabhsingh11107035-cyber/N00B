@@ -991,6 +991,28 @@ export async function voteStoryPoll(storyId: string, stickerIndex: number, optio
   }
 }
 
+// Story Questions sticker (migration 20260930000001): free-text answers, private to the story's
+// owner — never shown to other viewers, unlike poll results which everyone sees aggregated.
+export interface StoryQuestionAnswer {
+  id: string;
+  username: string;
+  avatar: string;
+  answer: string;
+  createdAt: string;
+}
+
+export async function answerStoryQuestion(storyId: string, stickerIndex: number, answer: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('answer_story_question', { p_story: storyId, p_sticker: stickerIndex, p_answer: answer });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not send your answer. Please try again.') };
+  }
+}
+
+export async function fetchStoryQuestionResults(storyId: string): Promise<Record<string, StoryQuestionAnswer[]>> {
+  try { return (await rpc<Record<string, StoryQuestionAnswer[]>>('story_question_results', { p_story: storyId })) || {}; } catch { return {}; }
+}
+
 // Today's real comments/likes for one story, by id, regardless of whether it's still in the live
 // 24h tray — this is what a highlight page calls to layer live data on top of its fixed snapshot.
 export async function fetchStoryById(storyId: string): Promise<Story | null> {

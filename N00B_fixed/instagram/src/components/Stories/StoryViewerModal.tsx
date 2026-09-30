@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2 } from 'lucide-react';
 import { Story, User } from '../../types';
-import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll } from '../../services/api';
-import type { StoryPollResult } from '../../services/api';
+import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
+import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import confetti from 'canvas-confetti';
@@ -77,6 +77,15 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // Real poll results from the database, keyed `${storyId}:${stickerIndex}` (they used to be made up).
   const [pollResults, setPollResults] = useState<Record<string, StoryPollResult>>({});
   const [pollError, setPollError] = useState('');
+  // Questions sticker: your own in-progress answer text, keyed the same way as pollResults, plus
+  // which ones you've already sent. The owner instead sees `questionResults` — everyone else's
+  // answers, fetched only when they tap their own question sticker (private, not preloaded).
+  const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
+  const [questionSent, setQuestionSent] = useState<Record<string, boolean>>({});
+  const [questionError, setQuestionError] = useState('');
+  const [openQuestionResultsKey, setOpenQuestionResultsKey] = useState<string | null>(null);
+  const [questionResults, setQuestionResults] = useState<Record<string, StoryQuestionAnswer[]>>({});
+  const [questionResultsLoading, setQuestionResultsLoading] = useState(false);
   const [quizSelected, setQuizSelected] = useState<number | null>(null);
   const [sliderVal, setSliderVal] = useState(75);
   const [showViewersSheet, setShowViewersSheet] = useState(false);
@@ -283,6 +292,37 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         });
         setPollError(res.error || 'Could not save your vote. Please try again.');
       }
+    });
+  };
+
+  const handleSubmitQuestionAnswer = (stickerIndex: number) => {
+    const id = story.id;
+    const key = `${id}:${stickerIndex}`;
+    const text = (questionDrafts[key] || '').trim();
+    if (!text) return;
+    setQuestionError('');
+    answerStoryQuestion(id, stickerIndex, text).then((res) => {
+      if (res.success) {
+        setQuestionSent((prev) => ({ ...prev, [key]: true }));
+        confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
+      } else {
+        setQuestionError(res.error || 'Could not send your answer. Please try again.');
+      }
+    });
+  };
+
+  const openQuestionResults = (stickerIndex: number) => {
+    const key = `${story.id}:${stickerIndex}`;
+    setOpenQuestionResultsKey((cur) => (cur === key ? null : key));
+    if (questionResults[key]) return;
+    setQuestionResultsLoading(true);
+    fetchStoryQuestionResults(story.id).then((res) => {
+      setQuestionResultsLoading(false);
+      setQuestionResults((prev) => {
+        const next = { ...prev };
+        for (const [idx, answers] of Object.entries(res)) next[`${story.id}:${idx}`] = answers;
+        return next;
+      });
     });
   };
 
@@ -508,6 +548,76 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       </span>
                     </div>
                   </div>
+                </div>
+              );
+            }
+
+            if (sticker.type === 'question') {
+              const key = `${story.id}:${idx}`;
+              const sent = !!questionSent[key];
+              const answers = questionResults[key] || [];
+              const resultsOpen = openQuestionResultsKey === key;
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle} onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="w-full bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-500 rounded-2xl p-3 shadow-lg text-center cursor-pointer"
+                    style={{ fontSize: `${(sticker.width || 62) * 0.06}cqw` }}
+                    onClick={() => isOwnStory && openQuestionResults(idx)}
+                  >
+                    <p className="font-bold text-white/80" style={{ fontSize: '0.75em' }}>Question</p>
+                    <p className="font-extrabold text-white mt-0.5 line-clamp-3" style={{ fontSize: '1em' }}>
+                      {sticker.data?.prompt}
+                    </p>
+                  </div>
+
+                  {!isOwnStory && !sent && (
+                    <div className="mt-1.5 flex items-center gap-1.5" style={{ fontSize: `${(sticker.width || 62) * 0.045}cqw` }}>
+                      <input
+                        value={questionDrafts[key] || ''}
+                        onChange={(e) => setQuestionDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitQuestionAnswer(idx); }}
+                        placeholder="Type your answer..."
+                        maxLength={500}
+                        className="flex-1 min-w-0 bg-black/70 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-white outline-none focus:border-[#00FF66]"
+                        style={{ fontSize: '1em' }}
+                      />
+                      <button
+                        onClick={() => handleSubmitQuestionAnswer(idx)}
+                        disabled={!(questionDrafts[key] || '').trim()}
+                        className="p-2 rounded-full bg-[#00FF66] text-black disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                      >
+                        <Send style={{ width: '1em', height: '1em' }} />
+                      </button>
+                    </div>
+                  )}
+                  {!isOwnStory && sent && (
+                    <p className="mt-1.5 text-center text-[#00FF66] font-bold" style={{ fontSize: `${(sticker.width || 62) * 0.045}cqw` }}>
+                      Sent ✓
+                    </p>
+                  )}
+                  {!isOwnStory && questionError && (
+                    <p className="mt-1 text-center text-red-400" style={{ fontSize: `${(sticker.width || 62) * 0.04}cqw` }}>{questionError}</p>
+                  )}
+
+                  {isOwnStory && resultsOpen && (
+                    <div className="mt-1.5 max-w-[260px] max-h-48 overflow-y-auto bg-black/90 backdrop-blur-md border border-white/20 rounded-xl p-2 space-y-1.5">
+                      {questionResultsLoading && <p className="text-[10px] text-center text-white/60 py-2">Loading…</p>}
+                      {!questionResultsLoading && answers.length === 0 && (
+                        <p className="text-[10px] text-center text-white/60 py-2">No answers yet.</p>
+                      )}
+                      {answers.map((a) => (
+                        <div key={a.id} className="flex items-start gap-1.5">
+                          <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 mt-0.5">
+                            <AvatarMedia src={a.avatar} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold text-white/70">@{a.username}</p>
+                            <p className="text-[11px] text-white break-words">{a.answer}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             }

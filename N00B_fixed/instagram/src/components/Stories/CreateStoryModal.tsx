@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer } from 'lucide-react';
+import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion } from 'lucide-react';
 import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
@@ -79,6 +79,15 @@ interface CountdownLayer {
   id: string;
   label: string;
   targetIso: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+}
+
+interface QuestionLayer {
+  id: string;
+  prompt: string;
   x: number;
   y: number;
   width: number;
@@ -426,6 +435,47 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
     setActiveLayerId((cur) => (cur === id ? null : cur));
   };
 
+  // Question layers — viewers answer with free text; only you see the answers (see
+  // answerStoryQuestion/fetchStoryQuestionResults, migration 20260930000001).
+  const [questionLayers, setQuestionLayers] = useState<QuestionLayer[]>([]);
+  const [questionEditorId, setQuestionEditorId] = useState<string | 'new' | null>(null);
+  const [draftQuestionPrompt, setDraftQuestionPrompt] = useState('');
+
+  const openNewQuestionLayer = () => {
+    setDraftQuestionPrompt('');
+    setQuestionEditorId('new');
+  };
+
+  const openEditQuestionLayer = (layer: QuestionLayer) => {
+    setDraftQuestionPrompt(layer.prompt);
+    setQuestionEditorId(layer.id);
+  };
+
+  const commitQuestionEditor = () => {
+    const prompt = draftQuestionPrompt.trim();
+    if (!prompt) {
+      setQuestionEditorId(null);
+      return;
+    }
+    if (questionEditorId === 'new') {
+      const id = `question-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setQuestionLayers((prev) => [
+        ...prev,
+        { id, prompt, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 62, rotation: 0 }
+      ]);
+      setActiveLayerId(id);
+    } else if (questionEditorId) {
+      setQuestionLayers((prev) => prev.map((q) => (q.id === questionEditorId ? { ...q, prompt } : q)));
+      setActiveLayerId(questionEditorId);
+    }
+    setQuestionEditorId(null);
+  };
+
+  const deleteQuestionLayer = (id: string) => {
+    setQuestionLayers((prev) => prev.filter((q) => q.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
+
   const openNewTextLayer = () => {
     setDraftText('');
     setDraftColor(TEXT_COLORS[0]);
@@ -591,6 +641,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         mainStickers.push({
           type: 'countdown',
           data: { label: layer.label, targetIso: layer.targetIso },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
+      questionLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'question',
+          data: { prompt: layer.prompt },
           x: layer.x,
           y: layer.y,
           width: layer.width,
@@ -1028,6 +1088,42 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </EditableStickerLayer>
             ))}
 
+          {/* Draggable / resizable / rotatable question layers */}
+          {selectedImage &&
+            questionLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) =>
+                  setQuestionLayers((prev) => prev.map((q) => (q.id === layer.id ? { ...q, ...next } : q)))
+                }
+                onTap={() => openEditQuestionLayer(layer)}
+                onDelete={() => deleteQuestionLayer(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+                minWidthPct={40}
+                maxWidthPct={95}
+              >
+                <div
+                  className="w-full bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-500 rounded-2xl p-3 shadow-lg text-center"
+                  style={{ fontSize: `${layer.width * 0.06}cqw` }}
+                >
+                  <p className="font-bold text-white/80" style={{ fontSize: '0.75em' }}>Question</p>
+                  <p className="font-extrabold text-white mt-0.5 line-clamp-3" style={{ fontSize: '1em' }}>
+                    {layer.prompt}
+                  </p>
+                </div>
+              </EditableStickerLayer>
+            ))}
+
           {/* Trash drop zone — shown only while dragging a layer */}
           {isDraggingLayer && (
             <div
@@ -1447,6 +1543,54 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               </div>
             </div>
           )}
+
+          {/* Question composer */}
+          {questionEditorId !== null && (
+            <div
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <button
+                  onClick={() => setQuestionEditorId(null)}
+                  className="p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                {questionEditorId !== 'new' && (
+                  <button
+                    onClick={() => { deleteQuestionLayer(questionEditorId); setQuestionEditorId(null); }}
+                    className="p-1.5 rounded-full bg-black/60 text-red-400 cursor-pointer"
+                    title="Delete question"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={commitQuestionEditor}
+                  disabled={!draftQuestionPrompt.trim()}
+                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6">
+                <div className="w-full max-w-xs bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-500 rounded-2xl p-4 text-center">
+                  <p className="text-xs font-bold text-white/80">Question</p>
+                  <textarea
+                    autoFocus
+                    value={draftQuestionPrompt}
+                    onChange={(e) => setDraftQuestionPrompt(e.target.value)}
+                    placeholder="Ask me a question..."
+                    maxLength={120}
+                    rows={2}
+                    className="w-full bg-transparent text-center font-extrabold text-white text-lg resize-none focus:outline-none placeholder:text-white/60 mt-1"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500 text-center">Only you will see the answers people send.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tools & Filter Presets */}
@@ -1500,6 +1644,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <Timer className="w-3.5 h-3.5" /> Countdown
+              </button>
+              <button
+                onClick={openNewQuestionLayer}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <MessageCircleQuestion className="w-3.5 h-3.5" /> Questions
               </button>
               <button
                 onClick={() => setShowPollInput(!showPollInput)}

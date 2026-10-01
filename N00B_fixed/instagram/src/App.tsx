@@ -191,6 +191,7 @@ export default function App() {
     roomCode?: string;
   } | null>(null);
   const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
+  const [sharedLiveLoungeCode, setSharedLiveLoungeCode] = useState<string | null>(null);
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
   const [sharedReelId, setSharedReelId] = useState<string | null>(null);
   const [pendingJoinTeam, setPendingJoinTeam] = useState(false);
@@ -211,6 +212,7 @@ export default function App() {
         const joinParam = params.get('join');
         const postParam = params.get('post');
         const reelParam = params.get('reel');
+        const liveLoungeParam = params.get('liveLounge');
 
         if (gameParam) {
           const matched = ALL_50_MINI_GAMES.find(
@@ -241,6 +243,10 @@ export default function App() {
         if (reelParam) {
           setSharedReelId(reelParam);
         }
+
+        if (liveLoungeParam) {
+          setSharedLiveLoungeCode(liveLoungeParam);
+        }
       } catch (err) {
         console.error('URL param parse error:', err);
       }
@@ -268,6 +274,16 @@ export default function App() {
   }, [sharedProfileUsername, currentUser, registeredUsers]);
 
   // Same deep-link pattern as the shared-profile one above.
+  useEffect(() => {
+    if (!sharedLiveLoungeCode || !currentUser) return;
+    setLiveLoungeInviteRoomId(null); // this is a code join, not a targeted invite — don't let a stale one race it
+    setShowLiveLoungeUpsell(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('liveLounge');
+    window.history.replaceState({}, '', url.toString());
+    // sharedLiveLoungeCode itself is left set — LiveLoungePage reads it as initialJoinCode below.
+  }, [sharedLiveLoungeCode, currentUser]);
+
   useEffect(() => {
     if (!sharedPostId || !currentUser) return;
     handleNavigateToPost(sharedPostId);
@@ -1472,7 +1488,8 @@ export default function App() {
             currentUser={currentUser}
             allUsers={registeredUsers}
             initialRoomId={liveLoungeInviteRoomId || undefined}
-            onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); }}
+            initialJoinCode={sharedLiveLoungeCode || undefined}
+            onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); setSharedLiveLoungeCode(null); }}
             onUserUpdated={(u) => setCurrentUser(u)}
           />
         </React.Suspense>

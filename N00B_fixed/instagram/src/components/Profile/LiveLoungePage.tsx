@@ -13,11 +13,12 @@ interface LiveLoungePageProps {
   onClose: () => void;
   onUserUpdated?: (user: User) => void;
   initialRoomId?: string;
+  initialJoinCode?: string;
 }
 
 type Mode = 'menu' | 'purchase' | 'coupon' | 'ask-friend' | 'history';
 
-export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, allUsers, onClose, onUserUpdated, initialRoomId }) => {
+export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, allUsers, onClose, onUserUpdated, initialRoomId, initialJoinCode }) => {
   const alreadyUnlocked = !!currentUser.hasLiveLounge;
   const [mode, setMode] = useState<Mode>('menu');
   const [password, setPassword] = useState('');
@@ -31,7 +32,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
   const [friendQuery, setFriendQuery] = useState('');
   const [friend, setFriend] = useState<User | null>(null);
   const [askSent, setAskSent] = useState(false);
-  const [roomFlow, setRoomFlow] = useState<'host' | 'join' | null>(initialRoomId ? 'join' : null);
+  const [roomFlow, setRoomFlow] = useState<'host' | 'join' | null>(initialRoomId || initialJoinCode ? 'join' : null);
   const [resumeRoomId, setResumeRoomId] = useState<string | undefined>(initialRoomId);
   const [pendingInvites, setPendingInvites] = useState<LiveLoungePendingInvite[]>([]);
   const [history, setHistory] = useState<LiveLoungeHistoryEntry[]>([]);
@@ -123,6 +124,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
         mode={roomFlow}
         allUsers={allUsers}
         initialRoomId={resumeRoomId}
+        initialJoinCode={resumeRoomId ? undefined : initialJoinCode}
         onClose={() => { setRoomFlow(null); setResumeRoomId(undefined); }}
       />
     );

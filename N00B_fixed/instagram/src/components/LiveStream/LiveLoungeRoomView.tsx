@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   X, Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PenTool, MessageCircle, Users,
-  Send, Copy, Check, UserCheck, UserX, LogOut, Radio, Eraser, MoreVertical
+  Send, Copy, Check, UserCheck, UserX, LogOut, Radio, Eraser, Hand, Wand2, CheckCircle2, AlertCircle, Clock,
+  MoreVertical, Share2
 } from 'lucide-react';
 import AgoraRTC, {
   IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack,
   IAgoraRTCRemoteUser, IRemoteVideoTrack, IRemoteAudioTrack
 } from 'agora-rtc-sdk-ng';
+import VirtualBackgroundExtension from 'agora-extension-virtual-background';
 import { User } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import {
@@ -26,6 +28,7 @@ import {
   subscribeToLiveLoungeRoomParticipants,
   connectLiveLoungeWhiteboard,
   connectLiveLoungeScreenShare,
+  connectLiveLoungeControls,
   fetchPublicPlatformSettings,
   inviteToLiveLoungeRoom
 } from '../../services/api';
@@ -38,6 +41,9 @@ interface LiveLoungeRoomViewProps {
   onClose: () => void;
   allUsers?: User[];
   initialRoomId?: string;
+  // From a shared link (?liveLounge=CODE) rather than a targeted invite — joins straight into the
+  // waiting room the same way typing the code in by hand would, no re-typing needed.
+  initialJoinCode?: string;
 }
 
 type Phase = 'lobby' | 'waiting-room' | 'connecting' | 'live' | 'ended';
@@ -66,8 +72,9 @@ const VideoTile: React.FC<{
   hasVideo: boolean;
   muted?: boolean;
   full?: boolean;
+  raised?: boolean;
   menu?: React.ReactNode;
-}> = ({ videoTrack, name, avatar, isSelf, hasVideo, muted, full, menu }) => {
+}> = ({ videoTrack, name, avatar, isSelf, hasVideo, muted, full, raised, menu }) => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (hasVideo && videoTrack && ref.current) {
@@ -79,6 +86,11 @@ const VideoTile: React.FC<{
   return (
     <div className={full ? 'relative w-full h-full bg-black' : 'relative aspect-[3/4] rounded-xl overflow-hidden bg-neutral-900 border border-white/10'}>
       <div ref={ref} className="absolute inset-0 w-full h-full" />
+      {raised && (
+        <div className="absolute top-1.5 right-1.5 bg-amber-500 rounded-full p-1 animate-bounce">
+          <Hand className="w-3 h-3 text-black" />
+        </div>
+      )}
       {menu}
       {!hasVideo && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -93,7 +105,7 @@ const VideoTile: React.FC<{
   );
 };
 
-export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentUser, mode, onClose, allUsers, initialRoomId }) => {
+export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentUser, mode, onClose, allUsers, initialRoomId, initialJoinCode }) => {
   const [phase, setPhase] = useState<Phase>(initialRoomId ? 'waiting-room' : 'lobby');
   const [title, setTitle] = useState('');
   const [codeInput, setCodeInput] = useState('');
@@ -103,6 +115,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [loungeLock, setLoungeLock] = useState<{ locked: boolean; message: string }>({ locked: false, message: '' });
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
   const [inviteQuery, setInviteQuery] = useState('');
@@ -131,6 +144,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [unreadChat, setUnreadChat] = useState(0);
   useEffect(() => { panelRef.current = panel; if (panel === 'chat') setUnreadChat(0); }, [panel]);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const [raisedHands, setRaisedHands] = useState<Set<number>>(new Set());
+  const [handRaised, setHandRaised] = useState(false);
+  const [blurOn, setBlurOn] = useState(false);
+  const [blurBusy, setBlurBusy] = useState(false);
+  const [endReason, setEndReason] = useState<'host' | 'ended' | 'removed' | 'error'>('ended');
+  const callStartRef = useRef<number | null>(null);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
@@ -145,6 +164,11 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const whiteboardOpenRef = useRef(false);
   const drawHandlerRef = useRef<((payload: any) => void) | null>(null);
   const screenShareChannelRef = useRef<{ send: (payload: { uid: number; sharing: boolean }) => void; query: () => void; disconnect: () => void } | null>(null);
+  const controlsChannelRef = useRef<{ mute: (targetUid: number | 'all') => void; hand: (uid: number, raised: boolean) => void; disconnect: () => void } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal SDK processor types aren't exported by the extension package
+  const vbExtensionRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const vbProcessorRef = useRef<any>(null);
 
   const myUid = agoraUidFor(currentUser.id);
 
@@ -209,6 +233,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           return next;
         });
         setScreenSharingUid((prevUid) => (prevUid === uid ? null : prevUid));
+        setRaisedHands((prev) => { if (!prev.has(uid)) return prev; const next = new Set(prev); next.delete(uid); return next; });
       });
 
       await withTimeout(client.join(join.appId, join.channelName, join.token, myUid));
@@ -229,6 +254,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       await withTimeout(client.publish(micTrackRef.current ? [micTrackRef.current, camTrackRef.current] : [camTrackRef.current]));
 
       setPhase('live');
+      callStartRef.current = Date.now();
       refreshParticipants(id);
     } catch (err) {
       if (isHost) void endLiveLoungeRoom(id);
@@ -238,6 +264,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         await clientRef.current?.leave();
       } catch { /* best-effort teardown of a connection that never fully came up */ }
       setError(friendlyAgoraError(err, 'Could not start your camera/microphone.'));
+      setEndReason('error');
       setPhase('ended');
     }
   }, [myUid, refreshParticipants, isHost]);
@@ -258,11 +285,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     connectAgora(res.roomId);
   };
 
-  const handleJoinByCode = async () => {
-    if (!codeInput.trim()) return;
+  const handleJoinByCode = async (codeOverride?: string) => {
+    const code = (codeOverride ?? codeInput).trim();
+    if (!code) return;
     setError('');
     setBusy(true);
-    const res = await joinLiveLoungeRoomByCode(codeInput.trim());
+    const res = await joinLiveLoungeRoomByCode(code);
     setBusy(false);
     if (!res.success || !res.roomId) {
       setError(res.error || 'Could not join that room.');
@@ -272,6 +300,15 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     setTitle(res.title || '');
     setPhase('waiting-room');
   };
+
+  // A shared-link join (?liveLounge=CODE): joins straight away instead of waiting for the person
+  // to type the code into the lobby screen by hand.
+  useEffect(() => {
+    if (initialJoinCode && !initialRoomId && mode === 'join') {
+      void handleJoinByCode(initialJoinCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once, on mount, off the initial prop only
+  }, []);
 
   // Waiting room: poll our own admission status.
   useEffect(() => {
@@ -285,6 +322,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       if (status?.status === 'admitted') { setPhase('connecting'); connectAgora(roomId); }
       else if (status?.status === 'removed' || status?.roomStatus === 'ended') {
         setError(status?.roomStatus === 'ended' ? 'This room has ended.' : 'The host removed you from this room.');
+        setEndReason(status?.roomStatus === 'ended' ? 'ended' : 'removed');
         setPhase('ended');
       }
     };
@@ -345,6 +383,29 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     screenShareChannelRef.current = channel;
     channel.query();
     return () => { channel.disconnect(); screenShareChannelRef.current = null; };
+  }, [phase, roomId, myUid]);
+
+  // Host mute (self or everyone) and raise-hand — one shared channel, see connectLiveLoungeControls.
+  useEffect(() => {
+    if (phase !== 'live' || !roomId) return;
+    const channel = connectLiveLoungeControls(
+      roomId,
+      ({ targetUid }) => {
+        if (targetUid === 'all' || targetUid === myUid) {
+          micTrackRef.current?.setEnabled(false);
+          setMicOn(false);
+        }
+      },
+      ({ uid, raised }) => {
+        setRaisedHands((prev) => {
+          const next = new Set(prev);
+          if (raised) next.add(uid); else next.delete(uid);
+          return next;
+        });
+      }
+    );
+    controlsChannelRef.current = channel;
+    return () => { channel.disconnect(); controlsChannelRef.current = null; };
   }, [phase, roomId, myUid]);
 
   // Whiteboard visibility: connected for the whole call (not just while open) so anyone toggling it
@@ -435,6 +496,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     if (cleanedUpRef.current) return;
     cleanedUpRef.current = true;
     try {
+      await vbProcessorRef.current?.release();
       micTrackRef.current?.close();
       camTrackRef.current?.close();
       screenTrackRef.current?.close();
@@ -444,10 +506,14 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   useEffect(() => () => { void cleanup(); }, [cleanup]);
 
   const handleEndOrLeave = async () => {
-    if (roomId) {
-      if (isHost) await endLiveLoungeRoom(roomId);
-      else await leaveLiveLoungeRoom(roomId);
+    if (isHost) {
+      if (roomId) await endLiveLoungeRoom(roomId);
+      await cleanup();
+      setEndReason('host');
+      setPhase('ended');
+      return;
     }
+    if (roomId) await leaveLiveLoungeRoom(roomId);
     await cleanup();
     onClose();
   };
@@ -464,6 +530,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       if (status?.roomStatus === 'ended' || status?.status === 'removed') {
         await cleanup();
         setError(status?.roomStatus === 'ended' ? 'The host ended this room.' : 'The host removed you from this room.');
+        setEndReason(status?.roomStatus === 'ended' ? 'ended' : 'removed');
         setPhase('ended');
       }
     };
@@ -473,6 +540,91 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
 
   const handleToggleMic = () => { micTrackRef.current?.setEnabled(!micOn); setMicOn((v) => !v); };
   const handleToggleCamera = () => { camTrackRef.current?.setEnabled(!cameraOn); setCameraOn((v) => !v); };
+
+  const handleMuteAll = () => controlsChannelRef.current?.mute('all');
+  const handleMuteParticipant = (uid: number) => controlsChannelRef.current?.mute(uid);
+
+  // Host-only 3-dot menu shown directly on a participant's video tile — Mute (same control the
+  // People panel already has) and Remove, without needing to open that panel first.
+  const renderTileMenu = (uid: number, userId?: string) => {
+    if (!isHost || !userId || !roomId) return null;
+    const open = tileMenuUid === uid;
+    return (
+      <div className="absolute top-1.5 left-1.5 z-10">
+        <button
+          onClick={(e) => { e.stopPropagation(); setTileMenuUid(open ? null : uid); }}
+          className="p-1 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setTileMenuUid(null)} />
+            <div className="absolute top-full left-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl py-1 min-w-[110px] z-20">
+              <button
+                onClick={() => { handleMuteParticipant(uid); setTileMenuUid(null); }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-800 text-left"
+              >
+                <MicOff className="w-3.5 h-3.5" /> Mute
+              </button>
+              <button
+                onClick={() => {
+                  admitLiveLoungeParticipant(roomId, userId, false).then(() => refreshParticipants(roomId));
+                  setTileMenuUid(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-zinc-800 text-left"
+              >
+                <UserX className="w-3.5 h-3.5" /> Remove
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const handleToggleHand = () => {
+    const next = !handRaised;
+    setHandRaised(next);
+    controlsChannelRef.current?.hand(myUid, next);
+  };
+
+  // Background blur (desktop Chrome only per Agora's own guidance — see the toolbar button's title).
+  // The processor is created once and reused: re-running init() re-downloads/decodes the segmentation
+  // model, which is the slow part, so toggling off just disables it rather than tearing it down.
+  const handleToggleBlur = async () => {
+    if (!camTrackRef.current || blurBusy) return;
+    setBlurBusy(true);
+    try {
+      if (!blurOn) {
+        if (!vbExtensionRef.current) {
+          const ext = new VirtualBackgroundExtension();
+          if (!ext.checkCompatibility()) {
+            setError('Background blur is not supported on this browser — try desktop Chrome instead.');
+            return;
+          }
+          AgoraRTC.registerExtensions([ext]);
+          vbExtensionRef.current = ext;
+        }
+        if (!vbProcessorRef.current) {
+          const processor = vbExtensionRef.current.createProcessor();
+          await processor.init();
+          vbProcessorRef.current = processor;
+          camTrackRef.current.pipe(processor).pipe(camTrackRef.current.processorDestination);
+        }
+        vbProcessorRef.current.setOptions({ type: 'blur', blurDegree: 2 });
+        await vbProcessorRef.current.enable();
+        setBlurOn(true);
+      } else {
+        await vbProcessorRef.current?.disable();
+        setBlurOn(false);
+      }
+    } catch (err) {
+      setError(friendlyAgoraError(err, 'Could not enable background blur.'));
+    } finally {
+      setBlurBusy(false);
+    }
+  };
 
   const handleToggleScreenShare = async () => {
     const client = clientRef.current;
@@ -518,39 +670,6 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     }
   };
 
-  // Host-only 3-dot menu shown directly on a participant's video tile, so removing them doesn't
-  // require opening the People panel first.
-  const renderTileMenu = (uid: number, userId?: string) => {
-    if (!isHost || !userId || !roomId) return null;
-    const open = tileMenuUid === uid;
-    return (
-      <div className="absolute top-1.5 left-1.5 z-10">
-        <button
-          onClick={(e) => { e.stopPropagation(); setTileMenuUid(open ? null : uid); }}
-          className="p-1 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
-        >
-          <MoreVertical className="w-3.5 h-3.5" />
-        </button>
-        {open && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setTileMenuUid(null)} />
-            <div className="absolute top-full left-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl py-1 min-w-[110px] z-20">
-              <button
-                onClick={() => {
-                  admitLiveLoungeParticipant(roomId, userId, false).then(() => refreshParticipants(roomId));
-                  setTileMenuUid(null);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-zinc-800 text-left"
-              >
-                <UserX className="w-3.5 h-3.5" /> Remove
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
-
   const handleSendChat = async () => {
     const text = chatInput.trim();
     if (!text || !roomId) return;
@@ -572,6 +691,27 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const copyRoomCode = () => {
     if (!roomCode) return;
     navigator.clipboard?.writeText(roomCode).then(() => { setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000); }).catch(() => undefined);
+  };
+
+  // A link anyone can open straight into the waiting room, already signed in as themselves —
+  // no separate invite step, no re-typing the code. Native share sheet on mobile (where it's
+  // actually useful — sharing into WhatsApp etc.), clipboard copy as the desktop fallback.
+  const shareRoomLink = () => {
+    if (!roomCode) return '';
+    return `${window.location.origin}/?liveLounge=${roomCode}`;
+  };
+  const handleShareRoom = async () => {
+    const link = shareRoomLink();
+    if (!link) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: title || 'Join my NOOB Live Lounge', url: link });
+        return;
+      } catch {
+        return; // cancelled or failed silently — no fallback needed, the share sheet itself reported it
+      }
+    }
+    navigator.clipboard?.writeText(link).then(() => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }).catch(() => undefined);
   };
 
   const handleInvite = async (userId: string) => {
@@ -641,7 +781,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         )}
         {error && <p className="text-red-400 text-xs">{error}</p>}
         <button
-          onClick={mode === 'host' ? handleStartRoom : handleJoinByCode}
+          onClick={() => (mode === 'host' ? handleStartRoom() : handleJoinByCode())}
           disabled={busy || (mode === 'join' && !codeInput.trim())}
           className="w-full max-w-sm bg-purple-500 text-white font-semibold rounded-full py-3 disabled:opacity-40 active:scale-95 transition"
         >
@@ -672,10 +812,37 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   }
 
   if (phase === 'ended') {
+    const durationMs = callStartRef.current ? Date.now() - callStartRef.current : 0;
+    const durationText = (() => {
+      if (durationMs < 60000) return null;
+      const totalMinutes = Math.round(durationMs / 60000);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    })();
+    const copy = {
+      host: { title: 'Meeting ended', body: 'You ended this Live Lounge room. Everyone has been disconnected.', tone: 'good' as const },
+      ended: { title: 'Meeting ended', body: error || 'The host ended this room.', tone: 'good' as const },
+      removed: { title: 'Removed from room', body: error || 'The host removed you from this room.', tone: 'bad' as const },
+      error: { title: 'Could not join', body: error || 'Something went wrong connecting to this room.', tone: 'warn' as const }
+    }[endReason];
     return (
-      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-white text-base">{error || 'This room has ended.'}</p>
-        <button onClick={onClose} className="mt-2 bg-white/10 text-white rounded-full px-6 py-2 text-sm">Close</button>
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center border ${
+          copy.tone === 'bad' ? 'bg-red-500/15 border-red-500/40' : copy.tone === 'warn' ? 'bg-amber-500/15 border-amber-500/40' : 'bg-[#00FF66]/15 border-[#00FF66]/40'
+        }`}>
+          {copy.tone === 'bad' ? <UserX className="w-8 h-8 text-red-400" /> : copy.tone === 'warn' ? <AlertCircle className="w-8 h-8 text-amber-400" /> : <CheckCircle2 className="w-8 h-8 text-[#00FF66]" />}
+        </div>
+        <div>
+          <h2 className="text-white text-lg font-bold">{copy.title}</h2>
+          <p className="text-zinc-400 text-xs mt-1 max-w-xs">{copy.body}</p>
+        </div>
+        {durationText && copy.tone === 'good' && (
+          <div className="flex items-center gap-1.5 text-zinc-500 text-xs bg-white/5 rounded-full px-3 py-1.5">
+            <Clock className="w-3.5 h-3.5" /> Call lasted {durationText}
+          </div>
+        )}
+        <button onClick={onClose} className="mt-2 bg-[#00FF66] text-black font-bold rounded-full px-8 py-2.5 text-sm">Done</button>
       </div>
     );
   }
@@ -699,6 +866,11 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           {isHost && (
             <button onClick={() => setInvitePanelOpen(true)} className="flex items-center gap-1.5 bg-white/10 text-white rounded-full px-3 py-1.5 text-xs font-semibold">
               <Users className="w-3.5 h-3.5" /> Invite
+            </button>
+          )}
+          {isHost && roomCode && (
+            <button onClick={handleShareRoom} className="flex items-center gap-1.5 bg-white/10 text-white rounded-full px-3 py-1.5 text-xs font-semibold">
+              {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />} {linkCopied ? 'Copied' : 'Share'}
             </button>
           )}
           <button onClick={handleEndOrLeave} className="flex items-center gap-1.5 bg-red-500/15 text-red-300 border border-red-500/30 rounded-full px-3 py-1.5 text-xs font-semibold">
@@ -743,7 +915,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           )
         ) : (
           <div className="grid grid-cols-2 gap-2 max-w-2xl mx-auto">
-            <VideoTile videoTrack={(sharingScreen ? screenTrackRef.current : camTrackRef.current) || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={sharingScreen || cameraOn} muted={!micOn} />
+            <VideoTile videoTrack={(sharingScreen ? screenTrackRef.current : camTrackRef.current) || undefined} name={currentUser.username} avatar={currentUser.avatar} isSelf hasVideo={sharingScreen || cameraOn} muted={!micOn} raised={handRaised} />
             {remoteList.map((r) => {
               const p = participants.admitted.find((a) => agoraUidFor(a.userId) === r.uid);
               return (
@@ -754,6 +926,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
                   avatar={p?.avatar}
                   hasVideo={r.hasVideo}
                   muted={!r.hasAudio}
+                  raised={raisedHands.has(r.uid)}
                   menu={renderTileMenu(r.uid, p?.userId)}
                 />
               );
@@ -776,6 +949,17 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         <button onClick={() => handleToggleWhiteboard(!whiteboardOpen)} className={`p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <PenTool className="w-5 h-5" />
         </button>
+        <button onClick={handleToggleHand} className={`p-3 rounded-full ${handRaised ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 text-white'}`}>
+          <Hand className="w-5 h-5" />
+        </button>
+        <button
+          onClick={handleToggleBlur}
+          disabled={blurBusy}
+          title="Blur your background (desktop Chrome works best)"
+          className={`p-3 rounded-full disabled:opacity-50 ${blurOn ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}
+        >
+          <Wand2 className="w-5 h-5" />
+        </button>
         <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`relative p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MessageCircle className="w-5 h-5" />
           {unreadChat > 0 && (
@@ -784,6 +968,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         </button>
         <button onClick={() => setPanel(panel === 'people' ? 'none' : 'people')} className={`relative p-3 rounded-full ${panel === 'people' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <Users className="w-5 h-5" />
+          {raisedHands.size > 0 && (
+            <span className="absolute -top-1 -left-1 bg-amber-500 text-black text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{raisedHands.size}</span>
+          )}
           {isHost && participants.waiting.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{participants.waiting.length}</span>
           )}
@@ -848,7 +1035,14 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         <div className="absolute inset-x-0 bottom-0 z-10 h-2/3 bg-zinc-950 border-t border-white/10 rounded-t-2xl flex flex-col">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
             <span className="text-white text-xs font-bold">People</span>
-            <button onClick={() => setPanel('none')} className="text-white/70"><X className="w-4 h-4" /></button>
+            <div className="flex items-center gap-2">
+              {isHost && (
+                <button onClick={handleMuteAll} className="flex items-center gap-1 text-[11px] text-white/70 px-2 py-1 rounded-lg bg-white/10">
+                  <MicOff className="w-3.5 h-3.5" /> Mute all
+                </button>
+              )}
+              <button onClick={() => setPanel('none')} className="text-white/70"><X className="w-4 h-4" /></button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
             {isHost && (
@@ -867,15 +1061,22 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
             )}
             <div className="space-y-1.5">
               <p className="text-[10px] text-white/50 font-bold uppercase">In the room ({participants.admitted.length})</p>
-              {participants.admitted.map((p) => (
-                <div key={p.userId} className="flex items-center gap-2 p-2 rounded-xl bg-white/5">
-                  <AvatarMedia src={p.avatar} alt={p.username} className="w-8 h-8 rounded-full object-cover" />
-                  <span className="flex-1 text-xs text-white truncate">{p.username}{p.role === 'host' ? ' (Host)' : ''}</span>
-                  {isHost && p.userId !== currentUser.id && (
-                    <button onClick={() => admitLiveLoungeParticipant(roomId!, p.userId, false).then(() => refreshParticipants(roomId!))} className="p-1.5 bg-red-500/20 text-red-400 rounded-lg text-[10px] font-bold px-2">Remove</button>
-                  )}
-                </div>
-              ))}
+              {participants.admitted.map((p) => {
+                const uid = agoraUidFor(p.userId);
+                return (
+                  <div key={p.userId} className="flex items-center gap-2 p-2 rounded-xl bg-white/5">
+                    <AvatarMedia src={p.avatar} alt={p.username} className="w-8 h-8 rounded-full object-cover" />
+                    <span className="flex-1 text-xs text-white truncate">{p.username}{p.role === 'host' ? ' (Host)' : ''}</span>
+                    {raisedHands.has(uid) && <Hand className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                    {isHost && p.userId !== currentUser.id && (
+                      <>
+                        <button onClick={() => handleMuteParticipant(uid)} className="p-1.5 bg-white/10 text-white/70 rounded-lg"><MicOff className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => admitLiveLoungeParticipant(roomId!, p.userId, false).then(() => refreshParticipants(roomId!))} className="p-1.5 bg-red-500/20 text-red-400 rounded-lg text-[10px] font-bold px-2">Remove</button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

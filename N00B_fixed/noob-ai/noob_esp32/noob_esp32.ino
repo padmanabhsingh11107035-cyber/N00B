@@ -178,6 +178,16 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   showStatus("Connecting WiFi...", WIFI_SSID);
   WiFi.mode(WIFI_STA);
+  // The MAC address itself is available as soon as STA mode is set, no connection needed yet — so
+  // the name is ready in time to also become the Wi-Fi hostname below, not just the name shown in
+  // the NOOB App's own device scan (which used to be the only place "NOOB-XXXX" ever appeared; a
+  // router's own "connected devices" list would otherwise show whatever generic default the ESP32
+  // Wi-Fi stack picks on its own).
+  if (deviceName.isEmpty()) {
+    String mac = WiFi.macAddress();
+    deviceName = "NOOB-" + mac.substring(12, 14) + mac.substring(15, 17);
+  }
+  WiFi.setHostname(deviceName.c_str());
   WiFi.setSleep(false);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   unsigned long start = millis();
@@ -462,9 +472,7 @@ void setup() {
   serverUrl = prefs.getString("url", "");
   deviceKey = prefs.getString("key", "");
 
-  connectWiFi();
-  String mac = WiFi.macAddress();              // e.g. "AA:BB:CC:DD:EE:FF" -> name "NOOB-EEFF"
-  deviceName = "NOOB-" + mac.substring(12, 14) + mac.substring(15, 17);
+  connectWiFi();                                // sets deviceName itself now, e.g. "NOOB-EEFF"
   lastWifiTry = millis();
   pingServer();
   lastPing = millis();

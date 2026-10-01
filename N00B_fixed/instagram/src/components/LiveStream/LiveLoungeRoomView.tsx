@@ -961,46 +961,49 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         )}
       </div>
 
-      {/* Bottom toolbar */}
-      <div className="shrink-0 flex items-center justify-center gap-2 px-3 py-3 border-t border-white/10 bg-zinc-950/95">
-        <button onClick={handleToggleMic} className={`p-3 rounded-full ${micOn ? 'bg-white/10 text-white' : 'bg-red-500/20 text-red-400'}`}>
+      {/* Bottom toolbar — scrolls horizontally instead of squeezing/clipping buttons off-screen:
+          9 controls at a comfortable tap size is wider than most phone screens, and the old
+          non-scrolling, centered row let that overflow push Mic (the first, most essential button)
+          outside the visible viewport entirely on a narrow phone. */}
+      <div className="shrink-0 flex items-center gap-2 px-3 py-3 border-t border-white/10 bg-zinc-950/95 overflow-x-auto">
+        <button onClick={handleToggleMic} className={`shrink-0 p-3 rounded-full ${micOn ? 'bg-white/10 text-white' : 'bg-red-500/20 text-red-400'}`}>
           {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
         </button>
-        <button onClick={handleToggleCamera} className={`p-3 rounded-full ${cameraOn ? 'bg-white/10 text-white' : 'bg-red-500/20 text-red-400'}`}>
+        <button onClick={handleToggleCamera} className={`shrink-0 p-3 rounded-full ${cameraOn ? 'bg-white/10 text-white' : 'bg-red-500/20 text-red-400'}`}>
           {cameraOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
         </button>
         <button
           onClick={handleFlipCamera}
           disabled={!cameraOn || sharingScreen || flippingCamera}
           title="Switch between front and back camera"
-          className="p-3 rounded-full bg-white/10 text-white disabled:opacity-40"
+          className="shrink-0 p-3 rounded-full bg-white/10 text-white disabled:opacity-40"
         >
           <SwitchCamera className="w-5 h-5" />
         </button>
-        <button onClick={handleToggleScreenShare} className={`p-3 rounded-full ${sharingScreen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={handleToggleScreenShare} className={`shrink-0 p-3 rounded-full ${sharingScreen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MonitorUp className="w-5 h-5" />
         </button>
-        <button onClick={() => handleToggleWhiteboard(!whiteboardOpen)} className={`p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={() => handleToggleWhiteboard(!whiteboardOpen)} className={`shrink-0 p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <PenTool className="w-5 h-5" />
         </button>
-        <button onClick={handleToggleHand} className={`p-3 rounded-full ${handRaised ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={handleToggleHand} className={`shrink-0 p-3 rounded-full ${handRaised ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 text-white'}`}>
           <Hand className="w-5 h-5" />
         </button>
         <button
           onClick={handleToggleBlur}
           disabled={blurBusy}
           title="Blur your background (desktop Chrome works best)"
-          className={`p-3 rounded-full disabled:opacity-50 ${blurOn ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}
+          className={`shrink-0 p-3 rounded-full disabled:opacity-50 ${blurOn ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}
         >
           <Wand2 className="w-5 h-5" />
         </button>
-        <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`relative p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`relative shrink-0 p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MessageCircle className="w-5 h-5" />
           {unreadChat > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{unreadChat > 9 ? '9+' : unreadChat}</span>
           )}
         </button>
-        <button onClick={() => setPanel(panel === 'people' ? 'none' : 'people')} className={`relative p-3 rounded-full ${panel === 'people' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        <button onClick={() => setPanel(panel === 'people' ? 'none' : 'people')} className={`relative shrink-0 p-3 rounded-full ${panel === 'people' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <Users className="w-5 h-5" />
           {raisedHands.size > 0 && (
             <span className="absolute -top-1 -left-1 bg-amber-500 text-black text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{raisedHands.size}</span>

@@ -13,7 +13,10 @@ import os
 import re
 import subprocess
 import sys
+import threading
+import time
 import urllib.request
+from collections import namedtuple
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CLOUDFLARED = os.path.join(HERE, "tools", "cloudflared.exe")
@@ -36,15 +39,72 @@ def public_url():
     return f"https://{match.group(1)}" if match else ""
 
 
-def start(log):
-    """Starts the tunnel in the background (called by the NOOB server). Returns the process or None."""
-    if not configured():
-        return None
+# ------------------------------ self-healing tunnel ------------------------------
+# cloudflared is a single subprocess with no retry of its own. Starting it the moment Windows logs
+# in or Wi-Fi reconnects — exactly when NOOB starts — is also the moment DNS is most likely not
+# ready yet, which makes cloudflared give up and exit for good ("NOOB is sleeping" until someone
+# manually restarts the whole server). _watchdog relaunches it within a few seconds instead.
+_Running = namedtuple("_Running", "process started_at")
+_current = None
+_state_lock = threading.Lock()
+_shutting_down = False
+
+
+def _spawn():
     out = open(LOG_FILE, "a", encoding="utf-8")
     process = subprocess.Popen([CLOUDFLARED, "tunnel", "--no-autoupdate", "--config", CONFIG, "run"],
                                stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT, creationflags=HIDDEN)
+    return _Running(process, time.monotonic())
+
+
+def _watchdog(log):
+    global _current
+    backoff = 5
+    while True:
+        running = _current
+        running.process.wait()
+        with _state_lock:
+            if _shutting_down or _current is not running:
+                return                                              # a deliberate stop, not a crash
+        stayed_up = time.monotonic() - running.started_at
+        backoff = 5 if stayed_up > 30 else min(backoff * 2, 60)     # a real crash-loop backs off; a one-off doesn't
+        log(f"Online access dropped — reconnecting in {backoff}s...")
+        time.sleep(backoff)
+        with _state_lock:
+            if _shutting_down:
+                return
+            _current = _spawn()
+        log(f"Online access on: {public_url()}")
+
+
+class _Handle:
+    """Stands in for the raw subprocess so stop_everything()'s tunnel.poll()/.terminate() keep
+    working unchanged, even though the actual cloudflared process underneath can be replaced
+    by the watchdog at any time."""
+    def poll(self):
+        return _current.process.poll() if _current else 0
+
+    def terminate(self):
+        global _shutting_down
+        _shutting_down = True
+        with _state_lock:
+            if _current:
+                try:
+                    _current.process.terminate()
+                except Exception:
+                    pass
+
+
+def start(log):
+    """Starts the tunnel in the background (called by the NOOB server) and keeps it reconnected
+    for as long as the server runs. Returns a handle with .poll()/.terminate(), or None."""
+    if not configured():
+        return None
+    global _current
+    _current = _spawn()
     log(f"Online access on: {public_url()}")
-    return process
+    threading.Thread(target=_watchdog, args=(log,), daemon=True).start()
+    return _Handle()
 
 
 # ------------------------------ one-time setup ------------------------------

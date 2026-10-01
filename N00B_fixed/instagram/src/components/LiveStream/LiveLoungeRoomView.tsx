@@ -321,6 +321,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       if (!alive) return;
       if (status?.title) setTitle(status.title);
       if (status?.roomCode) setRoomCode(status.roomCode);
+      if (status?.role === 'host') setIsHost(true);
       if (status?.status === 'admitted') { setPhase('connecting'); connectAgora(roomId); }
       else if (status?.status === 'removed' || status?.roomStatus === 'ended') {
         setError(status?.roomStatus === 'ended' ? 'This room has ended.' : 'The host removed you from this room.');

@@ -166,7 +166,12 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 text-center gap-4">
         <button onClick={onClose} className="absolute top-4 left-4 text-zinc-400 hover:text-white p-2"><ArrowLeft className="w-5 h-5" /></button>
-        <button onClick={() => setMode('history')} className="absolute top-4 right-4 text-zinc-400 hover:text-white p-2" aria-label="Meeting history"><History className="w-5 h-5" /></button>
+        <button
+          onClick={() => setMode('history')}
+          className="absolute top-4 right-4 flex items-center gap-1.5 text-zinc-400 hover:text-white px-3 py-2 rounded-xl hover:bg-white/5 text-xs font-bold"
+        >
+          <History className="w-4 h-4" /> History
+        </button>
         <div className="w-16 h-16 rounded-full bg-purple-500/15 border border-purple-500/40 flex items-center justify-center">
           <Sparkles className="w-8 h-8 text-purple-400" />
         </div>

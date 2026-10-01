@@ -175,7 +175,8 @@ interface ChatViewProps {
   onNavigateToReel?: (reelId: string) => void;
 }
 
-// Swipe-left-to-reply threshold (mobile), matching WhatsApp's gesture feel.
+// Swipe threshold (mobile): left opens Reply, right opens the React/Edit/Delete menu —
+// same gesture feel as WhatsApp, just mirrored for the second action.
 const SWIPE_REPLY_THRESHOLD = 56;
 
 type FilterTab = 'all' | 'unread' | 'favourites' | 'groups';
@@ -1230,11 +1231,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       if (Math.abs(dy) > Math.abs(dx)) return; // vertical scroll gesture, ignore
       t.locked = true;
     }
-    const clamped = Math.max(-90, Math.min(0, dx));
+    const clamped = Math.max(-90, Math.min(90, dx));
     const row = e.currentTarget as HTMLElement;
     row.style.transform = clamped ? `translateX(${clamped}px)` : '';
-    const icon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
-    if (icon) icon.style.opacity = String(Math.min(1, -clamped / SWIPE_REPLY_THRESHOLD));
+    const replyIcon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
+    if (replyIcon) replyIcon.style.opacity = String(Math.min(1, Math.max(0, -clamped) / SWIPE_REPLY_THRESHOLD));
+    const menuIcon = row.parentElement?.querySelector<HTMLElement>('.swipe-menu-icon');
+    if (menuIcon) menuIcon.style.opacity = String(Math.min(1, Math.max(0, clamped) / SWIPE_REPLY_THRESHOLD));
   };
   const handleBubbleTouchEnd = (e: React.TouchEvent, msg: Message) => {
     clearLongPressTimer();
@@ -1243,13 +1246,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const row = e.currentTarget as HTMLElement;
     row.style.transition = 'transform 0.2s ease';
     row.style.transform = '';
-    const icon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
-    if (icon) icon.style.opacity = '0';
+    const replyIcon = row.parentElement?.querySelector<HTMLElement>('.swipe-reply-icon');
+    if (replyIcon) replyIcon.style.opacity = '0';
+    const menuIcon = row.parentElement?.querySelector<HTMLElement>('.swipe-menu-icon');
+    if (menuIcon) menuIcon.style.opacity = '0';
     if (longPressFiredRef.current) return; // the menu already opened; do not also treat this as a swipe
     if (!t || t.id !== msg.id) return;
     const dx = e.changedTouches[0].clientX - t.startX;
-    if (t.locked && dx <= -SWIPE_REPLY_THRESHOLD) {
+    if (!t.locked) return;
+    if (dx <= -SWIPE_REPLY_THRESHOLD) {
       setReplyingToMessage(msg);
+    } else if (dx >= SWIPE_REPLY_THRESHOLD) {
+      if (navigator.vibrate) navigator.vibrate(15);
+      openMessageMenu(msg, e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }
   };
   const handleBubbleContextMenu = (e: React.MouseEvent, msg: Message) => {
@@ -2061,6 +2070,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     style={{ opacity: 0 }}
                   >
                     <Reply className="w-4 h-4" />
+                  </div>
+                  <div
+                    className="swipe-menu-icon absolute inset-y-0 left-0 flex items-center pl-1 text-[#00FF66] pointer-events-none"
+                    style={{ opacity: 0 }}
+                  >
+                    <MoreVertical className="w-4 h-4" />
                   </div>
                   <div
                     className={`flex flex-col w-full select-none ${isMine ? 'items-end' : 'items-start'}`}

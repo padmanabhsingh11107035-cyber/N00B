@@ -69,19 +69,29 @@ export const MEDIA_BUCKET = 'media';
 // Everything the database stores for a photo/video is either a bare storage key ("posts/123-abc.jpg"),
 // a full https URL (outside links such as default avatars), a bundled "/path", or a "data:"/"blob:" preview.
 // Only bare keys need turning into a real address.
+//
+// Resolved through our own origin's /media/ route (a Cloudflare Worker, see src/worker.ts) rather than
+// straight to Supabase Storage: every object request used to hit Supabase's origin directly, with no
+// CDN layer in front of it — measured around 1s+ just for response headers before any image bytes even
+// start, on every single photo a feed loads. The Worker caches objects at Cloudflare's edge instead.
+const MEDIA_PATH_PREFIX = '/media/';
+const LEGACY_MEDIA_URL_PREFIX = `${url}/storage/v1/object/public/${MEDIA_BUCKET}/`;
+
 export function resolveMedia(value?: string | null): string {
   if (!value) return '';
   if (/^(https?:|data:|blob:|\/)/i.test(value)) return value;
-  return `${url}/storage/v1/object/public/${MEDIA_BUCKET}/${value.split('/').map(encodeURIComponent).join('/')}`;
+  const path = `${MEDIA_PATH_PREFIX}${value.split('/').map(encodeURIComponent).join('/')}`;
+  return typeof window !== 'undefined' ? `${window.location.origin}${path}` : path;
 }
 
 // The reverse: what to SAVE when a screen hands back a display address. Storing the short key (not the
 // long address) keeps data portable and lets the storage location change later.
 export function toStoredMedia(value?: string | null): string {
   if (!value) return '';
-  const prefix = `${url}/storage/v1/object/public/${MEDIA_BUCKET}/`;
-  if (value.startsWith(prefix)) {
-    try { return decodeURIComponent(value.slice(prefix.length).split('?')[0]); } catch { return value.slice(prefix.length); }
+  for (const prefix of [LEGACY_MEDIA_URL_PREFIX, (typeof window !== 'undefined' ? window.location.origin : '') + MEDIA_PATH_PREFIX, MEDIA_PATH_PREFIX]) {
+    if (prefix && value.startsWith(prefix)) {
+      try { return decodeURIComponent(value.slice(prefix.length).split('?')[0]); } catch { return value.slice(prefix.length); }
+    }
   }
   return value;
 }

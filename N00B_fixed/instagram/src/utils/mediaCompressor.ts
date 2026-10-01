@@ -9,8 +9,18 @@ export async function compressImage(
   maxHeight = 1600,
   quality = 0.82
 ): Promise<File> {
-  // If file is already very small (< 100KB) or not an image, pass through
-  if (!file.type.startsWith('image/') || file.size < 100 * 1024) {
+  // HEIC/HEIF (the default iPhone camera format) can't be uploaded as-is — no browser except
+  // Safari can even display it, and the server rejects it outright. Route it through the same
+  // canvas pipeline as any other photo so it comes out as a JPEG everyone can view, instead of
+  // failing the upload (this is what made picking several iPhone photos at once fail while
+  // re-picking them one at a time sometimes "worked" — it depended on which ones iOS happened to
+  // hand over as HEIC). If this browser can't decode HEIC at all, onerror below still falls back
+  // to the original file, which the upload rejects with a clear message rather than silently.
+  const isHeic = file.type === 'image/heic' || file.type === 'image/heif';
+
+  // If file is already very small (< 100KB) and not HEIC, pass through — not an image at all
+  // skips compression too.
+  if (!file.type.startsWith('image/') || (!isHeic && file.size < 100 * 1024)) {
     return file;
   }
 
@@ -62,11 +72,13 @@ export async function compressImage(
         ctx.drawImage(img, 0, 0, width, height);
 
         // Convert to compressed JPEG or WebP blob
-        const outputType = file.type === 'image/png' ? 'image/jpeg' : file.type;
+        const outputType = isHeic || file.type === 'image/png' ? 'image/jpeg' : file.type;
         canvas.toBlob(
           (blob) => {
-            if (!blob || blob.size >= file.size) {
-              // If compression didn't reduce size, use original
+            // HEIC always needs this conversion regardless of the resulting size — unlike a plain
+            // "did compression help" check for other formats, a HEIC source can't be uploaded at
+            // all, so a bigger-but-viewable JPEG beats a smaller-but-rejected original every time.
+            if (!blob || (!isHeic && blob.size >= file.size)) {
               resolve(file);
               return;
             }

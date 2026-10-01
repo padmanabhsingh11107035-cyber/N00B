@@ -375,11 +375,17 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
         setMediaMode('photos');
         setUploadStatusMsg(`Adding photo attachments (${files.length} file${files.length > 1 ? 's' : ''})`);
         
+        // Each photo gets its own try/catch — one bad file in a multi-select (an unsupported
+        // format, a network blip) used to abort the whole batch, discarding the status of photos
+        // that had already uploaded fine right before it.
+        let failed = 0;
+        let lastError = '';
         for (let i = 0; i < files.length; i++) {
           if (slides.length + i >= 20) break;
           const file = files[i];
           const fileAnalysis = analyzeMediaFile(file);
-          if (fileAnalysis.isValid) {
+          if (!fileAnalysis.isValid) continue;
+          try {
             const res = await uploadMediaFile(file, 'posts');
             if (res.url) {
               const newSlide: PostSlide = {
@@ -391,12 +397,23 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               };
               setSlides((prev) => [...prev, newSlide]);
             }
+          } catch (err) {
+            failed++;
+            lastError = err instanceof Error ? err.message : 'Upload failed.';
+            console.error('Failed to upload one file in the batch:', err);
           }
         }
+        setUploadStatusMsg(
+          failed === 0
+            ? ''
+            : failed === files.length
+              ? lastError
+              : `${files.length - failed} of ${files.length} added — ${lastError}`
+        );
       }
     } catch (err) {
       console.error('Failed to upload file:', err);
-      setUploadStatusMsg('Upload failed. Please try again.');
+      setUploadStatusMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.');
     } finally {
       setIsUploadingMedia(false);
     }

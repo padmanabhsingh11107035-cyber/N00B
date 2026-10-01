@@ -617,8 +617,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           </div>
         )}
 
-        {/* Hidden preload of the next TWO reels in the deck so swiping doesn't stall while the browser starts fetching/decoding cold —
-            one reel of lookahead alone still stalls for anyone swiping faster than the current one finishes buffering. */}
+        {/* Hidden preload of the next reel so swiping doesn't stall while the browser starts fetching/decoding cold.
+            The one after that only gets its metadata (duration/dimensions), not a full download — fully buffering
+            two whole videos in the background at once was competing for bandwidth with the one actually playing,
+            which is exactly what made media feel slow to load on a real phone connection. */}
         {nextReel && (
           <video
             key={`preload-${nextReel.id}`}
@@ -637,7 +639,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             src={nextNextReel.videoUrl}
             muted
             playsInline
-            preload="auto"
+            preload="metadata"
             className="absolute w-px h-px opacity-0 pointer-events-none"
             aria-hidden="true"
           />

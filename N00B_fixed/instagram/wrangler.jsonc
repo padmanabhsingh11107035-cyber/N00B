@@ -2,16 +2,10 @@
   // Cloudflare hosting for the NOOB website: serves the built files in ./dist
   // (made by "npx vite build"). Any address that is not a real file falls back to the app,
   // so links like /profile or /reels open correctly when a page is refreshed.
-  //
-  // main (cf-worker/media-proxy.js) intercepts /media/* to cache Supabase Storage objects at
-  // Cloudflare's edge, then falls through to these same static assets (via the ASSETS binding
-  // below) for every other request — see that file for why.
   "name": "n00b",
-  "main": "cf-worker/media-proxy.js",
   "compatibility_date": "2026-09-01",
   "assets": {
     "directory": "./dist",
-    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   }
 }

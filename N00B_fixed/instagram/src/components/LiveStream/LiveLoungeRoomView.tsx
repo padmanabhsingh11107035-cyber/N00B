@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   X, Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PenTool, MessageCircle, Users,
   Send, Copy, Check, UserCheck, UserX, LogOut, Radio, Eraser, Hand, Wand2, CheckCircle2, AlertCircle, Clock,
-  MoreVertical, Share2
+  MoreVertical, Share2, SwitchCamera
 } from 'lucide-react';
 import AgoraRTC, {
   IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack,
@@ -134,6 +134,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
 
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [flippingCamera, setFlippingCamera] = useState(false);
   const [sharingScreen, setSharingScreen] = useState(false);
   const [screenShareError, setScreenShareError] = useState('');
   const [screenSharingUid, setScreenSharingUid] = useState<number | null>(null);
@@ -541,6 +543,29 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const handleToggleMic = () => { micTrackRef.current?.setEnabled(!micOn); setMicOn((v) => !v); };
   const handleToggleCamera = () => { camTrackRef.current?.setEnabled(!cameraOn); setCameraOn((v) => !v); };
 
+  // Swaps the published camera track for one on the other physical camera (front/back) — Agora
+  // has no in-place "flip" for an existing track, so this closes the old one and publishes a
+  // fresh one, the same unpublish/publish pattern screen-share already uses below.
+  const handleFlipCamera = async () => {
+    const client = clientRef.current;
+    if (!client || !camTrackRef.current || flippingCamera) return;
+    setFlippingCamera(true);
+    const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+    try {
+      const newCam = await AgoraRTC.createCameraVideoTrack({ facingMode: nextFacing });
+      await client.unpublish(camTrackRef.current);
+      camTrackRef.current.close();
+      camTrackRef.current = newCam;
+      newCam.setEnabled(cameraOn);
+      await client.publish(newCam);
+      setFacingMode(nextFacing);
+    } catch (err) {
+      setError(friendlyAgoraError(err, 'Could not switch camera — this device may only have one.'));
+    } finally {
+      setFlippingCamera(false);
+    }
+  };
+
   const handleMuteAll = () => controlsChannelRef.current?.mute('all');
   const handleMuteParticipant = (uid: number) => controlsChannelRef.current?.mute(uid);
 
@@ -942,6 +967,14 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         </button>
         <button onClick={handleToggleCamera} className={`p-3 rounded-full ${cameraOn ? 'bg-white/10 text-white' : 'bg-red-500/20 text-red-400'}`}>
           {cameraOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+        </button>
+        <button
+          onClick={handleFlipCamera}
+          disabled={!cameraOn || sharingScreen || flippingCamera}
+          title="Switch between front and back camera"
+          className="p-3 rounded-full bg-white/10 text-white disabled:opacity-40"
+        >
+          <SwitchCamera className="w-5 h-5" />
         </button>
         <button onClick={handleToggleScreenShare} className={`p-3 rounded-full ${sharingScreen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MonitorUp className="w-5 h-5" />

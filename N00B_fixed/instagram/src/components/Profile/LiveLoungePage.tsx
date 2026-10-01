@@ -151,6 +151,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
                     <p className="text-xs font-bold text-white truncate">{h.title || 'Live Lounge room'}</p>
                     <p className="text-[10px] text-zinc-500">{h.role === 'host' ? 'You hosted' : 'You joined'} · {new Date(h.joinedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
                     {duration && <p className="text-[10px] text-zinc-600">Duration: {duration}</p>}
+                    {h.roomCode && <p className="text-[10px] text-zinc-600 font-mono">Code: {h.roomCode}</p>}
                   </div>
                   <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${h.roomStatus === 'active' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-zinc-800 text-zinc-400'}`}>
                     {h.roomStatus === 'active' ? 'Live' : 'Ended'}

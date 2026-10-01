@@ -7,6 +7,13 @@
 // fires beforeinstallprompt, so the in-app "Install" button silently has nothing to trigger.
 self.addEventListener('fetch', () => {});
 
+// Without these, a browser that already had the old sw.js (from before this file existed, or from
+// any earlier version) keeps running it — a new version only takes over once every tab of the site
+// is fully closed — so this exact fix would sit inert for anyone who already had NOOB open before.
+// skipWaiting + clients.claim make a newly-deployed worker take control on the very next load.
+self.addEventListener('install', () => { self.skipWaiting(); });
+self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
+
 self.addEventListener('push', (event) => {
   let data = { title: 'NOOB', body: 'You have a new notification.' };
   try {

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   X, Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PenTool, MessageCircle, Users,
-  Send, Copy, Check, UserCheck, UserX, LogOut, Radio, Eraser
+  Send, Copy, Check, UserCheck, UserX, LogOut, Radio, Eraser, MoreVertical
 } from 'lucide-react';
 import AgoraRTC, {
   IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack,
@@ -66,7 +66,8 @@ const VideoTile: React.FC<{
   hasVideo: boolean;
   muted?: boolean;
   full?: boolean;
-}> = ({ videoTrack, name, avatar, isSelf, hasVideo, muted, full }) => {
+  menu?: React.ReactNode;
+}> = ({ videoTrack, name, avatar, isSelf, hasVideo, muted, full, menu }) => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (hasVideo && videoTrack && ref.current) {
@@ -78,6 +79,7 @@ const VideoTile: React.FC<{
   return (
     <div className={full ? 'relative w-full h-full bg-black' : 'relative aspect-[3/4] rounded-xl overflow-hidden bg-neutral-900 border border-white/10'}>
       <div ref={ref} className="absolute inset-0 w-full h-full" />
+      {menu}
       {!hasVideo && (
         <div className="absolute inset-0 flex items-center justify-center">
           <AvatarMedia src={avatar} alt={name} className="w-14 h-14 rounded-full object-cover" />
@@ -124,6 +126,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [screenSharingUid, setScreenSharingUid] = useState<number | null>(null);
   const sharingScreenRef = useRef(false);
   const [panel, setPanel] = useState<'none' | 'chat' | 'people'>('none');
+  const [tileMenuUid, setTileMenuUid] = useState<number | null>(null);
   const panelRef = useRef(panel);
   const [unreadChat, setUnreadChat] = useState(0);
   useEffect(() => { panelRef.current = panel; if (panel === 'chat') setUnreadChat(0); }, [panel]);
@@ -515,6 +518,39 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     }
   };
 
+  // Host-only 3-dot menu shown directly on a participant's video tile, so removing them doesn't
+  // require opening the People panel first.
+  const renderTileMenu = (uid: number, userId?: string) => {
+    if (!isHost || !userId || !roomId) return null;
+    const open = tileMenuUid === uid;
+    return (
+      <div className="absolute top-1.5 left-1.5 z-10">
+        <button
+          onClick={(e) => { e.stopPropagation(); setTileMenuUid(open ? null : uid); }}
+          className="p-1 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+        >
+          <MoreVertical className="w-3.5 h-3.5" />
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setTileMenuUid(null)} />
+            <div className="absolute top-full left-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl py-1 min-w-[110px] z-20">
+              <button
+                onClick={() => {
+                  admitLiveLoungeParticipant(roomId, userId, false).then(() => refreshParticipants(roomId));
+                  setTileMenuUid(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-red-400 hover:bg-zinc-800 text-left"
+              >
+                <UserX className="w-3.5 h-3.5" /> Remove
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const handleSendChat = async () => {
     const text = chatInput.trim();
     if (!text || !roomId) return;
@@ -711,7 +747,15 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
             {remoteList.map((r) => {
               const p = participants.admitted.find((a) => agoraUidFor(a.userId) === r.uid);
               return (
-                <VideoTile key={r.uid} videoTrack={r.videoTrack} name={p?.username || 'Guest'} avatar={p?.avatar} hasVideo={r.hasVideo} muted={!r.hasAudio} />
+                <VideoTile
+                  key={r.uid}
+                  videoTrack={r.videoTrack}
+                  name={p?.username || 'Guest'}
+                  avatar={p?.avatar}
+                  hasVideo={r.hasVideo}
+                  muted={!r.hasAudio}
+                  menu={renderTileMenu(r.uid, p?.userId)}
+                />
               );
             })}
           </div>

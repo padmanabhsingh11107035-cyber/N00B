@@ -80,7 +80,15 @@ function mapPost(p: any): Post {
 const mapPosts = (list: any[] | null | undefined): Post[] => (Array.isArray(list) ? list.map(mapPost) : []);
 
 function mapComment(c: any) {
-  return c ? { ...c, userAvatar: resolveMedia(c.userAvatar), authorLiveAvatarVideoUrl: c.authorLiveAvatarVideoUrl ? resolveMedia(c.authorLiveAvatarVideoUrl) : c.authorLiveAvatarVideoUrl } : c;
+  return c
+    ? {
+        ...c,
+        userAvatar: resolveMedia(c.userAvatar),
+        authorLiveAvatarVideoUrl: c.authorLiveAvatarVideoUrl ? resolveMedia(c.authorLiveAvatarVideoUrl) : c.authorLiveAvatarVideoUrl,
+        // gif/sticker URLs are already absolute (Giphy/Noto CDN); resolveMedia passes those through unchanged.
+        mediaUrl: c.mediaUrl ? resolveMedia(c.mediaUrl) : c.mediaUrl
+      }
+    : c;
 }
 
 function mapNotification(n: any): AppNotification {
@@ -747,9 +755,22 @@ export async function fetchComments(postId: string) {
   }
 }
 
-export async function addComment(postId: string, text: string, parentCommentId?: string) {
+export interface CommentMediaInput {
+  url: string;
+  type: 'image' | 'video' | 'voice' | 'gif' | 'sticker';
+  duration?: string;
+}
+
+export async function addComment(postId: string, text: string, parentCommentId?: string, media?: CommentMediaInput) {
   try {
-    const res = await rpc<{ comment: any }>('add_comment', { p_post: postId, p_text: text, p_parent_comment: parentCommentId || null });
+    const res = await rpc<{ comment: any }>('add_comment', {
+      p_post: postId,
+      p_text: text || null,
+      p_parent_comment: parentCommentId || null,
+      p_media_url: media?.url || null,
+      p_media_type: media?.type || null,
+      p_media_duration: media?.duration || null
+    });
     invalidateCache(`comments:${postId}`);
     return mapComment(res.comment);
   } catch (err) {
@@ -881,7 +902,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -1228,9 +1249,16 @@ export async function fetchReelComments(reelId: string) {
   }
 }
 
-export async function addReelComment(reelId: string, text: string, parentCommentId?: string) {
+export async function addReelComment(reelId: string, text: string, parentCommentId?: string, media?: CommentMediaInput) {
   try {
-    const res = await rpc<{ comment: any }>('add_reel_comment', { p_reel: reelId, p_text: text, p_parent_comment: parentCommentId || null });
+    const res = await rpc<{ comment: any }>('add_reel_comment', {
+      p_reel: reelId,
+      p_text: text || null,
+      p_parent_comment: parentCommentId || null,
+      p_media_url: media?.url || null,
+      p_media_type: media?.type || null,
+      p_media_duration: media?.duration || null
+    });
     invalidateCache(`reel-comments:${reelId}`);
     return mapComment(res.comment);
   } catch (err) {

@@ -27,6 +27,7 @@ import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { LiveStreamBar } from '../LiveStream/LiveStreamBar';
+import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type CommentAttachment } from '../Feed/CommentMediaComposer';
 // Lazy-loaded: pulls in the Agora SDK, only needed once someone actually opens a live stream —
 // shares the same chunk as App.tsx's own dynamic import() of this component.
 const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
@@ -113,6 +114,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [replyingToComment, setReplyingToComment] = useState<{ topLevelId: string; username: string } | null>(null);
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<string[]>([]);
   const [commentError, setCommentError] = useState('');
+  const [commentAttachment, setCommentAttachment] = useState<CommentAttachment | null>(null);
   const [liveOverlay, setLiveOverlay] = useState<{ stream: LiveStreamSummary } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -367,11 +369,14 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   };
 
   const handlePostComment = async () => {
-    if (!currentReel || !commentInput.trim() || isPostingComment) return;
+    if (!currentReel || (!commentInput.trim() && !commentAttachment) || isPostingComment) return;
     setCommentError('');
     try {
       setIsPostingComment(true);
-      const comment = await addReelComment(currentReel.id, commentInput.trim(), replyingToComment?.topLevelId);
+      const media = commentAttachment
+        ? { url: commentAttachment.objectKey || commentAttachment.url, type: commentAttachment.type, duration: commentAttachment.duration }
+        : undefined;
+      const comment = await addReelComment(currentReel.id, commentInput.trim(), replyingToComment?.topLevelId, media);
       if (!comment) throw new Error('Could not post the comment.');
       setReelComments((prev) => [comment, ...prev]);
       setLocalReels(
@@ -380,6 +385,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         )
       );
       setCommentInput('');
+      setCommentAttachment(null);
       if (replyingToComment) {
         setExpandedReplyThreads((prev) => (prev.includes(replyingToComment.topLevelId) ? prev : [...prev, replyingToComment.topLevelId]));
       }
@@ -1015,6 +1021,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     <div key={c.id} className="py-1">
                       <div translate="no" className="p-2 bg-neutral-900 rounded-lg">
                         <span className="font-bold text-[#00FF66]">@{c.username}:</span> {c.text}
+                        {c.mediaUrl && c.mediaType && <CommentMediaView url={c.mediaUrl} type={c.mediaType} duration={c.mediaDuration} />}
                         <button
                           type="button"
                           onClick={() => setReplyingToComment({ topLevelId: c.id, username: c.username })}
@@ -1046,6 +1053,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                                     <span className="text-[#00FF66] font-semibold mr-1">@{r.replyToUsername}</span>
                                   )}
                                   <span className="font-bold text-[#00FF66]">@{r.username}:</span> {r.text}
+                                  {r.mediaUrl && r.mediaType && <CommentMediaView url={r.mediaUrl} type={r.mediaType} duration={r.mediaDuration} />}
                                   <button
                                     type="button"
                                     onClick={() => setReplyingToComment({ topLevelId: c.id, username: r.username })}
@@ -1079,24 +1087,28 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               </button>
             </div>
           )}
-          <div className="flex items-center gap-2 pt-2 border-t border-neutral-800">
-            <input
-              type="text"
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handlePostComment();
-              }}
-              placeholder={replyingToComment ? `Reply to @${replyingToComment.username}...` : 'Add a comment...'}
-              className="flex-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
-            />
-            <button
-              onClick={handlePostComment}
-              disabled={!commentInput.trim() || isPostingComment}
-              className="px-3 py-2 rounded-full bg-[#00FF66] text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-            >
-              Post
-            </button>
+          {commentAttachment && <CommentAttachmentPreview attachment={commentAttachment} onRemove={() => setCommentAttachment(null)} />}
+          <div className="pt-2 border-t border-neutral-800">
+            <CommentMediaComposer onAttachmentChange={setCommentAttachment} onInsertEmoji={(emoji) => setCommentInput((prev) => prev + emoji)} />
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="text"
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handlePostComment();
+                }}
+                placeholder={replyingToComment ? `Reply to @${replyingToComment.username}...` : 'Add a comment...'}
+                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
+              />
+              <button
+                onClick={handlePostComment}
+                disabled={(!commentInput.trim() && !commentAttachment) || isPostingComment}
+                className="px-3 py-2 rounded-full bg-[#00FF66] text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Post
+              </button>
+            </div>
           </div>
         </div>
       )}

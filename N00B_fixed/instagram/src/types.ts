@@ -376,6 +376,12 @@ export interface PostComment {
   likesCount: number;
   isLiked?: boolean;
   isPinned?: boolean;
+  // One optional attachment per comment — a photo/video/voice note the person recorded or picked,
+  // or a GIF/sticker they chose from the panel. Never more than one; text and an attachment can
+  // both be set on the same comment.
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video' | 'voice' | 'gif' | 'sticker';
+  mediaDuration?: string;
   // Replies: parentId is set on a reply, always pointing at the top-level comment (threads are
   // flattened to one level — replying to a reply attaches to ITS parent, like Instagram).
   // replyToUsername is who a reply is actually answering, which may be a repliers rather than the

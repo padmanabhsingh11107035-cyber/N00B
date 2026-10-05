@@ -3,6 +3,7 @@ import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDo
 import { Post, PostComment, User } from '../../types';
 import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type CommentAttachment } from './CommentMediaComposer';
 import confetti from 'canvas-confetti';
 
 interface CommentsSheetProps {
@@ -22,6 +23,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   const [replyingTo, setReplyingTo] = useState<{ topLevelId: string; username: string } | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<string[]>([]);
   const [commentError, setCommentError] = useState('');
+  const [attachment, setAttachment] = useState<CommentAttachment | null>(null);
 
   const isPostOwner = post.userId === currentUser.id || post.username === currentUser.username;
 
@@ -44,11 +46,14 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
 
   const handleSendComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !attachment) return;
 
     setCommentError('');
     try {
-      const newC = await addComment(post.id, inputText.trim(), replyingTo?.topLevelId);
+      const media = attachment
+        ? { url: attachment.objectKey || attachment.url, type: attachment.type, duration: attachment.duration }
+        : undefined;
+      const newC = await addComment(post.id, inputText.trim(), replyingTo?.topLevelId, media);
       if (!newC) throw new Error('Could not post the comment.');
       // Only clear the input / close the reply composer / celebrate on an ACTUAL success — clearing
       // these unconditionally used to make a silently-failed save look identical to a real one (the
@@ -56,6 +61,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
       setComments(prev => [...(Array.isArray(prev) ? prev : []), newC]);
       if (replyingTo) setExpandedThreads((prev) => (prev.includes(replyingTo.topLevelId) ? prev : [...prev, replyingTo.topLevelId]));
       setInputText('');
+      setAttachment(null);
       setReplyingTo(null);
       confetti({ particleCount: 20, spread: 45, origin: { y: 0.9 } });
     } catch (err) {
@@ -178,6 +184,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               )}
               {c.text}
             </p>
+            {c.mediaUrl && c.mediaType && <CommentMediaView url={c.mediaUrl} type={c.mediaType} duration={c.mediaDuration} />}
             <button
               type="button"
               onClick={() => setReplyingTo({ topLevelId, username: c.username })}
@@ -333,6 +340,10 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               </button>
             </div>
           )}
+          {attachment && <CommentAttachmentPreview attachment={attachment} onRemove={() => setAttachment(null)} />}
+          <div className="mb-2">
+            <CommentMediaComposer onAttachmentChange={setAttachment} onInsertEmoji={(emoji) => setInputText((prev) => prev + emoji)} />
+          </div>
           <div className="flex items-center gap-2">
             <img
               src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
@@ -357,7 +368,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
             </div>
             <button
               type="submit"
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() && !attachment}
               className="px-3.5 py-2 bg-[#00FF66] text-black font-bold text-xs rounded-xl disabled:opacity-40 hover:scale-105 transition-transform cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />

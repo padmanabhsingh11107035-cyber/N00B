@@ -68,9 +68,10 @@ import {
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
   fetchAdminExplorePins, adminSetExplorePin,
-  adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons
+  adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
+  subscribeToOnlinePresence
 } from '../../services/api';
-import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem } from '../../services/api';
+import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem, PresenceEntry } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime } from '../../utils/formatTime';
@@ -163,6 +164,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Live online/offline + app-vs-web, per user — not fetched, just whoever is currently connected
+  // to the shared presence channel (see startPresenceHeartbeat in supabaseApi.ts). Updates itself
+  // the instant anyone connects or disconnects anywhere in the app.
+  const [onlinePresence, setOnlinePresence] = useState<Record<string, PresenceEntry[]>>({});
+  useEffect(() => {
+    if (activeTab !== 'users' || !canOpenAccounts) return;
+    return subscribeToOnlinePresence(setOnlinePresence);
+  }, [activeTab, canOpenAccounts]);
 
   // Notification form states
   const [notifTargetType, setNotifTargetType] = useState<'all' | 'specific'>('all');
@@ -1196,6 +1206,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     // nobody acts on their own account, on the main admin, or (for delegates) on any other admin
                     const isSelf = user.id === currentUser.id || isMainRow || (!main && !!user.isStaff);
                     const isSuspended = Boolean(user.isSuspended);
+                    const presence = onlinePresence[user.id];
+                    const isOnline = !!presence?.length;
+                    const onApp = !!presence?.some((p) => p.platform === 'app');
+                    const onWeb = !!presence?.some((p) => p.platform === 'web');
 
                     return (
                       <div
@@ -1227,6 +1241,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-black text-white truncate">@{user.username}</span>
                               {user.isVerified && <VerifiedBadge size="sm" />}
+                              {isOnline ? (
+                                <span className="flex items-center gap-1 text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30 shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  Online
+                                  {onApp && <Smartphone className="w-2.5 h-2.5" />}
+                                  {onWeb && <Globe2 className="w-2.5 h-2.5" />}
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-[10px] text-zinc-500 px-1.5 py-0.5 shrink-0">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
+                                  Offline
+                                </span>
+                              )}
                               {isSuspended && (
                                 <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/30">
                                   Suspended

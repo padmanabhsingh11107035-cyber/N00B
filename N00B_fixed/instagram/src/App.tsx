@@ -54,7 +54,8 @@ import {
   fetchAppNotifications,
   subscribeToNotificationChanges,
   clearAllNotifications,
-  markNotificationsAsRead
+  markNotificationsAsRead,
+  startPresenceHeartbeat
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
@@ -446,6 +447,15 @@ export default function App() {
     if (!shouldShowPushPrompt()) return;
     const timer = setTimeout(() => setShowPushPrompt(true), 4000);
     return () => clearTimeout(timer);
+  }, [currentUser?.id]);
+
+  // Announces this session as online (for the admin panel's live status) for as long as this tab/
+  // app stays open — Presence is per-connection, so it disappears on its own when the tab closes or
+  // the socket drops, with no cleanup needed beyond unsubscribing this one channel.
+  useEffect(() => {
+    if (!currentUser) return;
+    const stop = startPresenceHeartbeat(currentUser.id, Capacitor.isNativePlatform() ? 'app' : 'web');
+    return stop;
   }, [currentUser?.id]);
 
   // Prompt for contacts access (to suggest friends already on NOOB) once per

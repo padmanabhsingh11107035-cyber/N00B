@@ -19,10 +19,16 @@ interface GamePosterCarouselProps {
   game: MiniGameMeta;
 }
 
-const AUTO_ADVANCE_MS = 2000;
-
 export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) => {
   const [activeSlide, setActiveSlide] = useState(0);
+  // Plays one rotate-in transition right when this game's page (the modal) opens, then settles —
+  // replaces the old "auto-advance every 2s forever" behavior, which kept animating even while
+  // someone was just sitting reading the mode-select screen.
+  const [justEntered, setJustEntered] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setJustEntered(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
   const touchStartX = useRef<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   // Was a >=1,000,000 threshold, which worked while only chess paid in the
@@ -149,12 +155,9 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
     </div>
   ];
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setActiveSlide((prev) => (prev + 1) % slides.length);
-    }, AUTO_ADVANCE_MS);
-    return () => clearTimeout(timer);
-  }, [activeSlide, slides.length]);
+  // No longer auto-advances while sitting on screen — the carousel now only moves on a real swipe,
+  // dot tap, or arrow key. The only automatic motion left is a one-time rotate-in transition that
+  // plays once when the game's page (this modal) is first entered, below.
 
   // On a computer: A / D (or ← / →) move through the posters, like a swipe — only while the carousel is on screen.
   useEffect(() => {
@@ -186,7 +189,11 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
 
   return (
     <div ref={rootRef} className="rounded-2xl overflow-hidden border border-zinc-800 shadow-inner relative">
-      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className="select-none">
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={`select-none ${justEntered ? 'animate-in zoom-in-95 fade-in duration-500' : ''}`}
+      >
         {slides[activeSlide]}
       </div>
 

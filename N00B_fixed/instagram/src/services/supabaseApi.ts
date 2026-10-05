@@ -1714,6 +1714,34 @@ export async function fetchTypingUsers(chatId: string): Promise<User[]> {
   }
 }
 
+// ----------------------------------------------------------------------------- live online/offline presence
+
+const PRESENCE_CHANNEL = 'presence:online-users';
+export type PresencePlatform = 'app' | 'web';
+
+// Call once per signed-in session (App.tsx) to announce "I'm online, here's how" to everyone
+// watching the admin panel. Supabase Presence is ephemeral and per-connection — nothing is written
+// to the database, and the entry disappears the moment this tab closes or the socket drops, so
+// "online" here always reflects a real live connection rather than a stale timestamp.
+export function startPresenceHeartbeat(userId: string, platform: PresencePlatform): () => void {
+  const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: userId } } });
+  channel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') await channel.track({ platform, online_at: new Date().toISOString() });
+  });
+  return () => { supabase.removeChannel(channel); };
+}
+
+export interface PresenceEntry { platform: PresencePlatform; online_at: string }
+
+// Admin-only read side: calls `onChange` with the full live map (userId -> one entry per open tab/
+// device) every time anyone connects or disconnects anywhere in the app.
+export function subscribeToOnlinePresence(onChange: (state: Record<string, PresenceEntry[]>) => void): () => void {
+  const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: `observer-${crypto.randomUUID()}` } } });
+  const sync = () => onChange(channel.presenceState() as unknown as Record<string, PresenceEntry[]>);
+  channel.on('presence', { event: 'sync' }, sync).subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
 // Calls `onChange` (at most a few times a second) whenever a message or chat membership changes anywhere
 // this person can see — replaces asking the server for everything every 5 seconds.
 export function subscribeToChatChanges(onChange: () => void): () => void {

@@ -13,6 +13,10 @@ interface TicTacToeGameProps {
   // large number (full strength) so any caller that doesn't pass it keeps
   // today's fixed 15% mistake rate.
   gamesPlayedCount?: number;
+  // User-picked strength from the difficulty-select screen. Overrides the
+  // experience ramp above when given — easy/hard are blunter than the ramp
+  // ever gets, so a player can jump straight to either end.
+  difficulty?: 'easy' | 'normal' | 'hard';
 }
 
 function imperfectChanceForExperience(gamesPlayedCount: number): number {
@@ -21,6 +25,12 @@ function imperfectChanceForExperience(gamesPlayedCount: number): number {
   if (gamesPlayedCount < 30) return 0.15;
   return 0.05;
 }
+
+const IMPERFECT_CHANCE_BY_DIFFICULTY: Record<'easy' | 'normal' | 'hard', number> = {
+  easy: 0.55,
+  normal: 0.2,
+  hard: 0
+};
 
 type Cell = 'X' | 'O' | null;
 
@@ -81,9 +91,12 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
   onGameOver,
   opponentName = 'AI Bot',
   vsBot = true,
-  gamesPlayedCount = 9999
+  gamesPlayedCount = 9999,
+  difficulty
 }) => {
-  const imperfectChance = imperfectChanceForExperience(gamesPlayedCount);
+  const imperfectChance = difficulty
+    ? IMPERFECT_CHANCE_BY_DIFFICULTY[difficulty]
+    : imperfectChanceForExperience(gamesPlayedCount);
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [currentTurn, setCurrentTurn] = useState<'X' | 'O'>('X');
   const [winner, setWinner] = useState<'X' | 'O' | 'Tie' | null>(null);

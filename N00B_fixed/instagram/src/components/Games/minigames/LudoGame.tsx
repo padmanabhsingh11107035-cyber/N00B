@@ -9,6 +9,11 @@ interface LudoGameProps {
   // human and can be toggled to bot for a mixed group.
   entryMode?: 'bot' | 'pass_play';
   initialPlayerCount?: number;
+  // Easy: bot picks a random legal token instead of the best one. Normal:
+  // unchanged (always advances its furthest token). Hard: also prioritizes
+  // finishing a token outright and getting a second token out of the yard
+  // early for board presence.
+  difficulty?: 'easy' | 'normal' | 'hard';
 }
 
 // Classic Ludo palette — red / green / yellow / blue corners, matching the
@@ -23,7 +28,7 @@ const TOKENS_PER_PLAYER = 4;
 const MAX_PLAYERS = 4;
 const STEP_ANIM_MS = 150; // per-cell delay so a token visibly hops across every block it passes
 
-export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount }) => {
+export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount, difficulty }) => {
   const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
   const [numPlayers, setNumPlayers] = useState(Math.min(initialPlayerCount || MAX_PLAYERS, MAX_PLAYERS));
   const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
@@ -196,11 +201,21 @@ export const LudoGame: React.FC<LudoGameProps> = ({ onGameOver, entryMode = 'bot
       .map((p, i) => ({ i, p }))
       .filter(({ p }) => p > 0 && p + roll <= finishProgress)
       .sort((a, b) => b.p - a.p);
-    if (onBoard.length > 0) return onBoard[0].i;
-    if (roll === 6) {
-      const inYard = arr.findIndex((p) => p === 0);
-      if (inYard !== -1) return inYard;
+    const yardIdx = roll === 6 ? arr.findIndex((p) => p === 0) : -1;
+
+    if (difficulty === 'easy') {
+      const options = [...onBoard.map((o) => o.i), ...(yardIdx !== -1 ? [yardIdx] : [])];
+      return options.length > 0 ? options[Math.floor(Math.random() * options.length)] : null;
     }
+
+    if (difficulty === 'hard') {
+      const finisher = onBoard.find((o) => o.p + roll === finishProgress);
+      if (finisher) return finisher.i;
+      if (yardIdx !== -1 && arr.filter((p) => p > 0).length < 2) return yardIdx;
+    }
+
+    if (onBoard.length > 0) return onBoard[0].i;
+    if (yardIdx !== -1) return yardIdx;
     return null;
   };
 

@@ -9,7 +9,17 @@ interface MonopolyGameProps {
   // human and can be toggled to bot for a mixed group.
   entryMode?: 'bot' | 'pass_play';
   initialPlayerCount?: number;
+  // Easy: bot bots only buy when cash-rich (weak economy). Normal:
+  // unchanged $100 cash-buffer rule. Hard: bot buys almost anything it can
+  // afford, building its portfolio aggressively.
+  difficulty?: 'easy' | 'normal' | 'hard';
 }
+
+const BOT_BUY_CASH_BUFFER: Record<'easy' | 'normal' | 'hard', number> = {
+  easy: 400,
+  normal: 100,
+  hard: 0
+};
 
 const PLAYER_COLORS = ['#00FF66', '#ec4899', '#38bdf8', '#f59e0b'];
 const START_CASH = 1500;
@@ -81,7 +91,7 @@ const SPECIAL_STYLE: Record<string, { icon: string; color: string }> = {
   go_to_jail: { icon: '🚔', color: '#dc2626' }
 };
 
-export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount }) => {
+export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount, difficulty = 'normal' }) => {
   const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
   const [numPlayers, setNumPlayers] = useState(initialPlayerCount || 2);
   const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
@@ -199,7 +209,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         if (playerIdx === 0) {
           needsBuyDecision = true;
           log = `Landed on ${square.name} ($${square.price}) — buy it?`;
-        } else if (nextCash[playerIdx] - (square.price || 0) >= 100) {
+        } else if (nextCash[playerIdx] - (square.price || 0) >= BOT_BUY_CASH_BUFFER[difficulty]) {
           nextOwned[squareIdx] = playerIdx;
           nextCash[playerIdx] -= square.price || 0;
           log = `Player ${playerIdx + 1} bought ${square.name}.`;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 interface RockPaperScissorsGameProps {
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -7,6 +7,11 @@ interface RockPaperScissorsGameProps {
   // false = Pass and Play: Player 2 picks for real (hidden from Player 1
   // until reveal) instead of the bot choosing randomly.
   vsBot?: boolean;
+  // Easy: bot leans into whatever the player threw last round (beatable
+  // once a pattern shows). Normal: fully random, unchanged. Hard: bot
+  // tracks the player's most-thrown pick across the match and leans
+  // toward the move that beats it.
+  difficulty?: 'easy' | 'normal' | 'hard';
 }
 
 const CHOICES = [
@@ -15,12 +20,30 @@ const CHOICES = [
   { id: 'scissors', name: 'Scissors', emoji: '✌️', beats: 'paper' }
 ];
 
+const choiceThatBeats = (id: string) => CHOICES.find((c) => c.beats === id)!;
+const choiceThatLosesTo = (id: string) => CHOICES.find((c) => c.id === CHOICES.find((x) => x.id === id)!.beats)!;
+
+function pickBotChoice(history: string[], difficulty?: 'easy' | 'normal' | 'hard'): typeof CHOICES[0] {
+  if (difficulty === 'hard' && history.length > 0) {
+    const counts: Record<string, number> = {};
+    history.forEach((id) => (counts[id] = (counts[id] || 0) + 1));
+    const favorite = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    if (Math.random() < 0.75) return choiceThatBeats(favorite);
+  } else if (difficulty === 'easy' && history.length > 0) {
+    const last = history[history.length - 1];
+    if (Math.random() < 0.6) return choiceThatLosesTo(last);
+  }
+  return CHOICES[Math.floor(Math.random() * CHOICES.length)];
+}
+
 export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
   onGameOver,
   opponentName = 'AI Bot',
   bestOf = 3,
-  vsBot = true
+  vsBot = true,
+  difficulty
 }) => {
+  const playerHistory = useRef<string[]>([]);
   const [playerScore, setPlayerScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
   const [playerChoice, setPlayerChoice] = useState<typeof CHOICES[0] | null>(null);
@@ -91,8 +114,9 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
     setOpponentChoice(null);
     setRoundResult(null);
     setTimeout(() => {
-      const randomBot = CHOICES[Math.floor(Math.random() * CHOICES.length)];
-      resolveRound(choice, randomBot);
+      const botChoice = pickBotChoice(playerHistory.current, difficulty);
+      playerHistory.current.push(choice.id);
+      resolveRound(choice, botChoice);
     }, 600);
   };
 

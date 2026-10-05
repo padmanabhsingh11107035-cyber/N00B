@@ -60,8 +60,14 @@ interface GamePlayModalProps {
   onPointsUpdated: (pointsEarned: number, totalPoints: number, won?: boolean) => void;
 }
 
-type PlayMode = 'select_mode' | 'matchmaking' | 'play_bot' | 'play_friend' | 'play_match' | 'pass_play_handoff' | 'game_over';
+type PlayMode = 'select_mode' | 'select_difficulty' | 'matchmaking' | 'play_bot' | 'play_friend' | 'play_match' | 'pass_play_handoff' | 'game_over';
 type RoundResult = 'win' | 'tie' | 'loss';
+type BotDifficulty = 'easy' | 'normal' | 'hard';
+
+// Pure-luck games with zero decision points (nothing but dice rolls) — a
+// difficulty selector would be cosmetic only, so these skip straight to the
+// bot match like before instead of showing a selector that can't do anything.
+const NO_BOT_DIFFICULTY_IDS = ['snakes_ladders'];
 
 // Shared-board games manage their own multi-player turn loop internally and
 // report ONE direct result for the logged-in user (index 0) — unlike the
@@ -536,6 +542,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Chess vs bot carries real stakes (win big / lose everything) — show a
   // clear heads-up before every match instead of jumping straight in.
   const [showChessStakesConfirm, setShowChessStakesConfirm] = useState(false);
+  // Chosen once per modal session on the difficulty-select screen, then
+  // reused for every bot match (including rematches) until changed.
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('normal');
   const handleStartBotGame = () => {
     setLastPlayMode('bot');
     setLastOpponent(null);
@@ -544,6 +553,21 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       return;
     }
     startBotGameNow();
+  };
+
+  // Entry point from "Play with Bot": shows the difficulty picker first
+  // (unless the game has no bot decisions to tune), then starts the match.
+  const handlePlayBotClick = () => {
+    if (NO_BOT_DIFFICULTY_IDS.includes(game.id)) {
+      handleStartBotGame();
+      return;
+    }
+    setCurrentMode('select_difficulty');
+  };
+
+  const handlePickDifficulty = (level: BotDifficulty) => {
+    setBotDifficulty(level);
+    handleStartBotGame();
   };
 
   // Begin a brand new Pass and Play match (from the mode-select screen)
@@ -1010,7 +1034,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
                 {/* Option 2: Play with Bot */}
                 <button
-                  onClick={handleStartBotGame}
+                  onClick={handlePlayBotClick}
                   className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-purple-500/50 flex items-center justify-between transition-all group cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5">
@@ -1071,6 +1095,52 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* 1b. SELECT BOT DIFFICULTY */}
+          {currentMode === 'select_difficulty' && (
+            <div className="space-y-4 py-2">
+              <div className="text-center px-2">
+                <div className="w-12 h-12 mx-auto rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-3">
+                  <Bot className="w-6 h-6" />
+                </div>
+                <span className="text-sm font-bold text-white block">Choose Bot Difficulty</span>
+                <p className="text-[11px] text-zinc-400 mt-1">This changes how the bot actually plays</p>
+              </div>
+
+              <div className="space-y-2.5">
+                {([
+                  { level: 'easy' as const, label: 'Easy', desc: 'Bot makes frequent mistakes', color: 'emerald' },
+                  { level: 'normal' as const, label: 'Normal', desc: 'Bot plays a fair, balanced game', color: 'amber' },
+                  { level: 'hard' as const, label: 'Hard', desc: 'Bot plays to win, few mistakes', color: 'red' }
+                ]).map(({ level, label, desc, color }) => (
+                  <button
+                    key={level}
+                    onClick={() => handlePickDifficulty(level)}
+                    className={`w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border flex items-center justify-between transition-all group cursor-pointer ${
+                      color === 'emerald'
+                        ? 'border-zinc-800 hover:border-emerald-500/50'
+                        : color === 'amber'
+                          ? 'border-zinc-800 hover:border-amber-500/50'
+                          : 'border-zinc-800 hover:border-red-500/50'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <span className="text-sm font-bold text-white block">{label}</span>
+                      <span className="text-[11px] text-zinc-400 block">{desc}</span>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:translate-x-0.5 transition-all" />
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentMode('select_mode')}
+                className="w-full py-2 text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              >
+                Back
+              </button>
             </div>
           )}
 
@@ -1530,11 +1600,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'tictactoe' && !onlineMatch && (
-                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} />
+                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} difficulty={botDifficulty} />
               )}
 
               {game.id === 'chess_blitz' && (
-                <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} />
+                <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} difficulty={botDifficulty} />
               )}
 
               {game.id === 'snakes_ladders' && (
@@ -1550,6 +1620,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   onGameOver={handleGameOver}
                   entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
                   initialPlayerCount={boardPlayerCount}
+                  difficulty={botDifficulty}
                 />
               )}
 
@@ -1558,11 +1629,12 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   onGameOver={handleGameOver}
                   entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
                   initialPlayerCount={boardPlayerCount}
+                  difficulty={botDifficulty}
                 />
               )}
 
               {game.id === 'rps' && (
-                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} />
+                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} difficulty={botDifficulty} />
               )}
 
               {game.id === 'speed_math' && (

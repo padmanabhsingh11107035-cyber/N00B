@@ -12,7 +12,16 @@ interface ChessGameProps {
   // bot on their very first match. Defaults to a large number (full
   // strength) so any caller that doesn't pass it gets today's behavior.
   gamesPlayedCount?: number;
+  // User-picked strength from the difficulty-select screen. Overrides the
+  // experience ramp above when given.
+  difficulty?: 'easy' | 'normal' | 'hard';
 }
+
+const BOT_STRENGTH_BY_DIFFICULTY: Record<'easy' | 'normal' | 'hard', { timeBudgetMs: number; maxDepth: number }> = {
+  easy: { timeBudgetMs: 80, maxDepth: 2 },
+  normal: { timeBudgetMs: 250, maxDepth: 5 },
+  hard: { timeBudgetMs: 500, maxDepth: 8 }
+};
 
 // Maps games-played into a search depth/time budget tier. Deliberately
 // coarse (4 tiers) rather than a smooth curve — chess strength doesn't
@@ -233,9 +242,12 @@ function findBestMove(chess: Chess, timeBudgetMs = BOT_TIME_BUDGET_MS, maxDepth 
   return bestMove;
 }
 
-export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true, gamesPlayedCount = 9999 }) => {
+export const ChessGame: React.FC<ChessGameProps> = ({ onGameOver, vsBot = true, gamesPlayedCount = 9999, difficulty }) => {
   const chessRef = useRef(new Chess());
-  const botStrength = useMemo(() => botStrengthForExperience(gamesPlayedCount), [gamesPlayedCount]);
+  const botStrength = useMemo(
+    () => (difficulty ? BOT_STRENGTH_BY_DIFFICULTY[difficulty] : botStrengthForExperience(gamesPlayedCount)),
+    [difficulty, gamesPlayedCount]
+  );
   const [, forceRender] = useState(0);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [isBotThinking, setIsBotThinking] = useState(false);

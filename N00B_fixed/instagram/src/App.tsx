@@ -10,6 +10,9 @@ import {
   Bell,
   BellRing,
   Sparkles,
+  Wallet as WalletIcon,
+  Bot,
+  Radio,
   CheckCircle2,
   ChevronRight,
   LogOut,
@@ -97,6 +100,9 @@ const GamePlayModal = React.lazy(() => import('./components/Games/GamePlayModal'
 const ProfessionalDashboardModal = React.lazy(() => import('./components/Modals/ProfessionalDashboardModal').then((m) => ({ default: m.ProfessionalDashboardModal })));
 const LiveStreamView = React.lazy(() => import('./components/LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 const LiveLoungePage = React.lazy(() => import('./components/Profile/LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
+const NoobAiPage = React.lazy(() => import('./components/Profile/NoobAiPage').then((m) => ({ default: m.NoobAiPage })));
+const AccountsStatisticsModal = React.lazy(() => import('./components/Profile/AccountsStatisticsModal').then((m) => ({ default: m.AccountsStatisticsModal })));
+const ProFeaturesModal = React.lazy(() => import('./components/Profile/ProFeaturesModal').then((m) => ({ default: m.ProFeaturesModal })));
 
 // Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
 // full loading screen, since by the time it appears the user already tapped something and expects
@@ -174,6 +180,11 @@ export default function App() {
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [showGoLiveHost, setShowGoLiveHost] = useState(false);
   const [showLiveLoungeUpsell, setShowLiveLoungeUpsell] = useState(false);
+  // Desktop/tablet sidebar shortcuts straight to pages that otherwise only open from inside the
+  // Profile ⋮ menu — same underlying modals, just a second entry point for a wider screen.
+  const [showNoobAiPage, setShowNoobAiPage] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showSubscriptionsModal, setShowSubscriptionsModal] = useState(false);
   const [liveLoungeInviteRoomId, setLiveLoungeInviteRoomId] = useState<string | null>(null);
   const [showProfessionalDashboardModal, setShowProfessionalDashboardModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
@@ -1072,6 +1083,40 @@ export default function App() {
               <span>Music Hub</span>
             </button>
 
+            {/* Desktop/tablet-only shortcuts (this whole sidebar is hidden below the xl breakpoint) —
+                same destinations the Profile ⋮ menu already opens, just reachable directly here too. */}
+            <button
+              onClick={() => setShowLiveLoungeUpsell(true)}
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+            >
+              <Radio className="w-4 h-4 stroke-current" />
+              <span>Meetings</span>
+            </button>
+
+            <button
+              onClick={() => setShowNoobAiPage(true)}
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+            >
+              <Bot className="w-4 h-4 stroke-current" />
+              <span>NOOB AI</span>
+            </button>
+
+            <button
+              onClick={() => setShowWalletModal(true)}
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+            >
+              <WalletIcon className="w-4 h-4 stroke-current" />
+              <span>Wallet</span>
+            </button>
+
+            <button
+              onClick={() => setShowSubscriptionsModal(true)}
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 stroke-current" />
+              <span>Subscriptions</span>
+            </button>
+
             {/* Insights are for business accounts only. (Customer support is the round button at the bottom right.) */}
             {currentUser.isBusiness && (
               <button
@@ -1484,6 +1529,33 @@ export default function App() {
             initialRoomId={liveLoungeInviteRoomId || undefined}
             initialJoinCode={sharedLiveLoungeCode || undefined}
             onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); setSharedLiveLoungeCode(null); }}
+            onUserUpdated={(u) => setCurrentUser(u)}
+          />
+        </React.Suspense>
+      )}
+
+      {showNoobAiPage && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <NoobAiPage onClose={() => setShowNoobAiPage(false)} isMainAdmin={isMainAdmin(currentUser)} />
+        </React.Suspense>
+      )}
+
+      {showWalletModal && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <AccountsStatisticsModal
+            currentUser={currentUser}
+            allUsers={registeredUsers}
+            onClose={() => setShowWalletModal(false)}
+            onUserUpdated={(u) => setCurrentUser(u)}
+          />
+        </React.Suspense>
+      )}
+
+      {showSubscriptionsModal && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <ProFeaturesModal
+            currentUser={currentUser}
+            onClose={() => setShowSubscriptionsModal(false)}
             onUserUpdated={(u) => setCurrentUser(u)}
           />
         </React.Suspense>

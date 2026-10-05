@@ -940,12 +940,6 @@ export default function App() {
             <h2 className="text-base font-bold text-white">NOOB is under maintenance</h2>
             <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">{platformSettings.maintenanceMessage}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-6 py-2.5 bg-zinc-800 text-white font-bold text-sm rounded-2xl hover:bg-zinc-700 transition-colors cursor-pointer"
-          >
-            Log Out
-          </button>
         </div>
       </>
     );

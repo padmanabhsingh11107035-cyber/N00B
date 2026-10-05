@@ -206,7 +206,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   };
 
   useEffect(() => {
-    loadUsers(searchQuery);
+    loadUsers(searchQuery, true);
     setVisibleCount(ITEMS_PER_PAGE);
   }, [searchQuery]);
 
@@ -474,17 +474,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             </button>
           )}
         </div>
-
-        {/* Quick Shuffle Button */}
-        <button
-          onClick={handleShuffleAndRefresh}
-          className={`p-3 rounded-2xl bg-zinc-900 border border-white/10 hover:border-[#00FF66]/50 text-zinc-300 hover:text-[#00FF66] transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${
-            isRefreshing ? 'animate-spin text-[#00FF66]' : ''
-          }`}
-          title="Shuffle all users, posts and reels"
-        >
-          <Shuffle className="w-4 h-4" />
-        </button>
 
         {/* Apply to join the NOOB team (hidden while applications are closed) */}
         {joinTeamOpen && (

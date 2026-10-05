@@ -69,19 +69,32 @@ export const MEDIA_BUCKET = 'media';
 // Everything the database stores for a photo/video is either a bare storage key ("posts/123-abc.jpg"),
 // a full https URL (outside links such as default avatars), a bundled "/path", or a "data:"/"blob:" preview.
 // Only bare keys need turning into a real address.
+//
+// Resolved through the same-origin Cloudflare Worker route (nooob.xyz/media/* -> little-term-d4e7),
+// not straight to Supabase Storage — Supabase Storage has no edge cache of its own on the Free plan,
+// so every view of every photo/video was re-downloaded from its slow origin and billed as fresh
+// Cached Egress. The Worker caches each object at Cloudflare's edge after its first fetch, which is
+// what actually stops the egress bleed (confirmed live: the Workers Route is connected and the
+// Worker is responding, not falling through to the app).
 export function resolveMedia(value?: string | null): string {
   if (!value) return '';
   if (/^(https?:|data:|blob:|\/)/i.test(value)) return value;
-  return `${url}/storage/v1/object/public/${MEDIA_BUCKET}/${value.split('/').map(encodeURIComponent).join('/')}`;
+  return `/media/${value.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 // The reverse: what to SAVE when a screen hands back a display address. Storing the short key (not the
-// long address) keeps data portable and lets the storage location change later.
+// long address) keeps data portable and lets the storage location change later. Accepts either the
+// current /media/... form or the older direct-Supabase-URL form (still what's stored for anything
+// resolved before this change, or anything not yet re-saved).
 export function toStoredMedia(value?: string | null): string {
   if (!value) return '';
-  const prefix = `${url}/storage/v1/object/public/${MEDIA_BUCKET}/`;
-  if (value.startsWith(prefix)) {
-    try { return decodeURIComponent(value.slice(prefix.length).split('?')[0]); } catch { return value.slice(prefix.length); }
+  const directPrefix = `${url}/storage/v1/object/public/${MEDIA_BUCKET}/`;
+  if (value.startsWith(directPrefix)) {
+    try { return decodeURIComponent(value.slice(directPrefix.length).split('?')[0]); } catch { return value.slice(directPrefix.length); }
+  }
+  const proxyPrefix = '/media/';
+  if (value.startsWith(proxyPrefix)) {
+    try { return decodeURIComponent(value.slice(proxyPrefix.length).split('?')[0]); } catch { return value.slice(proxyPrefix.length); }
   }
   return value;
 }

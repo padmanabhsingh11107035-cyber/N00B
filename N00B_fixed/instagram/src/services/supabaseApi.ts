@@ -1724,11 +1724,19 @@ export type PresencePlatform = 'app' | 'web';
 // to the database, and the entry disappears the moment this tab closes or the socket drops, so
 // "online" here always reflects a real live connection rather than a stale timestamp.
 export function startPresenceHeartbeat(userId: string, platform: PresencePlatform): () => void {
-  const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: userId } } });
-  channel.subscribe(async (status) => {
-    if (status === 'SUBSCRIBED') await channel.track({ platform, online_at: new Date().toISOString() });
-  });
-  return () => { supabase.removeChannel(channel); };
+  try {
+    const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: userId } } });
+    channel.subscribe(async (status) => {
+      try {
+        if (status === 'SUBSCRIBED') await channel.track({ platform, online_at: new Date().toISOString() });
+      } catch {
+        // Best-effort — a failed presence announce must never affect anything else in the app.
+      }
+    });
+    return () => { try { supabase.removeChannel(channel); } catch { /* already gone */ } };
+  } catch {
+    return () => {};
+  }
 }
 
 export interface PresenceEntry { platform: PresencePlatform; online_at: string }
@@ -1736,10 +1744,16 @@ export interface PresenceEntry { platform: PresencePlatform; online_at: string }
 // Admin-only read side: calls `onChange` with the full live map (userId -> one entry per open tab/
 // device) every time anyone connects or disconnects anywhere in the app.
 export function subscribeToOnlinePresence(onChange: (state: Record<string, PresenceEntry[]>) => void): () => void {
-  const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: `observer-${crypto.randomUUID()}` } } });
-  const sync = () => onChange(channel.presenceState() as unknown as Record<string, PresenceEntry[]>);
-  channel.on('presence', { event: 'sync' }, sync).subscribe();
-  return () => { supabase.removeChannel(channel); };
+  try {
+    const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: `observer-${crypto.randomUUID()}` } } });
+    const sync = () => {
+      try { onChange(channel.presenceState() as unknown as Record<string, PresenceEntry[]>); } catch { /* skip this tick */ }
+    };
+    channel.on('presence', { event: 'sync' }, sync).subscribe();
+    return () => { try { supabase.removeChannel(channel); } catch { /* already gone */ } };
+  } catch {
+    return () => {};
+  }
 }
 
 // Calls `onChange` (at most a few times a second) whenever a message or chat membership changes anywhere

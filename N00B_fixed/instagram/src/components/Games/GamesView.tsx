@@ -26,6 +26,7 @@ import { GameBannerArtwork } from './GameIcons';
 const GamePlayModal = React.lazy(() => import('./GamePlayModal').then((m) => ({ default: m.GamePlayModal })));
 import { User, GameLeaderboardEntry } from '../../types';
 import { fetchGameLeaderboard } from '../../services/api';
+import { formatNoobPoints } from '../../utils/formatPoints';
 
 interface GamesViewProps {
   currentUser: User;
@@ -33,28 +34,6 @@ interface GamesViewProps {
   onUserUpdated?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
 }
-
-// Formats noob points: if exceeding 1000, shows 1k, 1.1k, 1.2k, etc.
-export const formatNoobPoints = (points: number): string => {
-  if (points === undefined || points === null) return '0';
-  if (points >= 1000000000000) {
-    const val = (points / 1000000000000).toFixed(1);
-    return val.endsWith('.0') ? `${Math.floor(points / 1000000000000)}T` : `${val}T`;
-  }
-  if (points >= 1000000000) {
-    const val = (points / 1000000000).toFixed(1);
-    return val.endsWith('.0') ? `${Math.floor(points / 1000000000)}B` : `${val}B`;
-  }
-  if (points >= 1000000) {
-    const val = (points / 1000000).toFixed(1);
-    return val.endsWith('.0') ? `${Math.floor(points / 1000000)}M` : `${val}M`;
-  }
-  if (points >= 1000) {
-    const val = (points / 1000).toFixed(1);
-    return val.endsWith('.0') ? `${Math.floor(points / 1000)}k` : `${val}k`;
-  }
-  return points.toString();
-};
 
 export const GamesView: React.FC<GamesViewProps> = ({
   currentUser,

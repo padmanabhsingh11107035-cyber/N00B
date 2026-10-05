@@ -5,7 +5,20 @@
 
 // An installable PWA needs a service worker that handles 'fetch' — without this, Chrome never
 // fires beforeinstallprompt, so the in-app "Install" button silently has nothing to trigger.
-self.addEventListener('fetch', () => {});
+//
+// Skipped on iOS/iPadOS: Safari has never supported beforeinstallprompt (there is nothing here for
+// it to trigger — "Add to Home Screen" there is a manual Share-sheet action with no JS hook at all),
+// but registering a 'fetch' listener forces EVERY network request on the page through the service
+// worker's dispatch, and WebKit's per-request overhead for that is well known to run far higher than
+// Chromium's. Chat makes many small requests back-to-back (messages, avatars, attachments, read
+// receipts), so that tax compounds worst exactly there — matching reports of chat being slow and
+// unresponsive on iOS specifically, everywhere else fine.
+const isAppleTouchDevice =
+  /iPad|iPhone|iPod/.test(self.navigator.userAgent) ||
+  (self.navigator.platform === 'MacIntel' && self.navigator.maxTouchPoints > 1);
+if (!isAppleTouchDevice) {
+  self.addEventListener('fetch', () => {});
+}
 
 // Without these, a browser that already had the old sw.js (from before this file existed, or from
 // any earlier version) keeps running it — a new version only takes over once every tab of the site

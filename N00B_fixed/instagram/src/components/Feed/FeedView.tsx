@@ -61,6 +61,47 @@ interface FeedViewProps {
 const POSTS_PER_PAGE = 4;
 const categories = ['All', 'gaming', 'tech', 'code', 'robotics', 'cad', 'fashion', 'art', 'others'];
 
+// Which posts this account has already scrolled past — kept in localStorage (not just memory) so
+// a post doesn't go back to "new" just because the app was closed and reopened. Capped so a very
+// active account's list can't grow forever; trimming the oldest half when it does is good enough
+// here (this only ever decides "new vs. in rotation", nothing that needs exact history).
+const SEEN_POSTS_CAP = 3000;
+const seenPostsKey = (userId: string) => `noob_seen_feed_posts_${userId}`;
+const loadSeenPostIds = (userId: string): Set<string> => {
+  try {
+    const raw = JSON.parse(localStorage.getItem(seenPostsKey(userId)) || '[]');
+    return new Set(Array.isArray(raw) ? raw : []);
+  } catch {
+    return new Set();
+  }
+};
+const persistSeenPostIds = (userId: string, ids: Set<string>) => {
+  try {
+    let arr = Array.from(ids);
+    if (arr.length > SEEN_POSTS_CAP) arr = arr.slice(arr.length - SEEN_POSTS_CAP / 2);
+    localStorage.setItem(seenPostsKey(userId), JSON.stringify(arr));
+  } catch {
+    /* storage blocked — the feed just keeps re-treating everything as new this session */
+  }
+};
+const shuffle = <T,>(arr: T[]): T[] => {
+  const next = [...arr];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+};
+
+// A new post sits at the top of the feed exactly once (the server already hands posts back
+// newest-first). The moment someone has scrolled past it, it's "seen" and from then on takes its
+// chance in the shuffled rotation with everything else instead of staying pinned by recency.
+const buildFeedOrder = (posts: Post[], seen: Set<string>): string[] => {
+  const unseen = posts.filter((p) => !seen.has(p.id));
+  const rest = shuffle(posts.filter((p) => seen.has(p.id)));
+  return [...unseen, ...rest].map((p) => p.id);
+};
+
 export const FeedView: React.FC<FeedViewProps> = ({
   currentUser,
   posts,
@@ -98,6 +139,24 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
 
+  // Feed order: frozen between re-renders (so scrolling never reshuffles content under someone's
+  // thumb) and only rebuilt when the actual set of posts changes — a genuinely new post, one
+  // removed, or a pull-to-refresh that brought back different content. Marking a post "seen" (via
+  // onPostSeen below) updates the ref immediately but deliberately does NOT trigger a rebuild on
+  // its own; it just changes what the NEXT rebuild will do.
+  const seenPostIdsRef = useRef<Set<string>>(loadSeenPostIds(currentUser.id));
+  const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts, seenPostIdsRef.current));
+  const postIdsKey = posts.map((p) => p.id).join(',');
+  useEffect(() => {
+    setFeedOrder(buildFeedOrder(posts, seenPostIdsRef.current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postIdsKey]);
+  const handlePostSeen = (postId: string) => {
+    if (seenPostIdsRef.current.has(postId)) return;
+    seenPostIdsRef.current = new Set(seenPostIdsRef.current).add(postId);
+    persistSeenPostIds(currentUser.id, seenPostIdsRef.current);
+  };
+
   // Infinite Scroll State
   const [visibleCount, setVisibleCount] = useState(POSTS_PER_PAGE);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -123,8 +182,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
     setHiddenAdIds([...hiddenAdIds, postId]);
   };
 
+  // Display order follows feedOrder (new-once-then-shuffled-rotation), not the raw posts array.
+  const postsById = new Map(posts.map((p) => [p.id, p]));
+  const orderedPosts = feedOrder.map((id) => postsById.get(id)).filter((p): p is Post => !!p);
+  // A post that arrived after the last rebuild (e.g. between renders, before the effect above has
+  // run) has no spot in feedOrder yet — tack it on at the front rather than hiding it.
+  const knownIds = new Set(feedOrder);
+  const notYetOrdered = posts.filter((p) => !knownIds.has(p.id));
+
   // Filter posts
-  let filteredPosts = posts.filter((p) => !hiddenAdIds.includes(p.id));
+  let filteredPosts = [...notYetOrdered, ...orderedPosts].filter((p) => !hiddenAdIds.includes(p.id));
 
   if (activeCategory !== 'All') {
     filteredPosts = filteredPosts.filter(
@@ -429,6 +496,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onSelectCategory={(cat) => setActiveCategory(cat)}
                 onNavigateToProfile={onNavigateToProfile}
                 onToggleFollowUser={onToggleFollowUser}
+                onPostSeen={handlePostSeen}
               />
             ))}
 

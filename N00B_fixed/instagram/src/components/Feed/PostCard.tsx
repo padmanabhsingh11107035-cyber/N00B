@@ -56,6 +56,9 @@ interface PostCardProps {
   onSelectCategory?: (category: string) => void;
   onNavigateToProfile?: (user: User) => void;
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
+  // Fires once this post has actually scrolled into view (not just been fetched) — the feed uses
+  // this to fold a "new" post back into the shuffled rotation after its one trip at the top.
+  onPostSeen?: (postId: string) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -72,7 +75,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   onHideAd,
   onToggleFollowUser,
   onSelectCategory,
-  onNavigateToProfile
+  onNavigateToProfile,
+  onPostSeen
 }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -210,6 +214,14 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => observer.disconnect();
   }, [post.id]);
   useScreenshotAlert('post', post.id, isInView && !isOwner);
+
+  const hasMarkedSeenRef = useRef(false);
+  useEffect(() => {
+    if (isInView && !hasMarkedSeenRef.current) {
+      hasMarkedSeenRef.current = true;
+      onPostSeen?.(post.id);
+    }
+  }, [isInView, post.id, onPostSeen]);
 
   // Only the current slide's <img> is ever mounted, so switching slides used
   // to mean a fresh network fetch on every arrow click, with the old image

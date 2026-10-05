@@ -1718,6 +1718,38 @@ export async function fetchTypingUsers(chatId: string): Promise<User[]> {
 
 const PRESENCE_CHANNEL = 'presence:online-users';
 export type PresencePlatform = 'app' | 'web';
+export interface PresenceEntry { platform: PresencePlatform; online_at: string }
+
+type PresenceHandle = {
+  channel: ReturnType<typeof supabase.channel>;
+  ready: Promise<void>;
+  listeners: Set<(state: Record<string, PresenceEntry[]>) => void>;
+};
+let presenceHandle: PresenceHandle | null = null;
+
+// `supabase.channel(topic)` dedupes by topic name — a second call with the same topic string
+// returns the SAME channel object rather than a fresh one, and that object throws if you try to
+// add an `.on()` listener after `.subscribe()` has already been called on it. An admin account is
+// also a normal signed-in user, so both startPresenceHeartbeat (App.tsx, every session) and
+// subscribeToOnlinePresence (the admin panel) used to each create their own channel on this same
+// topic — the second one collided with the first and crashed the whole app. This single shared
+// handle, created at most once per tab, is now the only place either side ever touches the channel.
+function getPresenceChannel(selfKey?: string): PresenceHandle {
+  if (presenceHandle) return presenceHandle;
+  const listeners = new Set<(state: Record<string, PresenceEntry[]>) => void>();
+  const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: selfKey || crypto.randomUUID() } } });
+  let resolveReady: () => void = () => {};
+  const ready = new Promise<void>((res) => { resolveReady = res; });
+  channel.on('presence', { event: 'sync' }, () => {
+    const state = channel.presenceState() as unknown as Record<string, PresenceEntry[]>;
+    listeners.forEach((fn) => {
+      try { fn(state); } catch { /* one bad listener must not break the rest */ }
+    });
+  });
+  channel.subscribe((status) => { if (status === 'SUBSCRIBED') resolveReady(); });
+  presenceHandle = { channel, ready, listeners };
+  return presenceHandle;
+}
 
 // Call once per signed-in session (App.tsx) to announce "I'm online, here's how" to everyone
 // watching the admin panel. Supabase Presence is ephemeral and per-connection — nothing is written
@@ -1725,32 +1757,29 @@ export type PresencePlatform = 'app' | 'web';
 // "online" here always reflects a real live connection rather than a stale timestamp.
 export function startPresenceHeartbeat(userId: string, platform: PresencePlatform): () => void {
   try {
-    const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: userId } } });
-    channel.subscribe(async (status) => {
-      try {
-        if (status === 'SUBSCRIBED') await channel.track({ platform, online_at: new Date().toISOString() });
-      } catch {
-        // Best-effort — a failed presence announce must never affect anything else in the app.
-      }
+    const { channel, ready } = getPresenceChannel(userId);
+    let cancelled = false;
+    ready.then(() => {
+      if (!cancelled) channel.track({ platform, online_at: new Date().toISOString() }).catch(() => {});
     });
-    return () => { try { supabase.removeChannel(channel); } catch { /* already gone */ } };
+    return () => {
+      cancelled = true;
+      ready.then(() => channel.untrack().catch(() => {}));
+    };
   } catch {
     return () => {};
   }
 }
 
-export interface PresenceEntry { platform: PresencePlatform; online_at: string }
-
 // Admin-only read side: calls `onChange` with the full live map (userId -> one entry per open tab/
-// device) every time anyone connects or disconnects anywhere in the app.
+// device) every time anyone connects or disconnects anywhere in the app. Shares the one channel
+// above rather than opening its own — see getPresenceChannel for why that matters.
 export function subscribeToOnlinePresence(onChange: (state: Record<string, PresenceEntry[]>) => void): () => void {
   try {
-    const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: `observer-${crypto.randomUUID()}` } } });
-    const sync = () => {
-      try { onChange(channel.presenceState() as unknown as Record<string, PresenceEntry[]>); } catch { /* skip this tick */ }
-    };
-    channel.on('presence', { event: 'sync' }, sync).subscribe();
-    return () => { try { supabase.removeChannel(channel); } catch { /* already gone */ } };
+    const { channel, listeners } = getPresenceChannel();
+    listeners.add(onChange);
+    try { onChange(channel.presenceState() as unknown as Record<string, PresenceEntry[]>); } catch { /* not synced yet */ }
+    return () => { listeners.delete(onChange); };
   } catch {
     return () => {};
   }

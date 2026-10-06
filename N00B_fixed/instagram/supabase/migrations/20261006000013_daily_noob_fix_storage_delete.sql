@@ -22,7 +22,9 @@ $$;
 grant execute on function public.delete_daily_challenge_entry(uuid) to authenticated;
 
 -- Returns the media keys of every entry it just wiped, so the caller (get_daily_challenge, below)
--- can hand them to the client for a real Storage API removal.
+-- can hand them to the client for a real Storage API removal. Return type changed from void to
+-- text[], which Postgres won't let `create or replace` do in place - drop it first.
+drop function if exists public.settle_past_daily_challenges();
 create or replace function public.settle_past_daily_challenges() returns text[]
 language plpgsql security definer set search_path = public as $$
 declare d record; top record; rank integer; purged text[] := '{}'; day_keys text[];

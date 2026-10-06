@@ -52,6 +52,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   const [giftSheetOpen, setGiftSheetOpen] = useState(false);
   const [error, setError] = useState('');
   const [micOn, setMicOn] = useState(true);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const videoRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -331,9 +332,18 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
                 {micOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
               </button>
             )}
-            <button onClick={handleCloseTap} className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white">
-              <X className="w-4 h-4" />
-            </button>
+            {mode === 'host' ? (
+              <button
+                onClick={() => setShowEndConfirm(true)}
+                className="flex items-center gap-1 bg-red-600 rounded-full pl-2.5 pr-3 py-1.5 text-white text-xs font-bold"
+              >
+                <X className="w-3.5 h-3.5" /> End Live
+              </button>
+            ) : (
+              <button onClick={handleCloseTap} className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white">
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -384,6 +394,29 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
                     <span className="text-white text-xs font-semibold">{formatNoobPoints(amt)}</span>
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showEndConfirm && (
+          <div className="absolute inset-0 z-30 bg-black/70 flex items-center justify-center px-6" onClick={() => setShowEndConfirm(false)}>
+            <div className="w-full max-w-xs bg-neutral-900 rounded-2xl p-5 text-center" onClick={(e) => e.stopPropagation()}>
+              <p className="text-white text-sm font-semibold mb-1">End this live session?</p>
+              <p className="text-white/60 text-xs mb-4">Everyone watching will be disconnected.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowEndConfirm(false)}
+                  className="flex-1 bg-white/10 text-white rounded-full py-2.5 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => void handleCloseTap()}
+                  className="flex-1 bg-red-600 text-white rounded-full py-2.5 text-sm font-semibold"
+                >
+                  End Live
+                </button>
               </div>
             </div>
           </div>

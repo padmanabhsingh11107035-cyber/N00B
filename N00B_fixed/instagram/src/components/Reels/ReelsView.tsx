@@ -12,7 +12,6 @@ import {
   Globe,
   Check,
   Film,
-  Eye,
   ArrowLeft,
   Trash2,
   MoreHorizontal,
@@ -126,11 +125,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // watching (and the very next one, so a fast swiper is covered too) is looked up quietly in the
   // background the moment it's shown; by the time anyone actually taps, it's usually already in hand.
   const profileCacheRef = useRef<Map<string, User>>(new Map());
-  // Set true only when the browser itself rejected unmuted autoplay (not
-  // when the user deliberately tapped the volume icon) — lets the
-  // first-interaction listener below know it's safe to switch sound back
-  // on automatically, without ever overriding a real manual mute.
-  const wasAutoMutedRef = useRef(false);
 
   useEffect(() => {
     if (initialReelId) {
@@ -204,13 +198,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         // frozen on a black frame forever (isPlaying said "true" but the
         // element never actually started). Retry muted, which every
         // browser allows unconditionally, so the reel always visibly
-        // plays. Tracked as "auto-muted" (not a real user choice) so the
-        // very next tap/key/touch anywhere can switch sound back on by
-        // itself — reels should default to audio-on, not require someone
-        // to find and tap the volume icon every time they open the page.
+        // plays. The listener below re-checks on every later tap/swipe
+        // (not just once), since each NEW reel is its own fresh <video>
+        // element and can independently hit this same block.
         if (!video.muted) {
           video.muted = true;
-          wasAutoMutedRef.current = true;
           setIsMuted(true);
           video.play().catch(() => {});
         }
@@ -220,33 +212,41 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   }, [isPlaying, currentReel?.id]);
 
-  // The moment the browser registers ANY real user gesture, it will allow
-  // unmuted playback — so retry with sound on right then, instead of
-  // leaving the reel silently muted until someone notices and taps the
-  // volume icon themselves.
+  // A real user gesture is required to unmute — but that permission doesn't
+  // reliably carry over to the NEXT reel's brand new <video> element (this
+  // used to only ever retry once per whole session, via a ref that got
+  // "used up" after the first reel — every reel after that, that also hit
+  // the autoplay-blocked path above, had nothing left to rescue it, which
+  // is exactly "every time it's muted"). This now gets one rescue attempt
+  // PER reel instead of once ever, triggered by the next gesture — a plain
+  // repeated play() on an element the browser already considers "playing"
+  // is often a no-op even when still silent, so this does an explicit
+  // pause-then-play, which is what actually re-evaluates the autoplay/mute
+  // policy (confirmed: manually pausing and resuming was the one thing
+  // that reliably brought sound back). Gated to fire at most once per
+  // reel (not every tap) so a reel whose sound is already fine never gets
+  // an unnecessary, visible pause/resume blip.
+  const rescuedReelIdRef = useRef<string | null>(null);
   useEffect(() => {
     const unlockAudio = () => {
-      if (!wasAutoMutedRef.current) return;
-      wasAutoMutedRef.current = false;
-      setIsMuted(false);
       const video = videoRef.current;
-      if (video) {
-        video.muted = false;
-        video.play().catch(() => {
-          // Still blocked for some reason — fall back to muted again
-          // rather than leaving playback stalled.
-          wasAutoMutedRef.current = true;
-          video.muted = true;
-          setIsMuted(true);
-        });
-      }
+      if (!video || !isPlaying || !currentReel) return;
+      if (!video.muted || rescuedReelIdRef.current === currentReel.id) return;
+      rescuedReelIdRef.current = currentReel.id;
+      video.muted = false;
+      setIsMuted(false);
+      video.pause();
+      video.play().catch(() => {
+        video.muted = true;
+        setIsMuted(true);
+      });
     };
     const events: (keyof DocumentEventMap)[] = ['pointerdown', 'touchstart', 'keydown'];
     events.forEach((evt) => document.addEventListener(evt, unlockAudio));
     return () => {
       events.forEach((evt) => document.removeEventListener(evt, unlockAudio));
     };
-  }, []);
+  }, [isPlaying, currentReel]);
 
   // Load real comments for the currently-open reel instead of showing
   // static placeholder text.
@@ -916,25 +916,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               </button>
             )}
           </div>
-
-          {/* Views (owner-only "seen by" list) */}
-          {currentReel.userId === currentUser.id && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLikesViewsInitialTab('views');
-                setShowLikesViewsSheet(true);
-              }}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
-            >
-              <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
-                <Eye className="w-6 h-6" />
-              </div>
-              <span className="text-[10px] font-bold text-white drop-shadow">
-                {currentReel.viewsCount.toLocaleString()}
-              </span>
-            </button>
-          )}
 
           {/* Comment */}
           {!currentReel.isCommentsDisabled && (

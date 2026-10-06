@@ -106,6 +106,8 @@ const LiveLoungePage = React.lazy(() => import('./components/Profile/LiveLoungeP
 const NoobAiPage = React.lazy(() => import('./components/Profile/NoobAiPage').then((m) => ({ default: m.NoobAiPage })));
 const AccountsStatisticsModal = React.lazy(() => import('./components/Profile/AccountsStatisticsModal').then((m) => ({ default: m.AccountsStatisticsModal })));
 const ProFeaturesModal = React.lazy(() => import('./components/Profile/ProFeaturesModal').then((m) => ({ default: m.ProFeaturesModal })));
+const HomeVideoFeedView = React.lazy(() => import('./components/Videos/HomeVideoFeedView').then((m) => ({ default: m.HomeVideoFeedView })));
+const UploadVideoModal = React.lazy(() => import('./components/Videos/UploadVideoModal').then((m) => ({ default: m.UploadVideoModal })));
 
 // Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
 // full loading screen, since by the time it appears the user already tapped something and expects
@@ -181,6 +183,10 @@ export default function App() {
   const [activeScratchCardId, setActiveScratchCardId] = useState<string | null>(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
+  const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
+  // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
+  // threading the new video through app-level state for a tab that's lazy-loaded anyway.
+  const [videosRefreshKey, setVideosRefreshKey] = useState(0);
   const [showGoLiveHost, setShowGoLiveHost] = useState(false);
   const [showLiveLoungeUpsell, setShowLiveLoungeUpsell] = useState(false);
   // Desktop/tablet sidebar shortcuts straight to pages that otherwise only open from inside the
@@ -1226,6 +1232,7 @@ export default function App() {
             onDeleteSlide={handleDeleteSlide}
             onOpenStoryViewer={(index) => setActiveStoryViewerIndex(index)}
             onOpenCreateStory={() => setShowCreateStoryModal(true)}
+            onOpenPostCreation={() => setShowPostCreationModal(true)}
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
             onOpenNotifications={handleOpenNotifications}
             onRefreshFeed={loadInitialData}
@@ -1273,6 +1280,17 @@ export default function App() {
               onNavigateToProfile={handleNavigateToUserProfile}
             />
           </div>
+        )}
+
+        {activeTab === 'videos' && (
+          <React.Suspense fallback={<LazyFallback />}>
+            <HomeVideoFeedView
+              currentUser={currentUser}
+              onOpenUpload={() => setShowUploadVideoModal(true)}
+              onNavigateToProfile={handleNavigateToUserProfile}
+              refreshKey={videosRefreshKey}
+            />
+          </React.Suspense>
         )}
 
         {activeTab === 'chat' && (
@@ -1539,6 +1557,19 @@ export default function App() {
           onSubmitPost={handleCreatePostOrReel}
           onGoLive={handleGoLiveTap}
         />
+      )}
+
+      {/* 3b. Long-form Video Upload Modal (Home tab's "+") */}
+      {showUploadVideoModal && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <UploadVideoModal
+            onClose={() => setShowUploadVideoModal(false)}
+            onUploaded={() => {
+              setShowUploadVideoModal(false);
+              setVideosRefreshKey((k) => k + 1);
+            }}
+          />
+        </React.Suspense>
       )}
 
       {showGoLiveHost && (

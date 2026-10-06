@@ -537,6 +537,25 @@ export interface Reel {
   isLikeCountHidden?: boolean;
 }
 
+// A long-form, YouTube-style upload (up to 2 hours) — shown only on the Home video feed, never mixed
+// into Reels. Deliberately minimal next to Reel: no audio track, hashtags, collab or tagging fields.
+export interface LongVideo {
+  id: string;
+  userId: string;
+  username: string;
+  userAvatar: string;
+  isVerified: boolean;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  title: string;
+  description: string;
+  durationSeconds: number;
+  likesCount: number;
+  viewsCount: number;
+  isLiked: boolean;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   chatId: string;

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, Compass, Plus, Film, MessageSquare, Gamepad2, Music } from 'lucide-react';
+import { Home, Compass, Youtube, Film, MessageSquare, Gamepad2, Music } from 'lucide-react';
 
-export type NavTab = 'feed' | 'explore' | 'post' | 'reels' | 'chat' | 'games' | 'music' | 'profile';
+export type NavTab = 'feed' | 'explore' | 'post' | 'reels' | 'chat' | 'games' | 'music' | 'profile' | 'videos';
 
 interface FloatingNavBarProps {
   activeTab: NavTab;
@@ -123,17 +123,18 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           />
         </NavButton>
 
-        {/* 5. Upload / Create */}
+        {/* 5. Home — the YouTube-style long video feed (live streams + uploaded videos only, no
+            reels). Create moved up to the top header; this slot used to be the Create button. */}
         <NavButton
-          id="nav-item-post-center"
-          label="Create"
-          title="Create New Post / Upload Reel"
-          active={activeTab === 'post'}
-          onClick={() => onSelectTab('post')}
+          id="nav-item-videos"
+          label="Home"
+          title="Home — Videos & Live"
+          active={activeTab === 'videos'}
+          onClick={() => onSelectTab('videos')}
         >
-          <Plus
+          <Youtube
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'post' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'videos' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>

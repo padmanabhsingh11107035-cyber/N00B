@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -902,7 +902,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -1183,6 +1183,46 @@ export async function fetchReels(): Promise<Reel[]> {
   } catch {
     return [];
   }
+}
+
+// ----------------------------------------------------------------------------- long-form videos (Home)
+
+function mapLongVideo(v: any): LongVideo {
+  return { ...v, userAvatar: resolveMedia(v.userAvatar), videoUrl: resolveMedia(v.videoUrl), thumbnailUrl: v.thumbnailUrl ? resolveMedia(v.thumbnailUrl) : v.thumbnailUrl };
+}
+
+export async function fetchLongVideos(): Promise<LongVideo[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('feed_long_videos')) || []).map(mapLongVideo);
+  } catch {
+    return [];
+  }
+}
+
+export async function createLongVideo(data: {
+  videoUrl: string; thumbnailUrl?: string; title?: string; description?: string; durationSeconds: number;
+}): Promise<LongVideo> {
+  const res = await rpc<{ video: any }>('create_long_video', {
+    p_video_url: toStoredMedia(data.videoUrl),
+    p_thumbnail_url: data.thumbnailUrl ? toStoredMedia(data.thumbnailUrl) : null,
+    p_title: data.title || '',
+    p_description: data.description || '',
+    p_duration_seconds: Math.round(data.durationSeconds)
+  });
+  return mapLongVideo(res.video);
+}
+
+export async function toggleLikeLongVideo(videoId: string): Promise<{ isLiked: boolean; likesCount: number }> {
+  try { return await rpc('toggle_long_video_like', { p_video: videoId }); } catch (err) { return { error: errorText(err, 'Could not update the like.') } as any; }
+}
+
+export async function recordLongVideoView(videoId: string) {
+  try { return await rpc('record_long_video_view', { p_video: videoId }); } catch { return { success: false }; }
+}
+
+export async function deleteLongVideo(videoId: string): Promise<boolean> {
+  try { await rpc('delete_long_video', { p_video: videoId }); return true; } catch { return false; }
 }
 
 // Used for a "?reel=<id>" deep link or a shared-reel chat card — see fetchPostById's comment.

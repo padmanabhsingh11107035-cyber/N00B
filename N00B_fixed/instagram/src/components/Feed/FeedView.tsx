@@ -18,7 +18,8 @@ import {
   ArrowDown,
   Loader2,
   Rocket,
-  Handshake
+  Handshake,
+  Plus
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -45,6 +46,8 @@ interface FeedViewProps {
   onDeleteSlide?: (postId: string, slideId: string) => void;
   onOpenStoryViewer: (index: number) => void;
   onOpenCreateStory: () => void;
+  // Create moved to this header (used to be a bottom-nav tab) — opens the post/reel picker.
+  onOpenPostCreation?: () => void;
   onOpenStatusNoteModal: () => void;
   onClearStatusNote?: () => void;
   onOpenNotifications: () => void;
@@ -91,6 +94,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onDeleteSlide,
   onOpenStoryViewer,
   onOpenCreateStory,
+  onOpenPostCreation,
   onOpenStatusNoteModal,
   onOpenNotifications,
   onRefreshFeed,
@@ -308,6 +312,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
         {/* Action Icons (Notification Bar, Refresh, Chat) */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Create — moved here from the bottom nav bar, which now carries the Home video tab instead */}
+          {onOpenPostCreation && (
+            <button
+              onClick={onOpenPostCreation}
+              className="p-1.5 bg-[#00FF66] text-black rounded-lg hover:bg-[#00FF66]/90 transition-colors cursor-pointer"
+              title="Create a post, reel or story"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          )}
           {/* Apply to join the SparkX team */}
           <button
             onClick={() => setShowSparkXModal(true)}

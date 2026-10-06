@@ -465,12 +465,19 @@ export async function revokeDeviceSession(deviceId: string): Promise<{ success: 
 // Watches this device's own device_sessions row and fires the moment someone logs it out remotely
 // (by resolving a conflict on another device) — same "watch one row, react when a column flips"
 // pattern as subscribeToLiveStreamEnded.
-export function subscribeToDeviceRevoked(deviceId: string, onRevoked: () => void): () => void {
+// userId is this tab's own signed-in account — every tab in the same browser shares one device id,
+// so the channel name alone isn't enough to keep two tabs on two different accounts from ever
+// colliding; folding userId into the channel name AND re-checking it on every event (RLS already
+// restricts which rows reach this client at all, this is a second, cheap belt-and-suspenders check
+// against acting on the wrong account's row) means this tab only ever reacts to its OWN account
+// being logged out, never another account's row that happens to share this browser's device id.
+export function subscribeToDeviceRevoked(deviceId: string, userId: string, onRevoked: () => void): () => void {
   const channel = supabase
-    .channel(`device-revoked-${deviceId}`)
+    .channel(`device-revoked-${userId}-${deviceId}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'device_sessions', filter: `device_id=eq.${deviceId}` },
       (payload) => {
-        if ((payload.new as any)?.revoked_at) onRevoked();
+        const row = payload.new as any;
+        if (row?.revoked_at && row?.user_id === userId) onRevoked();
       })
     .subscribe();
   return () => { supabase.removeChannel(channel); };

@@ -428,7 +428,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     const deviceId = getDeviceId();
-    const unsubscribe = subscribeToDeviceRevoked(deviceId, () => {
+    const unsubscribe = subscribeToDeviceRevoked(deviceId, currentUser.id, () => {
       void logoutUser();
       setSessionUserId(null);
       setSessionEndedNotice('Your account is signed in on another device. Log in again to continue here.');
@@ -532,22 +532,15 @@ export default function App() {
         fetchUsers(),
         fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }))
       ]);
-      if (user) {
-        // A session from before this device was last checked (or from before this feature shipped)
-        // still has to pass the single-device check, not just a fresh login — otherwise just keeping
-        // a tab open, or never fully closing the app, would dodge it entirely.
-        const deviceCheck = await checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
-        if (deviceCheck.conflict) {
-          await logoutUser();
-          setSessionUserId(null);
-          setSessionEndedNotice('Your account is signed in on another device. Log in again to continue here.');
-          setCurrentUser(null);
-        } else {
-          setCurrentUser(user);
-        }
-      } else {
-        setCurrentUser(user);
-      }
+      // Best-effort only: keeps this device's last-seen time fresh for the device list, but never
+      // forces a logout from here. This used to also sign a conflicting session out on every app
+      // load/refresh — but every tab in a browser shares the same device id (see utils/deviceId.ts),
+      // so two DIFFERENT accounts open in two tabs (an already-supported, unrelated feature — see
+      // services/tabSessions.ts) could trip this and knock one of them out on a refresh. Single-device
+      // enforcement now only ever acts at the moment of an explicit login/signup (AuthView.tsx), the
+      // one place it's unambiguous which account is actually trying to sign in.
+      if (user) void checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
+      setCurrentUser(user);
       setPosts(pList);
       setStories(sList);
       setReels(rList);

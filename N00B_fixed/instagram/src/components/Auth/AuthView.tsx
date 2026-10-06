@@ -31,10 +31,14 @@ import {
   HelpCircle,
   CalendarDays,
   Download,
-  Loader2
+  Loader2,
+  Smartphone,
+  LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice } from '../../services/api';
+import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, type ActiveDeviceSession } from '../../services/api';
+import { getDeviceId, getDeviceLabel } from '../../utils/deviceId';
+import { formatRelativeTime } from '../../utils/formatTime';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
@@ -204,6 +208,35 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [errorMessage, setErrorMessage] = useState<string | null>(notice || null);
   const [suspendedNotice, setSuspendedNotice] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // NOOB only allows one signed-in device at a time — a successful login/signup goes through this
+  // before actually entering the app. A conflict holds the just-authenticated user here and shows the
+  // other active device(s) with a "Log out" button instead of letting both devices stay signed in.
+  const [deviceConflict, setDeviceConflict] = useState<ActiveDeviceSession[] | null>(null);
+  const [pendingAuthUser, setPendingAuthUser] = useState<User | null>(null);
+  const [deviceActionBusy, setDeviceActionBusy] = useState<string | null>(null);
+
+  const proceedAfterAuth = async (user: User) => {
+    const check = await checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
+    if (check.conflict) {
+      setPendingAuthUser(user);
+      setDeviceConflict(check.devices);
+      return;
+    }
+    onAuthSuccess(user);
+  };
+
+  const handleLogOutOtherDevice = async (deviceId: string) => {
+    setDeviceActionBusy(deviceId);
+    await revokeDeviceSession(deviceId);
+    const recheck = await checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
+    setDeviceActionBusy(null);
+    if (!recheck.conflict) {
+      setDeviceConflict(null);
+      if (pendingAuthUser) onAuthSuccess(pendingAuthUser);
+    } else {
+      setDeviceConflict(recheck.devices);
+    }
+  };
   // The admin's in-app "pause new sign-ups" switch (Admin Control Panel → Platform) — a fast,
   // no-dashboard-needed kill switch on top of, not instead of, the Supabase project's own
   // "Allow new users to sign up" toggle, which stays the deeper backstop.
@@ -583,7 +616,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
       // Best-effort, never blocks the sign-up succeeding either way — see recordSignupDevice.
       void recordSignupDevice();
-      onAuthSuccess(res.user);
+      await proceedAfterAuth(res.user);
     } else if (res.suspended) {
       setSignupStep('form');
       setSuspendedNotice(
@@ -632,7 +665,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       });
 
       if (res.success && res.user) {
-        onAuthSuccess(res.user);
+        await proceedAfterAuth(res.user);
       } else {
         setErrorMessage(res.error || 'Authentication failed. Please check your credentials.');
       }
@@ -698,7 +731,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       });
       if (res.success && res.user) {
         setShowForgotPassword(false);
-        onAuthSuccess(res.user);
+        await proceedAfterAuth(res.user);
       } else {
         setForgotError(res.error || 'The details you entered do not match our records.');
       }
@@ -743,7 +776,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       const res = await verifyLoginOtp({ username: forgotUsername, code: otpCode.trim() });
       if (res.success && res.user) {
         setShowForgotPassword(false);
-        onAuthSuccess(res.user);
+        await proceedAfterAuth(res.user);
       } else {
         setOtpError(res.error || 'That code is not right. Please check your email and try again.');
       }
@@ -1826,6 +1859,58 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               className="w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
             >
               Back to Login
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* NOOB only allows one signed-in device at a time. A successful login/signup lands here
+          instead of the app when the account is already active on another device — picking "Log
+          out" revokes that device's session and, once no conflict remains, continues straight in. */}
+      {deviceConflict && (
+        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#141418] border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 mx-auto rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+                <Smartphone className="w-7 h-7 text-amber-400" />
+              </div>
+              <h3 className="text-sm font-bold text-white">You're already signed in elsewhere</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                NOOB only allows one device at a time. Log out of the device below to continue signing in here.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {deviceConflict.map((d) => (
+                <div key={d.deviceId} className="flex items-center justify-between gap-3 bg-black/40 border border-zinc-800 rounded-2xl px-3.5 py-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{d.label}</p>
+                    <p className="text-[10px] text-zinc-500">Active {formatRelativeTime(d.lastSeenAt)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleLogOutOtherDevice(d.deviceId)}
+                    disabled={deviceActionBusy === d.deviceId}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-red-500/15 border border-red-500/40 text-red-400 text-[11px] font-bold rounded-xl cursor-pointer hover:bg-red-500/25 disabled:opacity-50 transition-colors"
+                  >
+                    {deviceActionBusy === d.deviceId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
+                    Log out
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                // This device authenticated successfully but never finished entering the app — leaving
+                // that session dangling would just mean this box reappears from a fresh load; sign it
+                // back out so cancelling actually returns to a clean, logged-out login screen.
+                await logoutUser();
+                setDeviceConflict(null);
+                setPendingAuthUser(null);
+              }}
+              className="w-full py-2.5 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+            >
+              Cancel
             </button>
           </div>
         </div>

@@ -430,6 +430,52 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   return { success: true };
 }
 
+// ----------------------------------------------------------------------------- single-device login
+export interface ActiveDeviceSession {
+  deviceId: string;
+  label: string;
+  lastSeenAt: string;
+  createdAt: string;
+}
+
+// Called right after a successful login/signup, AND once at app boot for an already-open session, so
+// a session from before this feature shipped is checked too. Registers this device as the active one
+// unless another of this account's devices already is, in which case it reports that list instead so
+// the UI can offer to log one of them out before letting this device in.
+export async function checkAndRegisterDevice(deviceId: string, deviceLabel: string): Promise<{ conflict: boolean; devices: ActiveDeviceSession[] }> {
+  try {
+    const res = await rpc<{ conflict: boolean; devices?: ActiveDeviceSession[] }>('upsert_device_session', { p_device_id: deviceId, p_device_label: deviceLabel });
+    return { conflict: !!res.conflict, devices: res.devices || [] };
+  } catch {
+    // Can't reach the device check — fail OPEN (let the person in) rather than locking everyone out
+    // over a network hiccup; the realtime/poll-based remote-logout check still applies once in.
+    return { conflict: false, devices: [] };
+  }
+}
+
+// Self-service: revoke one of THIS account's own other devices — never anyone else's.
+export async function revokeDeviceSession(deviceId: string): Promise<{ success: boolean }> {
+  try {
+    return await rpc('revoke_device_session', { p_device_id: deviceId });
+  } catch {
+    return { success: false };
+  }
+}
+
+// Watches this device's own device_sessions row and fires the moment someone logs it out remotely
+// (by resolving a conflict on another device) — same "watch one row, react when a column flips"
+// pattern as subscribeToLiveStreamEnded.
+export function subscribeToDeviceRevoked(deviceId: string, onRevoked: () => void): () => void {
+  const channel = supabase
+    .channel(`device-revoked-${deviceId}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'device_sessions', filter: `device_id=eq.${deviceId}` },
+      (payload) => {
+        if ((payload.new as any)?.revoked_at) onRevoked();
+      })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
 // Routed through the Edge Function (not called as a plain RPC) so it can email a deletion receipt
 // to whatever address was on the account, grabbed from delete_my_account's own return value before
 // the row is gone — see recover-account's "delete-account" action. Invoked BEFORE signing out

@@ -50,6 +50,8 @@ import {
   updateUserBio,
   updateUserStatusNote,
   logoutUser,
+  checkAndRegisterDevice,
+  subscribeToDeviceRevoked,
   deleteMyAccount,
   setSessionUserId,
   fetchAppNotifications,
@@ -86,6 +88,7 @@ import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Commo
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
+import { getDeviceId, getDeviceLabel } from './utils/deviceId';
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
@@ -419,6 +422,21 @@ export default function App() {
     };
   }, [currentUser?.id]);
 
+  // Single-device login: the moment this device's own device_sessions row is revoked (someone logged
+  // it out from the picker shown on another device), sign out locally right away instead of waiting
+  // for the 30s poll above to eventually notice via checkSessionStatus.
+  useEffect(() => {
+    if (!currentUser) return;
+    const deviceId = getDeviceId();
+    const unsubscribe = subscribeToDeviceRevoked(deviceId, () => {
+      void logoutUser();
+      setSessionUserId(null);
+      setSessionEndedNotice('Your account is signed in on another device. Log in again to continue here.');
+      setCurrentUser(null);
+    });
+    return unsubscribe;
+  }, [currentUser?.id]);
+
   // Content protection (see utils/contentProtection.ts): no saving of pictures or videos, and the screen goes black for screenshot
   // shortcuts and when the tab is hidden. The main administrator is exempt (needs their own screenshots to look after the app).
   useEffect(() => {
@@ -514,7 +532,22 @@ export default function App() {
         fetchUsers(),
         fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }))
       ]);
-      setCurrentUser(user);
+      if (user) {
+        // A session from before this device was last checked (or from before this feature shipped)
+        // still has to pass the single-device check, not just a fresh login — otherwise just keeping
+        // a tab open, or never fully closing the app, would dodge it entirely.
+        const deviceCheck = await checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
+        if (deviceCheck.conflict) {
+          await logoutUser();
+          setSessionUserId(null);
+          setSessionEndedNotice('Your account is signed in on another device. Log in again to continue here.');
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(user);
+        }
+      } else {
+        setCurrentUser(user);
+      }
       setPosts(pList);
       setStories(sList);
       setReels(rList);

@@ -312,7 +312,10 @@ export {
   leaveNoobRoom,
   endNoobRoom,
   fetchNoobRoomParticipants,
-  subscribeToNoobRoomParticipants
+  subscribeToNoobRoomParticipants,
+  sendNoobRoomChat,
+  fetchNoobRoomChat,
+  subscribeToNoobRoomChat
 } from './supabaseApi';
 
 export type {

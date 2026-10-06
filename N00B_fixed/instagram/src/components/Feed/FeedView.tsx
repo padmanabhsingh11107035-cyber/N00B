@@ -23,7 +23,8 @@ import {
   Coins,
   Menu,
   Flame,
-  Trophy
+  Trophy,
+  ShoppingBag
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -31,10 +32,12 @@ import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
+import { StorePage } from '../Store/StorePage';
 import { requestPostBonusOffer } from '../../services/api';
 
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
+const LiveLoungePage = React.lazy(() => import('../Profile/LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
 
 interface FeedViewProps {
   currentUser: User;
@@ -67,6 +70,9 @@ interface FeedViewProps {
   // Admin Control Panel → Platform switches (both open unless switched off)
   sparkxOpen?: boolean;
   joinTeamOpen?: boolean;
+  // For the hamburger menu's Live Lounge entry (LiveLoungePage needs the full user list to invite people).
+  allUsers?: User[];
+  onUserUpdated?: (user: User) => void;
 }
 
 const POSTS_PER_PAGE = 4;
@@ -111,7 +117,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToProfile,
   onToggleFollowUser,
   sparkxOpen = true,
-  joinTeamOpen = true
+  joinTeamOpen = true,
+  allUsers = [],
+  onUserUpdated
 }) => {
   const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following'>('foryou');
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
@@ -125,6 +133,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showNoobMenu, setShowNoobMenu] = useState(false);
   const [showDailyNoob, setShowDailyNoob] = useState(false);
   const [showNoobRooms, setShowNoobRooms] = useState(false);
+  const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
+  const [showStorePage, setShowStorePage] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
 
   // Rolled once per mount, not re-rolled on every render — the amount has to stay the same between
@@ -613,6 +623,30 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-400">Live voice rooms — join, talk, play</span>
                 </div>
               </button>
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowLiveLoungePage(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4.5 h-4.5 text-purple-400" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">NOOB Live Lounge{currentUser.hasLiveLounge ? ' — Unlocked' : ''}</span>
+                  <span className="text-[10px] text-zinc-400">Private meeting rooms — screen share, whiteboard & chat</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowStorePage(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center shrink-0">
+                  <ShoppingBag className="w-4.5 h-4.5 text-orange-400" />
+                </div>
+                <div>
+                  <span className="shop-wordmark text-base leading-none text-white block">Shop NOOB</span>
+                  <span className="text-[10px] text-zinc-400">Browse products & your cart</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -627,6 +661,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
           <NoobRoomsLobbyView currentUser={currentUser} onClose={() => setShowNoobRooms(false)} />
         </React.Suspense>
       )}
+      {showLiveLoungePage && (
+        <React.Suspense fallback={null}>
+          <LiveLoungePage currentUser={currentUser} allUsers={allUsers} onClose={() => setShowLiveLoungePage(false)} onUserUpdated={onUserUpdated} />
+        </React.Suspense>
+      )}
+      {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
     </div>
   );
 };

@@ -587,6 +587,16 @@ export interface NoobRoomParticipant {
   avatar: string;
 }
 
+export interface NoobRoomChatMessage {
+  id: string;
+  roomId: string;
+  text: string;
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'video' | 'gif' | 'sticker' | null;
+  createdAt: string;
+  sender: { id: string; username: string; displayName?: string; avatar: string };
+}
+
 export interface DailyChallenge {
   challengeDate: string;
   prompt: string;

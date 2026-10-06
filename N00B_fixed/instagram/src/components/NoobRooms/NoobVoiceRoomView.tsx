@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Mic, MicOff, Users, LogOut, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { X, Mic, MicOff, Users, LogOut, CheckCircle2, AlertCircle, Clock, MessageCircle } from 'lucide-react';
 import AgoraRTC, { IAgoraRTCClient, IMicrophoneAudioTrack, IRemoteAudioTrack } from 'agora-rtc-sdk-ng';
 import { NoobRoom, NoobRoomParticipant, User } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
@@ -8,9 +8,11 @@ import {
   leaveNoobRoom,
   endNoobRoom,
   fetchNoobRoomParticipants,
-  subscribeToNoobRoomParticipants
+  subscribeToNoobRoomParticipants,
+  subscribeToNoobRoomChat
 } from '../../services/api';
 import { friendlyAgoraError } from '../../utils/agoraError';
+import { NoobRoomChatPanel } from './NoobRoomChatPanel';
 
 interface NoobVoiceRoomViewProps {
   currentUser: User;
@@ -46,6 +48,10 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   const [participants, setParticipants] = useState<NoobRoomParticipant[]>([]);
   const [remotes, setRemotes] = useState<Map<number, RemoteEntry>>(new Map());
   const [micOn, setMicOn] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const showChatRef = useRef(false);
+  useEffect(() => { showChatRef.current = showChat; if (showChat) setUnreadChat(0); }, [showChat]);
   const callStartRef = useRef<number | null>(null);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -144,6 +150,16 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
     const interval = setInterval(refreshParticipants, 5000);
     return () => { unsub(); clearInterval(interval); };
   }, [phase, room.id, refreshParticipants]);
+
+  // Badges the chat button for anyone else's message that arrives while the panel isn't open — the
+  // panel itself (NoobRoomChatPanel) does its own fetch + subscribe for the actual message list.
+  useEffect(() => {
+    if (phase !== 'live') return;
+    const unsub = subscribeToNoobRoomChat(room.id, (m) => {
+      if (m.sender.id !== currentUser.id && !showChatRef.current) setUnreadChat((n) => n + 1);
+    });
+    return unsub;
+  }, [phase, room.id, currentUser.id]);
 
   useEffect(() => () => { void cleanup(); }, [cleanup]);
 
@@ -266,14 +282,22 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center justify-center px-3 py-4 border-t border-zinc-800/80">
+      <div className="shrink-0 flex items-center justify-center gap-3 px-3 py-4 border-t border-zinc-800/80">
         <button
           onClick={handleToggleMic}
           className={`p-4 rounded-full cursor-pointer ${micOn ? 'bg-zinc-800 text-white' : 'bg-red-500/20 text-red-400'}`}
         >
           {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
         </button>
+        <button onClick={() => setShowChat((v) => !v)} className={`relative p-4 rounded-full cursor-pointer ${showChat ? 'bg-[#00FF66]/20 text-[#00FF66]' : 'bg-zinc-800 text-white'}`}>
+          <MessageCircle className="w-6 h-6" />
+          {unreadChat > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{unreadChat > 9 ? '9+' : unreadChat}</span>
+          )}
+        </button>
       </div>
+
+      {showChat && <NoobRoomChatPanel roomId={room.id} currentUser={currentUser} onClose={() => setShowChat(false)} />}
     </div>
   );
 };

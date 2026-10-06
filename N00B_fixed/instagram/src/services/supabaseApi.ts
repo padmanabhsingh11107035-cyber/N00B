@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant, NoobRoomChatMessage } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -4120,6 +4120,41 @@ export function subscribeToNoobRoomParticipants(roomId: string, onChange: () => 
     if (timer) clearTimeout(timer);
     supabase.removeChannel(channel);
   };
+}
+
+function mapNoobRoomChatMessage(m: any): NoobRoomChatMessage {
+  return { ...m, sender: { ...m.sender, avatar: resolveMedia(m.sender?.avatar) }, mediaUrl: m.mediaUrl ? resolveMedia(m.mediaUrl) : m.mediaUrl };
+}
+
+export async function sendNoobRoomChat(roomId: string, text: string, mediaUrl?: string, mediaType?: string): Promise<{ success: boolean; message?: NoobRoomChatMessage; error?: string }> {
+  try {
+    const res = await rpc<any>('noob_room_chat_send', { p_room_id: roomId, p_text: text, p_media_url: mediaUrl || null, p_media_type: mediaType || null });
+    return { success: true, message: mapNoobRoomChatMessage(res) };
+  } catch (err) {
+    return failWith(err, 'Could not send that message.');
+  }
+}
+
+export async function fetchNoobRoomChat(roomId: string, limit = 50): Promise<{ success: boolean; messages: NoobRoomChatMessage[]; error?: string }> {
+  try {
+    const list = (await rpc<any[]>('noob_room_chat_recent', { p_room_id: roomId, p_limit: limit })) || [];
+    return { success: true, messages: list.map(mapNoobRoomChatMessage) };
+  } catch (err) {
+    return { success: false, messages: [], error: errorText(err, 'Could not load chat.') };
+  }
+}
+
+export function subscribeToNoobRoomChat(roomId: string, onInsert: (message: NoobRoomChatMessage) => void): () => void {
+  const channel = supabase
+    .channel(`noobroom-chat-${roomId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'noob_room_chat', filter: `room_id=eq.${roomId}` },
+      async (payload) => {
+        const row = payload.new as any;
+        const sender = await fetchLiveStreamCommentSender(row.sender_id);
+        onInsert(mapNoobRoomChatMessage({ id: row.id, roomId: row.room_id, text: row.text, mediaUrl: row.media_url, mediaType: row.media_type, createdAt: row.created_at, sender }));
+      })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
 }
 
 // The DIY whiteboard is purely ephemeral (broadcast, never stored) — a fresh join just sees a blank

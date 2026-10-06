@@ -1327,6 +1327,8 @@ export default function App() {
             onNavigateToReel={handleNavigateToReel}
             onNavigateToProfile={handleNavigateToUserProfile}
             onToggleFollowUser={handleToggleFollowUser}
+            allUsers={registeredUsers}
+            onUserUpdated={(u) => setCurrentUser(u)}
             sparkxOpen={platformSettings?.sparkxOpen !== false}
             joinTeamOpen={platformSettings?.joinTeamOpen !== false}
           />

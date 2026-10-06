@@ -35,6 +35,10 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
     return () => clearInterval(interval);
   }, []);
 
+  // Warms the Agora SDK's chunk the moment the lobby opens, so it's already downloaded by the time
+  // someone taps a room instead of only starting that fetch at the moment they're trying to connect.
+  useEffect(() => { void import('agora-rtc-sdk-ng'); }, []);
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;

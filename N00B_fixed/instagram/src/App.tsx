@@ -33,6 +33,7 @@ import {
   fetchReelById,
   fetchUsers,
   toggleFollowUser,
+  removeFollower,
   acceptFollowRequest,
   declineFollowRequest,
   toggleLikePost,
@@ -829,6 +830,32 @@ export default function App() {
     }
   };
 
+  // Removes someone from MY OWN followers list — updates their followingIds (what the followers
+  // list is derived from), not mine, since this never changes who I follow.
+  const handleRemoveFollower = async (followerId: string) => {
+    try {
+      const res = await removeFollower(followerId);
+      if (!res.success) return res;
+      setRegisteredUsers((prev) =>
+        prev.map((u) =>
+          u.id === followerId
+            ? { ...u, followingIds: (u.followingIds || []).filter((id) => id !== currentUser?.id) }
+            : u
+        )
+      );
+      if (currentUser) {
+        setCurrentUser({ ...currentUser, followersCount: res.followersCount ?? Math.max(0, (currentUser.followersCount || 0) - 1) });
+      }
+      if (viewingProfileUser && viewingProfileUser.id === currentUser?.id) {
+        setViewingProfileUser((prev) => (prev ? { ...prev, followersCount: res.followersCount ?? prev.followersCount } : null));
+      }
+      return res;
+    } catch (err) {
+      console.error(err);
+      return { success: false };
+    }
+  };
+
   const handleOpenNotifications = () => {
     setShowNotificationsModal(true);
     setUnreadNotificationCount(0);
@@ -1434,6 +1461,7 @@ export default function App() {
             onDeleteMyAccount={handleDeleteMyAccount}
             onUserUpdated={(u) => setCurrentUser(u)}
             onToggleFollowUser={handleToggleFollowUser}
+            onRemoveFollower={handleRemoveFollower}
             onBackToMyProfile={() => setViewingProfileUser(null)}
             onNavigateToChatWithUser={(targetUser) => {
               setPendingChatUser(targetUser);

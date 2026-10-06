@@ -636,6 +636,16 @@ export async function toggleFollowUser(userId: string): Promise<{ success: boole
   }
 }
 
+// Removes someone from MY OWN followers list — the reverse of toggleFollowUser, which only ever
+// changes whether *I* follow someone else.
+export async function removeFollower(followerId: string): Promise<{ success: boolean; followersCount?: number; error?: string }> {
+  try {
+    return await rpc('remove_follower', { p_follower: followerId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not remove this follower.') };
+  }
+}
+
 // "Followed by ..." on someone else's profile: accounts *I* follow who also follow them. Only ever
 // computed from my following list, never my followers.
 export interface MutualFollower { id: string; username: string; displayName?: string; avatar?: string }

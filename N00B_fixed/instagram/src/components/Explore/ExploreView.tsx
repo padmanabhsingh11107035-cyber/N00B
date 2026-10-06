@@ -28,7 +28,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Post, Reel, User } from '../../types';
-import { fetchUsers } from '../../services/api';
+import { fetchUsers, subscribeToOnlinePresence, type PresenceEntry } from '../../services/api';
 import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
@@ -89,6 +89,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   onInitialSearchQueryHandled
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'reels'>('users');
+  const [onlinePresence, setOnlinePresence] = useState<Record<string, PresenceEntry[]>>({});
+  useEffect(() => subscribeToOnlinePresence(setOnlinePresence), []);
+  const isUserOnline = (userId: string) => !!onlinePresence[userId]?.length;
   const [searchQuery, setSearchQuery] = useState('');
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
 
@@ -583,7 +586,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                           className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover/avatar:scale-105 transition-transform"
                           referrerPolicy="no-referrer"
                         />
-                        <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black" />
+                        {isUserOnline(user.id) && (
+                          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black" />
+                        )}
                       </div>
 
                       {/* Info */}

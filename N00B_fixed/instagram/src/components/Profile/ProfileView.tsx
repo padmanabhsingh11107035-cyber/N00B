@@ -149,6 +149,7 @@ interface ProfileViewProps {
   onToggleFollowUser?: (
     userId: string
   ) => void | Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean; followersCount: number; message?: string } | undefined>;
+  onRemoveFollower?: (followerId: string) => void | Promise<{ success: boolean; followersCount?: number; error?: string } | undefined>;
   onBlockUser?: (userId: string) => void;
   onReportUser?: (userId: string, reason: string, details?: string) => void;
   onDeletePost?: (postId: string) => void;
@@ -178,6 +179,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteMyAccount,
   onUserUpdated,
   onToggleFollowUser,
+  onRemoveFollower,
   onBlockUser,
   onReportUser,
   onDeletePost,
@@ -2106,6 +2108,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           initialTab={followListTab}
           onClose={() => setFollowListTab(null)}
           onToggleFollowUser={onToggleFollowUser}
+          onRemoveFollower={onRemoveFollower}
           onNavigateToUserProfile={(u) => {
             setFollowListTab(null);
             onNavigateToUserProfile?.(u);

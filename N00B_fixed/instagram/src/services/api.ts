@@ -30,6 +30,7 @@ export {
   fetchUsers,
   fetchUserById,
   toggleFollowUser,
+  removeFollower,
   fetchMutualFollowers,
   acceptFollowRequest,
   declineFollowRequest,

@@ -144,7 +144,9 @@ import {
   fetchShopCatalog,
   purchaseShopItem,
   fetchUserById,
-  e2ee
+  e2ee,
+  subscribeToOnlinePresence,
+  type PresenceEntry
 } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -235,6 +237,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 }) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [onlinePresence, setOnlinePresence] = useState<Record<string, PresenceEntry[]>>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>('all');
@@ -317,6 +320,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
+
+  // Real online/offline — a green dot only while the other person is actually connected right now
+  // (Supabase Presence), never a stale/offline indicator.
+  useEffect(() => subscribeToOnlinePresence(setOnlinePresence), []);
+  const isUserOnline = (userId: string) => !!onlinePresence[userId]?.length;
 
   useEffect(() => {
     onMobileViewChange?.(mobileView);
@@ -730,6 +738,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
+  const headerPartner = activeChat?.participants.find((p) => p.id !== currentUser.id);
 
   // End-to-end encryption: is the open chat locked, its security code, and the two screens that explain it
   const [encryptionTick, setEncryptionTick] = useState(0);
@@ -1621,7 +1630,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           alt=""
                           className="w-12 h-12 rounded-full object-cover ring-1 ring-zinc-700"
                         />
-                        <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-[#00FF66] border-2 border-black rounded-full" />
+                        {isUserOnline(partner.id) && (
+                          <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-[#00FF66] border-2 border-black rounded-full" />
+                        )}
                       </div>
                     )}
                   </div>
@@ -1811,14 +1822,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <div className="relative">
                       <img
                         src={
-                          activeChat?.participants.find((p) => p.id !== currentUser.id)?.avatar ||
+                          headerPartner?.avatar ||
                           currentUser.avatar ||
                           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                         }
                         alt=""
                         className="w-10 h-10 rounded-full object-cover ring-1 ring-[#00FF66]"
                       />
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#00FF66] rounded-full border border-black" />
+                      {headerPartner && isUserOnline(headerPartner.id) && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#00FF66] rounded-full border border-black" />
+                      )}
                     </div>
                   )}
                 </div>

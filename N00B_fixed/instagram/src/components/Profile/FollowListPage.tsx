@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Search, UserPlus, UserCheck } from 'lucide-react';
+import { ArrowLeft, Search, UserPlus, UserCheck, UserMinus } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 
@@ -10,6 +10,7 @@ interface FollowListPageProps {
   initialTab: 'followers' | 'following';
   onClose: () => void;
   onToggleFollowUser?: (userId: string) => void;
+  onRemoveFollower?: (followerId: string) => void | Promise<{ success: boolean; followersCount?: number; error?: string } | undefined>;
   onNavigateToUserProfile?: (user: User) => void;
 }
 
@@ -20,11 +21,16 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
   initialTab,
   onClose,
   onToggleFollowUser,
+  onRemoveFollower,
   onNavigateToUserProfile
 }) => {
   const [tab, setTab] = useState<'followers' | 'following'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  // The NOOB admin's "followers" list is a synthetic everyone-follows-them list, not real rows in
+  // `follows` (see the comment below) — there's nothing real to remove, so no Remove button there.
+  const isOwnFollowersTab = tab === 'followers' && targetUser.id === currentUser.id && targetUser.id !== 'u_noob_admin';
 
   // Every registered account auto-follows the NOOB admin account at signup,
   // so its "followers" are, by definition, every other registered user —
@@ -41,7 +47,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
     .map((id) => allUsers.find((u) => u.id === id))
     .filter((u): u is User => !!u);
 
-  const list = tab === 'followers' ? followersList : followingList;
+  const list = (tab === 'followers' ? followersList : followingList).filter((u) => !removedIds.has(u.id));
   const query = searchQuery.trim().toLowerCase();
   const filteredList = query
     ? list.filter(
@@ -56,6 +62,18 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
     setPendingId(userId);
     try {
       await onToggleFollowUser(userId);
+    } finally {
+      setPendingId(null);
+    }
+  };
+
+  const handleRemove = async (followerId: string) => {
+    if (!onRemoveFollower || !confirm('Remove this follower?')) return;
+    setPendingId(followerId);
+    try {
+      const res = await onRemoveFollower(followerId);
+      if (!res || res.success) setRemovedIds((prev) => new Set(prev).add(followerId));
+      else alert(res.error || 'Could not remove this follower.');
     } finally {
       setPendingId(null);
     }
@@ -164,6 +182,18 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
                     >
                       {isFollowingRow ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
                       {pendingId === u.id ? '...' : isFollowingRow ? 'Following' : 'Follow'}
+                    </button>
+                  )}
+
+                  {isOwnFollowersTab && !isSelf && (
+                    <button
+                      onClick={() => handleRemove(u.id)}
+                      disabled={pendingId === u.id}
+                      title="Remove this follower"
+                      className="shrink-0 px-3.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 bg-zinc-900 text-red-400 border border-zinc-800 hover:bg-red-500/10 hover:border-red-500/30"
+                    >
+                      <UserMinus className="w-3.5 h-3.5" />
+                      {pendingId === u.id ? '...' : 'Remove'}
                     </button>
                   )}
                 </div>

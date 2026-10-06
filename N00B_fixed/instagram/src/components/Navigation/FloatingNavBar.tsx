@@ -63,11 +63,11 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
       }`}
     >
       <div className="liquid-glass relative rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1">
-        {/* 1. Feed */}
+        {/* 1. Feed (posts/stories) — labeled "Home", the app's main landing tab */}
         <NavButton
           id="nav-item-feed"
-          label="Feed"
-          title="Feed"
+          label="Home"
+          title="Home"
           active={activeTab === 'feed'}
           onClick={() => onSelectTab('feed')}
         >
@@ -123,12 +123,12 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           />
         </NavButton>
 
-        {/* 5. Home — the YouTube-style long video feed (live streams + uploaded videos only, no
+        {/* 5. Feed — the YouTube-style long video feed (live streams + uploaded videos only, no
             reels). Create moved up to the top header; this slot used to be the Create button. */}
         <NavButton
           id="nav-item-videos"
-          label="Home"
-          title="Home — Videos & Live"
+          label="Feed"
+          title="Feed — Videos & Live"
           active={activeTab === 'videos'}
           onClick={() => onSelectTab('videos')}
         >

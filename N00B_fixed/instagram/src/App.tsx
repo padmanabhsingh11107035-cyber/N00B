@@ -19,7 +19,8 @@ import {
   Users,
   UserCheck,
   UserPlus,
-  Plus
+  Plus,
+  Youtube
 } from 'lucide-react';
 import { Post, Reel, Story, User, StatusNote, AppNotification } from './types';
 import {
@@ -1023,7 +1024,7 @@ export default function App() {
               }`}
             >
               <Home className={`w-4 h-4 ${activeTab === 'feed' ? 'stroke-red-500' : 'stroke-current'}`} />
-              <span>Home Feed</span>
+              <span>Home</span>
             </button>
 
             <button
@@ -1047,7 +1048,19 @@ export default function App() {
               }`}
             >
               <Film className={`w-4 h-4 ${activeTab === 'reels' ? 'stroke-red-500' : 'stroke-current'}`} />
-              <span>Reels & Videos</span>
+              <span>Reels</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectNavTab('videos')}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'videos'
+                  ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+              }`}
+            >
+              <Youtube className={`w-4 h-4 ${activeTab === 'videos' ? 'stroke-red-500' : 'stroke-current'}`} />
+              <span>Feed</span>
             </button>
 
             <button

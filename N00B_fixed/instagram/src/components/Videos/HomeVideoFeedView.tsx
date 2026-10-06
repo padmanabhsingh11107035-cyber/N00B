@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, Radio, Users, Heart, X, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Plus, Radio, Users, Heart, X, Trash2, Search } from 'lucide-react';
 import { User, LongVideo } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -31,6 +31,18 @@ const formatDuration = (totalSeconds: number): string => {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
 };
 
+// Fisher-Yates — a fresh random order every time the feed loads, not a stable sort.
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+type FilterChip = 'all' | 'live' | 'newest' | 'liked';
+
 // The "Home" tab — a YouTube-style feed of long-form uploads plus whoever is live right now. Reels
 // never appear here (separate table, separate feed function — see long_videos in the migrations),
 // and this page never appears inside Reels either; each content type has exactly one home.
@@ -40,13 +52,33 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({ currentUse
   const [loading, setLoading] = useState(true);
   const [openVideo, setOpenVideo] = useState<LongVideo | null>(null);
   const [openLive, setOpenLive] = useState<LiveStreamSummary | null>(null);
+  const [filter, setFilter] = useState<FilterChip>('all');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetchLongVideos().then((list) => { if (alive) { setVideos(list); setLoading(false); } });
+    // Reshuffled on every load/refresh — the "All" chip is a random order each time, not a feed rank.
+    fetchLongVideos().then((list) => { if (alive) { setVideos(shuffle(list)); setLoading(false); } });
     return () => { alive = false; };
   }, [refreshKey]);
+
+  const displayedVideos = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let list = videos;
+    if (filter === 'newest') list = [...list].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    else if (filter === 'liked') list = [...list].sort((a, b) => b.likesCount - a.likesCount);
+    else if (filter === 'live') list = [];
+    if (q) list = list.filter((v) => v.title.toLowerCase().includes(q) || v.username.toLowerCase().includes(q));
+    return list;
+  }, [videos, filter, searchQuery]);
+
+  const displayedLiveStreams = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return liveStreams;
+    return liveStreams.filter((s) => s.host.username.toLowerCase().includes(q) || (s.title || '').toLowerCase().includes(q));
+  }, [liveStreams, searchQuery]);
 
   useEffect(() => {
     let alive = true;
@@ -75,25 +107,77 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({ currentUse
 
   return (
     <div className="w-full flex flex-col items-center pb-24">
-      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex items-center justify-between gap-2">
-        <h1 className="text-lg font-black italic tracking-tighter text-white">Home</h1>
-        <button
-          onClick={onOpenUpload}
-          className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
-          title="Upload a video"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" /> Create
-        </button>
+      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex flex-col gap-2.5">
+        <div className="flex items-center justify-between gap-2">
+          {showSearch ? (
+            <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5">
+              <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search videos"
+                className="flex-1 min-w-0 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
+              />
+              <button
+                onClick={() => { setShowSearch(false); setSearchQuery(''); }}
+                className="text-zinc-400 hover:text-white cursor-pointer shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-lg font-black italic tracking-tighter text-white">Feed</h1>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowSearch(true)}
+                  className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+                  title="Search videos"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={onOpenUpload}
+                  className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
+                  title="Upload a video"
+                >
+                  <Plus className="w-4 h-4 stroke-[2.5]" /> Create
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {([
+            ['all', 'All'],
+            ['live', 'Live'],
+            ['newest', 'Newest'],
+            ['liked', 'Most liked']
+          ] as [FilterChip, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer ${
+                filter === key ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </header>
 
       <div className="w-full max-w-2xl px-3 py-3 space-y-5">
-        {liveStreams.length > 0 && (
+        {displayedLiveStreams.length > 0 && filter !== 'newest' && filter !== 'liked' && (
           <div className="space-y-2">
             <span className="text-[11px] font-bold text-red-400 tracking-wider uppercase flex items-center gap-1.5">
               <Radio className="w-3.5 h-3.5" /> Live now
             </span>
             <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-              {liveStreams.map((s) => (
+              {displayedLiveStreams.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setOpenLive(s)}
@@ -115,14 +199,16 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({ currentUse
 
         {loading ? (
           <div className="py-16 flex items-center justify-center text-zinc-500 text-xs">Loading videos…</div>
-        ) : videos.length === 0 && liveStreams.length === 0 ? (
+        ) : displayedVideos.length === 0 && displayedLiveStreams.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-2 text-center text-zinc-500">
             <Radio className="w-8 h-8 text-zinc-700" />
-            <p className="text-xs">No videos yet — be the first to upload one.</p>
+            <p className="text-xs">
+              {searchQuery ? 'No videos match your search.' : filter === 'live' ? 'Nobody is live right now.' : 'No videos yet — be the first to upload one.'}
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {videos.map((video) => (
+            {displayedVideos.map((video) => (
               <button
                 key={video.id}
                 onClick={() => setOpenVideo(video)}

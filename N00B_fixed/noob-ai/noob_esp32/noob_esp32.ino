@@ -23,6 +23,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "driver/i2s_std.h"
+#include <math.h>
 
 // ===================== CHANGE THESE 2 LINES =====================
 const char* WIFI_SSID = "YOUR_WIFI_NAME";       // tip: use your phone's hotspot, then NOOB works anywhere
@@ -125,6 +126,157 @@ void showPairCode() {
 
 void haltWithError() {           // stop here; the reason is on the OLED + Serial Monitor
   while (true) delay(1000);
+}
+
+// ------------------------------------------------------------------ face
+// NOOB's face for the current reply's mood, named by the server's X-Face response header (see
+// FACE_NAMES in noob_server.py — this must recognize every name it can send). Drawn with plain
+// Adafruit_GFX shapes rather than bitmap sprites, which needs no image assets and is easy to adjust
+// later without re-exporting any art.
+const int16_t EYE_Y = 30;            // vertical center of both eyes
+const int16_t EYE_L = 40, EYE_R = 88;   // horizontal center of the left / right eye
+
+void eyeOpen(int16_t cx, int16_t cy, int16_t w, int16_t h) {
+  if (h < 2) h = 2;
+  display.fillRoundRect(cx - w / 2, cy - h / 2, w, h, min(w, h) / 2, SSD1306_WHITE);
+}
+
+// A closed eye as a gentle curved line — smile=true bows upward in the middle (happy), false sags
+// slightly downward (sleepy/content).
+void eyeClosedCurve(int16_t cx, int16_t cy, int16_t w, bool smile) {
+  int16_t half = w / 2;
+  int8_t bow = smile ? -4 : 3;
+  display.drawLine(cx - half, cy, cx, cy + bow, SSD1306_WHITE);
+  display.drawLine(cx, cy + bow, cx + half, cy, SSD1306_WHITE);
+  display.drawLine(cx - half, cy + 1, cx, cy + bow + 1, SSD1306_WHITE);
+  display.drawLine(cx, cy + bow + 1, cx + half, cy + 1, SSD1306_WHITE);
+}
+
+void drawMouthCurve(bool up, int8_t depth) {
+  int16_t cy = 52, sign = up ? -1 : 1;
+  display.drawLine(44, cy, 64, cy + sign * depth, SSD1306_WHITE);
+  display.drawLine(64, cy + sign * depth, 84, cy, SSD1306_WHITE);
+}
+
+void drawHeartEye(int16_t cx, int16_t cy) {
+  display.fillCircle(cx - 5, cy - 3, 6, SSD1306_WHITE);
+  display.fillCircle(cx + 5, cy - 3, 6, SSD1306_WHITE);
+  display.fillTriangle(cx - 10, cy - 1, cx + 10, cy - 1, cx, cy + 12, SSD1306_WHITE);
+}
+
+void drawTear(int16_t cx, int16_t cy) {
+  display.fillCircle(cx, cy, 4, SSD1306_WHITE);
+  display.fillTriangle(cx - 4, cy, cx + 4, cy, cx, cy - 8, SSD1306_WHITE);
+}
+
+void drawMusicNote(int16_t x, int16_t y) {
+  display.fillCircle(x, y + 14, 4, SSD1306_WHITE);
+  display.drawLine(x + 4, y + 14, x + 4, y, SSD1306_WHITE);
+  display.drawLine(x + 4, y, x + 12, y + 2, SSD1306_WHITE);
+  display.drawLine(x + 4, y + 1, x + 12, y + 3, SSD1306_WHITE);
+}
+
+void drawSpiralEye(int16_t cx, int16_t cy) {
+  float prevX = cx, prevY = cy;
+  for (int i = 1; i <= 18; i++) {
+    float angle = i * 0.9f, r = i * 0.7f;
+    float x = cx + cos(angle) * r, y = cy + sin(angle) * r;
+    display.drawLine((int16_t)prevX, (int16_t)prevY, (int16_t)x, (int16_t)y, SSD1306_WHITE);
+    prevX = x; prevY = y;
+  }
+}
+
+void drawFace(const String& face) {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  if (face == "sleeping") {
+    eyeClosedCurve(EYE_L, EYE_Y, 24, false);
+    eyeClosedCurve(EYE_R, EYE_Y, 24, false);
+    display.setTextSize(1);
+    display.setCursor(96, 6); display.print("z");
+    display.setCursor(104, 0); display.print("Z");
+  } else if (face == "sleepy" || face == "bored") {
+    eyeOpen(EYE_L, EYE_Y + 4, 24, 10);
+    eyeOpen(EYE_R, EYE_Y + 4, 24, 10);
+  } else if (face == "happy" || face == "laugh" || face == "smug") {
+    eyeClosedCurve(EYE_L, EYE_Y, 26, true);
+    eyeClosedCurve(EYE_R, EYE_Y, 26, true);
+    drawMouthCurve(true, face == "laugh" ? 3 : 1);
+  } else if (face == "love") {
+    drawHeartEye(EYE_L, EYE_Y);
+    drawHeartEye(EYE_R, EYE_Y);
+  } else if (face == "wink" || face == "shy") {
+    eyeOpen(EYE_L, EYE_Y, 26, face == "shy" ? 10 : 30);
+    eyeClosedCurve(EYE_R, EYE_Y, 24, true);
+    if (face == "shy") { display.drawCircle(EYE_L, EYE_Y + 16, 5, SSD1306_WHITE); display.drawCircle(EYE_R, EYE_Y + 16, 5, SSD1306_WHITE); }
+  } else if (face == "cool") {
+    display.fillRoundRect(EYE_L - 20, EYE_Y - 8, (EYE_R - EYE_L) + 40, 16, 4, SSD1306_WHITE);
+  } else if (face == "angry" || face == "furious") {
+    int16_t h = face == "furious" ? 14 : 18;
+    eyeOpen(EYE_L, EYE_Y + 2, 24, h);
+    eyeOpen(EYE_R, EYE_Y + 2, 24, h);
+    display.drawLine(EYE_L - 14, EYE_Y - 16, EYE_L + 10, EYE_Y - 8, SSD1306_WHITE);
+    display.drawLine(EYE_L - 14, EYE_Y - 15, EYE_L + 10, EYE_Y - 7, SSD1306_WHITE);
+    display.drawLine(EYE_R + 14, EYE_Y - 16, EYE_R - 10, EYE_Y - 8, SSD1306_WHITE);
+    display.drawLine(EYE_R + 14, EYE_Y - 15, EYE_R - 10, EYE_Y - 7, SSD1306_WHITE);
+  } else if (face == "sad" || face == "crying") {
+    eyeOpen(EYE_L, EYE_Y + 4, 22, 16);
+    eyeOpen(EYE_R, EYE_Y + 4, 22, 16);
+    display.drawLine(EYE_L - 12, EYE_Y - 14, EYE_L + 12, EYE_Y - 8, SSD1306_WHITE);
+    display.drawLine(EYE_R + 12, EYE_Y - 14, EYE_R - 12, EYE_Y - 8, SSD1306_WHITE);
+    drawMouthCurve(false, 1);
+    if (face == "crying") { drawTear(EYE_L, EYE_Y + 16); drawTear(EYE_R, EYE_Y + 16); }
+  } else if (face == "surprised" || face == "scared") {
+    eyeOpen(EYE_L, EYE_Y, 30, 34);
+    eyeOpen(EYE_R, EYE_Y, 30, 34);
+    if (face == "scared") drawTear(EYE_L + 16, EYE_Y + 14);
+  } else if (face == "confused") {
+    eyeOpen(EYE_L, EYE_Y, 24, 24);
+    eyeOpen(EYE_R, EYE_Y, 24, 24);
+    display.drawLine(EYE_R - 10, EYE_Y - 18, EYE_R + 14, EYE_Y - 22, SSD1306_WHITE);
+    display.setTextSize(2);
+    display.setCursor(4, 4);
+    display.print("?");
+  } else if (face == "thinking") {
+    eyeOpen(EYE_L, EYE_Y - 4, 22, 20);
+    eyeOpen(EYE_R, EYE_Y - 4, 22, 20);
+    display.fillCircle(106, 10, 2, SSD1306_WHITE);
+    display.fillCircle(114, 6, 3, SSD1306_WHITE);
+    display.fillCircle(121, 3, 3, SSD1306_WHITE);
+  } else if (face == "listening") {
+    eyeOpen(EYE_L, EYE_Y, 26, 28);
+    eyeOpen(EYE_R, EYE_Y, 26, 28);
+    display.drawCircle(EYE_L, EYE_Y, 20, SSD1306_WHITE);
+    display.drawCircle(EYE_R, EYE_Y, 20, SSD1306_WHITE);
+  } else if (face == "speaking") {
+    eyeOpen(EYE_L, EYE_Y - 6, 24, 24);
+    eyeOpen(EYE_R, EYE_Y - 6, 24, 24);
+    display.fillRoundRect(54, 48, 20, 8, 3, SSD1306_WHITE);
+  } else if (face == "lookleft") {
+    eyeOpen(EYE_L - 6, EYE_Y, 26, 28);
+    eyeOpen(EYE_R - 6, EYE_Y, 26, 28);
+  } else if (face == "lookright") {
+    eyeOpen(EYE_L + 6, EYE_Y, 26, 28);
+    eyeOpen(EYE_R + 6, EYE_Y, 26, 28);
+  } else if (face == "suspicious") {
+    eyeOpen(EYE_L, EYE_Y + 2, 26, 12);
+    eyeOpen(EYE_R, EYE_Y + 2, 26, 12);
+    display.drawLine(EYE_L - 14, EYE_Y - 12, EYE_L + 14, EYE_Y - 16, SSD1306_WHITE);
+    display.drawLine(EYE_R - 14, EYE_Y - 16, EYE_R + 14, EYE_Y - 12, SSD1306_WHITE);
+  } else if (face == "dizzy") {
+    drawSpiralEye(EYE_L, EYE_Y);
+    drawSpiralEye(EYE_R, EYE_Y);
+  } else if (face == "music") {
+    eyeClosedCurve(EYE_L, EYE_Y, 24, true);
+    eyeClosedCurve(EYE_R, EYE_Y, 24, true);
+    drawMusicNote(104, 10);
+  } else {   // "normal" and anything unrecognized
+    eyeOpen(EYE_L, EYE_Y, 26, 30);
+    eyeOpen(EYE_R, EYE_Y, 26, 30);
+  }
+
+  display.display();
 }
 
 // ------------------------------------------------------------------ audio
@@ -427,7 +579,13 @@ void askServerAndPlay(size_t samples) {
 
   // The answer arrives sentence by sentence while the PC is still making the rest, so NOOB starts
   // speaking at once. writeToStream() unwraps the web "chunks" and passes pure audio to the speaker.
-  showStatus("Speaking...", "press button = stop");
+  // X-Face names NOOB's mood for this reply (see drawFace) — already in hand here, since the server
+  // resolves and sends it before any audio streams, same reason text status wouldn't be able to change
+  // mid-stream either.
+  String face = http.header("X-Face");
+  face.trim();
+  if (face.length()) drawFace(face);
+  else showStatus("Speaking...", "press button = stop");
   SpeakerStream speaker;
   int result = http.writeToStream(&speaker);
   if (speaker.stopped) {

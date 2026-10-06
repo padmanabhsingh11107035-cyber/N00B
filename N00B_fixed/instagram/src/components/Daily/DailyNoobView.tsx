@@ -1,10 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Crown, Upload, Image as ImageIcon, Video as VideoIcon, Heart, RefreshCw, Clock, Trophy } from 'lucide-react';
+import { X, Crown, Upload, Image as ImageIcon, Video as VideoIcon, Heart, RefreshCw, Clock, Trophy, Trash2 } from 'lucide-react';
 import { User, DailyChallenge, DailyChallengeEntry, DailyChampion } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatRelativeTime } from '../../utils/formatTime';
-import { fetchDailyChallenge, submitDailyChallengeEntry, voteDailyChallengeEntry, fetchDailyChallengeEntries, fetchDailyChampions, uploadMediaFile, fetchUserById } from '../../services/api';
+import { can } from '../../adminAccess';
+import {
+  fetchDailyChallenge,
+  submitDailyChallengeEntry,
+  voteDailyChallengeEntry,
+  fetchDailyChallengeEntries,
+  fetchDailyChampions,
+  deleteDailyChallengeEntry,
+  uploadMediaFile,
+  fetchUserById
+} from '../../services/api';
 
 interface DailyNoobViewProps {
   currentUser: User;
@@ -104,6 +114,15 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
     );
     const res = await voteDailyChallengeEntry(entry.id);
     if (!res.success) await load();
+  };
+
+  const isMasterAdmin = can(currentUser, 'moderate_content');
+
+  const handleDelete = async (entry: DailyChallengeEntry) => {
+    if (!confirm("Delete this entry? This can't be undone.")) return;
+    const res = await deleteDailyChallengeEntry(entry.id);
+    if (res.success) await load();
+    else setError(res.error || 'Could not delete your entry.');
   };
 
   return (
@@ -238,16 +257,27 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                               {entry.caption && <p className="text-[11px] text-zinc-400 truncate">{entry.caption}</p>}
                             </div>
                           </button>
-                          <button
-                            onClick={() => handleVote(entry)}
-                            disabled={isMine}
-                            title={isMine ? "You can't vote for your own entry" : 'Vote for this entry'}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
-                              didVote ? 'bg-red-500/15 text-red-400 border border-red-500/40' : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
-                            }`}
-                          >
-                            <Heart className={`w-3.5 h-3.5 ${didVote ? 'fill-current' : ''}`} /> {entry.votesCount}
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {(isMine || isMasterAdmin) && (
+                              <button
+                                onClick={() => handleDelete(entry)}
+                                title="Delete this entry"
+                                className="p-1.5 text-zinc-500 hover:text-red-400 rounded-full hover:bg-zinc-900 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleVote(entry)}
+                              disabled={isMine}
+                              title={isMine ? "You can't vote for your own entry" : 'Vote for this entry'}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
+                                didVote ? 'bg-red-500/15 text-red-400 border border-red-500/40' : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
+                              }`}
+                            >
+                              <Heart className={`w-3.5 h-3.5 ${didVote ? 'fill-current' : ''}`} /> {entry.votesCount}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

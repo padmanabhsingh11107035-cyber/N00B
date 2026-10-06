@@ -1461,6 +1461,24 @@ export async function fetchDailyChampions(limit = 20): Promise<DailyChampion[]> 
   }
 }
 
+export async function deleteDailyChallengeEntry(entryId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('delete_daily_challenge_entry', { p_entry_id: entryId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not delete your entry.') };
+  }
+}
+
+// Admin only — sets (or schedules ahead) the task shown on Daily NOOB for a given day, overriding
+// the auto-rotating prompt pool for that day.
+export async function adminSetDailyChallenge(date: string, prompt: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('admin_set_daily_challenge', { p_date: date, p_prompt: prompt });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not save that task.') };
+  }
+}
+
 // Used for a "?reel=<id>" deep link or a shared-reel chat card — see fetchPostById's comment.
 export async function fetchReelById(reelId: string): Promise<Reel | null> {
   try {

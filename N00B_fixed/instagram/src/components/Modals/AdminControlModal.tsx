@@ -70,7 +70,8 @@ import {
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
   fetchAdminExplorePins, adminSetExplorePin,
   adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
-  subscribeToOnlinePresence
+  subscribeToOnlinePresence,
+  fetchDailyChallenge, adminSetDailyChallenge
 } from '../../services/api';
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem, PresenceEntry } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
@@ -251,6 +252,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [signupsEnabled, setSignupsEnabled] = useState(true);
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [dailyNoobDate, setDailyNoobDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dailyNoobPrompt, setDailyNoobPrompt] = useState('');
+  const [dailyNoobCurrentPrompt, setDailyNoobCurrentPrompt] = useState('');
   const [storeOrdersEnabled, setStoreOrdersEnabled] = useState(true);
   const [noobAiMaintenance, setNoobAiMaintenance] = useState(false);
   const [sparkxOpen, setSparkxOpen] = useState(true);
@@ -382,7 +386,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
   const loadSettings = async () => {
     setLoadingSettings(true);
-    const [s, shop] = await Promise.all([fetchPublicPlatformSettings(), fetchSettings()]);
+    const [s, shop, daily] = await Promise.all([fetchPublicPlatformSettings(), fetchSettings(), fetchDailyChallenge()]);
     setSignupsEnabled(s.signupsEnabled);
     setMaintenanceEnabled(s.maintenanceEnabled);
     setMaintenanceMessage(s.maintenanceMessage);
@@ -392,7 +396,24 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setLiveLoungeMaintenance(!!s.liveLoungeMaintenance);
     setLiveLoungeMaintenanceMessage(s.liveLoungeMaintenanceMessage || '');
     setStoreOrdersEnabled(shop.storeEnabled);
+    if (daily) setDailyNoobCurrentPrompt(daily.prompt);
     setLoadingSettings(false);
+  };
+
+  const handleSaveDailyNoobTask = async () => {
+    setSavingSettings(true);
+    const res = await adminSetDailyChallenge(dailyNoobDate, dailyNoobPrompt);
+    if (res.success) {
+      setStatusMessage({ text: `Task saved for ${dailyNoobDate}.`, type: 'success' });
+      setDailyNoobPrompt('');
+      if (dailyNoobDate === new Date().toISOString().slice(0, 10)) {
+        const daily = await fetchDailyChallenge();
+        if (daily) setDailyNoobCurrentPrompt(daily.prompt);
+      }
+    } else {
+      setStatusMessage({ text: res.error || 'Could not save that task.', type: 'error' });
+    }
+    setSavingSettings(false);
   };
 
   const loadLiveLoungeCoupons = async () => {
@@ -2293,6 +2314,39 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           Save
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                    <div>
+                      <span className="text-xs font-bold text-white block">🔥 Daily NOOB task</span>
+                      <span className="text-[11px] text-zinc-400">
+                        {dailyNoobCurrentPrompt ? `Today's task: "${dailyNoobCurrentPrompt}"` : 'Set the task shown on Daily NOOB — overrides the auto-rotating pool for that day.'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={dailyNoobDate}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setDailyNoobDate(e.target.value)}
+                        className="bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                      />
+                      <input
+                        type="text"
+                        value={dailyNoobPrompt}
+                        onChange={(e) => setDailyNoobPrompt(e.target.value)}
+                        placeholder="e.g. Post the funniest picture in your gallery."
+                        maxLength={300}
+                        className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                      />
+                      <button
+                        onClick={handleSaveDailyNoobTask}
+                        disabled={savingSettings || !dailyNoobPrompt.trim()}
+                        className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                      >
+                        Save
+                      </button>
                     </div>
                   </div>
 

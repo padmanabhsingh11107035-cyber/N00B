@@ -698,6 +698,15 @@ export default function App() {
     }
   };
 
+  // The server call itself happens inside StoryViewerModal (it needs the optimistic update right
+  // where the tap happened); this just keeps this top-level `stories` state in sync with the
+  // confirmed result, so a like survives the viewer being closed and reopened — without this, the
+  // viewer re-seeds its liked state from this same (until now never-updated) array every time it
+  // mounts fresh, making an already-saved like look like it never saved.
+  const handleToggleStoryLike = (storyId: string, isLiked: boolean, likesCount: number) => {
+    setStories((prev) => prev.map((s) => (s.id === storyId ? { ...s, isLiked, likesCount } : s)));
+  };
+
   // --- PROFILE ACTIONS ---
   const handleUpdateBio = async (newBio: string) => {
     try {
@@ -1491,6 +1500,7 @@ export default function App() {
           onClose={() => setActiveStoryViewerIndex(null)}
           currentUser={currentUser}
           onAddComment={handleAddStoryComment}
+          onToggleLike={handleToggleStoryLike}
           onDeleteStory={handleDeleteStory}
           onNavigateToProfile={handleNavigateToUserProfile}
           onNavigateToHashtag={(tag) => {

@@ -20,6 +20,11 @@ interface StoryViewerModalProps {
   onClose: () => void;
   currentUser: User;
   onAddComment: (storyId: string, text: string) => void;
+  // Patches the parent's own `stories` state so a like survives this viewer being closed and
+  // reopened — without this, the fix below only ever worked within one open session, since the
+  // viewer re-seeds likedStoryIds from the `stories` prop every time it mounts fresh, and nothing
+  // ever told that prop a like had happened.
+  onToggleLike?: (storyId: string, isLiked: boolean, likesCount: number) => void;
   onDeleteStory?: (storyId: string) => void;
   onNavigateToProfile?: (user: User) => void;
   // A hashtag sticker's tap-through — no dedicated hashtag page exists yet, so the caller is
@@ -42,6 +47,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   onClose,
   currentUser,
   onAddComment,
+  onToggleLike,
   onDeleteStory,
   onNavigateToProfile,
   onNavigateToHashtag,
@@ -996,7 +1002,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       if (wasLiked) next.add(id); else next.delete(id);
                       return next;
                     });
+                    return;
                   }
+                  // Tell the parent so its own `stories` state stays correct — otherwise this is
+                  // only ever true until the viewer is closed and reopened.
+                  onToggleLike?.(id, !!res.isLiked, res.likesCount ?? 0);
                 });
               }}
               className={`relative p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${

@@ -1171,10 +1171,15 @@ function mapReel(r: any): Reel {
   };
 }
 
+// A smaller initial batch than the server's own default (100) — feed_reels() runs 3 EXISTS subqueries
+// per reel (isLiked/isSaved/isFollowing) plus a join, so requesting 100 up front on every app load
+// paid for 100 rows of that even though most viewers never get through them all in one sitting.
+// ReelsView already reshuffles the same loaded set once a pass finishes (see shuffleReels there), so
+// it doesn't need a deep pool to begin with.
 export async function fetchReels(): Promise<Reel[]> {
   try {
     if (!(await currentSession())) return [];
-    return ((await rpc<any[]>('feed_reels')) || []).map(mapReel);
+    return ((await rpc<any[]>('feed_reels', { p_limit: 20 })) || []).map(mapReel);
   } catch {
     return [];
   }

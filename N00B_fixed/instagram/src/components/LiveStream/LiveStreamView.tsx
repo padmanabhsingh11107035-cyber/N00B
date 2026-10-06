@@ -366,11 +366,13 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
               </button>
             ) : (
               <>
-                {/* Admin moderation: force-end someone else's stream, separate from just leaving it */}
-                {mode === 'view' && isMasterAdmin && (
+                {/* Force-end this stream, separate from just leaving it — the actual host (watching
+                    their own stream from a different session than the one broadcasting it) or an
+                    admin moderating someone else's */}
+                {mode === 'view' && (isMasterAdmin || hostInfo.id === currentUser.id) && (
                   <button
                     onClick={() => setShowEndConfirm(true)}
-                    title="Admin: stop this live stream for everyone"
+                    title="Stop this live stream for everyone"
                     className="flex items-center gap-1 bg-red-600 rounded-full pl-2.5 pr-3 py-1.5 text-white text-xs font-bold"
                   >
                     <X className="w-3.5 h-3.5" /> Stop

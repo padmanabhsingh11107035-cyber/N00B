@@ -1261,7 +1261,7 @@ export async function addLongVideoComment(videoId: string, text: string, parentC
     return mapComment(res.comment);
   } catch (err) {
     console.error('Could not post the comment:', err);
-    return undefined;
+    throw new Error(errorText(err, 'Could not post the comment. Please try again.'));
   }
 }
 

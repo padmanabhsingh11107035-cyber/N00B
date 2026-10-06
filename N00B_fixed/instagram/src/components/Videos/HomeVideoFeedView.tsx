@@ -203,18 +203,21 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   };
 
   const handleToggleSave = async (video: LongVideo) => {
-    const res = await toggleSaveLongVideo(video.id);
+    const res: any = await toggleSaveLongVideo(video.id);
     if ('isSaved' in res) patchVideo(video.id, { isSaved: res.isSaved, savesCount: res.savesCount });
+    else if (res.error) alert(res.error);
   };
 
   const handleToggleComments = async (video: LongVideo) => {
-    const res = await toggleLongVideoComments(video.id);
+    const res: any = await toggleLongVideoComments(video.id);
     if ('isCommentsDisabled' in res) patchVideo(video.id, { isCommentsDisabled: res.isCommentsDisabled });
+    else if (res.error) alert(res.error);
   };
 
   const handleToggleLikeCountHidden = async (video: LongVideo) => {
-    const res = await toggleLongVideoLikeCount(video.id);
+    const res: any = await toggleLongVideoLikeCount(video.id);
     if ('isLikeCountHidden' in res) patchVideo(video.id, { isLikeCountHidden: res.isLikeCountHidden });
+    else if (res.error) alert(res.error);
   };
 
   const handleDelete = async (video: LongVideo) => {
@@ -224,6 +227,8 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       setVideos((prev) => prev.filter((v) => v.id !== video.id));
       setOpenVideo(null);
       setActionVideo(null);
+    } else {
+      alert('Could not delete this video. Please try again.');
     }
   };
 
@@ -518,7 +523,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 {liveLinkCopied ? <Check className="w-4.5 h-4.5 text-[#00FF66] shrink-0" /> : <Copy className="w-4.5 h-4.5 text-cyan-400 shrink-0" />}
                 <span className="text-xs font-bold text-white">{liveLinkCopied ? 'Link copied!' : 'Copy link'}</span>
               </button>
-              {isMasterAdmin && (
+              {(isMasterAdmin || menuLive.host.id === currentUser.id) && (
                 <>
                   <div className="h-px bg-zinc-900 my-1" />
                   <button

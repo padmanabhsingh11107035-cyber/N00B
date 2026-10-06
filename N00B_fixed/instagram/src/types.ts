@@ -552,7 +552,12 @@ export interface LongVideo {
   durationSeconds: number;
   likesCount: number;
   viewsCount: number;
+  commentsCount: number;
+  savesCount: number;
+  isCommentsDisabled: boolean;
+  isLikeCountHidden: boolean;
   isLiked: boolean;
+  isSaved: boolean;
   createdAt: string;
 }
 
@@ -582,9 +587,9 @@ export interface Message {
   // Send-time only: which post/reel to share — the server looks it up itself and builds
   // `sharedPost` below from the real row, rather than trusting a client-supplied caption/thumbnail.
   sharedPostId?: string;
-  sharedPostType?: 'post' | 'reel';
+  sharedPostType?: 'post' | 'reel' | 'video';
   sharedPost?: {
-    type: 'post' | 'reel';
+    type: 'post' | 'reel' | 'video';
     id: string;
     authorUsername: string;
     authorAvatar?: string;

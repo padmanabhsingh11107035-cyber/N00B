@@ -6,11 +6,12 @@ import { fetchChats, sendMessage } from '../../services/api';
 interface SharePostToChatModalProps {
   currentUser: User;
   itemId: string;
-  itemType: 'post' | 'reel';
+  itemType: 'post' | 'reel' | 'video';
   onClose: () => void;
 }
 
 const MAX_RECIPIENTS = 5;
+const ITEM_LABEL: Record<SharePostToChatModalProps['itemType'], string> = { post: 'Post', reel: 'Reel', video: 'Video' };
 
 // "Friends" here means people there's already a direct chat with — the app has no separate friends
 // graph, and this is the same list the Chat tab itself shows, so nothing new to explain.
@@ -63,7 +64,7 @@ export const SharePostToChatModal: React.FC<SharePostToChatModalProps> = ({ curr
       <div className="w-full max-w-sm bg-zinc-950 border border-cyan-500/30 rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-sm font-bold text-white">Send {itemType === 'reel' ? 'Reel' : 'Post'}</h2>
+            <h2 className="text-sm font-bold text-white">Send {ITEM_LABEL[itemType]}</h2>
             <p className="text-[11px] text-zinc-400">pick up to {MAX_RECIPIENTS}</p>
           </div>
           <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">

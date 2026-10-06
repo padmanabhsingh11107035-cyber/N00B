@@ -203,6 +203,7 @@ export default function App() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | undefined>(undefined);
   const [viewingProfileUser, setViewingProfileUser] = useState<User | null>(null);
   const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
@@ -215,6 +216,7 @@ export default function App() {
   const [sharedLiveLoungeCode, setSharedLiveLoungeCode] = useState<string | null>(null);
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
   const [sharedReelId, setSharedReelId] = useState<string | null>(null);
+  const [sharedVideoId, setSharedVideoId] = useState<string | null>(null);
   const [pendingJoinTeam, setPendingJoinTeam] = useState(false);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
   const [sessionEndedNotice, setSessionEndedNotice] = useState<string | null>(null);
@@ -233,6 +235,7 @@ export default function App() {
         const joinParam = params.get('join');
         const postParam = params.get('post');
         const reelParam = params.get('reel');
+        const videoParam = params.get('video');
         const liveLoungeParam = params.get('liveLounge');
 
         if (gameParam) {
@@ -263,6 +266,10 @@ export default function App() {
 
         if (reelParam) {
           setSharedReelId(reelParam);
+        }
+
+        if (videoParam) {
+          setSharedVideoId(videoParam);
         }
 
         if (liveLoungeParam) {
@@ -322,6 +329,15 @@ export default function App() {
     url.searchParams.delete('reel');
     window.history.replaceState({}, '', url.toString());
   }, [sharedReelId, currentUser]);
+
+  useEffect(() => {
+    if (!sharedVideoId || !currentUser) return;
+    handleNavigateToVideo(sharedVideoId);
+    setSharedVideoId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('video');
+    window.history.replaceState({}, '', url.toString());
+  }, [sharedVideoId, currentUser]);
 
   // Same deep-link pattern as the shared-profile one above: only resolved once someone is actually
   // logged in (a login/signup can happen first), lands on Explore with the "apply to join us" form
@@ -533,6 +549,11 @@ export default function App() {
 
   const handleReelsGoBack = () => {
     setActiveTab(previousTabRef.current);
+  };
+
+  const handleNavigateToVideo = async (videoId: string) => {
+    setSelectedVideoId(videoId);
+    setActiveTab('videos');
   };
 
   const handleNavigateToPost = async (postId: string) => {
@@ -1302,6 +1323,8 @@ export default function App() {
               onOpenUpload={() => setShowUploadVideoModal(true)}
               onNavigateToProfile={handleNavigateToUserProfile}
               refreshKey={videosRefreshKey}
+              initialOpenVideoId={selectedVideoId}
+              onInitialOpenVideoIdHandled={() => setSelectedVideoId(undefined)}
             />
           </React.Suspense>
         )}
@@ -1338,6 +1361,7 @@ export default function App() {
                 onNavigateToProfile={handleNavigateToUserProfile}
                 onNavigateToPost={handleNavigateToPost}
                 onNavigateToReel={handleNavigateToReel}
+                onNavigateToVideo={handleNavigateToVideo}
                 onPlayGame={(gameId, challengerUsername, roomCode) => {
                   const matched = ALL_50_MINI_GAMES.find(
                     (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()

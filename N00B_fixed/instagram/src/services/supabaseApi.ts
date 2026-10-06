@@ -1225,6 +1225,126 @@ export async function deleteLongVideo(videoId: string): Promise<boolean> {
   try { await rpc('delete_long_video', { p_video: videoId }); return true; } catch { return false; }
 }
 
+// Used for a "?video=<id>" deep link or a shared-video chat card.
+export async function fetchLongVideoById(videoId: string): Promise<LongVideo | null> {
+  try {
+    const video = await rpc<any>('get_long_video', { p_video: videoId });
+    return video ? mapLongVideo(video) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchLongVideoComments(videoId: string) {
+  try {
+    return await cached(`video-comments:${videoId}`, async () => {
+      const res = await rpc<{ comments: any[] }>('long_video_comments', { p_video: videoId });
+      return Array.isArray(res.comments) ? res.comments.map(mapComment) : [];
+    });
+  } catch (err) {
+    console.error('Error fetching video comments:', err);
+    return [];
+  }
+}
+
+export async function addLongVideoComment(videoId: string, text: string, parentCommentId?: string, media?: CommentMediaInput) {
+  try {
+    const res = await rpc<{ comment: any }>('add_long_video_comment', {
+      p_video: videoId,
+      p_text: text || null,
+      p_parent_comment: parentCommentId || null,
+      p_media_url: media?.url || null,
+      p_media_type: media?.type || null,
+      p_media_duration: media?.duration || null
+    });
+    invalidateCache(`video-comments:${videoId}`);
+    return mapComment(res.comment);
+  } catch (err) {
+    console.error('Could not post the comment:', err);
+    return undefined;
+  }
+}
+
+export async function deleteLongVideoComment(videoId: string, commentId: string) {
+  const { data, error } = await supabase.from('comments').delete().eq('id', commentId).select('id');
+  invalidateCache(`video-comments:${videoId}`);
+  if (error || !data || data.length === 0) return { success: false, error: 'You can only delete your own comments.' };
+  return { success: true };
+}
+
+export async function toggleLongVideoPinComment(videoId: string, commentId: string) {
+  try {
+    const res = await rpc('toggle_pin_comment', { p_comment: commentId });
+    invalidateCache(`video-comments:${videoId}`);
+    return res;
+  } catch (err) {
+    return { success: false, isPinned: false, error: errorText(err, 'Could not pin the comment.') };
+  }
+}
+
+export async function toggleLongVideoCommentLike(videoId: string, commentId: string) {
+  try {
+    const res = await rpc<{ success: boolean; isLiked: boolean; likesCount: number }>('toggle_comment_like', { p_comment: commentId });
+    invalidateCache(`video-comments:${videoId}`);
+    return res;
+  } catch (err) {
+    return { success: false, isLiked: false, likesCount: 0, error: errorText(err, 'Could not update the like.') };
+  }
+}
+
+export async function toggleSaveLongVideo(videoId: string): Promise<{ isSaved: boolean; savesCount: number }> {
+  try { return await rpc('toggle_save_long_video', { p_video: videoId }); } catch (err) { return { error: errorText(err, 'Could not update the save.') } as any; }
+}
+
+export async function fetchSavedLongVideos(): Promise<LongVideo[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('saved_long_videos')) || []).map(mapLongVideo);
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleLongVideoComments(videoId: string): Promise<{ isCommentsDisabled: boolean }> {
+  try { return await rpc('toggle_long_video_flag', { p_video: videoId, p_flag: 'comments' }); } catch (err) { return { error: errorText(err, 'You can only modify your own videos.') } as any; }
+}
+
+export async function toggleLongVideoLikeCount(videoId: string): Promise<{ isLikeCountHidden: boolean }> {
+  try { return await rpc('toggle_long_video_flag', { p_video: videoId, p_flag: 'like_count' }); } catch (err) { return { error: errorText(err, 'You can only modify your own videos.') } as any; }
+}
+
+export async function updateLongVideo(videoId: string, data: { title?: string; description?: string; thumbnailUrl?: string }): Promise<LongVideo> {
+  const res = await rpc<{ video: any }>('update_long_video', {
+    p_video: videoId,
+    p_title: data.title ?? null,
+    p_description: data.description ?? null,
+    p_thumbnail_url: data.thumbnailUrl ? toStoredMedia(data.thumbnailUrl) : null
+  });
+  return mapLongVideo(res.video);
+}
+
+export async function fetchLongVideoLikers(videoId: string): Promise<{ users: User[]; error?: string }> {
+  try {
+    return await cached(`video-likers:${videoId}`, async () => {
+      const res = await rpc<{ users: User[] }>('long_video_likers', { p_video: videoId });
+      return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    });
+  } catch (err) {
+    return { users: [], error: errorText(err, 'Only the publisher can see who liked this.') };
+  }
+}
+
+export async function fetchLongVideoViewers(videoId: string): Promise<{ users: User[]; error?: string }> {
+  try {
+    return await cached(`video-viewers:${videoId}`, async () => {
+      const res = await rpc<{ users: User[] }>('long_video_viewers', { p_video: videoId });
+      return { users: (res.users || []).map((u) => mapUser(u) as User) };
+    });
+  } catch (err) {
+    return { users: [], error: errorText(err, 'Only the publisher can see who viewed it.') };
+  }
+}
+
 // Used for a "?reel=<id>" deep link or a shared-reel chat card — see fetchPostById's comment.
 export async function fetchReelById(reelId: string): Promise<Reel | null> {
   try {

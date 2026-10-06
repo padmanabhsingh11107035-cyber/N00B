@@ -27,6 +27,56 @@ const readVideoDuration = (file: File): Promise<number> =>
     video.src = URL.createObjectURL(file);
   });
 
+// When the uploader skips the optional thumbnail, grab a frame from partway into the video itself
+// instead of leaving it blank — a blank thumbnail is also what the Home feed card, the chat share
+// card and the link-preview spot all fall back to otherwise.
+const captureVideoFrame = (file: File): Promise<File | null> =>
+  new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    const cleanup = () => URL.revokeObjectURL(video.src);
+    video.onloadeddata = () => {
+      try {
+        video.currentTime = Math.min(1, (video.duration || 2) / 2);
+      } catch {
+        cleanup();
+        resolve(null);
+      }
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 360;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          cleanup();
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            cleanup();
+            resolve(blob ? new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' }) : null);
+          },
+          'image/jpeg',
+          0.85
+        );
+      } catch {
+        cleanup();
+        resolve(null);
+      }
+    };
+    video.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+    video.src = URL.createObjectURL(file);
+  });
+
 export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onUploaded }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState('');
@@ -84,8 +134,9 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
     try {
       const videoRes = await uploadMediaFile(videoFile, 'videos');
       let thumbnailUrl: string | undefined;
-      if (thumbnailFile) {
-        const thumbRes = await uploadMediaFile(thumbnailFile, 'videos');
+      const thumbnailToUpload = thumbnailFile || (await captureVideoFrame(videoFile));
+      if (thumbnailToUpload) {
+        const thumbRes = await uploadMediaFile(thumbnailToUpload, 'videos');
         thumbnailUrl = thumbRes.url;
       }
       const video = await createLongVideo({

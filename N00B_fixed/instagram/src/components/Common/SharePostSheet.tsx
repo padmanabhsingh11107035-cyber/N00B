@@ -2,12 +2,14 @@ import React from 'react';
 import { X, Copy, Check, MessageCircle } from 'lucide-react';
 
 interface SharePostSheetProps {
-  type: 'post' | 'reel';
+  type: 'post' | 'reel' | 'video';
   linkCopied: boolean;
   onCopyLink: () => void;
   onSendInChat: () => void;
   onClose: () => void;
 }
+
+const TYPE_LABEL: Record<SharePostSheetProps['type'], string> = { post: 'Post', reel: 'Reel', video: 'Video' };
 
 export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, linkCopied, onCopyLink, onSendInChat, onClose }) => {
   return (
@@ -17,7 +19,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, linkCopied
         className="w-full sm:max-w-xs bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
       >
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">Share {type === 'reel' ? 'Reel' : 'Post'}</h2>
+          <h2 className="text-sm font-bold text-white">Share {TYPE_LABEL[type]}</h2>
           <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
             <X className="w-4.5 h-4.5" />
           </button>

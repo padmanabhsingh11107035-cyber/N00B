@@ -53,7 +53,8 @@ import {
   Reply,
   Paperclip,
   Film,
-  UserCircle2
+  UserCircle2,
+  Youtube
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
@@ -173,6 +174,7 @@ interface ChatViewProps {
   onNavigateToProfile?: (user: User) => void;
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
+  onNavigateToVideo?: (videoId: string) => void;
 }
 
 // Swipe threshold (mobile): left opens Reply, right opens the React/Edit/Delete menu —
@@ -228,7 +230,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onUserUpdated,
   onNavigateToProfile,
   onNavigateToPost,
-  onNavigateToReel
+  onNavigateToReel,
+  onNavigateToVideo
 }) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -2216,6 +2219,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         onClick={() => {
                           if (!m.sharedPost) return;
                           if (m.sharedPost.type === 'reel') onNavigateToReel?.(m.sharedPost.id);
+                          else if (m.sharedPost.type === 'video') onNavigateToVideo?.(m.sharedPost.id);
                           else onNavigateToPost?.(m.sharedPost.id);
                         }}
                         className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-[#00FF66]/50 transition-colors cursor-pointer text-left"
@@ -2230,6 +2234,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             />
                           ) : m.sharedPost.type === 'reel' ? (
                             <Film className="w-5 h-5 text-zinc-500" />
+                          ) : m.sharedPost.type === 'video' ? (
+                            <Youtube className="w-5 h-5 text-zinc-500" />
                           ) : (
                             <Image className="w-5 h-5 text-zinc-500" />
                           )}
@@ -2242,12 +2248,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             {m.sharedPost.authorIsVerified && <VerifiedBadge size="xs" />}
                           </div>
                           <span className="text-[10px] text-zinc-400 truncate block">
-                            {m.sharedPost.type === 'reel' ? 'Reel' : 'Post'}
+                            {m.sharedPost.type === 'reel' ? 'Reel' : m.sharedPost.type === 'video' ? 'Video' : 'Post'}
                             {m.sharedPost.caption ? ` · ${m.sharedPost.caption}` : ''}
                           </span>
                         </div>
                         {m.sharedPost.type === 'reel' ? (
                           <Film className="w-4 h-4 text-[#00FF66] shrink-0" />
+                        ) : m.sharedPost.type === 'video' ? (
+                          <Youtube className="w-4 h-4 text-[#00FF66] shrink-0" />
                         ) : (
                           <Image className="w-4 h-4 text-[#00FF66] shrink-0" />
                         )}

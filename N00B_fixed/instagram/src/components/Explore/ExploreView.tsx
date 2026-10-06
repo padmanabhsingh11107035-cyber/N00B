@@ -31,6 +31,7 @@ import { Post, Reel, User } from '../../types';
 import { fetchUsers } from '../../services/api';
 import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
 import { POST_FILTERS } from '../../data/mockData';
 import { JoinUsModal } from './JoinUsModal';
 
@@ -765,8 +766,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 onClick={() => onSelectPost(post)}
                 className="group relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
               >
-                <img
-                  src={post.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
+                <PostThumbnailMedia
+                  src={post.slides?.[0]?.mediaUrl}
+                  mediaType={post.slides?.[0]?.mediaType}
                   alt={post.caption}
                   className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
                 />

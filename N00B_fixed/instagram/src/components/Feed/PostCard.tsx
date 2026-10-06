@@ -501,19 +501,36 @@ export const PostCard: React.FC<PostCardProps> = ({
           onTouchMove={post.slides && post.slides.length > 1 ? handleCarouselTouchMove : undefined}
           onTouchEnd={post.slides && post.slides.length > 1 ? handleCarouselTouchEnd : undefined}
         >
-          <img
-            ref={slideImgRef}
-            src={currentSlide.mediaUrl}
-            alt={currentSlide.caption || post.caption}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            decoding="async"
-            onLoad={(e) => {
-              const img = e.currentTarget;
-              if (img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
-            }}
-          />
+          {currentSlide.mediaType === 'video' ? (
+            <video
+              key={currentSlide.id}
+              src={currentSlide.mediaUrl}
+              className={`w-full h-full object-cover ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
+              controls
+              loop
+              muted
+              playsInline
+              autoPlay={isInView}
+              onLoadedMetadata={(e) => {
+                const video = e.currentTarget;
+                if (video.videoWidth && video.videoHeight) setSlideAspect(video.videoWidth / video.videoHeight);
+              }}
+            />
+          ) : (
+            <img
+              ref={slideImgRef}
+              src={currentSlide.mediaUrl}
+              alt={currentSlide.caption || post.caption}
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              decoding="async"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
+              }}
+            />
+          )}
 
           {/* Text / sticker / mention / hashtag / link layers placed in the Post creator — same
               declarative shape as Story.stickers, same EditableStickerLayer engine to create them. */}

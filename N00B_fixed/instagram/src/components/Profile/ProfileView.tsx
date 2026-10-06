@@ -96,6 +96,7 @@ import { safeJsonStringify } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { GetVerifiedModal } from './GetVerifiedModal';
 import { AccountsStatisticsModal } from './AccountsStatisticsModal';
@@ -1786,8 +1787,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   onClick={() => onSelectPost(post)}
                   className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800/80 shadow-md"
                 >
-                  <img
-                    src={post.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
+                  <PostThumbnailMedia
+                    src={post.slides?.[0]?.mediaUrl}
+                    mediaType={post.slides?.[0]?.mediaType}
                     alt={post.caption}
                     className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
                   />
@@ -1888,8 +1890,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     onClick={() => onSelectPost(post)}
                     className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800 shadow-md"
                   >
-                    <img
-                      src={post.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
+                    <PostThumbnailMedia
+                      src={post.slides?.[0]?.mediaUrl}
+                      mediaType={post.slides?.[0]?.mediaType}
                       alt={post.caption || 'Saved post'}
                       className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
                     />
@@ -1952,8 +1955,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 onClick={() => onSelectPost(post)}
                 className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800"
               >
-                <img
-                  src={post.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
+                <PostThumbnailMedia
+                  src={post.slides?.[0]?.mediaUrl}
+                  mediaType={post.slides?.[0]?.mediaType}
                   alt=""
                   className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
                 />
@@ -1975,8 +1979,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   onClick={() => onSelectPost(post)}
                   className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-amber-500/30"
                 >
-                  <img
-                    src={post.slides?.[0]?.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
+                  <PostThumbnailMedia
+                    src={post.slides?.[0]?.mediaUrl}
+                    mediaType={post.slides?.[0]?.mediaType}
                     alt=""
                     className={`w-full h-full object-cover opacity-75 group-hover:opacity-100 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
                   />

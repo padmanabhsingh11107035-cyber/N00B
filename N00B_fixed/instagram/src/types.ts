@@ -103,6 +103,11 @@ export interface User {
   // admin-only: sanitizePublicUser strips this before any other user can
   // ever see it.
   ipAddress?: string;
+  // When this account was last seen active, and whether that was the installed app or a web
+  // browser — admin-only, same visibility as ipAddress. Persists after they go offline (unlike the
+  // live Presence-based online/offline status, which only ever reflects a connection right now).
+  lastSeenAt?: string;
+  lastSeenPlatform?: 'app' | 'web';
   // Web Push subscription (browser-issued, opaque to the app) — set once
   // the user grants push permission and subscribes; also stripped by
   // sanitizePublicUser.

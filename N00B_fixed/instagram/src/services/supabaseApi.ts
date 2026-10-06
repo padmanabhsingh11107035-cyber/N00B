@@ -1771,6 +1771,18 @@ export function startPresenceHeartbeat(userId: string, platform: PresencePlatfor
   }
 }
 
+const LAST_SEEN_EVERY_MS = 3 * 60 * 1000;
+
+// Persisted complement to the live Presence above — call once per signed-in session (App.tsx). Writes
+// immediately, then every few minutes for as long as the tab stays open, so the admin panel's "last
+// seen" for this account keeps advancing while they're active and simply stops once they leave.
+export function startLastSeenHeartbeat(platform: PresencePlatform): () => void {
+  const touch = () => { rpc('touch_last_seen', { p_platform: platform }).catch(() => {}); };
+  touch();
+  const interval = window.setInterval(touch, LAST_SEEN_EVERY_MS);
+  return () => window.clearInterval(interval);
+}
+
 // Admin-only read side: calls `onChange` with the full live map (userId -> one entry per open tab/
 // device) every time anyone connects or disconnects anywhere in the app. Shares the one channel
 // above rather than opening its own — see getPresenceChannel for why that matters.

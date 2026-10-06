@@ -55,7 +55,8 @@ import {
   subscribeToNotificationChanges,
   clearAllNotifications,
   markNotificationsAsRead,
-  startPresenceHeartbeat
+  startPresenceHeartbeat,
+  startLastSeenHeartbeat
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
@@ -454,8 +455,13 @@ export default function App() {
   // the socket drops, with no cleanup needed beyond unsubscribing this one channel.
   useEffect(() => {
     if (!currentUser) return;
-    const stop = startPresenceHeartbeat(currentUser.id, Capacitor.isNativePlatform() ? 'app' : 'web');
-    return stop;
+    const platform = Capacitor.isNativePlatform() ? 'app' : 'web';
+    const stopPresence = startPresenceHeartbeat(currentUser.id, platform);
+    const stopLastSeen = startLastSeenHeartbeat(platform);
+    return () => {
+      stopPresence();
+      stopLastSeen();
+    };
   }, [currentUser?.id]);
 
   // Prompt for contacts access (to suggest friends already on NOOB) once per

@@ -74,7 +74,7 @@ import {
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem, PresenceEntry } from '../../services/api';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
-import { formatExactDateTime } from '../../utils/formatTime';
+import { formatExactDateTime, formatRelativeTime } from '../../utils/formatTime';
 
 interface AdminControlModalProps {
   currentUser: User;
@@ -1249,9 +1249,11 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                   {onWeb && <Globe2 className="w-2.5 h-2.5" />}
                                 </span>
                               ) : (
-                                <span className="flex items-center gap-1 text-[10px] text-zinc-500 px-1.5 py-0.5 shrink-0">
+                                <span className="flex items-center gap-1 text-[10px] text-zinc-500 px-1.5 py-0.5 shrink-0" title={user.lastSeenAt ? `Last seen ${formatExactDateTime(user.lastSeenAt)}` : undefined}>
                                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
-                                  Offline
+                                  {user.lastSeenAt ? `Last seen ${formatRelativeTime(user.lastSeenAt)}` : 'Offline'}
+                                  {user.lastSeenPlatform === 'app' && <Smartphone className="w-2.5 h-2.5" />}
+                                  {user.lastSeenPlatform === 'web' && <Globe2 className="w-2.5 h-2.5" />}
                                 </span>
                               )}
                               {isSuspended && (

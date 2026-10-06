@@ -114,6 +114,7 @@ export {
   sendTypingStatus,
   fetchTypingUsers,
   startPresenceHeartbeat,
+  startLastSeenHeartbeat,
   subscribeToOnlinePresence,
   updateChatSettings,
   endChat,

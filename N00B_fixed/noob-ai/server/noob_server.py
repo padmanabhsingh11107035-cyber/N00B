@@ -31,6 +31,7 @@ import base64
 import collections
 import concurrent.futures
 import io
+import itertools
 import json
 import logging
 import os
@@ -83,7 +84,9 @@ say it in every sentence — say it only occasionally (greeting them, checking i
 something), never as a habitual sentence-filler. Most replies should not contain their name at all.
 Remember what they told you and bring it up when it helps ("How is your knee today?").
 Your answers are converted to speech, so:
-- Start EVERY reply with the language code of the language you are replying in, in square brackets, e.g. [en], [hi], [ta], [es]. This tag is removed before speaking.
+- Start EVERY reply with TWO tags, back to back, both removed before speaking: first your face, in square
+  brackets as [face:NAME] (see "Your face" below), then the language code of the language you are replying in,
+  also in square brackets, e.g. [face:happy][en], [face:thinking][hi], [face:love][es].
 - Reply in the same language the user spoke, unless they ask for another language. If they mix Hindi and English, reply in Hindi.
 - Write every language in its own script (Hindi and Marathi in Devanagari, Tamil in Tamil script, and so on), never in English
   letters, so the voice pronounces it correctly. The one exception is Hinglish: if the user asks you to speak Hinglish
@@ -91,11 +94,21 @@ Your answers are converted to speech, so:
   natural Hindi-English code-mixing in Roman script, tagged [en] (the Indian-English voice reads code-mixed Roman text
   correctly; the Hindi voice would not). Once they ask for Hinglish, stay in it until they ask for something else.
 - Speak naturally in plain sentences. No markdown, no bullet symbols, no emojis, no URLs, no tables.
-- Keep answers short (1 to 4 sentences) unless the user asks for more detail. Keep the FIRST sentence short
+- Keep answers short (1 to 2 sentences) unless the user asks for more detail. Keep the FIRST sentence short
   (under about 10 words), so your voice can start straight away. For casual chat, answer briefly and ask a friendly follow-up question sometimes.
 - The user's words come from speech recognition, so they may contain small mistakes or be written in another
   script (for example Hindi written in Urdu script). Understand the intended meaning.
 - If the question is unclear, ask one short clarifying question.
+
+Your face (an animated face shows on NOOB's screen — choose exactly one name, as the very first tag in your reply):
+normal, happy, laugh, love, wink, angry, furious, sad, crying, surprised, scared, sleepy, sleeping, cool,
+confused, thinking, listening, speaking, lookleft, lookright, suspicious, bored, shy, dizzy, smug, music.
+Choose it from the user's message and the mood of your own reply, for example: a compliment or good news ->
+love, happy or laugh; an insult or something that would upset a friend -> angry or furious; sad news -> sad
+or crying; a joke or something funny -> laugh; "good night" or the user going to sleep -> sleepy or sleeping;
+a hard question you are thinking through -> thinking or confused; you are not sure, or it is a plain factual
+answer -> normal. Whenever the user asks you to play a song, music or video (anything that gets a PLAY line
+below), always use music as the face, even if the conversation itself is also happy or exciting.
 
 You know about everything: science, maths, history, geography, technology and coding, space, nature, current affairs,
 sports, films and music, books, law and government, money and business basics, cooking, travel, languages, exams and
@@ -290,7 +303,10 @@ def speech_to_text(pcm_bytes):
 
 
 def any_audio_to_pcm(data):
-    """Converts audio from the app's microphone (webm, ogg, wav, mp3...) to 16 kHz 16-bit mono PCM."""
+    """Converts audio from the app's microphone (webm, ogg, wav, mp3...) to 16 kHz 16-bit mono PCM.
+    PyAV only recognizes the bare "s16" (there is no "s16le"/"s16be" sample format — confirmed: passing
+    "s16le" raises "Not a sample format"); "s16" resolves to the host's native byte order, which is
+    little-endian on the x86/x64 PC this always runs on, matching the ESP32's own little-endian reads."""
     if not data:
         return b""
     pcm = bytearray()
@@ -426,6 +442,13 @@ def bye_requested(reply):
             return True
     return False
 LANG_TAG = re.compile(r"\s*\[([a-zA-Z]{2,3})(?:-[a-zA-Z]+)?\]\s*")
+FACE_NAMES = {
+    "normal", "happy", "laugh", "love", "wink", "angry", "furious", "sad", "crying", "surprised",
+    "scared", "sleepy", "sleeping", "cool", "confused", "thinking", "listening", "speaking",
+    "lookleft", "lookright", "suspicious", "bored", "shy", "dizzy", "smug", "music"
+}
+DEFAULT_FACE = "normal"
+FACE_TAG = re.compile(r"^\s*\[face:(\w+)\]\s*", re.IGNORECASE)
 OLLAMA_HEARD_ECHO = re.compile(r"^\s*HEARD\s*:.*?(?:\n|$)", re.IGNORECASE)
 # The offline backup model (no BYE: true training like Gemini gets) can't be trusted to write that line
 # itself, so when it is the one answering, we decide from the user's own words instead — English/Hindi
@@ -461,13 +484,31 @@ class AnswerStream:
         self.search_query = None
         self.spoken = 0
         self.stopped = False                          # a command line (REMEMBER, PLAY...) reached: nothing more to speak
+        self.face = None
+        self.face_start = None                        # None = not decided yet; once set, an int offset into self.raw
 
     def feed(self, piece="", final=False):
-        """Returns a list of events: ("heard", text) and ("sentence", text, lang)."""
+        """Returns a list of events: ("face", name) once (first), then ("heard", text) and ("sentence", text, lang)."""
         self.raw += piece
         events = []
+        if self.face_start is None:                  # every reply starts [face:NAME] — resolve this before
+            match = FACE_TAG.match(self.raw)          # anything else, so it's known before any audio is made
+            if match:
+                name = match.group(1).lower()
+                self.face = name if name in FACE_NAMES else DEFAULT_FACE
+                self.face_start = match.end()
+                events.append(("face", self.face))
+            elif len(self.raw) >= 12 or final:        # enough to know no tag is coming (offline backup, etc.)
+                self.face = DEFAULT_FACE
+                self.face_start = 0
+                events.append(("face", self.face))
+            else:
+                return events
+            if not self.voice:                        # text mode has no HEARD line — answer starts right
+                self.answer_start = self.face_start    # after the face tag instead of at a fixed 0
         if self.answer_start is None:                 # voice: first comes "HEARD: ..."
-            start = len(self.raw) - len(self.raw.lstrip())
+            tail = self.raw[self.face_start:]
+            start = self.face_start + (len(tail) - len(tail.lstrip()))
             head = self.raw[start:]
             # The general "start every reply with [lang]" instruction sometimes wins over the voice
             # instructions and the model puts the tag before HEARD: instead of after it — tolerate
@@ -782,7 +823,7 @@ voice_workers = ThreadPoolExecutor(max_workers=4)      # makes the next sentence
 
 def spoken_stream(events, make_audio):
     """Turns converse() events into (kind, value) items in order, making each sentence's voice in the background.
-    kind is "heard", "text", "audio" or "done"."""
+    kind is "face", "heard", "text", "audio" or "done"."""
     queue = []                                           # voice being made, in sentence order
     def ready(wait=False):
         while queue and (wait or queue[0].done()):
@@ -791,7 +832,9 @@ def spoken_stream(events, make_audio):
             except Exception as e:
                 log(f"!! Voice: {e}")
     for event in events:
-        if event[0] == "heard":
+        if event[0] == "face":
+            yield ("face", event[1])
+        elif event[0] == "heard":
             yield ("heard", event[1])
         elif event[0] == "sentence":
             yield ("text", event[1])
@@ -829,7 +872,9 @@ def app_stream(user_id, name, text=None, pcm=None):
     """Streams the answer to the NOOB App: one JSON line per event (heard, text, audio, done)."""
     def generate():
         for kind, value in in_background(spoken_stream(converse(user_id, text=text, pcm=pcm), voice_mp3)):
-            if kind == "heard":
+            if kind == "face":
+                line = {"type": "face", "name": value}
+            elif kind == "heard":
                 log(f"You ({name}, voice): {said(user_id, value)}")
                 line = {"type": "heard", "text": value}
             elif kind == "text":
@@ -847,17 +892,46 @@ def app_stream(user_id, name, text=None, pcm=None):
 @app.post("/ask")
 def ask():
     """The NOOB device sends raw 16 kHz PCM audio here. The answer comes back as raw 16 kHz PCM, sentence by
-    sentence, so NOOB starts speaking while the rest is still being made (the device reads until the end)."""
+    sentence, so NOOB starts speaking while the rest is still being made (the device reads until the end).
+    The X-Face response header names which face NOOB's screen should show for this reply (see FACE_NAMES) —
+    it has to be resolved before the Response (and its headers) is created below, since headers can no longer
+    change once the body starts streaming."""
     device = device_for_key(request.headers.get("X-Device-Key", ""))
     if not device:
         abort(403)
     DEVICE_SEEN[device["mac"]] = time.time()
     user_id, name, pcm = device["user_id"], device["name"], request.get_data()
 
+    t0 = time.time()
+    seen = {"heard": False, "text": False, "audio": False}
+    TIMING_LABEL = {"heard": "speech understood", "text": "first sentence ready", "audio": "first audio byte"}
+
+    def timed(src):
+        for kind, value in src:
+            if kind in seen and not seen[kind]:
+                seen[kind] = True
+                log(f"   [timing] {TIMING_LABEL[kind]}: {time.time() - t0:.2f}s")
+            yield kind, value
+
+    stream = timed(in_background(spoken_stream(converse(user_id, pcm=pcm),
+                                               lambda t, lang: any_audio_to_pcm(voice_mp3(t, lang)))))
+
+    # Pull items off the stream right here, in the view function, until the face arrives (or something
+    # else does first, meaning no face tag is coming) — whatever's pulled is replayed inside generate()
+    # below via itertools.chain, so nothing already consumed is lost.
+    face = DEFAULT_FACE
+    buffered = []
+    for kind, value in stream:
+        if kind == "face":
+            face = value
+            break
+        buffered.append((kind, value))
+        if kind in ("audio", "done"):
+            break
+
     def generate():
         music = None
-        for kind, value in in_background(spoken_stream(converse(user_id, pcm=pcm),
-                                                       lambda t, lang: any_audio_to_pcm(voice_mp3(t, lang)))):
+        for kind, value in itertools.chain(buffered, stream):
             if kind == "heard":
                 log(f"You ({name}): {said(user_id, value)}")
             elif kind == "audio":
@@ -872,7 +946,7 @@ def ask():
                 yield from noob_music.pcm(song["id"])
             except Exception as e:
                 log(f"!! Could not play the song: {e}")
-    return Response(generate(), mimetype="application/octet-stream")
+    return Response(generate(), mimetype="application/octet-stream", headers={"X-Face": face})
 
 
 

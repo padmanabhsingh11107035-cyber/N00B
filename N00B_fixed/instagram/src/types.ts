@@ -569,6 +569,24 @@ export interface LongVideoPlaylist {
   coverThumbnail?: string;
 }
 
+export type NoobRoomActivityType = 'guess_song' | 'meme_battle' | 'mini_game' | 'truth_or_dare';
+
+export interface NoobRoom {
+  id: string;
+  name: string;
+  category: string;
+  activityType: NoobRoomActivityType | null;
+  participantCount: number;
+  host: { id: string; username: string; avatar: string } | null;
+  createdAt: string;
+}
+
+export interface NoobRoomParticipant {
+  userId: string;
+  username: string;
+  avatar: string;
+}
+
 export interface DailyChallenge {
   challengeDate: string;
   prompt: string;

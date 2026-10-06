@@ -305,7 +305,14 @@ export {
   subscribeToLiveLoungeRoomParticipants,
   connectLiveLoungeWhiteboard,
   connectLiveLoungeScreenShare,
-  connectLiveLoungeControls
+  connectLiveLoungeControls,
+  listNoobRooms,
+  startNoobRoom,
+  joinNoobRoom,
+  leaveNoobRoom,
+  endNoobRoom,
+  fetchNoobRoomParticipants,
+  subscribeToNoobRoomParticipants
 } from './supabaseApi';
 
 export type {

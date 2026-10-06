@@ -34,6 +34,7 @@ import { JoinUsModal } from '../Explore/JoinUsModal';
 import { requestPostBonusOffer } from '../../services/api';
 
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
+const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
 
 interface FeedViewProps {
   currentUser: User;
@@ -123,6 +124,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
   const [showNoobMenu, setShowNoobMenu] = useState(false);
   const [showDailyNoob, setShowDailyNoob] = useState(false);
+  const [showNoobRooms, setShowNoobRooms] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
 
   // Rolled once per mount, not re-rolled on every render — the amount has to stay the same between
@@ -599,15 +601,18 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-400">Today's challenge — win real points</span>
                 </div>
               </button>
-              <div className="w-full p-3 rounded-xl flex items-center gap-3 text-left opacity-50 cursor-not-allowed">
-                <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
-                  <Trophy className="w-4.5 h-4.5 text-zinc-400" />
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowNoobRooms(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                  <Trophy className="w-4.5 h-4.5 text-red-400" />
                 </div>
                 <div>
                   <span className="text-xs font-bold text-white block">NOOB Rooms</span>
-                  <span className="text-[10px] text-zinc-400">Coming soon</span>
+                  <span className="text-[10px] text-zinc-400">Live voice rooms — join, talk, play</span>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -615,6 +620,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {showDailyNoob && (
         <React.Suspense fallback={null}>
           <DailyNoobView currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} onClose={() => setShowDailyNoob(false)} />
+        </React.Suspense>
+      )}
+      {showNoobRooms && (
+        <React.Suspense fallback={null}>
+          <NoobRoomsLobbyView currentUser={currentUser} onClose={() => setShowNoobRooms(false)} />
         </React.Suspense>
       )}
     </div>

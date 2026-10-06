@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -4046,6 +4046,75 @@ export function subscribeToLiveLoungeRoomParticipants(roomId: string, onChange: 
   const channel = supabase
     .channel(`lounge-participants-${roomId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'live_lounge_room_participants', filter: `room_id=eq.${roomId}` }, fire)
+    .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
+  return () => {
+    if (timer) clearTimeout(timer);
+    supabase.removeChannel(channel);
+  };
+}
+
+// ----------------------------------------------------------------------------- NOOB Rooms (public voice rooms)
+
+function mapNoobRoom(r: any): NoobRoom {
+  return { ...r, host: r.host ? { ...r.host, avatar: resolveMedia(r.host.avatar) } : null };
+}
+
+export async function listNoobRooms(): Promise<NoobRoom[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('list_noob_rooms')) || []).map(mapNoobRoom);
+  } catch {
+    return [];
+  }
+}
+
+export async function startNoobRoom(name: string, category: string): Promise<{ success: boolean; roomId?: string; error?: string }> {
+  try {
+    return await rpc('start_noob_room', { p_name: name, p_category: category });
+  } catch (err) {
+    return failWith(err, 'Could not start the room.');
+  }
+}
+
+// Mints an Agora RTC token via the same "agora-token" Edge Function as Live Streaming/Live Lounge,
+// passing noobRoomId — noob_room_join() is the one place that authorizes and records the join.
+export async function joinNoobRoom(roomId: string): Promise<{ success: boolean; token?: string; channelName?: string; appId?: string; isHost?: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('agora-token', { body: { noobRoomId: roomId } });
+    if (error) return { success: false, error: await functionError(error, 'Could not join this room.') };
+    if (!data?.token) return { success: false, error: data?.error || 'Could not join this room.' };
+    return { success: true, ...data };
+  } catch (err) {
+    return failWith(err, 'Could not join this room.');
+  }
+}
+
+export async function leaveNoobRoom(roomId: string): Promise<void> {
+  try { await rpc('leave_noob_room', { p_room_id: roomId }); } catch { /* best-effort — leaving anyway */ }
+}
+
+export async function endNoobRoom(roomId: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('end_noob_room', { p_room_id: roomId }); } catch (err) { return failWith(err, 'Could not end the room.'); }
+}
+
+export async function fetchNoobRoomParticipants(roomId: string): Promise<NoobRoomParticipant[]> {
+  try {
+    const list = (await rpc<any[]>('noob_room_participants_list', { p_room_id: roomId })) || [];
+    return list.map((p) => ({ ...p, avatar: resolveMedia(p.avatar) }));
+  } catch {
+    return [];
+  }
+}
+
+export function subscribeToNoobRoomParticipants(roomId: string, onChange: () => void): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const fire = () => {
+    if (timer) return;
+    timer = setTimeout(() => { timer = null; onChange(); }, 300);
+  };
+  const channel = supabase
+    .channel(`noobroom-participants-${roomId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'noob_room_participants', filter: `room_id=eq.${roomId}` }, fire)
     .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
   return () => {
     if (timer) clearTimeout(timer);

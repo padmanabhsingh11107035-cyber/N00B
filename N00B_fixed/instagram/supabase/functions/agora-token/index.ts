@@ -1,13 +1,15 @@
 // NOOB — Edge Function "agora-token".
 //
-// Mints a short-lived Agora RTC token so a browser can join either a live stream's video channel or a
-// Live Lounge meeting room's — the Agora App Certificate (the actual secret) never leaves this
-// function. Privacy, viewer-counting and admission are all handled by the database (live_stream_join()
-// / live_lounge_room_join()): this function trusts whatever channel name that RPC hands back and never
-// invents or checks one itself, so there is exactly one place per feature that decides who gets in.
+// Mints a short-lived Agora RTC token so a browser can join a live stream's video channel, a Live
+// Lounge meeting room's, or a public NOOB Room's — the Agora App Certificate (the actual secret) never
+// leaves this function. Privacy, viewer-counting and admission are all handled by the database
+// (live_stream_join() / live_lounge_room_join() / noob_room_join()): this function trusts whatever
+// channel name that RPC hands back and never invents or checks one itself, so there is exactly one
+// place per feature that decides who gets in.
 //
-// { streamId } -> { token, channelName, appId, isHost }        (Live Streaming)
-// { roomId }   -> { token, channelName, appId, isHost }        (Live Lounge room)
+// { streamId }   -> { token, channelName, appId, isHost }        (Live Streaming)
+// { roomId }     -> { token, channelName, appId, isHost }        (Live Lounge room)
+// { noobRoomId } -> { token, channelName, appId, isHost }        (NOOB Room — public voice room)
 //
 // Deploy with "Verify JWT" switched OFF (the caller's login token is checked in the code below, same
 // pattern as dynamic-handler / recover-account).
@@ -46,7 +48,8 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: 'Invalid request.' }, 400); }
   const streamId = String(body?.streamId || '').trim();
   const roomId = String(body?.roomId || '').trim();
-  if (!streamId && !roomId) return json({ error: 'Missing streamId or roomId.' }, 400);
+  const noobRoomId = String(body?.noobRoomId || '').trim();
+  if (!streamId && !roomId && !noobRoomId) return json({ error: 'Missing streamId, roomId or noobRoomId.' }, 400);
 
   const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (!token) return json({ error: 'Please log in.' }, 401);
@@ -61,16 +64,18 @@ Deno.serve(async (req) => {
   // reused as-is, never duplicated here. Also atomically counts a stream viewer / checks admission.
   const { data, error } = streamId
     ? await asUser.rpc('live_stream_join', { p_id: streamId })
-    : await asUser.rpc('live_lounge_room_join', { p_room_id: roomId });
+    : roomId
+    ? await asUser.rpc('live_lounge_room_join', { p_room_id: roomId })
+    : await asUser.rpc('noob_room_join', { p_room_id: noobRoomId });
   if (error || !data) return json({ error: error?.message || 'This is not available.' }, 403);
 
   const appId = Deno.env.get('AGORA_APP_ID');
   const appCertificate = Deno.env.get('AGORA_APP_CERTIFICATE');
   if (!appId || !appCertificate) return json({ error: 'Live streaming is not configured yet.' }, 500);
 
-  // Live Streaming: only the host publishes, everyone else just watches. Live Lounge rooms: everyone
-  // admitted publishes their own camera/mic, so a room join is always a publisher.
-  const role = roomId || data.isHost ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
+  // Live Streaming: only the host publishes, everyone else just watches. Live Lounge rooms and NOOB
+  // Rooms: everyone admitted publishes their own mic, so a room join is always a publisher.
+  const role = roomId || noobRoomId || data.isHost ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
   const expireSeconds = 3600; // the client asks for a fresh token again if a stream runs longer than this
   const rtcToken = RtcTokenBuilder.buildTokenWithUid(appId, appCertificate, data.channelName, 0, role, expireSeconds, expireSeconds);
 

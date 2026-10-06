@@ -2,7 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { X, Users, Plus, Music2, Images, Gamepad2, MessageSquareQuote, Radio } from 'lucide-react';
 import { NoobRoom, NoobRoomActivityType, User } from '../../types';
 import { listNoobRooms, startNoobRoom } from '../../services/api';
-import { NoobVoiceRoomView } from './NoobVoiceRoomView';
+
+// Agora (plus everything NoobVoiceRoomView pulls in for it) only needs to load once someone actually
+// joins a room — bundling it into the lobby's own chunk made just opening the room LIST slow, which
+// is almost certainly why "NOOB Rooms" felt like it did nothing for a long stretch after being tapped.
+const NoobVoiceRoomView = React.lazy(() => import('./NoobVoiceRoomView').then((m) => ({ default: m.NoobVoiceRoomView })));
 
 interface NoobRoomsLobbyViewProps {
   currentUser: User;
@@ -27,6 +31,16 @@ const CATEGORY_STYLE: Record<string, { emoji: string; color: string }> = {
 const DEFAULT_CATEGORY_STYLE = { emoji: '🎙️', color: 'from-emerald-500/15 to-emerald-500/5 border-[#00FF66]/30' };
 
 const SUGGESTED_CATEGORIES = ['Vibe', 'Gaming', 'Study', 'General'];
+
+// A visible spinner instead of a blank Suspense fallback — the room-view chunk (Agora + everything it
+// needs) can take a few seconds on a slow connection, and showing nothing during that made it look
+// like the tap did nothing at all.
+export const RoomLoadingSpinner: React.FC = () => (
+  <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3">
+    <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-[#00FF66] animate-spin" />
+    <p className="text-zinc-400 text-sm">Connecting…</p>
+  </div>
+);
 
 export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentUser, onClose }) => {
   const [rooms, setRooms] = useState<NoobRoom[]>([]);
@@ -82,7 +96,11 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   };
 
   if (openRoom) {
-    return <NoobVoiceRoomView currentUser={currentUser} room={openRoom} onClose={() => { setOpenRoom(null); load(); }} />;
+    return (
+      <React.Suspense fallback={<RoomLoadingSpinner />}>
+        <NoobVoiceRoomView currentUser={currentUser} room={openRoom} onClose={() => { setOpenRoom(null); load(); }} />
+      </React.Suspense>
+    );
   }
 
   const activityRooms = rooms.filter((r) => r.activityType);

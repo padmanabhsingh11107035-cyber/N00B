@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { isStaff, isMainAdmin } from '../../adminAccess';
+import { isStaff } from '../../adminAccess';
 import {
   Grid,
   Film,
@@ -87,8 +87,6 @@ import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
-import { NoobAiPage } from './NoobAiPage';
-import { NoobAiLogo } from './NoobAiLogo';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { HighlightManagerModal } from './HighlightManagerModal';
 import { safeJsonStringify } from '../../utils/safeJson';
@@ -158,9 +156,6 @@ interface ProfileViewProps {
   // App.tsx's viewAsUser + AdminControlModal's "Use as User" button) — switches back to the admin
   // console. Absent for every other account, so the icon simply never renders for them.
   onSwitchToAdminPanel?: () => void;
-  // Saying bye inside NOOB AI takes the user to the main feed, not back to whatever screen NOOB AI
-  // happened to be opened over — see NoobAiPage's postMessage listener.
-  onNoobAiBye?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -184,8 +179,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onBackToMyProfile,
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
-  onSwitchToAdminPanel,
-  onNoobAiBye
+  onSwitchToAdminPanel
 }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved' | 'liked' | 'archive'>('posts');
   const [collections, setCollections] = useState<SavedCollection[]>([]);
@@ -271,7 +265,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showInstallPermissionsPage, setShowInstallPermissionsPage] = useState(false);
-  const [showNoobAi, setShowNoobAi] = useState(false);
   const [showMutualFollowersSheet, setShowMutualFollowersSheet] = useState(false);
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -735,22 +728,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </button>
               )}
 
-              {/* Own account: NOOB AI, the voice assistant (opens inside the app and signs in automatically) */}
-              {isOwnProfile && (
-                <button
-                  onClick={() => {
-                    setShowThreeDotsMenu(false);
-                    setShowNoobAi(true);
-                  }}
-                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                >
-                  <NoobAiLogo className="w-8 h-8 shrink-0 group-hover:scale-110 transition-transform" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold text-white block group-hover:text-violet-300 transition-colors">NOOB AI</span>
-                    <span className="text-[10px] text-zinc-400 block truncate">Talk to your AI friend by voice</span>
-                  </div>
-                </button>
-              )}
+              {/* NOOB AI moved to the Feed page's hamburger ("NOOB") menu, alongside Daily NOOB,
+                  NOOB Rooms, Guess the Song, Shop NOOB and Live Lounge. */}
 
               {/* Own account: Install and Permissions (add-to-home-screen + notifications) */}
               {isOwnProfile && (
@@ -1986,10 +1965,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
-
-      {showNoobAi && (
-        <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={onNoobAiBye} />
-      )}
 
       {showInstallPermissionsPage && (
         <InstallAndPermissionsPage

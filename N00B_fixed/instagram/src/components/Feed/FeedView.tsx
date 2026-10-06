@@ -34,12 +34,24 @@ import { CommentsSheet } from './CommentsSheet';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
 import { StorePage } from '../Store/StorePage';
+import { NoobAiPage } from '../Profile/NoobAiPage';
+import { NoobAiLogo } from '../Profile/NoobAiLogo';
+import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer } from '../../services/api';
 
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
 const GuessTheSongView = React.lazy(() => import('../NoobRooms/GuessTheSongView').then((m) => ({ default: m.GuessTheSongView })));
 const LiveLoungePage = React.lazy(() => import('../Profile/LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
+const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
+
+// A visible spinner instead of a blank Suspense fallback — on a slow connection the first tap of any
+// of these menu items could otherwise look like it did nothing for several seconds.
+const LazyFallback: React.FC = () => (
+  <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+  </div>
+);
 
 interface FeedViewProps {
   currentUser: User;
@@ -138,6 +150,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showGuessTheSong, setShowGuessTheSong] = useState(false);
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
+  const [showNoobAi, setShowNoobAi] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
 
   // Rolled once per mount, not re-rolled on every render — the amount has to stay the same between
@@ -662,31 +676,59 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-400">Browse products & your cart</span>
                 </div>
               </button>
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowNoobAi(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <NoobAiLogo className="w-9 h-9 shrink-0" />
+                <div>
+                  <span className="text-xs font-bold text-white block">NOOB AI</span>
+                  <span className="text-[10px] text-zinc-400">Talk to your AI friend by voice</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowSupportModal(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-4.5 h-4.5 text-sky-400" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Customer Support</span>
+                  <span className="text-[10px] text-zinc-400">Chat with the NOOB support team</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
       )}
       {showDailyNoob && (
-        <React.Suspense fallback={null}>
+        <React.Suspense fallback={<LazyFallback />}>
           <DailyNoobView currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} onClose={() => setShowDailyNoob(false)} />
         </React.Suspense>
       )}
       {showNoobRooms && (
-        <React.Suspense fallback={null}>
+        <React.Suspense fallback={<LazyFallback />}>
           <NoobRoomsLobbyView currentUser={currentUser} onClose={() => setShowNoobRooms(false)} />
         </React.Suspense>
       )}
       {showGuessTheSong && (
-        <React.Suspense fallback={null}>
+        <React.Suspense fallback={<LazyFallback />}>
           <GuessTheSongView currentUser={currentUser} onClose={() => setShowGuessTheSong(false)} />
         </React.Suspense>
       )}
       {showLiveLoungePage && (
-        <React.Suspense fallback={null}>
+        <React.Suspense fallback={<LazyFallback />}>
           <LiveLoungePage currentUser={currentUser} allUsers={allUsers} onClose={() => setShowLiveLoungePage(false)} onUserUpdated={onUserUpdated} />
         </React.Suspense>
       )}
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
+      {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}
+      {showSupportModal && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <CustomerSupportModal currentUser={currentUser} onClose={() => setShowSupportModal(false)} />
+        </React.Suspense>
+      )}
     </div>
   );
 };

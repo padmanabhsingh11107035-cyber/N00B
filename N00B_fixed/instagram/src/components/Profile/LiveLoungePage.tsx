@@ -4,7 +4,10 @@ import { User } from '../../types';
 import { LIVE_LOUNGE_PRICE, purchaseLiveLounge, redeemLiveLoungeCoupon, requestFriendPayment, fetchPendingLiveLoungeInvites, fetchLiveLoungeHistory } from '../../services/api';
 import type { LiveLoungePendingInvite, LiveLoungeHistoryEntry } from '../../services/api';
 import { formatNoobPoints } from '../../utils/formatPoints';
-import { LiveLoungeRoomView } from '../LiveStream/LiveLoungeRoomView';
+// Agora (plus the virtual-background extension it pulls in) only needs to load once someone actually
+// starts/joins a room — bundling it into this page's own chunk made even the plain purchase/menu
+// screen slow to open the first time, which looked like tapping "Live Lounge" did nothing for a while.
+const LiveLoungeRoomView = React.lazy(() => import('../LiveStream/LiveLoungeRoomView').then((m) => ({ default: m.LiveLoungeRoomView })));
 import confetti from 'canvas-confetti';
 
 interface LiveLoungePageProps {
@@ -119,14 +122,23 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
 
   if (roomFlow) {
     return (
-      <LiveLoungeRoomView
-        currentUser={currentUser}
-        mode={roomFlow}
-        allUsers={allUsers}
-        initialRoomId={resumeRoomId}
-        initialJoinCode={resumeRoomId ? undefined : initialJoinCode}
-        onClose={() => { setRoomFlow(null); setResumeRoomId(undefined); }}
-      />
+      <React.Suspense
+        fallback={
+          <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3">
+            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
+            <p className="text-white/70 text-sm">Connecting…</p>
+          </div>
+        }
+      >
+        <LiveLoungeRoomView
+          currentUser={currentUser}
+          mode={roomFlow}
+          allUsers={allUsers}
+          initialRoomId={resumeRoomId}
+          initialJoinCode={resumeRoomId ? undefined : initialJoinCode}
+          onClose={() => { setRoomFlow(null); setResumeRoomId(undefined); }}
+        />
+      </React.Suspense>
     );
   }
 

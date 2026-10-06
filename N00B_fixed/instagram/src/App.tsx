@@ -1471,7 +1471,6 @@ export default function App() {
             }}
             onNavigateToUserProfile={handleNavigateToUserProfile}
             onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
-            onNoobAiBye={() => setActiveTab('feed')}
           />
         )}
       </main>

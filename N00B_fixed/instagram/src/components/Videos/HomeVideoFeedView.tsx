@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil } from 'lucide-react';
+import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check } from 'lucide-react';
 import { User, LongVideo } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -23,6 +23,7 @@ import {
   fetchLongVideoLikers,
   fetchLongVideoViewers,
   fetchUserById,
+  endLiveStream,
   type LiveStreamSummary
 } from '../../services/api';
 
@@ -80,15 +81,22 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // The "⋮" options sheet — which video it's for (from a list card tap or the open player), shared
-  // by both surfaces instead of two separate menu implementations.
-  const [menuVideo, setMenuVideo] = useState<LongVideo | null>(null);
+  // The "⋮" options sheet — actionVideo is which video it's for (from a list card tap or the open
+  // player, shared by both surfaces instead of two separate menu implementations) and stays set
+  // after the sheet itself closes, since Share/Edit open a FOLLOW-UP modal that still needs it.
+  const [actionVideo, setActionVideo] = useState<LongVideo | null>(null);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [showShareToChat, setShowShareToChat] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
+
+  // Same idea for a live stream's own small "⋮" menu — just Copy Link for everyone and Stop Live
+  // for a moderator, so it doesn't need the full video sheet's extra states.
+  const [menuLive, setMenuLive] = useState<LiveStreamSummary | null>(null);
+  const [liveLinkCopied, setLiveLinkCopied] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -157,10 +165,36 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     setTimeout(() => setShareLinkCopied(false), 1800);
   };
 
+  const copyLiveLink = async (streamId: string) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(streamId)}`;
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = shareUrl;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* best effort */ }
+      document.body.removeChild(ta);
+    }
+    setLiveLinkCopied(true);
+    setTimeout(() => setLiveLinkCopied(false), 1800);
+  };
+
+  const handleStopLive = async (stream: LiveStreamSummary) => {
+    if (!confirm(`Stop ${stream.host.username}'s live stream for everyone?`)) return;
+    await endLiveStream(stream.id);
+    setLiveStreams((prev) => prev.filter((s) => s.id !== stream.id));
+    setMenuLive(null);
+  };
+
   const patchVideo = (videoId: string, patch: Partial<LongVideo>) => {
     setVideos((prev) => prev.map((v) => (v.id === videoId ? { ...v, ...patch } : v)));
     setOpenVideo((cur) => (cur && cur.id === videoId ? { ...cur, ...patch } : cur));
-    setMenuVideo((cur) => (cur && cur.id === videoId ? { ...cur, ...patch } : cur));
+    setActionVideo((cur) => (cur && cur.id === videoId ? { ...cur, ...patch } : cur));
   };
 
   const handleToggleLike = async (video: LongVideo) => {
@@ -189,7 +223,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     if (ok) {
       setVideos((prev) => prev.filter((v) => v.id !== video.id));
       setOpenVideo(null);
-      setMenuVideo(null);
+      setActionVideo(null);
     }
   };
 
@@ -216,7 +250,11 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
             </p>
           </div>
         </button>
-        <button onClick={() => setMenuVideo(video)} className="p-1.5 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer shrink-0" title="More">
+        <button
+          onClick={() => { setActionVideo(video); setShowOptionsMenu(true); }}
+          className="p-1.5 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer shrink-0"
+          title="More"
+        >
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
@@ -224,8 +262,8 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   );
 
   const LiveCard: React.FC<{ s: LiveStreamSummary }> = ({ s }) => (
-    <button onClick={() => setOpenLive(s)} className="w-full flex flex-col gap-2 cursor-pointer group text-left">
-      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-red-950 to-zinc-900 border border-red-500/30 flex items-center justify-center">
+    <div className="w-full flex flex-col gap-2 group">
+      <button onClick={() => setOpenLive(s)} className="relative w-full aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-red-950 to-zinc-900 border border-red-500/30 flex items-center justify-center cursor-pointer text-left">
         <AvatarMedia src={s.host.avatar} alt={s.host.username} className="w-16 h-16 rounded-full object-cover border-2 border-red-500/50 opacity-90" />
         <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full tracking-wide flex items-center gap-1">
           <Radio className="w-2.5 h-2.5" /> LIVE
@@ -233,15 +271,20 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
           <Users className="w-2.5 h-2.5" /> {s.viewerCount}
         </span>
-      </div>
+      </button>
       <div className="flex items-start gap-2.5 px-0.5">
-        <AvatarMedia src={s.host.avatar} alt={s.host.username} className="w-9 h-9 rounded-full object-cover shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-bold text-white line-clamp-2 leading-snug">{s.title || `${s.host.username} is live`}</p>
-          <p className="text-[11px] text-zinc-400 mt-0.5">@{s.host.username} • {s.viewerCount.toLocaleString()} watching</p>
-        </div>
+        <button onClick={() => setOpenLive(s)} className="flex items-start gap-2.5 flex-1 min-w-0 cursor-pointer text-left">
+          <AvatarMedia src={s.host.avatar} alt={s.host.username} className="w-9 h-9 rounded-full object-cover shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold text-white line-clamp-2 leading-snug">{s.title || `${s.host.username} is live`}</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">@{s.host.username} • {s.viewerCount.toLocaleString()} watching</p>
+          </div>
+        </button>
+        <button onClick={() => setMenuLive(s)} className="p-1.5 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer shrink-0" title="More">
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
       </div>
-    </button>
+    </div>
   );
 
   return (
@@ -323,7 +366,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-zinc-800/80 shrink-0">
             <button onClick={() => setOpenVideo(null)} className="p-1.5 text-white cursor-pointer"><X className="w-5 h-5" /></button>
-            <button onClick={() => setMenuVideo(openVideo)} className="p-1.5 text-white cursor-pointer" title="More">
+            <button onClick={() => { setActionVideo(openVideo); setShowOptionsMenu(true); }} className="p-1.5 text-white cursor-pointer" title="More">
               <MoreHorizontal className="w-5 h-5" />
             </button>
           </div>
@@ -383,55 +426,57 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         </React.Suspense>
       )}
 
-      {/* "⋮" options sheet — shared by a list card tap and the open player's own button */}
-      {menuVideo && (
-        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={() => setMenuVideo(null)}>
+      {/* "⋮" options sheet — shared by a list card tap and the open player's own button. Share and
+          Edit open a follow-up modal, so this closes itself (showOptionsMenu) without clearing
+          actionVideo — those modals render off actionVideo, not off whatever's currently open. */}
+      {showOptionsMenu && actionVideo && (
+        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={() => setShowOptionsMenu(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full sm:max-w-xs bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
           >
             <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white truncate pr-4">{menuVideo.title || 'Video options'}</h2>
-              <button onClick={() => setMenuVideo(null)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer shrink-0">
+              <h2 className="text-sm font-bold text-white truncate pr-4">{actionVideo.title || 'Video options'}</h2>
+              <button onClick={() => setShowOptionsMenu(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer shrink-0">
                 <X className="w-4.5 h-4.5" />
               </button>
             </div>
             <div className="p-2 space-y-0.5">
               <button
-                onClick={() => { setShowShareSheet(true); setMenuVideo(null); }}
+                onClick={() => { setShowOptionsMenu(false); setShowShareSheet(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
                 <Share2 className="w-4.5 h-4.5 text-cyan-400 shrink-0" />
                 <span className="text-xs font-bold text-white">Share</span>
               </button>
               <button
-                onClick={() => { void handleToggleSave(menuVideo); setMenuVideo(null); }}
+                onClick={() => { void handleToggleSave(actionVideo); setShowOptionsMenu(false); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
-                <Bookmark className={`w-4.5 h-4.5 shrink-0 ${menuVideo.isSaved ? 'text-[#00FF66] fill-current' : 'text-zinc-400'}`} />
-                <span className="text-xs font-bold text-white">{menuVideo.isSaved ? 'Saved' : 'Save'}</span>
+                <Bookmark className={`w-4.5 h-4.5 shrink-0 ${actionVideo.isSaved ? 'text-[#00FF66] fill-current' : 'text-zinc-400'}`} />
+                <span className="text-xs font-bold text-white">{actionVideo.isSaved ? 'Saved' : 'Save'}</span>
               </button>
 
-              {canModerate(menuVideo) && (
+              {canModerate(actionVideo) && (
                 <>
                   <div className="h-px bg-zinc-900 my-1" />
                   <button
-                    onClick={() => { void handleToggleLikeCountHidden(menuVideo); setMenuVideo(null); }}
+                    onClick={() => { void handleToggleLikeCountHidden(actionVideo); setShowOptionsMenu(false); }}
                     className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
                   >
-                    {menuVideo.isLikeCountHidden ? <Eye className="w-4.5 h-4.5 text-zinc-400 shrink-0" /> : <EyeOff className="w-4.5 h-4.5 text-zinc-400 shrink-0" />}
-                    <span className="text-xs font-bold text-white">{menuVideo.isLikeCountHidden ? 'Show like count' : 'Hide like count'}</span>
+                    {actionVideo.isLikeCountHidden ? <Eye className="w-4.5 h-4.5 text-zinc-400 shrink-0" /> : <EyeOff className="w-4.5 h-4.5 text-zinc-400 shrink-0" />}
+                    <span className="text-xs font-bold text-white">{actionVideo.isLikeCountHidden ? 'Show like count' : 'Hide like count'}</span>
                   </button>
                   <button
-                    onClick={() => { void handleToggleComments(menuVideo); setMenuVideo(null); }}
+                    onClick={() => { void handleToggleComments(actionVideo); setShowOptionsMenu(false); }}
                     className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
                   >
                     <MessageSquareOff className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
-                    <span className="text-xs font-bold text-white">{menuVideo.isCommentsDisabled ? 'Turn on comments' : 'Turn off comments'}</span>
+                    <span className="text-xs font-bold text-white">{actionVideo.isCommentsDisabled ? 'Turn on comments' : 'Turn off comments'}</span>
                   </button>
-                  {isOwner(menuVideo) && (
+                  {isOwner(actionVideo) && (
                     <button
-                      onClick={() => { setShowEditModal(true); setMenuVideo(null); }}
+                      onClick={() => { setShowOptionsMenu(false); setShowEditModal(true); }}
                       className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
                     >
                       <Pencil className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
@@ -439,7 +484,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                     </button>
                   )}
                   <button
-                    onClick={() => { const v = menuVideo; setMenuVideo(null); void handleDelete(v); }}
+                    onClick={() => { setShowOptionsMenu(false); void handleDelete(actionVideo); }}
                     className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4.5 h-4.5 text-red-400 shrink-0" />
@@ -452,24 +497,62 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         </div>
       )}
 
-      {showShareSheet && openVideo && (
+      {/* Live stream's own small "⋮" menu — Copy Link for everyone, Stop Live for a moderator */}
+      {menuLive && (
+        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={() => setMenuLive(null)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-xs bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+          >
+            <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white truncate pr-4">{menuLive.title || `${menuLive.host.username} is live`}</h2>
+              <button onClick={() => setMenuLive(null)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer shrink-0">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+            <div className="p-2 space-y-0.5">
+              <button
+                onClick={() => copyLiveLink(menuLive.id)}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                {liveLinkCopied ? <Check className="w-4.5 h-4.5 text-[#00FF66] shrink-0" /> : <Copy className="w-4.5 h-4.5 text-cyan-400 shrink-0" />}
+                <span className="text-xs font-bold text-white">{liveLinkCopied ? 'Link copied!' : 'Copy link'}</span>
+              </button>
+              {isMasterAdmin && (
+                <>
+                  <div className="h-px bg-zinc-900 my-1" />
+                  <button
+                    onClick={() => void handleStopLive(menuLive)}
+                    className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+                  >
+                    <X className="w-4.5 h-4.5 text-red-400 shrink-0" />
+                    <span className="text-xs font-bold text-red-400">Stop live</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShareSheet && actionVideo && (
         <SharePostSheet
           type="video"
           linkCopied={shareLinkCopied}
-          onCopyLink={() => copyVideoLink(openVideo.id)}
+          onCopyLink={() => copyVideoLink(actionVideo.id)}
           onSendInChat={() => { setShowShareSheet(false); setShowShareToChat(true); }}
           onClose={() => setShowShareSheet(false)}
         />
       )}
-      {showShareToChat && openVideo && (
-        <SharePostToChatModal currentUser={currentUser} itemId={openVideo.id} itemType="video" onClose={() => setShowShareToChat(false)} />
+      {showShareToChat && actionVideo && (
+        <SharePostToChatModal currentUser={currentUser} itemId={actionVideo.id} itemType="video" onClose={() => setShowShareToChat(false)} />
       )}
       {showComments && openVideo && (
         <VideoCommentsSheet video={openVideo} currentUser={currentUser} isMasterAdmin={isMasterAdmin} onClose={() => setShowComments(false)} />
       )}
-      {showEditModal && openVideo && (
+      {showEditModal && actionVideo && (
         <EditVideoDetailsModal
-          video={openVideo}
+          video={actionVideo}
           onClose={() => setShowEditModal(false)}
           onSaved={(updated) => {
             patchVideo(updated.id, updated);

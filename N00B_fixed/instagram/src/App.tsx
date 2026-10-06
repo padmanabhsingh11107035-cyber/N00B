@@ -84,6 +84,7 @@ import { FindFriendsModal } from './components/Modals/FindFriendsModal';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { useUpdateAvailable } from './utils/appVersion';
+import { isInstalled } from './utils/pwaInstall';
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
 import { initialWatch, stepWatch, SESSION_ENDED_MESSAGE, type WatchState } from './utils/sessionWatch';
@@ -455,7 +456,10 @@ export default function App() {
   // the socket drops, with no cleanup needed beyond unsubscribing this one channel.
   useEffect(() => {
     if (!currentUser) return;
-    const platform = Capacitor.isNativePlatform() ? 'app' : 'web';
+    // "Installed" means either a true native (Capacitor) wrapper OR a PWA added to the Home Screen
+    // and launched standalone — Capacitor's own check alone misses that second, far more common case
+    // (which is what showed as "web" for an account genuinely using the installed Home Screen app).
+    const platform = (Capacitor.isNativePlatform() || isInstalled()) ? 'app' : 'web';
     const stopPresence = startPresenceHeartbeat(currentUser.id, platform);
     const stopLastSeen = startLastSeenHeartbeat(platform);
     return () => {

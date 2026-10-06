@@ -322,16 +322,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <Plus className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}
-          {/* Apply to join the SparkX team — hidden while admin has applications closed */}
-          {sparkxOpen && (
-            <button
-              onClick={() => setShowSparkXModal(true)}
-              className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
-              title="Join our SparkX team (IIT Bombay Techfest)"
-            >
-              <Rocket className="w-4 h-4" />
-            </button>
-          )}
+          {/* Apply to join the SparkX team */}
+          <button
+            onClick={() => setShowSparkXModal(true)}
+            className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+            title="Join our SparkX team (IIT Bombay Techfest)"
+          >
+            <Rocket className="w-4 h-4" />
+          </button>
 
           {/* Notifications Bar Trigger */}
           <button

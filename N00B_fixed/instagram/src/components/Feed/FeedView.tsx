@@ -24,7 +24,8 @@ import {
   Menu,
   Flame,
   Trophy,
-  ShoppingBag
+  ShoppingBag,
+  Music2
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -37,6 +38,7 @@ import { requestPostBonusOffer } from '../../services/api';
 
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
+const GuessTheSongView = React.lazy(() => import('../NoobRooms/GuessTheSongView').then((m) => ({ default: m.GuessTheSongView })));
 const LiveLoungePage = React.lazy(() => import('../Profile/LiveLoungePage').then((m) => ({ default: m.LiveLoungePage })));
 
 interface FeedViewProps {
@@ -133,6 +135,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showNoobMenu, setShowNoobMenu] = useState(false);
   const [showDailyNoob, setShowDailyNoob] = useState(false);
   const [showNoobRooms, setShowNoobRooms] = useState(false);
+  const [showGuessTheSong, setShowGuessTheSong] = useState(false);
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
@@ -624,6 +627,18 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 </div>
               </button>
               <button
+                onClick={() => { setShowNoobMenu(false); setShowGuessTheSong(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                  <Music2 className="w-4.5 h-4.5 text-cyan-400" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Guess the Song</span>
+                  <span className="text-[10px] text-zinc-400">A clip plays — pick the right title, score points</span>
+                </div>
+              </button>
+              <button
                 onClick={() => { setShowNoobMenu(false); setShowLiveLoungePage(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
@@ -659,6 +674,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {showNoobRooms && (
         <React.Suspense fallback={null}>
           <NoobRoomsLobbyView currentUser={currentUser} onClose={() => setShowNoobRooms(false)} />
+        </React.Suspense>
+      )}
+      {showGuessTheSong && (
+        <React.Suspense fallback={null}>
+          <GuessTheSongView currentUser={currentUser} onClose={() => setShowGuessTheSong(false)} />
         </React.Suspense>
       )}
       {showLiveLoungePage && (

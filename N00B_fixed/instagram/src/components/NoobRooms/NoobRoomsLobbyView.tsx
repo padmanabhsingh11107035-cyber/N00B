@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Users, Plus, Mic, Music2, Images, Gamepad2, MessageSquareQuote } from 'lucide-react';
+import { X, Users, Plus, Music2, Images, Gamepad2, MessageSquareQuote, Radio } from 'lucide-react';
 import { NoobRoom, NoobRoomActivityType, User } from '../../types';
 import { listNoobRooms, startNoobRoom } from '../../services/api';
 import { NoobVoiceRoomView } from './NoobVoiceRoomView';
@@ -10,13 +10,23 @@ interface NoobRoomsLobbyViewProps {
 }
 
 const ACTIVITY_META: Record<NoobRoomActivityType, { label: string; icon: React.ReactNode; color: string }> = {
-  guess_song: { label: 'Guess the Song', icon: <Music2 className="w-5 h-5" />, color: 'bg-purple-500/15 border-purple-500/30 text-purple-300' },
-  meme_battle: { label: 'Meme Battle', icon: <Images className="w-5 h-5" />, color: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
-  mini_game: { label: 'Mini Game Room', icon: <Gamepad2 className="w-5 h-5" />, color: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300' },
-  truth_or_dare: { label: 'Truth or Dare', icon: <MessageSquareQuote className="w-5 h-5" />, color: 'bg-red-500/15 border-red-500/30 text-red-300' }
+  guess_song: { label: 'Guess the Song', icon: <Music2 className="w-6 h-6" />, color: 'from-purple-500/25 to-purple-500/5 border-purple-500/30 text-purple-300' },
+  meme_battle: { label: 'Meme Battle', icon: <Images className="w-6 h-6" />, color: 'from-amber-500/25 to-amber-500/5 border-amber-500/30 text-amber-300' },
+  mini_game: { label: 'Mini Game Room', icon: <Gamepad2 className="w-6 h-6" />, color: 'from-cyan-500/25 to-cyan-500/5 border-cyan-500/30 text-cyan-300' },
+  truth_or_dare: { label: 'Truth or Dare', icon: <MessageSquareQuote className="w-6 h-6" />, color: 'from-red-500/25 to-red-500/5 border-red-500/30 text-red-300' }
 };
 
-const CATEGORIES = ['General', 'Vibe', 'Gaming', 'Study'];
+// Known categories get their own colored tile + emoji so the lobby reads at a glance; a custom
+// category typed on the create form still works fine, it just falls back to a plain mic tile.
+const CATEGORY_STYLE: Record<string, { emoji: string; color: string }> = {
+  Vibe: { emoji: '🎧', color: 'from-pink-500/20 to-pink-500/5 border-pink-500/30' },
+  Gaming: { emoji: '🎮', color: 'from-indigo-500/20 to-indigo-500/5 border-indigo-500/30' },
+  Study: { emoji: '📚', color: 'from-sky-500/20 to-sky-500/5 border-sky-500/30' },
+  General: { emoji: '🎙️', color: 'from-zinc-700/40 to-zinc-800/10 border-zinc-700' }
+};
+const DEFAULT_CATEGORY_STYLE = { emoji: '🎙️', color: 'from-emerald-500/15 to-emerald-500/5 border-[#00FF66]/30' };
+
+const SUGGESTED_CATEGORIES = ['Vibe', 'Gaming', 'Study', 'General'];
 
 export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentUser, onClose }) => {
   const [rooms, setRooms] = useState<NoobRoom[]>([]);
@@ -24,14 +34,16 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   const [openRoom, setOpenRoom] = useState<NoobRoom | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newCategory, setNewCategory] = useState('General');
+  const [newCategory, setNewCategory] = useState('Vibe');
+  const [customCategory, setCustomCategory] = useState('');
+  const [newDescription, setNewDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
   const load = () => { listNoobRooms().then((r) => { setRooms(r); setLoading(false); }); };
   useEffect(() => {
     load();
-    const interval = setInterval(load, 15000);
+    const interval = setInterval(load, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -39,12 +51,15 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   // someone taps a room instead of only starting that fetch at the moment they're trying to connect.
   useEffect(() => { void import('agora-rtc-sdk-ng'); }, []);
 
+  const effectiveCategory = () => (customCategory.trim() ? customCategory.trim() : newCategory);
+
   const handleCreate = async () => {
     const name = newName.trim();
-    if (!name) return;
+    const category = effectiveCategory();
+    if (!name || !category) return;
     setCreating(true);
     setCreateError('');
-    const res = await startNoobRoom(name, newCategory);
+    const res = await startNoobRoom(name, category, newDescription.trim());
     setCreating(false);
     if (!res.success || !res.roomId) {
       setCreateError(res.error || 'Could not start the room.');
@@ -52,7 +67,18 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
     }
     setShowCreate(false);
     setNewName('');
-    setOpenRoom({ id: res.roomId, name, category: newCategory, activityType: null, participantCount: 0, host: null, createdAt: new Date().toISOString() });
+    setCustomCategory('');
+    setNewDescription('');
+    setOpenRoom({
+      id: res.roomId,
+      name,
+      category,
+      description: newDescription.trim(),
+      activityType: null,
+      participantCount: 0,
+      host: null,
+      createdAt: new Date().toISOString()
+    });
   };
 
   if (openRoom) {
@@ -65,28 +91,31 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
-        <h1 className="text-base font-black italic tracking-tighter text-white">🔴 NOOB Rooms</h1>
+        <h1 className="text-base font-black italic tracking-tighter text-white flex items-center gap-2">
+          <Radio className="w-4.5 h-4.5 text-red-500" /> NOOB Rooms
+        </h1>
         <button onClick={onClose} className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer">
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-7 max-w-2xl mx-auto w-full">
         {activityRooms.length > 0 && (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {activityRooms.map((r) => {
               const meta = ACTIVITY_META[r.activityType!];
               return (
                 <button
                   key={r.id}
                   onClick={() => setOpenRoom(r)}
-                  className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border ${meta.color} cursor-pointer text-left`}
+                  className={`w-full flex items-center gap-4 p-5 rounded-3xl border bg-gradient-to-br ${meta.color} cursor-pointer text-left transition-transform hover:scale-[1.01]`}
                 >
-                  {meta.icon}
+                  <div className="w-14 h-14 rounded-2xl bg-black/30 flex items-center justify-center shrink-0">{meta.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold text-white block">{meta.label}</span>
-                    <span className="text-[11px] text-zinc-400 flex items-center gap-1">
-                      <Users className="w-3 h-3" /> {r.participantCount} {r.participantCount === 1 ? 'person' : 'people'}
+                    <span className="text-base font-black text-white block">{meta.label}</span>
+                    {r.description && <p className="text-[11px] text-zinc-300/80 mt-0.5 line-clamp-1">{r.description}</p>}
+                    <span className="text-xs font-bold flex items-center gap-1 mt-1.5">
+                      <Users className="w-3.5 h-3.5" /> {r.participantCount} {r.participantCount === 1 ? 'person' : 'people'}
                     </span>
                   </div>
                 </button>
@@ -95,12 +124,12 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
           </div>
         )}
 
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Live voice rooms</span>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
+              className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2.5 pr-3.5 py-2 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Start a room
             </button>
@@ -110,27 +139,30 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
           ) : voiceRooms.length === 0 ? (
             <div className="py-10 text-center text-zinc-500 text-xs">No one's hosting a room right now — start one!</div>
           ) : (
-            <div className="space-y-2.5">
-              {voiceRooms.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => setOpenRoom(r)}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-zinc-800 bg-zinc-900/40 hover:border-[#00FF66]/40 transition-colors cursor-pointer text-left"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
-                    <Mic className="w-4.5 h-4.5 text-zinc-300" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold text-white block truncate">{r.name}</span>
-                    <span className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                      <span>{r.category}</span>
-                      <span>•</span>
-                      <Users className="w-3 h-3" /> {r.participantCount}
-                      {r.host && <span>• hosted by @{r.host.username}</span>}
-                    </span>
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-3">
+              {voiceRooms.map((r) => {
+                const style = CATEGORY_STYLE[r.category] || DEFAULT_CATEGORY_STYLE;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => setOpenRoom(r)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-3xl border bg-gradient-to-br ${style.color} hover:border-[#00FF66]/50 transition-all cursor-pointer text-left`}
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-black/30 flex items-center justify-center shrink-0 text-2xl">{style.emoji}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-white truncate">{r.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-black/30 text-zinc-300 font-bold uppercase shrink-0">{r.category}</span>
+                      </div>
+                      {r.description && <p className="text-[11px] text-zinc-400 mt-0.5 line-clamp-1">{r.description}</p>}
+                      <span className="text-[11px] text-zinc-300 font-semibold flex items-center gap-1 mt-1">
+                        <Users className="w-3 h-3" /> {r.participantCount} {r.participantCount === 1 ? 'person' : 'people'}
+                        {r.host && <span className="text-zinc-500 font-normal">• hosted by @{r.host.username}</span>}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -140,34 +172,62 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
         <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={() => setShowCreate(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full sm:max-w-sm bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 space-y-3 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+            className="w-full sm:max-w-sm bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl p-4 space-y-3.5 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto"
           >
             <h2 className="text-sm font-bold text-white">Start a voice room</h2>
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              maxLength={60}
-              placeholder="Room name, e.g. Late Night Vibes"
-              autoFocus
-              className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
-            />
-            <div className="flex gap-2 flex-wrap">
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setNewCategory(c)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${
-                    newCategory === c ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Room name</label>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                maxLength={60}
+                placeholder="e.g. Late Night Vibes"
+                autoFocus
+                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+              />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Category</label>
+              <div className="flex gap-2 flex-wrap">
+                {SUGGESTED_CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => { setNewCategory(c); setCustomCategory(''); }}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors ${
+                      newCategory === c && !customCategory.trim() ? 'bg-white text-black' : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                maxLength={30}
+                placeholder="Or type your own category…"
+                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Description (optional)</label>
+              <textarea
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                maxLength={200}
+                rows={2}
+                placeholder="What's this room about?"
+                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66] resize-none"
+              />
+            </div>
+
             {createError && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">{createError}</div>}
             <button
               onClick={handleCreate}
-              disabled={creating || !newName.trim()}
+              disabled={creating || !newName.trim() || !effectiveCategory()}
               className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm disabled:opacity-40 cursor-pointer"
             >
               {creating ? 'Starting…' : 'Start room'}

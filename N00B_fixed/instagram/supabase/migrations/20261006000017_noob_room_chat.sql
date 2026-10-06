@@ -2,7 +2,7 @@
 -- Live Lounge's live_lounge_room_chat, but public (no "admitted" gate, since these rooms have no
 -- admission step at all) and with a media_url/media_type pair for non-text messages.
 
-create table public.noob_room_chat (
+create table if not exists public.noob_room_chat (
   id         uuid primary key default gen_random_uuid(),
   room_id    uuid not null references public.noob_rooms(id) on delete cascade,
   sender_id  uuid not null references public.profiles(id) on delete cascade,
@@ -11,13 +11,18 @@ create table public.noob_room_chat (
   media_type text check (media_type in ('image', 'video', 'gif', 'sticker')),
   created_at timestamptz not null default now()
 );
-create index noob_room_chat_room_idx on public.noob_room_chat (room_id, created_at desc);
+create index if not exists noob_room_chat_room_idx on public.noob_room_chat (room_id, created_at desc);
 alter table public.noob_room_chat enable row level security;
+drop policy if exists noob_room_chat_read on public.noob_room_chat;
 create policy noob_room_chat_read on public.noob_room_chat for select using (true);
 
 do $$
 begin
-  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+    and not exists (
+      select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'noob_room_chat'
+    )
+  then
     alter publication supabase_realtime add table public.noob_room_chat;
   end if;
 end

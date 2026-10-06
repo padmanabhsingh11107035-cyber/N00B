@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant, NoobRoomChatMessage } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant, NoobRoomChatMessage, SongGuessRound, SongGuessLeaderboardEntry } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -977,7 +977,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily' | 'songs';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -4068,9 +4068,9 @@ export async function listNoobRooms(): Promise<NoobRoom[]> {
   }
 }
 
-export async function startNoobRoom(name: string, category: string): Promise<{ success: boolean; roomId?: string; error?: string }> {
+export async function startNoobRoom(name: string, category: string, description: string): Promise<{ success: boolean; roomId?: string; error?: string }> {
   try {
-    return await rpc('start_noob_room', { p_name: name, p_category: category });
+    return await rpc('start_noob_room', { p_name: name, p_category: category, p_description: description });
   } catch (err) {
     return failWith(err, 'Could not start the room.');
   }
@@ -4155,6 +4155,81 @@ export function subscribeToNoobRoomChat(roomId: string, onInsert: (message: Noob
       })
     .subscribe();
   return () => { supabase.removeChannel(channel); };
+}
+
+// ----------------------------------------------------------------------------- Guess the Song
+
+function mapSongGuessRound(r: any): SongGuessRound {
+  return { ...r, clipUrl: r.clipUrl ? resolveMedia(r.clipUrl) : r.clipUrl };
+}
+
+export async function fetchSongGuessRound(): Promise<SongGuessRound | null> {
+  try {
+    if (!(await currentSession())) return null;
+    return mapSongGuessRound(await rpc<any>('get_song_guess_round'));
+  } catch {
+    return null;
+  }
+}
+
+export async function submitSongGuess(roundNumber: number, chosenIndex: number): Promise<{ success: boolean; isCorrect?: boolean; error?: string }> {
+  try {
+    return await rpc('submit_song_guess', { p_round_number: roundNumber, p_chosen_index: chosenIndex });
+  } catch (err) {
+    return failWith(err, 'Could not submit your guess.');
+  }
+}
+
+export async function fetchSongGuessLeaderboard(limit = 3): Promise<SongGuessLeaderboardEntry[]> {
+  try {
+    const list = (await rpc<any[]>('fetch_song_guess_leaderboard', { p_limit: limit })) || [];
+    return list.map((e) => ({ ...e, avatar: resolveMedia(e.avatar) }));
+  } catch {
+    return [];
+  }
+}
+
+export function subscribeToSongGuessRound(onChange: () => void): () => void {
+  const channel = supabase
+    .channel('song-guess-round')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'song_guess_round', filter: 'id=eq.1' }, onChange)
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+export async function adminAddSongGuessTrack(title: string, artist: string, audioUrl: string, clipStartSeconds = 0, clipLengthSeconds = 5): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('admin_add_song_guess_track', {
+      p_title: title, p_artist: artist, p_audio_url: toStoredMedia(audioUrl), p_clip_start_seconds: clipStartSeconds, p_clip_length_seconds: clipLengthSeconds
+    });
+  } catch (err) {
+    return failWith(err, 'Could not add that song.');
+  }
+}
+
+export interface AdminSongGuessTrack {
+  id: string;
+  title: string;
+  artist: string;
+  clipStartSeconds: number;
+  clipLengthSeconds: number;
+  createdAt: string;
+}
+
+export async function adminListSongGuessTracks(): Promise<AdminSongGuessTrack[]> {
+  try {
+    return (await rpc<any[]>('admin_list_song_guess_tracks')) || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function adminDeleteSongGuessTrack(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('admin_delete_song_guess_track', { p_id: id });
+  } catch (err) {
+    return failWith(err, 'Could not delete that song.');
+  }
 }
 
 // The DIY whiteboard is purely ephemeral (broadcast, never stored) — a fresh join just sees a blank

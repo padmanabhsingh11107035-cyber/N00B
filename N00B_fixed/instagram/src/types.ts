@@ -575,6 +575,7 @@ export interface NoobRoom {
   id: string;
   name: string;
   category: string;
+  description: string;
   activityType: NoobRoomActivityType | null;
   participantCount: number;
   host: { id: string; username: string; avatar: string } | null;
@@ -585,6 +586,28 @@ export interface NoobRoomParticipant {
   userId: string;
   username: string;
   avatar: string;
+}
+
+export interface SongGuessRound {
+  roundNumber: number;
+  options: string[];
+  phaseEndsAt: string;
+  myAnswer: { chosenIndex: number; isCorrect: boolean } | null;
+  clipUrl: string | null;
+  clipStartSeconds: number;
+  clipLengthSeconds: number;
+  revealedTitle: string | null;
+  revealedArtist: string | null;
+  myScore: number;
+  tracksReady: boolean;
+}
+
+export interface SongGuessLeaderboardEntry {
+  userId: string;
+  username: string;
+  avatar: string;
+  isVerified: boolean;
+  points: number;
 }
 
 export interface NoobRoomChatMessage {

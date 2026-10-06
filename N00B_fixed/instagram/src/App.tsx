@@ -208,6 +208,7 @@ export default function App() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);
   const [selectedVideoId, setSelectedVideoId] = useState<string | undefined>(undefined);
+  const [selectedPostId, setSelectedPostId] = useState<string | undefined>(undefined);
   const [viewingProfileUser, setViewingProfileUser] = useState<User | null>(null);
   const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
@@ -590,12 +591,11 @@ export default function App() {
       setPosts((prev) => (prev.some((p) => p.id === postId) ? prev : [post, ...prev]));
     }
     setActiveTab('feed');
-    setTimeout(() => {
-      const el = document.getElementById(`post-card-${postId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 150);
+    // FeedView paginates and shuffles its own order, so a post could easily sit outside whatever's
+    // currently rendered — handing it the id (like initialReelId for Reels) lets it guarantee the
+    // post is actually loaded/visible before trying to scroll, instead of this just hoping the DOM
+    // node already exists.
+    setSelectedPostId(postId);
   };
 
   const handleNavigateToUserProfile = (user: User) => {
@@ -1331,6 +1331,8 @@ export default function App() {
             onUserUpdated={(u) => setCurrentUser(u)}
             sparkxOpen={platformSettings?.sparkxOpen !== false}
             joinTeamOpen={platformSettings?.joinTeamOpen !== false}
+            initialPostId={selectedPostId}
+            onInitialPostIdHandled={() => setSelectedPostId(undefined)}
           />
         )}
 

@@ -79,6 +79,10 @@ interface FeedViewProps {
   onRefreshFeed: () => void;
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
+  // A specific post to scroll to and highlight (e.g. tapped from a profile grid or Explore) — the
+  // feed is shuffled and paginated, so without this the target post may not even be rendered yet.
+  initialPostId?: string;
+  onInitialPostIdHandled?: () => void;
   onNavigateToProfile?: (user: User) => void;
   onToggleFollowUser?: (userId: string) => Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean } | void>;
   // Admin Control Panel → Platform switches (both open unless switched off)
@@ -133,7 +137,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
   sparkxOpen = true,
   joinTeamOpen = true,
   allUsers = [],
-  onUserUpdated
+  onUserUpdated,
+  initialPostId,
+  onInitialPostIdHandled
 }) => {
   const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following'>('foryou');
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
@@ -228,6 +234,32 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   const paginatedPosts = filteredPosts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPosts.length;
+
+  // Deep-linking to one specific post (from a profile grid, Explore, etc.): the feed is shuffled and
+  // paginated, so the target post may not be in filteredPosts at all yet (wrong filter/tab) or may
+  // sit past the currently-rendered page — in either case scrollIntoView would silently find nothing
+  // and leave the view wherever it already was, which is exactly the "always lands on the top post"
+  // bug this fixes. Widening visibleCount to include it guarantees its DOM node exists before the
+  // scroll attempt below.
+  useEffect(() => {
+    if (!initialPostId) return;
+    const idx = filteredPosts.findIndex((p) => p.id === initialPostId);
+    if (idx === -1) {
+      if (activeFeedFilter !== 'foryou') setActiveFeedFilter('foryou');
+      if (activeCategory !== 'All') setActiveCategory('All');
+      return;
+    }
+    if (visibleCount <= idx) {
+      setVisibleCount(idx + 1);
+      return;
+    }
+    const t = setTimeout(() => {
+      document.getElementById(`post-card-${initialPostId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      onInitialPostIdHandled?.();
+    }, 150);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPostId, filteredPosts.length, visibleCount, activeFeedFilter, activeCategory]);
 
   // IntersectionObserver for lag-free infinite scrolling
   useEffect(() => {

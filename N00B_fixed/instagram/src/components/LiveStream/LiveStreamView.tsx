@@ -17,12 +17,14 @@ import {
   likeLiveStream,
   giftLiveStream,
   subscribeToLiveStreamComments,
+  subscribeToLiveStreamEnded,
   subscribeToLiveStreamHearts,
   broadcastLiveStreamHeart,
   fetchLiveStreams
 } from '../../services/api';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
+import { can } from '../../adminAccess';
 
 interface LiveStreamViewProps {
   currentUser: User;
@@ -53,6 +55,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   const [error, setError] = useState('');
   const [micOn, setMicOn] = useState(true);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const isMasterAdmin = can(currentUser, 'moderate_content');
 
   const videoRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -203,12 +206,34 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   useEffect(() => () => { void cleanup(); }, [cleanup]);
 
+  // A host has no way to find out an admin ended their stream from the outside — end_live_stream
+  // only touches the database row, it can't reach into this tab's own Agora session — so the host's
+  // own view listens for that row flipping to 'ended' and tears its broadcast down when it does.
+  useEffect(() => {
+    if (mode !== 'host' || !streamId || phase !== 'live') return;
+    const unsub = subscribeToLiveStreamEnded(streamId, () => {
+      setError('An admin ended your live stream.');
+      setPhase('ended');
+      void cleanup();
+    });
+    return unsub;
+  }, [mode, streamId, phase, cleanup]);
+
   const handleCloseTap = async () => {
     if (mode === 'host' && streamId) {
       await endLiveStream(streamId);
     } else if (streamId) {
       await leaveLiveStream(streamId);
     }
+    await cleanup();
+    onClose();
+  };
+
+  // The confirm dialog's "End Live" button — reached either as the host ending their own stream,
+  // or (new) an admin force-ending someone else's while just watching it, so this always ends the
+  // stream rather than merely leaving it the way a plain viewer close (handleCloseTap) would.
+  const confirmEndStream = async () => {
+    if (streamId) await endLiveStream(streamId);
     await cleanup();
     onClose();
   };
@@ -340,9 +365,21 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
                 <X className="w-3.5 h-3.5" /> End Live
               </button>
             ) : (
-              <button onClick={handleCloseTap} className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white">
-                <X className="w-4 h-4" />
-              </button>
+              <>
+                {/* Admin moderation: force-end someone else's stream, separate from just leaving it */}
+                {mode === 'view' && isMasterAdmin && (
+                  <button
+                    onClick={() => setShowEndConfirm(true)}
+                    title="Admin: stop this live stream for everyone"
+                    className="flex items-center gap-1 bg-red-600 rounded-full pl-2.5 pr-3 py-1.5 text-white text-xs font-bold"
+                  >
+                    <X className="w-3.5 h-3.5" /> Stop
+                  </button>
+                )}
+                <button onClick={handleCloseTap} className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -412,7 +449,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
                   Cancel
                 </button>
                 <button
-                  onClick={() => void handleCloseTap()}
+                  onClick={() => void confirmEndStream()}
                   className="flex-1 bg-red-600 text-white rounded-full py-2.5 text-sm font-semibold"
                 >
                   End Live

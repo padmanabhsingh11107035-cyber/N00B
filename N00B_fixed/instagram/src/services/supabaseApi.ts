@@ -3434,6 +3434,20 @@ async function fetchLiveStreamCommentSender(userId: string) {
 
 // Purely ephemeral — every viewer's heart-tap animation, decoupled from the durable total_likes counter
 // (likeLiveStream() above already persists the count; this is only "make the heart fly for everyone now").
+// Fires when this stream's own row flips to 'ended' without the host doing it themselves — the
+// signal a host's own view listens for to learn an admin force-ended their broadcast, since
+// end_live_stream only updates the database and has no way to reach into the host's Agora session.
+export function subscribeToLiveStreamEnded(streamId: string, onEnded: () => void): () => void {
+  const channel = supabase
+    .channel(`live-ended-${streamId}`)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `id=eq.${streamId}` },
+      (payload) => {
+        if ((payload.new as any)?.status === 'ended') onEnded();
+      })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
 export function subscribeToLiveStreamHearts(streamId: string, onHeart: () => void): () => void {
   const channel = supabase
     .channel(`live-hearts-${streamId}`, { config: { broadcast: { self: false } } })

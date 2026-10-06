@@ -243,6 +243,7 @@ export {
   likeLiveStream,
   giftLiveStream,
   subscribeToLiveStreamComments,
+  subscribeToLiveStreamEnded,
   subscribeToLiveStreamHearts,
   broadcastLiveStreamHeart,
   LIVE_LOUNGE_PRICE,

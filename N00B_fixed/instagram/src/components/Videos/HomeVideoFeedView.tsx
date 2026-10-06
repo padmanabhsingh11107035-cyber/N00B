@@ -13,6 +13,7 @@ import {
   fetchUserById,
   type LiveStreamSummary
 } from '../../services/api';
+import { can } from '../../adminAccess';
 
 const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 
@@ -47,6 +48,7 @@ type FilterChip = 'all' | 'live' | 'newest' | 'liked';
 // never appear here (separate table, separate feed function — see long_videos in the migrations),
 // and this page never appears inside Reels either; each content type has exactly one home.
 export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({ currentUser, onOpenUpload, onNavigateToProfile, refreshKey }) => {
+  const isMasterAdmin = can(currentUser, 'moderate_content');
   const [videos, setVideos] = useState<LongVideo[]>([]);
   const [liveStreams, setLiveStreams] = useState<LiveStreamSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,7 +245,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({ currentUse
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-zinc-800/80 shrink-0">
             <button onClick={() => setOpenVideo(null)} className="p-1.5 text-white cursor-pointer"><X className="w-5 h-5" /></button>
-            {(openVideo.userId === currentUser.id) && (
+            {(openVideo.userId === currentUser.id || isMasterAdmin) && (
               <button onClick={() => handleDelete(openVideo)} className="p-1.5 text-red-400 cursor-pointer" title="Delete video">
                 <Trash2 className="w-4 h-4" />
               </button>

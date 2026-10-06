@@ -20,7 +20,10 @@ import {
   Rocket,
   Handshake,
   Plus,
-  Coins
+  Coins,
+  Menu,
+  Flame,
+  Trophy
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -29,6 +32,8 @@ import { CommentsSheet } from './CommentsSheet';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
 import { requestPostBonusOffer } from '../../services/api';
+
+const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 
 interface FeedViewProps {
   currentUser: User;
@@ -116,6 +121,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
+  const [showNoobMenu, setShowNoobMenu] = useState(false);
+  const [showDailyNoob, setShowDailyNoob] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
 
   // Rolled once per mount, not re-rolled on every render — the amount has to stay the same between
@@ -284,9 +291,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
       </div>
       {/* 1. Minimalist Top Header */}
       <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-sm relative">
-        {/* Brand Wordmark */}
-        <div className="flex items-center gap-1 cursor-pointer select-none shrink-0">
-          <h1 className="text-lg font-black italic tracking-tighter text-white">
+        {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setShowNoobMenu(true)}
+            className="p-1.5 -ml-1 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+            title="More from NOOB"
+          >
+            <Menu className="w-4.5 h-4.5" />
+          </button>
+          <h1 className="text-lg font-black italic tracking-tighter text-white select-none">
             NOOB
           </h1>
         </div>
@@ -554,6 +568,51 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
       {showSparkXModal && <SparkXApplicationModal closed={!sparkxOpen} onClose={() => setShowSparkXModal(false)} />}
       {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
+
+      {/* NOOB's extra-features menu — the hamburger next to the wordmark */}
+      {showNoobMenu && (
+        <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start" onClick={() => setShowNoobMenu(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-black italic tracking-tighter text-white">NOOB</h2>
+              <button onClick={() => setShowNoobMenu(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
+                  <Flame className="w-4.5 h-4.5 text-[#00FF66]" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Daily NOOB</span>
+                  <span className="text-[10px] text-zinc-400">Today's challenge — win real points</span>
+                </div>
+              </button>
+              <div className="w-full p-3 rounded-xl flex items-center gap-3 text-left opacity-50 cursor-not-allowed">
+                <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
+                  <Trophy className="w-4.5 h-4.5 text-zinc-400" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">NOOB Rooms</span>
+                  <span className="text-[10px] text-zinc-400">Coming soon</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDailyNoob && (
+        <React.Suspense fallback={null}>
+          <DailyNoobView currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} onClose={() => setShowDailyNoob(false)} />
+        </React.Suspense>
+      )}
     </div>
   );
 };

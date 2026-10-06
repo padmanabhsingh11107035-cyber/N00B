@@ -561,6 +561,36 @@ export interface LongVideo {
   createdAt: string;
 }
 
+export interface DailyChallenge {
+  challengeDate: string;
+  prompt: string;
+  hasSubmitted: boolean;
+  myVoteEntryId?: string;
+}
+
+export interface DailyChallengeEntry {
+  id: string;
+  userId: string;
+  username: string;
+  userAvatar: string;
+  isVerified: boolean;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  caption: string;
+  votesCount: number;
+  createdAt: string;
+}
+
+export interface DailyChampion {
+  challengeDate: string;
+  userId: string;
+  username: string;
+  userAvatar: string;
+  isVerified: boolean;
+  votesCount: number;
+  prompt: string;
+}
+
 export interface Message {
   id: string;
   chatId: string;

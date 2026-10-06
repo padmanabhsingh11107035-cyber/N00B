@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -967,7 +967,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -1407,6 +1407,57 @@ export async function fetchLongVideoViewers(videoId: string): Promise<{ users: U
     });
   } catch (err) {
     return { users: [], error: errorText(err, 'Only the publisher can see who viewed it.') };
+  }
+}
+
+// ----------------------------------------------------------------------------- Daily NOOB challenge
+function mapDailyEntry(e: any): DailyChallengeEntry {
+  return { ...e, userAvatar: resolveMedia(e.userAvatar), mediaUrl: resolveMedia(e.mediaUrl) };
+}
+
+export async function fetchDailyChallenge(): Promise<DailyChallenge | null> {
+  try {
+    return await rpc<DailyChallenge>('get_daily_challenge');
+  } catch {
+    return null;
+  }
+}
+
+export async function submitDailyChallengeEntry(data: { mediaUrl: string; mediaType: 'image' | 'video'; caption?: string }): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('submit_daily_challenge_entry', {
+      p_media_url: toStoredMedia(data.mediaUrl),
+      p_media_type: data.mediaType,
+      p_caption: data.caption || ''
+    });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not submit your entry.') };
+  }
+}
+
+export async function voteDailyChallengeEntry(entryId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('vote_daily_challenge_entry', { p_entry_id: entryId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not cast your vote.') };
+  }
+}
+
+export async function fetchDailyChallengeEntries(date?: string): Promise<DailyChallengeEntry[]> {
+  try {
+    const res = await rpc<any[]>('fetch_daily_challenge_entries', date ? { p_date: date } : {});
+    return (res || []).map(mapDailyEntry);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchDailyChampions(limit = 20): Promise<DailyChampion[]> {
+  try {
+    const res = await rpc<any[]>('fetch_daily_champions', { p_limit: limit });
+    return (res || []).map((c: any) => ({ ...c, userAvatar: resolveMedia(c.userAvatar) }));
+  } catch {
+    return [];
   }
 }
 

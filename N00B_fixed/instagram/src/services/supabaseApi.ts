@@ -1417,7 +1417,12 @@ function mapDailyEntry(e: any): DailyChallengeEntry {
 
 export async function fetchDailyChallenge(): Promise<DailyChallenge | null> {
   try {
-    return await rpc<DailyChallenge>('get_daily_challenge');
+    const res = await rpc<any>('get_daily_challenge');
+    const purged: string[] = Array.isArray(res?.purgedMediaKeys)
+      ? res.purgedMediaKeys.filter((k: unknown): k is string => typeof k === 'string' && k.length > 0)
+      : [];
+    if (purged.length > 0) void supabase.storage.from(MEDIA_BUCKET).remove(purged);
+    return res as DailyChallenge;
   } catch {
     return null;
   }
@@ -1463,7 +1468,11 @@ export async function fetchDailyChampions(limit = 20): Promise<DailyChampion[]> 
 
 export async function deleteDailyChallengeEntry(entryId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    return await rpc('delete_daily_challenge_entry', { p_entry_id: entryId });
+    const res = await rpc<any>('delete_daily_challenge_entry', { p_entry_id: entryId });
+    if (res?.success && res?.mediaKey) {
+      void supabase.storage.from(MEDIA_BUCKET).remove([res.mediaKey]);
+    }
+    return { success: !!res?.success };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not delete your entry.') };
   }

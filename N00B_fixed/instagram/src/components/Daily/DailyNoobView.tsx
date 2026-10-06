@@ -113,7 +113,10 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
       })
     );
     const res = await voteDailyChallengeEntry(entry.id);
-    if (!res.success) await load();
+    if (!res.success) {
+      setError(res.error || 'Could not cast your vote.');
+      await load();
+    }
   };
 
   const isMasterAdmin = can(currentUser, 'moderate_content');
@@ -172,6 +175,8 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                 <p className="text-[11px] text-zinc-400 mt-2">{entries.length} {entries.length === 1 ? 'entry' : 'entries'} so far</p>
               </div>
 
+              {error && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">{error}</div>}
+
               {!challenge.hasSubmitted && (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 space-y-3">
                   <input
@@ -213,7 +218,6 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                       className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
                     />
                   )}
-                  {error && <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-400">{error}</div>}
                   {pickedFile && (
                     <button
                       onClick={handleSubmit}

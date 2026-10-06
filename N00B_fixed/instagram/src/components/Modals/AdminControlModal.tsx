@@ -40,6 +40,7 @@ import {
   Check,
   Link as LinkIcon,
   Smartphone,
+  BadgeCheck,
   Rocket,
   UserCircle,
   Bot,
@@ -1210,6 +1211,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     const isOnline = !!presence?.length;
                     const onApp = !!presence?.some((p) => p.platform === 'app');
                     const onWeb = !!presence?.some((p) => p.platform === 'web');
+                    // Has the installed app, not just a browser — live right now, or the last time they
+                    // were seen at all (so this still shows for someone currently offline).
+                    const hasApp = onApp || user.lastSeenPlatform === 'app';
 
                     return (
                       <div
@@ -1241,6 +1245,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-black text-white truncate">@{user.username}</span>
                               {user.isVerified && <VerifiedBadge size="sm" />}
+                              {hasApp && <BadgeCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" title="Has the NOOB app installed" />}
                               {isOnline ? (
                                 <span className="flex items-center gap-1 text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30 shrink-0">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

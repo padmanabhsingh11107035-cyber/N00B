@@ -19,7 +19,8 @@ import {
   Loader2,
   Rocket,
   Handshake,
-  Plus
+  Plus,
+  Coins
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -112,6 +113,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
+  const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
 
   // Feed order: frozen between re-renders (so scrolling never reshuffles content under someone's
@@ -398,6 +400,40 @@ export const FeedView: React.FC<FeedViewProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Earn-points nudge — posts, reels and long videos already award real NOOB Points on
+          publish; this just makes that visible instead of it being a silent background reward.
+          Deliberately left out of the story/instant creation flows, which don't earn points. */}
+      {onOpenPostCreation && !isEarnPointsBannerDismissed && (
+        <div className="w-full max-w-[480px] px-3 pt-2">
+          <button
+            onClick={onOpenPostCreation}
+            className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-[#00FF66]/15 via-zinc-900/90 to-zinc-950 border border-[#00FF66]/40 flex items-center justify-between gap-2 shadow-lg shadow-[#00FF66]/5 hover:border-[#00FF66] transition-all cursor-pointer text-left"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
+                <Coins className="w-3.5 h-3.5 text-[#00FF66]" />
+              </div>
+              <div className="truncate text-xs text-zinc-300">
+                <span className="font-bold text-white mr-1">Earn 25 NOOB Points</span>
+                <span className="text-zinc-300">— share a Post, Reel or Video</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00FF66] text-black font-extrabold">Post now</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEarnPointsBannerDismissed(true);
+                }}
+                className="text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </button>
         </div>
       )}
 

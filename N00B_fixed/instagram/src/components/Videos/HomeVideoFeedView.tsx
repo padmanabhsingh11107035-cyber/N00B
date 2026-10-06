@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check } from 'lucide-react';
-import { User, LongVideo } from '../../types';
+import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus } from 'lucide-react';
+import { User, LongVideo, LongVideoPlaylist } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { formatNoobPoints } from '../../utils/formatPoints';
@@ -9,6 +9,8 @@ import { SharePostSheet } from '../Common/SharePostSheet';
 import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { VideoCommentsSheet } from './VideoCommentsSheet';
 import { EditVideoDetailsModal } from './EditVideoDetailsModal';
+import { LongVideoListPage } from './LongVideoListPage';
+import { LongVideoPlaylistsView } from './LongVideoPlaylistsView';
 import { can } from '../../adminAccess';
 import {
   fetchLongVideos,
@@ -24,6 +26,11 @@ import {
   fetchLongVideoViewers,
   fetchUserById,
   endLiveStream,
+  fetchLongVideoHistory,
+  fetchLikedLongVideos,
+  fetchPlaylistsForVideo,
+  createLongVideoPlaylist,
+  toggleVideoInPlaylist,
   type LiveStreamSummary
 } from '../../services/api';
 
@@ -97,6 +104,17 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   // for a moderator, so it doesn't need the full video sheet's extra states.
   const [menuLive, setMenuLive] = useState<LiveStreamSummary | null>(null);
   const [liveLinkCopied, setLiveLinkCopied] = useState(false);
+
+  // Hamburger menu -> History / Playlist / Liked Videos, same pattern as the Home feed's own "NOOB" menu.
+  const [showFeedMenu, setShowFeedMenu] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showLikedVideos, setShowLikedVideos] = useState(false);
+  const [showPlaylists, setShowPlaylists] = useState(false);
+
+  // "Add to playlist" picker, opened from the "⋮" options sheet.
+  const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
+  const [addToPlaylistList, setAddToPlaylistList] = useState<(LongVideoPlaylist & { hasVideo: boolean })[]>([]);
+  const [addToPlaylistLoading, setAddToPlaylistLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -208,6 +226,37 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     else if (res.error) alert(res.error);
   };
 
+  const openAddToPlaylist = async (video: LongVideo) => {
+    setActionVideo(video);
+    setShowOptionsMenu(false);
+    setShowAddToPlaylist(true);
+    setAddToPlaylistLoading(true);
+    setAddToPlaylistList(await fetchPlaylistsForVideo(video.id));
+    setAddToPlaylistLoading(false);
+  };
+
+  const handleToggleVideoInPlaylist = async (playlistId: string) => {
+    if (!actionVideo) return;
+    const res = await toggleVideoInPlaylist(playlistId, actionVideo.id);
+    if (res.success) {
+      setAddToPlaylistList((prev) => prev.map((p) => (p.id === playlistId ? { ...p, hasVideo: !!res.inPlaylist, videosCount: p.videosCount + (res.inPlaylist ? 1 : -1) } : p)));
+    } else if (res.error) {
+      alert(res.error);
+    }
+  };
+
+  const handleCreatePlaylistForVideo = async () => {
+    const name = prompt('Name your playlist:');
+    if (!name || !name.trim() || !actionVideo) return;
+    const res = await createLongVideoPlaylist(name.trim());
+    if (res.success && res.id) {
+      await toggleVideoInPlaylist(res.id, actionVideo.id);
+      setAddToPlaylistList(await fetchPlaylistsForVideo(actionVideo.id));
+    } else {
+      alert(res.error || 'Could not create the playlist.');
+    }
+  };
+
   const handleToggleComments = async (video: LongVideo) => {
     const res: any = await toggleLongVideoComments(video.id);
     if ('isCommentsDisabled' in res) patchVideo(video.id, { isCommentsDisabled: res.isCommentsDisabled });
@@ -312,7 +361,16 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
             </div>
           ) : (
             <>
-              <h1 className="text-lg font-black italic tracking-tighter text-white">Feed</h1>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => setShowFeedMenu(true)}
+                  className="p-1 -ml-1 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+                  title="History, Playlist & Liked Videos"
+                >
+                  <Menu className="w-4.5 h-4.5" />
+                </button>
+                <h1 className="text-lg font-black italic tracking-tighter text-white">Feed</h1>
+              </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setShowSearch(true)} className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer" title="Search videos">
                   <Search className="w-4 h-4" />
@@ -461,6 +519,13 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 <Bookmark className={`w-4.5 h-4.5 shrink-0 ${actionVideo.isSaved ? 'text-[#00FF66] fill-current' : 'text-zinc-400'}`} />
                 <span className="text-xs font-bold text-white">{actionVideo.isSaved ? 'Saved' : 'Save'}</span>
               </button>
+              <button
+                onClick={() => void openAddToPlaylist(actionVideo)}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <ListPlus className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
+                <span className="text-xs font-bold text-white">Add to playlist</span>
+              </button>
 
               {canModerate(actionVideo) && (
                 <>
@@ -574,6 +639,134 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
           onNavigateToUser={onNavigateToProfile}
           onClose={() => setShowLikesSheet(false)}
         />
+      )}
+
+      {showFeedMenu && (
+        <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start" onClick={() => setShowFeedMenu(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-black italic tracking-tighter text-white">Feed</h2>
+              <button onClick={() => setShowFeedMenu(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+            <div className="space-y-1">
+              <button
+                onClick={() => { setShowFeedMenu(false); setShowHistory(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                  <Clock className="w-4.5 h-4.5 text-zinc-300" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">History</span>
+                  <span className="text-[10px] text-zinc-400">Videos you've watched</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowFeedMenu(false); setShowPlaylists(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                  <ListVideo className="w-4.5 h-4.5 text-zinc-300" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Playlist</span>
+                  <span className="text-[10px] text-zinc-400">Saved videos & your playlists</span>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowFeedMenu(false); setShowLikedVideos(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                  <Heart className="w-4.5 h-4.5 text-red-400" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Liked Videos</span>
+                  <span className="text-[10px] text-zinc-400">Videos you've liked</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <LongVideoListPage
+          title="History"
+          icon={<Clock className="w-4.5 h-4.5" />}
+          emptyIcon={<Clock className="w-8 h-8 text-zinc-700" />}
+          emptyText="Videos you watch will show up here."
+          loadingText="Loading your watch history…"
+          fetcher={fetchLongVideoHistory}
+          onClose={() => setShowHistory(false)}
+          onOpenVideo={(v) => { setShowHistory(false); setOpenVideo(v); }}
+        />
+      )}
+      {showLikedVideos && (
+        <LongVideoListPage
+          title="Liked Videos"
+          icon={<Heart className="w-4.5 h-4.5" />}
+          emptyIcon={<Heart className="w-8 h-8 text-zinc-700" />}
+          emptyText="Videos you like will show up here."
+          loadingText="Loading your liked videos…"
+          fetcher={fetchLikedLongVideos}
+          onClose={() => setShowLikedVideos(false)}
+          onOpenVideo={(v) => { setShowLikedVideos(false); setOpenVideo(v); }}
+        />
+      )}
+      {showPlaylists && (
+        <LongVideoPlaylistsView
+          onClose={() => setShowPlaylists(false)}
+          onOpenVideo={(v) => { setShowPlaylists(false); setOpenVideo(v); }}
+        />
+      )}
+
+      {showAddToPlaylist && actionVideo && (
+        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={() => setShowAddToPlaylist(false)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-xs bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[70vh] flex flex-col"
+          >
+            <div className="p-4 border-b border-zinc-800 flex items-center justify-between shrink-0">
+              <h2 className="text-sm font-bold text-white truncate pr-4">Add to playlist</h2>
+              <button onClick={() => setShowAddToPlaylist(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer shrink-0">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+            <div className="p-2 space-y-0.5 overflow-y-auto">
+              <button
+                onClick={() => void handleCreatePlaylistForVideo()}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <Plus className="w-4.5 h-4.5 text-[#00FF66] shrink-0" />
+                <span className="text-xs font-bold text-white">New playlist</span>
+              </button>
+              {addToPlaylistLoading ? (
+                <div className="py-8 flex items-center justify-center text-zinc-500 text-xs">Loading…</div>
+              ) : addToPlaylistList.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-zinc-500">No playlists yet — create one above.</p>
+              ) : (
+                addToPlaylistList.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => void handleToggleVideoInPlaylist(p.id)}
+                    className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer"
+                  >
+                    <span className="text-xs font-bold text-white truncate">{p.name}</span>
+                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${p.hasVideo ? 'bg-[#00FF66] border-[#00FF66]' : 'border-zinc-700'}`}>
+                      {p.hasVideo && <Check className="w-3 h-3 text-black" />}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

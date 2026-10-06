@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
+import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -1367,6 +1367,83 @@ export async function fetchSavedLongVideos(): Promise<LongVideo[]> {
     return ((await rpc<any[]>('saved_long_videos')) || []).map(mapLongVideo);
   } catch {
     return [];
+  }
+}
+
+export async function fetchLikedLongVideos(): Promise<LongVideo[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('liked_long_videos')) || []).map(mapLongVideo);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchLongVideoHistory(): Promise<LongVideo[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return ((await rpc<any[]>('history_long_videos')) || []).map(mapLongVideo);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchMyLongVideoPlaylists(): Promise<LongVideoPlaylist[]> {
+  try {
+    if (!(await currentSession())) return [];
+    const res = (await rpc<any[]>('fetch_my_long_video_playlists')) || [];
+    return res.map((p) => ({ ...p, coverThumbnail: p.coverThumbnail ? resolveMedia(p.coverThumbnail) : p.coverThumbnail }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchPlaylistsForVideo(videoId: string): Promise<(LongVideoPlaylist & { hasVideo: boolean })[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return (await rpc<any[]>('fetch_my_long_video_playlists_with_membership', { p_video_id: videoId })) || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createLongVideoPlaylist(name: string): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    return await rpc('create_long_video_playlist', { p_name: name });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not create the playlist.') };
+  }
+}
+
+export async function renameLongVideoPlaylist(playlistId: string, name: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('rename_long_video_playlist', { p_id: playlistId, p_name: name });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not rename the playlist.') };
+  }
+}
+
+export async function deleteLongVideoPlaylist(playlistId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await rpc('delete_long_video_playlist', { p_id: playlistId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not delete the playlist.') };
+  }
+}
+
+export async function fetchLongVideoPlaylistItems(playlistId: string): Promise<LongVideo[]> {
+  try {
+    return ((await rpc<any[]>('fetch_long_video_playlist_items', { p_playlist_id: playlistId })) || []).map(mapLongVideo);
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleVideoInPlaylist(playlistId: string, videoId: string): Promise<{ success: boolean; inPlaylist?: boolean; error?: string }> {
+  try {
+    return await rpc('toggle_video_in_playlist', { p_playlist_id: playlistId, p_video_id: videoId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update the playlist.') };
   }
 }
 

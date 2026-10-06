@@ -561,6 +561,14 @@ export interface LongVideo {
   createdAt: string;
 }
 
+export interface LongVideoPlaylist {
+  id: string;
+  name: string;
+  videosCount: number;
+  createdAt: string;
+  coverThumbnail?: string;
+}
+
 export interface DailyChallenge {
   challengeDate: string;
   prompt: string;

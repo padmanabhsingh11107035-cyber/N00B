@@ -35,9 +35,12 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
     currentUser.statusNote &&
     (!currentUser.statusNote.expiresAt || Date.now() < currentUser.statusNote.expiresAt);
 
-  // Deduplicate stories by user or show unique story entries
+  // Deduplicate stories by user or show unique story entries. The ring shown has to reflect that
+  // person's stories as a whole (any unviewed -> colorful ring), not just whichever one of their
+  // stories happened to be picked as the representative tray entry.
   const uniqueStories: Story[] = [];
   const seenUserIds = new Set<string>();
+  const anyUnviewedByUser = new Map<string, boolean>();
 
   for (const s of stories) {
     const key = s.userId || s.username;
@@ -45,6 +48,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
       seenUserIds.add(key);
       uniqueStories.push(s);
     }
+    if (!s.isViewed) anyUnviewedByUser.set(key, true);
   }
 
   return (
@@ -112,7 +116,9 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
         </div>
 
         {/* Active Stories from Following */}
-        {uniqueStories.map((story) => (
+        {uniqueStories.map((story) => {
+          const hasUnviewed = anyUnviewedByUser.get(story.userId || story.username) ?? !story.isViewed;
+          return (
           <button
             key={story.id}
             id={`story-item-${story.id}`}
@@ -121,13 +127,17 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
             title={`View ${story.username}'s Story`}
           >
             <div
-              className={`w-16 h-16 rounded-full p-[2px] transition-transform duration-200 group-hover:scale-105 ${
-                story.isCloseFriendsOnly
-                  ? 'bg-gradient-to-tr from-[#00FF66] via-emerald-400 to-green-300 shadow-[0_0_10px_rgba(0,255,102,0.3)]'
-                  : 'bg-gradient-to-tr from-rose-500 via-amber-400 via-emerald-400 via-sky-500 to-purple-600 shadow-[0_0_10px_rgba(236,72,153,0.3)]'
+              className={`w-16 h-16 rounded-full transition-transform duration-200 group-hover:scale-105 ${
+                !hasUnviewed
+                  ? 'p-0'
+                  : `p-[2px] ${
+                      story.isCloseFriendsOnly
+                        ? 'bg-gradient-to-tr from-[#00FF66] via-emerald-400 to-green-300 shadow-[0_0_10px_rgba(0,255,102,0.3)]'
+                        : 'bg-gradient-to-tr from-rose-500 via-amber-400 via-emerald-400 via-sky-500 to-purple-600 shadow-[0_0_10px_rgba(236,72,153,0.3)]'
+                    }`
               }`}
             >
-              <div className="w-full h-full rounded-full p-[2px] bg-black">
+              <div className={`w-full h-full rounded-full bg-black ${!hasUnviewed ? 'p-0' : 'p-[2px]'}`}>
                 <img
                   src={story.userAvatar || '/noob-logo.svg.jpeg'}
                   alt={story.username}
@@ -145,7 +155,8 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
               )}
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* Enlarged Status Note Viewer with Auto-playing Song */}

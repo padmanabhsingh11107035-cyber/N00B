@@ -312,6 +312,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
         {/* Action Icons (Notification Bar, Refresh, Chat) */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Apply to join the SparkX team */}
+          <button
+            onClick={() => setShowSparkXModal(true)}
+            className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+            title="Join our SparkX team (IIT Bombay Techfest)"
+          >
+            <Rocket className="w-4 h-4" />
+          </button>
+
           {/* Create — moved here from the bottom nav bar, which now carries the Home video tab instead */}
           {onOpenPostCreation && (
             <button
@@ -322,14 +331,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <Plus className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}
-          {/* Apply to join the SparkX team */}
-          <button
-            onClick={() => setShowSparkXModal(true)}
-            className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
-            title="Join our SparkX team (IIT Bombay Techfest)"
-          >
-            <Rocket className="w-4 h-4" />
-          </button>
 
           {/* Notifications Bar Trigger */}
           <button

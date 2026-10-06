@@ -132,8 +132,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [messages, setMessages] = useState<LiveLoungeRoomChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
 
-  const [micOn, setMicOn] = useState(true);
-  const [cameraOn, setCameraOn] = useState(true);
+  const [micOn, setMicOn] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [flippingCamera, setFlippingCamera] = useState(false);
   const [sharingScreen, setSharingScreen] = useState(false);
@@ -240,21 +240,10 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
 
       await withTimeout(client.join(join.appId, join.channelName, join.token, myUid));
 
-      // Acquired separately with allSettled (not Promise.all) so a device with no working microphone
-      // still joins camera-only — Promise.all's rejection would have made the successfully-acquired
-      // camera track unreachable to close, leaving the camera indicator lit for no reason.
-      const [micResult, camResult] = await withTimeout(Promise.allSettled([
-        AgoraRTC.createMicrophoneAudioTrack(),
-        AgoraRTC.createCameraVideoTrack()
-      ]));
-      if (camResult.status === 'rejected') {
-        if (micResult.status === 'fulfilled') micResult.value.close();
-        throw camResult.reason;
-      }
-      camTrackRef.current = camResult.value;
-      micTrackRef.current = micResult.status === 'fulfilled' ? micResult.value : null;
-      await withTimeout(client.publish(micTrackRef.current ? [micTrackRef.current, camTrackRef.current] : [camTrackRef.current]));
-
+      // Mic and camera start OFF and unpublished — joining a room should never itself trigger a
+      // permission prompt. A track is only ever acquired lazily, the moment someone taps the mic or
+      // camera button (see handleToggleMic/handleToggleCamera), so the prompt appears exactly when
+      // they asked for it, not as a surprise the instant they land in the room.
       setPhase('live');
       callStartRef.current = Date.now();
       refreshParticipants(id);
@@ -265,7 +254,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         camTrackRef.current?.close();
         await clientRef.current?.leave();
       } catch { /* best-effort teardown of a connection that never fully came up */ }
-      setError(friendlyAgoraError(err, 'Could not start your camera/microphone.'));
+      setError(friendlyAgoraError(err, 'Could not join this room.'));
       setEndReason('error');
       setPhase('ended');
     }
@@ -541,8 +530,43 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     return () => { alive = false; clearInterval(interval); };
   }, [phase, roomId, isHost, cleanup]);
 
-  const handleToggleMic = () => { micTrackRef.current?.setEnabled(!micOn); setMicOn((v) => !v); };
-  const handleToggleCamera = () => { camTrackRef.current?.setEnabled(!cameraOn); setCameraOn((v) => !v); };
+  // The track itself is only ever acquired here, on first tap — this is the one moment the browser's
+  // permission prompt should appear. Every tap after that just enables/disables the track already
+  // held (Agora stops the camera/mic hardware on disable and restarts it on enable, no repeat prompt).
+  const handleToggleMic = async () => {
+    const client = clientRef.current;
+    if (!client) return;
+    if (!micTrackRef.current) {
+      try {
+        const track = await AgoraRTC.createMicrophoneAudioTrack();
+        micTrackRef.current = track;
+        await client.publish(track);
+        setMicOn(true);
+      } catch (err) {
+        setError(friendlyAgoraError(err, 'Could not access your microphone.'));
+      }
+      return;
+    }
+    micTrackRef.current.setEnabled(!micOn);
+    setMicOn((v) => !v);
+  };
+  const handleToggleCamera = async () => {
+    const client = clientRef.current;
+    if (!client) return;
+    if (!camTrackRef.current) {
+      try {
+        const track = await AgoraRTC.createCameraVideoTrack();
+        camTrackRef.current = track;
+        await client.publish(track);
+        setCameraOn(true);
+      } catch (err) {
+        setError(friendlyAgoraError(err, 'Could not access your camera.'));
+      }
+      return;
+    }
+    camTrackRef.current.setEnabled(!cameraOn);
+    setCameraOn((v) => !v);
+  };
 
   // Swaps the published camera track for one on the other physical camera (front/back) — Agora
   // has no in-place "flip" for an existing track, so this closes the old one and publishes a

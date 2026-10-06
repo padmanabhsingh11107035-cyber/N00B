@@ -353,16 +353,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
             )}
           </button>
 
-          {/* Refresh simulated feed */}
-          <button
-            onClick={handleRefresh}
-            className={`p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer ${
-              isRefreshing ? 'animate-spin text-[#00FF66]' : ''
-            }`}
-            title="Refresh Feed"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
         </div>
       </header>
 

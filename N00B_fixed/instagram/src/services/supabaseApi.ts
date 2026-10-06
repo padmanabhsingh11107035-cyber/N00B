@@ -430,6 +430,18 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   return { success: true };
 }
 
+// Rolls (or re-rolls) this account's post-bonus offer — the server remembers the exact amount and
+// credits it the moment a post/reel/video actually gets published, so the client never gets to pick
+// the number itself (that only ever happens by calling a claim RPC with a self-chosen amount).
+export async function requestPostBonusOffer(): Promise<{ amount: number } | { error: string }> {
+  try {
+    const res = await rpc<{ amount: number }>('request_post_bonus_offer');
+    return { amount: res.amount };
+  } catch (err) {
+    return { error: errorText(err, 'Could not fetch your bonus offer.') };
+  }
+}
+
 // ----------------------------------------------------------------------------- single-device login
 export interface ActiveDeviceSession {
   deviceId: string;

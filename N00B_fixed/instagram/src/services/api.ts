@@ -15,6 +15,7 @@ export {
   requestLoginOtp,
   verifyLoginOtp,
   logoutUser,
+  requestPostBonusOffer,
   checkAndRegisterDevice,
   revokeDeviceSession,
   subscribeToDeviceRevoked,

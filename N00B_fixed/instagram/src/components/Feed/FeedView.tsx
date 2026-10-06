@@ -28,6 +28,7 @@ import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
+import { requestPostBonusOffer } from '../../services/api';
 
 interface FeedViewProps {
   currentUser: User;
@@ -114,7 +115,20 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
+  const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
+
+  // Rolled once per mount, not re-rolled on every render — the amount has to stay the same between
+  // when it's shown and when "Accept" is tapped, otherwise the number on screen would lie.
+  useEffect(() => {
+    if (!onOpenPostCreation) return;
+    let alive = true;
+    requestPostBonusOffer().then((res) => {
+      if (alive && 'amount' in res) setBonusOfferAmount(res.amount);
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Feed order: frozen between re-renders (so scrolling never reshuffles content under someone's
   // thumb) and only rebuilt when the actual set of posts changes — a genuinely new post, one
@@ -403,37 +417,44 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       )}
 
-      {/* Earn-points nudge — posts, reels and long videos already award real NOOB Points on
-          publish; this just makes that visible instead of it being a silent background reward.
+      {/* Random post-bonus offer — posts, reels and long videos normally award a flat 25 NOOB
+          Points on publish; the server rolls a one-off 5,000,000–30,000,000 bonus instead when
+          this offer is accepted, credited the moment anything actually gets published. Rejecting
+          just dismisses it; it quietly expires server-side and that next post earns the normal 25.
           Deliberately left out of the story/instant creation flows, which don't earn points. */}
-      {onOpenPostCreation && !isEarnPointsBannerDismissed && (
+      {onOpenPostCreation && !isEarnPointsBannerDismissed && bonusOfferAmount !== null && (
         <div className="w-full max-w-[480px] px-3 pt-2">
-          <button
-            onClick={onOpenPostCreation}
-            className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-[#00FF66]/15 via-zinc-900/90 to-zinc-950 border border-[#00FF66]/40 flex items-center justify-between gap-2 shadow-lg shadow-[#00FF66]/5 hover:border-[#00FF66] transition-all cursor-pointer text-left"
-          >
+          <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-[#00FF66]/15 via-zinc-900/90 to-zinc-950 border border-[#00FF66]/40 shadow-lg shadow-[#00FF66]/10">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
-                <Coins className="w-3.5 h-3.5 text-[#00FF66]" />
+              <div className="w-9 h-9 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
+                <Coins className="w-4.5 h-4.5 text-[#00FF66]" />
               </div>
-              <div className="truncate text-xs text-zinc-300">
-                <span className="font-bold text-white mr-1">Earn 25 NOOB Points</span>
-                <span className="text-zinc-300">— share a Post, Reel or Video</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] text-zinc-400 font-semibold">You've been offered</p>
+                <p className="text-lg font-black text-[#00FF66] leading-tight tracking-tight">
+                  {bonusOfferAmount.toLocaleString()} <span className="text-xs font-bold text-zinc-300">NOOB Points</span>
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00FF66] text-black font-extrabold">Post now</span>
+            <p className="text-[11px] text-zinc-400 mt-2">Post a Post, Reel or Video now and it's credited instantly.</p>
+            <div className="flex items-center gap-2 mt-3">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
                   setIsEarnPointsBannerDismissed(true);
+                  onOpenPostCreation();
                 }}
-                className="text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer"
+                className="flex-1 py-2 rounded-xl bg-[#00FF66] text-black text-xs font-extrabold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
               >
-                <X className="w-3.5 h-3.5" />
+                Accept &amp; Post
+              </button>
+              <button
+                onClick={() => setIsEarnPointsBannerDismissed(true)}
+                className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-bold cursor-pointer hover:text-white transition-colors"
+              >
+                Reject
               </button>
             </div>
-          </button>
+          </div>
         </div>
       )}
 

@@ -182,6 +182,10 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
         <p className="text-zinc-400 text-xs max-w-xs">
           Go live from the + page any time, or start/join a Live Lounge meeting room below — this unlock is forever, so you won't need to pay again.
         </p>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30">
+          <Lock className="w-3 h-3 text-purple-300" />
+          <span className="text-[11px] font-semibold text-purple-200">Create your end-to-end encrypted, private meeting room</span>
+        </div>
         {pendingInvites.length > 0 && (
           <div className="w-full max-w-sm space-y-2">
             {pendingInvites.map((inv) => (

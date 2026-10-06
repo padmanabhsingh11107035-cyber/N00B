@@ -131,7 +131,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
     if (!onOpenPostCreation) return;
     let alive = true;
     requestPostBonusOffer().then((res) => {
-      if (alive && 'amount' in res) setBonusOfferAmount(res.amount);
+      if (alive && res.available && typeof res.amount === 'number') setBonusOfferAmount(res.amount);
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -290,12 +290,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       </div>
       {/* 1. Minimalist Top Header */}
-      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex items-center justify-between gap-2 shadow-sm relative">
+      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3 py-2.5 flex items-center gap-1 shadow-sm">
         {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => setShowNoobMenu(true)}
-            className="p-1.5 -ml-1 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+            className="p-1 -ml-1 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
             title="More from NOOB"
           >
             <Menu className="w-4.5 h-4.5" />
@@ -305,43 +305,47 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </h1>
         </div>
 
-        {/* Feed Switcher — centered in the header regardless of the logo/icons widths on either side */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] shrink-0">
-          {/* Apply to join the NOOB team — just left of the switcher (the switcher itself stays centred) */}
+        {/* Feed Switcher — centered in the remaining space between the left and right zones, in
+            normal flex flow (not absolutely positioned) so it can never overlap either of them,
+            no matter how wide they get as more icons are added either side. */}
+        <div className="flex-1 min-w-0 flex items-center justify-center gap-1">
+          {/* Apply to join the NOOB team — a normal flex sibling now, not absolutely placed */}
           {joinTeamOpen && (
             <button
               onClick={() => setShowJoinUsModal(true)}
-              className="absolute right-full mr-1.5 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-violet-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+              className="p-1 text-zinc-400 hover:text-violet-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer shrink-0"
               title="Join the NOOB team"
               aria-label="Join the NOOB team"
             >
               <Handshake className="w-4 h-4" />
             </button>
           )}
-          <button
-            onClick={() => setActiveFeedFilter('foryou')}
-            className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
-              activeFeedFilter === 'foryou'
-                ? 'bg-rose-600 text-white shadow-sm font-bold'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            For You
-          </button>
-          <button
-            onClick={() => setActiveFeedFilter('following')}
-            className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
-              activeFeedFilter === 'following'
-                ? 'bg-rose-600 text-white shadow-sm font-bold'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Following
-          </button>
+          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] shrink-0">
+            <button
+              onClick={() => setActiveFeedFilter('foryou')}
+              className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+                activeFeedFilter === 'foryou'
+                  ? 'bg-rose-600 text-white shadow-sm font-bold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              For You
+            </button>
+            <button
+              onClick={() => setActiveFeedFilter('following')}
+              className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+                activeFeedFilter === 'following'
+                  ? 'bg-rose-600 text-white shadow-sm font-bold'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              Following
+            </button>
+          </div>
         </div>
 
         {/* Action Icons (Notification Bar, Refresh, Chat) */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Apply to join the SparkX team */}
           <button
             onClick={() => setShowSparkXModal(true)}

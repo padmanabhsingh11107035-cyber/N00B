@@ -283,7 +283,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
 
             {round.myAnswer && (
               <p className="text-center text-xs text-zinc-400">
-                {round.myAnswer.isCorrect ? '🎉 Correct! +1 point.' : `Not quite — it was "${round.revealedTitle}".`} Next song coming up…
+                {round.myAnswer.isCorrect ? '🎉 Correct! +1,000,000 NOOB Points credited instantly.' : `Not quite — it was "${round.revealedTitle}".`} Next song coming up…
               </p>
             )}
             {error && <p className="text-center text-[11px] text-red-400">{error}</p>}

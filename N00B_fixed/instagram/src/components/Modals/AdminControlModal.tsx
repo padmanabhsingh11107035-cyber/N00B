@@ -36,6 +36,7 @@ import {
   ToggleRight,
   ShoppingBag,
   Share2,
+  Trophy,
   Copy,
   Check,
   Link as LinkIcon,
@@ -261,6 +262,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [joinTeamOpen, setJoinTeamOpen] = useState(true);
   const [liveLoungeMaintenance, setLiveLoungeMaintenance] = useState(false);
   const [liveLoungeMaintenanceMessage, setLiveLoungeMaintenanceMessage] = useState('');
+  const [noobRoomsEnabled, setNoobRoomsEnabled] = useState(true);
+  const [noobRoomsDisabledMessage, setNoobRoomsDisabledMessage] = useState('');
   // Explore pins (main admin): userId -> when it was pinned. Pinned accounts come first in Explore, newest on top.
   const [explorePins, setExplorePins] = useState<Record<string, string>>({});
   const [pinBusyId, setPinBusyId] = useState<string | null>(null);
@@ -395,6 +398,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setJoinTeamOpen(s.joinTeamOpen !== false);
     setLiveLoungeMaintenance(!!s.liveLoungeMaintenance);
     setLiveLoungeMaintenanceMessage(s.liveLoungeMaintenanceMessage || '');
+    setNoobRoomsEnabled(s.noobRoomsEnabled !== false);
+    setNoobRoomsDisabledMessage(s.noobRoomsDisabledMessage || '');
     setStoreOrdersEnabled(shop.storeEnabled);
     if (daily) setDailyNoobCurrentPrompt(daily.prompt);
     setLoadingSettings(false);
@@ -598,6 +603,22 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setSavingSettings(true);
     const res = await adminSetPlatformSettings({ liveLoungeMaintenanceMessage });
     if (res.success) setStatusMessage({ text: 'Live Lounge lock message saved.', type: 'success' });
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleToggleNoobRoomsEnabled = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ noobRoomsEnabled: !noobRoomsEnabled });
+    if (res.success && res.settings) setNoobRoomsEnabled(res.settings.noobRoomsEnabled !== false);
+    else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleSaveNoobRoomsDisabledMessage = async () => {
+    setSavingSettings(true);
+    const res = await adminSetPlatformSettings({ noobRoomsDisabledMessage });
+    if (res.success) setStatusMessage({ text: 'NOOB Rooms off-message saved.', type: 'success' });
     else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
     setSavingSettings(false);
   };
@@ -2393,6 +2414,42 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         />
                         <button
                           onClick={handleSaveLiveLoungeMaintenanceMessage}
+                          disabled={savingSettings}
+                          className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-white flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-red-400" /> NOOB Rooms on/off
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          {noobRoomsEnabled
+                            ? 'NOOB Rooms is open to everyone. The lobby and any open room poll Supabase continuously while in use.'
+                            : "Off: starting or joining a room shows the message below instead (you're exempt). Turn it back on any time — nothing is deleted."}
+                        </span>
+                      </div>
+                      <button onClick={handleToggleNoobRoomsEnabled} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="NOOB Rooms on/off">
+                        {noobRoomsEnabled ? <ToggleRight className="w-9 h-9 text-[#00FF66]" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-zinc-400 block mb-1.5">Message shown while off</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={noobRoomsDisabledMessage}
+                          onChange={(e) => setNoobRoomsDisabledMessage(e.target.value)}
+                          className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-red-400"
+                        />
+                        <button
+                          onClick={handleSaveNoobRoomsDisabledMessage}
                           disabled={savingSettings}
                           className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
                         >

@@ -3422,6 +3422,10 @@ export interface PlatformSettings {
   // Live Lounge (the meeting room, not Live Streaming) maintenance lock — migration 20260929000009
   liveLoungeMaintenance?: boolean;
   liveLoungeMaintenanceMessage?: string;
+  // NOOB Rooms on/off toggle, for cutting the lobby/room polling's Supabase egress on demand —
+  // migration 20261007000002
+  noobRoomsEnabled?: boolean;
+  noobRoomsDisabledMessage?: string;
 }
 
 export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
@@ -3430,7 +3434,7 @@ export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
   } catch {
     return {
       signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false, sparkxOpen: true, joinTeamOpen: true,
-      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: ''
+      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: '', noobRoomsEnabled: true, noobRoomsDisabledMessage: ''
     };
   }
 }
@@ -3444,6 +3448,8 @@ export async function adminSetPlatformSettings(payload: {
   joinTeamOpen?: boolean;
   liveLoungeMaintenance?: boolean;
   liveLoungeMaintenanceMessage?: string;
+  noobRoomsEnabled?: boolean;
+  noobRoomsDisabledMessage?: string;
 }): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
   try {
     const settings = await rpc<PlatformSettings>('admin_set_platform_settings', {
@@ -3454,7 +3460,9 @@ export async function adminSetPlatformSettings(payload: {
       ...(payload.sparkxOpen !== undefined ? { p_sparkx_open: payload.sparkxOpen } : {}),
       ...(payload.joinTeamOpen !== undefined ? { p_join_team_open: payload.joinTeamOpen } : {}),
       ...(payload.liveLoungeMaintenance !== undefined ? { p_live_lounge_maintenance: payload.liveLoungeMaintenance } : {}),
-      ...(payload.liveLoungeMaintenanceMessage !== undefined ? { p_live_lounge_maintenance_message: payload.liveLoungeMaintenanceMessage } : {})
+      ...(payload.liveLoungeMaintenanceMessage !== undefined ? { p_live_lounge_maintenance_message: payload.liveLoungeMaintenanceMessage } : {}),
+      ...(payload.noobRoomsEnabled !== undefined ? { p_noob_rooms_enabled: payload.noobRoomsEnabled } : {}),
+      ...(payload.noobRoomsDisabledMessage !== undefined ? { p_noob_rooms_disabled_message: payload.noobRoomsDisabledMessage } : {})
     });
     return { success: true, settings };
   } catch (err) {

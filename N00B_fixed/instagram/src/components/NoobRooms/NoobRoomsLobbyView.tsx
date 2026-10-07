@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, Users, Plus, Music2, Images, Gamepad2, MessageSquareQuote, Radio } from 'lucide-react';
+import { X, Users, Plus, Music2, Images, Gamepad2, MessageSquareQuote, Radio, PowerOff } from 'lucide-react';
 import { NoobRoom, NoobRoomActivityType, User } from '../../types';
-import { listNoobRooms, startNoobRoom } from '../../services/api';
+import { listNoobRooms, startNoobRoom, fetchPublicPlatformSettings } from '../../services/api';
+import { isMainAdmin } from '../../adminAccess';
 
 // Agora (plus everything NoobVoiceRoomView pulls in for it) only needs to load once someone actually
 // joins a room — bundling it into the lobby's own chunk made just opening the room LIST slow, which
@@ -54,16 +55,33 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
+  // Admin on/off switch for cutting NOOB Rooms' Supabase egress on demand — checked BEFORE anything
+  // else starts polling, since the whole point of turning it off is that nothing here should make any
+  // of these calls at all, not just have the server reject them. Admin stays exempt (can still open it
+  // to test), same as every other maintenance-style lock in this app.
+  const [lock, setLock] = useState<{ checked: boolean; locked: boolean; message: string }>({ checked: false, locked: false, message: '' });
+  useEffect(() => {
+    fetchPublicPlatformSettings().then((s) =>
+      setLock({ checked: true, locked: s.noobRoomsEnabled === false, message: s.noobRoomsDisabledMessage || 'NOOB Rooms is turned off right now. Check back soon.' })
+    );
+  }, []);
+  const blocked = lock.locked && !isMainAdmin(currentUser);
+
   const load = () => { listNoobRooms().then((r) => { setRooms(r); setLoading(false); }); };
   useEffect(() => {
+    if (!lock.checked || blocked) return;
     load();
     const interval = setInterval(load, 8000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lock.checked, blocked]);
 
   // Warms the Agora SDK's chunk the moment the lobby opens, so it's already downloaded by the time
   // someone taps a room instead of only starting that fetch at the moment they're trying to connect.
-  useEffect(() => { void import('agora-rtc-sdk-ng'); }, []);
+  useEffect(() => {
+    if (!lock.checked || blocked) return;
+    void import('agora-rtc-sdk-ng');
+  }, [lock.checked, blocked]);
 
   const effectiveCategory = () => (customCategory.trim() ? customCategory.trim() : newCategory);
 
@@ -100,6 +118,25 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
       <React.Suspense fallback={<RoomLoadingSpinner />}>
         <NoobVoiceRoomView currentUser={currentUser} room={openRoom} onClose={() => { setOpenRoom(null); load(); }} />
       </React.Suspense>
+    );
+  }
+
+  if (!lock.checked) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-[#00FF66] animate-spin" />
+      </div>
+    );
+  }
+
+  if (blocked) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <button onClick={onClose} className="absolute top-4 right-4 text-zinc-400 hover:text-white cursor-pointer"><X className="w-6 h-6" /></button>
+        <PowerOff className="w-10 h-10 text-zinc-600" />
+        <h2 className="text-white text-base font-semibold">NOOB Rooms is turned off</h2>
+        <p className="text-zinc-500 text-sm max-w-sm">{lock.message}</p>
+      </div>
     );
   }
 

@@ -43,7 +43,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const [selectedCokeId, setSelectedCokeId] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [storeEnabled, setStoreEnabled] = useState(true);
+  const [foodStallEnabled, setFoodStallEnabled] = useState(true);
   const [deliveryFeeSetting, setDeliveryFeeSetting] = useState(0);
   const [upiId, setUpiId] = useState('');
 
@@ -67,7 +67,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     Promise.all([fetchStoreProducts(), fetchSettings(), getShopDetails()]).then(([list, settings, shop]) => {
       if (!alive) return;
       setProducts(list);
-      setStoreEnabled(settings.storeEnabled !== false);
+      setFoodStallEnabled(!!settings.foodStallEnabled);
       setDeliveryFeeSetting(settings.storeDeliveryFee ?? 0);
       setUpiId(settings.storeUpiId || '');
       if (shop.success) {
@@ -191,7 +191,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
           {children}
           <button
             onClick={() => addToCart(product.id)}
-            disabled={!storeEnabled}
+            disabled={!foodStallEnabled}
             className="w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" /> Add to Cart
@@ -225,7 +225,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
       </header>
 
       <div className="flex-1 overflow-y-auto p-3">
-        {!storeEnabled && (
+        {!foodStallEnabled && (
           <div className="mb-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold text-center">
             The stall isn't taking orders right now — browse away, but checkout is paused.
           </div>
@@ -305,7 +305,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                     setShowCart(false);
                     setShowCheckout(true);
                   }}
-                  disabled={!storeEnabled}
+                  disabled={!foodStallEnabled}
                   className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40"
                 >
                   Checkout

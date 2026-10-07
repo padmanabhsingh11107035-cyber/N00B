@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ClipboardList, Loader2, Package, Pencil, RefreshCw, Save, Search, UtensilsCrossed } from 'lucide-react';
+import { ClipboardList, Loader2, Package, Pencil, PowerOff, RefreshCw, Save, Search, UtensilsCrossed } from 'lucide-react';
 import { AppSettings, StoreOrder, StoreOrderStatus, StoreProduct } from '../../types';
-import { fetchAdminStoreOrders, fetchSettings, fetchStoreProducts, setStoreOrderStatus, updateSettings } from '../../services/api';
+import { fetchAdminStoreOrders, fetchSettings, fetchStoreProducts, setFoodStallSettings, setStoreOrderStatus, updateSettings, updateStoreProduct } from '../../services/api';
 import { OrderCard } from '../Store/OrdersView';
 import { OrderTrackingScreen } from '../Store/OrderTrackingScreen';
 import { ProductEditorModal } from '../Store/ProductEditorModal';
@@ -17,7 +17,8 @@ const FILTERS: StatusFilter[] = ['all', 'placed', 'confirmed', 'ready', 'complet
 // nothing here is a second, divergent copy of that logic.
 export const AdminFoodStallPanel: React.FC = () => {
   const [settings, setSettingsState] = useState<AppSettings | null>(null);
-  const [storeEnabled, setStoreEnabled] = useState(true);
+  const [foodStallVisible, setFoodStallVisible] = useState(false);
+  const [foodStallEnabled, setFoodStallEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('0');
   const [upiId, setUpiId] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -27,6 +28,7 @@ export const AdminFoodStallPanel: React.FC = () => {
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<StoreProduct | null>(null);
+  const [stockBusyId, setStockBusyId] = useState<string | null>(null);
 
   const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -39,7 +41,8 @@ export const AdminFoodStallPanel: React.FC = () => {
   const loadSettings = useCallback(async () => {
     const s = await fetchSettings();
     setSettingsState(s);
-    setStoreEnabled(s.storeEnabled !== false);
+    setFoodStallVisible(!!s.foodStallVisible);
+    setFoodStallEnabled(!!s.foodStallEnabled);
     setDeliveryFee(String(s.storeDeliveryFee ?? 0));
     setUpiId(s.storeUpiId || '');
   }, []);
@@ -80,7 +83,8 @@ export const AdminFoodStallPanel: React.FC = () => {
     setSavingSettings(true);
     setSettingsError(null);
     try {
-      const updated = await updateSettings({ storeEnabled, storeDeliveryFee: fee, storeUpiId: trimmedUpi });
+      await setFoodStallSettings(foodStallVisible, foodStallEnabled);
+      const updated = await updateSettings({ storeDeliveryFee: fee, storeUpiId: trimmedUpi });
       setSettingsState(updated);
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 2000);
@@ -89,6 +93,22 @@ export const AdminFoodStallPanel: React.FC = () => {
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const toggleStock = async (p: StoreProduct) => {
+    setStockBusyId(p.id);
+    const res = await updateStoreProduct(p.id, {
+      name: p.name,
+      price: p.price,
+      description: p.description,
+      media: p.media,
+      inStock: !p.inStock,
+      stock: p.stock,
+      options: p.options,
+      variants: p.variants.map((v) => ({ options: v.options, stock: v.stock }))
+    });
+    setStockBusyId(null);
+    if (res.success && res.product) setProducts((prev) => prev.map((x) => (x.id === p.id ? res.product! : x)));
   };
 
   const foodProductIds = new Set(products.map((p) => p.id));
@@ -139,8 +159,19 @@ export const AdminFoodStallPanel: React.FC = () => {
         </h3>
 
         <label className="flex items-center justify-between gap-4 cursor-pointer text-xs text-zinc-300">
-          <span className="font-bold text-white">Accept orders</span>
-          <input type="checkbox" checked={storeEnabled} onChange={(e) => setStoreEnabled(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
+          <div>
+            <span className="block font-bold text-white">Show Food Stall</span>
+            <span className="block text-[10px] text-zinc-500 leading-snug">Off hides it everywhere — the home page banner and the ☰ menu both disappear for every user.</span>
+          </div>
+          <input type="checkbox" checked={foodStallVisible} onChange={(e) => setFoodStallVisible(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
+        </label>
+
+        <label className="flex items-center justify-between gap-4 cursor-pointer text-xs text-zinc-300 pt-2 border-t border-zinc-800/80">
+          <div>
+            <span className="block font-bold text-white">Accept Food Stall orders</span>
+            <span className="block text-[10px] text-zinc-500 leading-snug">Separate from Shop NOOB's own "Accept orders" — people can still browse while this is off, but checkout is paused.</span>
+          </div>
+          <input type="checkbox" checked={foodStallEnabled} onChange={(e) => setFoodStallEnabled(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
         </label>
 
         <div className="space-y-1.5">
@@ -194,8 +225,21 @@ export const AdminFoodStallPanel: React.FC = () => {
                 <img src={p.media[0]?.url} alt="" className="w-10 h-10 rounded-lg object-cover bg-zinc-900 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-white truncate">{p.name}</p>
-                  <p className="text-[11px] text-zinc-500">{formatPrice(p.price)} · {p.inStock ? 'In stock' : 'Out of stock'}</p>
+                  <p className={`text-[11px] ${p.inStock ? 'text-zinc-500' : 'text-red-400 font-bold'}`}>
+                    {formatPrice(p.price)} · {p.inStock ? 'In stock' : 'Out of stock'}
+                  </p>
                 </div>
+                <button
+                  onClick={() => toggleStock(p)}
+                  disabled={stockBusyId === p.id}
+                  className={`px-2.5 py-2 rounded-lg text-[10px] font-bold cursor-pointer shrink-0 flex items-center gap-1 disabled:opacity-50 ${
+                    p.inStock ? 'bg-zinc-800 hover:bg-red-500/20 text-zinc-300 hover:text-red-300' : 'bg-[#00FF66]/15 text-[#00FF66] hover:bg-[#00FF66]/25'
+                  }`}
+                  title={p.inStock ? 'Mark out of stock' : 'Bring back in stock'}
+                >
+                  {stockBusyId === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PowerOff className="w-3.5 h-3.5" />}
+                  {p.inStock ? 'Out of stock' : 'In stock'}
+                </button>
                 <button
                   onClick={() => setEditingProduct(p)}
                   className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer shrink-0"

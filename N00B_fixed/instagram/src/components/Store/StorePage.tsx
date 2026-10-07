@@ -109,7 +109,10 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const loadData = async () => {
     setLoading(true);
     try {
-      const [p, s] = await Promise.all([fetchStoreProducts(), fetchSettings()]);
+      const [allProducts, s] = await Promise.all([fetchStoreProducts(), fetchSettings()]);
+      // Food Stall products live in the same table but have their own dedicated storefront — never
+      // show them in the general Shop NOOB catalog.
+      const p = allProducts.filter((x) => x.category !== 'food_stall');
       setProducts(p);
       setSettings(s);
       // stock may have changed since the cart was filled: drop what is gone and trim what is now more than is left

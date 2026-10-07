@@ -68,6 +68,7 @@ export {
   clearAllNotifications,
   fetchSettings,
   updateSettings,
+  setFoodStallSettings,
   updateUserSettings,
   uploadMediaFile,
   updateFullProfile,

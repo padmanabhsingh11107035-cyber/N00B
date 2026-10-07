@@ -832,5 +832,10 @@ export interface AppSettings {
   // The shop owner's own UPI VPA (e.g. "name@okhdfcbank") — shown to a buyer who picks UPI at
   // checkout so they can pay it directly from their own UPI app. Empty/unset hides the UPI option.
   storeUpiId?: string;
+  // NOOB Food Stall: its own pair of switches, independent of storeEnabled/the general Shop NOOB.
+  // foodStallVisible controls whether anyone even sees the entry point (home banner + ☰ menu);
+  // foodStallEnabled controls whether its own checkout is accepting orders. Both start off.
+  foodStallVisible?: boolean;
+  foodStallEnabled?: boolean;
 }
 

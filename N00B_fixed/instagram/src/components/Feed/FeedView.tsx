@@ -40,7 +40,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { isMainAdmin } from '../../adminAccess';
-import { requestPostBonusOffer } from '../../services/api';
+import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
@@ -161,6 +161,17 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
   const [showFoodStall, setShowFoodStall] = useState(false);
+  const [foodStallVisible, setFoodStallVisible] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetchSettings().then((s) => {
+      if (alive) setFoodStallVisible(!!s.foodStallVisible);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [showNoobAi, setShowNoobAi] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
@@ -556,20 +567,23 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 2b. Food Stall banner — sits right on the home feed (not buried in a menu), three lines:
-          title, a short description, and the call to action. */}
-      <button
-        onClick={() => setShowFoodStall(true)}
-        className="w-full max-w-[480px] px-3 mt-2 text-left cursor-pointer"
-      >
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-zinc-900 border border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3 hover:border-amber-400/50 transition-colors">
-          <div className="min-w-0">
-            <p className="text-sm font-black text-white leading-tight">🍔 NOOB Food Stall</p>
-            <p className="text-[11px] text-amber-200/80 leading-tight mt-0.5">Burgers, bhel, fries, manchurian &amp; coke</p>
-            <p className="text-[11px] font-bold text-amber-400 leading-tight mt-0.5">Tap to order now →</p>
+          title, a short description, and the call to action. Hidden entirely unless the admin has
+          switched "Show Food Stall" on. */}
+      {foodStallVisible && (
+        <button
+          onClick={() => setShowFoodStall(true)}
+          className="w-full max-w-[480px] px-3 mt-2 text-left cursor-pointer"
+        >
+          <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-zinc-900 border border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3 hover:border-amber-400/50 transition-colors">
+            <div className="min-w-0">
+              <p className="text-sm font-black text-white leading-tight">🍔 NOOB Food Stall</p>
+              <p className="text-[11px] text-amber-200/80 leading-tight mt-0.5">Burgers, bhel, fries, manchurian &amp; coke</p>
+              <p className="text-[11px] font-bold text-amber-400 leading-tight mt-0.5">Tap to order now →</p>
+            </div>
+            <span className="shrink-0 text-2xl">🧋</span>
           </div>
-          <span className="shrink-0 text-2xl">🧋</span>
-        </div>
-      </button>
+        </button>
+      )}
 
       {/* 3. Category Topic Filter Pills */}
       <div className="w-full max-w-[480px] px-3 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -739,18 +753,20 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-400">Browse products & your cart</span>
                 </div>
               </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowFoodStall(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-base">
-                  🍔
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">NOOB Food Stall</span>
-                  <span className="text-[10px] text-zinc-400">Burgers, bhel, fries, manchurian &amp; coke</span>
-                </div>
-              </button>
+              {foodStallVisible && (
+                <button
+                  onClick={() => { setShowNoobMenu(false); setShowFoodStall(true); }}
+                  className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-base">
+                    🍔
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-white block">NOOB Food Stall</span>
+                    <span className="text-[10px] text-zinc-400">Burgers, bhel, fries, manchurian &amp; coke</span>
+                  </div>
+                </button>
+              )}
               <button
                 onClick={() => { setShowNoobMenu(false); setShowNoobAi(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"

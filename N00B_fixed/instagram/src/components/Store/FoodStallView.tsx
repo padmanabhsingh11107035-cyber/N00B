@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
+import confetti from 'canvas-confetti';
 import {
   X, ShoppingCart, Plus, Minus, Loader2, Check, Store as StoreIcon, Truck,
   Banknote, Smartphone, Copy, CheckCircle2, ClipboardList
@@ -32,6 +33,12 @@ const CSS = `
 .fs-tilt-0{transform:rotateX(4deg) rotateY(-6deg)}
 .fs-tilt-1{transform:rotateX(-3deg) rotateY(6deg)}
 .fs-tilt-2{transform:rotateX(5deg) rotateY(4deg)}
+@keyframes fs-pop{0%{transform:scale(1)}35%{transform:scale(1.35)}65%{transform:scale(.92)}100%{transform:scale(1)}}
+.fs-bump{animation:fs-pop .4s ease-out}
+@keyframes fs-toast-in{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+.fs-toast{animation:fs-toast-in .25s ease-out}
+@keyframes fs-check-pop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.fs-check-pop{animation:fs-check-pop .5s cubic-bezier(.34,1.56,.64,1)}
 `;
 
 const FOOD_CATEGORY = 'food_stall';
@@ -128,6 +135,8 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const [placedOrderNo, setPlacedOrderNo] = useState<number | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [upiCopied, setUpiCopied] = useState(false);
+  const [cartToast, setCartToast] = useState<string | null>(null);
+  const [cartBump, setCartBump] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -173,7 +182,16 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
 
   const addToCart = (productId: string) => {
     persistCart({ ...cart, [productId]: (cart[productId] || 0) + 1 });
+    const added = products.find((p) => p.id === productId);
+    setCartToast(`Added ${added?.name || 'item'} to cart`);
+    setCartBump((n) => n + 1);
   };
+
+  useEffect(() => {
+    if (!cartToast) return;
+    const t = window.setTimeout(() => setCartToast(null), 1600);
+    return () => window.clearTimeout(t);
+  }, [cartToast]);
 
   const changeQty = (productId: string, delta: number) => {
     const next = { ...cart };
@@ -257,6 +275,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     setPlacedOrderNo(res.order.orderNo);
     persistCart({});
     setShowCheckout(false);
+    confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#00FF66', '#22d3ee', '#ffffff'], zIndex: 9999 });
   };
 
 
@@ -280,7 +299,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
           <button onClick={() => setShowCart(true)} className="touch-manipulation relative p-2 rounded-full bg-zinc-900 border border-zinc-800 text-white cursor-pointer">
             <ShoppingCart className="w-4.5 h-4.5" />
             {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#00FF66] text-black text-[10px] font-black flex items-center justify-center">
+              <span key={cartBump} className="fs-bump absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#00FF66] text-black text-[10px] font-black flex items-center justify-center">
                 {cartCount}
               </span>
             )}
@@ -564,7 +583,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
       {placedOrderNo !== null && (
         <div className="fixed inset-0 z-[99] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setPlacedOrderNo(null)}>
           <div className="w-full max-w-xs bg-zinc-950 border border-[#00FF66]/40 rounded-3xl p-6 text-center space-y-3" onClick={(e) => e.stopPropagation()}>
-            <div className="w-14 h-14 rounded-full bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center mx-auto">
+            <div className="fs-check-pop w-14 h-14 rounded-full bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center mx-auto">
               <Check className="w-7 h-7 text-[#00FF66]" />
             </div>
             <h3 className="text-base font-black text-white">Order #{placedOrderNo} placed!</h3>
@@ -576,6 +595,14 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
               Done
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Added-to-cart toast */}
+      {cartToast && (
+        <div className="fs-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[97] bg-zinc-900/95 backdrop-blur-md border border-[#00FF66]/40 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 whitespace-nowrap">
+          <CheckCircle2 className="w-4 h-4 text-[#00FF66] shrink-0" />
+          {cartToast}
         </div>
       )}
     </div>

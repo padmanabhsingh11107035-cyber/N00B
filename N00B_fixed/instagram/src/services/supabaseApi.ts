@@ -4251,6 +4251,36 @@ export function subscribeToSongGuessRound(onChange: () => void): () => void {
   return () => { supabase.removeChannel(channel); };
 }
 
+export interface SongGuessPresenceEntry { userId: string; username: string; avatar: string; isVerified?: boolean }
+
+// "Who else is playing right now" — a plain Supabase Presence channel, same ephemeral/nothing-ever-
+// written-to-a-table idea as the voice-call and NOOB Rooms presence: tracked only while this screen
+// is open, gone the instant it closes.
+export function joinSongGuessPresence(
+  me: { id: string; username: string; avatar: string; isVerified?: boolean },
+  onChange: (state: Record<string, SongGuessPresenceEntry>) => void
+): () => void {
+  const channel = supabase.channel('song-guess-presence', { config: { presence: { key: me.id } } });
+  channel.on('presence', { event: 'sync' }, () => {
+    const raw = channel.presenceState<SongGuessPresenceEntry>();
+    const out: Record<string, SongGuessPresenceEntry> = {};
+    for (const key of Object.keys(raw)) {
+      const entry = raw[key]?.[0] as unknown as SongGuessPresenceEntry | undefined;
+      if (entry) out[key] = entry;
+    }
+    onChange(out);
+  });
+  channel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      void channel.track({ userId: me.id, username: me.username, avatar: me.avatar, isVerified: me.isVerified }).catch(() => {});
+    }
+  });
+  return () => {
+    void channel.untrack().catch(() => {});
+    void supabase.removeChannel(channel);
+  };
+}
+
 export async function adminAddSongGuessTrack(title: string, artist: string, youtubeVideoId: string, clipStartSeconds = 0, clipLengthSeconds = 5): Promise<{ success: boolean; error?: string }> {
   try {
     return await rpc('admin_add_song_guess_track', {

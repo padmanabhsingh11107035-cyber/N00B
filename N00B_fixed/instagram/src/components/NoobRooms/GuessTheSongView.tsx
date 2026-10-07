@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Music2, Trophy, Play, Pause, Check, Plus, Trash2, Youtube, Bot } from 'lucide-react';
+import { X, Music2, Trophy, Play, Pause, Check, Plus, Trash2, Youtube, Bot, Users, Crown } from 'lucide-react';
 import { User } from '../../types';
 import type { SongGuessRound, SongGuessLeaderboardEntry } from '../../types';
 import {
@@ -7,11 +7,12 @@ import {
   submitSongGuess,
   fetchSongGuessLeaderboard,
   subscribeToSongGuessRound,
+  joinSongGuessPresence,
   adminAddSongGuessTrack,
   adminListSongGuessTracks,
   adminDeleteSongGuessTrack
 } from '../../services/api';
-import type { AdminSongGuessTrack } from '../../services/api';
+import type { AdminSongGuessTrack, SongGuessPresenceEntry } from '../../services/api';
 import { can } from '../../adminAccess';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -64,9 +65,10 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
   // done — guessing from the title list before you've even heard the song defeats the point.
   const [optionsRevealed, setOptionsRevealed] = useState(false);
   const [error, setError] = useState('');
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState<SongGuessLeaderboardEntry[]>([]);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [presence, setPresence] = useState<Record<string, SongGuessPresenceEntry>>({});
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +100,34 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
     advanceTimerRef.current = setTimeout(() => void load(), ms);
     return () => { if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current); };
   }, [round?.roundNumber, round?.phaseEndsAt]);
+
+  // Who else currently has this screen open — a plain presence channel, nothing ever written to a
+  // table, gone the instant this view closes.
+  useEffect(() => {
+    const stop = joinSongGuessPresence(
+      { id: currentUser.id, username: currentUser.username, avatar: currentUser.avatar || '', isVerified: currentUser.isVerified },
+      setPresence
+    );
+    return stop;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A purely visual, once-a-second countdown of this round's remaining time — the actual advance is
+  // still driven by the single setTimeout above, this is just so the screen shows it ticking down.
+  useEffect(() => {
+    if (!round?.phaseEndsAt) { setSecondsLeft(0); return; }
+    const endsAt = new Date(round.phaseEndsAt).getTime();
+    const tick = () => setSecondsLeft(Math.max(0, Math.round((endsAt - Date.now()) / 1000)));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [round?.phaseEndsAt]);
+
+  // Keeps the inline Top 3 card fresh — right when a new round starts, and right after this device
+  // answers (since a correct guess changes standings immediately).
+  useEffect(() => {
+    void fetchSongGuessLeaderboard(3).then(setLeaderboard);
+  }, [round?.roundNumber, !!round?.myAnswer]);
 
   useEffect(() => {
     setPlaying(false);
@@ -166,13 +196,15 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
     void load();
   };
 
-  const openLeaderboard = async () => {
-    setShowLeaderboard(true);
-    setLeaderboard(await fetchSongGuessLeaderboard(3));
-  };
+  const liveCount = Object.keys(presence).length;
+  const ROUND_SECONDS = 20; // matches the backend's phase_ends_at = now() + interval '20 seconds'
+  const timerPct = Math.max(0, Math.min(100, (secondsLeft / ROUND_SECONDS) * 100));
+
+  const RANK_STYLE = ['from-amber-400 to-yellow-500 text-black', 'from-zinc-300 to-zinc-400 text-black', 'from-amber-700 to-orange-800 text-white'];
+  const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-purple-950/30 via-zinc-950 to-zinc-950 flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
         <h1 className="text-base font-black italic tracking-tighter text-white flex items-center gap-2">
           <Music2 className="w-4.5 h-4.5 text-purple-400" /> Guess the Song
@@ -183,9 +215,12 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               <Plus className="w-4.5 h-4.5" />
             </button>
           )}
-          <button onClick={() => void openLeaderboard()} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-bold cursor-pointer">
-            <Trophy className="w-3.5 h-3.5" /> Top 3
-          </button>
+          {liveCount > 0 && (
+            <span className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {liveCount} live
+            </span>
+          )}
           <button onClick={onClose} className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
@@ -207,21 +242,60 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               <p className="text-2xl font-black text-[#00FF66]">{round.myScore}</p>
             </div>
 
-            <div className="flex items-center gap-2.5 justify-center px-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shrink-0 shadow-[0_0_14px_rgba(217,70,239,0.4)]">
-                <Bot className="w-5 h-5 text-white" />
+            {/* Live players — who else currently has this screen open */}
+            {liveCount > 0 && (
+              <div className="flex items-center justify-center gap-2.5">
+                <div className="flex -space-x-2.5">
+                  {Object.values(presence)
+                    .slice(0, 5)
+                    .map((p: SongGuessPresenceEntry) => (
+                      <AvatarMedia
+                        key={p.userId}
+                        src={p.avatar}
+                        alt={p.username}
+                        className="w-6 h-6 rounded-full object-cover border-2 border-zinc-950 shrink-0"
+                      />
+                    ))}
+                </div>
+                <p className="text-[11px] text-zinc-400 flex items-center gap-1">
+                  <Users className="w-3 h-3" /> {liveCount} playing now
+                </p>
               </div>
-              <p className="text-xs text-zinc-300 text-left">
-                <span className="font-black text-fuchsia-300">Pro</span>{' '}
-                {round.myAnswer
-                  ? 'Next song coming up…'
-                  : playing
-                  ? `is playing ${round.clipLengthSeconds}s of the track…`
-                  : optionsRevealed
-                  ? 'Alright — who sang it? Take your pick!'
-                  : 'is ready to play a clip. Tap below to start.'}
-              </p>
+            )}
+
+            {/* Pro — the host persona, with a round countdown along the bottom edge */}
+            <div className="relative rounded-3xl border border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/10 via-zinc-900/60 to-purple-900/10 p-4 overflow-hidden">
+              <div className="flex items-center gap-2.5">
+                <div className="relative shrink-0">
+                  {playing && <div className="absolute inset-0 rounded-full bg-fuchsia-500/30 animate-ping" />}
+                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-[0_0_14px_rgba(217,70,239,0.4)]">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-300 text-left">
+                  <span className="font-black text-fuchsia-300">Pro</span>{' '}
+                  {round.myAnswer
+                    ? 'Next song coming up…'
+                    : playing
+                    ? `is playing ${round.clipLengthSeconds}s of the track…`
+                    : optionsRevealed
+                    ? 'Alright — who sang it? Take your pick!'
+                    : 'is ready to play a clip. Tap below to start.'}
+                </p>
+              </div>
+              {secondsLeft > 0 && (
+                <div className="mt-3 h-1 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-500 transition-all duration-1000 ease-linear" style={{ width: `${timerPct}%` }} />
+                </div>
+              )}
             </div>
+
+            {round.youtubeVideoId && (
+              <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-500">
+                <Youtube className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                Audio streamed via YouTube — full credit to the original artists & YouTube
+              </div>
+            )}
 
             {round.youtubeVideoId ? (
               <>
@@ -261,7 +335,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
                       key={i}
                       onClick={() => void handleGuess(i)}
                       disabled={answered || submitting}
-                      className={`w-full flex items-center justify-between gap-2 p-3.5 rounded-2xl border text-left text-sm font-bold cursor-pointer disabled:cursor-default transition-colors ${
+                      className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left text-sm font-bold cursor-pointer disabled:cursor-default transition-colors ${
                         answered
                           ? isRevealedCorrect
                             ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]'
@@ -271,7 +345,14 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
                           : 'bg-zinc-900 border-zinc-800 text-white hover:border-purple-500/50'
                       }`}
                     >
-                      {opt}
+                      <span
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 ${
+                          answered && isRevealedCorrect ? 'bg-[#00FF66] text-black' : answered && isMyChoice ? 'bg-red-400 text-black' : 'bg-zinc-800 text-zinc-400'
+                        }`}
+                      >
+                        {OPTION_LETTERS[i]}
+                      </span>
+                      <span className="flex-1">{opt}</span>
                       {isRevealedCorrect && <Check className="w-4 h-4 shrink-0" />}
                     </button>
                   );
@@ -287,36 +368,34 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               </p>
             )}
             {error && <p className="text-center text-[11px] text-red-400">{error}</p>}
+
+            {/* Top 3 leaderboard — always visible, not hidden behind a tap */}
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3.5 space-y-2.5">
+              <h2 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" /> Top 3
+              </h2>
+              {leaderboard.length === 0 ? (
+                <p className="text-center text-[11px] text-zinc-500 py-3">No one has scored yet — be the first!</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {leaderboard.map((e, i) => (
+                    <div key={e.userId} className={`flex items-center gap-2.5 p-2 rounded-xl ${e.userId === currentUser.id ? 'bg-[#00FF66]/10 border border-[#00FF66]/30' : 'bg-zinc-900/60'}`}>
+                      <span className={`w-5 h-5 rounded-full bg-gradient-to-br ${RANK_STYLE[i] || 'from-zinc-700 to-zinc-800 text-zinc-300'} flex items-center justify-center text-[10px] font-black shrink-0`}>
+                        {i === 0 ? <Crown className="w-3 h-3" /> : i + 1}
+                      </span>
+                      <AvatarMedia src={e.avatar} alt={e.username} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                      <span className="flex-1 text-xs font-bold text-white truncate flex items-center gap-1">
+                        @{e.username} {e.isVerified && <VerifiedBadge size="xs" />}
+                      </span>
+                      <span className="text-xs font-black text-[#00FF66]">{e.points}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
-
-      {showLeaderboard && (
-        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowLeaderboard(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full sm:max-w-xs bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-400" /> Top 3</h2>
-              <button onClick={() => setShowLeaderboard(false)} className="text-zinc-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
-            </div>
-            {leaderboard.length === 0 ? (
-              <p className="text-center text-xs text-zinc-500 py-6">No one has scored yet — be the first!</p>
-            ) : (
-              <div className="space-y-2">
-                {leaderboard.map((e, i) => (
-                  <div key={e.userId} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-zinc-900/60">
-                    <span className="text-sm font-black text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                    <AvatarMedia src={e.avatar} alt={e.username} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                    <span className="flex-1 text-xs font-bold text-white truncate flex items-center gap-1">
-                      @{e.username} {e.isVerified && <VerifiedBadge size="xs" />}
-                    </span>
-                    <span className="text-xs font-black text-[#00FF66]">{e.points}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {showAdmin && <AdminSongManager onClose={() => setShowAdmin(false)} />}
     </div>

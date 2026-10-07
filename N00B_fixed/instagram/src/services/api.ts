@@ -1,6 +1,6 @@
 // The app's server calls. Everything now runs on Supabase (see supabaseApi.ts and supabase/migrations);
 // this file only lists them under the names the screens have always imported.
-export type { GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, AdminSongGuessTrack } from './supabaseApi';
+export type { GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, AdminSongGuessTrack, SongGuessPresenceEntry } from './supabaseApi';
 export {
   e2ee,
   searchGifs,
@@ -323,6 +323,7 @@ export {
   submitSongGuess,
   fetchSongGuessLeaderboard,
   subscribeToSongGuessRound,
+  joinSongGuessPresence,
   adminAddSongGuessTrack,
   adminListSongGuessTracks,
   adminDeleteSongGuessTrack

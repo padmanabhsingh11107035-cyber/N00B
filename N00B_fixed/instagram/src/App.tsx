@@ -66,7 +66,11 @@ import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
 import { ExploreView } from './components/Explore/ExploreView';
 import { ReelsView } from './components/Reels/ReelsView';
-import { ChatView } from './components/Chat/ChatView';
+// Statically imported before, which meant every single page load of the whole app (not just opening
+// Chat) paid for its full weight upfront — E2EE crypto setup, the Instants camera/viewer, encryption
+// modals, sticker/GIF panels, confetti, group management, all bundled into the one main chunk. Lazy
+// just like every other heavy, occasional screen in this file.
+const ChatView = React.lazy(() => import('./components/Chat/ChatView').then((m) => ({ default: m.ChatView })));
 import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
@@ -1407,31 +1411,33 @@ export default function App() {
                 </div>
               }
             >
-              <ChatView
-                currentUser={currentUser}
-                pendingChatUser={pendingChatUser}
-                onPendingChatUserHandled={() => setPendingChatUser(null)}
-                pendingChatId={pendingChatId}
-                onPendingChatIdHandled={() => setPendingChatId(null)}
-                onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
-                onUserUpdated={(u) => setCurrentUser(u)}
-                onNavigateToProfile={handleNavigateToUserProfile}
-                onNavigateToPost={handleNavigateToPost}
-                onNavigateToReel={handleNavigateToReel}
-                onNavigateToVideo={handleNavigateToVideo}
-                onPlayGame={(gameId, challengerUsername, roomCode) => {
-                  const matched = ALL_50_MINI_GAMES.find(
-                    (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
-                  );
-                  if (matched) {
-                    setGameToPlay({
-                      game: matched,
-                      challenger: challengerUsername,
-                      roomCode
-                    });
-                  }
-                }}
-              />
+              <React.Suspense fallback={<LazyFallback />}>
+                <ChatView
+                  currentUser={currentUser}
+                  pendingChatUser={pendingChatUser}
+                  onPendingChatUserHandled={() => setPendingChatUser(null)}
+                  pendingChatId={pendingChatId}
+                  onPendingChatIdHandled={() => setPendingChatId(null)}
+                  onMobileViewChange={(view) => setChatConversationOpenOnMobile(view === 'chat')}
+                  onUserUpdated={(u) => setCurrentUser(u)}
+                  onNavigateToProfile={handleNavigateToUserProfile}
+                  onNavigateToPost={handleNavigateToPost}
+                  onNavigateToReel={handleNavigateToReel}
+                  onNavigateToVideo={handleNavigateToVideo}
+                  onPlayGame={(gameId, challengerUsername, roomCode) => {
+                    const matched = ALL_50_MINI_GAMES.find(
+                      (g) => g.id === gameId || g.id.toLowerCase() === gameId.toLowerCase()
+                    );
+                    if (matched) {
+                      setGameToPlay({
+                        game: matched,
+                        challenger: challengerUsername,
+                        roomCode
+                      });
+                    }
+                  }}
+                />
+              </React.Suspense>
             </ErrorBoundary>
           </div>
         )}

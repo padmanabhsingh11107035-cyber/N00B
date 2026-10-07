@@ -24,6 +24,11 @@ export interface CallParticipant {
   isLocal: boolean;
   hasAudio: boolean;
   stream: MediaStream | null;
+  // The actual peer-to-peer connection's state (undefined for the local tile, which has none) —
+  // "connected" means media can really flow; "new"/"connecting"/"checking" means it's still
+  // negotiating, and "failed"/"disconnected" means audio genuinely isn't going to reach them right
+  // now (most often a NAT/firewall that needs a TURN relay neither side has configured).
+  connectionState?: RTCPeerConnectionState;
 }
 
 interface PeerState {
@@ -47,6 +52,7 @@ function micErrorMessage(err: unknown): string {
 export function useChatCall(chatId: string, me: User) {
   const [presence, setPresence] = useState<Record<string, CallPresence>>({});
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+  const [connectionStates, setConnectionStates] = useState<Record<string, RTCPeerConnectionState>>({});
   // Mic starts OFF and unpublished — joining a call should never itself trigger a permission
   // prompt, only an explicit tap on the mic button does (see toggleMic below).
   const [micOn, setMicOn] = useState(false);
@@ -95,6 +101,12 @@ export function useChatCall(chatId: string, me: User) {
       delete next[peerId];
       return next;
     });
+    setConnectionStates((prev) => {
+      if (!(peerId in prev)) return prev;
+      const next = { ...prev };
+      delete next[peerId];
+      return next;
+    });
   }, []);
 
   const ensurePeer = useCallback(
@@ -120,6 +132,15 @@ export function useChatCall(chatId: string, me: User) {
           } catch {
             /* not supported on this browser — the peer just stays down until someone rejoins */
           }
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        setConnectionStates((prev) => ({ ...prev, [peerId]: pc.connectionState }));
+        if (pc.connectionState === 'failed') {
+          // Almost always means no direct path exists between the two devices and no TURN relay
+          // was available to bridge it — logged so this is diagnosable without needing to reproduce
+          // it live. See getIceServers() in callSignaling.ts for the TURN fallback this depends on.
+          console.warn(`[call] connection to a peer failed (iceConnectionState=${pc.iceConnectionState}) — likely no usable TURN relay for this network`);
         }
       };
       pc.onnegotiationneeded = async () => {
@@ -278,6 +299,7 @@ export function useChatCall(chatId: string, me: User) {
     setRinging(false);
     setPresence({});
     setRemoteStreams({});
+    setConnectionStates({});
   }, [closePeer]);
   leaveRef.current = leave;
 
@@ -335,7 +357,8 @@ export function useChatCall(chatId: string, me: User) {
             avatar: p.avatar,
             isLocal: false,
             hasAudio: p.hasAudio,
-            stream: remoteStreams[p.userId] || null
+            stream: remoteStreams[p.userId] || null,
+            connectionState: connectionStates[p.userId]
           })
         )
       ]

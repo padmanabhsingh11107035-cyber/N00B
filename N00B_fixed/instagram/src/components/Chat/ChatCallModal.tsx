@@ -31,30 +31,50 @@ interface ChatCallModalProps {
 }
 
 // One participant's tile — audio-only, so always their avatar, with a mic-off badge when muted.
-const Tile: React.FC<{ p: CallParticipant }> = ({ p }) => (
-  <div className="relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center">
-    <div className={`relative w-16 h-16 rounded-full ${p.hasAudio ? 'ring-2 ring-[#00FF66]/60' : 'ring-2 ring-zinc-700'}`}>
-      <img src={p.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
-    </div>
-    {/* remote audio has to actually play somewhere */}
-    {!p.isLocal && p.stream && <AudioSink stream={p.stream} />}
-    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2">
-      <span className="text-[11px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg truncate">
-        {p.isLocal ? 'You' : p.displayName || p.username}
-      </span>
-      {!p.hasAudio && (
-        <span className="p-1 rounded-full bg-black/60 backdrop-blur-md shrink-0">
-          <MicOff className="w-3 h-3 text-red-400" />
-        </span>
+// For a remote tile, the connection underneath (see connectionState on CallParticipant) is what
+// actually decides whether their audio can reach this device at all — shown here so a stuck/failed
+// connection is visible instead of just silently never making a sound.
+const Tile: React.FC<{ p: CallParticipant }> = ({ p }) => {
+  const notConnected = !p.isLocal && p.connectionState && p.connectionState !== 'connected';
+  const failed = !p.isLocal && (p.connectionState === 'failed' || p.connectionState === 'disconnected');
+  return (
+    <div className="relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center">
+      <div className={`relative w-16 h-16 rounded-full ${p.hasAudio ? 'ring-2 ring-[#00FF66]/60' : 'ring-2 ring-zinc-700'}`}>
+        <img src={p.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+      </div>
+      {/* remote audio has to actually play somewhere */}
+      {!p.isLocal && p.stream && <AudioSink stream={p.stream} />}
+      {notConnected && (
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-center">
+          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-md ${
+            failed ? 'bg-red-500/20 border border-red-500/40 text-red-300' : 'bg-black/60 text-zinc-300'
+          }`}>
+            {failed ? 'Connection issue' : <><Loader2 className="w-3 h-3 animate-spin" /> Connecting audio…</>}
+          </span>
+        </div>
       )}
+      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg truncate">
+          {p.isLocal ? 'You' : p.displayName || p.username}
+        </span>
+        {!p.hasAudio && (
+          <span className="p-1 rounded-full bg-black/60 backdrop-blur-md shrink-0">
+            <MicOff className="w-3 h-3 text-red-400" />
+          </span>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AudioSink: React.FC<{ stream: MediaStream }> = ({ stream }) => {
   const ref = useRef<HTMLAudioElement>(null);
   useEffect(() => {
-    if (ref.current) ref.current.srcObject = stream;
+    if (!ref.current) return;
+    ref.current.srcObject = stream;
+    // Autoplay is normally allowed for a real-time call stream, but if the browser blocks it
+    // anyway this makes that an actual, loggable failure instead of silent, unexplained quiet.
+    ref.current.play().catch((err) => console.warn('[call] could not autoplay remote audio:', err));
   }, [stream]);
   return <audio ref={ref} autoPlay />;
 };

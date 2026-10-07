@@ -740,6 +740,18 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 </div>
               </button>
               <button
+                onClick={() => { setShowNoobMenu(false); setShowFoodStall(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-base">
+                  🍔
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">NOOB Food Stall</span>
+                  <span className="text-[10px] text-zinc-400">Burgers, bhel, fries, manchurian &amp; coke</span>
+                </div>
+              </button>
+              <button
                 onClick={() => { setShowNoobMenu(false); setShowNoobAi(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >

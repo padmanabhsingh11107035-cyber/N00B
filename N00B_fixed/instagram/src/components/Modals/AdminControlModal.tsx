@@ -60,10 +60,12 @@ import {
   Ticket,
   Plus,
   Radio,
-  ClipboardList
+  ClipboardList,
+  UtensilsCrossed
 } from 'lucide-react';
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
+import { AdminFoodStallPanel } from './AdminFoodStallPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
@@ -95,7 +97,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1192,6 +1194,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </button>
           )}
 
+          {canManageStore && (
+            <button
+              onClick={() => setActiveTab('foodStall')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'foodStall'
+                  ? 'border-[#00FF66] text-[#00FF66]'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <UtensilsCrossed className="w-4 h-4" /> Food Stall
+            </button>
+          )}
+
           {main && (
             <button
               onClick={() => setActiveTab('joinRequests')}
@@ -2059,6 +2074,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </div>
           ) : activeTab === 'orders' && canManageStore ? (
             <AdminOrdersPanel />
+          ) : activeTab === 'foodStall' && canManageStore ? (
+            <AdminFoodStallPanel />
           ) : activeTab === 'joinRequests' && main ? (
             /* "Apply to join us" submissions */
             <div className="space-y-3">

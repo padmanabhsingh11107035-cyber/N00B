@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Music2, Trophy, Play, Pause, Check, Plus, Trash2, Youtube } from 'lucide-react';
+import { X, Music2, Trophy, Play, Pause, Check, Plus, Trash2, Youtube, Bot } from 'lucide-react';
 import { User } from '../../types';
 import type { SongGuessRound, SongGuessLeaderboardEntry } from '../../types';
 import {
@@ -60,6 +60,9 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [playing, setPlaying] = useState(false);
+  // Pro (the game's host persona) plays the clip first and keeps the options hidden until it's
+  // done — guessing from the title list before you've even heard the song defeats the point.
+  const [optionsRevealed, setOptionsRevealed] = useState(false);
   const [error, setError] = useState('');
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState<SongGuessLeaderboardEntry[]>([]);
@@ -98,6 +101,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
 
   useEffect(() => {
     setPlaying(false);
+    setOptionsRevealed(false);
     audioRef.current?.pause();
     if (ytPauseTimerRef.current) clearTimeout(ytPauseTimerRef.current);
   }, [round?.roundNumber]);
@@ -135,7 +139,8 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
       player.seekTo(round.clipStartSeconds || 0, true);
       player.playVideo();
       setPlaying(true);
-      ytPauseTimerRef.current = window.setTimeout(() => { player.pauseVideo(); setPlaying(false); }, (round.clipLengthSeconds || 5) * 1000);
+      setOptionsRevealed(false);
+      ytPauseTimerRef.current = window.setTimeout(() => { player.pauseVideo(); setPlaying(false); setOptionsRevealed(true); }, (round.clipLengthSeconds || 10) * 1000);
       return;
     }
     if (!round?.clipUrl) return;
@@ -145,7 +150,8 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
       audio.currentTime = round.clipStartSeconds || 0;
       void audio.play();
       setPlaying(true);
-      window.setTimeout(() => { audio.pause(); setPlaying(false); }, (round.clipLengthSeconds || 5) * 1000);
+      setOptionsRevealed(false);
+      window.setTimeout(() => { audio.pause(); setPlaying(false); setOptionsRevealed(true); }, (round.clipLengthSeconds || 10) * 1000);
     };
     if (audio.readyState >= 1) start();
     else audio.addEventListener('loadedmetadata', start, { once: true });
@@ -201,6 +207,22 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               <p className="text-2xl font-black text-[#00FF66]">{round.myScore}</p>
             </div>
 
+            <div className="flex items-center gap-2.5 justify-center px-2">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shrink-0 shadow-[0_0_14px_rgba(217,70,239,0.4)]">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-xs text-zinc-300 text-left">
+                <span className="font-black text-fuchsia-300">Pro</span>{' '}
+                {round.myAnswer
+                  ? 'Next song coming up…'
+                  : playing
+                  ? `is playing ${round.clipLengthSeconds}s of the track…`
+                  : optionsRevealed
+                  ? 'Alright — who sang it? Take your pick!'
+                  : 'is ready to play a clip. Tap below to start.'}
+              </p>
+            </div>
+
             {round.youtubeVideoId ? (
               <>
                 <div className="absolute w-px h-px overflow-hidden opacity-0 pointer-events-none" aria-hidden>
@@ -228,32 +250,36 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               </>
             )}
 
-            <div className="space-y-2">
-              {round.options.map((opt, i) => {
-                const isMyChoice = round.myAnswer?.chosenIndex === i;
-                const answered = !!round.myAnswer;
-                const isRevealedCorrect = answered && round.revealedTitle === opt;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => void handleGuess(i)}
-                    disabled={answered || submitting}
-                    className={`w-full flex items-center justify-between gap-2 p-3.5 rounded-2xl border text-left text-sm font-bold cursor-pointer disabled:cursor-default transition-colors ${
-                      answered
-                        ? isRevealedCorrect
-                          ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]'
-                          : isMyChoice
-                          ? 'bg-red-500/15 border-red-500/50 text-red-300'
-                          : 'bg-zinc-900 border-zinc-800 text-zinc-500'
-                        : 'bg-zinc-900 border-zinc-800 text-white hover:border-purple-500/50'
-                    }`}
-                  >
-                    {opt}
-                    {isRevealedCorrect && <Check className="w-4 h-4 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
+            {(optionsRevealed || round.myAnswer) ? (
+              <div className="space-y-2">
+                {round.options.map((opt, i) => {
+                  const isMyChoice = round.myAnswer?.chosenIndex === i;
+                  const answered = !!round.myAnswer;
+                  const isRevealedCorrect = answered && round.revealedTitle === opt;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => void handleGuess(i)}
+                      disabled={answered || submitting}
+                      className={`w-full flex items-center justify-between gap-2 p-3.5 rounded-2xl border text-left text-sm font-bold cursor-pointer disabled:cursor-default transition-colors ${
+                        answered
+                          ? isRevealedCorrect
+                            ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]'
+                            : isMyChoice
+                            ? 'bg-red-500/15 border-red-500/50 text-red-300'
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+                          : 'bg-zinc-900 border-zinc-800 text-white hover:border-purple-500/50'
+                      }`}
+                    >
+                      {opt}
+                      {isRevealedCorrect && <Check className="w-4 h-4 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-center text-[11px] text-zinc-600">Pro will show the 4 options once the clip finishes.</p>
+            )}
 
             {round.myAnswer && (
               <p className="text-center text-xs text-zinc-400">
@@ -304,7 +330,7 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [artist, setArtist] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
   const [clipStart, setClipStart] = useState(0);
-  const [clipLength, setClipLength] = useState(5);
+  const [clipLength, setClipLength] = useState(10);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -319,7 +345,7 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     try {
       const res = await adminAddSongGuessTrack(title.trim(), artist.trim(), videoId, clipStart, clipLength);
       if (!res.success) { setError(res.error || 'Could not add that song.'); return; }
-      setTitle(''); setArtist(''); setYoutubeLink(''); setClipStart(0); setClipLength(5);
+      setTitle(''); setArtist(''); setYoutubeLink(''); setClipStart(0); setClipLength(10);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add that song.');

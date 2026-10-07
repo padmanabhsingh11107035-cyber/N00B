@@ -201,6 +201,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({ order,
               {order.contact.altPhone ? ` · ${order.contact.altPhone}` : ''}
             </a>
           )}
+          {shopView && order.contact.email && <p className="mt-2 text-[11px] text-black/60">{order.contact.email}</p>}
           {shopView && order.customer && (
             <p className="mt-2 text-[11px] text-black/60">
               Ordered by <b>{order.contact.fullName || order.customer.displayName || order.customer.username}</b> (@{order.customer.username})
@@ -251,11 +252,31 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({ order,
         <Card title="Order details">
           <dl className="space-y-2.5 text-[12px]">
             <div><dt className="text-black/45">Order ID</dt><dd className="font-bold">#{order.orderNo}</dd></div>
+            <div><dt className="text-black/45">Customer ID</dt><dd className="font-bold">{order.customer?.id || '—'}</dd></div>
             <div><dt className="text-black/45">Placed on</dt><dd className="font-bold">{clock(order.createdAt)}</dd></div>
-            <div><dt className="text-black/45">Payment</dt><dd className="font-bold">{delivery ? 'Pay on delivery' : 'Pay at pickup'}</dd></div>
+            <div><dt className="text-black/45">Payment</dt><dd className="font-bold">{order.paymentMethod === 'cash' ? (delivery ? 'Pay on delivery' : 'Pay at pickup') : order.paymentMethod}</dd></div>
             <div><dt className="text-black/45">Way of getting it</dt><dd className="font-bold">{delivery ? 'Home delivery' : 'Pickup from the shop'}</dd></div>
             {order.note && <div><dt className="text-black/45">Your note</dt><dd className="font-bold">{order.note}</dd></div>}
+            {order.status === 'cancelled' && (
+              <div>
+                <dt className="text-black/45">Cancelled by</dt>
+                <dd className="font-bold">{order.cancelledBy === 'shop' ? 'The shop' : 'The customer'}{order.cancelReason ? ` — ${order.cancelReason}` : ''}</dd>
+              </div>
+            )}
           </dl>
+          {shopView && (
+            <div className="mt-3 pt-3 border-t border-dashed border-black/15">
+              <p className="text-[11px] font-bold text-black/50 mb-1.5">Full status history</p>
+              <ul className="space-y-1">
+                {order.statusHistory.map((h, i) => (
+                  <li key={i} className="text-[11px] text-black/60 flex justify-between">
+                    <span className="capitalize">{h.status} <span className="text-black/35">({h.by})</span></span>
+                    <span>{clock(h.at)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Card>
 
         {!shopView && order.status === 'placed' && onCancel && (

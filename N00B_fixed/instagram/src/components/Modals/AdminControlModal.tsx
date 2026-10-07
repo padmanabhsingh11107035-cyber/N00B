@@ -59,9 +59,11 @@ import {
   Sparkles,
   Ticket,
   Plus,
-  Radio
+  Radio,
+  ClipboardList
 } from 'lucide-react';
 import { User } from '../../types';
+import { AdminOrdersPanel } from './AdminOrdersPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
@@ -93,7 +95,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -143,9 +145,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const canAdjustPoints = can(currentUser, 'adjust_points');
   const canHandleReports = can(currentUser, 'handle_reports');
   const canNotify = can(currentUser, 'send_notifications');
+  const canManageStore = can(currentUser, 'manage_store');
   const canOpenAccounts = canViewAccounts || canSuspend || canDelete || canAdjustPoints || canHandleReports;
 
-  const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : 'users');
+  const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : canManageStore ? 'orders' : 'users');
   const [usersList, setUsersList] = useState<User[]>([]);
 
   // Admin team (main admin only): who has which powers, and the editor for ticking them
@@ -166,6 +169,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [aiFeedbackReplyDrafts, setAiFeedbackReplyDrafts] = useState<Record<string, string>>({});
   const [aiFeedbackBusyId, setAiFeedbackBusyId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // Set by tapping the "Suspended" stat card — filters Account Moderation down to just those accounts.
+  const [suspendedOnlyFilter, setSuspendedOnlyFilter] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -969,9 +974,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
   const filteredUsers = usersList.filter(
     (u) =>
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      (!suspendedOnlyFilter || u.isSuspended) &&
+      (u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const suspendedCount = usersList.filter((u) => u.isSuspended).length;
@@ -1059,24 +1065,38 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           </div>
         )}
 
-        {/* Stats Row */}
+        {/* Stats Row — each stat jumps straight to the list it's counting */}
         <div className="grid grid-cols-4 divide-x divide-zinc-800/80 bg-zinc-900/50 border-b border-zinc-800 text-center py-2.5 px-3">
-          <div>
+          <button
+            onClick={() => {
+              setSuspendedOnlyFilter(false);
+              setActiveTab('users');
+            }}
+            disabled={!canOpenAccounts}
+            className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors"
+          >
             <span className="text-[11px] text-zinc-400 block font-medium">Accounts</span>
             <span className="text-sm font-black text-white">{usersList.length}</span>
-          </div>
-          <div>
+          </button>
+          <button
+            onClick={() => {
+              setSuspendedOnlyFilter(true);
+              setActiveTab('users');
+            }}
+            disabled={!canOpenAccounts}
+            className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors"
+          >
             <span className="text-[11px] text-zinc-400 block font-medium">Suspended</span>
             <span className="text-sm font-black text-red-400">{suspendedCount}</span>
-          </div>
-          <div>
+          </button>
+          <button onClick={() => setActiveTab('reports')} disabled={!canHandleReports} className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors">
             <span className="text-[11px] text-zinc-400 block font-medium">Reports</span>
             <span className="text-sm font-black text-amber-400">{reportsList.length}</span>
-          </div>
-          <div>
+          </button>
+          <button onClick={() => setActiveTab('staff')} disabled={!main} className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors">
             <span className="text-[11px] text-zinc-400 block font-medium">Admin Role</span>
             <span className="text-sm font-black text-[#00FF66]">{main ? 'Authorized' : 'Delegate'}</span>
-          </div>
+          </button>
         </div>
 
         {/* Tab Navigation */}
@@ -1156,6 +1176,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <Image className="w-4 h-4" /> Content
+            </button>
+          )}
+
+          {canManageStore && (
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'orders'
+                  ? 'border-[#00FF66] text-[#00FF66]'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" /> Shop Orders
             </button>
           )}
 
@@ -1246,6 +1279,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
+
+              {suspendedOnlyFilter && (
+                <button
+                  onClick={() => setSuspendedOnlyFilter(false)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-300 text-[11px] font-bold cursor-pointer"
+                >
+                  Showing suspended only <X className="w-3 h-3" />
+                </button>
+              )}
 
               {main && selectedUserIds.size > 0 && (
                 <div className="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-red-500/10 border border-red-500/30">
@@ -2015,6 +2057,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               )}
             </div>
+          ) : activeTab === 'orders' && canManageStore ? (
+            <AdminOrdersPanel />
           ) : activeTab === 'joinRequests' && main ? (
             /* "Apply to join us" submissions */
             <div className="space-y-3">

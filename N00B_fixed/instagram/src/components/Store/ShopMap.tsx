@@ -10,12 +10,18 @@ export const SHOP_ADDRESS = 'Divyajivan Residency, Nigam Nagar, Chandkheda, Ahme
 
 interface ShopMapProps {
   className?: string;
+  // Defaults to Shop NOOB's own pickup spot above — pass these to point the same map (with the
+  // same NOOB-logo pin) at a different fixed location instead, e.g. the Food Stall's own pickup spot.
+  lat?: number;
+  lng?: number;
+  address?: string;
+  label?: string;
 }
 
 // Plain Leaflet + OpenStreetMap tiles (no API key/billing needed, unlike
 // the Google Maps JS API) so the pickup marker can use our own logo
 // instead of a generic pin.
-export const ShopMap: React.FC<ShopMapProps> = ({ className }) => {
+export const ShopMap: React.FC<ShopMapProps> = ({ className, lat = SHOP_LAT, lng = SHOP_LNG, address = SHOP_ADDRESS, label = 'NOOB' }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -23,7 +29,7 @@ export const ShopMap: React.FC<ShopMapProps> = ({ className }) => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: [SHOP_LAT, SHOP_LNG],
+      center: [lat, lng],
       zoom: 16,
       scrollWheelZoom: false
     });
@@ -42,15 +48,16 @@ export const ShopMap: React.FC<ShopMapProps> = ({ className }) => {
       className: 'shop-map-marker'
     });
 
-    L.marker([SHOP_LAT, SHOP_LNG], { icon: noobIcon })
+    L.marker([lat, lng], { icon: noobIcon })
       .addTo(map)
-      .bindPopup(`<strong>NOOB</strong><br/>${SHOP_ADDRESS}`)
+      .bindPopup(`<strong>${label}</strong><br/>${address}`)
       .openPopup();
 
     return () => {
       map.remove();
       mapRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

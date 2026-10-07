@@ -8,6 +8,7 @@ import { StoreProduct, User } from '../../types';
 import { fetchStoreProducts, placeStoreOrder, getShopDetails, fetchSettings } from '../../services/api';
 import { ProductMediaCarousel } from './ProductMediaCarousel';
 import { OrdersView } from './OrdersView';
+import { ShopMap } from './ShopMap';
 import { formatPrice } from './formatPrice';
 import { loadCart, saveCart, type CartMap } from './cartStorage';
 import { buildUpiUri } from '../../utils/upi';
@@ -35,6 +36,14 @@ const CSS = `
 
 const FOOD_CATEGORY = 'food_stall';
 const cartStorageId = (userId: string) => `${userId}::food_stall`;
+
+// The Food Stall's own pickup spot — Podar International School's main branch, Chandkheda —
+// deliberately separate from SHOP_LAT/SHOP_LNG in ShopMap.tsx (Shop NOOB's own pickup address);
+// coordinates resolved from OpenStreetMap's own geocoder, not guessed.
+const FOOD_STALL_LAT = 23.1097883;
+const FOOD_STALL_LNG = 72.5906670;
+const FOOD_STALL_ADDRESS =
+  'Podar International School, Behind Vitthal Complex, Opposite Sakaar School, Near Trishala Complex Cross Road, New C.G. Road, Chandkheda, Ahmedabad, Gujarat - 382424';
 
 // Coke's 3 sizes are 3 separate products under the hood (store_products has one price per product,
 // not per-variant) but shown here as one card with a size picker, like any other size choice.
@@ -285,6 +294,13 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
             The stall isn't taking orders right now — browse away, but checkout is paused.
           </div>
         )}
+
+        <div className="mb-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+          <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Find the stall</h3>
+          <ShopMap lat={FOOD_STALL_LAT} lng={FOOD_STALL_LNG} address={FOOD_STALL_ADDRESS} label="NOOB Food Stall" className="w-full h-44 rounded-xl overflow-hidden" />
+          <p className="text-[11px] text-zinc-400 leading-relaxed">{FOOD_STALL_ADDRESS}</p>
+        </div>
+
         {loading ? (
           <div className="py-20 flex items-center justify-center text-zinc-500 text-xs gap-2">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading the menu…

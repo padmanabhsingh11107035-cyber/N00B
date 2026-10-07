@@ -3,10 +3,15 @@
 // Realtime channel in callSignaling.ts. Nothing about the call — who joined, any audio — is ever
 // written to a database table; the moment everyone leaves, there is no record it happened.
 //
-// The caller never connects (no mic request, no presence announced) while just ringing — see
-// startAsCaller()/connectMedia() below — and any side that finds itself alone again (the call
-// dropped below 2 real participants) hangs up automatically rather than sitting in a "call" that's
-// really already over.
+// The caller never connects (no presence announced) while just ringing — see startAsCaller()/
+// trackPresence() below — and any side that finds itself alone again (the call dropped below 2 real
+// participants) hangs up automatically rather than sitting in a "call" that's really already over.
+//
+// Joining the call and turning your mic on are deliberately two separate steps, same as NOOB Rooms/
+// Live Lounge: trackPresence() announces you're in the call with no mic request at all, so joining
+// never depends on microphone access succeeding. The mic is only ever requested from toggleMic() —
+// which should only ever be wired to a direct button tap — the first time someone actually taps to
+// unmute. A failed mic grant then just means "still muted," not "never actually joined the call."
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { joinCallChannel, getIceServers, MAX_CALL_PARTICIPANTS, type CallChannel, type CallPresence, type SignalMessage } from '../../services/callSignaling';
 import { logCallEvent } from '../../services/api';
@@ -28,13 +33,27 @@ interface PeerState {
   initiator: boolean;
 }
 
+// Turns a getUserMedia() failure into the actual reason instead of one generic message for every
+// case — NotAllowedError (permission denied) vs NotFoundError (no mic) vs NotReadableError (mic
+// already in use elsewhere) are each a different real problem to fix.
+function micErrorMessage(err: unknown): string {
+  const name = (err as { name?: string } | undefined)?.name;
+  if (name === 'NotAllowedError') return 'Microphone access was denied. Please allow it for this app (check your OS mic privacy settings too) and try again.';
+  if (name === 'NotFoundError') return 'No microphone was found on this device.';
+  if (name === 'NotReadableError') return 'Your microphone is already being used by another app.';
+  if (name) return `Could not use your microphone (${name}).`;
+  return 'Could not use your microphone. Please allow microphone access and try again.';
+}
+
 export function useChatCall(chatId: string, me: User) {
   const [presence, setPresence] = useState<Record<string, CallPresence>>({});
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
-  const [micOn, setMicOn] = useState(true);
+  // Mic starts OFF and unpublished — joining a call should never itself trigger a permission
+  // prompt, only an explicit tap on the mic button does (see toggleMic below).
+  const [micOn, setMicOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
-  // True from startAsCaller() until either a peer shows up (connectMedia runs automatically) or the
+  // True from startAsCaller() until either a peer shows up (trackPresence runs automatically) or the
   // caller gives up — the call screen shows "Ringing…" the whole time, with no media active at all.
   const [ringing, setRinging] = useState(false);
 
@@ -169,43 +188,25 @@ export function useChatCall(chatId: string, me: User) {
     [ensurePeer, closePeer, me.id]
   );
 
-  // The actual connect: requests the mic (only moment this ever happens) and announces our own
-  // presence on the channel — called immediately when answering a ring, or automatically once a
-  // caller who was only peeking sees someone else show up.
-  const connectMedia = useCallback(async () => {
+  // Joins the call's roster — no microphone request at all, just announces presence so the 2-person
+  // rule and peer connections can engage. Called immediately when answering a ring or joining an
+  // already-live call, or automatically once a caller who was only peeking sees someone else show up.
+  const trackPresence = useCallback(async () => {
     if (trackedRef.current || connectingRef.current) return;
     connectingRef.current = true;
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      localStreamRef.current = stream;
-      setMicOn(true);
       iceServersRef.current = await getIceServers();
       const chan = chanRef.current;
       if (!chan) return;
       isCallOwnerRef.current = Object.keys(chan.presenceState()).length === 0;
-      await chan.track(myPresence(true));
+      await chan.track(myPresence(false));
       trackedRef.current = true;
       setRinging(false);
       setJoined(true);
       joinedAtRef.current = Date.now();
-    } catch (err) {
-      // Surface the browser's real reason (NotAllowedError = permission denied, NotFoundError = no
-      // mic device, NotReadableError = mic already in use by something else, etc.) instead of one
-      // generic message for every case — this is the one piece of information that actually tells us
-      // what to fix next.
-      const name = (err as { name?: string } | undefined)?.name;
-      const reason =
-        name === 'NotAllowedError'
-          ? 'Microphone access was denied. Please allow it for this app (check your OS mic privacy settings too) and try again.'
-          : name === 'NotFoundError'
-          ? 'No microphone was found on this device.'
-          : name === 'NotReadableError'
-          ? 'Your microphone is already being used by another app.'
-          : name
-          ? `Could not use your microphone (${name}).`
-          : 'Could not use your microphone. Please allow microphone access and try again.';
-      setError(reason);
+    } catch {
+      setError('Could not join the call. Please try again.');
     } finally {
       connectingRef.current = false;
     }
@@ -218,9 +219,9 @@ export function useChatCall(chatId: string, me: User) {
       const otherCount = Object.keys(state).filter((k) => k !== me.id).length;
       if (otherCount >= 1 && trackedRef.current) everMultiPartyRef.current = true;
 
-      // Caller still just peeking: the moment anyone else is actually present, connect for real.
+      // Caller still just peeking: the moment anyone else is actually present, join for real.
       if (waitForPeerRef.current && !trackedRef.current && otherCount >= 1) {
-        void connectMedia();
+        void trackPresence();
       }
 
       // Never manage peer connections until we ourselves have actually connected.
@@ -242,7 +243,7 @@ export function useChatCall(chatId: string, me: User) {
         leaveRef.current();
       }
     },
-    [ensurePeer, closePeer, connectMedia, me.id]
+    [ensurePeer, closePeer, trackPresence, me.id]
   );
 
   const openChannel = useCallback(
@@ -257,16 +258,17 @@ export function useChatCall(chatId: string, me: User) {
   );
 
   // Fresh outgoing call: open the channel in listen-only mode (no mic, no presence announced) and
-  // wait — connectMedia() only runs once handlePresence actually sees someone else join.
+  // wait — trackPresence() only runs once handlePresence actually sees someone else join.
   const startAsCaller = useCallback(() => {
     openChannel(true);
   }, [openChannel]);
 
-  // Answering a ring, or joining an already-live call: connect right away.
+  // Answering a ring, or joining an already-live call: join the roster right away — still no mic
+  // request, that only ever happens from an explicit tap on the mic button (toggleMic below).
   const answer = useCallback(async () => {
     openChannel(false);
-    await connectMedia();
-  }, [openChannel, connectMedia]);
+    await trackPresence();
+  }, [openChannel, trackPresence]);
 
   const leave = useCallback(() => {
     for (const peerId of Array.from(peersRef.current.keys())) closePeer(peerId);
@@ -292,12 +294,33 @@ export function useChatCall(chatId: string, me: User) {
   }, [closePeer, chatId]);
   leaveRef.current = leave;
 
-  const toggleMic = useCallback(() => {
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    setMicOn(track.enabled);
-    void chanRef.current?.track(myPresence(track.enabled));
+  // First tap ever: actually requests the microphone (the only place this hook ever does) and, once
+  // granted, adds the live track to every peer connection already open — each one's onnegotiationneeded
+  // handler (see ensurePeer above) automatically renegotiates so audio starts flowing with no extra
+  // wiring needed here. Every tap after that is just a cheap local mute/unmute, no new prompt.
+  const toggleMic = useCallback(async () => {
+    const existing = localStreamRef.current?.getAudioTracks()[0];
+    if (existing) {
+      existing.enabled = !existing.enabled;
+      setMicOn(existing.enabled);
+      void chanRef.current?.track(myPresence(existing.enabled));
+      return;
+    }
+    if (connectingRef.current) return;
+    connectingRef.current = true;
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      localStreamRef.current = stream;
+      const track = stream.getAudioTracks()[0];
+      for (const { pc } of peersRef.current.values()) pc.addTrack(track, stream);
+      setMicOn(true);
+      void chanRef.current?.track(myPresence(true));
+    } catch (err) {
+      setError(micErrorMessage(err));
+    } finally {
+      connectingRef.current = false;
+    }
   }, [myPresence]);
 
   useEffect(() => {

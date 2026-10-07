@@ -202,6 +202,9 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
             ))}
           </div>
         )}
+        {joined && !micOn && !error && (
+          <p className="text-[11px] text-zinc-500 text-center mt-4">Tap the mic button below to start talking.</p>
+        )}
         {joined && atCapacity && (
           <p className="text-[11px] text-amber-300 text-center mt-4">
             This call is full — a group call holds at most {MAX_CALL_PARTICIPANTS} people at once.

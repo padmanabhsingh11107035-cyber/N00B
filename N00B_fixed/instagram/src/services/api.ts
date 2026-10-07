@@ -195,6 +195,8 @@ export {
   getGameRoom,
   submitGameRoomResult,
   submitGameRoomMove,
+  submitChessMove,
+  resignChessMatch,
   joinMatchmaking,
   getMatchmakingStatus,
   startChessRound,

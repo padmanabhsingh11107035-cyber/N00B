@@ -2455,9 +2455,11 @@ export interface GameRoom {
   players: GameRoomPlayer[];
   resultsSubmittedBy: string[];
   outcome: { results: Record<string, 'win' | 'tie' | 'loss'>; points: Record<string, number> } | null;
-  // Present only for games with true live-synced play (currently Tic Tac Toe) — the two players
-  // move on this same shared board instead of each playing their own round against a bot.
-  board?: ('X' | 'O' | null)[] | null;
+  // Present only for games with true live-synced play — the two players move on this same shared
+  // board instead of each playing their own round against a bot. Tic Tac Toe's board is a flat
+  // 9-cell array; Chess Blitz's is { fen, lastMove } (see supabase/functions/chess-move) — shape
+  // depends entirely on gameId, so callers narrow it themselves based on which game this room is.
+  board?: ('X' | 'O' | null)[] | { fen: string; lastMove?: { from: string; to: string } | null } | null;
   turn?: string | null;
 }
 
@@ -2780,6 +2782,37 @@ export async function submitGameRoomMove(
   index: number
 ): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
   return roomCall('submit_game_room_move', { p_code: code, p_index: index }, 'Could not make that move.');
+}
+
+// Chess Blitz's live move sync goes through an Edge Function instead of a plain RPC — move legality
+// and checkmate/stalemate detection need a real chess engine (chess.js), which Postgres doesn't
+// have, and the result decides a 50,000,000-point swing, so it can't be trusted from the client.
+async function chessMoveCall(body: Record<string, unknown>, fallback: string): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('chess-move', { body });
+    if (error) {
+      let errBody: any = null;
+      try { errBody = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
+      return { success: false, error: errBody?.error || fallback };
+    }
+    if (!data?.success) return { success: false, error: data?.error || fallback };
+    return { success: true, room: mapRoom(data.room) };
+  } catch (err) {
+    return failWith(err, fallback);
+  }
+}
+
+export async function submitChessMove(
+  code: string,
+  from: string,
+  to: string,
+  promotion?: string
+): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  return chessMoveCall({ action: 'move', code, from, to, promotion }, 'Could not make that move.');
+}
+
+export async function resignChessMatch(code: string): Promise<{ success: boolean; room?: GameRoom; error?: string }> {
+  return chessMoveCall({ action: 'resign', code }, 'Could not resign the match.');
 }
 
 export async function joinMatchmaking(

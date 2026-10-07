@@ -28,6 +28,8 @@ import {
   getGameRoom,
   submitGameRoomResult,
   submitGameRoomMove,
+  submitChessMove,
+  resignChessMatch,
   startChessRound,
   joinMatchmaking,
   getMatchmakingStatus,
@@ -45,7 +47,8 @@ import { MemoryMatchGame } from './minigames/MemoryMatchGame';
 import { ReactionTapGame } from './minigames/ReactionTapGame';
 import { ColorRushGame } from './minigames/ColorRushGame';
 import { GenericArcadeGame } from './minigames/GenericArcadeGame';
-import { ChessGame } from './minigames/ChessGame';
+import { ChessGame } from './minigames/chess/ChessGame';
+import { ChessOnlineMatch } from './minigames/chess/ChessOnlineMatch';
 import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
 import { LudoGame } from './minigames/LudoGame';
 import { MonopolyGame } from './minigames/MonopolyGame';
@@ -79,7 +82,11 @@ const BOARD_GAME_IDS = ['ludo_classic', 'snakes_ladders', 'monopoly_noob'];
 // Games with a true live-synced shared board: the two matched players
 // actually move on the SAME board in real time against each other, instead
 // of each playing their own round against a bot and comparing results.
-const SYNCED_GAME_IDS = ['tictactoe'];
+// Chess Blitz's moves are validated server-side by the chess-move Edge
+// Function (see supabase/functions/chess-move) rather than a plain RPC,
+// since real move legality/checkmate detection needs an actual chess
+// engine and the result swings 50,000,000 points either way.
+const SYNCED_GAME_IDS = ['tictactoe', 'chess_blitz'];
 
 // Games whose built-in Pass and Play mode is a real, complete head-to-head
 // match in itself (both symbols/players share the same instance) — same
@@ -176,6 +183,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     // Only set for SYNCED_GAME_IDS — which symbol this player is on the
     // shared board (room.players[0] is always 'X').
     mySymbol?: 'X' | 'O';
+    // Chess Blitz's equivalent of mySymbol — room.players[0] is always white.
+    myColor?: 'w' | 'b';
   } | null>(
     initialRoomCode && !BOARD_GAME_IDS.includes(game.id) ? { roomCode: initialRoomCode, phase: 'joining' } : null
   );
@@ -256,8 +265,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       setIsPassAndPlay(false);
       setGameResult(null);
       setPointsEarned(0);
+      const emptyBoard = game.id === 'chess_blitz' ? { fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' } : Array(9).fill(null);
       setGameState({
-        board: room.board || Array(9).fill(null),
+        board: room.board || emptyBoard,
         turn: room.turn || room.players[0]?.userId
       });
       setCurrentMode('play_bot');
@@ -265,7 +275,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         roomCode: room.code,
         phase: 'in_progress',
         opponent: opponent ? { id: opponent.userId, username: opponent.username, displayName: opponent.displayName, avatar: opponent.avatar } : undefined,
-        mySymbol: myIndex === 0 ? 'X' : 'O'
+        mySymbol: myIndex === 0 ? 'X' : 'O',
+        myColor: myIndex === 0 ? 'w' : 'b'
       });
       return;
     }
@@ -747,6 +758,44 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           setGameState((prev: any) => ({ ...prev, board: res.room!.board, turn: res.room!.turn }));
           setIsSubmitting(false);
         }
+      } else {
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChessOnlineMove = async (from: string, to: string, promotion?: string) => {
+    if (!onlineMatch || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await submitChessMove(onlineMatch.roomCode, from, to, promotion);
+      if (res.success && res.room) {
+        if (res.room.status === 'finished' && res.room.outcome) {
+          finalizeOnlineMatch(res.room);
+        } else {
+          setGameState((prev: any) => ({ ...prev, board: res.room!.board, turn: res.room!.turn }));
+          setIsSubmitting(false);
+        }
+      } else {
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChessResign = async () => {
+    if (!onlineMatch || isSubmitting) return;
+    if (!window.confirm('Resign this match? You will lose.')) return;
+    setIsSubmitting(true);
+    try {
+      const res = await resignChessMatch(onlineMatch.roomCode);
+      if (res.success && res.room && res.room.status === 'finished' && res.room.outcome) {
+        finalizeOnlineMatch(res.room);
       } else {
         setIsSubmitting(false);
       }
@@ -1603,8 +1652,29 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} difficulty={botDifficulty} />
               )}
 
-              {game.id === 'chess_blitz' && (
-                <ChessGame onGameOver={handleGameOver} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} difficulty={botDifficulty} />
+              {game.id === 'chess_blitz' && onlineMatch && (
+                <ChessOnlineMatch
+                  myUserId={currentUser.id}
+                  myColor={onlineMatch.myColor || 'w'}
+                  opponentUsername={onlineMatch.opponent?.username}
+                  board={gameState.board}
+                  turn={gameState.turn}
+                  isSubmitting={isSubmitting}
+                  onMove={handleChessOnlineMove}
+                  onResign={handleChessResign}
+                />
+              )}
+
+              {game.id === 'chess_blitz' && !onlineMatch && (
+                <ChessGame
+                  onGameOver={handleGameOver}
+                  vsBot={!isPassAndPlay}
+                  gamesPlayedCount={currentUser.gamesPlayedCount}
+                  difficulty={botDifficulty}
+                  userId={currentUser.id}
+                  username={currentUser.username}
+                  profilePicture={currentUser.avatar}
+                />
               )}
 
               {game.id === 'snakes_ladders' && (

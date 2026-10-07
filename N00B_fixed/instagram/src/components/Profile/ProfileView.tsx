@@ -114,7 +114,6 @@ import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
 import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
 import { MutualFollowersSheet } from './MutualFollowersSheet';
-import { ShareProfileSheet } from './ShareProfileSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
 
@@ -268,8 +267,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showMutualFollowersSheet, setShowMutualFollowersSheet] = useState(false);
   const [followListTab, setFollowListTab] = useState<'followers' | 'following' | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [shareLinkCopied, setShareLinkCopied] = useState(false);
-  const [showShareSheet, setShowShareSheet] = useState(false);
   const [showShareToChatModal, setShowShareToChatModal] = useState(false);
   const [showProfileQrModal, setShowProfileQrModal] = useState(false);
   const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
@@ -404,37 +401,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const displayedReels = reels.filter((r) => {
     return r.userId === targetUser.id || r.username === targetUser.username;
   });
-
-  // Builds a real deep link to this specific profile (?profile=username) rather
-  // than just copying the current page URL, which is always the same generic
-  // app URL since there's no per-profile routing. App.tsx reads this param on
-  // load and opens the matching profile once the viewer is logged in.
-  const handleShareProfile = async (username: string) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?profile=${encodeURIComponent(username)}`;
-    try {
-      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      // Fallback for browsers/embedded contexts that block the async Clipboard API
-      const textarea = document.createElement('textarea');
-      textarea.value = shareUrl;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      try {
-        document.execCommand('copy');
-      } catch {
-        // Nothing more we can do; the confetti + "Copied" state below still
-        // fire so the click always visibly acknowledges the tap either way.
-      }
-      document.body.removeChild(textarea);
-    }
-    confetti({ particleCount: 20, spread: 40 });
-    setShareLinkCopied(true);
-    setTimeout(() => setShareLinkCopied(false), 2000);
-  };
 
   const handleToggleFollowTargetUser = async () => {
     if (isOwnProfile) return;
@@ -1149,7 +1115,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <button
                     onClick={() => {
                       setShowThreeDotsMenu(false);
-                      setShowShareSheet(true);
+                      setShowProfileQrModal(true);
                     }}
                     className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                   >
@@ -1283,7 +1249,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {isOwnProfile ? (
               <>
                 <button
-                  onClick={() => setShowShareSheet(true)}
+                  onClick={() => setShowProfileQrModal(true)}
                   className="flex-1 py-2 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white"
                   title="Share Profile"
                 >
@@ -1334,7 +1300,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     )}
 
                     <button
-                      onClick={() => setShowShareSheet(true)}
+                      onClick={() => setShowProfileQrModal(true)}
                       className="py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white"
                       title="Share Profile"
                     >
@@ -1985,25 +1951,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         />
       )}
 
-      {showShareSheet && (
-        <ShareProfileSheet
-          username={targetUser.username}
-          linkCopied={shareLinkCopied}
-          onCopyLink={() => {
-            handleShareProfile(targetUser.username);
-          }}
-          onSendInChat={() => {
-            setShowShareSheet(false);
-            setShowShareToChatModal(true);
-          }}
-          onShowQrCode={() => {
-            setShowShareSheet(false);
-            setShowProfileQrModal(true);
-          }}
-          onClose={() => setShowShareSheet(false)}
-        />
-      )}
-
       {showShareToChatModal && (
         <ShareToChatModal
           currentUser={currentUser}
@@ -2013,7 +1960,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showProfileQrModal && (
-        <ProfileQrModal targetUser={targetUser} onClose={() => setShowProfileQrModal(false)} />
+        <ProfileQrModal
+          targetUser={targetUser}
+          onSendInChat={() => {
+            setShowProfileQrModal(false);
+            setShowShareToChatModal(true);
+          }}
+          onClose={() => setShowProfileQrModal(false)}
+        />
       )}
 
       {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}

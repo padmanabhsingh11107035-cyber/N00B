@@ -17,13 +17,19 @@ const DIFFICULTY_LEVEL: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3 }
 
 interface GamePosterCarouselProps {
   game: MiniGameMeta;
+  // Cycles through the slides on a continuous loop at this interval — on by default (500ms) in both
+  // the gallery card and the game's own detail page. A manual swipe/dot-tap/arrow-key just jumps to
+  // that slide; the loop keeps going from wherever it's left.
+  autoAdvanceMs?: number;
+  // The gallery card wraps this whole thing in its own "tap to open the game" handler, so swipe and
+  // the dot indicators are turned off there — they'd otherwise fight the card's own tap/scroll.
+  showDots?: boolean;
+  swipeEnabled?: boolean;
 }
 
-export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) => {
+export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, autoAdvanceMs = 500, showDots = true, swipeEnabled = true }) => {
   const [activeSlide, setActiveSlide] = useState(0);
-  // Plays one rotate-in transition right when this game's page (the modal) opens, then settles —
-  // replaces the old "auto-advance every 2s forever" behavior, which kept animating even while
-  // someone was just sitting reading the mode-select screen.
+  // Plays one rotate-in transition right when this game's page (the modal) opens, then settles.
   const [justEntered, setJustEntered] = useState(true);
   useEffect(() => {
     const timer = setTimeout(() => setJustEntered(false), 500);
@@ -155,12 +161,19 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
     </div>
   ];
 
-  // No longer auto-advances while sitting on screen — the carousel now only moves on a real swipe,
-  // dot tap, or arrow key. The only automatic motion left is a one-time rotate-in transition that
-  // plays once when the game's page (this modal) is first entered, below.
+  // Loops through the slides on its own — a manual swipe/dot-tap/arrow-key jumps straight to that
+  // slide, and the loop just continues on from there on the next tick.
+  useEffect(() => {
+    if (!autoAdvanceMs) return;
+    const id = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, autoAdvanceMs);
+    return () => window.clearInterval(id);
+  }, [autoAdvanceMs, slides.length]);
 
   // On a computer: A / D (or ← / →) move through the posters, like a swipe — only while the carousel is on screen.
   useEffect(() => {
+    if (!swipeEnabled) return;
     const onKey = (e: KeyboardEvent) => {
       const dir = navKey(e);
       if ((dir !== 'left' && dir !== 'right') || !isOnTop(rootRef.current)) return;
@@ -169,14 +182,15 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [slides.length]);
+  }, [slides.length, swipeEnabled]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!swipeEnabled) return;
     touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
+    if (!swipeEnabled || touchStartX.current === null) return;
     const deltaX = touchStartX.current - e.changedTouches[0].clientX;
     touchStartX.current = null;
     const SWIPE_THRESHOLD = 40;
@@ -198,18 +212,20 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game }) 
       </div>
 
       {/* Dot indicators */}
-      <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1 z-30 px-2 flex-wrap">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveSlide(i)}
-            className={`rounded-full transition-all cursor-pointer shrink-0 ${
-              i === activeSlide ? 'w-3.5 h-1.5 bg-[#00FF66]' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'
-            }`}
-            aria-label={`Slide ${i + 1}`}
-          />
-        ))}
-      </div>
+      {showDots && (
+        <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1 z-30 px-2 flex-wrap">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveSlide(i)}
+              className={`rounded-full transition-all cursor-pointer shrink-0 ${
+                i === activeSlide ? 'w-3.5 h-1.5 bg-[#00FF66]' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'
+              }`}
+              aria-label={`Slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

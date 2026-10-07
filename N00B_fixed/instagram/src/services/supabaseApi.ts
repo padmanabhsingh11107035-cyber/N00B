@@ -2488,9 +2488,11 @@ export async function notifyIncomingRing(chatId: string, calleeId: string): Prom
 }
 
 // Writes a plain "call ended / missed / declined" line into the chat's own message history.
-export async function logCallEvent(chatId: string, kind: 'ended' | 'missed' | 'declined', durationSeconds?: number): Promise<void> {
+// Only ever logs a missed call now — a call that actually connected, or one that was declined,
+// writes nothing to the chat at all.
+export async function logCallEvent(chatId: string, kind: 'missed'): Promise<void> {
   try {
-    await rpc('log_call_event', { p_chat: chatId, p_kind: kind, p_duration_seconds: durationSeconds ?? null });
+    await rpc('log_call_event', { p_chat: chatId, p_kind: kind });
   } catch {
     // Best-effort — never let a logging failure disrupt the call itself.
   }

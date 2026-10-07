@@ -2,7 +2,6 @@
 // screen they're currently on — the actual call itself (audio, mic) only starts once they accept.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listenForRings, sendRing, type RingEvent } from '../../services/ringSignaling';
-import { logCallEvent } from '../../services/api';
 import type { User } from '../../types';
 
 // Cold-starting the app from an incoming-call push notification (the app was fully closed, so the
@@ -66,7 +65,6 @@ export function useIncomingCalls(me: User | null) {
       isGroup: cur.isGroup,
       from: { id: me.id, username: me.username, displayName: me.displayName, avatar: me.avatar }
     }).catch(() => undefined);
-    void logCallEvent(cur.chatId, 'declined');
   }, [me]);
 
   // Called once the accept flow has handed the chat off to the real call screen — separate from

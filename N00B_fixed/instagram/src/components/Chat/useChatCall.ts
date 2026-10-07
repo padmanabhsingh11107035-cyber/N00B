@@ -14,7 +14,6 @@
 // unmute. A failed mic grant then just means "still muted," not "never actually joined the call."
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { joinCallChannel, getIceServers, MAX_CALL_PARTICIPANTS, type CallChannel, type CallPresence, type SignalMessage } from '../../services/callSignaling';
-import { logCallEvent } from '../../services/api';
 import type { User } from '../../types';
 
 export interface CallParticipant {
@@ -66,10 +65,6 @@ export function useChatCall(chatId: string, me: User) {
   const waitForPeerRef = useRef(false);
   const connectingRef = useRef(false);
   const endedBelowTwoRef = useRef(false);
-  // Whoever is first to actually connect to an otherwise-empty call "owns" logging it — set once at
-  // connect, read once at leave, so exactly one participant ever writes the "call ended" line.
-  const isCallOwnerRef = useRef(false);
-  const joinedAtRef = useRef<number | null>(null);
   const everMultiPartyRef = useRef(false);
   const leaveRef = useRef<() => void>(() => undefined);
 
@@ -199,12 +194,10 @@ export function useChatCall(chatId: string, me: User) {
       iceServersRef.current = await getIceServers();
       const chan = chanRef.current;
       if (!chan) return;
-      isCallOwnerRef.current = Object.keys(chan.presenceState()).length === 0;
       await chan.track(myPresence(false));
       trackedRef.current = true;
       setRinging(false);
       setJoined(true);
-      joinedAtRef.current = Date.now();
     } catch {
       setError('Could not join the call. Please try again.');
     } finally {
@@ -277,12 +270,6 @@ export function useChatCall(chatId: string, me: User) {
     const chan = chanRef.current;
     chanRef.current = null;
     void chan?.leave();
-    if (isCallOwnerRef.current && everMultiPartyRef.current && joinedAtRef.current) {
-      const durationSeconds = Math.round((Date.now() - joinedAtRef.current) / 1000);
-      void logCallEvent(chatId, 'ended', durationSeconds);
-    }
-    isCallOwnerRef.current = false;
-    joinedAtRef.current = null;
     everMultiPartyRef.current = false;
     endedBelowTwoRef.current = false;
     trackedRef.current = false;
@@ -291,7 +278,7 @@ export function useChatCall(chatId: string, me: User) {
     setRinging(false);
     setPresence({});
     setRemoteStreams({});
-  }, [closePeer, chatId]);
+  }, [closePeer]);
   leaveRef.current = leave;
 
   // First tap ever: actually requests the microphone (the only place this hook ever does) and, once

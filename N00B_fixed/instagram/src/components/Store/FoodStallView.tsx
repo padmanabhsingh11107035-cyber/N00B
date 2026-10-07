@@ -40,6 +40,58 @@ const cartStorageId = (userId: string) => `${userId}::food_stall`;
 // not per-variant) but shown here as one card with a size picker, like any other size choice.
 const sortCokeBySize = (products: StoreProduct[]): StoreProduct[] => [...products].sort((a, b) => a.price - b.price);
 
+// Defined at module scope (not inside FoodStallView) on purpose: a component declared inside
+// another component's function body is a brand-new function identity every render, so React
+// treats every <Card> as a different component type each time and fully unmounts/remounts the
+// whole product grid (and every ProductMediaCarousel inside it) on every single state change —
+// opening the cart, toggling checkout, anything. That churn is exactly the kind of disruption that
+// can eat a tap on iOS, which is almost certainly why every button on this page needed two taps.
+const FoodCard: React.FC<{
+  product: StoreProduct;
+  name: string;
+  tiltIndex: number;
+  foodStallEnabled: boolean;
+  onAddToCart: (productId: string) => void;
+  children?: React.ReactNode;
+}> = ({ product, name, tiltIndex, foodStallEnabled, onAddToCart, children }) => {
+  const comingSoon = !product.inStock;
+  return (
+    <div className="fs-stage">
+      <div className={`fs-card fs-tilt-${tiltIndex % 3} bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden ${comingSoon ? 'opacity-70' : ''}`}>
+        <div className="fs-media relative aspect-square">
+          <ProductMediaCarousel media={product.media} />
+          {comingSoon && (
+            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+              <span className="bg-black/80 backdrop-blur-md text-amber-300 text-xs font-black px-3 py-1.5 rounded-full border border-amber-400/40">
+                Coming Soon
+              </span>
+            </div>
+          )}
+          <span className="fs-chip absolute top-2 right-2 bg-black/75 backdrop-blur-md text-[#00FF66] text-xs font-black px-2.5 py-1 rounded-full border border-[#00FF66]/30">
+            {formatPrice(product.price)}
+          </span>
+        </div>
+        <div className="p-3 space-y-2">
+          <h3 className="text-sm font-black text-white">{name}</h3>
+          <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-2">{product.description}</p>
+          {children}
+          <button
+            onClick={() => onAddToCart(product.id)}
+            disabled={!foodStallEnabled || comingSoon}
+            className="touch-manipulation w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          >
+            {comingSoon ? 'Coming Soon' : (
+              <>
+                <Plus className="w-3.5 h-3.5" /> Add to Cart
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClose }) => {
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,44 +250,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     setShowCheckout(false);
   };
 
-  const Card: React.FC<{ product: StoreProduct; name: string; delaySeed: number; children?: React.ReactNode }> = ({ product, name, delaySeed, children }) => {
-    const comingSoon = !product.inStock;
-    return (
-    <div className="fs-stage">
-      <div className={`fs-card fs-tilt-${delaySeed % 3} bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden ${comingSoon ? 'opacity-70' : ''}`}>
-        <div className="fs-media relative aspect-square">
-          <ProductMediaCarousel media={product.media} />
-          {comingSoon && (
-            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
-              <span className="bg-black/80 backdrop-blur-md text-amber-300 text-xs font-black px-3 py-1.5 rounded-full border border-amber-400/40">
-                Coming Soon
-              </span>
-            </div>
-          )}
-          <span className="fs-chip absolute top-2 right-2 bg-black/75 backdrop-blur-md text-[#00FF66] text-xs font-black px-2.5 py-1 rounded-full border border-[#00FF66]/30">
-            {formatPrice(product.price)}
-          </span>
-        </div>
-        <div className="p-3 space-y-2">
-          <h3 className="text-sm font-black text-white">{name}</h3>
-          <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-2">{product.description}</p>
-          {children}
-          <button
-            onClick={() => addToCart(product.id)}
-            disabled={!foodStallEnabled || comingSoon}
-            className="touch-manipulation w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-          >
-            {comingSoon ? 'Coming Soon' : (
-              <>
-                <Plus className="w-3.5 h-3.5" /> Add to Cart
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-    );
-  };
 
   const selectedCoke = cokeOptions.find((c) => c.id === selectedCokeId) || cokeOptions[0];
 
@@ -278,10 +292,10 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {otherProducts.map((p, i) => (
-              <Card key={p.id} product={p} name={p.name} delaySeed={i} />
+              <FoodCard key={p.id} product={p} name={p.name} tiltIndex={i} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart} />
             ))}
             {selectedCoke && (
-              <Card key={selectedCoke.id} product={selectedCoke} name="Coke" delaySeed={otherProducts.length}>
+              <FoodCard key={selectedCoke.id} product={selectedCoke} name="Coke" tiltIndex={otherProducts.length} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart}>
                 <div className="flex items-center gap-1">
                   {cokeOptions.map((c, i) => (
                     <button
@@ -297,7 +311,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                     </button>
                   ))}
                 </div>
-              </Card>
+              </FoodCard>
             )}
           </div>
         )}

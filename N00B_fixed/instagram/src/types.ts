@@ -837,5 +837,8 @@ export interface AppSettings {
   // foodStallEnabled controls whether its own checkout is accepting orders. Both start off.
   foodStallVisible?: boolean;
   foodStallEnabled?: boolean;
+  // Shows the entry point but hides the real menu/price/ordering details behind a plain
+  // "Coming Soon" badge with nothing to tap — a middle ground between invisible and fully live.
+  foodStallComingSoon?: boolean;
 }
 

@@ -973,14 +973,15 @@ export async function fetchSettings(): Promise<AppSettings> {
     storeDeliveryFee: shared.storeDeliveryFee ?? INITIAL_SETTINGS.storeDeliveryFee,
     storeUpiId: shared.storeUpiId ?? '',
     foodStallVisible: shared.foodStallVisible ?? false,
-    foodStallEnabled: shared.foodStallEnabled ?? false
+    foodStallEnabled: shared.foodStallEnabled ?? false,
+    foodStallComingSoon: shared.foodStallComingSoon ?? false
   } as AppSettings;
 }
 
-// Food Stall's own visible/accepting-orders switches — deliberately a separate RPC from
-// set_shop_settings so toggling one never touches the general Shop NOOB's own "Accept orders".
-export async function setFoodStallSettings(visible?: boolean, enabled?: boolean): Promise<AppSettings> {
-  const res = await supabase.rpc('set_food_stall_settings', { p_visible: visible ?? null, p_enabled: enabled ?? null });
+// Food Stall's own visible/accepting-orders/coming-soon switches — deliberately a separate RPC
+// from set_shop_settings so toggling one never touches the general Shop NOOB's own "Accept orders".
+export async function setFoodStallSettings(visible?: boolean, enabled?: boolean, comingSoon?: boolean): Promise<AppSettings> {
+  const res = await supabase.rpc('set_food_stall_settings', { p_visible: visible ?? null, p_enabled: enabled ?? null, p_coming_soon: comingSoon ?? null });
   if (res.error) throw new Error(res.error.message);
   return fetchSettings();
 }

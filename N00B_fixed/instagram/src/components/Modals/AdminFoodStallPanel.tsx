@@ -19,6 +19,7 @@ export const AdminFoodStallPanel: React.FC = () => {
   const [settings, setSettingsState] = useState<AppSettings | null>(null);
   const [foodStallVisible, setFoodStallVisible] = useState(false);
   const [foodStallEnabled, setFoodStallEnabled] = useState(false);
+  const [foodStallComingSoon, setFoodStallComingSoon] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('0');
   const [upiId, setUpiId] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -43,6 +44,7 @@ export const AdminFoodStallPanel: React.FC = () => {
     setSettingsState(s);
     setFoodStallVisible(!!s.foodStallVisible);
     setFoodStallEnabled(!!s.foodStallEnabled);
+    setFoodStallComingSoon(!!s.foodStallComingSoon);
     setDeliveryFee(String(s.storeDeliveryFee ?? 0));
     setUpiId(s.storeUpiId || '');
   }, []);
@@ -83,7 +85,7 @@ export const AdminFoodStallPanel: React.FC = () => {
     setSavingSettings(true);
     setSettingsError(null);
     try {
-      await setFoodStallSettings(foodStallVisible, foodStallEnabled);
+      await setFoodStallSettings(foodStallVisible, foodStallEnabled, foodStallComingSoon);
       const updated = await updateSettings({ storeDeliveryFee: fee, storeUpiId: trimmedUpi });
       setSettingsState(updated);
       setSettingsSaved(true);
@@ -164,6 +166,16 @@ export const AdminFoodStallPanel: React.FC = () => {
             <span className="block text-[10px] text-zinc-500 leading-snug">Off hides it everywhere — the home page banner and the ☰ menu both disappear for every user.</span>
           </div>
           <input type="checkbox" checked={foodStallVisible} onChange={(e) => setFoodStallVisible(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
+        </label>
+
+        <label className="flex items-center justify-between gap-4 cursor-pointer text-xs text-zinc-300 pt-2 border-t border-zinc-800/80">
+          <div>
+            <span className="block font-bold text-white">Mark as Coming Soon</span>
+            <span className="block text-[10px] text-zinc-500 leading-snug">
+              On: the banner/menu entry still shows, but only says "Coming Soon" — no menu, price or order details, and it isn't tappable into anything.
+            </span>
+          </div>
+          <input type="checkbox" checked={foodStallComingSoon} onChange={(e) => setFoodStallComingSoon(e.target.checked)} className="w-5 h-5 shrink-0 accent-amber-400 cursor-pointer" />
         </label>
 
         <label className="flex items-center justify-between gap-4 cursor-pointer text-xs text-zinc-300 pt-2 border-t border-zinc-800/80">

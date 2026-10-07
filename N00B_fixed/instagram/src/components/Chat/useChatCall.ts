@@ -189,8 +189,23 @@ export function useChatCall(chatId: string, me: User) {
       setRinging(false);
       setJoined(true);
       joinedAtRef.current = Date.now();
-    } catch {
-      setError('Could not use your microphone. Please allow microphone access and try again.');
+    } catch (err) {
+      // Surface the browser's real reason (NotAllowedError = permission denied, NotFoundError = no
+      // mic device, NotReadableError = mic already in use by something else, etc.) instead of one
+      // generic message for every case — this is the one piece of information that actually tells us
+      // what to fix next.
+      const name = (err as { name?: string } | undefined)?.name;
+      const reason =
+        name === 'NotAllowedError'
+          ? 'Microphone access was denied. Please allow it for this app (check your OS mic privacy settings too) and try again.'
+          : name === 'NotFoundError'
+          ? 'No microphone was found on this device.'
+          : name === 'NotReadableError'
+          ? 'Your microphone is already being used by another app.'
+          : name
+          ? `Could not use your microphone (${name}).`
+          : 'Could not use your microphone. Please allow microphone access and try again.';
+      setError(reason);
     } finally {
       connectingRef.current = false;
     }

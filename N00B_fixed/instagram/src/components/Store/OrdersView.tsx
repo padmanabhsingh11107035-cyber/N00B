@@ -100,10 +100,18 @@ export const OrderCard: React.FC<{
           </div>
         )}
         <div className="flex justify-between text-sm font-black text-white pt-0.5">
-          <span>Total (pay {order.deliveryMethod === 'pickup' ? 'at pickup' : 'on delivery'})</span>
+          <span>Total ({order.paymentMethod === 'upi' ? 'pay by UPI' : `pay ${order.deliveryMethod === 'pickup' ? 'at pickup' : 'on delivery'}`})</span>
           <span>{formatPrice(order.total)}</span>
         </div>
       </div>
+
+      {/* The shop never gets an automatic "payment received" signal for UPI — this badge is the
+          reminder to check their own UPI app before pressing Confirm. */}
+      {shopView && order.paymentMethod === 'upi' && order.status === 'placed' && (
+        <p className="text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-2.5 py-1.5">
+          💳 Paying by UPI — check your UPI app for {formatPrice(order.total)} before confirming.
+        </p>
+      )}
 
       <div className="text-[11px] text-zinc-400 space-y-1">
         <p className="flex items-center gap-1.5">

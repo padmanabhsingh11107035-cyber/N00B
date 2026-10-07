@@ -14,6 +14,7 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ settings
   // yet — treat that as "enabled" (the real default), not as "disabled".
   const [storeEnabled, setStoreEnabled] = useState(settings.storeEnabled !== false);
   const [deliveryFee, setDeliveryFee] = useState(String(settings.storeDeliveryFee ?? 0));
+  const [upiId, setUpiId] = useState(settings.storeUpiId || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,10 +24,15 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ settings
       setError('Enter a valid delivery charge.');
       return;
     }
+    const trimmedUpi = upiId.trim();
+    if (trimmedUpi && !/^[\w.+-]{2,256}@[a-zA-Z][\w.-]{1,64}$/.test(trimmedUpi)) {
+      setError('Enter a valid UPI ID, like yourname@okhdfcbank.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      const updated = await updateSettings({ storeEnabled, storeDeliveryFee: fee });
+      const updated = await updateSettings({ storeEnabled, storeDeliveryFee: fee, storeUpiId: trimmedUpi });
       onSaved(updated);
       onClose();
     } catch (err) {
@@ -67,6 +73,22 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ settings
             className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50"
           />
           <p className="text-[10px] text-zinc-500">Applied only when a buyer chooses Delivery over Pickup.</p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold text-zinc-400 uppercase">Your UPI ID</label>
+          <input
+            type="text"
+            value={upiId}
+            onChange={(e) => setUpiId(e.target.value)}
+            placeholder="yourname@okhdfcbank"
+            className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50"
+          />
+          <p className="text-[10px] text-zinc-500">
+            Shown to any buyer who pays by UPI, with the exact bill amount pre-filled — the money goes straight to this
+            UPI ID. There's no payment gateway, so always check your own UPI app for the payment before confirming an order.
+            Leave blank to hide UPI and only accept Cash on Delivery/Pickup.
+          </p>
         </div>
 
         {error && <p className="text-xs text-red-400 font-semibold">{error}</p>}

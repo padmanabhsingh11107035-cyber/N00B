@@ -261,6 +261,9 @@ export interface StoreProduct {
   stock: number | null;
   options: StoreProductOption[];
   variants: StoreProductVariant[];
+  // Free-text grouping (e.g. "food_stall") so a dedicated storefront can show just its own
+  // products out of the one shared catalog — unset for ordinary Shop NOOB products.
+  category?: string | null;
   createdAt: string;
   updatedAt?: string | null;
 }
@@ -826,5 +829,8 @@ export interface AppSettings {
   // delivery charge applied when a buyer picks Delivery over Pickup.
   storeEnabled: boolean;
   storeDeliveryFee: number;
+  // The shop owner's own UPI VPA (e.g. "name@okhdfcbank") — shown to a buyer who picks UPI at
+  // checkout so they can pay it directly from their own UPI app. Empty/unset hides the UPI option.
+  storeUpiId?: string;
 }
 

@@ -966,18 +966,24 @@ export async function fetchSettings(): Promise<AppSettings> {
   try {
     if (await currentSession()) shared = await rpc<Partial<AppSettings>>('get_app_settings');
   } catch { /* fall back to defaults */ }
-  return { ...INITIAL_SETTINGS, ...readLocalSettings(), storeEnabled: shared.storeEnabled ?? INITIAL_SETTINGS.storeEnabled, storeDeliveryFee: shared.storeDeliveryFee ?? INITIAL_SETTINGS.storeDeliveryFee } as AppSettings;
+  return {
+    ...INITIAL_SETTINGS,
+    ...readLocalSettings(),
+    storeEnabled: shared.storeEnabled ?? INITIAL_SETTINGS.storeEnabled,
+    storeDeliveryFee: shared.storeDeliveryFee ?? INITIAL_SETTINGS.storeDeliveryFee,
+    storeUpiId: shared.storeUpiId ?? ''
+  } as AppSettings;
 }
 
 export async function updateSettings(newSettings: Partial<AppSettings>): Promise<AppSettings> {
-  const { storeEnabled, storeDeliveryFee, ...personal } = newSettings;
+  const { storeEnabled, storeDeliveryFee, storeUpiId, ...personal } = newSettings;
   if (Object.keys(personal).length) {
     try { localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify({ ...readLocalSettings(), ...personal })); } catch { /* storage full/blocked */ }
   }
-  if (storeEnabled !== undefined || storeDeliveryFee !== undefined) {
+  if (storeEnabled !== undefined || storeDeliveryFee !== undefined || storeUpiId !== undefined) {
     // The database function checks who is asking, makes the change and writes it to the admin activity log; if it refuses, its
     // message names the account that is signed in.
-    const viaFunction = await supabase.rpc('set_shop_settings', { p_enabled: storeEnabled ?? null, p_fee: storeDeliveryFee ?? null });
+    const viaFunction = await supabase.rpc('set_shop_settings', { p_enabled: storeEnabled ?? null, p_fee: storeDeliveryFee ?? null, p_upi_id: storeUpiId ?? null });
     if (viaFunction.error) {
       const notInstalled = viaFunction.error.code === 'PGRST202' || /could not find the function/i.test(viaFunction.error.message || '');
       if (!notInstalled) throw new Error(viaFunction.error.message);
@@ -985,6 +991,7 @@ export async function updateSettings(newSettings: Partial<AppSettings>): Promise
       const shared: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (storeEnabled !== undefined) shared.store_enabled = storeEnabled;
       if (storeDeliveryFee !== undefined) shared.store_delivery_fee = storeDeliveryFee;
+      if (storeUpiId !== undefined) shared.store_upi_id = storeUpiId;
       // .select() so a change the database silently refused is noticed instead of looking saved
       const { data, error } = await supabase.from('app_settings').update(shared).eq('id', 1).select('id');
       if (error) throw new Error(error.message);
@@ -3016,10 +3023,14 @@ const mapOrder = (o: any): StoreOrder => ({
   customer: o.customer ? { ...o.customer, avatar: resolveMedia(o.customer.avatar) } : o.customer
 });
 
-// Payment is on pickup / on delivery (there is no online payment). Prices and stock are always taken from the database.
+// Payment is cash on pickup/delivery, or UPI paid directly to the shop's own VPA (see storeUpiId in
+// AppSettings) — there is still no payment gateway, so "paid" is never verified automatically; the
+// shop owner checks their own UPI app before confirming an order. Prices and stock always come from
+// the database regardless of what's sent here.
 export async function placeStoreOrder(payload: {
   items: { productId: string; variantKey?: string | null; quantity: number }[];
   deliveryMethod: 'pickup' | 'delivery';
+  paymentMethod?: 'cash' | 'upi';
   contact: Partial<ShopDetails>;
   note?: string;
   saveDetails?: boolean;

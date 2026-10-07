@@ -35,6 +35,7 @@ import { FeedVideoWatchView } from './FeedVideoWatchView';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
 import { StorePage } from '../Store/StorePage';
+import { FoodStallView } from '../Store/FoodStallView';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
@@ -159,6 +160,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showGuessTheSong, setShowGuessTheSong] = useState(false);
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
   const [showStorePage, setShowStorePage] = useState(false);
+  const [showFoodStall, setShowFoodStall] = useState(false);
   const [showNoobAi, setShowNoobAi] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showSparkXModal, setShowSparkXModal] = useState(false);
@@ -553,6 +555,22 @@ export const FeedView: React.FC<FeedViewProps> = ({
         onNavigateToReel={onNavigateToReel}
       />
 
+      {/* 2b. Food Stall banner — sits right on the home feed (not buried in a menu), three lines:
+          title, a short description, and the call to action. */}
+      <button
+        onClick={() => setShowFoodStall(true)}
+        className="w-full max-w-[480px] px-3 mt-2 text-left cursor-pointer"
+      >
+        <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-zinc-900 border border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3 hover:border-amber-400/50 transition-colors">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-white leading-tight">🍔 NOOB Food Stall</p>
+            <p className="text-[11px] text-amber-200/80 leading-tight mt-0.5">Burgers, bhel, fries, manchurian &amp; coke</p>
+            <p className="text-[11px] font-bold text-amber-400 leading-tight mt-0.5">Tap to order now →</p>
+          </div>
+          <span className="shrink-0 text-2xl">🧋</span>
+        </div>
+      </button>
+
       {/* 3. Category Topic Filter Pills */}
       <div className="w-full max-w-[480px] px-3 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
         {categories.map((cat) => (
@@ -774,6 +792,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </ErrorBoundary>
       )}
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
+      {showFoodStall && <FoodStallView currentUser={currentUser} onClose={() => setShowFoodStall(false)} />}
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}
       {showSupportModal && (
         <React.Suspense fallback={<LazyFallback />}>

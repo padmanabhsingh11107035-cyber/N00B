@@ -254,7 +254,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({ order,
             <div><dt className="text-black/45">Order ID</dt><dd className="font-bold">#{order.orderNo}</dd></div>
             <div><dt className="text-black/45">Customer ID</dt><dd className="font-bold">{order.customer?.id || '—'}</dd></div>
             <div><dt className="text-black/45">Placed on</dt><dd className="font-bold">{clock(order.createdAt)}</dd></div>
-            <div><dt className="text-black/45">Payment</dt><dd className="font-bold">{order.paymentMethod === 'cash' ? (delivery ? 'Pay on delivery' : 'Pay at pickup') : order.paymentMethod}</dd></div>
+            <div><dt className="text-black/45">Payment</dt><dd className="font-bold">{order.paymentMethod === 'upi' ? 'Paid by UPI' : order.paymentMethod === 'cash' ? (delivery ? 'Pay on delivery' : 'Pay at pickup') : order.paymentMethod}</dd></div>
             <div><dt className="text-black/45">Way of getting it</dt><dd className="font-bold">{delivery ? 'Home delivery' : 'Pickup from the shop'}</dd></div>
             {order.note && <div><dt className="text-black/45">Your note</dt><dd className="font-bold">{order.note}</dd></div>}
             {order.status === 'cancelled' && (

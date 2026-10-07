@@ -204,7 +204,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
   const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-purple-950/30 via-zinc-950 to-zinc-950 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-zinc-950 bg-gradient-to-b from-purple-950 via-zinc-950 to-zinc-950 flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
         <h1 className="text-base font-black italic tracking-tighter text-white flex items-center gap-2">
           <Music2 className="w-4.5 h-4.5 text-purple-400" /> Guess the Song

@@ -148,6 +148,20 @@ export default function App() {
   // they're currently on — a hook, so it must be called unconditionally, before any early return
   // below. It internally no-ops until currentUser is actually set.
   const { incoming: incomingCall, decline: declineIncomingCall, clearAfterAccept: clearIncomingCallAfterAccept } = useIncomingCalls(currentUser);
+  // Defined up here (not just before the main return) so it's available to the IncomingCallModal
+  // rendered inside the main-admin early-return below too — the admin needs to be able to accept a
+  // call while looking at the admin console, same as anywhere else in the app.
+  const acceptIncomingCall = () => {
+    if (!incomingCall) return;
+    const chatId = incomingCall.chatId;
+    clearIncomingCallAfterAccept();
+    // The main admin normally sees the admin console instead of the real app (see the isMainAdmin
+    // early-return below) — accepting a call has to step them out into it, or there's nowhere for
+    // the call screen to actually show.
+    setViewAsUser(true);
+    setActiveTab('chat');
+    setPendingCallChatId(chatId);
+  };
   // The main NOOB admin normally opens straight into the admin console (see the isMainAdmin gate
   // below) — this lets them step into the app exactly as any other member sees it, then step back
   // out via the computer icon on their own profile page. Resets to the admin console on every fresh
@@ -1045,6 +1059,9 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
+        {incomingCall && (
+          <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
+        )}
         <React.Suspense fallback={<LazyFallback />}>
           <AdminControlModal
             currentUser={currentUser}
@@ -1078,14 +1095,6 @@ export default function App() {
   }
 
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
-
-  const acceptIncomingCall = () => {
-    if (!incomingCall) return;
-    const chatId = incomingCall.chatId;
-    clearIncomingCallAfterAccept();
-    setActiveTab('chat');
-    setPendingCallChatId(chatId);
-  };
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 overflow-x-hidden">

@@ -97,7 +97,12 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const otherProducts = useMemo(() => foodProducts.filter((p) => !p.name.startsWith('Coke')), [foodProducts]);
 
   useEffect(() => {
-    if (!selectedCokeId && cokeOptions.length > 0) setSelectedCokeId(cokeOptions[Math.min(1, cokeOptions.length - 1)].id);
+    if (selectedCokeId && cokeOptions.some((c) => c.id === selectedCokeId)) return;
+    if (cokeOptions.length === 0) return;
+    // Default to the medium size, but never land on a size that's out of stock if another one isn't.
+    const preferred = cokeOptions[Math.min(1, cokeOptions.length - 1)];
+    const pick = preferred.inStock ? preferred : cokeOptions.find((c) => c.inStock) || preferred;
+    setSelectedCokeId(pick.id);
   }, [cokeOptions, selectedCokeId]);
 
   const persistCart = (next: CartMap) => {
@@ -193,11 +198,20 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     setShowCheckout(false);
   };
 
-  const Card: React.FC<{ product: StoreProduct; name: string; delaySeed: number; children?: React.ReactNode }> = ({ product, name, delaySeed, children }) => (
+  const Card: React.FC<{ product: StoreProduct; name: string; delaySeed: number; children?: React.ReactNode }> = ({ product, name, delaySeed, children }) => {
+    const comingSoon = !product.inStock;
+    return (
     <div className="fs-stage">
-      <div className={`fs-card fs-tilt-${delaySeed % 3} bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden`}>
+      <div className={`fs-card fs-tilt-${delaySeed % 3} bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden ${comingSoon ? 'opacity-70' : ''}`}>
         <div className="fs-media relative aspect-square">
           <ProductMediaCarousel media={product.media} />
+          {comingSoon && (
+            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+              <span className="bg-black/80 backdrop-blur-md text-amber-300 text-xs font-black px-3 py-1.5 rounded-full border border-amber-400/40">
+                Coming Soon
+              </span>
+            </div>
+          )}
           <span className="fs-chip absolute top-2 right-2 bg-black/75 backdrop-blur-md text-[#00FF66] text-xs font-black px-2.5 py-1 rounded-full border border-[#00FF66]/30">
             {formatPrice(product.price)}
           </span>
@@ -208,15 +222,20 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
           {children}
           <button
             onClick={() => addToCart(product.id)}
-            disabled={!foodStallEnabled}
+            disabled={!foodStallEnabled || comingSoon}
             className="touch-manipulation w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
-            <Plus className="w-3.5 h-3.5" /> Add to Cart
+            {comingSoon ? 'Coming Soon' : (
+              <>
+                <Plus className="w-3.5 h-3.5" /> Add to Cart
+              </>
+            )}
           </button>
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const selectedCoke = cokeOptions.find((c) => c.id === selectedCokeId) || cokeOptions[0];
 
@@ -267,8 +286,10 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                   {cokeOptions.map((c, i) => (
                     <button
                       key={c.id}
-                      onClick={() => setSelectedCokeId(c.id)}
-                      className={`flex-1 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-colors ${
+                      onClick={() => c.inStock && setSelectedCokeId(c.id)}
+                      disabled={!c.inStock}
+                      title={c.inStock ? undefined : 'Coming soon'}
+                      className={`flex-1 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                         c.id === selectedCokeId ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]' : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                       }`}
                     >

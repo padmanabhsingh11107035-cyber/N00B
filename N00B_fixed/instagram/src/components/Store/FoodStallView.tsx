@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import {
   X, ShoppingCart, Plus, Minus, Loader2, Check, Store as StoreIcon, Truck,
-  Banknote, Smartphone, Copy, CheckCircle2
+  Banknote, Smartphone, Copy, CheckCircle2, ClipboardList
 } from 'lucide-react';
 import { StoreProduct, User } from '../../types';
 import { fetchStoreProducts, placeStoreOrder, getShopDetails, fetchSettings } from '../../services/api';
 import { ProductMediaCarousel } from './ProductMediaCarousel';
+import { OrdersView } from './OrdersView';
 import { formatPrice } from './formatPrice';
 import { loadCart, saveCart, type CartMap } from './cartStorage';
 import { buildUpiUri } from '../../utils/upi';
@@ -16,17 +17,20 @@ interface FoodStallViewProps {
   onClose: () => void;
 }
 
+// A static tilt (no running animation) that only reacts on an actual press, via :active — a
+// continuously-running CSS animation on a transform-style:preserve-3d element is a known source of
+// unreliable touch hit-testing on iOS Safari (the first tap can get "eaten" while the browser is
+// mid-recompositing), which is exactly the "need two taps" bug this replaces.
 const CSS = `
+.fs-root button, .fs-root a, .fs-root input[type="checkbox"], .fs-root label{touch-action:manipulation}
 .fs-stage{perspective:1000px}
-.fs-card{transform-style:preserve-3d;animation:fs-float 6s ease-in-out infinite;transition:transform .25s ease-out}
-.fs-card:active{animation-play-state:paused;transform:rotateX(2deg) rotateY(-3deg) scale(.97)}
-.fs-media{transform:translateZ(22px)}
-.fs-chip{transform:translateZ(44px)}
-@keyframes fs-float{
-  0%,100%{transform:rotateX(5deg) rotateY(-7deg) translateY(0)}
-  50%{transform:rotateX(-3deg) rotateY(7deg) translateY(-7px)}
-}
-@media (prefers-reduced-motion: reduce){.fs-card{animation:none}}
+.fs-card{transform-style:preserve-3d;transition:transform .2s ease-out}
+.fs-card:active{transform:rotateX(2deg) rotateY(-3deg) scale(.97)}
+.fs-media{transform:translateZ(18px)}
+.fs-chip{transform:translateZ(36px)}
+.fs-tilt-0{transform:rotateX(4deg) rotateY(-6deg)}
+.fs-tilt-1{transform:rotateX(-3deg) rotateY(6deg)}
+.fs-tilt-2{transform:rotateX(5deg) rotateY(4deg)}
 `;
 
 const FOOD_CATEGORY = 'food_stall';
@@ -43,6 +47,8 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const [selectedCokeId, setSelectedCokeId] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showMyOrders, setShowMyOrders] = useState(false);
+  const [upiPaymentConfirmed, setUpiPaymentConfirmed] = useState(false);
   const [foodStallEnabled, setFoodStallEnabled] = useState(true);
   const [deliveryFeeSetting, setDeliveryFeeSetting] = useState(0);
   const [upiId, setUpiId] = useState('');
@@ -142,6 +148,11 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
 
   const upiUri = upiId && total > 0 ? buildUpiUri(upiId, 'NOOB Food Stall', total, 'NOOB Food Stall order') : '';
 
+  // A fresh payment-method pick (or a fresh total to pay) can never inherit an earlier "I've paid" tick.
+  useEffect(() => {
+    setUpiPaymentConfirmed(false);
+  }, [paymentMethod, total]);
+
   const handlePlaceOrder = async () => {
     setPlaceError(null);
     if (cartLines.length === 0) return;
@@ -155,6 +166,12 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     }
     if (deliveryMethod === 'delivery' && (!addressLine1.trim() || !city.trim() || !state.trim() || !pincode.trim())) {
       setPlaceError('Fill in your full delivery address.');
+      return;
+    }
+    // No payment gateway exists to verify this automatically — the order is never created for UPI
+    // until the buyer explicitly says they've actually paid.
+    if (paymentMethod === 'upi' && !upiPaymentConfirmed) {
+      setPlaceError('Please pay via UPI first, then confirm the payment is done.');
       return;
     }
     setPlacing(true);
@@ -178,7 +195,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
 
   const Card: React.FC<{ product: StoreProduct; name: string; delaySeed: number; children?: React.ReactNode }> = ({ product, name, delaySeed, children }) => (
     <div className="fs-stage">
-      <div className="fs-card bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden" style={{ animationDelay: `-${(delaySeed % 6) * 0.9}s` }}>
+      <div className={`fs-card fs-tilt-${delaySeed % 3} bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden`}>
         <div className="fs-media relative aspect-square">
           <ProductMediaCarousel media={product.media} />
           <span className="fs-chip absolute top-2 right-2 bg-black/75 backdrop-blur-md text-[#00FF66] text-xs font-black px-2.5 py-1 rounded-full border border-[#00FF66]/30">
@@ -192,7 +209,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
           <button
             onClick={() => addToCart(product.id)}
             disabled={!foodStallEnabled}
-            className="w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            className="touch-manipulation w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" /> Add to Cart
           </button>
@@ -204,24 +221,29 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const selectedCoke = cokeOptions.find((c) => c.id === selectedCokeId) || cokeOptions[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
+    <div className="fs-root fixed inset-0 z-50 bg-zinc-950 flex flex-col">
       <style>{CSS}</style>
 
       <header className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="p-1.5 -ml-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
-            <X className="w-5 h-5" />
+        <div className="flex items-center gap-2 min-w-0">
+          <button onClick={onClose} className="touch-manipulation p-1 -ml-1 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer shrink-0">
+            <X className="w-3.5 h-3.5" />
           </button>
-          <h1 className="text-sm font-black italic tracking-tighter text-white">🍔 NOOB Food Stall</h1>
+          <h1 className="text-sm font-black italic tracking-tighter text-white truncate">🍔 NOOB Food Stall</h1>
         </div>
-        <button onClick={() => setShowCart(true)} className="relative p-2 rounded-full bg-zinc-900 border border-zinc-800 text-white cursor-pointer">
-          <ShoppingCart className="w-4.5 h-4.5" />
-          {cartCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#00FF66] text-black text-[10px] font-black flex items-center justify-center">
-              {cartCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setShowMyOrders(true)} className="touch-manipulation p-2 rounded-full bg-zinc-900 border border-zinc-800 text-white cursor-pointer" title="My Orders">
+            <ClipboardList className="w-4.5 h-4.5" />
+          </button>
+          <button onClick={() => setShowCart(true)} className="touch-manipulation relative p-2 rounded-full bg-zinc-900 border border-zinc-800 text-white cursor-pointer">
+            <ShoppingCart className="w-4.5 h-4.5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#00FF66] text-black text-[10px] font-black flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-3">
@@ -306,7 +328,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                     setShowCheckout(true);
                   }}
                   disabled={!foodStallEnabled}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40"
+                  className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40"
                 >
                   Checkout
                 </button>
@@ -398,7 +420,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                   )}
                   <a
                     href={upiUri}
-                    className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-black cursor-pointer flex items-center justify-center gap-1.5 hover:opacity-90"
+                    className="touch-manipulation w-full py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-black cursor-pointer flex items-center justify-center gap-1.5 hover:opacity-90"
                   >
                     <Smartphone className="w-3.5 h-3.5" /> Pay {formatPrice(total)} via UPI
                   </a>
@@ -412,15 +434,25 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                         /* clipboard blocked */
                       }
                     }}
-                    className="w-full py-2 rounded-xl border border-zinc-700 text-zinc-300 text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5"
+                    className="touch-manipulation w-full py-2 rounded-xl border border-zinc-700 text-zinc-300 text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     {upiCopied ? <CheckCircle2 className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
                     {upiCopied ? 'Copied' : 'Copy UPI ID'}
                   </button>
                   <p className="text-[10px] text-zinc-500 leading-relaxed">
-                    There's no payment gateway — the stall checks their own UPI app for your payment before confirming the
-                    order, so keep your payment screenshot handy just in case.
+                    There's no payment gateway — this order will not be placed until you confirm below that you've
+                    actually paid. The stall still checks their own UPI app before confirming it, so keep your payment
+                    screenshot handy just in case.
                   </p>
+                  <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-black/40 border border-zinc-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={upiPaymentConfirmed}
+                      onChange={(e) => setUpiPaymentConfirmed(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 shrink-0 accent-[#00FF66] cursor-pointer"
+                    />
+                    <span className="text-[11px] font-bold text-white">I have completed this UPI payment of {formatPrice(total)}</span>
+                  </label>
                 </div>
               )}
             </div>
@@ -447,12 +479,32 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
           <div className="p-4 border-t border-zinc-800 shrink-0">
             <button
               onClick={handlePlaceOrder}
-              disabled={placing}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
+              disabled={placing || (paymentMethod === 'upi' && !upiPaymentConfirmed)}
+              className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              {placing ? 'Placing order…' : `Place Order · ${formatPrice(total)}`}
+              {placing
+                ? 'Placing order…'
+                : paymentMethod === 'upi' && !upiPaymentConfirmed
+                ? 'Confirm payment above to continue'
+                : `Place Order · ${formatPrice(total)}`}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* My Orders */}
+      {showMyOrders && (
+        <div className="fixed inset-0 z-[92] bg-zinc-950 flex flex-col">
+          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80">
+            <button onClick={() => setShowMyOrders(false)} className="touch-manipulation p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+            <h2 className="text-sm font-black text-white">My Orders</h2>
+            <span className="w-7" />
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <OrdersView canManage={false} />
           </div>
         </div>
       )}

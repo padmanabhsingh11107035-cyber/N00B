@@ -222,7 +222,27 @@ async function handlePush(req: Request, body: any, admin: any): Promise<Response
     console.error(`push: the VAPID keys are not usable (${oneLine((e as Error)?.message, 120)}) — check VAPID_PRIVATE_KEY matches the public key`);
     return json({ error: 'Push keys are invalid.' }, 500);
   }
-  const payload = te.encode(JSON.stringify({ title: String(data.title ?? 'NOOB'), body: String(data.body ?? ''), url: '/' }));
+  // An incoming call needs to ring even with the app fully closed. Declining always happens inside
+  // the app's own incoming-call screen (no OS notification action buttons here, unlike before) — the
+  // tap just opens/focuses the app and deep-links straight into the ring screen via the URL below.
+  const callData = data.type === 'call_ring' && data.data && typeof data.data === 'object' ? data.data : null;
+  const notifPayload: Record<string, unknown> = { title: String(data.title ?? 'NOOB'), body: String(data.body ?? ''), url: '/' };
+  if (callData) {
+    const params = new URLSearchParams({
+      incomingCallChat: String(callData.chatId ?? ''),
+      chatName: String(callData.chatName ?? ''),
+      isGroup: callData.isGroup ? '1' : '0',
+      callerId: String(callData.callerId ?? ''),
+      callerUsername: String(callData.callerUsername ?? ''),
+      callerDisplayName: String(callData.callerDisplayName ?? ''),
+      callerAvatar: String(callData.callerAvatar ?? '')
+    });
+    notifPayload.url = `/?${params.toString()}`;
+    notifPayload.type = 'call_ring';
+    notifPayload.tag = `call:${callData.chatId}`;
+    notifPayload.requireInteraction = true;
+  }
+  const payload = te.encode(JSON.stringify(notifPayload));
   const tally = { sent: 0, gone: 0, failed: 0 };
   const dead: { userId: string; endpoint: string }[] = [];
   let next = 0;
@@ -822,6 +842,35 @@ Deno.serve(async (req) => {
       .eq('user_id', userId);
     if (error) return json({ error: 'Could not record device info.' }, 500);
     return json({ success: true });
+  }
+
+  // ------------------------------------------------------------------ call: TURN credentials
+  // STUN alone (callSignaling.ts's fallback) can't get two devices through many real-world NATs
+  // (cellular carrier-grade NAT, some corporate/campus Wi-Fi, some home routers) — a TURN relay is
+  // needed for those. Metered's TURN service (its free tier needs no card on file) mints geo-nearest
+  // credentials over a plain REST call using a secret API key that must never reach the browser, so
+  // this has to happen here. Falls back to STUN-only if the secrets aren't set yet or Metered's API
+  // is unreachable — a call can still work without TURN, just less reliably.
+  if (body?.action === 'get_turn_credentials') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const stunOnly = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+    const appName = (Deno.env.get('METERED_APP_NAME') || '').trim();
+    const apiKey = (Deno.env.get('METERED_API_KEY') || '').trim();
+    if (!appName || !apiKey) return json({ success: true, iceServers: stunOnly });
+    try {
+      const res = await fetch(`https://${encodeURIComponent(appName)}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(apiKey)}`, {
+        signal: AbortSignal.timeout(8_000)
+      });
+      if (!res.ok) {
+        console.warn(`turn: Metered answered ${res.status} ${oneLine(await res.text().catch(() => ''), 160)}`);
+        return json({ success: true, iceServers: stunOnly });
+      }
+      const iceServers = await res.json();
+      return json({ success: true, iceServers: Array.isArray(iceServers) && iceServers.length ? iceServers : stunOnly });
+    } catch (e) {
+      console.warn(`turn: could not reach Metered: ${oneLine((e as Error)?.message, 120)}`);
+      return json({ success: true, iceServers: stunOnly });
+    }
   }
 
   // ------------------------------------------------------------------ SparkX email notifications

@@ -174,6 +174,8 @@ export {
   applyLiveAvatar,
   matchContacts,
   sendScreenshotAlert,
+  notifyIncomingRing,
+  logCallEvent,
   translateMessage,
   submitSafetyReport,
   submitSupportReview,

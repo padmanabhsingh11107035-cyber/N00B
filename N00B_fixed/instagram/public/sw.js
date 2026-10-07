@@ -36,26 +36,36 @@ self.addEventListener('push', (event) => {
     // than showing nothing at all.
   }
 
+  const isCallRing = data.type === 'call_ring';
   const options = {
     body: data.body,
     icon: data.icon || '/noob-logo-circle.png',
     badge: '/noob-logo-circle.png',
-    data: { url: data.url || '/' }
+    data: { url: data.url || '/', isCallRing },
+    // An incoming call needs to demand attention (stay on screen until acted on) and replace any
+    // earlier ring for the same call rather than stacking a second notification for it. Everything
+    // else keeps the browser's normal auto-dismissing behavior.
+    ...(isCallRing ? { tag: data.tag, requireInteraction: true } : {})
   };
 
   event.waitUntil(self.registration.showNotification(data.title || 'NOOB', options));
 });
 
-// Clicking the OS notification should bring an existing NOOB tab to the
-// front instead of always opening a fresh one.
+// Clicking the OS notification should bring an existing NOOB tab to the front instead of always
+// opening a fresh one. A call notification also needs to jump straight to the ring screen even if
+// the tab was on a different page — every other notification just brings the app forward as-is.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
+  const isCallRing = !!event.notification.data?.isCallRing;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ('focus' in client) return client.focus();
+        if ('focus' in client) {
+          if (isCallRing && 'navigate' in client) client.navigate(targetUrl).catch(() => undefined);
+          return client.focus();
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })

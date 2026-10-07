@@ -36,6 +36,7 @@ import {
   removeFollower,
   acceptFollowRequest,
   declineFollowRequest,
+  respondToSuggestedUser,
   toggleLikePost,
   toggleSavePost,
   toggleArchivePost,
@@ -941,6 +942,29 @@ export default function App() {
     }
   };
 
+  const handleRespondSuggestedUser = async (notifId: string, actorId: string, accept: boolean) => {
+    try {
+      const res = await respondToSuggestedUser(notifId, accept);
+      if (!res.success) return;
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notifId ? { ...n, actionStatus: accept ? 'accepted' : 'declined' } : n))
+      );
+      if (accept) {
+        setRegisteredUsers((prev) =>
+          prev.map((u) => (u.id === actorId ? { ...u, isFollowing: !!res.isFollowing, isFollowRequested: !!res.isFollowRequested } : u))
+        );
+        if (currentUser && res.isFollowing) {
+          const curFollowing = currentUser.followingIds || [];
+          if (!curFollowing.includes(actorId)) {
+            setCurrentUser({ ...currentUser, followingIds: [...curFollowing, actorId], followingCount: curFollowing.length + 1 });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to respond to suggested user:', err);
+    }
+  };
+
   const handleGoLiveTap = () => {
     setShowPostCreationModal(false);
     if (currentUser.hasLiveLounge) setShowGoLiveHost(true);
@@ -1772,6 +1796,7 @@ export default function App() {
           onAcceptFollowRequest={handleAcceptFollowRequest}
           onDeclineFollowRequest={handleDeclineFollowRequest}
           onFollowBack={handleToggleFollowUser}
+          onRespondSuggestedUser={handleRespondSuggestedUser}
           onClearAll={handleClearAllNotifications}
           onClose={() => setShowNotificationsModal(false)}
           onOpenScratchCard={(id) => setActiveScratchCardId(id)}

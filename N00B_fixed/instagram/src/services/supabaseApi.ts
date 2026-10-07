@@ -676,6 +676,15 @@ export async function declineFollowRequest(requesterId: string): Promise<{ succe
   }
 }
 
+export async function respondToSuggestedUser(notifId: string, accept: boolean): Promise<{ success: boolean; isFollowing?: boolean; isFollowRequested?: boolean; followersCount?: number }> {
+  try {
+    const res = await rpc<any>('respond_suggested_user', { p_notif_id: notifId, p_accept: accept });
+    return { success: !!res.success, ...(res.follow || {}) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not do that right now.') } as any;
+  }
+}
+
 // ----------------------------------------------------------------------------- posts
 
 export async function fetchPosts(_category?: string, _location?: string): Promise<Post[]> {

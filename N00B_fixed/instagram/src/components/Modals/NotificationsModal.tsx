@@ -48,6 +48,7 @@ interface NotificationsModalProps {
   onAcceptFollowRequest: (notifId: string, actorId: string) => void;
   onDeclineFollowRequest: (notifId: string, actorId: string) => void;
   onFollowBack?: (userId: string) => void;
+  onRespondSuggestedUser?: (notifId: string, actorId: string, accept: boolean) => void;
   onClearAll: () => void;
   onNavigateToUser?: (username: string) => void;
   onOpenScratchCard?: (scratchCardId: string) => void;
@@ -64,6 +65,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onAcceptFollowRequest,
   onDeclineFollowRequest,
   onFollowBack,
+  onRespondSuggestedUser,
   onClearAll,
   onNavigateToUser,
   onOpenScratchCard,
@@ -94,7 +96,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     }
 
     if (filterType === 'all') return true;
-    if (filterType === 'follows') return n.type === 'new_follower' || n.type === 'follow_request_accepted' || n.type === 'follow_request_received';
+    if (filterType === 'follows') return n.type === 'new_follower' || n.type === 'follow_request_accepted' || n.type === 'follow_request_received' || n.type === 'suggested_user';
     if (filterType === 'likes') return n.type === 'post_like' || n.type === 'post_comment';
     if (filterType === 'games_music') return n.type === 'game_challenge' || n.type === 'music_share';
     return true;
@@ -142,6 +144,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <UserPlus className="w-3.5 h-3.5 text-purple-400" />;
       case 'new_follower':
         return <UserPlus className="w-3.5 h-3.5 text-cyan-400" />;
+      case 'suggested_user':
+        return <UserPlus className="w-3.5 h-3.5 text-amber-400" />;
       case 'post_like':
         return <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500" />;
       case 'post_comment':
@@ -429,6 +433,46 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           {notif.type === 'follow_request_received' && notif.actionStatus === 'declined' && (
                             <div className="mt-1.5 text-[11px] text-zinc-500 font-medium">
                               Request dismissed
+                            </div>
+                          )}
+
+                          {/* Suggested for you — a random account they don't yet follow, shown with
+                              their @handle explicitly (the bold name above is just their display name). */}
+                          {notif.type === 'suggested_user' && (notif.actorUsername || notif.senderUsername) && (
+                            <div className="text-[11px] text-zinc-500 font-medium -mt-0.5 mb-1" translate="no">
+                              @{notif.actorUsername || notif.senderUsername}
+                            </div>
+                          )}
+                          {notif.type === 'suggested_user' && notif.actionStatus === 'pending' && (
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, true);
+                                }}
+                                className="px-3 py-1 bg-[#00FF66] hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" /> Follow
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, false);
+                                }}
+                                className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                          {notif.type === 'suggested_user' && notif.actionStatus === 'accepted' && (
+                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[#00FF66] font-bold">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Followed
+                            </div>
+                          )}
+                          {notif.type === 'suggested_user' && notif.actionStatus === 'declined' && (
+                            <div className="mt-1.5 text-[11px] text-zinc-500 font-medium">
+                              Suggestion dismissed
                             </div>
                           )}
 

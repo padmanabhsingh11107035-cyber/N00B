@@ -276,7 +276,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
               >
                 {/* Looping poster carousel — same slides as the game's own detail page, cycling on its own */}
                 <div className="relative overflow-hidden cursor-pointer group-hover:scale-105 transition-transform duration-500" onClick={() => setSelectedGameForPlay(game)}>
-                  <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} />
+                  <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} autoAdvanceMs={1000} />
 
                   {/* Game Number Badge */}
                   <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono font-black text-white border border-white/10">

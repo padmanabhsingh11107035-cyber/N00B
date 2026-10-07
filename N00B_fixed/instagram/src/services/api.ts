@@ -34,6 +34,7 @@ export {
   fetchMutualFollowers,
   acceptFollowRequest,
   declineFollowRequest,
+  respondToSuggestedUser,
   fetchPosts,
   fetchPostById,
   fetchLikedPosts,

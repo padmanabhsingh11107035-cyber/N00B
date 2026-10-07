@@ -34,6 +34,7 @@ import { CommentsSheet } from './CommentsSheet';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
 import { StorePage } from '../Store/StorePage';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { isMainAdmin } from '../../adminAccess';
@@ -740,19 +741,25 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </React.Suspense>
       )}
       {showNoobRooms && (
-        <React.Suspense fallback={<LazyFallback />}>
-          <NoobRoomsLobbyView currentUser={currentUser} onClose={() => setShowNoobRooms(false)} />
-        </React.Suspense>
+        <ErrorBoundary showErrorDetails>
+          <React.Suspense fallback={<LazyFallback />}>
+            <NoobRoomsLobbyView currentUser={currentUser} onClose={() => setShowNoobRooms(false)} />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
       {showGuessTheSong && (
-        <React.Suspense fallback={<LazyFallback />}>
-          <GuessTheSongView currentUser={currentUser} onClose={() => setShowGuessTheSong(false)} />
-        </React.Suspense>
+        <ErrorBoundary showErrorDetails>
+          <React.Suspense fallback={<LazyFallback />}>
+            <GuessTheSongView currentUser={currentUser} onClose={() => setShowGuessTheSong(false)} />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
       {showLiveLoungePage && (
-        <React.Suspense fallback={<LazyFallback />}>
-          <LiveLoungePage currentUser={currentUser} allUsers={allUsers} onClose={() => setShowLiveLoungePage(false)} onUserUpdated={onUserUpdated} />
-        </React.Suspense>
+        <ErrorBoundary showErrorDetails>
+          <React.Suspense fallback={<LazyFallback />}>
+            <LiveLoungePage currentUser={currentUser} allUsers={allUsers} onClose={() => setShowLiveLoungePage(false)} onUserUpdated={onUserUpdated} />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}

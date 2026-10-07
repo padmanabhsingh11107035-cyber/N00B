@@ -290,7 +290,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
             <Loader2 className="w-4 h-4 animate-spin" /> Loading the menu…
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {otherProducts.map((p, i) => (
               <FoodCard key={p.id} product={p} name={p.name} tiltIndex={i} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart} />
             ))}

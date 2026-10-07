@@ -791,6 +791,23 @@ export async function toggleSavePost(postId: string): Promise<{ isSaved: boolean
   try { return await rpc('toggle_post_save', { p_post: postId }); } catch (err) { return { error: errorText(err, 'Could not update the save.') } as any; }
 }
 
+// dislikesCount only ever comes back non-null for the main admin — everyone else only learns
+// their own isDisliked state, same as the database itself enforces (see toggle_post_dislike).
+export async function toggleDislikePost(postId: string): Promise<{ isDisliked: boolean; isLiked: boolean; likesCount: number; dislikesCount: number | null }> {
+  try { return await rpc('toggle_post_dislike', { p_post: postId }); } catch (err) { return { error: errorText(err, 'Could not update that.') } as any; }
+}
+
+// Other video posts to watch next — people the viewer follows first, then random, never a private
+// account's posts the viewer can't actually see.
+export async function fetchFeedVideoUpNext(excludePostId?: string, limit = 20): Promise<Post[]> {
+  try {
+    const res = (await rpc<any[]>('feed_video_up_next', { p_exclude_post_id: excludePostId || null, p_limit: limit })) || [];
+    return res.map(mapPost);
+  } catch {
+    return [];
+  }
+}
+
 export async function toggleArchivePost(postId: string): Promise<{ isArchived: boolean }> {
   try { return await rpc('toggle_post_flag', { p_post: postId, p_flag: 'archive' }); } catch (err) { return { error: errorText(err, 'You can only modify your own posts.') } as any; }
 }
@@ -1423,6 +1440,25 @@ export async function fetchPlaylistsForVideo(videoId: string): Promise<(LongVide
     return (await rpc<any[]>('fetch_my_long_video_playlists_with_membership', { p_video_id: videoId })) || [];
   } catch {
     return [];
+  }
+}
+
+// Same playlists as above (a playlist doesn't care whether a video came from NOOB Videos or the
+// Feed) — just a Feed-post-flavored membership check and toggle, backed by post_playlist_items.
+export async function fetchPlaylistsForPost(postId: string): Promise<(LongVideoPlaylist & { hasVideo: boolean })[]> {
+  try {
+    if (!(await currentSession())) return [];
+    return (await rpc<any[]>('fetch_my_post_playlists_with_membership', { p_post_id: postId })) || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function togglePostInPlaylist(playlistId: string, postId: string): Promise<{ success: boolean; inPlaylist?: boolean; error?: string }> {
+  try {
+    return await rpc('toggle_post_in_playlist', { p_playlist_id: playlistId, p_post_id: postId });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not update the playlist.') };
   }
 }
 

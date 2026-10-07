@@ -31,6 +31,7 @@ import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
 import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
+import { FeedVideoWatchView } from './FeedVideoWatchView';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
 import { StorePage } from '../Store/StorePage';
@@ -145,6 +146,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following'>('foryou');
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
+  const [watchVideoPost, setWatchVideoPost] = useState<Post | null>(null);
   const [hiddenAdIds, setHiddenAdIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -601,6 +603,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onSelectCategory={(cat) => setActiveCategory(cat)}
                 onNavigateToProfile={onNavigateToProfile}
                 onToggleFollowUser={onToggleFollowUser}
+                onOpenVideoWatch={(p) => setWatchVideoPost(p)}
               />
             ))}
 
@@ -629,6 +632,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
           post={selectedPostForComments}
           currentUser={currentUser}
           onClose={() => setSelectedPostForComments(null)}
+        />
+      )}
+
+      {watchVideoPost && (
+        <FeedVideoWatchView
+          post={watchVideoPost}
+          currentUser={currentUser}
+          onClose={() => setWatchVideoPost(null)}
+          onNavigateToProfile={onNavigateToProfile}
         />
       )}
 

@@ -18,7 +18,8 @@ import {
   EyeOff,
   Trash2,
   Link2,
-  Pause
+  Pause,
+  Maximize2
 } from 'lucide-react';
 import { Post, User } from '../../types';
 import confetti from 'canvas-confetti';
@@ -56,6 +57,7 @@ interface PostCardProps {
   onSelectCategory?: (category: string) => void;
   onNavigateToProfile?: (user: User) => void;
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
+  onOpenVideoWatch?: (post: Post) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -72,7 +74,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   onHideAd,
   onToggleFollowUser,
   onSelectCategory,
-  onNavigateToProfile
+  onNavigateToProfile,
+  onOpenVideoWatch
 }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -530,6 +533,22 @@ export const PostCard: React.FC<PostCardProps> = ({
                 if (img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
               }}
             />
+          )}
+
+          {/* Opens the full YouTube-style watch page (like/dislike/comments/share/save/playlist/
+              download/up next) — the inline player above still works exactly as before; this is an
+              explicit, separate affordance so it never conflicts with double-tap-to-like. */}
+          {currentSlide.mediaType === 'video' && onOpenVideoWatch && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenVideoWatch(post);
+              }}
+              title="Open full video"
+              className="absolute bottom-3 right-3 z-20 p-2 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
           )}
 
           {/* Text / sticker / mention / hashtag / link layers placed in the Post creator — same

@@ -416,6 +416,10 @@ export interface Post {
   savesCount: number;
   isLiked: boolean;
   isSaved: boolean;
+  isDisliked: boolean;
+  // Only ever populated for the main admin — the real number is never sent to anyone else,
+  // not even the post's own owner (see toggle_post_dislike / post_json server-side).
+  dislikesCount?: number | null;
   isPinnedToProfile?: boolean;
   isArchived?: boolean;
   isCommentsDisabled?: boolean;

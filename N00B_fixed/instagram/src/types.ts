@@ -594,6 +594,7 @@ export interface SongGuessRound {
   phaseEndsAt: string;
   myAnswer: { chosenIndex: number; isCorrect: boolean } | null;
   clipUrl: string | null;
+  youtubeVideoId: string | null;
   clipStartSeconds: number;
   clipLengthSeconds: number;
   revealedTitle: string | null;

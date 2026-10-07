@@ -72,9 +72,10 @@ import {
   fetchAdminExplorePins, adminSetExplorePin,
   adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
   subscribeToOnlinePresence,
-  fetchDailyChallenge, adminSetDailyChallenge
+  fetchDailyChallenge, adminSetDailyChallenge, fetchDailyChallengeEntries, adminAssignDailyChallengeWinners
 } from '../../services/api';
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem, PresenceEntry } from '../../services/api';
+import type { DailyChallengeEntry } from '../../types';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime, formatRelativeTime } from '../../utils/formatTime';
@@ -256,6 +257,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [dailyNoobDate, setDailyNoobDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dailyNoobPrompt, setDailyNoobPrompt] = useState('');
   const [dailyNoobCurrentPrompt, setDailyNoobCurrentPrompt] = useState('');
+  // Manually assigning 1st/2nd/3rd for a day's Daily NOOB (Platform tab) — defaults to yesterday
+  // since that's usually the day whose entries are actually finished coming in.
+  const [dailyWinnersDate, setDailyWinnersDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); });
+  const [dailyWinnersEntries, setDailyWinnersEntries] = useState<DailyChallengeEntry[]>([]);
+  const [dailyWinnersLoading, setDailyWinnersLoading] = useState(false);
+  const [dailyWinnersFirst, setDailyWinnersFirst] = useState('');
+  const [dailyWinnersSecond, setDailyWinnersSecond] = useState('');
+  const [dailyWinnersThird, setDailyWinnersThird] = useState('');
+  const [dailyWinnersSaving, setDailyWinnersSaving] = useState(false);
   const [storeOrdersEnabled, setStoreOrdersEnabled] = useState(true);
   const [noobAiMaintenance, setNoobAiMaintenance] = useState(false);
   const [sparkxOpen, setSparkxOpen] = useState(true);
@@ -419,6 +429,28 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       setStatusMessage({ text: res.error || 'Could not save that task.', type: 'error' });
     }
     setSavingSettings(false);
+  };
+
+  const loadDailyWinnersEntries = async (date: string) => {
+    setDailyWinnersLoading(true);
+    setDailyWinnersFirst(''); setDailyWinnersSecond(''); setDailyWinnersThird('');
+    const entries = await fetchDailyChallengeEntries(date);
+    setDailyWinnersEntries(entries);
+    setDailyWinnersLoading(false);
+  };
+
+  const handleAssignDailyWinners = async () => {
+    if (!dailyWinnersFirst) { setStatusMessage({ text: 'Pick at least a 1st place.', type: 'error' }); return; }
+    setDailyWinnersSaving(true);
+    const res = await adminAssignDailyChallengeWinners(dailyWinnersDate, dailyWinnersFirst, dailyWinnersSecond || null, dailyWinnersThird || null);
+    if (res.success) {
+      setStatusMessage({ text: `Winners paid out for ${dailyWinnersDate}.`, type: 'success' });
+      setDailyWinnersEntries([]);
+      setDailyWinnersFirst(''); setDailyWinnersSecond(''); setDailyWinnersThird('');
+    } else {
+      setStatusMessage({ text: res.error || 'Could not assign winners for that day.', type: 'error' });
+    }
+    setDailyWinnersSaving(false);
   };
 
   const loadLiveLoungeCoupons = async () => {
@@ -2369,6 +2401,66 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         Save
                       </button>
                     </div>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3">
+                    <div>
+                      <span className="text-xs font-bold text-white flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-amber-400" /> Daily NOOB — assign winners
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        Pick 1st/2nd/3rd for a day directly (10,000 / 5,000 / 2,500 points) instead of waiting on votes — refuses if that day's already been settled.
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={dailyWinnersDate}
+                        max={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => { setDailyWinnersDate(e.target.value); setDailyWinnersEntries([]); }}
+                        className="bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-amber-400"
+                      />
+                      <button
+                        onClick={() => void loadDailyWinnersEntries(dailyWinnersDate)}
+                        disabled={dailyWinnersLoading}
+                        className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                      >
+                        {dailyWinnersLoading ? 'Loading…' : 'Load entries'}
+                      </button>
+                    </div>
+                    {dailyWinnersEntries.length > 0 && (
+                      <div className="space-y-2">
+                        {([
+                          { label: '1st — 10,000 pts', value: dailyWinnersFirst, set: setDailyWinnersFirst },
+                          { label: '2nd — 5,000 pts', value: dailyWinnersSecond, set: setDailyWinnersSecond },
+                          { label: '3rd — 2,500 pts', value: dailyWinnersThird, set: setDailyWinnersThird }
+                        ] as const).map((row) => (
+                          <div key={row.label} className="flex items-center gap-2">
+                            <span className="text-[11px] text-zinc-400 w-24 shrink-0">{row.label}</span>
+                            <select
+                              value={row.value}
+                              onChange={(e) => row.set(e.target.value)}
+                              className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-amber-400"
+                            >
+                              <option value="">— none —</option>
+                              {dailyWinnersEntries.map((e) => (
+                                <option key={e.userId} value={e.userId}>@{e.username} ({e.votesCount} votes)</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                        <button
+                          onClick={handleAssignDailyWinners}
+                          disabled={dailyWinnersSaving || !dailyWinnersFirst}
+                          className="w-full py-2.5 rounded-xl bg-amber-500 text-black font-bold text-xs disabled:opacity-40 cursor-pointer"
+                        >
+                          {dailyWinnersSaving ? 'Paying out…' : 'Assign & pay out'}
+                        </button>
+                      </div>
+                    )}
+                    {dailyWinnersEntries.length === 0 && !dailyWinnersLoading && (
+                      <p className="text-[11px] text-zinc-500">Load a day to see who entered.</p>
+                    )}
                   </div>
 
                   <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 flex items-center justify-between gap-3">

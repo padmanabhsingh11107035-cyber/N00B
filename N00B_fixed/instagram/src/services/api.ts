@@ -119,6 +119,7 @@ export {
   fetchDailyChampions,
   deleteDailyChallengeEntry,
   adminSetDailyChallenge,
+  adminAssignDailyChallengeWinners,
   fetchReelById,
   createReel,
   toggleLikeReel,

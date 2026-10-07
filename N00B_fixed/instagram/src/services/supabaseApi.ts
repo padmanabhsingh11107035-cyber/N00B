@@ -1565,6 +1565,23 @@ export async function deleteDailyChallengeEntry(entryId: string): Promise<{ succ
   }
 }
 
+// Admin only — directly assigns 1st/2nd/3rd (and pays out their points) for a day's challenge from
+// among that day's real entrants, instead of relying on vote counts. Refuses once that day's already
+// settled (automatically or manually) so points can never be paid out twice for the same day.
+export async function adminAssignDailyChallengeWinners(date: string, firstUserId: string, secondUserId?: string | null, thirdUserId?: string | null): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_assign_daily_challenge_winners', {
+      p_date: date, p_first: firstUserId, p_second: secondUserId || null, p_third: thirdUserId || null
+    });
+    if (res?.success && Array.isArray(res.purgedMediaKeys) && res.purgedMediaKeys.length > 0) {
+      void supabase.storage.from(MEDIA_BUCKET).remove(res.purgedMediaKeys);
+    }
+    return { success: !!res?.success };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not assign winners for that day.') };
+  }
+}
+
 // Admin only — sets (or schedules ahead) the task shown on Daily NOOB for a given day, overriding
 // the auto-rotating prompt pool for that day.
 export async function adminSetDailyChallenge(date: string, prompt: string): Promise<{ success: boolean; error?: string }> {
@@ -4205,10 +4222,10 @@ export function subscribeToSongGuessRound(onChange: () => void): () => void {
   return () => { supabase.removeChannel(channel); };
 }
 
-export async function adminAddSongGuessTrack(title: string, artist: string, audioUrl: string, clipStartSeconds = 0, clipLengthSeconds = 5): Promise<{ success: boolean; error?: string }> {
+export async function adminAddSongGuessTrack(title: string, artist: string, youtubeVideoId: string, clipStartSeconds = 0, clipLengthSeconds = 5): Promise<{ success: boolean; error?: string }> {
   try {
     return await rpc('admin_add_song_guess_track', {
-      p_title: title, p_artist: artist, p_audio_url: toStoredMedia(audioUrl), p_clip_start_seconds: clipStartSeconds, p_clip_length_seconds: clipLengthSeconds
+      p_title: title, p_artist: artist, p_audio_url: '', p_clip_start_seconds: clipStartSeconds, p_clip_length_seconds: clipLengthSeconds, p_youtube_video_id: youtubeVideoId
     });
   } catch (err) {
     return failWith(err, 'Could not add that song.');
@@ -4219,6 +4236,7 @@ export interface AdminSongGuessTrack {
   id: string;
   title: string;
   artist: string;
+  youtubeVideoId: string | null;
   clipStartSeconds: number;
   clipLengthSeconds: number;
   createdAt: string;

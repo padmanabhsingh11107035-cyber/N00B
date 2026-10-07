@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Music2, Trophy, Play, Pause, Check, Plus, Trash2 } from 'lucide-react';
+import { X, Music2, Trophy, Play, Pause, Check, Plus, Trash2, Youtube } from 'lucide-react';
 import { User } from '../../types';
 import type { SongGuessRound, SongGuessLeaderboardEntry } from '../../types';
 import {
@@ -9,13 +9,42 @@ import {
   subscribeToSongGuessRound,
   adminAddSongGuessTrack,
   adminListSongGuessTracks,
-  adminDeleteSongGuessTrack,
-  uploadMediaFile
+  adminDeleteSongGuessTrack
 } from '../../services/api';
 import type { AdminSongGuessTrack } from '../../services/api';
 import { can } from '../../adminAccess';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
+
+// Pulls a video id out of any pasted YouTube URL form (watch?v=, youtu.be/, shorts/, embed/), or
+// passes through a bare 11-character id typed directly.
+function extractYoutubeId(input: string): string | null {
+  const s = input.trim();
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtube\.com\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+    /^([A-Za-z0-9_-]{11})$/
+  ];
+  for (const re of patterns) {
+    const m = s.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+// Loads the YouTube IFrame Player API script exactly once per page load.
+let ytApiPromise: Promise<void> | null = null;
+function loadYoutubeApi(): Promise<void> {
+  if ((window as any).YT?.Player) return Promise.resolve();
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    const prevReady = (window as any).onYouTubeIframeAPIReady;
+    (window as any).onYouTubeIframeAPIReady = () => { prevReady?.(); resolve(); };
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+  return ytApiPromise;
+}
 
 interface GuessTheSongViewProps {
   currentUser: User;
@@ -38,6 +67,10 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ytContainerRef = useRef<HTMLDivElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const ytPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [ytReady, setYtReady] = useState(false);
   const isAdmin = can(currentUser, 'moderate_content');
 
   const load = async () => {
@@ -66,9 +99,45 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
   useEffect(() => {
     setPlaying(false);
     audioRef.current?.pause();
+    if (ytPauseTimerRef.current) clearTimeout(ytPauseTimerRef.current);
   }, [round?.roundNumber]);
 
+  // Builds (and tears down) a hidden YouTube player for the current round's track. Kept off-screen —
+  // the actual video usually shows the title/artist as on-screen graphics, which would hand out the
+  // answer — the visible "Playing from YouTube" button below is what the user actually sees.
+  useEffect(() => {
+    if (!round?.youtubeVideoId) { setYtReady(false); return; }
+    let cancelled = false;
+    setYtReady(false);
+    void loadYoutubeApi().then(() => {
+      if (cancelled || !ytContainerRef.current) return;
+      ytPlayerRef.current?.destroy?.();
+      ytPlayerRef.current = new (window as any).YT.Player(ytContainerRef.current, {
+        width: 2, height: 2,
+        videoId: round.youtubeVideoId,
+        playerVars: { controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3, playsinline: 1 },
+        events: { onReady: () => { if (!cancelled) setYtReady(true); } }
+      });
+    });
+    return () => {
+      cancelled = true;
+      ytPlayerRef.current?.destroy?.();
+      ytPlayerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.roundNumber, round?.youtubeVideoId]);
+
   const handlePlay = () => {
+    if (round?.youtubeVideoId) {
+      const player = ytPlayerRef.current;
+      if (!player || !ytReady) return;
+      if (ytPauseTimerRef.current) clearTimeout(ytPauseTimerRef.current);
+      player.seekTo(round.clipStartSeconds || 0, true);
+      player.playVideo();
+      setPlaying(true);
+      ytPauseTimerRef.current = window.setTimeout(() => { player.pauseVideo(); setPlaying(false); }, (round.clipLengthSeconds || 5) * 1000);
+      return;
+    }
     if (!round?.clipUrl) return;
     const audio = audioRef.current;
     if (!audio) return;
@@ -132,14 +201,32 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               <p className="text-2xl font-black text-[#00FF66]">{round.myScore}</p>
             </div>
 
-            <audio ref={audioRef} src={round.clipUrl || undefined} preload="metadata" />
-            <button
-              onClick={handlePlay}
-              className="w-full flex items-center justify-center gap-2 py-5 rounded-3xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/30 text-purple-200 font-bold cursor-pointer"
-            >
-              {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-              {playing ? 'Playing…' : `Play ${round.clipLengthSeconds}s clip`}
-            </button>
+            {round.youtubeVideoId ? (
+              <>
+                <div className="absolute w-px h-px overflow-hidden opacity-0 pointer-events-none" aria-hidden>
+                  <div ref={ytContainerRef} />
+                </div>
+                <button
+                  onClick={handlePlay}
+                  disabled={!ytReady}
+                  className="w-full flex items-center justify-center gap-2 py-5 rounded-3xl bg-gradient-to-br from-red-500/20 to-purple-500/5 border border-red-500/30 text-red-200 font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {playing ? <Pause className="w-6 h-6" /> : <Youtube className="w-6 h-6" />}
+                  {playing ? 'Playing from YouTube…' : ytReady ? `Play ${round.clipLengthSeconds}s clip` : 'Loading…'}
+                </button>
+              </>
+            ) : (
+              <>
+                <audio ref={audioRef} src={round.clipUrl || undefined} preload="metadata" />
+                <button
+                  onClick={handlePlay}
+                  className="w-full flex items-center justify-center gap-2 py-5 rounded-3xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/30 text-purple-200 font-bold cursor-pointer"
+                >
+                  {playing ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                  {playing ? 'Playing…' : `Play ${round.clipLengthSeconds}s clip`}
+                </button>
+              </>
+            )}
 
             <div className="space-y-2">
               {round.options.map((opt, i) => {
@@ -215,7 +302,7 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [youtubeLink, setYoutubeLink] = useState('');
   const [clipStart, setClipStart] = useState(0);
   const [clipLength, setClipLength] = useState(5);
   const [saving, setSaving] = useState(false);
@@ -225,14 +312,14 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   useEffect(() => { load(); }, []);
 
   const handleAdd = async () => {
-    if (!title.trim() || !file) { setError('Add a title and an audio file.'); return; }
+    const videoId = extractYoutubeId(youtubeLink);
+    if (!title.trim() || !videoId) { setError('Add a title and a valid YouTube link.'); return; }
     setSaving(true);
     setError('');
     try {
-      const uploaded = await uploadMediaFile(file, 'songs');
-      const res = await adminAddSongGuessTrack(title.trim(), artist.trim(), uploaded.objectKey || uploaded.url, clipStart, clipLength);
+      const res = await adminAddSongGuessTrack(title.trim(), artist.trim(), videoId, clipStart, clipLength);
       if (!res.success) { setError(res.error || 'Could not add that song.'); return; }
-      setTitle(''); setArtist(''); setFile(null); setClipStart(0); setClipLength(5);
+      setTitle(''); setArtist(''); setYoutubeLink(''); setClipStart(0); setClipLength(5);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add that song.');
@@ -257,7 +344,7 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="space-y-2 p-3.5 rounded-2xl border border-zinc-800 bg-zinc-900/40">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]" />
           <input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Artist (optional)" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]" />
-          <input type="file" accept="audio/*" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-xs text-zinc-400" />
+          <input value={youtubeLink} onChange={(e) => setYoutubeLink(e.target.value)} placeholder="YouTube link (youtube.com/watch?v=... or youtu.be/...)" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]" />
           <div className="flex gap-2">
             <label className="flex-1 text-[10px] text-zinc-400">
               Clip starts at (s)
@@ -272,7 +359,7 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <button onClick={handleAdd} disabled={saving} className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-xs disabled:opacity-40 cursor-pointer">
             {saving ? 'Adding…' : 'Add song'}
           </button>
-          <p className="text-[10px] text-zinc-500">Need at least 4 songs in the pool for the game to start.</p>
+          <p className="text-[10px] text-zinc-500">Paste the YouTube video's link — need at least 4 songs in the pool for the game to start.</p>
         </div>
 
         {loading ? (
@@ -282,7 +369,9 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {tracks.map((t) => (
               <div key={t.id} className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-900/60">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">{t.title}</p>
+                  <p className="text-xs font-bold text-white truncate flex items-center gap-1">
+                    {t.youtubeVideoId && <Youtube className="w-3 h-3 text-red-400 shrink-0" />} {t.title}
+                  </p>
                   <p className="text-[10px] text-zinc-500 truncate">{t.artist || 'Unknown artist'} • {t.clipStartSeconds}s–{t.clipStartSeconds + t.clipLengthSeconds}s</p>
                 </div>
                 <button onClick={() => void handleDelete(t.id)} className="p-1.5 text-zinc-500 hover:text-red-400 rounded-full hover:bg-zinc-900 cursor-pointer shrink-0">

@@ -325,6 +325,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeChatIdRef = useRef<string | null>(activeChatId);
+  // Mirrors the newest message's createdAt currently on screen — the cursor the next sync passes to
+  // fetchMessages so it only asks for what's new/changed since then, not the whole history again.
+  const latestMessageAtRef = useRef<string | undefined>(undefined);
   const chatActionsMenuRef = useRef<HTMLDivElement>(null);
   const leftMenuRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -333,6 +336,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
+
+  useEffect(() => {
+    latestMessageAtRef.current = messages.length ? messages[messages.length - 1].createdAt : undefined;
+  }, [messages]);
 
   // Real online/offline — a green dot only while the other person is actually connected right now
   // (Supabase Presence), never a stale/offline indicator.
@@ -476,9 +483,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
     // Cross-device real-time sync. Messages and membership changes now arrive LIVE over Supabase Realtime
     // (instant, and nothing is fetched while nothing happens). A slow 30s poll stays as a safety net in case
     // the live connection drops.
-    const unsubscribe = subscribeToChatChanges(() => {
-      syncLiveChatData();
-    });
+    const unsubscribe = subscribeToChatChanges(
+      () => { syncLiveChatData(); },
+      (deletedId) => { setMessages((prev) => (prev.some((m) => m.id === deletedId) ? prev.filter((m) => m.id !== deletedId) : prev)); }
+    );
     const interval = setInterval(() => {
       syncLiveChatData();
     }, 30000);
@@ -588,29 +596,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       const currentActiveId = activeChatIdRef.current;
       if (currentActiveId) {
-        const latestMsgs = await fetchMessages(currentActiveId);
+        // Only ask for what's new or changed since the newest message already on screen — not the
+        // whole last-300 again. (undefined cursor = this chat hasn't been loaded yet this session;
+        // falls back to a full fetch, same as before.)
+        const cursor = latestMessageAtRef.current;
+        const delta = await fetchMessages(currentActiveId, cursor);
         // Same guard as loadMessages: if the person switched to a different
         // chat while this poll's request was in flight, its response is for
         // a conversation that isn't even open anymore — applying it would
         // overwrite whatever chat is actually on screen right now.
-        if (activeChatIdRef.current !== currentActiveId) return;
+        if (activeChatIdRef.current !== currentActiveId || delta.length === 0) return;
         setMessages((prev) => {
-          // A message send appends an optimistic `temp_`-id entry immediately,
-          // then swaps it for the real one once the POST resolves. If this
-          // poll's GET was already in flight when that happened, latestMsgs
-          // won't have the new message yet — never let it erase a send that's
-          // still pending its own optimistic-to-real swap.
-          const pendingLocal = prev.filter((m) => m.id.startsWith('temp_'));
-          if (pendingLocal.length > 0) {
-            return [...latestMsgs, ...pendingLocal];
-          }
-          if (
-            latestMsgs.length !== prev.length ||
-            (latestMsgs.length > 0 && latestMsgs[latestMsgs.length - 1].id !== prev[prev.length - 1]?.id)
-          ) {
-            return latestMsgs;
-          }
-          return prev;
+          const byId = new Map<string, Message>(prev.map((m) => [m.id, m]));
+          for (const m of delta) byId.set(m.id, m);
+          return Array.from(byId.values()).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         });
       }
     } catch (err) {

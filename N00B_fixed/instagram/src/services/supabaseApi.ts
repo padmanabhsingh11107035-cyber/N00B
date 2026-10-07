@@ -1973,9 +1973,12 @@ export async function deleteChat(chatId: string): Promise<boolean> {
   }
 }
 
-export async function fetchMessages(chatId: string): Promise<Message[]> {
+// `after` (an already-held message's createdAt) switches this to an incremental fetch — only
+// messages that are new, or have changed (edited, reacted to, etc.) since then — instead of
+// re-downloading the whole recent history on every poll/realtime tick. Omit it for a fresh/full load.
+export async function fetchMessages(chatId: string, after?: string): Promise<Message[]> {
   try {
-    const res = await rpc<{ messages: any[] }>('chat_messages', { p_chat: chatId });
+    const res = await rpc<{ messages: any[] }>('chat_messages', { p_chat: chatId, p_after: after || null });
     return await unlockMessages(chatId, (res.messages || []).map((m) => mapMessage(m, true)));
   } catch {
     return [];
@@ -2211,7 +2214,11 @@ export function subscribeToOnlinePresence(onChange: (state: Record<string, Prese
 
 // Calls `onChange` (at most a few times a second) whenever a message or chat membership changes anywhere
 // this person can see — replaces asking the server for everything every 5 seconds.
-export function subscribeToChatChanges(onChange: () => void): () => void {
+// `onMessageDeleted` is optional and fires immediately (not debounced) with just the deleted
+// message's id — messages are hard-deleted, so the incremental sync in fetchMessages/chat_messages
+// (which only ever SELECTs rows) has no way to notice one is gone; this is the one case that still
+// needs the raw realtime event instead of a follow-up fetch.
+export function subscribeToChatChanges(onChange: () => void, onMessageDeleted?: (messageId: string) => void): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const fire = () => {
     if (timer) return;
@@ -2219,7 +2226,10 @@ export function subscribeToChatChanges(onChange: () => void): () => void {
   };
   const channel = supabase
     .channel(`chat-changes-${crypto.randomUUID()}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fire)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+      if (payload.eventType === 'DELETE' && (payload.old as any)?.id) onMessageDeleted?.((payload.old as any).id);
+      fire();
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, fire)
     // Refresh once the connection is (re)established: anything that arrived while it was still opening
     // (or while it was down) would otherwise wait for the slow fallback refresh.

@@ -71,7 +71,9 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   useEffect(() => {
     if (!lock.checked || blocked) return;
     load();
-    const interval = setInterval(load, 8000);
+    // 25s, not a few seconds — this is just a browsing list (no realtime channel backs it), so it
+    // doesn't need to be near-instant, and polling it aggressively was pure wasted Supabase egress.
+    const interval = setInterval(load, 25000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lock.checked, blocked]);

@@ -147,7 +147,9 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   useEffect(() => {
     if (phase !== 'live') return;
     const unsub = subscribeToNoobRoomParticipants(room.id, refreshParticipants);
-    const interval = setInterval(refreshParticipants, 5000);
+    // Realtime (subscribeToNoobRoomParticipants above) handles this live — this is only a safety net
+    // for a missed event, so it doesn't need to be frequent, and every few seconds was wasted egress.
+    const interval = setInterval(refreshParticipants, 30000);
     return () => { unsub(); clearInterval(interval); };
   }, [phase, room.id, refreshParticipants]);
 

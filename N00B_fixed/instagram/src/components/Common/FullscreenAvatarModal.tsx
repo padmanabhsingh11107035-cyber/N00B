@@ -39,15 +39,14 @@ export const FullscreenAvatarModal: React.FC<FullscreenAvatarModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Oversized Profile Image Overlay — a rounded square, not a circle, and object-contain
-            (never crops) so the complete uploaded photo is always visible, edges included. */}
-        <div className="relative w-64 h-64 sm:w-72 sm:h-72 my-4 rounded-[2rem] overflow-hidden p-1 bg-gradient-to-tr from-rose-500 via-purple-500 to-cyan-400 shadow-[0_0_50px_rgba(255,78,106,0.3)]">
-          <div className="w-full h-full rounded-[1.75rem] overflow-hidden bg-zinc-900">
+        {/* Oversized Profile Image Overlay */}
+        <div className="relative w-64 h-64 sm:w-72 sm:h-72 my-4 rounded-full overflow-hidden p-1 bg-gradient-to-tr from-rose-500 via-purple-500 to-cyan-400 shadow-[0_0_50px_rgba(255,78,106,0.3)]">
+          <div className="w-full h-full rounded-full overflow-hidden bg-zinc-900">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={username || 'Profile'}
-                className="w-full h-full object-contain select-none"
+                className="w-full h-full object-cover select-none"
                 referrerPolicy="no-referrer"
               />
             ) : (

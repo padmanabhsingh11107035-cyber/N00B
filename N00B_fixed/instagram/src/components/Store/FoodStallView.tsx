@@ -2,14 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import {
-  X, ShoppingCart, Plus, Minus, Loader2, Check, Store as StoreIcon, Truck,
-  Banknote, Smartphone, Copy, CheckCircle2, ClipboardList
+  X, Plus, Minus, Loader2, Check, Store as StoreIcon, Truck,
+  Banknote, Smartphone, Copy, CheckCircle2
 } from 'lucide-react';
 import { StoreProduct, User } from '../../types';
 import { fetchStoreProducts, placeStoreOrder, getShopDetails, fetchSettings } from '../../services/api';
 import { ProductMediaCarousel } from './ProductMediaCarousel';
 import { OrdersView } from './OrdersView';
 import { ShopMap } from './ShopMap';
+import { FoodHeroMount } from './FoodHeroMount';
 import { formatPrice } from './formatPrice';
 import { loadCart, saveCart, type CartMap } from './cartStorage';
 import { buildUpiUri } from '../../utils/upi';
@@ -52,9 +53,9 @@ const FOOD_STALL_LNG = 72.5906670;
 const FOOD_STALL_ADDRESS =
   'Podar International School, Behind Vitthal Complex, Opposite Sakaar School, Near Trishala Complex Cross Road, New C.G. Road, Chandkheda, Ahmedabad, Gujarat - 382424';
 
-// Coke's 3 sizes are 3 separate products under the hood (store_products has one price per product,
-// not per-variant) but shown here as one card with a size picker, like any other size choice.
-const sortCokeBySize = (products: StoreProduct[]): StoreProduct[] => [...products].sort((a, b) => a.price - b.price);
+// The scroll-assembly hero (FoodHeroMount) covers exactly these 5 real products by name — anything
+// else in the food_stall catalog (Bhel, the other Coke sizes) shows in a plain grid below it instead.
+const HERO_COVERED_NAMES = new Set(['Burger', 'Fries', 'Manchurian', 'Coke (Medium Cup)', 'Diet Coke']);
 
 // Defined at module scope (not inside FoodStallView) on purpose: a component declared inside
 // another component's function body is a brand-new function identity every render, so React
@@ -112,7 +113,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartMap>(() => loadCart(cartStorageId(currentUser.id)));
-  const [selectedCokeId, setSelectedCokeId] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showMyOrders, setShowMyOrders] = useState(false);
@@ -136,7 +136,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [upiCopied, setUpiCopied] = useState(false);
   const [cartToast, setCartToast] = useState<string | null>(null);
-  const [cartBump, setCartBump] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -163,17 +162,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   }, []);
 
   const foodProducts = useMemo(() => products.filter((p) => p.category === FOOD_CATEGORY), [products]);
-  const cokeOptions = useMemo(() => sortCokeBySize(foodProducts.filter((p) => p.name.startsWith('Coke'))), [foodProducts]);
-  const otherProducts = useMemo(() => foodProducts.filter((p) => !p.name.startsWith('Coke')), [foodProducts]);
-
-  useEffect(() => {
-    if (selectedCokeId && cokeOptions.some((c) => c.id === selectedCokeId)) return;
-    if (cokeOptions.length === 0) return;
-    // Default to the medium size, but never land on a size that's out of stock if another one isn't.
-    const preferred = cokeOptions[Math.min(1, cokeOptions.length - 1)];
-    const pick = preferred.inStock ? preferred : cokeOptions.find((c) => c.inStock) || preferred;
-    setSelectedCokeId(pick.id);
-  }, [cokeOptions, selectedCokeId]);
+  const leftoverProducts = useMemo(() => foodProducts.filter((p) => !HERO_COVERED_NAMES.has(p.name)), [foodProducts]);
 
   const persistCart = (next: CartMap) => {
     setCart(next);
@@ -184,7 +173,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     persistCart({ ...cart, [productId]: (cart[productId] || 0) + 1 });
     const added = products.find((p) => p.id === productId);
     setCartToast(`Added ${added?.name || 'item'} to cart`);
-    setCartBump((n) => n + 1);
   };
 
   useEffect(() => {
@@ -208,7 +196,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
         .filter((l): l is { product: StoreProduct; quantity: number } => !!l.product),
     [cart, products]
   );
-  const cartCount = cartLines.reduce((n, l) => n + l.quantity, 0);
   const subtotal = cartLines.reduce((n, l) => n + l.product.price * l.quantity, 0);
   const deliveryFee = deliveryMethod === 'delivery' ? deliveryFeeSetting : 0;
   const total = subtotal + deliveryFee;
@@ -278,78 +265,65 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#00FF66', '#22d3ee', '#ffffff'], zIndex: 9999 });
   };
 
+  // The hero's scroll-driven animation listens for the WINDOW's own 'scroll' event and measures
+  // its sections with getBoundingClientRect() (viewport-relative either way) — correct regardless
+  // of what actually scrolled, but this view is a position:fixed overlay with its own internal
+  // scrolling, which never fires a window-level scroll event on its own. Forwarding one on every
+  // scroll tick is the minimal bridge, with no change to the hero's own files.
+  const forwardScrollToWindow = () => window.dispatchEvent(new Event('scroll'));
 
-  const selectedCoke = cokeOptions.find((c) => c.id === selectedCokeId) || cokeOptions[0];
+  const handleHeroAddToCart = (productId: string, quantity: number) => {
+    for (let i = 0; i < Math.max(1, quantity); i++) addToCart(productId);
+  };
 
   return (
-    <div className="fs-root fixed inset-0 z-50 bg-zinc-950 flex flex-col">
+    <div className="fs-root fixed inset-0 z-50 bg-zinc-950 overflow-y-auto" onScroll={forwardScrollToWindow}>
       <style>{CSS}</style>
 
-      <header className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
-        <div className="flex items-center gap-2 min-w-0">
-          <button onClick={onClose} className="touch-manipulation p-1 -ml-1 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer shrink-0">
-            <X className="w-3.5 h-3.5" />
-          </button>
-          <h1 className="text-sm font-black italic tracking-tighter text-white truncate">🍔 NOOB Food Stall</h1>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setShowMyOrders(true)} className="touch-manipulation p-2 rounded-full bg-zinc-900 border border-zinc-800 text-white cursor-pointer" title="My Orders">
-            <ClipboardList className="w-4.5 h-4.5" />
-          </button>
-          <button onClick={() => setShowCart(true)} className="touch-manipulation relative p-2 rounded-full bg-zinc-900 border border-zinc-800 text-white cursor-pointer">
-            <ShoppingCart className="w-4.5 h-4.5" />
-            {cartCount > 0 && (
-              <span key={cartBump} className="fs-bump absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#00FF66] text-black text-[10px] font-black flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </header>
+      <button
+        onClick={onClose}
+        className="fixed top-3 left-3 z-[70] w-9 h-9 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-white flex items-center justify-center cursor-pointer hover:bg-black/85"
+        aria-label="Close Food Stall"
+      >
+        <X className="w-4 h-4" />
+      </button>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        {!foodStallEnabled && (
-          <div className="mb-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold text-center">
-            The stall isn't taking orders right now — browse away, but checkout is paused.
+      {!foodStallEnabled && (
+        <div className="m-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold text-center">
+          The stall isn't taking orders right now — browse away, but checkout is paused.
+        </div>
+      )}
+
+      {loading ? (
+        <div className="py-20 flex items-center justify-center text-zinc-500 text-xs gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading the menu…
+        </div>
+      ) : (
+        <FoodHeroMount
+          products={foodProducts}
+          onAddToCart={handleHeroAddToCart}
+          onOpenCart={() => setShowCart(true)}
+          onOpenOrders={() => setShowMyOrders(true)}
+        />
+      )}
+
+      <div className="p-3 space-y-3">
+        {!loading && leftoverProducts.length > 0 && (
+          <div>
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 px-1">More from the menu</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {leftoverProducts.map((p, i) => (
+                <FoodCard key={p.id} product={p} name={p.name} tiltIndex={i} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart} />
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="mb-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+        <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
           <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Find the stall</h3>
           <ShopMap lat={FOOD_STALL_LAT} lng={FOOD_STALL_LNG} address={FOOD_STALL_ADDRESS} label="NOOB Food Stall" className="w-full h-44 rounded-xl overflow-hidden" />
           <p className="text-[11px] text-zinc-400 leading-relaxed">{FOOD_STALL_ADDRESS}</p>
         </div>
-
-        {loading ? (
-          <div className="py-20 flex items-center justify-center text-zinc-500 text-xs gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading the menu…
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {otherProducts.map((p, i) => (
-              <FoodCard key={p.id} product={p} name={p.name} tiltIndex={i} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart} />
-            ))}
-            {selectedCoke && (
-              <FoodCard key={selectedCoke.id} product={selectedCoke} name="Coke" tiltIndex={otherProducts.length} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart}>
-                <div className="flex items-center gap-1">
-                  {cokeOptions.map((c, i) => (
-                    <button
-                      key={c.id}
-                      onClick={() => c.inStock && setSelectedCokeId(c.id)}
-                      disabled={!c.inStock}
-                      title={c.inStock ? undefined : 'Coming soon'}
-                      className={`flex-1 py-1 rounded-lg text-[10px] font-bold border cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                        c.id === selectedCokeId ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]' : 'bg-zinc-800 border-zinc-700 text-zinc-400'
-                      }`}
-                    >
-                      {['S', 'M', 'L'][i] || `${i + 1}`}
-                    </button>
-                  ))}
-                </div>
-              </FoodCard>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Cart drawer */}

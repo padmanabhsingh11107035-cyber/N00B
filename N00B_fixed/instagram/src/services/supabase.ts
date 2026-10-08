@@ -52,8 +52,11 @@ export const supabase = createClient(url || 'http://localhost:54321', key || 'mi
     storage: tabStorage,
     persistSession: true,
     autoRefreshToken: true,
-    // Logins are by username/email + password only, so there is never a token in the address bar.
-    detectSessionInUrl: false
+    // "Sign in with Google" comes back as a token sitting in the URL (Supabase's own OAuth redirect,
+    // not something this app builds) — this is what picks it up and turns it into a real session, then
+    // cleans the token back out of the address bar. Every other login (username/email + password, the
+    // emailed-code exchanges) never puts anything here and is unaffected either way.
+    detectSessionInUrl: true
   }
 });
 

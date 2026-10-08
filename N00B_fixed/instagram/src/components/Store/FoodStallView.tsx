@@ -307,7 +307,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
         />
       )}
 
-      <div className="p-3 space-y-3">
+      <div className="p-3 space-y-3 max-w-md mx-auto">
         {!loading && leftoverProducts.length > 0 && (
           <div>
             <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 px-1">More from the menu</h3>

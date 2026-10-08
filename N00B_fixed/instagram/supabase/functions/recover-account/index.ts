@@ -17,6 +17,12 @@
 // The database (check_signup / handle_new_user) still refuses to create any account at all unless that specific email was verified
 // in the last 30 minutes, so this can't be bypassed by calling auth.signUp() directly either.
 //
+// (action: "oauth-complete-signup") "Sign in with Google": that OAuth redirect already made a real,
+// logged-in auth.users row with no NOOB profile on it yet — this proves the email the same way
+// (signup_otp_verify, same as above) and then writes the profile itself (complete_oauth_profile),
+// using the CALLER's OWN bearer token to know which already-authenticated account is asking, instead
+// of creating a new one.
+//
 // (action: "welcome") sends the "Welcome to NOOB" email right after a brand new account's own first session exists.
 //
 // (action: "delete-account") runs delete_my_account as the caller (their own bearer token) and, once it succeeds, emails a
@@ -278,6 +284,45 @@ Deno.serve(async (req) => {
     const tokenHash = await issueSignInToken(admin, created.user.id);
     if (!tokenHash) return json(unavailable, 500);
     return json({ success: true, tokenHash });
+  }
+
+  // -------------------------------------------------------------- finishing a Google (etc.) sign-in
+  // The caller already has a real session here — Supabase's own OAuth redirect created it the moment
+  // they tapped "Continue with Google" — so unlike signup-otp-verify there is no new auth.users row to
+  // create and no sign-in token to hand back: this proves the email the same way every other signup
+  // does (signup_otp_verify, unchanged) and then writes the profile row for the account the caller is
+  // already logged in as (complete_oauth_profile, service-role only, see its migration).
+  if (body?.action === 'oauth-complete-signup') {
+    const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return json({ error: 'Please sign in again.' }, 401);
+    const { data: authData } = await admin.auth.getUser(token);
+    const userId = authData?.user?.id;
+    if (!userId) return json({ error: 'Please sign in again.' }, 401);
+
+    const p = body?.signup;
+    const email = String(p?.email || authData.user.email || '');
+    const { data: check, error } = await admin.rpc('signup_otp_verify', {
+      p_ip: ip, p_email: email, p_code: String(body?.code ?? '')
+    });
+    if (error || !check) return json(unavailable, 500);
+    switch (check.status) {
+      case 'missing_email': return json({ error: 'Email is required.', stage: 'code' }, 400);
+      case 'missing': return json({ error: 'Please enter the code from your email.', stage: 'code' }, 400);
+      case 'rate_limited': return json({ error: 'Too many attempts. Please try again later.', stage: 'code' }, 429);
+      case 'expired': return json({ error: 'That code has expired or was already used. Please ask for a new one.', stage: 'code' }, 401);
+      case 'too_many_attempts': return json({ error: 'Too many wrong codes. Please ask for a new one.', stage: 'code' }, 401);
+      case 'mismatch': return json({ error: 'That code is not right. Please check your email and try again.', stage: 'code' }, 401);
+      case 'ok': break;
+      default: return json(unavailable, 500);
+    }
+    if (!p) return json({ success: true });
+
+    const { data: result, error: completeErr } = await admin.rpc('complete_oauth_profile', { p_user_id: userId, p: { ...p, email } });
+    if (completeErr) return json({ error: 'Something went wrong creating your account. Please try again in a moment.', stage: 'form' }, 400);
+    if (!result?.success) {
+      return json({ error: result?.error || 'Could not create the account.', suspended: result?.suspended, message: result?.message, stage: 'form' }, 400);
+    }
+    return json({ success: true });
   }
 
   // -------------------------------------------------------------- emailed one-time code

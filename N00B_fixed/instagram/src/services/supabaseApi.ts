@@ -315,6 +315,75 @@ export async function signupUser(payload: SignupPayload): Promise<{ success: boo
   }
 }
 
+// -------------------------------------------------------- "Sign in with Google"
+// A full-page OAuth redirect (not a popup — far more reliable inside an installed PWA, which is how
+// most people actually use NOOB). Supabase creates the auth.users row itself on return; whether that
+// identity already has a NOOB profile is for checkPendingOAuthSignup, once the app reloads, to decide.
+export async function signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not start Google sign-in. Please try again.') };
+  }
+}
+
+// Called once when the auth screen loads: is there already a real (Google, etc.) session with no NOOB
+// profile on it yet? That's exactly the state right after a brand-new "Continue with Google" —
+// handle_new_user's trigger saw no username in Google's own metadata and deliberately skipped making a
+// profile (see complete_oauth_profile's migration) — versus a RETURNING Google sign-in, which already
+// has one and should just go straight into the app like any other login.
+export async function checkPendingOAuthSignup(): Promise<{ pending: boolean; email?: string; fullName?: string; pictureUrl?: string }> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const user = data.session?.user;
+    if (!user) return { pending: false };
+    const existing = await rpc<any>('get_my_user').catch(() => null);
+    if (existing) return { pending: false };
+    const m = user.user_metadata || {};
+    return {
+      pending: true,
+      email: String(user.email || m.email || ''),
+      fullName: m.full_name || m.name || undefined,
+      pictureUrl: m.picture || m.avatar_url || undefined
+    };
+  } catch {
+    return { pending: false };
+  }
+}
+
+export type OAuthSignupPayload = Omit<SignupPayload, 'password'>;
+
+// The last step of "Sign in with Google": the email code (same signup_otp_request/verify every other
+// signup uses — see requestSignupOtp) plus whatever Google didn't already hand over. No password here
+// at all — e2ee.ensure() already treats it as optional (this device just makes its own chat key
+// instead of restoring a shared one, same as any device that signs in before a password is ever set).
+export async function completeOAuthSignup(code: string, payload: OAuthSignupPayload): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string; stage?: 'code' | 'form' }> {
+  const unavailable = 'Could not verify that code right now. Please try again later.';
+  try {
+    const { avatar, pendingKey } = prepareSignupAvatar(payload.avatar);
+    const { data, error } = await supabase.functions.invoke('recover-account', {
+      body: { action: 'oauth-complete-signup', code, signup: { ...payload, avatar, language: cleanLanguageCode(payload.language) } }
+    });
+    if (error) {
+      let body: any = null;
+      try { body = await (error as any)?.context?.json?.(); } catch { /* use the fallback below */ }
+      return { success: false, error: body?.error || unavailable, suspended: body?.suspended, message: body?.message, stage: body?.stage };
+    }
+    if (!data?.success) return { success: false, error: data?.error || unavailable, suspended: data?.suspended, message: data?.message, stage: data?.stage };
+
+    await uploadPendingSignupAvatar(pendingKey);
+    const user = await rpc<any>('get_my_user');
+    void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
+    return { success: true, user: startChatKeys(mapUser(user)) as User };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
 export async function loginUser(payload: {
   identifier: string;
   password?: string;

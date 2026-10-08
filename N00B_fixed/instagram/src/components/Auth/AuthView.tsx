@@ -36,7 +36,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, type ActiveDeviceSession } from '../../services/api';
+import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, signInWithGoogle, checkPendingOAuthSignup, type ActiveDeviceSession } from '../../services/api';
+import { CompleteOAuthProfile } from './CompleteOAuthProfile';
 import { getDeviceId, getDeviceLabel } from '../../utils/deviceId';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
@@ -237,6 +238,28 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       setDeviceConflict(recheck.devices);
     }
   };
+
+  // "Sign in with Google": checked once on load, since a brand-new Google sign-in lands back here
+  // (via a full-page redirect) already logged in, just with no NOOB profile yet — see
+  // checkPendingOAuthSignup. A RETURNING Google sign-in already has one and never shows this; it
+  // goes straight into the app the normal way, before AuthView is even rendered at all.
+  const [oauthPending, setOauthPending] = useState<Awaited<ReturnType<typeof checkPendingOAuthSignup>> | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  useEffect(() => {
+    void checkPendingOAuthSignup().then((res) => { if (res.pending) setOauthPending(res); });
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleBusy(true);
+    setErrorMessage(null);
+    const res = await signInWithGoogle();
+    if (!res.success) {
+      setGoogleBusy(false);
+      setErrorMessage(res.error || 'Could not start Google sign-in. Please try again.');
+    }
+    // on success the page is about to redirect away — nothing further to do here
+  };
+
   // The admin's in-app "pause new sign-ups" switch (Admin Control Panel → Platform) — a fast,
   // no-dashboard-needed kill switch on top of, not instead of, the Supabase project's own
   // "Allow new users to sign up" toggle, which stays the deeper backstop.
@@ -787,6 +810,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
   };
 
+  if (oauthPending) {
+    return <CompleteOAuthProfile pending={oauthPending} onDone={(user) => { setOauthPending(null); void proceedAfterAuth(user); }} />;
+  }
+
   return (
     <div className="min-h-screen w-full bg-[#070709] text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Premium Gen Z Background glow accents */}
@@ -963,6 +990,34 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               >
                 ← Back to Log In
               </button>
+            </div>
+          )}
+
+          {(mode === 'login' || (signupsEnabled && signupStep === 'form')) && (
+            <div className="mb-4">
+              <button
+                type="button"
+                disabled={googleBusy}
+                onClick={() => void handleGoogleSignIn()}
+                className="w-full py-2.5 bg-white text-black font-bold text-sm rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2.5"
+              >
+                {googleBusy ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true">
+                    <path fill="#4285F4" d="M23.52 12.27c0-.82-.07-1.42-.22-2.04H12v3.86h6.56c-.13 1.09-.86 2.73-2.48 3.84l-.02.15 3.6 2.79.25.02c2.29-2.11 3.61-5.22 3.61-8.62z" />
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.93-2.91l-3.78-2.94c-1.02.71-2.4 1.21-4.15 1.21-3.17 0-5.86-2.1-6.82-5.03l-.14.01-3.73 2.9-.05.14C3.3 21.52 7.3 24 12 24z" />
+                    <path fill="#FBBC05" d="M5.18 14.33a7.26 7.26 0 0 1-.39-2.33c0-.81.14-1.6.38-2.33l-.01-.16-3.78-2.94-.12.06A11.94 11.94 0 0 0 0 12c0 1.93.46 3.76 1.26 5.37z" />
+                    <path fill="#EA4335" d="M12 4.75c2.26 0 3.78.97 4.65 1.79l3.39-3.31C17.94 1.19 15.24 0 12 0 7.3 0 3.3 2.48 1.26 6.63l3.9 3.04c.98-2.93 3.67-4.92 6.84-4.92z" />
+                  </svg>
+                )}
+                {googleBusy ? 'Opening Google…' : 'Continue with Google'}
+              </button>
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[11px] text-zinc-500 font-bold">OR</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
             </div>
           )}
 

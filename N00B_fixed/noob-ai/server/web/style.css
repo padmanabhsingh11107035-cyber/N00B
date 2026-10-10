@@ -357,8 +357,8 @@ textarea { resize: vertical; min-height: 70px; }
 .orb.thinking .gem-halo { animation-duration: 3s, 1s; }
 .orb.speaking .gem-halo { animation-duration: 6s, 1.6s; }
 @media (max-width: 860px) { .orb .gem { --s: 150px; } }
-.brand-logo { width: 42px; height: 42px; border-radius: 12px; flex: none; box-shadow: 0 6px 18px rgba(var(--accent-rgb), .35); }
-.brand-logo.big { width: 84px; height: 84px; border-radius: 22px; display: block; margin: 0 auto 14px; }
+.brand-logo { width: 42px; height: 42px; border-radius: 23%; flex: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); }
+.brand-logo.big { width: 84px; height: 84px; border-radius: 23%; display: block; margin: 0 auto 14px; }
 .brand-logo.dim { filter: grayscale(1) brightness(1.1); }
 
 /* ---------- free questions, mood history, 5-star survey ---------- */

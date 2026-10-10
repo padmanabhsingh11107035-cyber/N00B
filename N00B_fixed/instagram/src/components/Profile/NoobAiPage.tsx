@@ -81,7 +81,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
         <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 transition-colors cursor-pointer" aria-label="Back">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <NoobAiLogo className="w-11 h-11 shrink-0 drop-shadow-[0_6px_14px_rgba(76,47,208,0.35)]" sleeping={status === 'offline'} />
+        <NoobAiLogo className="w-11 h-11 shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]" sleeping={status === 'offline'} />
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-black tracking-tight leading-tight">NOOB AI</h1>
           <p className="text-[11px] font-semibold text-slate-500 leading-tight">

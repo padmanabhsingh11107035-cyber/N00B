@@ -5,6 +5,7 @@ import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  ChevronDown,
   Search,
   Pin,
   MoreVertical,
@@ -538,9 +539,74 @@ export const ChatView: React.FC<ChatViewProps> = ({
     };
   }, [activeChatId]);
 
+  // Following the conversation. The list used to jump to the bottom every time the messages were refreshed (new message, read tick,
+  // reaction, sync...), which threw anyone reading older messages back down. Now it only follows when the person is already at (or
+  // near) the bottom, or has just sent something themselves; if they have scrolled up, nothing moves and a "new messages" button
+  // appears instead. Opening a chat starts at the newest message.
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const justOpenedChatRef = useRef(true);
+  const lastSeenMessageIdRef = useRef<string | null>(null);
+  const [newBelowCount, setNewBelowCount] = useState(0);
+  const [showJumpDown, setShowJumpDown] = useState(false);
+
+  const scrollMessagesToBottom = (smooth: boolean) => {
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    // a short hop is animated; a long way (older messages far above) lands straight away instead of crawling past everything
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth && distance < 1200 ? 'smooth' : ('instant' as ScrollBehavior) });
+  };
+
+  const handleMessagesScroll = () => {
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = gap < 140;
+    stickToBottomRef.current = nearBottom;
+    setShowJumpDown(!nearBottom && gap > 320);
+    if (nearBottom) setNewBelowCount(0);
+  };
+
+  // A different conversation: start again from the newest message.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, typingUsers.length]);
+    justOpenedChatRef.current = true;
+    stickToBottomRef.current = true;
+    lastSeenMessageIdRef.current = null;
+    setNewBelowCount(0);
+    setShowJumpDown(false);
+  }, [activeChatId]);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const last = messages[messages.length - 1];
+    const previousLastId = lastSeenMessageIdRef.current;
+    lastSeenMessageIdRef.current = last.id;
+    const newMessageArrived = last.id !== previousLastId;
+    const sentByMe = last.senderId === currentUser.id;
+
+    if (justOpenedChatRef.current) {
+      justOpenedChatRef.current = false;
+      scrollMessagesToBottom(false);
+      // pictures and videos fill in a moment later and make the list taller: stay at the bottom while that happens
+      const t1 = setTimeout(() => { if (stickToBottomRef.current) scrollMessagesToBottom(false); }, 350);
+      const t2 = setTimeout(() => { if (stickToBottomRef.current) scrollMessagesToBottom(false); }, 1100);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+    if (stickToBottomRef.current || (newMessageArrived && sentByMe)) {
+      stickToBottomRef.current = true;
+      scrollMessagesToBottom(true);
+    } else if (newMessageArrived && !sentByMe && previousLastId !== null) {
+      setNewBelowCount((n) => n + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
+  // "X is typing…" appearing only moves the view if the person is at the bottom already.
+  useEffect(() => {
+    if (stickToBottomRef.current) scrollMessagesToBottom(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typingUsers.length]);
 
   const loadChats = async () => {
     try {
@@ -2058,7 +2124,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           )}
 
           {/* Messages History Container */}
-          <div className="chat-wallpaper flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
+          <div ref={messagesScrollRef} onScroll={handleMessagesScroll} className="chat-wallpaper flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
             {/* Encryption notice banner */}
             <div className="flex justify-center my-2">
               <div className="px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/80 text-zinc-400 text-[10px] font-medium flex items-center gap-1.5 shadow-sm">
@@ -2507,6 +2573,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
             <div ref={messagesEndRef} />
+            {/* "Jump to the newest message": only while scrolled up; counts messages that arrived meanwhile */}
+            {showJumpDown && (
+              <div className="sticky bottom-3 h-0 flex justify-end pointer-events-none">
+                <button
+                  type="button"
+                  onClick={() => { stickToBottomRef.current = true; setNewBelowCount(0); setShowJumpDown(false); scrollMessagesToBottom(true); }}
+                  aria-label={newBelowCount > 0 ? `${newBelowCount} new message${newBelowCount === 1 ? '' : 's'}, jump to the newest` : 'Jump to the newest message'}
+                  className="pointer-events-auto -translate-y-full mb-1 flex items-center gap-1.5 px-3 py-2 rounded-full bg-zinc-900/95 border border-noob/40 text-noob text-xs font-bold shadow-lg shadow-black/40 cursor-pointer hover:bg-zinc-800"
+                >
+                  {newBelowCount > 0 ? `${newBelowCount} new message${newBelowCount === 1 ? '' : 's'}` : 'Latest'} <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Press-and-hold / right-click menu: quick reactions plus Reply/Translate/Edit/Delete.

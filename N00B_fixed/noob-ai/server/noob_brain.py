@@ -26,7 +26,7 @@ GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.
                  "gemini-3.6-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.5-flash"]
 REST_SECONDS = {429: 15 * 60, 503: 60, 500: 60, 404: 24 * 3600}
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse"
-HEDGE_AFTER = 2.2                 # seconds without an answer before a second model is asked as well
+HEDGE_AFTER = 1.7                 # seconds without an answer before a second model is asked as well
 KEEP_WARM_EVERY = 40              # seconds between tiny "still there?" calls that keep the connection open
 THINKING_LEVELS = ["minimal", "low", None]      # least thinking first; remembered once a model refuses one
 

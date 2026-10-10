@@ -454,7 +454,11 @@ FACE_TAG = re.compile(r"^\s*\[face:(\w+)\]\s*", re.IGNORECASE)
 # one of each, but it sometimes repeats them (it copies the shape of its own earlier replies), so every leading one is
 # removed, never just the first.
 LEADING_TAG = re.compile(r"\s*\[(?:face:\w+|[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)\]\s*", re.IGNORECASE)
-ANY_FACE_TAG = re.compile(r"\s*\[face:\w+\]", re.IGNORECASE)
+# Every form of a face tag, anywhere in a reply: "[face:happy]", "[ face : happy ]" and the bare "face:happy" that is
+# left when the brackets were already stripped (the voice cleaner used to leave exactly that behind: "face:loveThank you").
+ANY_FACE_TAG = re.compile(
+    r"\s*\[\s*face\s*:\s*\w+\s*\]|\s*\bface\s*:\s*(?:" + "|".join(sorted(FACE_NAMES, key=len, reverse=True)) + ")",
+    re.IGNORECASE)
 
 
 def strip_control_tags(text):
@@ -839,6 +843,10 @@ LIMIT_REACHED = (f"You have used your {FREE_QUESTIONS} free questions. To keep t
                  "in About Me, or sign in with Continue with NOOB. It is free!")
 
 
+TTS_HEDGE_AFTER = 1.6        # seconds without a voice before the same sentence is asked for a second time in parallel
+TTS_GIVE_UP = 14             # seconds in all
+
+
 def voice_mp3(text, lang):
     """NOOB's voice for one sentence (MP3). Microsoft's voice service normally answers in about a second; if a
     request stalls (it happens on a weak connection), it is asked again instead of freezing the answer."""
@@ -852,12 +860,40 @@ def voice_mp3(text, lang):
                 mp3 += chunk["data"]
         return bytes(mp3)
 
-    for limit in (5, 8, 10):
+    async def hedged():
+        """Asks once; if there is no answer within TTS_HEDGE_AFTER seconds, asks again AT THE SAME TIME (the first request
+        keeps going) and uses whichever finishes first. A stalled request used to cost 5 s before the second try started."""
+        started = time.time()
+        pending = {asyncio.ensure_future(synthesize())}
+        asked = 1
         try:
-            return asyncio.run(asyncio.wait_for(synthesize(), timeout=limit))
-        except asyncio.TimeoutError:
-            log(f"   [voice] slow answer from the voice service, asking again ({limit} s)")
-    return b""     # every attempt stalled — silence beats an answer that never comes
+            while pending:
+                left = TTS_GIVE_UP - (time.time() - started)
+                if left <= 0:
+                    break
+                step = TTS_HEDGE_AFTER if asked < 3 else left
+                done, pending = await asyncio.wait(pending, timeout=min(step, left), return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    try:
+                        data = task.result()
+                    except Exception:
+                        continue
+                    if data:
+                        return data
+                if asked < 3 and (not done or not pending):
+                    log(f"   [voice] slow answer from the voice service, asking again ({time.time() - started:.1f} s)")
+                    pending.add(asyncio.ensure_future(synthesize()))
+                    asked += 1
+            return b""     # every attempt stalled — silence beats an answer that never comes
+        finally:
+            for task in pending:
+                task.cancel()
+
+    try:
+        return asyncio.run(hedged())
+    except Exception as e:
+        log(f"!! Voice: {e}")
+        return b""
 
 
 voice_workers = ThreadPoolExecutor(max_workers=4)      # makes the next sentences' voice while one is playing

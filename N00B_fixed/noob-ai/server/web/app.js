@@ -300,7 +300,8 @@ function setState(next, text) {
 
 // [face:happy] and [en] are instructions for NOOB's screen and voice, never part of what is said or shown.
 const cleanText = (t) => String(t ?? "")
-  .replace(/\s*\[face:\w+\]/gi, "")
+  .replace(/\s*\[\s*face\s*:\s*\w+\s*\]/gi, "")
+  .replace(/\s*\bface\s*:\s*(?:normal|happy|laugh|love|wink|angry|furious|sad|crying|surprised|scared|sleepy|sleeping|cool|confused|thinking|listening|speaking|lookleft|lookright|suspicious|bored|shy|dizzy|smug|music)/gi, "")
   .replace(/^(\s*\[[a-z]{2,3}(-[a-z]+)?\])+\s*/i, "")
   .trim();
 function addBubble(who, text, extraClass = "") {
@@ -468,7 +469,9 @@ async function streamAnswer(path, request, fromVoice) {
       }
     } else if (ev.type === "text") {
       const b = noobBubble();
-      b.textContent += (b.textContent ? " " : "") + ev.text;
+      const piece = cleanText(ev.text);
+      if (!piece) return;
+      b.textContent += (b.textContent ? " " : "") + piece;
       $("chat").scrollTop = $("chat").scrollHeight;
       captionAnswer.textContent = b.textContent;
       caption.hidden = false;
@@ -485,7 +488,7 @@ async function streamAnswer(path, request, fromVoice) {
       if (ev.survey) wantSurvey = true;
       if (ev.bye) wantBye = true;
       const b = noobBubble();
-      if (!b.textContent) b.textContent = ev.answer;
+      if (!b.textContent) b.textContent = cleanText(ev.answer);
       if (!ev.ok) b.classList.add("error");
       captionAnswer.textContent = b.textContent;
       caption.hidden = false;

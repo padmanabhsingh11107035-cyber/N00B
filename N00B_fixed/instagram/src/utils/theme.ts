@@ -5,7 +5,8 @@
 export type ThemePreference = 'dark' | 'light' | 'system';
 
 const KEY = 'noob_theme';
-const THEME_COLOR = { dark: '#262624', light: '#faf9f5' } as const;
+// The strip above the app (the installed app's title bar, the phone's status bar) is the accent colour in both themes.
+const CHROME_COLOR = '#d97757';
 
 let memoryPreference: ThemePreference = 'system'; // used only if the browser blocks storage
 
@@ -44,7 +45,7 @@ export function applyTheme(): void {
     meta.setAttribute('name', 'theme-color');
     document.head.appendChild(meta);
   }
-  meta.setAttribute('content', THEME_COLOR[resolved]);
+  meta.setAttribute('content', CHROME_COLOR);
   listeners.forEach((fn) => fn(preference, resolved));
 }
 

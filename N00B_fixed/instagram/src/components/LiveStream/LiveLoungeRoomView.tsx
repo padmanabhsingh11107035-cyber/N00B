@@ -22,6 +22,8 @@ import {
   joinLiveLoungeRoom,
   endLiveLoungeRoom,
   leaveLiveLoungeRoom,
+  leaveLiveLoungeRoomOnPageExit,
+  keepExitTokenFresh,
   sendLiveLoungeRoomChat,
   fetchLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomChat,
@@ -150,7 +152,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const [handRaised, setHandRaised] = useState(false);
   const [blurOn, setBlurOn] = useState(false);
   const [blurBusy, setBlurBusy] = useState(false);
-  const [endReason, setEndReason] = useState<'host' | 'ended' | 'removed' | 'error'>('ended');
+  const [endReason, setEndReason] = useState<'host' | 'ended' | 'removed' | 'error' | 'dropped'>('ended');
   const callStartRef = useRef<number | null>(null);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -158,6 +160,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const camTrackRef = useRef<ICameraVideoTrack | null>(null);
   const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
   const cleanedUpRef = useRef(false);
+  // A guest who is in the call (not the host): used to leave the room when the app/tab is closed.
+  const guestInCallRef = useRef<{ roomId?: string; active: boolean; left: boolean }>({ active: false, left: false });
   const chatEndRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -495,7 +499,26 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       await clientRef.current?.leave();
     } catch { /* best-effort teardown */ }
   }, []);
-  useEffect(() => () => { void cleanup(); }, [cleanup]);
+  useEffect(() => () => {
+    void cleanup();
+    const g = guestInCallRef.current;
+    if (g.active && g.roomId && !g.left) { g.left = true; void leaveLiveLoungeRoom(g.roomId); }
+  }, [cleanup]);
+
+  // Closing the tab / app without tapping Leave: a guest leaves straight away (the database also drops a guest whose app has gone
+  // quiet for 75 seconds — see live_lounge_room_my_status below, which doubles as the "still here" signal). The host stays host.
+  useEffect(() => {
+    guestInCallRef.current.roomId = roomId;
+    guestInCallRef.current.active = phase === 'live' && !isHost;
+    if (phase !== 'live' || isHost || !roomId) return;
+    const stopToken = keepExitTokenFresh();
+    const onHide = (e: PageTransitionEvent) => {
+      const g = guestInCallRef.current;
+      if (!e.persisted && g.active && g.roomId && !g.left) leaveLiveLoungeRoomOnPageExit(g.roomId);
+    };
+    window.addEventListener('pagehide', onHide);
+    return () => { stopToken(); window.removeEventListener('pagehide', onHide); };
+  }, [phase, isHost, roomId]);
 
   const handleEndOrLeave = async () => {
     if (isHost) {
@@ -505,6 +528,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       setPhase('ended');
       return;
     }
+    guestInCallRef.current.left = true;
     if (roomId) await leaveLiveLoungeRoom(roomId);
     await cleanup();
     onClose();
@@ -519,10 +543,13 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const tick = async () => {
       const status = await fetchLiveLoungeRoomMyStatus(roomId);
       if (!alive) return;
-      if (status?.roomStatus === 'ended' || status?.status === 'removed') {
+      // 'left' here means the database dropped us after the app went quiet for a while (leaving on purpose closes this screen first).
+      if (status?.roomStatus === 'ended' || status?.status === 'removed' || status?.status === 'left') {
+        const ended = status?.roomStatus === 'ended';
+        const dropped = !ended && status?.status === 'left';
         await cleanup();
-        setError(status?.roomStatus === 'ended' ? 'The host ended this room.' : 'The host removed you from this room.');
-        setEndReason(status?.roomStatus === 'ended' ? 'ended' : 'removed');
+        setError(ended ? 'The host ended this room.' : dropped ? 'You were away for too long, so you were taken out of the room. You can join again with the room code.' : 'The host removed you from this room.');
+        setEndReason(ended ? 'ended' : dropped ? 'dropped' : 'removed');
         setPhase('ended');
       }
     };
@@ -874,6 +901,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       host: { title: 'Meeting ended', body: 'You ended this Live Lounge room. Everyone has been disconnected.', tone: 'good' as const },
       ended: { title: 'Meeting ended', body: error || 'The host ended this room.', tone: 'good' as const },
       removed: { title: 'Removed from room', body: error || 'The host removed you from this room.', tone: 'bad' as const },
+      dropped: { title: 'You were disconnected', body: error || 'You were away for too long, so you were taken out of the room.', tone: 'warn' as const },
       error: { title: 'Could not join', body: error || 'Something went wrong connecting to this room.', tone: 'warn' as const }
     }[endReason];
     return (

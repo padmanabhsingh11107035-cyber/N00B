@@ -4626,6 +4626,46 @@ export async function leaveNoobRoom(roomId: string): Promise<void> {
   try { await rpc('leave_noob_room', { p_room_id: roomId }); } catch { /* best-effort — leaving anyway */ }
 }
 
+// Leaving when the app/tab is closed. Nothing can be awaited while a page is closing, and an ordinary request is cancelled with the
+// page — so this keeps the person's access token in memory ahead of time and sends the leave with `keepalive`, which the browser
+// finishes on its own. Whatever this misses (a killed app, a dead phone) the database cleans up when the person stops sending the
+// "still here" signal (see 20261010000006_live_rooms_auto_leave.sql).
+let exitToken: string | null = null;
+async function rememberExitToken(): Promise<void> {
+  try { exitToken = (await supabase.auth.getSession()).data.session?.access_token ?? null; } catch { /* keep the last one */ }
+}
+// Call while a room is open; returns the stop function.
+export function keepExitTokenFresh(): () => void {
+  void rememberExitToken();
+  const timer = setInterval(() => { void rememberExitToken(); }, 5 * 60 * 1000);
+  return () => clearInterval(timer);
+}
+function leaveOnPageExit(fn: string, args: Record<string, unknown>): void {
+  if (!exitToken) return;
+  try {
+    const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '';
+    void fetch(`${(import.meta.env.VITE_SUPABASE_URL as string) || ''}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { apikey: key, Authorization: `Bearer ${exitToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args)
+    }).catch(() => {});
+  } catch { /* best-effort */ }
+}
+export function leaveNoobRoomOnPageExit(roomId: string): void { leaveOnPageExit('leave_noob_room', { p_room_id: roomId }); }
+export function leaveLiveLoungeRoomOnPageExit(roomId: string): void { leaveOnPageExit('leave_live_lounge_room', { p_room_id: roomId }); }
+
+// The "I am still here" signal. 'gone' = the database no longer lists this person (they went quiet for a while), 'unknown' = the
+// call itself failed (offline, or the database update has not been applied) — never treated as "gone".
+export async function noobRoomHeartbeat(roomId: string): Promise<'here' | 'gone' | 'unknown'> {
+  try { return (await rpc<boolean>('noob_room_heartbeat', { p_room_id: roomId })) ? 'here' : 'gone'; } catch { return 'unknown'; }
+}
+
+// Puts someone back on the list after a 'gone' (the voice connection itself was never dropped).
+export async function rejoinNoobRoom(roomId: string): Promise<{ success: boolean; error?: string }> {
+  try { await rpc('noob_room_join', { p_room_id: roomId }); return { success: true }; } catch (err) { return failWith(err, 'Could not get back into this room.'); }
+}
+
 export async function endNoobRoom(roomId: string): Promise<{ success: boolean; error?: string }> {
   try { return await rpc('end_noob_room', { p_room_id: roomId }); } catch (err) { return failWith(err, 'Could not end the room.'); }
 }
@@ -4647,7 +4687,10 @@ export function subscribeToNoobRoomParticipants(roomId: string, onChange: () => 
   };
   const channel = supabase
     .channel(`noobroom-participants-${roomId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'noob_room_participants', filter: `room_id=eq.${roomId}` }, fire)
+    // Only people arriving and leaving matter here — the "still here" signal updates a row every few seconds and must not
+    // make every phone in the room reload the list each time.
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'noob_room_participants', filter: `room_id=eq.${roomId}` }, fire)
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'noob_room_participants', filter: `room_id=eq.${roomId}` }, fire)
     .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
   return () => {
     if (timer) clearTimeout(timer);

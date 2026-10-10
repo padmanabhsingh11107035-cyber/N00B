@@ -6,6 +6,10 @@ import { AvatarMedia } from '../Common/AvatarMedia';
 import {
   joinNoobRoom,
   leaveNoobRoom,
+  leaveNoobRoomOnPageExit,
+  keepExitTokenFresh,
+  noobRoomHeartbeat,
+  rejoinNoobRoom,
   endNoobRoom,
   fetchNoobRoomParticipants,
   subscribeToNoobRoomParticipants,
@@ -21,6 +25,9 @@ interface NoobVoiceRoomViewProps {
 }
 
 type Phase = 'connecting' | 'live' | 'ended';
+
+// How often the room is told "this person is still here". The database drops anyone silent for 75 seconds (20261010000006).
+const HEARTBEAT_MS = 15000;
 
 interface RemoteEntry {
   uid: number;
@@ -44,7 +51,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   const [phase, setPhase] = useState<Phase>('connecting');
   const [isHost, setIsHost] = useState(false);
   const [error, setError] = useState('');
-  const [endReason, setEndReason] = useState<'left' | 'ended' | 'error'>('left');
+  const [endReason, setEndReason] = useState<'left' | 'ended' | 'error' | 'dropped'>('left');
   const [participants, setParticipants] = useState<NoobRoomParticipant[]>([]);
   const [remotes, setRemotes] = useState<Map<number, RemoteEntry>>(new Map());
   const [micOn, setMicOn] = useState(false);
@@ -57,6 +64,8 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const micTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const cleanedUpRef = useRef(false);
+  const joinedRef = useRef(false);   // the database lists us in the room
+  const leftRef = useRef(false);     // we have already left on purpose (Leave/End), so nothing should put us back
 
   const myUid = agoraUidFor(currentUser.id);
 
@@ -88,6 +97,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
         return;
       }
       setIsHost(!!join.isHost);
+      joinedRef.current = true;
       try {
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         clientRef.current = client;
@@ -163,7 +173,51 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
     return unsub;
   }, [phase, room.id, currentUser.id]);
 
-  useEffect(() => () => { void cleanup(); }, [cleanup]);
+  // Keeps us on the room's list. If the database dropped us (the phone lost connection for over a minute) but this screen is still
+  // open, we are put straight back; if that is not possible (the room ended meanwhile) we say so.
+  useEffect(() => {
+    if (phase !== 'live') return;
+    let alive = true;
+    const stopToken = keepExitTokenFresh();
+    const beat = async () => {
+      const res = await noobRoomHeartbeat(room.id);
+      if (!alive || leftRef.current || res !== 'gone') return;
+      const back = await rejoinNoobRoom(room.id);
+      if (!alive) return;
+      if (leftRef.current) { void leaveNoobRoom(room.id); return; }
+      if (back.success) { refreshParticipants(); return; }
+      await cleanup();
+      setError(back.error || '');
+      setEndReason('dropped');
+      setPhase('ended');
+    };
+    const interval = setInterval(() => { void beat(); }, HEARTBEAT_MS);
+    const onWake = () => { if (document.visibilityState === 'visible') void beat(); };
+    document.addEventListener('visibilitychange', onWake);
+    window.addEventListener('online', onWake);
+    return () => {
+      alive = false;
+      stopToken();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onWake);
+      window.removeEventListener('online', onWake);
+    };
+  }, [phase, room.id, refreshParticipants, cleanup]);
+
+  // Closing the tab / app: leave straight away instead of waiting for the "still here" signal to run out. (A page that is only being
+  // frozen for later — `persisted` — is left to the signal, since it may come back.)
+  useEffect(() => {
+    if (phase !== 'live') return;
+    const onHide = (e: PageTransitionEvent) => { if (!e.persisted && !leftRef.current) leaveNoobRoomOnPageExit(room.id); };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, [phase, room.id]);
+
+  // Leaving this screen any other way (the room view being closed by the app) also leaves the room.
+  useEffect(() => () => {
+    void cleanup();
+    if (joinedRef.current && !leftRef.current) { leftRef.current = true; void leaveNoobRoom(room.id); }
+  }, [cleanup, room.id]);
 
   const handleToggleMic = async () => {
     const client = clientRef.current;
@@ -184,6 +238,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   };
 
   const handleLeaveOrEnd = async (asHostEnd: boolean) => {
+    leftRef.current = true;
     if (asHostEnd) await endNoobRoom(room.id);
     else await leaveNoobRoom(room.id);
     await cleanup();
@@ -212,7 +267,8 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
     const copy = {
       left: { title: 'Left the room', body: 'You left this room.', tone: 'good' as const },
       ended: { title: 'Room ended', body: 'You ended this room. Everyone has been disconnected.', tone: 'good' as const },
-      error: { title: 'Could not join', body: error || 'Something went wrong connecting to this room.', tone: 'warn' as const }
+      error: { title: 'Could not join', body: error || 'Something went wrong connecting to this room.', tone: 'warn' as const },
+      dropped: { title: 'You were disconnected', body: error || 'You were away for too long, so you were taken out of the room.', tone: 'warn' as const }
     }[endReason];
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-4 px-6 text-center">

@@ -25,7 +25,7 @@ import {
   Radio,
   Bot
 } from 'lucide-react';
-import { ShoppingBag, Phone } from 'lucide-react';
+import { ShoppingBag, Phone, Lightbulb } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
 import { formatRelativeTime } from '../../utils/formatTime';
 
@@ -171,6 +171,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Radio className="w-3.5 h-3.5 text-purple-400" />;
       case 'ai_feedback_reply':
         return <Bot className="w-3.5 h-3.5 text-violet-400" />;
+      case 'suggestion_reply':
+        return <Lightbulb className="w-3.5 h-3.5 text-amber-400" />;
       default:
         return <Sparkles className="w-3.5 h-3.5 text-noob" />;
     }

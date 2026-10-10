@@ -61,16 +61,18 @@ import {
   Plus,
   Radio,
   ClipboardList,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Lightbulb
 } from 'lucide-react';
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
 import { AdminSignInPanel } from './AdminSignInPanel';
+import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
-  fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback,
+  fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
@@ -98,7 +100,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -167,6 +169,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [expandedEvidence, setExpandedEvidence] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [suggestionOpenCount, setSuggestionOpenCount] = useState(0);
   const [aiFeedbackList, setAiFeedbackList] = useState<NoobAiFeedbackItem[]>([]);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [aiFeedbackReplyDrafts, setAiFeedbackReplyDrafts] = useState<Record<string, string>>({});
@@ -338,6 +341,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       loadSparkxRequests();
       loadAccountRequests();
       loadAiFeedback();
+      void fetchAdminAppSuggestions('open').then((r) => { if (r.success) setSuggestionOpenCount(r.items.length); });
     }
   }, []);
 
@@ -1223,6 +1227,24 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               {aiFeedbackList.filter((f) => f.status === 'open').length > 0 && (
                 <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
                   {aiFeedbackList.filter((f) => f.status === 'open').length}
+                </span>
+              )}
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('suggestions')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'suggestions'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Lightbulb className="w-4 h-4" /> Suggestions
+              {suggestionOpenCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
+                  {suggestionOpenCount}
                 </span>
               )}
             </button>
@@ -2146,6 +2168,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminOrdersPanel />
           ) : activeTab === 'foodStall' && canManageStore ? (
             <AdminFoodStallPanel />
+          ) : activeTab === 'suggestions' && main ? (
+            <AdminSuggestionsPanel onOpenCountChange={setSuggestionOpenCount} />
           ) : activeTab === 'signIn' && main ? (
             <AdminSignInPanel />
           ) : activeTab === 'joinRequests' && main ? (

@@ -145,6 +145,7 @@ export type NotificationType =
   | 'call_started'
   | 'live_lounge_invite'
   | 'ai_feedback_reply'
+  | 'suggestion_reply'
   | 'suggested_user'
   | 'system';
 

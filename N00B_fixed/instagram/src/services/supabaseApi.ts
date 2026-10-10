@@ -3710,6 +3710,61 @@ export async function closeNoobAiFeedback(feedbackId: string): Promise<{ success
   try { return await rpc('admin_close_noob_ai_feedback', { p_feedback_id: feedbackId }); } catch (err) { return failWith(err, 'Could not close that.'); }
 }
 
+// ---- Suggestion box (members send suggestions / improvements / issues; the administrator replies) ----
+
+export type SuggestionCategory = 'suggestion' | 'improvement' | 'issue';
+export type SuggestionStatus = 'open' | 'replied' | 'closed';
+
+export interface MySuggestion {
+  id: string;
+  category: SuggestionCategory;
+  message: string;
+  status: SuggestionStatus;
+  adminReply?: string;
+  repliedAt?: string;
+  createdAt: string;
+}
+
+export interface AdminSuggestion extends MySuggestion {
+  userId: string;
+  username: string;
+  displayName?: string;
+  avatar?: string;
+}
+
+export async function submitAppSuggestion(category: SuggestionCategory, message: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('submit_app_suggestion', { p_category: category, p_message: message }); } catch (err) { return failWith(err, 'Could not send that right now. Please try again.'); }
+}
+
+export async function fetchMyAppSuggestions(): Promise<{ success: boolean; items: MySuggestion[]; error?: string }> {
+  try {
+    return { success: true, items: (await rpc<MySuggestion[]>('my_app_suggestions')) || [] };
+  } catch (err) {
+    return { success: false, items: [], error: errorText(err, 'Could not load your earlier messages.') };
+  }
+}
+
+export async function fetchAdminAppSuggestions(status?: SuggestionStatus): Promise<{ success: boolean; items: AdminSuggestion[]; error?: string }> {
+  try {
+    const items = await rpc<any[]>('admin_app_suggestions_list', { p_status: status ?? null });
+    return { success: true, items: (items || []).map((s) => ({ ...s, avatar: resolveMedia(s.avatar) })) };
+  } catch (err) {
+    return { success: false, items: [], error: errorText(err, 'Could not load the suggestion box.') };
+  }
+}
+
+export async function replyAppSuggestion(id: string, reply: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('admin_reply_app_suggestion', { p_id: id, p_reply: reply }); } catch (err) { return failWith(err, 'Could not send that reply.'); }
+}
+
+export async function closeAppSuggestion(id: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('admin_close_app_suggestion', { p_id: id }); } catch (err) { return failWith(err, 'Could not close that.'); }
+}
+
+export async function deleteAppSuggestion(id: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc('admin_delete_app_suggestion', { p_id: id }); } catch (err) { return failWith(err, 'Could not delete that.'); }
+}
+
 // ---- "Apply to join us" (team_applications) ----
 
 export interface TeamApplication {

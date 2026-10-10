@@ -26,7 +26,8 @@ import {
   Flame,
   Trophy,
   ShoppingBag,
-  Music2
+  Music2,
+  Lightbulb
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -40,6 +41,7 @@ import { FoodStallView } from '../Store/FoodStallView';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
+import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 
@@ -148,6 +150,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
   const [showNoobMenu, setShowNoobMenu] = useState(false);
+  const [showSuggestionBox, setShowSuggestionBox] = useState(false);
   const [showDailyNoob, setShowDailyNoob] = useState(false);
   const [showNoobRooms, setShowNoobRooms] = useState(false);
   const [showGuessTheSong, setShowGuessTheSong] = useState(false);
@@ -785,6 +788,18 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-400">Chat with the NOOB support team</span>
                 </div>
               </button>
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowSuggestionBox(true); }}
+                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+                  <Lightbulb className="w-4.5 h-4.5 text-amber-400" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Suggestion Box</span>
+                  <span className="text-[10px] text-zinc-400">Share ideas, improvements or problems</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -818,6 +833,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
       {showFoodStall && <FoodStallView currentUser={currentUser} onClose={() => setShowFoodStall(false)} />}
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}
+      {showSuggestionBox && <SuggestionBoxModal onClose={() => setShowSuggestionBox(false)} />}
       {showSupportModal && (
         <React.Suspense fallback={<LazyFallback />}>
           <CustomerSupportModal currentUser={currentUser} onClose={() => setShowSupportModal(false)} />

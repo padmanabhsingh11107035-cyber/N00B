@@ -450,7 +450,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
             <span className="w-7" />
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            <OrdersView canManage={false} />
+            <OrdersView canManage={false} storefront="food_stall" />
           </div>
         </div>
       )}

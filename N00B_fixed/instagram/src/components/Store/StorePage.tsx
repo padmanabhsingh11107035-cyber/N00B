@@ -748,7 +748,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
           />
         )}
 
-        {view === 'orders' && <OrdersView canManage={canManage} onOrdersChanged={loadData} />}
+        {view === 'orders' && <OrdersView canManage={canManage} onOrdersChanged={loadData} storefront="shop" />}
 
         {view === 'account' && <AccountDetailsView currentUser={currentUser} onOpenOrders={() => setView('orders')} />}
       </div>

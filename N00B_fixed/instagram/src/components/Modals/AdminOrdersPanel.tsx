@@ -32,7 +32,7 @@ export const AdminOrdersPanel: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await fetchAdminStoreOrders();
+    const res = await fetchAdminStoreOrders(undefined, 'shop');
     if (res.success) setOrders(res.orders);
     else setError(res.error || 'Could not load orders.');
     setLoading(false);

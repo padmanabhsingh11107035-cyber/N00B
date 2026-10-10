@@ -3244,10 +3244,35 @@ export async function placeStoreOrder(payload: {
   }
 }
 
-export async function fetchMyStoreOrders(): Promise<{ success: boolean; orders: StoreOrder[]; error?: string }> {
+// Shop NOOB and the Food Stall are two separate storefronts with separate carts, so an order is never
+// both. Food Stall orders are the ones holding Food Stall products; every other order is Shop NOOB's.
+export type Storefront = 'shop' | 'food_stall';
+
+let foodIdsCache: { at: number; ids: Set<string> } | null = null;
+async function foodProductIdSet(): Promise<Set<string> | null> {
+  if (foodIdsCache && Date.now() - foodIdsCache.at < 30000) return foodIdsCache.ids;
+  try {
+    const rows = ((await rpc<any[]>('list_store_products')) || []).map(mapProduct);
+    const ids = new Set(rows.filter((p) => p.category === 'food_stall').map((p) => p.id));
+    foodIdsCache = { at: Date.now(), ids };
+    return ids;
+  } catch {
+    return null; // can't tell the storefronts apart right now: show everything rather than hide an order
+  }
+}
+
+async function onlyStorefront(orders: StoreOrder[], storefront?: Storefront): Promise<StoreOrder[]> {
+  if (!storefront) return orders;
+  const food = await foodProductIdSet();
+  if (!food) return orders;
+  const isFood = (o: StoreOrder) => o.items.some((it) => !!it.productId && food.has(it.productId));
+  return orders.filter((o) => isFood(o) === (storefront === 'food_stall'));
+}
+
+export async function fetchMyStoreOrders(storefront?: Storefront): Promise<{ success: boolean; orders: StoreOrder[]; error?: string }> {
   try {
     const res = await rpc<any>('my_store_orders');
-    return { success: true, orders: (res.orders || []).map(mapOrder) };
+    return { success: true, orders: await onlyStorefront((res.orders || []).map(mapOrder), storefront) };
   } catch (err) {
     return { success: false, orders: [], error: errorText(err, 'Could not load your orders.') };
   }
@@ -3263,10 +3288,16 @@ export async function cancelMyStoreOrder(orderId: string): Promise<{ success: bo
 }
 
 // The shop's side: everyone's orders, and moving an order along (needs the "manage the shop" permission).
-export async function fetchAdminStoreOrders(status?: string): Promise<{ success: boolean; orders: StoreOrder[]; openCount: number; error?: string }> {
+export async function fetchAdminStoreOrders(status?: string, storefront?: Storefront): Promise<{ success: boolean; orders: StoreOrder[]; openCount: number; error?: string }> {
   try {
     const res = await rpc<any>('admin_store_orders', { p_status: status || null });
-    return { success: true, orders: (res.orders || []).map(mapOrder), openCount: res.openCount || 0 };
+    const all: StoreOrder[] = (res.orders || []).map(mapOrder);
+    const orders = await onlyStorefront(all, storefront);
+    // the server's own open count covers both storefronts; for one storefront, count its own
+    const openCount = storefront && orders.length !== all.length
+      ? orders.filter((o) => ['placed', 'confirmed', 'ready'].includes(o.status)).length
+      : res.openCount || 0;
+    return { success: true, orders, openCount };
   } catch (err) {
     return { success: false, orders: [], openCount: 0, error: errorText(err, 'Could not load the orders.') };
   }

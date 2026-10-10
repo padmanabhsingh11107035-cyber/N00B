@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Check, ClipboardList, Loader2, MapPin, Package, Phone, RefreshCw, Store as StoreIcon, Truck, X } from 'lucide-react';
 import { StoreOrder, StoreOrderStatus } from '../../types';
 import { cancelMyStoreOrder, fetchAdminStoreOrders, fetchMyStoreOrders, setStoreOrderStatus } from '../../services/api';
+import type { Storefront } from '../../services/api';
 import { formatPrice } from './formatPrice';
 import { formatAddress } from './ContactFields';
 import { OrderTrackingScreen } from './OrderTrackingScreen';
@@ -11,6 +12,8 @@ interface OrdersViewProps {
   // may see and handle everyone's orders (shop managers)
   canManage: boolean;
   onOrdersChanged?: () => void;
+  // Which storefront's orders this list is for — Shop NOOB and the Food Stall each only show their own.
+  storefront?: Storefront;
 }
 
 const STATUS_STYLE: Record<StoreOrderStatus, string> = {
@@ -217,7 +220,7 @@ export const OrderCard: React.FC<{
 type Tab = 'mine' | 'shop';
 type ShopFilter = 'open' | 'all' | 'completed' | 'cancelled';
 
-export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChanged }) => {
+export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChanged, storefront }) => {
   const [tab, setTab] = useState<Tab>('mine');
   const [shopFilter, setShopFilter] = useState<ShopFilter>('open');
   const [mine, setMine] = useState<StoreOrder[]>([]);
@@ -231,7 +234,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const [m, s] = await Promise.all([fetchMyStoreOrders(), canManage ? fetchAdminStoreOrders() : Promise.resolve(null)]);
+    const [m, s] = await Promise.all([fetchMyStoreOrders(storefront), canManage ? fetchAdminStoreOrders(undefined, storefront) : Promise.resolve(null)]);
     if (m.success) setMine(m.orders);
     else setError(m.error || 'Could not load your orders.');
     if (s) {
@@ -241,7 +244,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
       } else setError(s.error || 'Could not load the shop orders.');
     }
     setLoading(false);
-  }, [canManage]);
+  }, [canManage, storefront]);
 
   useEffect(() => {
     load();

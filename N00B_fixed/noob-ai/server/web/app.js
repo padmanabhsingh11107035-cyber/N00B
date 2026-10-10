@@ -300,8 +300,8 @@ function setState(next, text) {
 
 // [face:happy] and [en] are instructions for NOOB's screen and voice, never part of what is said or shown.
 const cleanText = (t) => String(t ?? "")
-  .replace(/\s*\[\s*face\s*:\s*\w+\s*\]/gi, "")
-  .replace(/\s*\bface\s*:\s*(?:normal|happy|laugh|love|wink|angry|furious|sad|crying|surprised|scared|sleepy|sleeping|cool|confused|thinking|listening|speaking|lookleft|lookright|suspicious|bored|shy|dizzy|smug|music)/gi, "")
+  .replace(/\s*\[\s*face\s*:[^\]\n]{0,60}\]/gi, "")
+  .replace(/\s*\bface:(?:normal|happy|laugh|love|wink|angry|furious|sad|crying|surprised|scared|sleepy|sleeping|cool|confused|thinking|listening|speaking|lookleft|lookright|suspicious|bored|shy|dizzy|smug|music|[a-z0-9]+(?:_[a-z0-9]+)+|\w+(?=[\s.,!?;:)]|$))/gi, "")
   .replace(/^(\s*\[[a-z]{2,3}(-[a-z]+)?\])+\s*/i, "")
   .trim();
 function addBubble(who, text, extraClass = "") {

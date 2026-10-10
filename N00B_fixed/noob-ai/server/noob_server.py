@@ -449,16 +449,25 @@ FACE_NAMES = {
     "lookleft", "lookright", "suspicious", "bored", "shy", "dizzy", "smug", "music"
 }
 DEFAULT_FACE = "normal"
-FACE_TAG = re.compile(r"^\s*\[face:(\w+)\]\s*", re.IGNORECASE)
+FACE_TAG = re.compile(r"^\s*\[\s*face\s*:\s*([^\]\s\n]{1,60})\s*\]\s*", re.IGNORECASE)
 # One control tag at the very start of text: [face:NAME] or [language]. The model is told to start every reply with
 # one of each, but it sometimes repeats them (it copies the shape of its own earlier replies), so every leading one is
 # removed, never just the first.
-LEADING_TAG = re.compile(r"\s*\[(?:face:\w+|[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)\]\s*", re.IGNORECASE)
-# Every form of a face tag, anywhere in a reply: "[face:happy]", "[ face : happy ]" and the bare "face:happy" that is
-# left when the brackets were already stripped (the voice cleaner used to leave exactly that behind: "face:loveThank you").
+LEADING_TAG = re.compile(r"\s*\[(?:\s*face\s*:[^\]\n]{0,60}|[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)\]\s*", re.IGNORECASE)
+# Every form of a face tag, anywhere in a reply, whatever name the model gave it (it sometimes invents one, such as
+# "user_asked_question"): "[face:happy]", "[ face : happy ]", and the bare "face:happy" that is left when the brackets were
+# already stripped ("face:loveThank you"). A bare tag is "face:" straight into its name; ordinary talk about a face
+# ("face: ...", "interface:") never looks like that.
 ANY_FACE_TAG = re.compile(
-    r"\s*\[\s*face\s*:\s*\w+\s*\]|\s*\bface\s*:\s*(?:" + "|".join(sorted(FACE_NAMES, key=len, reverse=True)) + ")",
+    r"\s*\[\s*face\s*:[^\]\n]{0,60}\]"
+    r"|\s*\bface:(?:" + "|".join(sorted(FACE_NAMES, key=len, reverse=True)) + r"|[A-Za-z0-9]+(?:_[A-Za-z0-9]+)+|\w+(?=[\s.,!?;:)]|$))",
     re.IGNORECASE)
+
+
+def tag_still_arriving(text):
+    """True while the text so far is the start of a [tag] whose closing bracket has not come in yet."""
+    text = (text or "").lstrip()
+    return text.startswith("[") and "]" not in text and len(text) < 80
 
 
 def strip_control_tags(text):
@@ -520,6 +529,8 @@ class AnswerStream:
                 self.face = name if name in FACE_NAMES else DEFAULT_FACE
                 self.face_start = match.end()
                 events.append(("face", self.face))
+            elif tag_still_arriving(self.raw) and not final:
+                return events                          # "[face:..." is being written, however long its name is: wait for the "]"
             elif len(self.raw) >= 12 or final:        # enough to know no tag is coming (offline backup, etc.)
                 self.face = DEFAULT_FACE
                 self.face_start = 0
@@ -575,7 +586,7 @@ class AnswerStream:
                         self.lang = again.group(1).lower()
                     start += repeated.end()
                     continue
-                if rest.lstrip().startswith("[") and "]" not in rest and len(rest) < 20 and not final:
+                if tag_still_arriving(rest) and not final:
                     return events                     # a tag is still arriving: wait for the rest of it
                 break
             self.text_start = start

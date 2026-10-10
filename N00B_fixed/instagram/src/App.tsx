@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Home,
   Compass,
@@ -28,7 +28,7 @@ import {
   loadSignedInUser,
   fetchPosts,
   fetchPostById,
-  fetchStories,
+  fetchHomeStoryTray,
   fetchReels,
   fetchReelById,
   fetchUsers,
@@ -77,6 +77,7 @@ import { useIncomingCalls } from './components/Chat/useIncomingCalls';
 import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
 import { takeRestorePage } from './utils/pageResume';
+import { buildStoryTray, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
 import { MusicHubView } from './components/Music/MusicHubView';
@@ -196,6 +197,20 @@ export default function App() {
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
+  // The home-page story tray: the stories this person may see plus up to 10 random accounts to follow (reshuffled each time the
+  // feed loads or is refreshed), worked out in utils/storyTray.ts. The full-screen viewer plays the same list in the same order;
+  // that order is fixed when the viewer opens, so a ring turning grey while you watch can't shuffle the stories under you.
+  const [homeSuggestions, setHomeSuggestions] = useState<StoryTraySuggestion[]>([]);
+  const [ownSeenStoryIds, setOwnSeenStoryIds] = useState<Set<string>>(() => loadOwnSeenStoryIds());
+  const [storyViewerOrder, setStoryViewerOrder] = useState<string[]>([]);
+  const storyTray = useMemo(
+    () => buildStoryTray(stories, homeSuggestions, currentUser?.id ?? '', new Set(currentUser?.followingIds ?? []), ownSeenStoryIds),
+    [stories, homeSuggestions, currentUser?.id, currentUser?.followingIds, ownSeenStoryIds]
+  );
+  const storyViewerStories = useMemo(() => {
+    const byId = new Map(stories.map((s) => [s.id, s] as const));
+    return storyViewerOrder.map((id) => byId.get(id)).filter((s): s is Story => !!s);
+  }, [stories, storyViewerOrder]);
   const [reels, setReels] = useState<Reel[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
   // A hashtag story sticker tap sets this, then switches to Explore — consumed once and cleared,
@@ -578,10 +593,10 @@ export default function App() {
     try {
       setLoading(true);
       setInitialLoadFailed(false);
-      const [user, pList, sList, rList, uList, notifRes] = await Promise.all([
+      const [user, pList, trayData, rList, uList, notifRes] = await Promise.all([
         loadSignedInUser(), // a failed request is an error (Retry screen), not "logged out"
         fetchPosts(),
-        fetchStories(),
+        fetchHomeStoryTray(),
         fetchReels(),
         fetchUsers(),
         fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }))
@@ -596,7 +611,8 @@ export default function App() {
       if (user) void checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
       setCurrentUser(user);
       setPosts(pList);
-      setStories(sList);
+      setStories(trayData.stories);
+      setHomeSuggestions(trayData.suggestions);
       setReels(rList);
       setRegisteredUsers(uList);
       if (notifRes && !notifRes.failed && Array.isArray(notifRes.notifications)) {
@@ -787,6 +803,26 @@ export default function App() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Tapping a circle in the tray: play from that person's first unseen story. The order is frozen for as long as the viewer is open.
+  const handleOpenStoryViewer = (index: number) => {
+    const list = storyTray.viewerStories;
+    if (!list[index]) return;
+    setStoryViewerOrder(list.map((s) => s.id));
+    setActiveStoryViewerIndex(index);
+    if (list[index].userId === currentUser?.id) {
+      // the server never counts the owner as a viewer, so "I have looked at my own story" is remembered on this device
+      const next = new Set<string>(ownSeenStoryIds);
+      storyTray.own.storyIds.forEach((id) => next.add(id));
+      setOwnSeenStoryIds(next);
+      saveOwnSeenStoryIds(next);
+    }
+  };
+
+  // The viewer reports each story the moment it is shown, so the ring in the tray turns grey as soon as it is closed.
+  const handleStoryViewed = (storyId: string) => {
+    setStories((prev) => prev.map((s) => (s.id === storyId && !s.isViewed ? { ...s, isViewed: true } : s)));
   };
 
   const handleAddStoryComment = async (storyId: string, text: string) => {
@@ -1388,6 +1424,7 @@ export default function App() {
             currentUser={currentUser}
             posts={posts.filter((p) => !p.isArchived)}
             stories={stories}
+            storyTray={storyTray}
             reels={reels}
             unreadNotificationCount={unreadNotificationCount}
             unreadChatCount={unreadChatCount}
@@ -1399,7 +1436,7 @@ export default function App() {
             onToggleLikeCount={handleToggleLikeCount}
             onDeletePost={handleDeletePost}
             onDeleteSlide={handleDeleteSlide}
-            onOpenStoryViewer={(index) => setActiveStoryViewerIndex(index)}
+            onOpenStoryViewer={handleOpenStoryViewer}
             onOpenCreateStory={() => setShowCreateStoryModal(true)}
             onOpenPostCreation={() => setShowPostCreationModal(true)}
             onOpenStatusNoteModal={() => setShowStatusNoteModal(true)}
@@ -1701,12 +1738,13 @@ export default function App() {
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
 
       {/* 1. Fullscreen Story Viewer */}
-      {activeStoryViewerIndex !== null && stories[activeStoryViewerIndex] && (
+      {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (
         <StoryViewerModal
-          stories={stories}
+          stories={storyViewerStories}
           initialIndex={activeStoryViewerIndex}
           onClose={() => setActiveStoryViewerIndex(null)}
           currentUser={currentUser}
+          onStoryViewed={handleStoryViewed}
           onAddComment={handleAddStoryComment}
           onToggleLike={handleToggleStoryLike}
           onDeleteStory={handleDeleteStory}

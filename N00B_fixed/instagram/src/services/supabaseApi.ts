@@ -20,6 +20,7 @@ import { browserKeyStore } from '../e2ee/keyring.ts';
 import { markSeen, mergeSeen } from '../utils/seenContent';
 import { getDeviceId, getDeviceModel } from '../utils/deviceId';
 import { clearResume } from '../utils/pageResume';
+import type { StoryTraySuggestion } from '../utils/storyTray';
 
 // ----------------------------------------------------------------------------- plumbing
 
@@ -1374,6 +1375,32 @@ export async function fetchStories(): Promise<Story[]> {
     return ((await rpc<any[]>('active_stories')) || []).map(mapStory);
   } catch {
     return [];
+  }
+}
+
+// Everything the home-page story tray shows in one call (migration 20261010000010): the live stories this person may see - their
+// own, every public / business account's, the private accounts they follow - plus up to 10 random accounts to follow. Until that
+// migration has been run the old list is used, so the tray keeps working either way (just without suggestions).
+export async function fetchHomeStoryTray(): Promise<{ stories: Story[]; suggestions: StoryTraySuggestion[] }> {
+  const empty = { stories: [] as Story[], suggestions: [] as StoryTraySuggestion[] };
+  try {
+    if (!(await currentSession())) return empty;
+    try {
+      const res = await rpc<any>('home_story_tray');
+      if (res && Array.isArray(res.stories)) {
+        return {
+          stories: res.stories.map(mapStory),
+          suggestions: (Array.isArray(res.suggestions) ? res.suggestions : [])
+            .filter((x: any) => x && x.id && x.username)
+            .map((x: any): StoryTraySuggestion => ({ ...x, avatar: resolveMedia(x.avatar) }))
+        };
+      }
+    } catch (err) {
+      console.warn('home_story_tray unavailable, using the plain story list:', err);
+    }
+    return { ...empty, stories: await fetchStories() };
+  } catch {
+    return empty;
   }
 }
 

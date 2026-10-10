@@ -19,6 +19,8 @@ interface StoryViewerModalProps {
   initialIndex: number;
   onClose: () => void;
   currentUser: User;
+  // Told the moment another person's story is shown (the tray turns that person's ring grey once every story of theirs is seen).
+  onStoryViewed?: (storyId: string) => void;
   onAddComment: (storyId: string, text: string) => void;
   // Patches the parent's own `stories` state so a like survives this viewer being closed and
   // reopened — without this, the fix below only ever worked within one open session, since the
@@ -46,6 +48,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   initialIndex,
   onClose,
   currentUser,
+  onStoryViewed,
   onAddComment,
   onToggleLike,
   onDeleteStory,
@@ -106,6 +109,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   const story = stories[currentIndex];
   const nextStory = stories[currentIndex + 1];
+  // One bar per story of the person being watched (the list holds one person after another, so the bars restart for each person).
+  let groupStart = currentIndex;
+  let groupEnd = currentIndex;
+  if (story) {
+    while (groupStart > 0 && stories[groupStart - 1].userId === story.userId) groupStart--;
+    while (groupEnd < stories.length - 1 && stories[groupEnd + 1].userId === story.userId) groupEnd++;
+  }
   // Once live data has arrived for this item, it's the source of truth for anything that can
   // change after the story was posted (comments, likes); everything else (media, stickers, who
   // posted it) is immutable, so the snapshot already showing it instantly is never overwritten.
@@ -146,6 +156,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   useEffect(() => {
     if (isHighlight || !story || story.userId === currentUser.id) return;
     recordStoryView(story.id).catch(() => {});
+    onStoryViewed?.(story.id);
   }, [isHighlight, story?.id, currentUser.id]);
 
   // Highlights stay likeable/commentable forever (their original story row is kept, never
@@ -410,16 +421,19 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       >
         {/* Top Progress Bars */}
         <div className="absolute top-2 inset-x-2 z-30 flex items-center gap-1.5 px-2">
-          {stories.map((s, idx) => (
-            <div key={s.id} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-noob transition-all duration-75 ease-linear"
-                style={{
-                  width: idx === currentIndex ? `${progress}%` : idx < currentIndex ? '100%' : '0%'
-                }}
-              />
-            </div>
-          ))}
+          {stories.slice(groupStart, groupEnd + 1).map((s, i) => {
+            const idx = groupStart + i;
+            return (
+              <div key={s.id} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-noob transition-all duration-75 ease-linear"
+                  style={{
+                    width: idx === currentIndex ? `${progress}%` : idx < currentIndex ? '100%' : '0%'
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* Story Header */}

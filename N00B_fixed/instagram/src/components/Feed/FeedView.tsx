@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
+import type { StoryTrayModel } from '../../utils/storyTray';
 import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
 import { FeedVideoWatchView } from './FeedVideoWatchView';
@@ -64,6 +65,8 @@ interface FeedViewProps {
   currentUser: User;
   posts: Post[];
   stories: Story[];
+  // Who is in the home-page story tray and in which order (utils/storyTray.ts); `stories` is kept for callers that only need the raw list.
+  storyTray: StoryTrayModel;
   reels?: Reel[];
   unreadNotificationCount?: number;
   unreadChatCount?: number;
@@ -76,7 +79,7 @@ interface FeedViewProps {
   onToggleLikeCount: (postId: string) => void;
   onDeletePost: (postId: string) => void;
   onDeleteSlide?: (postId: string, slideId: string) => void;
-  onOpenStoryViewer: (index: number) => void;
+  onOpenStoryViewer: (index: number) => void;   // an index into storyTray.viewerStories
   onOpenCreateStory: () => void;
   // Create moved to this header (used to be a bottom-nav tab) — opens the post/reel picker.
   onOpenPostCreation?: () => void;
@@ -111,6 +114,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   currentUser,
   posts,
   stories,
+  storyTray,
   reels = [],
   unreadNotificationCount = 0,
   unreadChatCount = 0,
@@ -571,14 +575,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {/* 2. Stories Tray */}
       <StoryTray
         currentUser={currentUser}
-        stories={stories}
-        posts={posts}
-        reels={reels}
+        model={storyTray}
         onOpenStoryViewer={onOpenStoryViewer}
         onOpenCreateStory={onOpenCreateStory}
         onOpenStatusNoteModal={onOpenStatusNoteModal}
-        onNavigateToPost={onNavigateToPost}
-        onNavigateToReel={onNavigateToReel}
+        onNavigateToProfile={onNavigateToProfile}
+        onToggleFollowUser={onToggleFollowUser}
+        allUsers={allUsers}
       />
 
       {/* 3. Category Topic Filter Pills */}

@@ -81,6 +81,7 @@ export {
   uploadMediaFile,
   updateFullProfile,
   fetchStories,
+  fetchHomeStoryTray,
   createStory,
   recordStoryView,
   toggleStoryLike,

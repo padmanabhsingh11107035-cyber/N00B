@@ -96,6 +96,22 @@ function showPage() {
 window.addEventListener("hashchange", showPage);
 
 // ---------------------------------------------------------------- server status
+// The person's NOOB profile picture, or the first letter of their name while there is none (or it can not be loaded).
+function setAvatar(box, url, name) {
+  const letter = (name.trim()[0] || "?").toUpperCase();
+  const key = (url || "") + "|" + letter;
+  if (box.dataset.key === key) return;                    // unchanged: no flicker, and a picture that failed is not retried every few seconds
+  box.dataset.key = key;
+  box.textContent = "";
+  if (!url) { box.textContent = letter; return; }
+  const img = document.createElement("img");
+  img.alt = "";
+  img.referrerPolicy = "no-referrer";
+  img.onerror = () => { box.textContent = letter; };
+  img.src = url;
+  box.append(img);
+}
+
 let serverStatus = null;
 async function refreshStatus() {
   try {
@@ -109,7 +125,7 @@ async function refreshStatus() {
     const user = serverStatus.user;
     $("userName").textContent = user.name;
     $("userRole").textContent = user.is_owner ? "Owner" : "Member";
-    $("avatar").textContent = (user.name.trim()[0] || "?").toUpperCase();
+    setAvatar($("avatar"), user.avatar, user.name);
     document.querySelectorAll(".owner-only").forEach((e) => (e.hidden = !user.is_owner));
     showFreeNote(serverStatus.questions_left);
     $("maintenance").hidden = !serverStatus.maintenance;                      // locked by the NOOB admin

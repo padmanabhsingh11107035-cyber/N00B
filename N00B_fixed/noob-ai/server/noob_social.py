@@ -9,6 +9,7 @@ straight away. The NOOB password is never saved or logged by the assistant.
 import re
 import threading
 import time
+from urllib.parse import quote
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
@@ -107,6 +108,67 @@ def list_feedback(secret, noob_id):
         return r.json() if r.status_code == 200 and isinstance(r.json(), list) else []
     except (requests.RequestException, ValueError):
         return []
+
+
+# ---------------- the person's current NOOB profile picture ----------------
+# Shown next to their name in the NOOB AI app. It is asked from NOOB (same shared secret as the feedback above, scoped to the one
+# linked account) and kept for a few minutes, so changing the picture in NOOB shows up here without signing in again.
+MEDIA_BASE = "https://nooob.xyz"
+AVATAR_FRESH = 300         # seconds a picture is trusted before NOOB is asked again
+AVATAR_RETRY = 60          # seconds before trying again after NOOB could not be reached
+_avatars = {}              # NOOB account id -> {"url": str, "until": float}
+_avatars_busy = set()
+_avatars_lock = threading.Lock()
+
+
+def media_url(value):
+    """A stored picture (a short storage key, a /media/ path or a full address) as an address that works from anywhere."""
+    value = str(value or "").strip()
+    if not value or value.lower().startswith("data:"):
+        return ""
+    if re.match(r"^https?://", value, re.I):
+        return value
+    if value.startswith("/"):
+        return MEDIA_BASE + value
+    return MEDIA_BASE + "/media/" + "/".join(quote(part, safe="") for part in value.split("/"))
+
+
+def _load_avatar(secret, noob_id):
+    url = None
+    try:
+        r = _http.post(f"{NOOB_SOCIAL_URL}/rest/v1/rpc/noob_ai_profile_for_user", headers=_headers(),
+                       json={"p_secret": secret, "p_noob_user_id": noob_id}, timeout=(4, 6))
+        if r.status_code == 200 and isinstance(r.json(), dict):
+            url = media_url(r.json().get("avatar"))
+    except (requests.RequestException, ValueError):
+        pass
+    with _avatars_lock:
+        old = _avatars.get(noob_id, {}).get("url", "")
+        if url is None:                                   # NOOB could not be reached (or the lookup is not set up yet)
+            _avatars[noob_id] = {"url": old, "until": time.time() + AVATAR_RETRY}
+        else:
+            _avatars[noob_id] = {"url": url, "until": time.time() + AVATAR_FRESH}
+        _avatars_busy.discard(noob_id)
+
+
+def profile_avatar(secret, noob_id):
+    """The person's current NOOB profile picture address ('' when there is none). The first look waits a moment; after that
+    a stale picture is shown straight away while a fresh one is fetched in the background."""
+    if not secret or not noob_id:
+        return ""
+    with _avatars_lock:
+        entry = _avatars.get(noob_id)
+        stale = entry is None or entry["until"] < time.time()
+        start = stale and noob_id not in _avatars_busy
+        if start:
+            _avatars_busy.add(noob_id)
+    if start:
+        if entry is None:
+            _load_avatar(secret, noob_id)
+        else:
+            threading.Thread(target=_load_avatar, args=(secret, noob_id), daemon=True).start()
+    with _avatars_lock:
+        return _avatars.get(noob_id, {}).get("url", "")
 
 
 # ---------------- NOOB AI maintenance lock ----------------

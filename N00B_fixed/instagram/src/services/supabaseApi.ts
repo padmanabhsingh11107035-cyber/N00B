@@ -333,7 +333,7 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
   }
 }
 
-export type SocialProvider = 'google' | 'apple' | 'discord' | 'x';
+export type SocialProvider = 'google' | 'apple' | 'facebook' | 'microsoft' | 'x' | 'discord' | 'github' | 'linkedin' | 'twitch' | 'spotify';
 export interface EnabledSocialProvider {
   id: SocialProvider;
   supabaseId: string; // the name the sign-in service knows it by
@@ -358,9 +358,15 @@ export function fetchEnabledSocialProviders(): Promise<EnabledSocialProvider[]> 
         const out: EnabledSocialProvider[] = [];
         if (external.google) out.push({ id: 'google', supabaseId: 'google' });
         if (external.apple) out.push({ id: 'apple', supabaseId: 'apple' });
-        if (external.discord) out.push({ id: 'discord', supabaseId: 'discord' });
+        if (external.facebook) out.push({ id: 'facebook', supabaseId: 'facebook' });
+        if (external.azure) out.push({ id: 'microsoft', supabaseId: 'azure' });
         if (external.x) out.push({ id: 'x', supabaseId: 'x' });
         else if (external.twitter) out.push({ id: 'x', supabaseId: 'twitter' });
+        if (external.discord) out.push({ id: 'discord', supabaseId: 'discord' });
+        if (external.github) out.push({ id: 'github', supabaseId: 'github' });
+        if (external.linkedin_oidc) out.push({ id: 'linkedin', supabaseId: 'linkedin_oidc' });
+        if (external.twitch) out.push({ id: 'twitch', supabaseId: 'twitch' });
+        if (external.spotify) out.push({ id: 'spotify', supabaseId: 'spotify' });
         return out.length ? out : fallback;
       } catch {
         return fallback;
@@ -376,6 +382,7 @@ export async function signInWithProvider(provider: EnabledSocialProvider): Promi
     if (provider.id === 'google') options.queryParams = { prompt: 'select_account' };
     if (provider.id === 'apple') options.scopes = 'name email';
     if (provider.id === 'discord') options.scopes = 'identify email';
+    if (provider.id === 'microsoft') options.scopes = 'email';
     const { error } = await supabase.auth.signInWithOAuth({ provider: provider.supabaseId as any, options });
     return error ? { success: false, error: error.message } : { success: true };
   } catch (err) {

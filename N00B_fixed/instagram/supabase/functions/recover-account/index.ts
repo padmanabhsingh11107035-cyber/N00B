@@ -80,7 +80,10 @@ async function oauthCaller(admin: ReturnType<typeof createClient>, req: Request)
     ? user.app_metadata.providers
     : [String(user.app_metadata?.provider || '')];
   const email = String(user.email || '').trim().toLowerCase();
-  const trusted = providers.some((x) => ['google', 'apple', 'discord', 'x', 'twitter'].includes(x)) && !!user.email_confirmed_at && email.includes('@');
+  // Only providers that verify the email address themselves are trusted to log someone straight into an existing account.
+  // Facebook, Microsoft (any "work or school" tenant can claim any email), X and Spotify are NOT on this list: for them the person
+  // proves the email with the emailed code on the sign-up page instead, so nobody can take over an account by typing its email there.
+  const trusted = providers.some((x) => ['google', 'apple', 'discord', 'github', 'linkedin_oidc', 'twitch'].includes(x)) && !!user.email_confirmed_at && email.includes('@');
   return { id: user.id, email, trusted };
 }
 
@@ -375,10 +378,10 @@ Deno.serve(async (req) => {
   if (body?.action === 'oauth-login-existing') {
     const who = await oauthCaller(admin, req);
     if (!who) return json({ error: 'Please sign in again.' }, 401);
-    if (!who.trusted) return json({ error: 'Google could not confirm your email address.' }, 403);
+    if (!who.trusted) return json({ error: 'Your sign-in provider could not confirm your email address.' }, 403);
     const accounts = await accountsForEmail(admin, who.email, who.id);
     const chosen = accounts.find((a: any) => a.id === String(body?.accountId || ''));
-    if (!chosen) return json({ error: 'That account is not linked to your Google email.' }, 403);
+    if (!chosen) return json({ error: 'That account is not linked to your sign-in email.' }, 403);
     if (chosen.suspended) return json({ error: 'This account has been suspended by NOOB Administrator.' }, 403);
     const tokenHash = await issueSignInToken(admin, chosen.id);
     if (!tokenHash) return json(unavailable, 500);

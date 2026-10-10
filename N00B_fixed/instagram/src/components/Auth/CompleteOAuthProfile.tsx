@@ -31,6 +31,10 @@ interface CompleteOAuthProfileProps {
 export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pending, onDone }) => {
   const language = useLanguage();
   const nameGuess = (pending.fullName || '').trim();
+  // Some providers (X, unless the person allows it) do not hand over an email address: then it is asked for here, and proved with the same 6-digit code.
+  const [typedEmail, setTypedEmail] = useState('');
+  const needsEmail = !pending.email;
+  const email = (pending.email || typedEmail).trim().toLowerCase();
   const [username, setUsername] = useState(() => nameGuess.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || '');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'taken' | 'free'>('idle');
   const [bio, setBio] = useState('');
@@ -132,7 +136,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
       lastName: rest.join(' ') || undefined,
       displayName: nameGuess || username,
       username,
-      email: pending.email,
+      email,
       countryCode,
       mobileNumber: mobileNumber.trim(),
       dateOfBirth,
@@ -157,9 +161,10 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
     if (!dateOfBirth) { setErrorMessage('Please enter your date of birth.'); return; }
     if (!(avatarObjectKey || avatarUrl)) { setErrorMessage('Please upload a profile photo. It is required to create a NOOB account.'); return; }
     if (!agreedToTerms) { setErrorMessage("Please check the box to agree to NOOB's general terms and privacy policy."); return; }
+    if (needsEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) { setErrorMessage('Please enter a valid email address.'); return; }
 
     setLoading(true);
-    const res = await requestSignupOtp(pending.email);
+    const res = await requestSignupOtp(email);
     setLoading(false);
     if (!res.success) { setErrorMessage(res.error || 'Could not send a verification code. Please try again.'); return; }
     setOtpCode('');
@@ -193,7 +198,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
   const handleResendOtp = async () => {
     setOtpResending(true);
     setOtpError(null);
-    const res = await requestSignupOtp(pending.email);
+    const res = await requestSignupOtp(email);
     setOtpResending(false);
     if (!res.success) setOtpError(res.error || 'Could not send a new code. Please try again.');
   };
@@ -207,12 +212,12 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
   const avatarPreview = avatarUrl;
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-page flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-5">
           <h1 className="text-xl font-black text-white">Just a few more details</h1>
           <p className="text-xs text-zinc-400 mt-1">
-            Signed in as <span className="text-white font-semibold" translate="no">{pending.email}</span>. NOOB needs a bit more to finish setting up your account.
+            {pending.email ? (<>Signed in as <span className="text-white font-semibold" translate="no">{pending.email}</span>. </>) : null}NOOB needs a bit more to finish setting up your account.
           </p>
         </div>
 
@@ -240,7 +245,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
               ) : (
                 <>
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    We emailed a 6-digit code to <span className="text-white font-semibold" translate="no">{pending.email}</span>. Enter it below to finish creating your account.
+                    We emailed a 6-digit code to <span className="text-white font-semibold" translate="no">{email}</span>. Enter it below to finish creating your account.
                   </p>
                   {otpError && (
                     <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">{otpError}</div>
@@ -320,6 +325,22 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                 {usernameStatus === 'taken' && <p className="text-[11px] text-red-400 mt-1">That User ID is already taken.</p>}
                 {usernameStatus === 'free' && <p className="text-[11px] text-noob mt-1 flex items-center gap-1"><Check className="w-3 h-3" /> Available</p>}
               </div>
+
+              {needsEmail && (
+                <div>
+                  <label className="text-xs font-bold text-zinc-300 block mb-1.5">Email address</label>
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={typedEmail}
+                    onChange={(e) => setTypedEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm"
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1">We will email you a 6-digit code to confirm it.</p>
+                </div>
+              )}
 
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Bio</label>

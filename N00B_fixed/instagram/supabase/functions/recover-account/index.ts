@@ -80,7 +80,7 @@ async function oauthCaller(admin: ReturnType<typeof createClient>, req: Request)
     ? user.app_metadata.providers
     : [String(user.app_metadata?.provider || '')];
   const email = String(user.email || '').trim().toLowerCase();
-  const trusted = providers.some((x) => x === 'google' || x === 'apple') && !!user.email_confirmed_at && email.includes('@');
+  const trusted = providers.some((x) => ['google', 'apple', 'discord', 'x', 'twitter'].includes(x)) && !!user.email_confirmed_at && email.includes('@');
   return { id: user.id, email, trusted };
 }
 

@@ -333,6 +333,56 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
   }
 }
 
+export type SocialProvider = 'google' | 'apple' | 'discord' | 'x';
+export interface EnabledSocialProvider {
+  id: SocialProvider;
+  supabaseId: string; // the name the sign-in service knows it by
+}
+
+// Which "Continue with …" providers are switched on in the sign-in settings (a public setting). A provider whose setup is not
+// finished is simply not offered. If the settings can not be read, Google (the one that is known to be on) is offered.
+let socialProvidersPromise: Promise<EnabledSocialProvider[]> | null = null;
+export function fetchEnabledSocialProviders(): Promise<EnabledSocialProvider[]> {
+  if (!socialProvidersPromise) {
+    socialProvidersPromise = (async () => {
+      const fallback: EnabledSocialProvider[] = [{ id: 'google', supabaseId: 'google' }];
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(`${(import.meta.env.VITE_SUPABASE_URL as string) || ''}/auth/v1/settings`, {
+          headers: { apikey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '' },
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        const external = (await res.json())?.external || {};
+        const out: EnabledSocialProvider[] = [];
+        if (external.google) out.push({ id: 'google', supabaseId: 'google' });
+        if (external.apple) out.push({ id: 'apple', supabaseId: 'apple' });
+        if (external.discord) out.push({ id: 'discord', supabaseId: 'discord' });
+        if (external.x) out.push({ id: 'x', supabaseId: 'x' });
+        else if (external.twitter) out.push({ id: 'x', supabaseId: 'twitter' });
+        return out.length ? out : fallback;
+      } catch {
+        return fallback;
+      }
+    })();
+  }
+  return socialProvidersPromise;
+}
+
+export async function signInWithProvider(provider: EnabledSocialProvider): Promise<{ success: boolean; error?: string }> {
+  try {
+    const options: Record<string, unknown> = { redirectTo: window.location.origin };
+    if (provider.id === 'google') options.queryParams = { prompt: 'select_account' };
+    if (provider.id === 'apple') options.scopes = 'name email';
+    if (provider.id === 'discord') options.scopes = 'identify email';
+    const { error } = await supabase.auth.signInWithOAuth({ provider: provider.supabaseId as any, options });
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not start sign-in. Please try again.') };
+  }
+}
+
 // Called once when the auth screen loads: is there already a real (Google, etc.) session with no NOOB
 // profile on it yet? That's exactly the state right after a brand-new "Continue with Google" —
 // handle_new_user's trigger saw no username in Google's own metadata and deliberately skipped making a

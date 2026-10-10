@@ -12,6 +12,7 @@ import { FoodHeroMount } from './FoodHeroMount';
 import { formatPrice } from './formatPrice';
 import { loadCart, saveCart, type CartMap } from './cartStorage';
 import { buildUpiUri } from '../../utils/upi';
+import { useResumeState } from '../../utils/useResumeState';
 
 interface FoodStallViewProps {
   currentUser: User;
@@ -35,23 +36,24 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartMap>(() => loadCart(cartStorageId(currentUser.id)));
-  const [showCart, setShowCart] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [showMyOrders, setShowMyOrders] = useState(false);
+  // Refreshing / reopening the app brings back the same screen (cart, checkout, my orders) and the choices made on it.
+  const [showCart, setShowCart] = useResumeState(currentUser.id, 'food', 'showCart', false);
+  const [showCheckout, setShowCheckout] = useResumeState(currentUser.id, 'food', 'showCheckout', false);
+  const [showMyOrders, setShowMyOrders] = useResumeState(currentUser.id, 'food', 'showMyOrders', false);
   const [upiPaymentConfirmed, setUpiPaymentConfirmed] = useState(false);
   const [foodStallEnabled, setFoodStallEnabled] = useState(true);
   const [deliveryFeeSetting, setDeliveryFeeSetting] = useState(0);
   const [upiId, setUpiId] = useState('');
 
-  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('pickup');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi'>('cash');
+  const [deliveryMethod, setDeliveryMethod] = useResumeState<'pickup' | 'delivery'>(currentUser.id, 'food', 'deliveryMethod', 'pickup');
+  const [paymentMethod, setPaymentMethod] = useResumeState<'cash' | 'upi'>(currentUser.id, 'food', 'paymentMethod', 'cash');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
-  const [note, setNote] = useState('');
+  const [note, setNote] = useResumeState(currentUser.id, 'food', 'note', '');
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placedOrderNo, setPlacedOrderNo] = useState<number | null>(null);

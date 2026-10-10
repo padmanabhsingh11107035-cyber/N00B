@@ -51,14 +51,36 @@ check(await count() === 3, 'bob can join again');
 await quietFor('noob_room_participants', roomId, alice, 500);
 await quietFor('noob_room_participants', roomId, bob, 500);
 await quietFor('noob_room_participants', roomId, carol, 500);
-const rooms = await one(alice, `select public.list_noob_rooms() as l`);
-check(!rooms.find((r) => r.id === roomId), 'when everyone has gone, a room somebody created ends by itself');
+let rooms = await one(alice, `select public.list_noob_rooms() as l`);
+check(rooms.find((r) => r.id === roomId)?.participantCount === 0, 'when everyone has gone the room shows 0 people');
+check((await db.query(`select status from public.noob_rooms where id = $1`, [roomId])).rows[0].status === 'live', 'but it waits 90 seconds before ending (a host who refreshes keeps their room)');
+await call(alice, `select public.noob_room_join($1)`, [roomId]);
+check((await db.query(`select empty_since from public.noob_rooms where id = $1`, [roomId])).rows[0].empty_since === null, 'someone coming back during the wait cancels it');
+await quietFor('noob_room_participants', roomId, alice, 500);
+await call(bob, `select public.list_noob_rooms()`);
+await db.query(`update public.noob_rooms set empty_since = now() - interval '100 seconds' where id = $1`, [roomId]);
+rooms = await one(alice, `select public.list_noob_rooms() as l`);
+check(!rooms.find((r) => r.id === roomId), 'after 90 seconds with nobody back, the room ends and leaves the lobby');
 check((await db.query(`select status from public.noob_rooms where id = $1`, [roomId])).rows[0].status === 'ended', 'it is marked ended');
 const defaults = rooms.filter((r) => r.host == null);
 check(defaults.length >= 1, 'the always-on default rooms stay, even with nobody inside');
 
 const fresh = (await one(alice, `select public.start_noob_room('Brand new', 'General', '') as r`)).roomId;
 check((await one(bob, `select public.list_noob_rooms() as l`)).some((r) => r.id === fresh), 'a brand-new room (host has not joined yet) is NOT ended by a lobby refresh');
+
+section('1a. Leaving on purpose vs the app closing');
+const room2 = (await one(alice, `select public.start_noob_room('Second', 'General', '') as r`)).roomId;
+await call(alice, `select public.noob_room_join($1)`, [room2]);
+await call(alice, `select public.leave_noob_room($1)`, [room2]);
+check((await db.query(`select status from public.noob_rooms where id = $1`, [room2])).rows[0].status === 'live', 'the app closing (or a refresh) does not end the room at once');
+await call(alice, `select public.noob_room_join($1)`, [room2]);
+await call(alice, `select public.leave_noob_room($1, true)`, [room2]);
+check((await db.query(`select status from public.noob_rooms where id = $1`, [room2])).rows[0].status === 'ended', 'tapping Leave as the last person ends the room right away, as before');
+const room3 = (await one(alice, `select public.start_noob_room('Third', 'General', '') as r`)).roomId;
+await call(alice, `select public.noob_room_join($1)`, [room3]);
+await call(bob, `select public.noob_room_join($1)`, [room3]);
+await call(alice, `select public.leave_noob_room($1, true)`, [room3]);
+check((await db.query(`select status from public.noob_rooms where id = $1`, [room3])).rows[0].status === 'live', 'tapping Leave while others are inside leaves the room running');
 
 section('1b. Only members of the app can use it');
 let denied = false;
@@ -82,14 +104,18 @@ check((await inRoom()).length === 3, 'host + two admitted guests are listed');
 await quietFor('live_lounge_room_participants', lounge.roomId, bob, 200);
 check(!(await inRoom()).includes(bob) && (await inRoom()).length === 2, 'bob went quiet: he is no longer listed');
 check(await one(carol, `select public.live_lounge_room_my_status($1) as s`, [lounge.roomId]).then((s) => s.status) === 'admitted', 'carol (still polling) stays admitted');
-check((await db.query(`select status from public.live_lounge_room_participants where room_id=$1 and user_id=$2`, [lounge.roomId, bob])).rows[0].status === 'left', 'bob is marked as having left once someone checks');
-check(await one(bob, `select public.live_lounge_room_my_status($1) as s`, [lounge.roomId]).then((s) => s.status) === 'left', 'bob\'s own next check tells him he left');
+check((await db.query(`select status from public.live_lounge_room_participants where room_id=$1 and user_id=$2`, [lounge.roomId, bob])).rows[0].status === 'admitted', 'bob is only hidden, not thrown out');
+const back = await one(bob, `select public.live_lounge_room_my_status($1) as s`, [lounge.roomId]);
+check(back.status === 'admitted' && back.roomStatus === 'active', 'bob refreshes / reopens the app: he is still admitted to the same meeting, no waiting room');
+check((await inRoom()).includes(bob), 'and he is listed again straight away');
 
 await quietFor('live_lounge_room_participants', lounge.roomId, alice, 900);
 check((await inRoom()).includes(alice), 'the host is never dropped for being quiet');
 
+await call(bob, `select public.leave_live_lounge_room($1)`, [lounge.roomId]);
+check(await one(bob, `select public.live_lounge_room_my_status($1) as s`, [lounge.roomId]).then((s) => s.status) === 'left', 'tapping Leave really leaves');
 await call(bob, `select public.join_live_lounge_room_by_code($1)`, [lounge.roomCode]);
-check((await db.query(`select status from public.live_lounge_room_participants where room_id=$1 and user_id=$2`, [lounge.roomId, bob])).rows[0].status === 'waiting', 'bob can join again by code (waiting room)');
+check((await db.query(`select status from public.live_lounge_room_participants where room_id=$1 and user_id=$2`, [lounge.roomId, bob])).rows[0].status === 'waiting', 'after leaving on purpose, bob needs to be admitted again (waiting room)');
 
 section('2b. Invited people and fresh admissions are not dropped');
 const dave = await mkUser('dave');

@@ -5,6 +5,7 @@ import { AvatarMedia } from '../Common/AvatarMedia';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { can } from '../../adminAccess';
+import { useResumeState } from '../../utils/useResumeState';
 import {
   fetchDailyChallenge,
   submitDailyChallengeEntry,
@@ -43,14 +44,14 @@ const useMidnightCountdown = (): string => {
 };
 
 export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClose, onNavigateToProfile }) => {
-  const [tab, setTab] = useState<'today' | 'hallOfFame'>('today');
+  const [tab, setTab] = useResumeState<'today' | 'hallOfFame'>(currentUser.id, 'daily', 'tab', 'today');
   const [challenge, setChallenge] = useState<DailyChallenge | null>(null);
   const [entries, setEntries] = useState<DailyChallengeEntry[]>([]);
   const [champions, setChampions] = useState<DailyChampion[]>([]);
   const [loading, setLoading] = useState(true);
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useResumeState(currentUser.id, 'daily', 'caption', '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);

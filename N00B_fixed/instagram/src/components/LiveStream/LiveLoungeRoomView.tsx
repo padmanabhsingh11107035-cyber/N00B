@@ -22,8 +22,6 @@ import {
   joinLiveLoungeRoom,
   endLiveLoungeRoom,
   leaveLiveLoungeRoom,
-  leaveLiveLoungeRoomOnPageExit,
-  keepExitTokenFresh,
   sendLiveLoungeRoomChat,
   fetchLiveLoungeRoomChat,
   subscribeToLiveLoungeRoomChat,
@@ -34,6 +32,7 @@ import {
   fetchPublicPlatformSettings,
   inviteToLiveLoungeRoom
 } from '../../services/api';
+import { saveMeeting, clearMeeting } from '../../utils/pageResume';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
 
@@ -160,8 +159,6 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const camTrackRef = useRef<ICameraVideoTrack | null>(null);
   const screenTrackRef = useRef<ILocalVideoTrack | null>(null);
   const cleanedUpRef = useRef(false);
-  // A guest who is in the call (not the host): used to leave the room when the app/tab is closed.
-  const guestInCallRef = useRef<{ roomId?: string; active: boolean; left: boolean }>({ active: false, left: false });
   const chatEndRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -499,26 +496,19 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       await clientRef.current?.leave();
     } catch { /* best-effort teardown */ }
   }, []);
-  useEffect(() => () => {
-    void cleanup();
-    const g = guestInCallRef.current;
-    if (g.active && g.roomId && !g.left) { g.left = true; void leaveLiveLoungeRoom(g.roomId); }
-  }, [cleanup]);
+  useEffect(() => () => { void cleanup(); }, [cleanup]);
 
-  // Closing the tab / app without tapping Leave: a guest leaves straight away (the database also drops a guest whose app has gone
-  // quiet for 75 seconds — see live_lounge_room_my_status below, which doubles as the "still here" signal). The host stays host.
+  // The meeting is remembered while the person is in it (waiting room, connecting, live), so refreshing or reopening the app
+  // reconnects them to the same meeting. Only leaving on purpose forgets it: the Leave / End button, the meeting ending, being
+  // removed, or backing out of the screen. (Closing the app does not run any of those, which is the point.)
   useEffect(() => {
-    guestInCallRef.current.roomId = roomId;
-    guestInCallRef.current.active = phase === 'live' && !isHost;
-    if (phase !== 'live' || isHost || !roomId) return;
-    const stopToken = keepExitTokenFresh();
-    const onHide = (e: PageTransitionEvent) => {
-      const g = guestInCallRef.current;
-      if (!e.persisted && g.active && g.roomId && !g.left) leaveLiveLoungeRoomOnPageExit(g.roomId);
-    };
-    window.addEventListener('pagehide', onHide);
-    return () => { stopToken(); window.removeEventListener('pagehide', onHide); };
-  }, [phase, isHost, roomId]);
+    if (roomId && (phase === 'waiting-room' || phase === 'connecting' || phase === 'live')) saveMeeting(currentUser.id, roomId);
+  }, [roomId, phase, currentUser.id]);
+  useEffect(() => {
+    // A failed connection ('error') keeps it, so the next refresh can try again (for example after a network drop).
+    if (phase === 'ended' && endReason !== 'error') clearMeeting();
+  }, [phase, endReason]);
+  const handleClose = () => { clearMeeting(); onClose(); };
 
   const handleEndOrLeave = async () => {
     if (isHost) {
@@ -528,7 +518,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       setPhase('ended');
       return;
     }
-    guestInCallRef.current.left = true;
+    clearMeeting();
     if (roomId) await leaveLiveLoungeRoom(roomId);
     await cleanup();
     onClose();
@@ -543,12 +533,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const tick = async () => {
       const status = await fetchLiveLoungeRoomMyStatus(roomId);
       if (!alive) return;
-      // 'left' here means the database dropped us after the app went quiet for a while (leaving on purpose closes this screen first).
+      // 'left' here means we left from somewhere else (another tab or device) — leaving from this screen closes it first.
       if (status?.roomStatus === 'ended' || status?.status === 'removed' || status?.status === 'left') {
         const ended = status?.roomStatus === 'ended';
         const dropped = !ended && status?.status === 'left';
         await cleanup();
-        setError(ended ? 'The host ended this room.' : dropped ? 'You were away for too long, so you were taken out of the room. You can join again with the room code.' : 'The host removed you from this room.');
+        setError(ended ? 'The host ended this room.' : dropped ? 'You left this room. You can join again with the room code.' : 'The host removed you from this room.');
         setEndReason(ended ? 'ended' : dropped ? 'dropped' : 'removed');
         setPhase('ended');
       }
@@ -807,7 +797,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   if (phase === 'lobby' && isIosStandalonePwa()) {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-4 text-center">
-        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        <button onClick={handleClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
         <VideoIcon className="w-10 h-10 text-white/40" />
         <h2 className="text-white text-base font-semibold">Open NOOB in Safari for Live Lounge</h2>
         <p className="text-white/60 text-sm max-w-sm">
@@ -821,7 +811,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   if (phase === 'lobby' && loungeLock.locked && !currentUser.isAdmin) {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-4 text-center">
-        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        <button onClick={handleClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
         <Radio className="w-10 h-10 text-white/40" />
         <h2 className="text-white text-base font-semibold">NOOB Live Room is locked</h2>
         <p className="text-white/60 text-sm max-w-sm">{loungeLock.message}</p>
@@ -832,7 +822,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   if (phase === 'lobby') {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-5">
-        <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
+        <button onClick={handleClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
         {loungeLock.locked && currentUser.isAdmin && (
           <p className="text-amber-400 text-[11px] text-center max-w-sm">Locked for everyone else right now — you can still host/join as admin.</p>
         )}
@@ -901,7 +891,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       host: { title: 'Meeting ended', body: 'You ended this Live Lounge room. Everyone has been disconnected.', tone: 'good' as const },
       ended: { title: 'Meeting ended', body: error || 'The host ended this room.', tone: 'good' as const },
       removed: { title: 'Removed from room', body: error || 'The host removed you from this room.', tone: 'bad' as const },
-      dropped: { title: 'You were disconnected', body: error || 'You were away for too long, so you were taken out of the room.', tone: 'warn' as const },
+      dropped: { title: 'You are no longer in this room', body: error || 'You left this room. You can join again with the room code.', tone: 'warn' as const },
       error: { title: 'Could not join', body: error || 'Something went wrong connecting to this room.', tone: 'warn' as const }
     }[endReason];
     return (
@@ -920,7 +910,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
             <Clock className="w-3.5 h-3.5" /> Call lasted {durationText}
           </div>
         )}
-        <button onClick={onClose} className="mt-2 bg-noob text-black font-bold rounded-full px-8 py-2.5 text-sm">Done</button>
+        <button onClick={handleClose} className="mt-2 bg-noob text-black font-bold rounded-full px-8 py-2.5 text-sm">Done</button>
       </div>
     );
   }

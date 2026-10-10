@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useResumeState } from '../../utils/useResumeState';
 import {
   ChevronLeft,
   ShoppingCart,
@@ -73,11 +74,16 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [view, setView] = useState<StoreView>('grid');
+  // Refreshing / reopening the app brings back the same screen of the shop, the product that was open, and the order options chosen.
+  const [savedView, setView] = useResumeState<StoreView>(currentUser.id, 'store', 'view', 'grid');
+  const [placedOrder, setPlacedOrder] = useState<StoreOrder | null>(null);
+  const view: StoreView = savedView === 'done' && !placedOrder ? 'grid' : savedView;   // the "order placed" screen can not be rebuilt after a refresh
   // what is in the cart: a product, or one version of it (see cartKey) -> how many
   // (remembered on this device for this account, so it is still here when you leave the shop and come back)
   const [cart, setCart] = useState<Record<string, number>>(() => loadCart(currentUser.id));
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
+  const [savedProductId, setSavedProductId] = useResumeState<string | null>(currentUser.id, 'store', 'productId', null);
+  const productRestoreTriedRef = useRef(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<StoreProduct | undefined>(undefined);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -88,7 +94,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const [showFilters, setShowFilters] = useState(false);
 
   // Checkout
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup');
+  const [deliveryMethod, setDeliveryMethod] = useResumeState<DeliveryMethod>(currentUser.id, 'store', 'deliveryMethod', 'pickup');
   const [contact, setContact] = useState<ShopDetails>(withDefaults());
   const [contactLoaded, setContactLoaded] = useState(false);
   const [saveDetails, setSaveDetails] = useState(true);
@@ -97,9 +103,8 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
   const [addressesLoaded, setAddressesLoaded] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [addressEditor, setAddressEditor] = useState<{ address?: ShopAddress } | null>(null);
-  const [orderNote, setOrderNote] = useState('');
+  const [orderNote, setOrderNote] = useResumeState(currentUser.id, 'store', 'orderNote', '');
   const [placing, setPlacing] = useState(false);
-  const [placedOrder, setPlacedOrder] = useState<StoreOrder | null>(null);
 
   // "We are not accepting orders for a while": shown when someone presses Checkout while the owner has switched orders off.
   const [showClosed, setShowClosed] = useState(false);
@@ -254,6 +259,22 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
     setEditingProduct(product);
     setEditorOpen(true);
   };
+
+  // Once the shelf has loaded: reopen the product that was open (or forget it if it is gone), and keep note of the open one.
+  useEffect(() => {
+    if (productRestoreTriedRef.current || loading) return;
+    productRestoreTriedRef.current = true;
+    if (!savedProductId || selectedProduct) return;
+    const product = products.find((p) => p.id === savedProductId);
+    if (product) setSelectedProduct(product); else setSavedProductId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, products]);
+  useEffect(() => {
+    if (selectedProduct) productRestoreTriedRef.current = true;
+    if (!productRestoreTriedRef.current) return;
+    setSavedProductId(selectedProduct ? selectedProduct.id : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProduct]);
 
   const acceptingOrders = ordersAccepted(settings);
   const paused = !acceptingOrders;

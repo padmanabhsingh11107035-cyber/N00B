@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useResumeState } from '../../utils/useResumeState';
 import {
   Headphones,
   Bot,
@@ -68,7 +69,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   onOpenTerms,
   onOpenPrivacy
 }) => {
-  const [activeSupportTab, setActiveSupportTab] = useState<'ai_chat' | 'call_us' | 'safety_report' | 'ticket' | 'faq'>('ai_chat');
+  // The tab, the conversation and anything half-typed survive closing the app or refreshing (see utils/pageResume.ts).
+  const [activeSupportTab, setActiveSupportTab] = useResumeState<'ai_chat' | 'call_us' | 'safety_report' | 'ticket' | 'faq'>(currentUser.id, 'support', 'tab', 'ai_chat');
   
   // Voice & Speech Synthesis / Recognition State (Used exclusively for Live Voice Call)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -105,8 +107,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
   // Trust & Safety Report State (Moved from chat)
   const [reportTargetId, setReportTargetId] = useState('');
-  const [reportReason, setReportReason] = useState('Cyber Bullying & Harassment');
-  const [reportDetails, setReportDetails] = useState('');
+  const [reportReason, setReportReason] = useResumeState(currentUser.id, 'support', 'reportReason', 'Cyber Bullying & Harassment');
+  const [reportDetails, setReportDetails] = useResumeState(currentUser.id, 'support', 'reportDetails', '');
   const [reportSuccessMsg, setReportSuccessMsg] = useState('');
   const [reportErrorMsg, setReportErrorMsg] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
@@ -188,7 +190,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   };
 
   // Messages state with personalized greeting
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  const buildGreeting = (): ChatMessage[] => {
     const userGender = (currentUser.gender || '').toLowerCase();
     let greetingTone = `Hey @${currentUser.username}!`;
     if (userGender.includes('female') || userGender.includes('woman') || userGender.includes('she')) {
@@ -202,9 +204,10 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ];
-  });
+  };
+  const [messages, setMessages] = useResumeState<ChatMessage[]>(currentUser.id, 'support', 'messages', buildGreeting());
 
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useResumeState(currentUser.id, 'support', 'inputMessage', '');
   const [isTyping, setIsTyping] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loadingTransactions, setLoadingTransactions] = useState(false);
@@ -214,9 +217,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [activePaymentContext, setActivePaymentContext] = useState<WalletTransferDetail | null>(null);
 
   // Ticket form state
-  const [ticketSubject, setTicketSubject] = useState('');
-  const [ticketCategory, setTicketCategory] = useState('Account & Verification');
-  const [ticketDescription, setTicketDescription] = useState('');
+  const [ticketSubject, setTicketSubject] = useResumeState(currentUser.id, 'support', 'ticketSubject', '');
+  const [ticketCategory, setTicketCategory] = useResumeState(currentUser.id, 'support', 'ticketCategory', 'Account & Verification');
+  const [ticketDescription, setTicketDescription] = useResumeState(currentUser.id, 'support', 'ticketDescription', '');
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
   const [ticketId, setTicketId] = useState('');
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { orderUnseenFirst, mergeIntoOrder } from '../../utils/seenContent';
 import {
   Bell,
@@ -42,6 +42,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
+import { takeRestorePage, setResumePage } from '../../utils/pageResume';
 import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 
@@ -150,13 +151,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
   const [showNoobMenu, setShowNoobMenu] = useState(false);
-  const [showSuggestionBox, setShowSuggestionBox] = useState(false);
-  const [showDailyNoob, setShowDailyNoob] = useState(false);
-  const [showNoobRooms, setShowNoobRooms] = useState(false);
-  const [showGuessTheSong, setShowGuessTheSong] = useState(false);
-  const [showLiveLoungePage, setShowLiveLoungePage] = useState(false);
-  const [showStorePage, setShowStorePage] = useState(false);
-  const [showFoodStall, setShowFoodStall] = useState(false);
+  // The menu page that was open when the app was closed / refreshed opens again (see utils/pageResume.ts).
+  const [restoredPage] = useState(() => takeRestorePage(currentUser.id));
+  const [showSuggestionBox, setShowSuggestionBox] = useState(restoredPage === 'suggestions');
+  const [showDailyNoob, setShowDailyNoob] = useState(restoredPage === 'daily');
+  const [showNoobRooms, setShowNoobRooms] = useState(restoredPage === 'rooms');
+  const [showGuessTheSong, setShowGuessTheSong] = useState(restoredPage === 'song');
+  const [showLiveLoungePage, setShowLiveLoungePage] = useState(restoredPage === 'lounge');
+  const [showStorePage, setShowStorePage] = useState(restoredPage === 'store');
+  const [showFoodStall, setShowFoodStall] = useState(restoredPage === 'food');
   const [foodStallVisible, setFoodStallVisible] = useState(false);
   const [foodStallComingSoon, setFoodStallComingSoon] = useState(false);
 
@@ -171,9 +174,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
       alive = false;
     };
   }, []);
-  const [showNoobAi, setShowNoobAi] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showNoobAi, setShowNoobAi] = useState(restoredPage === 'ai');
+  const [showSupportModal, setShowSupportModal] = useState(restoredPage === 'support');
   const [showSparkXModal, setShowSparkXModal] = useState(false);
+
+  // Keeps note of which menu page is open (null once it is closed). A layout effect, so it is noted before the page's own effects
+  // start saving their progress.
+  const openPage = showDailyNoob ? 'daily' : showNoobRooms ? 'rooms' : showGuessTheSong ? 'song' : showLiveLoungePage ? 'lounge'
+    : showStorePage ? 'store' : showFoodStall ? 'food' : showNoobAi ? 'ai' : showSupportModal ? 'support' : showSuggestionBox ? 'suggestions' : null;
+  useLayoutEffect(() => { setResumePage(currentUser.id, openPage); }, [currentUser.id, openPage]);
 
   // Rolled once per mount, not re-rolled on every render — the amount has to stay the same between
   // when it's shown and when "Accept" is tapped, otherwise the number on screen would lie.
@@ -833,7 +842,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
       {showFoodStall && <FoodStallView currentUser={currentUser} onClose={() => setShowFoodStall(false)} />}
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}
-      {showSuggestionBox && <SuggestionBoxModal onClose={() => setShowSuggestionBox(false)} />}
+      {showSuggestionBox && <SuggestionBoxModal userId={currentUser.id} onClose={() => setShowSuggestionBox(false)} />}
       {showSupportModal && (
         <React.Suspense fallback={<LazyFallback />}>
           <CustomerSupportModal currentUser={currentUser} onClose={() => setShowSupportModal(false)} />

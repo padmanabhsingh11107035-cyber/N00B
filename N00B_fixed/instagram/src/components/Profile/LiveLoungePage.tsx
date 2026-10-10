@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Sparkles, Ticket, Coins, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Users, Search, HeartHandshake, Radio, KeyRound, History, Bell } from 'lucide-react';
 import { User } from '../../types';
-import { LIVE_LOUNGE_PRICE, purchaseLiveLounge, redeemLiveLoungeCoupon, requestFriendPayment, fetchPendingLiveLoungeInvites, fetchLiveLoungeHistory } from '../../services/api';
+import { LIVE_LOUNGE_PRICE, purchaseLiveLounge, redeemLiveLoungeCoupon, requestFriendPayment, fetchPendingLiveLoungeInvites, fetchLiveLoungeHistory, fetchLiveLoungeRoomMyStatus } from '../../services/api';
+import { readMeeting, clearMeeting } from '../../utils/pageResume';
 import type { LiveLoungePendingInvite, LiveLoungeHistoryEntry } from '../../services/api';
 import { formatNoobPoints } from '../../utils/formatPoints';
 // Agora (plus the virtual-background extension it pulls in) only needs to load once someone actually
@@ -37,6 +38,24 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
   const [askSent, setAskSent] = useState(false);
   const [roomFlow, setRoomFlow] = useState<'host' | 'join' | null>(initialRoomId || initialJoinCode ? 'join' : null);
   const [resumeRoomId, setResumeRoomId] = useState<string | undefined>(initialRoomId);
+  // Refreshing / reopening the app while in a meeting: go straight back into that meeting (if it is still running and the person has
+  // not left it). Checked with the server first so a finished meeting does not flash an "ended" screen.
+  const [resumeCheck, setResumeCheck] = useState<'checking' | 'done'>(() => (!initialRoomId && !initialJoinCode && readMeeting(currentUser.id) ? 'checking' : 'done'));
+  useEffect(() => {
+    if (resumeCheck !== 'checking') return;
+    const saved = readMeeting(currentUser.id);
+    if (!saved) { setResumeCheck('done'); return; }
+    let alive = true;
+    fetchLiveLoungeRoomMyStatus(saved.roomId).then((status) => {
+      if (!alive) return;
+      const stillIn = !!status && status.roomStatus === 'active' && (status.status === 'admitted' || status.status === 'waiting');
+      if (stillIn) { setResumeRoomId(saved.roomId); setRoomFlow('join'); }
+      else if (status) clearMeeting();   // the meeting ended, or this person left / was removed: nothing to go back to
+      setResumeCheck('done');
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [pendingInvites, setPendingInvites] = useState<LiveLoungePendingInvite[]>([]);
   const [history, setHistory] = useState<LiveLoungeHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -119,6 +138,15 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
       setBusy(false);
     }
   };
+
+  if (resumeCheck === 'checking') {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
+        <p className="text-white/70 text-sm">Reconnecting to your meeting…</p>
+      </div>
+    );
+  }
 
   if (roomFlow) {
     return (

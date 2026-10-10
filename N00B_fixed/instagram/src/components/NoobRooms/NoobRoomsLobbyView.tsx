@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Users, Plus, Music2, Images, Gamepad2, MessageSquareQuote, Radio, PowerOff } from 'lucide-react';
 import { NoobRoom, NoobRoomActivityType, User } from '../../types';
 import { listNoobRooms, startNoobRoom, fetchPublicPlatformSettings } from '../../services/api';
 import { isMainAdmin } from '../../adminAccess';
+import { useResumeState } from '../../utils/useResumeState';
 
 // Agora (plus everything NoobVoiceRoomView pulls in for it) only needs to load once someone actually
 // joins a room — bundling it into the lobby's own chunk made just opening the room LIST slow, which
@@ -47,11 +48,14 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   const [rooms, setRooms] = useState<NoobRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [openRoom, setOpenRoom] = useState<NoobRoom | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newCategory, setNewCategory] = useState('Vibe');
-  const [customCategory, setCustomCategory] = useState('');
-  const [newDescription, setNewDescription] = useState('');
+  // Refreshing / reopening the app puts the person back in the room they were in, and keeps a half-filled "create room" form.
+  const [savedRoomId, setSavedRoomId] = useResumeState<string | null>(currentUser.id, 'rooms', 'roomId', null);
+  const restoreTriedRef = useRef(false);
+  const [showCreate, setShowCreate] = useResumeState(currentUser.id, 'rooms', 'showCreate', false);
+  const [newName, setNewName] = useResumeState(currentUser.id, 'rooms', 'newName', '');
+  const [newCategory, setNewCategory] = useResumeState(currentUser.id, 'rooms', 'newCategory', 'Vibe');
+  const [customCategory, setCustomCategory] = useResumeState(currentUser.id, 'rooms', 'customCategory', '');
+  const [newDescription, setNewDescription] = useResumeState(currentUser.id, 'rooms', 'newDescription', '');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
@@ -68,6 +72,21 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   const blocked = lock.locked && !isMainAdmin(currentUser);
 
   const load = () => { listNoobRooms().then((r) => { setRooms(r); setLoading(false); }); };
+  // Once the list is in: reopen the room that was open, or forget it if it has ended meanwhile.
+  useEffect(() => {
+    if (restoreTriedRef.current || loading) return;
+    restoreTriedRef.current = true;
+    if (!savedRoomId || openRoom) return;
+    const room = rooms.find((r) => r.id === savedRoomId);
+    if (room) setOpenRoom(room); else setSavedRoomId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, rooms]);
+  useEffect(() => {
+    if (openRoom) restoreTriedRef.current = true;
+    if (!restoreTriedRef.current) return;
+    setSavedRoomId(openRoom ? openRoom.id : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRoom]);
   useEffect(() => {
     if (!lock.checked || blocked) return;
     load();

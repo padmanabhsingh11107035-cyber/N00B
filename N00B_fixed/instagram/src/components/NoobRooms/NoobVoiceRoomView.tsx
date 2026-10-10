@@ -240,7 +240,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   const handleLeaveOrEnd = async (asHostEnd: boolean) => {
     leftRef.current = true;
     if (asHostEnd) await endNoobRoom(room.id);
-    else await leaveNoobRoom(room.id);
+    else await leaveNoobRoom(room.id, true);
     await cleanup();
     setEndReason(asHostEnd ? 'ended' : 'left');
     setPhase('ended');

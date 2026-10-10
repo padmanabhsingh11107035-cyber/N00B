@@ -336,7 +336,6 @@ export {
   joinNoobRoom,
   leaveNoobRoom,
   leaveNoobRoomOnPageExit,
-  leaveLiveLoungeRoomOnPageExit,
   keepExitTokenFresh,
   noobRoomHeartbeat,
   rejoinNoobRoom,

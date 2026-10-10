@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Bug, CheckCircle2, Lightbulb, Loader2, Send, Sparkles, X } from 'lucide-react';
 import { fetchMyAppSuggestions, submitAppSuggestion } from '../../services/api';
 import type { MySuggestion, SuggestionCategory } from '../../services/api';
+import { useResumeState } from '../../utils/useResumeState';
 import { formatRelativeTime } from '../../utils/formatTime';
 
 // The Suggestion Box (home menu): a member sends a suggestion, an improvement idea or an issue, and sees NOOB's reply to
@@ -16,12 +17,14 @@ const CATEGORIES: Array<{ id: SuggestionCategory; label: string; hint: string; I
 const MAX = 2000;
 
 interface Props {
+  userId: string;
   onClose: () => void;
 }
 
-export const SuggestionBoxModal: React.FC<Props> = ({ onClose }) => {
-  const [category, setCategory] = useState<SuggestionCategory>('suggestion');
-  const [message, setMessage] = useState('');
+export const SuggestionBoxModal: React.FC<Props> = ({ userId, onClose }) => {
+  // A half-written message survives closing the app or refreshing.
+  const [category, setCategory] = useResumeState<SuggestionCategory>(userId, 'suggestions', 'category', 'suggestion');
+  const [message, setMessage] = useResumeState(userId, 'suggestions', 'message', '');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);

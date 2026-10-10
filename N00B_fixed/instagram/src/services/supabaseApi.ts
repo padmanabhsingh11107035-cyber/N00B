@@ -19,6 +19,7 @@ import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
 import { markSeen, mergeSeen } from '../utils/seenContent';
 import { getDeviceId, getDeviceModel } from '../utils/deviceId';
+import { clearResume } from '../utils/pageResume';
 
 // ----------------------------------------------------------------------------- plumbing
 
@@ -625,6 +626,7 @@ export async function verifyLoginOtp(payload: { username: string; code: string }
 // out on the phone used to sign the laptop out within the hour.) The note lets other tabs of this browser say why they were signed out.
 export async function logoutUser(): Promise<{ success: boolean }> {
   recordDiag({ kind: 'explicit-logout' });
+  clearResume(); // the page / meeting remembered for the next app start belongs to the account that is signing out
   // Mark this device as signed out in the account's device list / login history while the session is
   // still valid. Best-effort and time-boxed: it must never hold up or break the logout itself.
   // If this same account is still logged in from the other context on this device (the installed app while this is the
@@ -4622,8 +4624,10 @@ export async function joinNoobRoom(roomId: string): Promise<{ success: boolean; 
   }
 }
 
-export async function leaveNoobRoom(roomId: string): Promise<void> {
-  try { await rpc('leave_noob_room', { p_room_id: roomId }); } catch { /* best-effort — leaving anyway */ }
+// explicit = the person tapped Leave (a room they created then ends at once if they were the last one in it); anything else (the screen
+// closing by itself) leaves the room open for 90 seconds in case they are just back from a refresh.
+export async function leaveNoobRoom(roomId: string, explicit = false): Promise<void> {
+  try { await rpc('leave_noob_room', explicit ? { p_room_id: roomId, p_explicit: true } : { p_room_id: roomId }); } catch { /* best-effort — leaving anyway */ }
 }
 
 // Leaving when the app/tab is closed. Nothing can be awaited while a page is closing, and an ordinary request is cancelled with the
@@ -4653,7 +4657,6 @@ function leaveOnPageExit(fn: string, args: Record<string, unknown>): void {
   } catch { /* best-effort */ }
 }
 export function leaveNoobRoomOnPageExit(roomId: string): void { leaveOnPageExit('leave_noob_room', { p_room_id: roomId }); }
-export function leaveLiveLoungeRoomOnPageExit(roomId: string): void { leaveOnPageExit('leave_live_lounge_room', { p_room_id: roomId }); }
 
 // The "I am still here" signal. 'gone' = the database no longer lists this person (they went quiet for a while), 'unknown' = the
 // call itself failed (offline, or the database update has not been applied) — never treated as "gone".

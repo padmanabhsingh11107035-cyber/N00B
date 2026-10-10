@@ -1059,7 +1059,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             </div>
           )}
 
-          {(mode === 'login' || (signupsEnabled && signupStep === 'form')) && (
+          {mode === 'signup' && signupsEnabled && signupStep === 'form' && (
             <div className="mb-4">
               <SocialLoginButtons onError={setErrorMessage} />
               <div className="flex items-center gap-3 my-4">
@@ -1679,6 +1679,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     </>
                   )}
                 </button>
+              </div>
+
+              {/* "Continue with Google / Apple / …" sit below the Log In button */}
+              <div className="pt-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-[11px] text-zinc-500 font-bold">OR</span>
+                  <div className="flex-1 h-px bg-white/10" />
+                </div>
+                <SocialLoginButtons onError={setErrorMessage} />
               </div>
 
               {/* Bottom "Create Account" Link strictly in Blue */}

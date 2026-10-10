@@ -1687,6 +1687,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
               {game.id === 'ludo_classic' && (
                 <LudoGame
+                  currentUser={{ id: currentUser.id, username: currentUser.username, avatar: currentUser.avatar }}
                   onGameOver={handleGameOver}
                   entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
                   initialPlayerCount={boardPlayerCount}

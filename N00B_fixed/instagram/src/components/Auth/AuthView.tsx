@@ -1730,19 +1730,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       {/* Footer */}
       <footer className="w-full max-w-lg z-10 py-3 text-center border-t border-white/5 mt-auto">
         <div className="flex items-center justify-center gap-4 text-xs text-zinc-500 mb-1">
-          <button
-            onClick={() => setShowTermsModal(true)}
+          <a
+            href="/terms.html"
+            onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}
             className="hover:text-zinc-300 transition-colors cursor-pointer"
           >
             Terms & Conditions
-          </button>
+          </a>
           <span>•</span>
-          <button
-            onClick={() => setShowPrivacyModal(true)}
+          <a
+            href="/privacy.html"
+            onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}
             className="hover:text-zinc-300 transition-colors cursor-pointer"
           >
             Privacy Policy
-          </button>
+          </a>
         </div>
         <p className="text-[11px] text-zinc-600">
           © 2026 NOOB Social Platform

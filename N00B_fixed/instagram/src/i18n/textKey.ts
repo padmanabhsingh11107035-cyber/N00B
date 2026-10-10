@@ -49,11 +49,16 @@ function looksLikeCodeOrLink(s: string): boolean {
 
 // Would this text be something a person reads on a screen? `permissive` is for places where a string is known to be shown
 // (a button label, a placeholder, an alert): there even a single lower-case word counts.
+// Drawing instructions for a picture (an SVG path built from numbers, like "M{0} {1}C{2} {3} ..."): never shown as words.
+function looksLikeSvgPath(s: string): boolean {
+  return /^[MmLlHhVvCcSsQqTtAaZz]/.test(s) && /^[MmLlHhVvCcSsQqTtAaZz0-9{}\s.,\-]+$/.test(s) && /\{\d+\}/.test(s);
+}
+
 export function looksLikeUiText(raw: string, permissive = false): boolean {
   const s = normalizeText(raw);
   if (s.length < 2 || s.length > 400) return false;
   if (!HAS_LETTER.test(s)) return false;
-  if (looksLikeClassList(s) || looksLikeCodeOrLink(s)) return false;
+  if (looksLikeClassList(s) || looksLikeCodeOrLink(s) || looksLikeSvgPath(s)) return false;
   if (permissive) return true;
   const spaced = /\s/.test(s);
   const capital = /^\p{Lu}/u.test(s);

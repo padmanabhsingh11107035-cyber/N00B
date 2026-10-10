@@ -293,7 +293,28 @@ textarea { resize: vertical; min-height: 70px; }
 .auth-error { color: var(--red); margin: 6px 0 0; font-size: 14px; }
 .wide-btn { width: 100%; justify-content: center; margin-top: 14px; padding: 13px; }
 .noob-btn { background: var(--inv-bg); color: var(--inv-fg); font-weight: 800; box-shadow: 0 8px 20px rgba(15, 23, 42, .18); }
-.noob-btn:hover { filter: brightness(1.2); }
+/* "Continue with NOOB": hand-drawn doodles at both edges (they fade toward the label), a dashed "stitched" edge, a little lift on hover. */
+.noob-btn { position: relative; overflow: hidden; padding-block: 14px; border-radius: 14px;
+  background: linear-gradient(90deg, var(--inv-bg), color-mix(in srgb, var(--inv-bg) 90%, #7c5cff 10%) 50%, var(--inv-bg));
+  transition: transform .18s var(--ease), box-shadow .2s, filter .2s; }
+.noob-btn:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 26px rgba(124, 92, 255, .28); }
+.noob-btn:active { transform: translateY(0) scale(.985); }
+.noob-label { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 10px; }
+.noob-stitch { position: absolute; inset: 3px; border-radius: 11px; border: 1px dashed color-mix(in srgb, var(--inv-fg) 28%, transparent); pointer-events: none; }
+.noob-btn .dd { position: absolute; top: 0; height: 100%; width: clamp(40px, calc((100% - 230px) / 2), 96px); pointer-events: none; }
+.noob-btn .dd-l { left: 0; }
+.noob-btn .dd-r { right: 0; }
+.dd-float, .dd-twinkle { transform-box: fill-box; transform-origin: center; }
+@keyframes dd-float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-2px) rotate(5deg); } }
+@keyframes dd-twinkle { 0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); } 50% { opacity: .55; transform: scale(.8) rotate(14deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .dd-float { animation: dd-float 3.6s ease-in-out infinite; }
+  .dd-twinkle { animation: dd-twinkle 2.7s ease-in-out infinite; }
+  .noob-btn:hover .dd-float { animation-duration: 1.6s; }
+  .noob-btn:hover .dd-twinkle { animation-duration: 1.2s; }
+}
+.dd-mask-l { -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent); mask-image: linear-gradient(90deg, #000 58%, transparent); }
+.dd-mask-r { -webkit-mask-image: linear-gradient(270deg, #000 58%, transparent); mask-image: linear-gradient(270deg, #000 58%, transparent); }
 .noob-mark { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; font-weight: 900;
   color: #fff; background: linear-gradient(135deg, #f43f5e, #7c5cff 55%, #22d3ee); font-size: 15px; flex: none; }
 .noob-mark.big { width: 46px; height: 46px; border-radius: 14px; font-size: 24px; }

@@ -440,3 +440,16 @@ body.is-android .liquid-glass {
 html[data-i18n-loading] body {
   visibility: hidden;
 }
+
+/* Doodles on the sign-in buttons (components/Auth/ButtonDoodles.tsx): fade toward the label, a little float / twinkle. */
+.dd-float, .dd-twinkle { transform-box: fill-box; transform-origin: center; }
+@keyframes dd-float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-2px) rotate(5deg); } }
+@keyframes dd-twinkle { 0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); } 50% { opacity: .55; transform: scale(.8) rotate(14deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .dd-float { animation: dd-float 3.6s ease-in-out infinite; }
+  .dd-twinkle { animation: dd-twinkle 2.7s ease-in-out infinite; }
+  .dd-btn:hover .dd-float { animation-duration: 1.6s; }
+  .dd-btn:hover .dd-twinkle { animation-duration: 1.2s; }
+}
+.dd-mask-l { -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent); mask-image: linear-gradient(90deg, #000 58%, transparent); }
+.dd-mask-r { -webkit-mask-image: linear-gradient(270deg, #000 58%, transparent); mask-image: linear-gradient(270deg, #000 58%, transparent); }

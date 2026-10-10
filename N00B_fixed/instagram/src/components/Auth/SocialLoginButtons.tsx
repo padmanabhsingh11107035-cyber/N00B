@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { fetchEnabledSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
+import { ButtonDoodles } from './ButtonDoodles';
 
 // "Continue with …" buttons. Only the providers that are switched on in the sign-in settings are shown, so a button appears
 // by itself the moment its setup is finished — and never as a button that can only fail.
@@ -64,17 +65,18 @@ const SpotifyIcon: React.FC<IconProps> = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
-const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; className: string }> = {
-  google: { name: 'Google', Icon: GoogleIcon, className: 'bg-white text-black ring-1 ring-black/10' },
-  apple: { name: 'Apple', Icon: AppleIcon, className: 'bg-white text-black ring-1 ring-black/10' },
-  facebook: { name: 'Facebook', Icon: FacebookIcon, className: 'bg-[#1877F2] force-white-text' },
-  microsoft: { name: 'Microsoft', Icon: MicrosoftIcon, className: 'bg-white text-black ring-1 ring-black/10' },
-  x: { name: 'X', Icon: XIcon, className: 'bg-[#0a0a0a] force-white-text ring-1 ring-white/20' },
-  discord: { name: 'Discord', Icon: DiscordIcon, className: 'bg-[#5865F2] force-white-text' },
-  github: { name: 'GitHub', Icon: GitHubIcon, className: 'bg-[#24292f] force-white-text ring-1 ring-white/20' },
-  linkedin: { name: 'LinkedIn', Icon: LinkedInIcon, className: 'bg-[#0A66C2] force-white-text' },
-  twitch: { name: 'Twitch', Icon: TwitchIcon, className: 'bg-[#9146FF] force-white-text' },
-  spotify: { name: 'Spotify', Icon: SpotifyIcon, className: 'bg-[#1DB954] text-black' }
+// light = the button is a light colour (the doodles then use dark strokes); stitch = colour of the dashed "stitching" just inside the edge.
+const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; className: string; light?: boolean; stitch: string }> = {
+  google: { name: 'Google', Icon: GoogleIcon, className: 'bg-gradient-to-r from-white via-[#f1f6ff] to-white text-black ring-1 ring-black/10 shadow-[0_2px_0_rgba(66,133,244,.35)]', light: true, stitch: 'rgba(66,133,244,.38)' },
+  apple: { name: 'Apple', Icon: AppleIcon, className: 'bg-white text-black ring-1 ring-black/10', light: true, stitch: 'rgba(0,0,0,.18)' },
+  facebook: { name: 'Facebook', Icon: FacebookIcon, className: 'bg-gradient-to-r from-[#1877F2] via-[#3b8bff] to-[#1877F2] force-white-text shadow-[0_2px_0_rgba(10,60,150,.55)]', stitch: 'rgba(255,255,255,.4)' },
+  microsoft: { name: 'Microsoft', Icon: MicrosoftIcon, className: 'bg-white text-black ring-1 ring-black/10', light: true, stitch: 'rgba(0,0,0,.18)' },
+  x: { name: 'X', Icon: XIcon, className: 'bg-[#0a0a0a] force-white-text ring-1 ring-white/20', stitch: 'rgba(255,255,255,.28)' },
+  discord: { name: 'Discord', Icon: DiscordIcon, className: 'bg-gradient-to-r from-[#5865F2] via-[#7482ff] to-[#5865F2] force-white-text shadow-[0_2px_0_rgba(40,48,150,.6)]', stitch: 'rgba(255,255,255,.4)' },
+  github: { name: 'GitHub', Icon: GitHubIcon, className: 'bg-[#24292f] force-white-text ring-1 ring-white/20', stitch: 'rgba(255,255,255,.28)' },
+  linkedin: { name: 'LinkedIn', Icon: LinkedInIcon, className: 'bg-[#0A66C2] force-white-text', stitch: 'rgba(255,255,255,.4)' },
+  twitch: { name: 'Twitch', Icon: TwitchIcon, className: 'bg-[#9146FF] force-white-text', stitch: 'rgba(255,255,255,.4)' },
+  spotify: { name: 'Spotify', Icon: SpotifyIcon, className: 'bg-[#1DB954] text-black', light: true, stitch: 'rgba(0,0,0,.25)' }
 };
 
 interface Props {
@@ -116,10 +118,14 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
         disabled={busy !== null}
         onClick={() => void start(p)}
         aria-label={label}
-        className={`${m.className} w-full py-2.5 font-bold text-sm rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2.5`}
+        className={`${m.className} dd-btn group relative overflow-hidden w-full py-2.5 font-bold text-sm rounded-2xl cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-60 disabled:hover:translate-y-0 flex items-center justify-center gap-2.5`}
       >
-        {busy === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <m.Icon className="w-4 h-4" />}
-        <span>{busy === p.id ? `Opening ${m.name}…` : label}</span>
+        <ButtonDoodles provider={p.id} light={m.light} />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-dashed" style={{ borderColor: m.stitch }} />
+        <span className="relative z-10 flex items-center justify-center gap-2.5">
+          {busy === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <m.Icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6" />}
+          <span>{busy === p.id ? `Opening ${m.name}…` : label}</span>
+        </span>
       </button>
     );
   };

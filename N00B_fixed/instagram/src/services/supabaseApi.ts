@@ -523,6 +523,9 @@ export async function loginUser(payload: {
     if (error) {
       if (/rate|too many/i.test(error.message)) return { success: false, error: 'Too many attempts. Please wait a moment and try again.' };
       if (/banned/i.test(error.message)) return { success: false, error: 'This account has been suspended by NOOB Administrator.' };
+      if (/^[+(]?[0-9][0-9 ().-]{5,}$/.test(identifier)) {
+        return { success: false, error: 'Incorrect phone number or password. Please check your details.' };
+      }
       if (!identifier.includes('@') && !(await rpc<boolean>('username_taken', { candidate: identifier }))) {
         return { success: false, error: 'Account not found. Please click "Create Account" below.' };
       }

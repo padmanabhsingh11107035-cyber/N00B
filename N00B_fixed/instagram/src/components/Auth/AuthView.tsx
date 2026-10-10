@@ -690,7 +690,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     setErrorMessage(null);
 
     if (!loginIdentifier.trim()) {
-      setErrorMessage('Please enter your User ID or Email');
+      setErrorMessage('Please enter your User ID, Email or Phone number');
       return;
     }
     if (!loginPassword) {
@@ -724,6 +724,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     const uname = loginIdentifier.trim();
     if (!uname) {
       setErrorMessage('Please enter your username above first, then tap Forgot Password.');
+      return;
+    }
+    if (uname.includes('@') || /^[+(]?[0-9][0-9 ().-]{5,}$/.test(uname)) {
+      setErrorMessage('Forgot Password needs your User ID. Type your User ID above (not your email or phone number), then tap Forgot Password.');
       return;
     }
     try {
@@ -1614,7 +1618,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">
-                  User ID or Email
+                  User ID, Email or Phone
                 </label>
                 <div className="relative">
                   <input
@@ -1622,7 +1626,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     required
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="Enter your @user_id or email"
+                    placeholder="Enter your @user_id, email or phone number"
                     className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                   />
                 </div>

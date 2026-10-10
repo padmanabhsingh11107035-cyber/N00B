@@ -17,6 +17,7 @@ import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase'
 import { createE2ee } from '../e2ee/service.ts';
 import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
+import { markSeen, mergeSeen } from '../utils/seenContent';
 
 // ----------------------------------------------------------------------------- plumbing
 
@@ -756,11 +757,38 @@ export async function respondToSuggestedUser(notifId: string, accept: boolean): 
 
 // ----------------------------------------------------------------------------- posts
 
+// Which of the latest posts/reels this account has already viewed, per the server's own view records
+// (post_views / reel_views), folded into this device's seen list so the Feed and Reels can put what's
+// new to this person on top. Posts and reels load together, so they share one request. Best-effort:
+// if it fails (offline, or the my_seen_content function isn't installed yet) the device's own list
+// is still used.
+let seenSyncInFlight: Promise<void> | null = null;
+function syncSeenContent(userId: string): Promise<void> {
+  if (!seenSyncInFlight) {
+    seenSyncInFlight = (async () => {
+      try {
+        const res = await rpc<{ posts?: string[]; reels?: string[] }>('my_seen_content');
+        mergeSeen(userId, 'posts', res?.posts || []);
+        mergeSeen(userId, 'reels', res?.reels || []);
+      } catch {
+        // keep going with what this device already knows
+      }
+    })().finally(() => {
+      setTimeout(() => {
+        seenSyncInFlight = null;
+      }, 2000);
+    });
+  }
+  return seenSyncInFlight;
+}
+
 export async function fetchPosts(_category?: string, _location?: string): Promise<Post[]> {
   // (The old server ignored both filters too — screens filter what they show.)
   try {
-    if (!(await currentSession())) return []; // logged-out visitors see nothing (and we don't even ask)
-    return mapPosts(await rpc<any[]>('feed_posts'));
+    const session = await currentSession();
+    if (!session) return []; // logged-out visitors see nothing (and we don't even ask)
+    const [list] = await Promise.all([rpc<any[]>('feed_posts'), syncSeenContent(session.user.id)]);
+    return mapPosts(list);
   } catch {
     return [];
   }
@@ -841,6 +869,8 @@ export async function fetchPostLikers(postId: string): Promise<{ users: User[] }
 }
 
 export async function recordPostView(postId: string) {
+  const session = await currentSession();
+  if (session) markSeen(session.user.id, 'posts', postId); // so the Feed stops treating it as new right away
   try { return await rpc('record_post_view', { p_post: postId }); } catch { return { success: false }; }
 }
 
@@ -1366,8 +1396,10 @@ function mapReel(r: any): Reel {
 // it doesn't need a deep pool to begin with.
 export async function fetchReels(): Promise<Reel[]> {
   try {
-    if (!(await currentSession())) return [];
-    return ((await rpc<any[]>('feed_reels', { p_limit: 20 })) || []).map(mapReel);
+    const session = await currentSession();
+    if (!session) return [];
+    const [list] = await Promise.all([rpc<any[]>('feed_reels', { p_limit: 20 }), syncSeenContent(session.user.id)]);
+    return (list || []).map(mapReel);
   } catch {
     return [];
   }
@@ -1811,6 +1843,8 @@ export async function addReelComment(reelId: string, text: string, parentComment
 }
 
 export async function recordReelView(reelId: string) {
+  const session = await currentSession();
+  if (session) markSeen(session.user.id, 'reels', reelId);
   try { return await rpc('record_reel_view', { p_reel: reelId }); } catch { return { success: false }; }
 }
 

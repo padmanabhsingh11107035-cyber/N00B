@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { orderUnseenFirst, mergeIntoOrder } from '../../utils/seenContent';
 import {
   Bell,
   BellRing,
@@ -99,17 +100,9 @@ interface FeedViewProps {
 const POSTS_PER_PAGE = 4;
 const categories = ['All', 'gaming', 'tech', 'code', 'robotics', 'cad', 'fashion', 'art', 'others'];
 
-const shuffle = <T,>(arr: T[]): T[] => {
-  const next = [...arr];
-  for (let i = next.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [next[i], next[j]] = [next[j], next[i]];
-  }
-  return next;
-};
-
-// Every post, new or old, mixed into one random order — not sorted by recency at all.
-const buildFeedOrder = (posts: Post[]): string[] => shuffle(posts).map((p) => p.id);
+// Posts this person hasn't seen yet (newest first) go on top; everything they've already seen, and
+// their own posts, is shuffled in behind them.
+const buildFeedOrder = (posts: Post[], userId: string): string[] => orderUnseenFirst(posts, userId, 'posts').map((p) => p.id);
 
 export const FeedView: React.FC<FeedViewProps> = ({
   currentUser,
@@ -192,14 +185,20 @@ export const FeedView: React.FC<FeedViewProps> = ({
   }, []);
 
   // Feed order: frozen between re-renders (so scrolling never reshuffles content under someone's
-  // thumb) and only rebuilt when the actual set of posts changes — a genuinely new post, one
-  // removed, or a pull-to-refresh that brought back different content.
-  const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts));
+  // thumb). Built when the feed opens: anything new to this person on top, newest first, then what
+  // they've already seen shuffled. When the set of posts later changes (a new post arrives, one is
+  // removed) the existing order is kept and new unseen posts are added on top; only an explicit
+  // pull-to-refresh rebuilds it from scratch, which is also what moves just-viewed posts back into the mix.
+  const [feedOrder, setFeedOrder] = useState<string[]>(() => buildFeedOrder(posts, currentUser.id));
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const lastRefreshNonceRef = useRef(0);
   const postIdsKey = posts.map((p) => p.id).join(',');
   useEffect(() => {
-    setFeedOrder(buildFeedOrder(posts));
+    const refreshed = lastRefreshNonceRef.current !== refreshNonce;
+    lastRefreshNonceRef.current = refreshNonce;
+    setFeedOrder((prev) => (refreshed ? buildFeedOrder(posts, currentUser.id) : mergeIntoOrder(prev, posts, currentUser.id, 'posts')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postIdsKey]);
+  }, [postIdsKey, refreshNonce]);
 
   // Infinite Scroll State
   const [visibleCount, setVisibleCount] = useState(POSTS_PER_PAGE);
@@ -219,6 +218,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
     setTimeout(() => {
       setIsRefreshing(false);
       setPullDistance(0);
+      setRefreshNonce((n) => n + 1);
     }, 700);
   };
 
@@ -226,7 +226,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
     setHiddenAdIds([...hiddenAdIds, postId]);
   };
 
-  // Display order follows feedOrder (new-once-then-shuffled-rotation), not the raw posts array.
+  // Display order follows feedOrder (unseen first, then shuffled), not the raw posts array.
   const postsById = new Map(posts.map((p) => [p.id, p]));
   const orderedPosts = feedOrder.map((id) => postsById.get(id)).filter((p): p is Post => !!p);
   // A post that arrived after the last rebuild (e.g. between renders, before the effect above has

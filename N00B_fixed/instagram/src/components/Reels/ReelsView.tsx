@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { orderUnseenFirst } from '../../utils/seenContent';
 import { navKey } from '../../utils/keyboardNav';
 import { can } from '../../adminAccess';
 import {
@@ -132,9 +133,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       // first, with the rest of the feed shuffled behind it.
       const target = reels.find((r) => r.id === initialReelId);
       const rest = reels.filter((r) => r.id !== initialReelId);
-      setLocalReels(target ? [target, ...shuffleReels(rest)] : shuffleReels(reels));
+      setLocalReels(target ? [target, ...orderUnseenFirst(rest, currentUser.id, 'reels')] : orderUnseenFirst(reels, currentUser.id, 'reels'));
     } else {
-      setLocalReels(shuffleReels(reels));
+      // Reels this person hasn't watched yet come first (newest first), the rest shuffled behind them.
+      setLocalReels(orderUnseenFirst(reels, currentUser.id, 'reels'));
     }
     setCurrentIndex(0);
   }, [reels, initialReelId]);

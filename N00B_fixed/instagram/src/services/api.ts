@@ -56,6 +56,7 @@ export {
   toggleSavePost,
   toggleDislikePost,
   fetchFeedVideoUpNext,
+  fetchUserFeedVideos,
   fetchPlaylistsForPost,
   togglePostInPlaylist,
   toggleArchivePost,

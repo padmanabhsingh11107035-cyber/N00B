@@ -56,6 +56,8 @@ interface PostCardProps {
   onHideAd?: (postId: string) => void;
   onSelectCategory?: (category: string) => void;
   onNavigateToProfile?: (user: User) => void;
+  // Every account, used to open a co-author whose id was never stored (only their @handle).
+  allUsers?: User[];
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
   onOpenVideoWatch?: (post: Post) => void;
 }
@@ -75,6 +77,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onToggleFollowUser,
   onSelectCategory,
   onNavigateToProfile,
+  allUsers = [],
   onOpenVideoWatch
 }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -305,6 +308,12 @@ export const PostCard: React.FC<PostCardProps> = ({
     const user = await fetchUserById(userId);
     if (user) onNavigateToProfile(user);
   };
+  // Same for a tagged / co-author account: older posts only stored its @handle, newer ones also its id.
+  const goToTagged = (tagged: { userId?: string; username: string }) => {
+    if (tagged.userId) { void goToProfile(tagged.userId); return; }
+    const match = allUsers.find((u) => u.username?.toLowerCase() === tagged.username.toLowerCase());
+    if (match) void goToProfile(match.id);
+  };
 
   // Text Background styling for text-only thoughts
   const getTextBgClass = (bgStyle?: string) => {
@@ -378,7 +387,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               {primaryTaggedUser && (
                 <>
                   <span className="text-[11px] text-zinc-400 font-medium">and</span>
-                  <span className="text-xs font-bold text-noob flex items-center gap-1 hover:underline cursor-pointer">
+                  <span onClick={() => goToTagged(primaryTaggedUser)} className="text-xs font-bold text-noob flex items-center gap-1 hover:underline cursor-pointer">
                     @{primaryTaggedUser.username}
                   </span>
                 </>
@@ -677,7 +686,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               {showTagPill && (
                 <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-noob/50 shadow-2xl backdrop-blur-xl min-w-[160px] max-h-48 overflow-y-auto space-y-1.5 animate-in zoom-in-90 duration-150">
                   {currentSlide.taggedUsers.map((t) => (
-                    <div key={t.userId} className="flex items-center gap-2">
+                    <div key={t.userId} onClick={() => goToTagged(t)} className="flex items-center gap-2 cursor-pointer hover:underline">
                       <img
                         src={t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                         alt={t.username}
@@ -706,7 +715,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
               {/* Tag popover bubble */}
               {showTagPill && (
-                <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-noob/50 shadow-2xl backdrop-blur-xl flex items-center gap-2 min-w-[140px] animate-in zoom-in-90 duration-150">
+                <div onClick={() => goToTagged(primaryTaggedUser)} className="cursor-pointer absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-noob/50 shadow-2xl backdrop-blur-xl flex items-center gap-2 min-w-[140px] animate-in zoom-in-90 duration-150">
                   <img
                     src={primaryTaggedUser.avatar}
                     alt={primaryTaggedUser.username}
@@ -781,7 +790,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           {primaryTaggedUser && (
             <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
               <span className="text-[10px] uppercase tracking-wider text-zinc-400">Co-authored with:</span>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-xs font-bold text-noob">
+              <div onClick={() => goToTagged(primaryTaggedUser)} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-xs font-bold text-noob cursor-pointer hover:underline">
                 <img
                   src={primaryTaggedUser.avatar}
                   alt={primaryTaggedUser.username}
@@ -883,7 +892,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Captions with Formatted Line Breaks */}
         <div className="mt-1.5 text-xs text-zinc-200">
-          <span className="font-bold text-white mr-1.5 cursor-pointer hover:underline">
+          <span onClick={() => goToProfile(post.userId)} className="font-bold text-white mr-1.5 cursor-pointer hover:underline">
             {post.username}
           </span>
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>

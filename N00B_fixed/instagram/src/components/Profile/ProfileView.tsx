@@ -3,6 +3,8 @@ import { isStaff } from '../../adminAccess';
 import {
   Grid,
   Film,
+  Play,
+  PlaySquare,
   Bookmark,
   Heart,
   Archive,
@@ -79,6 +81,7 @@ import {
   fetchHighlights,
   deleteHighlight,
   fetchMutualFollowers,
+  fetchUserFeedVideos,
   type MutualFollower
 } from '../../services/api';
 import confetti from 'canvas-confetti';
@@ -92,6 +95,8 @@ import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
+import { FeedVideoWatchView } from '../Feed/FeedVideoWatchView';
+import { formatRelativeTime } from '../../utils/formatTime';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { GetVerifiedModal } from './GetVerifiedModal';
 import { AccountsStatisticsModal } from './AccountsStatisticsModal';
@@ -180,7 +185,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onNavigateToUserProfile,
   onSwitchToAdminPanel
 }) => {
-  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'saved' | 'liked' | 'archive'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'feed' | 'saved' | 'liked' | 'archive'>('posts');
+  // The "Feed" tab: this person's video posts, one wide card per row. Loaded from the server when the tab is opened (the app itself only
+  // holds the latest 200 posts of everyone); until then / if that is unavailable, the video posts already on hand are shown.
+  const [feedVideos, setFeedVideos] = useState<{ userId: string; posts: Post[] } | null>(null);
+  const [watchVideoPost, setWatchVideoPost] = useState<Post | null>(null);
   const [collections, setCollections] = useState<SavedCollection[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
@@ -361,6 +370,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const isAuthor = p.userId === targetUser.id || p.username === targetUser.username;
     return isAuthor && !p.isArchived;
   });
+
+  const isVideoPost = (p: Post) => (p.slides || []).some((s) => s.mediaType === 'video');
+  const feedVideoPosts: Post[] = (feedVideos && feedVideos.userId === targetUser.id ? feedVideos.posts : displayedPosts.filter(isVideoPost))
+    .filter((p) => !p.isArchived)
+    .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+  useEffect(() => {
+    if (activeTab !== 'feed') return;
+    let alive = true;
+    fetchUserFeedVideos(targetUser.id).then((list) => { if (alive && list) setFeedVideos({ userId: targetUser.id, posts: list }); });
+    return () => { alive = false; };
+  }, [activeTab, targetUser.id]);
 
   const displayedReels = reels.filter((r) => {
     return r.userId === targetUser.id || r.username === targetUser.username;
@@ -1579,6 +1599,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <span className="hidden sm:inline">REELS</span>
         </button>
 
+        <button
+          onClick={() => setActiveTab('feed')}
+          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
+            activeTab === 'feed' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+          }`}
+          title="Videos shared in the Feed"
+        >
+          <PlaySquare className="w-4 h-4" />
+          <span className="hidden sm:inline">FEED</span>
+        </button>
+
         {/* Saved, Liked and Archive are private — only the profile's own owner sees these tabs at all. */}
         {isOwnProfile && (
           <>
@@ -1695,6 +1726,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             ))}
           </div>
         ))}
+
+        {/* B2. FEED VIDEOS: the video posts, each as a wide card across the full width, one under the other */}
+        {activeTab === 'feed' && (
+          feedVideoPosts.length === 0 ? (
+            <div className="text-center py-16 bg-zinc-950 rounded-3xl border border-zinc-800 space-y-2">
+              <PlaySquare className="w-10 h-10 text-zinc-600 mx-auto" />
+              <span className="text-sm font-bold text-zinc-300 block">No feed videos shared yet</span>
+              <p className="text-xs text-zinc-500">Videos posted to the Feed show up here.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {feedVideoPosts.map((post) => {
+                const videoSlide = post.slides.find((s) => s.mediaType === 'video') || post.slides[0];
+                return (
+                  <button
+                    key={post.id}
+                    type="button"
+                    onClick={() => setWatchVideoPost(post)}
+                    className="group block w-full text-left cursor-pointer"
+                    aria-label={`Watch ${post.caption || 'video'}`}
+                  >
+                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800/80 shadow-md">
+                      <PostThumbnailMedia
+                        src={videoSlide?.mediaUrl}
+                        mediaType="video"
+                        alt={post.caption}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-12 h-12 rounded-full bg-black/55 backdrop-blur-md border border-white/25 flex items-center justify-center">
+                          <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                        </span>
+                      </span>
+                    </div>
+                    <div className="mt-2 px-1">
+                      <p className="text-sm font-bold text-white line-clamp-2 break-words">{post.caption || 'Untitled video'}</p>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        {post.likesCount.toLocaleString()} {post.likesCount === 1 ? 'like' : 'likes'} · {(post.commentsCount || 0).toLocaleString()} {post.commentsCount === 1 ? 'comment' : 'comments'} · {formatRelativeTime(post.createdAt)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        )}
 
         {/* C. SAVED POSTS & COLLECTIONS (owner only) */}
         {activeTab === 'saved' && isOwnProfile && (
@@ -1926,6 +2003,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       )}
 
       {showFollowUsModal && <FollowUsModal onClose={() => setShowFollowUsModal(false)} />}
+
+      {watchVideoPost && (
+        <FeedVideoWatchView
+          post={watchVideoPost}
+          currentUser={currentUser}
+          onClose={() => setWatchVideoPost(null)}
+          onNavigateToProfile={(u) => { setWatchVideoPost(null); onNavigateToUserProfile?.(u); }}
+        />
+      )}
 
       {followListTab && (
         <FollowListPage

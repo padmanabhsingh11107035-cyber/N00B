@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, PostComment, User } from '../../types';
-import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike } from '../../services/api';
+import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike, fetchUserById } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type CommentAttachment } from './CommentMediaComposer';
 import confetti from 'canvas-confetti';
@@ -11,9 +11,16 @@ interface CommentsSheetProps {
   post: Post;
   currentUser: User;
   onClose: () => void;
+  // Tapping a commenter's picture or name (or the @name a reply is aimed at) opens that person's profile.
+  onNavigateToProfile?: (user: User) => void;
 }
 
-export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser, onClose }) => {
+export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser, onClose, onNavigateToProfile }) => {
+  const openProfile = async (userId?: string) => {
+    if (!userId || !onNavigateToProfile) return;
+    const user = await fetchUserById(userId);
+    if (user) { onClose(); onNavigateToProfile(user); }
+  };
   const [comments, setComments] = useState<PostComment[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -162,16 +169,18 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 text-gray-500" />}
             </button>
           )}
-          <AvatarMedia
-            src={c.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-            isLiveAvatar={c.authorIsLiveAvatar}
-            liveAvatarVideoUrl={c.authorLiveAvatarVideoUrl}
-            alt={c.username}
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-          />
+          <button type="button" onClick={() => openProfile(c.userId)} className="flex-shrink-0 cursor-pointer" aria-label={`View ${c.username}'s profile`}>
+            <AvatarMedia
+              src={c.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+              isLiveAvatar={c.authorIsLiveAvatar}
+              liveAvatarVideoUrl={c.authorLiveAvatarVideoUrl}
+              alt={c.username}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-bold text-white">{c.username}</span>
+              <span onClick={() => openProfile(c.userId)} className="text-xs font-bold text-white cursor-pointer hover:underline">{c.username}</span>
               {c.isVerified && <VerifiedBadge size="xs" />}
               {c.isPinned && (
                 <span className="flex items-center gap-0.5 text-[9px] text-noob bg-noob/10 px-1.5 py-0.2 rounded font-semibold">
@@ -182,7 +191,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
             </div>
             <p translate="no" className="text-xs text-gray-200 mt-1 whitespace-pre-line leading-relaxed break-words">
               {isReply && c.replyToUsername && c.replyToUsername !== c.username && (
-                <span className="text-noob font-semibold mr-1">@{c.replyToUsername}</span>
+                <span onClick={() => openProfile(c.replyToUserId)} className="text-noob font-semibold mr-1 cursor-pointer hover:underline">@{c.replyToUsername}</span>
               )}
               {c.text}
             </p>

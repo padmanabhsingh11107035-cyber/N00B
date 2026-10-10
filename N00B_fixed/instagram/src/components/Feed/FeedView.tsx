@@ -270,6 +270,45 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const paginatedPosts = filteredPosts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPosts.length;
 
+  const headerRef = useRef<HTMLElement | null>(null);
+  const postListRef = useRef<HTMLElement | null>(null);
+  const alignSessionRef = useRef<{ id: string; stop: (notify: boolean) => void } | null>(null);
+  useEffect(() => () => alignSessionRef.current?.stop(true), []);   // leaving the feed early still clears the pending jump
+  const startAlignToPost = (postId: string) => {
+    alignSessionRef.current?.stop(false);
+    let done = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let observer: ResizeObserver | null = null;
+    const userEvents = ['wheel', 'touchstart', 'mousedown', 'keydown'] as const;
+    const align = () => {
+      if (done) return;
+      const el = document.getElementById(`post-card-${postId}`);
+      if (!el) return;
+      const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0;
+      const target = Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY - headerHeight - 8));
+      if (Math.abs(window.scrollY - target) > 1) window.scrollTo({ top: target, behavior: 'instant' as ScrollBehavior });
+    };
+    const stop = (notify: boolean) => {
+      if (done) return;
+      done = true;
+      timers.forEach(clearTimeout);
+      observer?.disconnect();
+      userEvents.forEach((ev) => window.removeEventListener(ev, onUser));
+      if (alignSessionRef.current?.id === postId) alignSessionRef.current = null;
+      if (notify) onInitialPostIdHandled?.();
+    };
+    const onUser = () => stop(true);
+    userEvents.forEach((ev) => window.addEventListener(ev, onUser, { passive: true }));
+    if (typeof ResizeObserver !== 'undefined' && postListRef.current) {
+      observer = new ResizeObserver(align);
+      observer.observe(postListRef.current);
+    }
+    [0, 60, 160, 320, 600, 1000, 1600, 2400].forEach((ms) => timers.push(setTimeout(align, ms)));
+    timers.push(setTimeout(() => stop(true), 3000));
+    alignSessionRef.current = { id: postId, stop };
+    align();
+  };
+
   // Deep-linking to one specific post (from a profile grid, Explore, etc.): the feed is shuffled and
   // paginated, so the target post may not be in filteredPosts at all yet (wrong filter/tab) or may
   // sit past the currently-rendered page — in either case scrollIntoView would silently find nothing
@@ -284,15 +323,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
       if (activeCategory !== 'All') setActiveCategory('All');
       return;
     }
-    if (visibleCount <= idx) {
-      setVisibleCount(idx + 1);
+    // Show the post and a few after it: a post at the very bottom of what is rendered cannot be scrolled up to the top of the screen.
+    const needed = Math.min(filteredPosts.length, idx + 1 + POSTS_PER_PAGE);
+    if (visibleCount < needed) {
+      setVisibleCount(needed);
       return;
     }
-    const t = setTimeout(() => {
-      document.getElementById(`post-card-${initialPostId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      onInitialPostIdHandled?.();
-    }, 150);
-    return () => clearTimeout(t);
+    // The post is on the page: take it to the top of the screen and KEEP it there while the pictures and videos above it finish
+    // loading (they change the page's height after the first scroll, which used to leave the post 2-3 posts away from where the
+    // person had tapped). Stops the moment they scroll or touch the screen themselves.
+    if (alignSessionRef.current?.id !== initialPostId) startAlignToPost(initialPostId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPostId, filteredPosts.length, visibleCount, activeFeedFilter, activeCategory]);
 
@@ -386,7 +426,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       </div>
       {/* 1. Minimalist Top Header */}
-      <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3 py-2.5 flex items-center gap-1 shadow-sm">
+      <header ref={headerRef} className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3 py-2.5 flex items-center gap-1 shadow-sm">
         {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -602,7 +642,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       </div>
 
       {/* 4. Feed Posts Stack */}
-      <main className="w-full max-w-[480px] px-2 sm:px-3 mt-1 space-y-4">
+      <main ref={postListRef} className="w-full max-w-[480px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 ? (
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
             <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />
@@ -633,6 +673,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onHideAd={handleHideAd}
                 onSelectCategory={(cat) => setActiveCategory(cat)}
                 onNavigateToProfile={onNavigateToProfile}
+                allUsers={allUsers}
                 onToggleFollowUser={onToggleFollowUser}
                 onOpenVideoWatch={(p) => setWatchVideoPost(p)}
               />
@@ -663,6 +704,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           post={selectedPostForComments}
           currentUser={currentUser}
           onClose={() => setSelectedPostForComments(null)}
+          onNavigateToProfile={onNavigateToProfile}
         />
       )}
 

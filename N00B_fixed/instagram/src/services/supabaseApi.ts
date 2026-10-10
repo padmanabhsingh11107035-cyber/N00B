@@ -1098,6 +1098,17 @@ export async function fetchFeedVideoUpNext(excludePostId?: string, limit = 20): 
   }
 }
 
+// One person's video posts for their profile "Feed" tab (migration 20261010000011). Returns null when that function is not installed
+// yet or the call failed, so the screen can fall back to the posts it already holds.
+export async function fetchUserFeedVideos(userId: string): Promise<Post[] | null> {
+  try {
+    const res = await rpc<any[]>('user_feed_videos', { p_user: userId });
+    return Array.isArray(res) ? res.map(mapPost) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function toggleArchivePost(postId: string): Promise<{ isArchived: boolean }> {
   try { return await rpc('toggle_post_flag', { p_post: postId, p_flag: 'archive' }); } catch (err) { return { error: errorText(err, 'You can only modify your own posts.') } as any; }
 }

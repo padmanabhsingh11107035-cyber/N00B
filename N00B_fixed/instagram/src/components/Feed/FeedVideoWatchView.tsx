@@ -288,7 +288,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
       </div>
 
       {showComments && (
-        <CommentsSheet post={activePost} currentUser={currentUser} onClose={() => setShowComments(false)} />
+        <CommentsSheet post={activePost} currentUser={currentUser} onClose={() => setShowComments(false)} onNavigateToProfile={onNavigateToProfile} />
       )}
 
       {showShareSheet && (

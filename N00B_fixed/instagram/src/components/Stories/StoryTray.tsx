@@ -37,6 +37,23 @@ const RingedAvatar: React.FC<{ ring: TrayRing; closeFriends?: boolean; src?: str
   </div>
 );
 
+// The little round badge at the bottom-right of a picture: blue plus = tap to follow, then a green check (or a grey clock when it was
+// only a follow request).
+const FollowBadge: React.FC<{ username: string; state: 'none' | 'following' | 'requested'; busy: boolean; disabled: boolean; onFollow: () => void }> = ({ username, state, busy, disabled, onFollow }) => (
+  <button
+    type="button"
+    onClick={onFollow}
+    disabled={state !== 'none' || busy || disabled}
+    title={state === 'following' ? 'Following' : state === 'requested' ? 'Requested' : `Follow ${username}`}
+    aria-label={state === 'following' ? `Following ${username}` : state === 'requested' ? `Follow requested for ${username}` : `Follow ${username}`}
+    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
+      state === 'following' ? 'bg-emerald-500' : state === 'requested' ? 'bg-zinc-600' : 'bg-sky-500 hover:bg-sky-400 cursor-pointer'
+    } ${busy ? 'opacity-60' : ''}`}
+  >
+    {state === 'following' ? <Check className="w-3 h-3 stroke-[3]" /> : state === 'requested' ? <Clock className="w-3 h-3 stroke-[3]" /> : <Plus className="w-3 h-3 stroke-[3]" />}
+  </button>
+);
+
 export const StoryTray: React.FC<StoryTrayProps> = ({
   currentUser,
   model,
@@ -170,15 +187,24 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
         {/* Everyone else: people with a story (rainbow ring = new, grey ring = seen) and suggested accounts (plus badge) */}
         {model.items.map((item) => {
           if (item.kind === 'story') {
+            // Someone I do not follow yet gets the same blue plus as a suggested account; once followed from here it turns into the check.
+            const state = followState(item.userId);
+            const showBadge = state !== 'none' ? followed[item.userId] !== undefined : !!onToggleFollowUser;
             return (
-              <button
-                key={`story-${item.userId}`}
-                id={`story-item-${item.userId}`}
-                onClick={() => onOpenStoryViewer(item.startIndex)}
-                className="flex flex-col items-center flex-shrink-0 group cursor-pointer"
-                title={`View ${item.username}'s Story`}
-              >
-                <RingedAvatar ring={item.ring} closeFriends={item.closeFriends} src={item.avatar} alt={item.username} />
+              <div key={`story-${item.userId}`} id={`story-item-${item.userId}`} className="flex flex-col items-center flex-shrink-0 group">
+                <div className="relative">
+                  <button
+                    onClick={() => onOpenStoryViewer(item.startIndex)}
+                    className="block cursor-pointer"
+                    title={`View ${item.username}'s Story`}
+                    aria-label={`View ${item.username}'s story`}
+                  >
+                    <RingedAvatar ring={item.ring} closeFriends={item.closeFriends} src={item.avatar} alt={item.username} />
+                  </button>
+                  {showBadge && (
+                    <FollowBadge username={item.username} state={state} busy={busy.has(item.userId)} disabled={!onToggleFollowUser} onFollow={() => followSuggestion(item)} />
+                  )}
+                </div>
                 <div className="flex items-center gap-0.5 mt-1 max-w-[68px]">
                   <span className={`text-[10px] truncate font-normal tracking-tight ${item.ring === 'seen' ? 'text-zinc-500 group-hover:text-zinc-300' : 'text-zinc-300 group-hover:text-white'}`}>
                     {item.username}
@@ -187,7 +213,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                     <span className="w-1.5 h-1.5 rounded-full bg-noob flex-shrink-0 shadow-[0_0_6px_rgba(217,119,87,0.8)]" title="Close Friends" />
                   )}
                 </div>
-              </button>
+              </div>
             );
           }
           const state = followState(item.userId);
@@ -202,17 +228,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 >
                   <RingedAvatar ring="none" src={item.avatar} alt={item.username} />
                 </button>
-                <button
-                  onClick={() => followSuggestion(item)}
-                  disabled={state !== 'none' || busy.has(item.userId) || !onToggleFollowUser}
-                  title={state === 'following' ? 'Following' : state === 'requested' ? 'Requested' : `Follow ${item.username}`}
-                  aria-label={state === 'following' ? `Following ${item.username}` : state === 'requested' ? `Follow requested for ${item.username}` : `Follow ${item.username}`}
-                  className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
-                    state === 'following' ? 'bg-emerald-500' : state === 'requested' ? 'bg-zinc-600' : 'bg-sky-500 hover:bg-sky-400 cursor-pointer'
-                  } ${busy.has(item.userId) ? 'opacity-60' : ''}`}
-                >
-                  {state === 'following' ? <Check className="w-3 h-3 stroke-[3]" /> : state === 'requested' ? <Clock className="w-3 h-3 stroke-[3]" /> : <Plus className="w-3 h-3 stroke-[3]" />}
-                </button>
+                <FollowBadge username={item.username} state={state} busy={busy.has(item.userId)} disabled={!onToggleFollowUser} onFollow={() => followSuggestion(item)} />
               </div>
               <span className="text-[10px] text-zinc-300 group-hover:text-white truncate font-normal tracking-tight mt-1 max-w-[68px]">{item.username}</span>
             </div>

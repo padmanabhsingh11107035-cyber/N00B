@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Trash2,
   Volume2,
+  VolumeX,
   BellOff,
   BellRing,
   Coins,
@@ -28,6 +29,7 @@ import {
 import { ShoppingBag, Phone, Lightbulb } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
 import { formatRelativeTime } from '../../utils/formatTime';
+import { isNotificationSoundOn, setNotificationSoundOn } from '../../utils/notificationSound';
 
 export interface NotificationSettingsState {
   masterEnabled: boolean;
@@ -72,6 +74,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onOpenChat,
   onOpenLiveLoungeInvite
 }) => {
+  const [soundOn, setSoundOn] = useState(isNotificationSoundOn());
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'settings'>('all');
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -209,6 +212,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { const next = !soundOn; setSoundOn(next); setNotificationSoundOn(next); }}
+              title={soundOn ? 'Notification sound is on (tap to turn off)' : 'Notification sound is off (tap to turn on)'}
+              aria-label={soundOn ? 'Turn notification sound off' : 'Turn notification sound on'}
+              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${soundOn ? 'bg-noob/15 border-noob/40 text-noob' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-white'}`}
+            >
+              {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"

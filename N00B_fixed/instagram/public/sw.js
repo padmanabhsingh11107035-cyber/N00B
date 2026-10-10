@@ -42,6 +42,10 @@ self.addEventListener('push', (event) => {
     icon: data.icon || '/noob-logo-circle.png',
     badge: '/noob-logo-circle.png',
     data: { url: data.url || '/', isCallRing },
+    // Never silent: the phone plays its own notification sound, and buzzes, so the person knows there is an update
+    // even when the app is closed.
+    silent: false,
+    vibrate: isCallRing ? [300, 150, 300, 150, 300] : [120, 60, 120],
     // An incoming call needs to demand attention (stay on screen until acted on) and replace any
     // earlier ring for the same call rather than stacking a second notification for it. Everything
     // else keeps the browser's normal auto-dismissing behavior.

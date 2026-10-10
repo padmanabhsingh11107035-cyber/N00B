@@ -6,7 +6,7 @@
 // The number shown is the count of CONVERSATIONS with at least one unread message, not the count of
 // unread messages — sending someone 2 messages should show 1, two different people messaging should
 // show 2, matching ChatView's own "Unread" filter tab, which already counts it exactly this way.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchChats, subscribeToChatChanges } from '../../services/api';
 import type { User } from '../../types';
 
@@ -15,8 +15,11 @@ function isRealChat(c: any): boolean {
   return !c.isAi && c.id !== 'c_ai_assistant' && !c.participants?.some((p: any) => p.isAi);
 }
 
-export function useUnreadChatCount(me: User | null): number {
+// onIncoming (optional) is called when the total number of unread messages goes UP after the first load, i.e. a new message arrived.
+export function useUnreadChatCount(me: User | null, onIncoming?: () => void): number {
   const [count, setCount] = useState(0);
+  const onIncomingRef = useRef(onIncoming);
+  onIncomingRef.current = onIncoming;
 
   useEffect(() => {
     if (!me) {
@@ -24,11 +27,16 @@ export function useUnreadChatCount(me: User | null): number {
       return;
     }
     let alive = true;
+    let lastTotal: number | null = null;
 
     const refresh = async () => {
       const chats = await fetchChats();
       if (!alive) return;
-      setCount(chats.filter(isRealChat).filter((c) => (c.unreadCount || 0) > 0).length);
+      const real = chats.filter(isRealChat);
+      setCount(real.filter((c) => (c.unreadCount || 0) > 0).length);
+      const total = real.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      if (lastTotal !== null && total > lastTotal) onIncomingRef.current?.();
+      lastTotal = total;
     };
 
     refresh();

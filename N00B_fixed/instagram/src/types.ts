@@ -108,6 +108,11 @@ export interface User {
   // live Presence-based online/offline status, which only ever reflects a connection right now).
   lastSeenAt?: string;
   lastSeenPlatform?: 'app' | 'web';
+  // Admin-only: has this person switched notifications on (a saved push registration exists), when that was last confirmed, and
+  // roughly what kind of phone / browser it is. The registration itself never leaves the server.
+  pushEnabled?: boolean;
+  pushUpdatedAt?: string;
+  pushKind?: 'chrome' | 'apple' | 'firefox' | 'edge' | 'other';
   // Web Push subscription (browser-issued, opaque to the app) — set once
   // the user grants push permission and subscribes; also stripped by
   // sanitizePublicUser.

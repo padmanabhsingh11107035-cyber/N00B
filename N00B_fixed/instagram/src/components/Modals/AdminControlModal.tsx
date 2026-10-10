@@ -62,7 +62,9 @@ import {
   Radio,
   ClipboardList,
   UtensilsCrossed,
-  Lightbulb
+  Lightbulb,
+  BellRing,
+  BellOff
 } from 'lucide-react';
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
@@ -178,6 +180,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [searchQuery, setSearchQuery] = useState('');
   // Set by tapping the "Suspended" stat card — filters Account Moderation down to just those accounts.
   const [suspendedOnlyFilter, setSuspendedOnlyFilter] = useState(false);
+  // Show everyone, only the people who switched notifications on, or only those who have not.
+  const [notifFilter, setNotifFilter] = useState<'all' | 'on' | 'off'>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -984,12 +988,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const filteredUsers = usersList.filter(
     (u) =>
       (!suspendedOnlyFilter || u.isSuspended) &&
+      (notifFilter === 'all' || (notifFilter === 'on' ? !!u.pushEnabled : !u.pushEnabled)) &&
       (u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const suspendedCount = usersList.filter((u) => u.isSuspended).length;
+  const notifOnCount = usersList.filter((u) => u.pushEnabled).length;
+  const pushKindLabel = (k?: string) => ({ chrome: 'Chrome / Android', apple: 'iPhone / Safari', firefox: 'Firefox', edge: 'Microsoft Edge', other: 'Other browser' } as Record<string, string>)[k || ''] || '';
 
   return (
     <div
@@ -1351,6 +1358,26 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </button>
               </div>
 
+              {/* Who has notifications switched on */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                {([
+                  ['all', 'Everyone', usersList.length],
+                  ['on', 'Notifications on', notifOnCount],
+                  ['off', 'Notifications off', usersList.length - notifOnCount]
+                ] as const).map(([key, label, n]) => (
+                  <button
+                    key={key}
+                    onClick={() => setNotifFilter(key)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer border ${
+                      notifFilter === key ? 'border-noob text-noob bg-noob/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {key === 'on' ? <BellRing className="w-3 h-3" /> : key === 'off' ? <BellOff className="w-3 h-3" /> : <Users className="w-3 h-3" />}
+                    {label} ({n})
+                  </button>
+                ))}
+              </div>
+
               {suspendedOnlyFilter && (
                 <button
                   onClick={() => setSuspendedOnlyFilter(false)}
@@ -1466,6 +1493,15 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             <span className="text-[11px] text-zinc-400 block truncate">
                               {user.displayName || user.email || 'NOOB Member'} • {user.followersCount || 0} followers • {(user.noobPoints || 0).toLocaleString()} noobs
                             </span>
+                            {user.pushEnabled ? (
+                              <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold" title={user.pushUpdatedAt ? `Notifications were last confirmed on ${formatExactDateTime(user.pushUpdatedAt)}` : undefined}>
+                                <BellRing className="w-3 h-3 shrink-0" /> Notifications on{pushKindLabel(user.pushKind) ? ` · ${pushKindLabel(user.pushKind)}` : ''}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] text-zinc-500 font-semibold" title="This person has not allowed notifications (or turned them off)">
+                                <BellOff className="w-3 h-3 shrink-0" /> Notifications off
+                              </span>
+                            )}
                             {isSuspended && user.suspendedReason && (
                               <span className="text-[10px] text-red-400/80 block truncate">
                                 Reason: {user.suspendedReason}
@@ -3122,6 +3158,16 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     <span className="text-[11px] text-zinc-500">Verification</span>
                     <span className="text-xs text-white font-medium capitalize">
                       {selectedUserForDetails.isVerified ? selectedUserForDetails.verificationTier || 'Verified' : 'Not Verified'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                      {selectedUserForDetails.pushEnabled ? <BellRing className="w-3 h-3" /> : <BellOff className="w-3 h-3" />} Notifications
+                    </span>
+                    <span className={`text-xs font-medium text-right ${selectedUserForDetails.pushEnabled ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                      {selectedUserForDetails.pushEnabled
+                        ? `On${pushKindLabel(selectedUserForDetails.pushKind) ? ` · ${pushKindLabel(selectedUserForDetails.pushKind)}` : ''}${selectedUserForDetails.pushUpdatedAt ? ` · confirmed ${formatRelativeTime(selectedUserForDetails.pushUpdatedAt)}` : ''}`
+                        : 'Off — has not allowed notifications'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">

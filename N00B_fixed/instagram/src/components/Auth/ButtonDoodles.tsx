@@ -39,7 +39,7 @@ const Dot: React.FC<{ x: number; y: number; r?: number; c: string; cls?: string;
 );
 
 // ---- Google: colourful, like the logo
-const G = { b: '#4285F4', r: '#EA4335', y: '#F9AB00', g: '#34A853' };
+const G = { b: '#3367D6', r: '#E0392B', y: '#E37400', g: '#1E8E3E' };   // a little deeper than the logo so they show on the yellow button
 const googleLeft = (
   <>
     <P d={wave(4, 36, 6, 4.5, 4)} stroke={G.b} w={2} />
@@ -138,7 +138,7 @@ const dcLeft = (
 const dcRight = (
   <>
     <P d={sparkle(13, 12, 6)} stroke={DC.w} cls="dd-twinkle" delay={0.2} />
-    <P d={bolt(32, 28, 6.5)} stroke={DC.pink} fill="rgba(235,69,158,.25)" cls="dd-float" delay={0.6} />
+    <P d={bolt(32, 28, 6.5)} stroke={DC.yellow} fill="rgba(254,231,92,.3)" cls="dd-float" delay={0.6} />
     <P d={plus(40, 9, 3)} stroke={DC.yellow} w={1.9} />
     <P d={wave(26, 38, 6, 4, 4)} stroke={DC.w} w={1.9} />
     <P d={spiral(10, 28, 4.5)} stroke={DC.green} cls="dd-float" />
@@ -149,7 +149,7 @@ const dcRight = (
 
 const dcLeftMore = (
   <>
-    <P d={star(70, 12, 4.5)} stroke={DC.pink} cls="dd-twinkle" delay={0.8} />
+    <P d={star(70, 12, 4.5)} stroke={DC.yellow} cls="dd-twinkle" delay={0.8} />
     <P d={plus(84, 29, 2.6)} stroke={DC.green} w={1.9} />
     <P d={sparkle(89, 11, 4)} stroke={DC.w} cls="dd-twinkle" delay={1.3} />
     <Dot x={62} y={33} c={DC.yellow} r={1.5} />
@@ -160,7 +160,7 @@ const dcRightMore = (
     <P d={bolt(14, 14, 5.5)} stroke={DC.green} fill="rgba(87,242,135,.22)" cls="dd-float" delay={0.4} />
     <P d={star(28, 31, 4.5)} stroke={DC.yellow} cls="dd-twinkle" delay={1} />
     <P d={plus(30, 12, 2.6)} stroke={DC.w} w={1.8} />
-    <Dot x={6} y={34} c={DC.pink} r={1.4} />
+    <Dot x={6} y={34} c={DC.w} r={1.4} />
   </>
 );
 

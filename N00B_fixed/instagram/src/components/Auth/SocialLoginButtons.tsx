@@ -66,13 +66,33 @@ const SpotifyIcon: React.FC<IconProps> = ({ className = 'w-4 h-4' }) => (
 );
 
 // light = the button is a light colour (the doodles then use dark strokes); stitch = colour of the dashed "stitching" just inside the edge.
-const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; className: string; light?: boolean; stitch: string }> = {
-  google: { name: 'Google', Icon: GoogleIcon, className: 'bg-gradient-to-r from-white via-[#f1f6ff] to-white text-black ring-1 ring-black/10 shadow-[0_2px_0_rgba(66,133,244,.35)]', light: true, stitch: 'rgba(66,133,244,.38)' },
+// pattern = a faint texture drawn over the colour (confetti, ripples, pixels); shine = seconds before the light sweeps across again.
+const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; className: string; light?: boolean; stitch: string; pattern?: string; patternSize?: string; shine?: number }> = {
+  // Google: sunny yellow, with confetti in Google's four colours
+  google: {
+    name: 'Google', Icon: GoogleIcon, light: true, shine: 0,
+    className: 'bg-gradient-to-r from-[#fffef5] via-[#ffe97a] to-[#fffef5] text-black ring-1 ring-amber-500/40 shadow-[0_3px_0_rgba(217,119,6,.5),0_9px_18px_-8px_rgba(250,204,21,.8)]',
+    stitch: 'rgba(180,110,0,.4)',
+    pattern: 'radial-gradient(circle at 16% 72%, rgba(234,67,53,.22) 0 3px, transparent 3.6px), radial-gradient(circle at 38% 22%, rgba(66,133,244,.22) 0 2.6px, transparent 3.2px), radial-gradient(circle at 64% 80%, rgba(52,168,83,.24) 0 3px, transparent 3.6px), radial-gradient(circle at 86% 28%, rgba(234,67,53,.2) 0 2.6px, transparent 3.2px), radial-gradient(circle at 52% 14%, rgba(66,133,244,.18) 0 2px, transparent 2.6px)'
+  },
   apple: { name: 'Apple', Icon: AppleIcon, className: 'bg-white text-black ring-1 ring-black/10', light: true, stitch: 'rgba(0,0,0,.18)' },
-  facebook: { name: 'Facebook', Icon: FacebookIcon, className: 'bg-gradient-to-r from-[#1877F2] via-[#3b8bff] to-[#1877F2] force-white-text shadow-[0_2px_0_rgba(10,60,150,.55)]', stitch: 'rgba(255,255,255,.4)' },
+  // Facebook: deep ocean blue fading to bright cyan, with ripples
+  facebook: {
+    name: 'Facebook', Icon: FacebookIcon, shine: 1.6,
+    className: 'bg-gradient-to-r from-[#0a46c9] via-[#1877F2] to-[#1fc0ff] force-white-text shadow-[0_3px_0_rgba(6,40,120,.65),0_9px_18px_-8px_rgba(31,192,255,.75)]',
+    stitch: 'rgba(255,255,255,.42)',
+    pattern: 'repeating-linear-gradient(135deg, rgba(255,255,255,.075) 0 5px, transparent 5px 13px), radial-gradient(circle at 100% 0%, rgba(120,225,255,.5), transparent 52%), radial-gradient(circle at 0% 100%, rgba(8,30,120,.45), transparent 50%)'
+  },
   microsoft: { name: 'Microsoft', Icon: MicrosoftIcon, className: 'bg-white text-black ring-1 ring-black/10', light: true, stitch: 'rgba(0,0,0,.18)' },
   x: { name: 'X', Icon: XIcon, className: 'bg-[#0a0a0a] force-white-text ring-1 ring-white/20', stitch: 'rgba(255,255,255,.28)' },
-  discord: { name: 'Discord', Icon: DiscordIcon, className: 'bg-gradient-to-r from-[#5865F2] via-[#7482ff] to-[#5865F2] force-white-text shadow-[0_2px_0_rgba(40,48,150,.6)]', stitch: 'rgba(255,255,255,.4)' },
+  // Discord: violet melting into hot pink, with a pixel grid
+  discord: {
+    name: 'Discord', Icon: DiscordIcon, shine: 3.2,
+    className: 'bg-gradient-to-r from-[#4f3bd9] via-[#8a4dff] to-[#e04fc0] force-white-text shadow-[0_3px_0_rgba(60,25,150,.65),0_9px_18px_-8px_rgba(224,79,192,.7)]',
+    stitch: 'rgba(255,255,255,.42)',
+    pattern: 'radial-gradient(rgba(255,255,255,.24) 1.1px, transparent 1.7px), radial-gradient(circle at 100% 100%, rgba(255,120,215,.5), transparent 52%), radial-gradient(circle at 0% 0%, rgba(40,20,160,.45), transparent 50%)',
+    patternSize: '9px 9px, auto, auto'
+  },
   github: { name: 'GitHub', Icon: GitHubIcon, className: 'bg-[#24292f] force-white-text ring-1 ring-white/20', stitch: 'rgba(255,255,255,.28)' },
   linkedin: { name: 'LinkedIn', Icon: LinkedInIcon, className: 'bg-[#0A66C2] force-white-text', stitch: 'rgba(255,255,255,.4)' },
   twitch: { name: 'Twitch', Icon: TwitchIcon, className: 'bg-[#9146FF] force-white-text', stitch: 'rgba(255,255,255,.4)' },
@@ -120,6 +140,9 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
         aria-label={label}
         className={`${m.className} dd-btn group relative overflow-hidden w-full py-2.5 font-bold text-sm rounded-2xl cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-60 disabled:hover:translate-y-0 flex items-center justify-center gap-2.5`}
       >
+        {m.pattern && <span aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: m.pattern, backgroundSize: m.patternSize }} />}
+        <span aria-hidden="true" className="dd-gloss pointer-events-none absolute inset-x-0 top-0 h-1/2" />
+        <span aria-hidden="true" className="dd-shine pointer-events-none absolute inset-y-0 -left-1/4 w-1/2" style={m.shine !== undefined ? { animationDelay: `${m.shine}s` } : undefined} />
         <ButtonDoodles provider={p.id} light={m.light} />
         <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-dashed" style={{ borderColor: m.stitch }} />
         <span className="relative z-10 flex items-center justify-center gap-2.5">

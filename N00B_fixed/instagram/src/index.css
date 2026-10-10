@@ -451,5 +451,10 @@ html[data-i18n-loading] body {
   .dd-btn:hover .dd-float { animation-duration: 1.6s; }
   .dd-btn:hover .dd-twinkle { animation-duration: 1.2s; }
 }
+.dd-gloss { background: linear-gradient(to bottom, rgba(255,255,255,.34), rgba(255,255,255,0)); border-radius: 16px 16px 0 0; }
+.dd-shine { background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.6) 50%, transparent 62%); transform: translateX(-130%) skewX(-12deg); opacity: 0; }
+.dd-btn:hover .dd-shine { opacity: 1; transform: translateX(330%) skewX(-12deg); transition: transform .75s ease, opacity .1s; }
+@keyframes dd-shine-idle { 0%, 62% { transform: translateX(-130%) skewX(-12deg); opacity: 0; } 66% { opacity: 1; } 100% { transform: translateX(330%) skewX(-12deg); opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) { .dd-btn:not(:hover) .dd-shine { animation: dd-shine-idle 6s ease-in-out infinite; } }
 .dd-mask-l { -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent); mask-image: linear-gradient(90deg, #000 58%, transparent); }
 .dd-mask-r { -webkit-mask-image: linear-gradient(270deg, #000 58%, transparent); mask-image: linear-gradient(270deg, #000 58%, transparent); }

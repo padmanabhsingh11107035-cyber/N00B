@@ -75,6 +75,7 @@ const ChatView = React.lazy(() => import('./components/Chat/ChatView').then((m) 
 import { IncomingCallModal } from './components/Chat/IncomingCallModal';
 import { useIncomingCalls } from './components/Chat/useIncomingCalls';
 import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
+import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
 import { MusicHubView } from './components/Music/MusicHubView';
@@ -168,7 +169,10 @@ export default function App() {
   // out via the computer icon on their own profile page. Resets to the admin console on every fresh
   // login/reload on purpose, so the account never gets "stuck" outside it by accident.
   const [viewAsUser, setViewAsUser] = useState(false);
-  const unreadChatCount = useUnreadChatCount(currentUser);
+  // A short sound when a chat message arrives while the app is open and the person is not already in the chat tab.
+  const unreadChatCount = useUnreadChatCount(currentUser, () => {
+    if (document.visibilityState === 'visible' && activeTabRef.current !== 'chat') playNotificationSound('message');
+  });
 
   // The admin console's "whole-app maintenance lock" (see AdminControlModal's Platform tab) — checked
   // once someone is signed in so a non-admin mid-lockdown sees the block screen below instead of the
@@ -191,6 +195,17 @@ export default function App() {
   const [pendingExploreSearch, setPendingExploreSearch] = useState<string | null>(null);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  // New notifications make a sound (see utils/notificationSound.ts): the ids already known are remembered, so only ones that
+  // arrive after the first load count as new, and nothing sounds for a notification the person has already seen.
+  const seenNotificationIdsRef = useRef<Set<string> | null>(null);
+  const announceNotifications = (list: any[], silent = false) => {
+    const known = seenNotificationIdsRef.current;
+    seenNotificationIdsRef.current = new Set<string>([...(known || []), ...list.map((n) => String(n.id))]);
+    if (silent || !known) return;
+    const fresh = list.some((n) => !n.isRead && !known.has(String(n.id)));
+    if (fresh && notificationSettingsRef.current.masterEnabled && document.visibilityState === 'visible') playNotificationSound('notification');
+  };
+  useEffect(() => { armNotificationSound(); }, []);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsState>({
     masterEnabled: true,
     followRequests: true,
@@ -200,6 +215,8 @@ export default function App() {
     musicHub: true,
     soundAlerts: true
   });
+  const notificationSettingsRef = useRef(notificationSettings);
+  notificationSettingsRef.current = notificationSettings;
   const [loading, setLoading] = useState(true);
   // A single failed/rejected call in the initial Promise.all (a network
   // blip, a transient 5xx, the brief boot gap right after a deploy) used to
@@ -489,6 +506,7 @@ export default function App() {
       try {
         const notifRes = await fetchAppNotifications();
         if (stopped || notifRes.failed || !Array.isArray(notifRes.notifications)) return;
+        announceNotifications(notifRes.notifications);
         setNotifications(notifRes.notifications);
         setUnreadNotificationCount(notifRes.notifications.filter((n: any) => !n.isRead).length);
       } catch (err) {
@@ -574,6 +592,7 @@ export default function App() {
       setReels(rList);
       setRegisteredUsers(uList);
       if (notifRes && !notifRes.failed && Array.isArray(notifRes.notifications)) {
+        announceNotifications(notifRes.notifications, true);   // the first load: everything here is already known
         setNotifications(notifRes.notifications);
         setUnreadNotificationCount(notifRes.notifications.filter((n: any) => !n.isRead).length);
       }

@@ -114,6 +114,24 @@
 
 .bg-page { background-color: var(--page); }
 
+/* The verified badge: a white badge with a black tick in dark mode, a black badge with a white tick in light mode.
+   Dark surfaces inside light mode (media, calls: .force-dark) keep the dark-mode version so it stays visible. */
+:root, .force-dark {
+  --verified-badge: #ffffff;
+  --verified-tick: #000000;
+  --verified-shadow: rgba(0, 0, 0, 0.6);
+}
+:root[data-theme="light"] {
+  --verified-badge: #000000;
+  --verified-tick: #ffffff;
+  --verified-shadow: rgba(0, 0, 0, 0.25);
+}
+:root[data-theme="light"] .force-dark {
+  --verified-badge: #ffffff;
+  --verified-tick: #000000;
+  --verified-shadow: rgba(0, 0, 0, 0.6);
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

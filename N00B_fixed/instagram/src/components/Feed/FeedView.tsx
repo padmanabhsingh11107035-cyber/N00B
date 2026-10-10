@@ -569,35 +569,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
         onNavigateToReel={onNavigateToReel}
       />
 
-      {/* 2b. Food Stall banner — sits right on the home feed (not buried in a menu), three lines:
-          title, a short description, and the call to action. Hidden entirely unless the admin has
-          switched "Show Food Stall" on. While "Coming Soon" is on, it's a plain, non-tappable
-          div instead of a button — no menu/price/order details leak through it at all. */}
-      {foodStallVisible && (
-        foodStallComingSoon ? (
-          <div className="w-full max-w-[480px] px-3 mt-2">
-            <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-zinc-900 border border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3">
-              <p className="text-sm font-black text-white leading-tight">🍔 NOOB Food Stall</p>
-              <span className="shrink-0 text-[11px] font-black text-amber-400 bg-black/40 px-2.5 py-1 rounded-full border border-amber-400/40">Coming Soon</span>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowFoodStall(true)}
-            className="w-full max-w-[480px] px-3 mt-2 text-left cursor-pointer"
-          >
-            <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-zinc-900 border border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3 hover:border-amber-400/50 transition-colors">
-              <div className="min-w-0">
-                <p className="text-sm font-black text-white leading-tight">🍔 NOOB Food Stall</p>
-                <p className="text-[11px] text-amber-200/80 leading-tight mt-0.5">Burgers, bhel, fries, manchurian &amp; coke</p>
-                <p className="text-[11px] font-bold text-amber-400 leading-tight mt-0.5">Tap to order now →</p>
-              </div>
-              <span className="shrink-0 text-2xl">🧋</span>
-            </div>
-          </button>
-        )
-      )}
-
       {/* 3. Category Topic Filter Pills */}
       <div className="w-full max-w-[480px] px-3 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
         {categories.map((cat) => (

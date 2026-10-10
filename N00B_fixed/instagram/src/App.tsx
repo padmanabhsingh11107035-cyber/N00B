@@ -1538,9 +1538,9 @@ export default function App() {
 
       {/* 3. Right Desktop Sidebar (Registered People & Community) */}
       <aside className="hidden lg:flex flex-col w-[280px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none">
-        {/* Community People Directory */}
-        <div className="bg-zinc-900/40 p-5 rounded-[28px] border border-white/5 shadow-xl backdrop-blur-md">
-          <div className="flex items-center justify-between mb-3.5">
+        {/* Community People Directory: fills the sidebar from the top down to the footer links, and scrolls when there are more people */}
+        <div className="bg-zinc-900/40 p-5 rounded-[28px] border border-white/5 shadow-xl backdrop-blur-md flex-1 min-h-0 flex flex-col">
+          <div className="flex items-center justify-between mb-3.5 shrink-0">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-red-500" />
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">NOOB Members</h3>
@@ -1553,13 +1553,13 @@ export default function App() {
             </button>
           </div>
 
-          <div className="space-y-3.5">
+          <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar pr-1">
             {otherUsers.length === 0 ? (
               <div className="text-center py-4 text-xs text-zinc-500">
                 You are the first member! Invite friends to sign up.
               </div>
             ) : (
-              otherUsers.slice(0, 5).map((user) => (
+              otherUsers.slice(0, 60).map((user) => (
                 <div key={user.id} className="flex items-center justify-between gap-2">
                   <div
                     onClick={() => handleNavigateToUserProfile(user)}
@@ -1604,7 +1604,7 @@ export default function App() {
         </div>
 
         {/* Minimal Sophisticated Footer Links */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-zinc-500 text-[10px] px-2">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-zinc-500 text-[10px] px-2 shrink-0">
           <button onClick={() => setShowPrivacyModal(true)} className="hover:underline cursor-pointer">
             Privacy Policy
           </button>

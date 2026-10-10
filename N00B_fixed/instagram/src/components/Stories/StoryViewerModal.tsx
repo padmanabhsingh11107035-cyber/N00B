@@ -413,7 +413,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           {stories.map((s, idx) => (
             <div key={s.id} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#00FF66] transition-all duration-75 ease-linear"
+                className="h-full bg-noob transition-all duration-75 ease-linear"
                 style={{
                   width: idx === currentIndex ? `${progress}%` : idx < currentIndex ? '100%' : '0%'
                 }}
@@ -439,7 +439,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               isLiveAvatar={story.authorIsLiveAvatar}
               liveAvatarVideoUrl={story.authorLiveAvatarVideoUrl}
               alt={story.username}
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-[#00FF66]"
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-noob"
             />
             <div>
               <div className="flex items-center gap-1.5">
@@ -450,7 +450,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   </span>
                 )}
                 {story.isCloseFriendsOnly && (
-                  <span className="bg-[#00FF66]/20 border border-[#00FF66]/50 text-[#00FF66] text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                  <span className="bg-noob/20 border border-noob/50 text-noob text-[10px] px-1.5 py-0.5 rounded-full font-medium">
                     ★ Close Friends
                   </span>
                 )}
@@ -572,10 +572,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div key={idx} className="absolute z-30 pointer-events-none" style={layerStyle}>
                   <div className="w-full flex items-center justify-center">
                     <div
-                      className="flex flex-col items-center gap-0.5 bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
+                      className="flex flex-col items-center gap-0.5 bg-black/85 backdrop-blur-md border border-noob/40 rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
                       style={{ fontSize: `${(sticker.width || 50) * 0.075}cqw` }}
                     >
-                      <span className="font-bold text-[#00FF66] uppercase tracking-wide" style={{ fontSize: '0.6em' }}>
+                      <span className="font-bold text-noob uppercase tracking-wide" style={{ fontSize: '0.6em' }}>
                         {sticker.data?.label}
                       </span>
                       <span className="font-extrabold text-white tabular-nums" style={{ fontSize: '1em' }}>
@@ -638,20 +638,20 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                         onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitQuestionAnswer(idx); }}
                         placeholder="Type your answer..."
                         maxLength={500}
-                        className="flex-1 min-w-0 bg-black/70 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-white outline-none focus:border-[#00FF66]"
+                        className="flex-1 min-w-0 bg-black/70 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-white outline-none focus:border-noob"
                         style={{ fontSize: '1em' }}
                       />
                       <button
                         onClick={() => handleSubmitQuestionAnswer(idx)}
                         disabled={!(questionDrafts[key] || '').trim()}
-                        className="p-2 rounded-full bg-[#00FF66] text-black disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                        className="p-2 rounded-full bg-noob text-black disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
                       >
                         <Send style={{ width: '1em', height: '1em' }} />
                       </button>
                     </div>
                   )}
                   {!isOwnStory && sent && (
-                    <p className="mt-1.5 text-center text-[#00FF66] font-bold" style={{ fontSize: `${(sticker.width || 62) * 0.045}cqw` }}>
+                    <p className="mt-1.5 text-center text-noob font-bold" style={{ fontSize: `${(sticker.width || 62) * 0.045}cqw` }}>
                       Sent ✓
                     </p>
                   )}
@@ -739,10 +739,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   <div className="w-full flex items-center justify-center">
                     <button
                       onClick={(e) => { e.stopPropagation(); onNavigateToHashtag?.(sticker.data?.tag); }}
-                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
                       style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}
                     >
-                      <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                      <span className="font-semibold text-noob" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
                     </button>
                   </div>
                 </div>
@@ -777,7 +777,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               return (
                 <div
                   key={idx}
-                  className="absolute z-30 max-w-[260px] w-full bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl p-3 shadow-xl pointer-events-auto"
+                  className="absolute z-30 max-w-[260px] w-full bg-black/85 backdrop-blur-md border border-noob/40 rounded-xl p-3 shadow-xl pointer-events-auto"
                   style={layerStyle}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -798,7 +798,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                           {showResults && (
                             <span
                               aria-hidden
-                              className={`absolute inset-y-0 left-0 transition-all duration-500 ${chosen ? 'bg-[#00FF66]' : 'bg-white/15'}`}
+                              className={`absolute inset-y-0 left-0 transition-all duration-500 ${chosen ? 'bg-noob' : 'bg-white/15'}`}
                               style={{ width: `${percentage}%` }}
                             />
                           )}
@@ -847,7 +847,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                         className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold text-left transition-all ${
                           quizSelected === oIdx
                             ? oIdx === sticker.data.correctIndex
-                              ? 'bg-[#00FF66] text-black'
+                              ? 'bg-noob text-black'
                               : 'bg-red-500 text-white'
                             : 'bg-neutral-800/90 text-white hover:bg-neutral-700'
                         }`}
@@ -903,10 +903,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
                   <div className="w-full flex items-center justify-center">
                     <div
-                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
                       style={{ fontSize: `${locWidth * 0.1}cqw` }}
                     >
-                      <MapPin className="shrink-0 text-[#00FF66]" style={{ width: '1.1em', height: '1.1em' }} />
+                      <MapPin className="shrink-0 text-noob" style={{ width: '1.1em', height: '1.1em' }} />
                       <span className="font-semibold text-white" style={{ fontSize: '1em' }}>
                         {sticker.data.name}
                       </span>
@@ -938,7 +938,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           <div className="absolute bottom-16 inset-x-3 z-30 max-h-24 overflow-y-auto space-y-1 pr-2 no-scrollbar">
             {effectiveStory.comments.filter(Boolean).map((c) => (
               <div key={c.id} className="bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-gray-200 flex items-center gap-2">
-                <span className="font-bold text-[#00FF66]">@{c.username}:</span>
+                <span className="font-bold text-noob">@{c.username}:</span>
                 <span translate="no" className="truncate">{c.text}</span>
               </div>
             ))}
@@ -963,7 +963,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           </div>
         ) : (
           <div className="absolute bottom-3 inset-x-3 z-30 flex items-center gap-2">
-            <form onSubmit={handleSendComment} className="flex-1 flex items-center bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 focus-within:border-[#00FF66]">
+            <form onSubmit={handleSendComment} className="flex-1 flex items-center bg-black/80 backdrop-blur-md border border-neutral-700 rounded-full px-3.5 py-1.5 focus-within:border-noob">
               <input
                 type="text"
                 placeholder={`Reply to ${story.username}...`}
@@ -974,7 +974,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 className="w-full bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none"
               />
               {commentText.trim() && (
-                <button type="submit" className="text-[#00FF66] hover:text-emerald-400 ml-1.5 cursor-pointer">
+                <button type="submit" className="text-noob hover:text-emerald-400 ml-1.5 cursor-pointer">
                   <Send className="w-3.5 h-3.5" />
                 </button>
               )}

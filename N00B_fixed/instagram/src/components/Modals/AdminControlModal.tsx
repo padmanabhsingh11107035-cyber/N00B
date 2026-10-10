@@ -999,13 +999,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         className={
           fullPage
             ? 'w-full h-full bg-zinc-950 flex flex-col'
-            : 'w-full max-w-2xl bg-zinc-950 border border-[#00FF66]/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,255,102,0.15)] flex flex-col max-h-[90vh]'
+            : 'w-full max-w-2xl bg-zinc-950 border border-noob/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(217,119,87,0.15)] flex flex-col max-h-[90vh]'
         }
       >
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.4)] bg-black p-0.5">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(217,119,87,0.4)] bg-black p-0.5">
               <img src="/noob-logo-circle.png" alt="NOOB Logo" className="w-full h-full object-cover" />
             </div>
             <div>
@@ -1022,7 +1022,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               <button
                 onClick={onUseAsUser}
                 title="Browse NOOB exactly as a normal member sees it — switch back anytime from the computer icon on your profile page"
-                className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-[#00FF66]/20 hover:border-[#00FF66]/40 border border-transparent text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+                className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-noob/20 hover:border-noob/40 border border-transparent text-zinc-400 hover:text-noob transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
               >
                 <UserCircle className="w-4 h-4" /> Use as User
               </button>
@@ -1048,7 +1048,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           <div
             className={`px-4 py-2.5 text-xs font-bold flex items-center justify-between ${
               statusMessage.type === 'success'
-                ? 'bg-[#00FF66]/15 text-[#00FF66] border-b border-[#00FF66]/30'
+                ? 'bg-noob/15 text-noob border-b border-noob/30'
                 : 'bg-red-500/15 text-red-400 border-b border-red-500/30'
             }`}
           >
@@ -1099,7 +1099,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           </button>
           <button onClick={() => setActiveTab('staff')} disabled={!main} className="cursor-pointer disabled:cursor-default hover:bg-white/5 rounded-lg py-0.5 transition-colors">
             <span className="text-[11px] text-zinc-400 block font-medium">Admin Role</span>
-            <span className="text-sm font-black text-[#00FF66]">{main ? 'Authorized' : 'Delegate'}</span>
+            <span className="text-sm font-black text-noob">{main ? 'Authorized' : 'Delegate'}</span>
           </button>
         </div>
 
@@ -1110,7 +1110,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               onClick={() => setActiveTab('users')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'users'
-                  ? 'border-[#00FF66] text-[#00FF66]'
+                  ? 'border-noob text-noob'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -1136,7 +1136,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               onClick={() => setActiveTab('notify')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'notify'
-                  ? 'border-[#00FF66] text-[#00FF66]'
+                  ? 'border-noob text-noob'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -1175,7 +1175,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               onClick={() => setActiveTab('content')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'content'
-                  ? 'border-[#00FF66] text-[#00FF66]'
+                  ? 'border-noob text-noob'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -1188,7 +1188,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               onClick={() => setActiveTab('orders')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'orders'
-                  ? 'border-[#00FF66] text-[#00FF66]'
+                  ? 'border-noob text-noob'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -1201,7 +1201,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               onClick={() => setActiveTab('foodStall')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'foodStall'
-                  ? 'border-[#00FF66] text-[#00FF66]'
+                  ? 'border-noob text-noob'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -1214,7 +1214,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               onClick={() => setActiveTab('noobAi')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'noobAi'
-                  ? 'border-[#00FF66] text-[#00FF66]'
+                  ? 'border-noob text-noob'
                   : 'border-transparent text-zinc-400 hover:text-white'
               }`}
             >
@@ -1303,7 +1303,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={canViewAccounts ? 'Search accounts by @username, name, or email...' : 'Search accounts by @username or name...'}
-                    className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                    className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
                   />
                 </div>
                 <button
@@ -1344,7 +1344,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               {/* Users List */}
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center gap-2 text-zinc-400">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#00FF66]" />
+                  <Loader2 className="w-6 h-6 animate-spin text-noob" />
                   <span className="text-xs">Loading accounts database...</span>
                 </div>
               ) : filteredUsers.length === 0 ? (
@@ -1418,7 +1418,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                 </span>
                               )}
                               {isMainRow ? (
-                                <span className="text-[10px] bg-[#00FF66]/20 text-[#00FF66] px-2 py-0.5 rounded-full font-bold border border-[#00FF66]/30">
+                                <span className="text-[10px] bg-noob/20 text-noob px-2 py-0.5 rounded-full font-bold border border-noob/30">
                                   Primary Admin
                                 </span>
                               ) : user.isStaff ? (
@@ -1446,7 +1446,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             aria-label={`Copy @${user.username}'s profile link`}
                             className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                           >
-                            {copiedLinkKey === `profile:${user.id}` ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <LinkIcon className="w-3.5 h-3.5" />}
+                            {copiedLinkKey === `profile:${user.id}` ? <Check className="w-3.5 h-3.5 text-noob" /> : <LinkIcon className="w-3.5 h-3.5" />}
                             <span className="hidden sm:inline">{copiedLinkKey === `profile:${user.id}` ? 'Copied!' : 'Share'}</span>
                           </button>
                           {main && !isMainRow && user.id !== currentUser.id && (
@@ -1567,7 +1567,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
                 <button
                   onClick={loadReports}
-                  className="text-xs text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                  className="text-xs text-noob hover:underline flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingReports ? 'animate-spin' : ''}`} /> Refresh
                 </button>
@@ -1575,12 +1575,12 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
               {loadingReports ? (
                 <div className="py-12 text-center">
-                  <Loader2 className="w-7 h-7 animate-spin text-[#00FF66] mx-auto mb-2" />
+                  <Loader2 className="w-7 h-7 animate-spin text-noob mx-auto mb-2" />
                   <p className="text-xs text-zinc-400">Loading safety reports...</p>
                 </div>
               ) : reportsList.length === 0 ? (
                 <div className="py-12 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800 p-6 space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-[#00FF66] mx-auto" />
+                  <CheckCircle2 className="w-8 h-8 text-noob mx-auto" />
                   <h4 className="text-sm font-bold text-white">Zero Pending Incidents</h4>
                   <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                     All submitted reports have been reviewed, or no safety violations have been flagged by members.
@@ -1616,7 +1616,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         <span
                           className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
                             rep.status === 'resolved'
-                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              ? 'bg-emerald-500/20 text-noob border-emerald-500/30'
                               : rep.status === 'dismissed'
                               ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
                               : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
@@ -1687,7 +1687,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           <button
                             onClick={() => handleReportAction(rep.id, 'resolved', false)}
                             disabled={actionLoading === rep.id}
-                            className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-[#00FF66] disabled:opacity-50 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            className="flex-1 py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-noob disabled:opacity-50 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> Resolve Report
                           </button>
@@ -1715,7 +1715,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
                 <button
                   onClick={loadAiFeedback}
-                  className="text-xs text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                  className="text-xs text-noob hover:underline flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingAiFeedback ? 'animate-spin' : ''}`} /> Refresh
                 </button>
@@ -1737,7 +1737,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       key={key}
                       onClick={() => setAiFeedbackFilter(key)}
                       className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer border ${
-                        aiFeedbackFilter === key ? 'border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
+                        aiFeedbackFilter === key ? 'border-noob text-noob bg-noob/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
                       }`}
                     >
                       {label} ({count})
@@ -1747,7 +1747,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               </div>
 
               {loadingAiFeedback && aiFeedbackList.length === 0 ? (
-                <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto" /></div>
+                <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin text-noob mx-auto" /></div>
               ) : (
                 (() => {
                   const shown = aiFeedbackList.filter((f) => aiFeedbackFilter === 'all' || f.status === aiFeedbackFilter);
@@ -1771,7 +1771,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                               </span>
                             </div>
                             <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
-                              f.status === 'closed' ? 'bg-zinc-800 text-zinc-400' : f.status === 'replied' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-amber-500/20 text-amber-300'
+                              f.status === 'closed' ? 'bg-zinc-800 text-zinc-400' : f.status === 'replied' ? 'bg-emerald-500/20 text-noob' : 'bg-amber-500/20 text-amber-300'
                             }`}>
                               {f.status === 'closed' ? 'solved' : f.status}
                             </span>
@@ -1822,7 +1822,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     onClick={() => setNotifTargetType('all')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       notifTargetType === 'all'
-                        ? 'bg-[#00FF66] text-black border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]'
+                        ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
                     }`}
                   >
@@ -1834,7 +1834,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     onClick={() => setNotifTargetType('specific')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       notifTargetType === 'specific'
-                        ? 'bg-[#00FF66] text-black border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]'
+                        ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
                     }`}
                   >
@@ -1850,7 +1850,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       value={notifTargetUsername}
                       onChange={(e) => setNotifTargetUsername(e.target.value)}
                       placeholder="e.g. gamer_pro (without @)"
-                      className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                      className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
                     />
                   </div>
                 )}
@@ -1865,7 +1865,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     value={notifTitle}
                     onChange={(e) => setNotifTitle(e.target.value)}
                     placeholder="e.g. ⚡ Official Community Announcement"
-                    className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                    className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
                   />
                 </div>
 
@@ -1876,7 +1876,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     value={notifMessage}
                     onChange={(e) => setNotifMessage(e.target.value)}
                     placeholder="Write your official message to members here..."
-                    className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66] resize-none"
+                    className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob resize-none"
                   />
                 </div>
               </div>
@@ -1884,7 +1884,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               <button
                 type="submit"
                 disabled={isSendingNotif}
-                className="w-full py-3 bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,255,102,0.3)] transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3 bg-noob hover:bg-noob/90 text-black font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(217,119,87,0.3)] transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSendingNotif ? (
                   <>
@@ -2048,21 +2048,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       key={t}
                       onClick={() => setContentType(t)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
-                        contentType === t ? 'bg-[#00FF66] text-black' : 'text-zinc-400 hover:text-white'
+                        contentType === t ? 'bg-noob text-black' : 'text-zinc-400 hover:text-white'
                       }`}
                     >
                       {t}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => loadContent(contentType)} className="text-xs text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                <button onClick={() => loadContent(contentType)} className="text-xs text-noob hover:underline flex items-center gap-1 cursor-pointer font-medium">
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingContent ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
 
               {loadingContent ? (
                 <div className="py-12 text-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto mb-2" />
+                  <Loader2 className="w-6 h-6 animate-spin text-noob mx-auto mb-2" />
                   <p className="text-xs text-zinc-400">Loading {contentType}...</p>
                 </div>
               ) : contentItems.length === 0 ? (
@@ -2168,7 +2168,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         <span
                           className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${
                             app.status === 'accepted'
-                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              ? 'bg-emerald-500/20 text-noob border-emerald-500/30'
                               : app.status === 'declined'
                               ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
                               : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
@@ -2186,7 +2186,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/60">
                           <button
                             onClick={() => handleReviewJoinRequest(app.id, 'accepted')}
-                            className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            className="flex-1 py-2 px-2.5 bg-noob hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> Accept
                           </button>
@@ -2306,7 +2306,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         <span
                           className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${
                             app.status === 'accepted'
-                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              ? 'bg-emerald-500/20 text-noob border-emerald-500/30'
                               : app.status === 'declined'
                               ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
                               : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
@@ -2333,7 +2333,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           <>
                             <button
                               onClick={() => handleReviewSparkxRequest(app.id, 'accepted')}
-                              className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              className="flex-1 py-2 px-2.5 bg-noob hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" /> Accept
                             </button>
@@ -2397,7 +2397,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         <span
                           className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${
                             r.status === 'approved'
-                              ? 'bg-emerald-500/20 text-[#00FF66] border-emerald-500/30'
+                              ? 'bg-emerald-500/20 text-noob border-emerald-500/30'
                               : r.status === 'rejected'
                               ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
                               : r.action === 'delete'
@@ -2415,7 +2415,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           <button
                             onClick={() => handleResolveAccountRequest(r, true)}
                             disabled={resolvingRequestId === r.id}
-                            className="flex-1 py-2 px-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                            className="flex-1 py-2 px-2.5 bg-noob hover:opacity-90 text-black rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                           >
                             {r.action === 'delete' && <KeyRound className="w-3.5 h-3.5" />}
                             {resolvingRequestId === r.id ? 'Working...' : 'Approve'}
@@ -2439,7 +2439,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <div className="space-y-3">
               {loadingSettings ? (
                 <div className="py-12 text-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto mb-2" />
+                  <Loader2 className="w-6 h-6 animate-spin text-noob mx-auto mb-2" />
                 </div>
               ) : (
                 <>
@@ -2451,7 +2451,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       </span>
                     </div>
                     <button onClick={handleToggleSignups} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50">
-                      {signupsEnabled ? <ToggleRight className="w-9 h-9 text-[#00FF66]" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                      {signupsEnabled ? <ToggleRight className="w-9 h-9 text-noob" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
                     </button>
                   </div>
 
@@ -2500,7 +2500,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         value={dailyNoobDate}
                         min={new Date().toISOString().slice(0, 10)}
                         onChange={(e) => setDailyNoobDate(e.target.value)}
-                        className="bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                        className="bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-noob"
                       />
                       <input
                         type="text"
@@ -2508,7 +2508,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         onChange={(e) => setDailyNoobPrompt(e.target.value)}
                         placeholder="e.g. Post the funniest picture in your gallery."
                         maxLength={300}
-                        className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                        className="flex-1 bg-zinc-950 text-xs text-white px-3 py-2 rounded-xl border border-zinc-800 outline-none focus:border-noob"
                       />
                       <button
                         onClick={handleSaveDailyNoobTask}
@@ -2645,7 +2645,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         </span>
                       </div>
                       <button onClick={handleToggleNoobRoomsEnabled} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="NOOB Rooms on/off">
-                        {noobRoomsEnabled ? <ToggleRight className="w-9 h-9 text-[#00FF66]" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                        {noobRoomsEnabled ? <ToggleRight className="w-9 h-9 text-noob" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
                       </button>
                     </div>
                     <div>
@@ -2727,7 +2727,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg cursor-pointer"
                           title="Copy link"
                         >
-                          {copiedLinkKey === 'app' ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedLinkKey === 'app' ? <Check className="w-3.5 h-3.5 text-noob" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                         <button
                           onClick={() => shareLink('app', 'NOOB', appLink)}
@@ -2750,7 +2750,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg cursor-pointer"
                           title="Copy link"
                         >
-                          {copiedLinkKey === 'join' ? <Check className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedLinkKey === 'join' ? <Check className="w-3.5 h-3.5 text-noob" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                         <button
                           onClick={() => shareLink('join', 'Join the NOOB team', joinTeamLink)}
@@ -2809,7 +2809,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             {c.redeemedBy ? (
                               <span className="text-zinc-500">used by @{c.redeemedBy}</span>
                             ) : (
-                              <span className="text-[#00FF66] font-bold flex items-center gap-1"><Ticket className="w-3 h-3" /> unused</span>
+                              <span className="text-noob font-bold flex items-center gap-1"><Ticket className="w-3 h-3" /> unused</span>
                             )}
                           </div>
                         ))}

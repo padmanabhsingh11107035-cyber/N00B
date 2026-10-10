@@ -29,7 +29,7 @@ const CATEGORY_STYLE: Record<string, { emoji: string; color: string }> = {
   Study: { emoji: '📚', color: 'from-sky-500/20 to-sky-500/5 border-sky-500/30' },
   General: { emoji: '🎙️', color: 'from-zinc-700/40 to-zinc-800/10 border-zinc-700' }
 };
-const DEFAULT_CATEGORY_STYLE = { emoji: '🎙️', color: 'from-emerald-500/15 to-emerald-500/5 border-[#00FF66]/30' };
+const DEFAULT_CATEGORY_STYLE = { emoji: '🎙️', color: 'from-emerald-500/15 to-emerald-500/5 border-noob/30' };
 
 const SUGGESTED_CATEGORIES = ['Vibe', 'Gaming', 'Study', 'General'];
 
@@ -38,7 +38,7 @@ const SUGGESTED_CATEGORIES = ['Vibe', 'Gaming', 'Study', 'General'];
 // like the tap did nothing at all.
 export const RoomLoadingSpinner: React.FC = () => (
   <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3">
-    <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-[#00FF66] animate-spin" />
+    <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-noob animate-spin" />
     <p className="text-zinc-400 text-sm">Connecting…</p>
   </div>
 );
@@ -126,7 +126,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
   if (!lock.checked) {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-[#00FF66] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-noob animate-spin" />
       </div>
     );
   }
@@ -186,7 +186,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
             <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Live voice rooms</span>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2.5 pr-3.5 py-2 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
+              className="flex items-center gap-1 bg-noob text-black rounded-full pl-2.5 pr-3.5 py-2 text-xs font-bold cursor-pointer hover:bg-noob/90 transition-colors"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Start a room
             </button>
@@ -203,7 +203,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
                   <button
                     key={r.id}
                     onClick={() => setOpenRoom(r)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-3xl border bg-gradient-to-br ${style.color} hover:border-[#00FF66]/50 transition-all cursor-pointer text-left`}
+                    className={`w-full flex items-center gap-4 p-4 rounded-3xl border bg-gradient-to-br ${style.color} hover:border-noob/50 transition-all cursor-pointer text-left`}
                   >
                     <div className="w-12 h-12 rounded-2xl bg-black/30 flex items-center justify-center shrink-0 text-2xl">{style.emoji}</div>
                     <div className="flex-1 min-w-0">
@@ -241,7 +241,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
                 maxLength={60}
                 placeholder="e.g. Late Night Vibes"
                 autoFocus
-                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
               />
             </div>
 
@@ -265,7 +265,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
                 onChange={(e) => setCustomCategory(e.target.value)}
                 maxLength={30}
                 placeholder="Or type your own category…"
-                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
               />
             </div>
 
@@ -277,7 +277,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
                 maxLength={200}
                 rows={2}
                 placeholder="What's this room about?"
-                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66] resize-none"
+                className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob resize-none"
               />
             </div>
 
@@ -285,7 +285,7 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
             <button
               onClick={handleCreate}
               disabled={creating || !newName.trim() || !effectiveCategory()}
-              className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm disabled:opacity-40 cursor-pointer"
+              className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 cursor-pointer"
             >
               {creating ? 'Starting…' : 'Start room'}
             </button>

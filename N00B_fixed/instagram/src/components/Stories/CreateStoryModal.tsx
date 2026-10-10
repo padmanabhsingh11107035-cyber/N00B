@@ -757,7 +757,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="relative w-full max-w-md bg-[#121212] border border-neutral-800 rounded-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
           <button onClick={onClose} className="text-gray-400 hover:text-white p-1 cursor-pointer">
@@ -767,7 +767,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           <button
             onClick={handlePublish}
             disabled={!selectedImage || isUploading || isPublishing}
-            className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full hover:scale-105 transition-transform cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="px-3.5 py-1 bg-noob text-black text-xs font-bold rounded-full hover:scale-105 transition-transform cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {isPublishing ? 'Sharing...' : 'Share'}
           </button>
@@ -790,7 +790,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="flex flex-col items-center gap-3 text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer"
+              className="flex flex-col items-center gap-3 text-zinc-400 hover:text-noob transition-colors cursor-pointer"
             >
               {isUploading ? (
                 <Loader2 className="w-10 h-10 animate-spin" />
@@ -815,10 +815,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           {/* Location Tag Editor */}
           {selectedImage && showLocationInput && (
             <div
-              className="absolute top-14 inset-x-8 bg-black/85 backdrop-blur-md border border-[#00FF66] rounded-xl p-2 shadow-2xl z-20 flex items-center gap-2"
+              className="absolute top-14 inset-x-8 bg-black/85 backdrop-blur-md border border-noob rounded-xl p-2 shadow-2xl z-20 flex items-center gap-2"
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <MapPin className="w-4 h-4 text-[#00FF66] shrink-0" />
+              <MapPin className="w-4 h-4 text-noob shrink-0" />
               <input
                 type="text"
                 placeholder="Enter Location Tag..."
@@ -829,7 +829,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               />
               <button
                 onClick={() => setShowLocationInput(false)}
-                className="shrink-0 px-2 py-1 rounded-full bg-[#00FF66] text-black text-[10px] font-bold cursor-pointer"
+                className="shrink-0 px-2 py-1 rounded-full bg-noob text-black text-[10px] font-bold cursor-pointer"
               >
                 Done
               </button>
@@ -862,10 +862,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             >
               <div className="w-full flex items-center justify-center">
                 <div
-                  className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
                   style={{ fontSize: `${locationGeo.width * 0.1}cqw` }}
                 >
-                  <MapPin className="shrink-0 text-[#00FF66]" style={{ width: '1.1em', height: '1.1em' }} />
+                  <MapPin className="shrink-0 text-noob" style={{ width: '1.1em', height: '1.1em' }} />
                   <span className="font-semibold text-white" style={{ fontSize: '1em' }}>
                     {locationTag.trim()}
                   </span>
@@ -1040,10 +1040,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               >
                 <div className="w-full flex items-center justify-center">
                   <div
-                    className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
+                    className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap"
                     style={{ fontSize: `${layer.width * 0.1}cqw` }}
                   >
-                    <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{layer.tag}</span>
+                    <span className="font-semibold text-noob" style={{ fontSize: '1em' }}>#{layer.tag}</span>
                   </div>
                 </div>
               </EditableStickerLayer>
@@ -1111,10 +1111,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               >
                 <div className="w-full flex items-center justify-center">
                   <div
-                    className="flex flex-col items-center gap-0.5 bg-black/85 backdrop-blur-md border border-[#00FF66]/40 rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
+                    className="flex flex-col items-center gap-0.5 bg-black/85 backdrop-blur-md border border-noob/40 rounded-xl px-4 py-2 shadow-lg whitespace-nowrap"
                     style={{ fontSize: `${layer.width * 0.075}cqw` }}
                   >
-                    <span className="font-bold text-[#00FF66] uppercase tracking-wide" style={{ fontSize: '0.6em' }}>
+                    <span className="font-bold text-noob uppercase tracking-wide" style={{ fontSize: '0.6em' }}>
                       {layer.label}
                     </span>
                     <span className="font-extrabold text-white tabular-nums" style={{ fontSize: '1em' }}>
@@ -1246,7 +1246,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <button
                   onClick={commitTextEditor}
                   disabled={!draftText.trim()}
-                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3.5 py-1 bg-noob text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Done
                 </button>
@@ -1299,7 +1299,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                       key={tab}
                       onClick={() => setStickerTab(tab)}
                       className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors cursor-pointer shrink-0 ${
-                        stickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300 hover:text-white'
+                        stickerTab === tab ? 'bg-noob text-black' : 'text-gray-300 hover:text-white'
                       }`}
                     >
                       {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : tab === 'gif' ? 'GIF' : 'Upload'}
@@ -1320,7 +1320,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                       type="button"
                       onClick={() => stickerUploadInputRef.current?.click()}
                       disabled={isUploadingSticker}
-                      className="flex flex-col items-center gap-2.5 px-6 py-8 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer disabled:opacity-50"
+                      className="flex flex-col items-center gap-2.5 px-6 py-8 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-noob text-zinc-400 hover:text-noob transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {isUploadingSticker ? <Loader2 className="w-8 h-8 animate-spin" /> : <ImagePlus className="w-8 h-8" />}
                       <span className="text-xs font-bold">
@@ -1361,7 +1361,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     value={mentionQuery}
                     onChange={(e) => setMentionQuery(e.target.value)}
                     placeholder="Search people to mention"
-                    className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none placeholder:text-zinc-600"
+                    className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-noob outline-none placeholder:text-zinc-600"
                   />
                 </div>
               </div>
@@ -1413,13 +1413,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <button
                   onClick={commitHashtagEditor}
                   disabled={!draftHashtag.trim()}
-                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3.5 py-1 bg-noob text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Done
                 </button>
               </div>
               <div className="flex-1 flex items-center justify-center p-6">
-                <div className="w-full flex items-center justify-center gap-1 text-2xl font-extrabold text-[#00FF66]">
+                <div className="w-full flex items-center justify-center gap-1 text-2xl font-extrabold text-noob">
                   <span>#</span>
                   <input
                     autoFocus
@@ -1427,7 +1427,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     onChange={(e) => setDraftHashtag(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                     placeholder="hashtag"
                     maxLength={40}
-                    className="bg-transparent text-center focus:outline-none placeholder:text-[#00FF66]/40 min-w-0"
+                    className="bg-transparent text-center focus:outline-none placeholder:text-noob/40 min-w-0"
                     style={{ width: `${Math.max(3, draftHashtag.length || 8)}ch` }}
                   />
                 </div>
@@ -1460,7 +1460,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <button
                   onClick={commitLinkEditor}
                   disabled={!draftLinkUrl.trim()}
-                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3.5 py-1 bg-noob text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Done
                 </button>
@@ -1471,14 +1471,14 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                   value={draftLinkUrl}
                   onChange={(e) => setDraftLinkUrl(e.target.value)}
                   placeholder="https://example.com"
-                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none placeholder:text-white/40"
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-noob outline-none placeholder:text-white/40"
                 />
                 <input
                   value={draftLinkLabel}
                   onChange={(e) => setDraftLinkLabel(e.target.value)}
                   placeholder="Label shown on the sticker (optional)"
                   maxLength={30}
-                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none placeholder:text-white/40"
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-noob outline-none placeholder:text-white/40"
                 />
               </div>
             </div>
@@ -1508,7 +1508,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                       key={tool}
                       onClick={() => setDrawTool(tool)}
                       className={`p-1.5 rounded-full cursor-pointer ${
-                        drawTool === tool ? 'bg-[#00FF66] text-black' : 'bg-black/60 text-white'
+                        drawTool === tool ? 'bg-noob text-black' : 'bg-black/60 text-white'
                       }`}
                       title={tool}
                     >
@@ -1577,7 +1577,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     key={sz}
                     onClick={() => setDrawSize(sz)}
                     className={`rounded-full flex items-center justify-center cursor-pointer transition-colors ${
-                      drawSize === sz ? 'bg-[#00FF66]' : 'bg-neutral-700'
+                      drawSize === sz ? 'bg-noob' : 'bg-neutral-700'
                     }`}
                     style={{ width: '32px', height: '32px' }}
                     title={['Thin', 'Medium', 'Thick'][i]}
@@ -1617,7 +1617,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <button
                   onClick={commitCountdownEditor}
                   disabled={!draftCountdownTarget}
-                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3.5 py-1 bg-noob text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Done
                 </button>
@@ -1629,16 +1629,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                   onChange={(e) => setDraftCountdownLabel(e.target.value)}
                   placeholder="What's counting down? (e.g. New Year)"
                   maxLength={30}
-                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none placeholder:text-white/40"
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-noob outline-none placeholder:text-white/40"
                 />
                 <input
                   type="datetime-local"
                   value={draftCountdownTarget}
                   onChange={(e) => setDraftCountdownTarget(e.target.value)}
-                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none [color-scheme:dark]"
+                  className="w-full bg-white/10 text-center text-sm text-white p-2.5 rounded-lg border border-white/20 focus:border-noob outline-none [color-scheme:dark]"
                 />
                 {draftCountdownTarget && (
-                  <p className="text-[#00FF66] text-xs font-bold">{formatCountdown(new Date(draftCountdownTarget).toISOString())}</p>
+                  <p className="text-noob text-xs font-bold">{formatCountdown(new Date(draftCountdownTarget).toISOString())}</p>
                 )}
               </div>
             </div>
@@ -1669,7 +1669,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 <button
                   onClick={commitQuestionEditor}
                   disabled={!draftQuestionPrompt.trim()}
-                  className="px-3.5 py-1 bg-[#00FF66] text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-3.5 py-1 bg-noob text-black text-xs font-bold rounded-full cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Done
                 </button>
@@ -1772,7 +1772,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               <button
                 onClick={() => setShowPollInput(!showPollInput)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  showPollInput ? 'bg-[#00FF66] text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
+                  showPollInput ? 'bg-noob text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
                 }`}
               >
                 <HelpCircle className="w-3.5 h-3.5" /> Poll Sticker
@@ -1780,7 +1780,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
               <button
                 onClick={() => setShowLocationInput(!showLocationInput)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                  showLocationInput ? 'bg-[#00FF66] text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
+                  showLocationInput ? 'bg-noob text-black font-bold' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
                 }`}
               >
                 <MapPin className="w-3.5 h-3.5" /> Location
@@ -1798,7 +1798,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             {/* Poll Setup: this no longer overlays the photo — it becomes its own page
                 right after this one, with a plain background in the color you pick. */}
             {showPollInput && (
-              <div className="p-3 bg-neutral-950 border border-[#00FF66]/30 rounded-xl space-y-2.5">
+              <div className="p-3 bg-neutral-950 border border-noob/30 rounded-xl space-y-2.5">
                 <p className="text-[10px] text-gray-400">
                   Your poll appears as its own page, right after this photo — not on top of it.
                 </p>
@@ -1807,7 +1807,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                   placeholder="Ask a question for your poll..."
                   value={pollQuestion}
                   onChange={(e) => setPollQuestion(e.target.value)}
-                  className="w-full bg-neutral-900 text-xs text-white p-2 rounded-lg border border-neutral-700 focus:border-[#00FF66] outline-none text-center font-bold"
+                  className="w-full bg-neutral-900 text-xs text-white p-2 rounded-lg border border-neutral-700 focus:border-noob outline-none text-center font-bold"
                 />
                 {/* The answers people can vote for: written by you, 2 to 8 of them */}
                 <div className="space-y-1.5">
@@ -1823,7 +1823,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                         maxLength={MAX_OPTION_LENGTH}
                         placeholder={`Answer ${i + 1}`}
                         onChange={(e) => setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
-                        className="flex-1 min-w-0 bg-neutral-900 text-xs text-white px-2.5 py-2 rounded-lg border border-neutral-700 focus:border-[#00FF66] outline-none font-semibold"
+                        className="flex-1 min-w-0 bg-neutral-900 text-xs text-white px-2.5 py-2 rounded-lg border border-neutral-700 focus:border-noob outline-none font-semibold"
                       />
                       {pollOptions.length > MIN_POLL_OPTIONS && (
                         <button
@@ -1842,7 +1842,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     <button
                       type="button"
                       onClick={() => setPollOptions((prev) => [...prev, ''])}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-neutral-700 text-[11px] font-bold text-gray-300 hover:border-[#00FF66] hover:text-[#00FF66] transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-neutral-700 text-[11px] font-bold text-gray-300 hover:border-noob hover:text-noob transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add answer
                     </button>
@@ -1891,7 +1891,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                         maxWidthPct={95}
                       >
                         <div
-                          className="w-full bg-black/85 border border-[#00FF66]/40 rounded-md p-1.5"
+                          className="w-full bg-black/85 border border-noob/40 rounded-md p-1.5"
                           style={{ fontSize: `${pollGeo.width * 0.045}cqw` }}
                         >
                           <p className="font-bold text-center text-white mb-1 line-clamp-2" style={{ fontSize: '1em' }}>
@@ -1931,7 +1931,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     onClick={() => setFilter(f)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize border transition-all ${
                       filter === f
-                        ? 'border-[#00FF66] bg-[#00FF66]/10 text-[#00FF66]'
+                        ? 'border-noob bg-noob/10 text-noob'
                         : 'border-neutral-700 text-gray-400 hover:text-white'
                     }`}
                   >

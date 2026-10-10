@@ -100,7 +100,7 @@ export const BlockedAccountsModal: React.FC<BlockedAccountsModalProps> = ({
 
         {/* Status toast message */}
         {statusMessage && (
-          <div className="p-2.5 rounded-xl bg-zinc-900 border border-[#00FF66]/40 text-[#00FF66] text-xs font-semibold flex items-center gap-2">
+          <div className="p-2.5 rounded-xl bg-zinc-900 border border-noob/40 text-noob text-xs font-semibold flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             <span>{statusMessage}</span>
           </div>

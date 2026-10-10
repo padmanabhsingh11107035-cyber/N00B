@@ -183,7 +183,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     setPlacedOrderNo(res.order.orderNo);
     persistCart({});
     setShowCheckout(false);
-    confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#00FF66', '#22d3ee', '#ffffff'], zIndex: 9999 });
+    confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#d97757', '#22d3ee', '#ffffff'], zIndex: 9999 });
   };
 
   // The hero's scroll-driven animation listens for the WINDOW's own 'scroll' event and measures
@@ -274,7 +274,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                     setShowCheckout(true);
                   }}
                   disabled={!foodStallEnabled}
-                  className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40"
+                  className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40"
                 >
                   Checkout
                 </button>
@@ -299,7 +299,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
               <button
                 onClick={() => setDeliveryMethod('pickup')}
                 className={`py-2.5 rounded-xl text-xs font-bold border cursor-pointer flex items-center justify-center gap-1.5 ${
-                  deliveryMethod === 'pickup' ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                  deliveryMethod === 'pickup' ? 'bg-noob/15 border-noob/50 text-noob' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                 }`}
               >
                 <StoreIcon className="w-3.5 h-3.5" /> Pickup
@@ -307,7 +307,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
               <button
                 onClick={() => setDeliveryMethod('delivery')}
                 className={`py-2.5 rounded-xl text-xs font-bold border cursor-pointer flex items-center justify-center gap-1.5 ${
-                  deliveryMethod === 'delivery' ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                  deliveryMethod === 'delivery' ? 'bg-noob/15 border-noob/50 text-noob' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                 }`}
               >
                 <Truck className="w-3.5 h-3.5" /> Delivery
@@ -315,19 +315,19 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
             </div>
 
             <div className="space-y-2">
-              <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
+              <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
               {deliveryMethod === 'delivery' && (
                 <>
-                  <input value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="Delivery address" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
+                  <input value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="Delivery address" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
                   <div className="grid grid-cols-2 gap-2">
-                    <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
-                    <input value={state} onChange={(e) => setState(e.target.value)} placeholder="State" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
+                    <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
+                    <input value={state} onChange={(e) => setState(e.target.value)} placeholder="State" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
                   </div>
-                  <input value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="Pincode" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
+                  <input value={pincode} onChange={(e) => setPincode(e.target.value)} placeholder="Pincode" className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
                 </>
               )}
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note for the stall (optional)" maxLength={300} className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50" />
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note for the stall (optional)" maxLength={300} className="w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50" />
             </div>
 
             <div className="space-y-2">
@@ -336,7 +336,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                 <button
                   onClick={() => setPaymentMethod('cash')}
                   className={`py-2.5 rounded-xl text-xs font-bold border cursor-pointer flex items-center justify-center gap-1.5 ${
-                    paymentMethod === 'cash' ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                    paymentMethod === 'cash' ? 'bg-noob/15 border-noob/50 text-noob' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                   }`}
                 >
                   <Banknote className="w-3.5 h-3.5" /> Cash on {deliveryMethod === 'pickup' ? 'Pickup' : 'Delivery'}
@@ -346,7 +346,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                   disabled={!upiId}
                   title={upiId ? undefined : 'The stall has not set up UPI yet'}
                   className={`py-2.5 rounded-xl text-xs font-bold border cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${
-                    paymentMethod === 'upi' ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
+                    paymentMethod === 'upi' ? 'bg-noob/15 border-noob/50 text-noob' : 'bg-zinc-900 border-zinc-800 text-zinc-400'
                   }`}
                 >
                   <Smartphone className="w-3.5 h-3.5" /> UPI
@@ -366,7 +366,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                   )}
                   <a
                     href={upiUri}
-                    className="touch-manipulation w-full py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-black cursor-pointer flex items-center justify-center gap-1.5 hover:opacity-90"
+                    className="touch-manipulation w-full py-2.5 rounded-xl bg-noob text-black text-xs font-black cursor-pointer flex items-center justify-center gap-1.5 hover:opacity-90"
                   >
                     <Smartphone className="w-3.5 h-3.5" /> Pay {formatPrice(total)} via UPI
                   </a>
@@ -382,7 +382,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                     }}
                     className="touch-manipulation w-full py-2 rounded-xl border border-zinc-700 text-zinc-300 text-[11px] font-bold cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    {upiCopied ? <CheckCircle2 className="w-3.5 h-3.5 text-[#00FF66]" /> : <Copy className="w-3.5 h-3.5" />}
+                    {upiCopied ? <CheckCircle2 className="w-3.5 h-3.5 text-noob" /> : <Copy className="w-3.5 h-3.5" />}
                     {upiCopied ? 'Copied' : 'Copy UPI ID'}
                   </button>
                   <p className="text-[10px] text-zinc-500 leading-relaxed">
@@ -395,7 +395,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                       type="checkbox"
                       checked={upiPaymentConfirmed}
                       onChange={(e) => setUpiPaymentConfirmed(e.target.checked)}
-                      className="w-4 h-4 mt-0.5 shrink-0 accent-[#00FF66] cursor-pointer"
+                      className="w-4 h-4 mt-0.5 shrink-0 accent-noob cursor-pointer"
                     />
                     <span className="text-[11px] font-bold text-white">I have completed this UPI payment of {formatPrice(total)}</span>
                   </label>
@@ -426,7 +426,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
             <button
               onClick={handlePlaceOrder}
               disabled={placing || (paymentMethod === 'upi' && !upiPaymentConfirmed)}
-              className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {placing
@@ -458,16 +458,16 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
       {/* Confirmation */}
       {placedOrderNo !== null && (
         <div className="fixed inset-0 z-[99] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setPlacedOrderNo(null)}>
-          <div className="w-full max-w-xs bg-zinc-950 border border-[#00FF66]/40 rounded-3xl p-6 text-center space-y-3" onClick={(e) => e.stopPropagation()}>
-            <div className="fs-check-pop w-14 h-14 rounded-full bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center mx-auto">
-              <Check className="w-7 h-7 text-[#00FF66]" />
+          <div className="w-full max-w-xs bg-zinc-950 border border-noob/40 rounded-3xl p-6 text-center space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="fs-check-pop w-14 h-14 rounded-full bg-noob/15 border border-noob/40 flex items-center justify-center mx-auto">
+              <Check className="w-7 h-7 text-noob" />
             </div>
             <h3 className="text-base font-black text-white">Order #{placedOrderNo} placed!</h3>
             <p className="text-xs text-zinc-400">
               You'll get a notification the moment the stall confirms, when it's ready, and when it's handed over —
               track it anytime from Shop NOOB's Orders tab.
             </p>
-            <button onClick={() => setPlacedOrderNo(null)} className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-black cursor-pointer">
+            <button onClick={() => setPlacedOrderNo(null)} className="w-full py-2.5 rounded-xl bg-noob text-black text-xs font-black cursor-pointer">
               Done
             </button>
           </div>
@@ -476,8 +476,8 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
 
       {/* Added-to-cart toast */}
       {cartToast && (
-        <div className="fs-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[97] bg-zinc-900/95 backdrop-blur-md border border-[#00FF66]/40 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 whitespace-nowrap">
-          <CheckCircle2 className="w-4 h-4 text-[#00FF66] shrink-0" />
+        <div className="fs-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[97] bg-zinc-900/95 backdrop-blur-md border border-noob/40 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 whitespace-nowrap">
+          <CheckCircle2 className="w-4 h-4 text-noob shrink-0" />
           {cartToast}
         </div>
       )}

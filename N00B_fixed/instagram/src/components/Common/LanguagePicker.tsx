@@ -73,7 +73,7 @@ export const LanguagePicker: React.FC<LanguagePickerProps> = ({ value, onSelect,
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search languages"
               autoComplete="off"
-              className="w-full bg-[#141418] text-sm text-white pl-9 pr-3 py-2.5 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none placeholder:text-zinc-600"
+              className="w-full bg-zinc-900 text-sm text-white pl-9 pr-3 py-2.5 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none placeholder:text-zinc-600"
             />
           </div>
         </div>

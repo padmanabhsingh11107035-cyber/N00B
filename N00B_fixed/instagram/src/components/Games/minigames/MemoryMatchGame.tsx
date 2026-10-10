@@ -84,7 +84,7 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onGameOver }) 
     <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
-        <span className="text-xs text-zinc-400 font-semibold">Pairs: <strong className="text-[#00FF66]">{matchesFound} / {ICONS.length}</strong></span>
+        <span className="text-xs text-zinc-400 font-semibold">Pairs: <strong className="text-noob">{matchesFound} / {ICONS.length}</strong></span>
         <span className="text-xs text-zinc-400 font-semibold">Flips: <strong className="text-white">{flipsCount}</strong></span>
       </div>
 
@@ -97,7 +97,7 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onGameOver }) 
             disabled={card.isFlipped || card.isMatched || isLocked}
             className={`h-16 rounded-2xl flex items-center justify-center text-2xl transition-all duration-300 transform cursor-pointer ${
               card.isFlipped || card.isMatched
-                ? 'bg-zinc-900 border border-[#00FF66]/50 shadow-[0_0_10px_rgba(0,255,102,0.2)] rotate-0 scale-100'
+                ? 'bg-zinc-900 border border-noob/50 shadow-[0_0_10px_rgba(217,119,87,0.2)] rotate-0 scale-100'
                 : 'bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/50 hover:scale-105'
             }`}
           >

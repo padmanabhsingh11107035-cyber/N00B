@@ -125,7 +125,7 @@ export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClo
           >
             {undoing ? 'Undoing...' : 'Undo'}
           </button>
-          <button onClick={onClose} className="px-5 py-2.5 bg-[#00FF66] text-black rounded-2xl text-xs font-bold cursor-pointer">
+          <button onClick={onClose} className="px-5 py-2.5 bg-noob text-black rounded-2xl text-xs font-bold cursor-pointer">
             Done
           </button>
         </div>
@@ -177,13 +177,13 @@ export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClo
               value={caption}
               onChange={(e) => setCaption(e.target.value.slice(0, 100))}
               placeholder="Add a caption..."
-              className="w-full bg-zinc-900 text-xs text-white px-3.5 py-2.5 rounded-2xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+              className="w-full bg-zinc-900 text-xs text-white px-3.5 py-2.5 rounded-2xl border border-zinc-800 outline-none focus:border-noob"
             />
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAudience('friends')}
                 className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer border ${
-                  audience === 'friends' ? 'bg-[#00FF66]/20 text-[#00FF66] border-[#00FF66]/40' : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                  audience === 'friends' ? 'bg-noob/20 text-noob border-noob/40' : 'bg-zinc-900 text-zinc-400 border-zinc-800'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" /> Friends
@@ -217,7 +217,7 @@ export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClo
               <button
                 onClick={handleSend}
                 disabled={sending}
-                className="flex-1 max-w-xs py-3 bg-[#00FF66] hover:opacity-90 text-black rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="flex-1 max-w-xs py-3 bg-noob hover:opacity-90 text-black rounded-2xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {sending ? 'Sending...' : 'Send Instant'}

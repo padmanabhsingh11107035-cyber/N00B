@@ -553,7 +553,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             <ArrowLeft className="w-4 h-4" />
           </button>
         )}
-        <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-[#00FF66]">
+        <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-noob">
           <Film className="w-8 h-8" />
         </div>
         <h3 className="text-lg font-bold text-white mb-1">No Reels Yet</h3>
@@ -783,7 +783,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 isLiveAvatar={currentReel.authorIsLiveAvatar}
                 liveAvatarVideoUrl={currentReel.authorLiveAvatarVideoUrl}
                 alt={currentReel.username}
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-[#00FF66]"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-noob"
               />
               {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
                 <div className="relative -ml-3 mt-2 w-6 h-6 rounded-full ring-2 ring-black bg-zinc-800 overflow-hidden shadow-md">
@@ -814,7 +814,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
                 <>
                   <span className="text-[10px] text-zinc-400 font-normal">and</span>
-                  <span className="text-xs font-bold text-[#00FF66] flex items-center gap-1">
+                  <span className="text-xs font-bold text-noob flex items-center gap-1">
                     @{currentReel.collabUsername || currentReel.taggedUsers?.[0]?.username}
                   </span>
                 </>
@@ -830,7 +830,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                 className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
                   isFollowingCreator
                     ? 'bg-black/50 border-neutral-700 text-gray-300'
-                    : 'bg-[#00FF66] border-[#00FF66] text-black'
+                    : 'bg-noob border-noob text-black'
                 }`}
               >
                 {isFollowingCreator ? 'Following' : 'Follow'}
@@ -850,7 +850,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 bg-black/60 border border-[#00FF66]/40 px-2 py-0.5 rounded-full text-[10px] text-[#00FF66] font-medium"
+              className="inline-flex items-center gap-1 bg-black/60 border border-noob/40 px-2 py-0.5 rounded-full text-[10px] text-noob font-medium"
             >
               <ExternalLink className="w-2.5 h-2.5" /> {currentReel.webLink}
             </a>
@@ -865,7 +865,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               }}
               className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                 aiVoiceTranslationActive
-                  ? 'bg-[#00FF66] text-black border-[#00FF66]'
+                  ? 'bg-noob text-black border-noob'
                   : 'bg-black/60 text-purple-300 border-purple-500/40'
               }`}
             >
@@ -876,7 +876,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
           {/* Audio Marquee */}
           <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full px-2.5 py-1 w-fit">
-            <Music className="w-3 h-3 text-[#00FF66] animate-spin" />
+            <Music className="w-3 h-3 text-noob animate-spin" />
             <span className="text-[10px] text-gray-300 font-medium truncate max-w-[200px]">
               {currentReel.audioTrack.title} • {currentReel.audioTrack.artist}
             </span>
@@ -963,7 +963,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           >
             <div
               className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform ${
-                currentReel.isSaved ? 'text-[#00FF66]' : 'text-white'
+                currentReel.isSaved ? 'text-noob' : 'text-white'
               }`}
             >
               <Bookmark className={`w-6 h-6 ${currentReel.isSaved ? 'fill-current' : ''}`} />
@@ -972,7 +972,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
           {/* Audio Spinning Disc */}
           <div className="w-8 h-8 rounded-full border-2 border-neutral-700 overflow-hidden animate-spin bg-neutral-900 flex items-center justify-center">
-            <Music className="w-4 h-4 text-[#00FF66]" />
+            <Music className="w-4 h-4 text-noob" />
           </div>
         </div>
       </div>
@@ -980,7 +980,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && (
         <div
-          className="absolute inset-x-0 bottom-0 z-40 bg-[#0f0f0f]/95 backdrop-blur-md border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60%] flex flex-col animate-in slide-in-from-bottom duration-200"
+          className="absolute inset-x-0 bottom-0 z-40 bg-zinc-950/95 backdrop-blur-md border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60%] flex flex-col animate-in slide-in-from-bottom duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
@@ -1003,7 +1003,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   return (
                     <div key={c.id} className="py-1">
                       <div translate="no" className="p-2 bg-neutral-900 rounded-lg">
-                        <span className="font-bold text-[#00FF66]">@{c.username}:</span> {c.text}
+                        <span className="font-bold text-noob">@{c.username}:</span> {c.text}
                         {c.mediaUrl && c.mediaType && <CommentMediaView url={c.mediaUrl} type={c.mediaType} duration={c.mediaDuration} />}
                         <button
                           type="button"
@@ -1033,9 +1033,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                               {replies.map((r) => (
                                 <div key={r.id} translate="no" className="p-2 bg-neutral-900/70 rounded-lg border-l border-neutral-800">
                                   {r.replyToUsername && r.replyToUsername !== r.username && (
-                                    <span className="text-[#00FF66] font-semibold mr-1">@{r.replyToUsername}</span>
+                                    <span className="text-noob font-semibold mr-1">@{r.replyToUsername}</span>
                                   )}
-                                  <span className="font-bold text-[#00FF66]">@{r.username}:</span> {r.text}
+                                  <span className="font-bold text-noob">@{r.username}:</span> {r.text}
                                   {r.mediaUrl && r.mediaType && <CommentMediaView url={r.mediaUrl} type={r.mediaType} duration={r.mediaDuration} />}
                                   <button
                                     type="button"
@@ -1063,7 +1063,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           {replyingToComment && (
             <div className="flex items-center justify-between px-1 pb-1.5">
               <span className="text-[11px] text-gray-400">
-                Replying to <span className="text-[#00FF66] font-semibold">@{replyingToComment.username}</span>
+                Replying to <span className="text-noob font-semibold">@{replyingToComment.username}</span>
               </span>
               <button type="button" onClick={() => setReplyingToComment(null)} className="text-[11px] text-gray-500 hover:text-white cursor-pointer">
                 Cancel
@@ -1082,12 +1082,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   if (e.key === 'Enter') handlePostComment();
                 }}
                 placeholder={replyingToComment ? `Reply to @${replyingToComment.username}...` : 'Add a comment...'}
-                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
+                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-noob"
               />
               <button
                 onClick={handlePostComment}
                 disabled={(!commentInput.trim() && !commentAttachment) || isPostingComment}
-                className="px-3 py-2 rounded-full bg-[#00FF66] text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-3 py-2 rounded-full bg-noob text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 Post
               </button>
@@ -1141,7 +1141,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     {liveOverlay && (
       <React.Suspense fallback={
         <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
         </div>
       }>
         <LiveStreamView

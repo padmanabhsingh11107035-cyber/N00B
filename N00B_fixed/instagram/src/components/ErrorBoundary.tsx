@@ -61,7 +61,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             )}
             <button
               onClick={this.handleReload}
-              className="w-full py-3 bg-[#00FF66] text-black font-bold rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
+              className="w-full py-3 bg-noob text-black font-bold rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
             >
               Reload NOOB
             </button>

@@ -65,8 +65,8 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({
       <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center">
-              <Contact className="w-4.5 h-4.5 text-[#00FF66]" />
+            <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/30 flex items-center justify-center">
+              <Contact className="w-4.5 h-4.5 text-noob" />
             </div>
             <div>
               <h2 className="text-base font-bold text-white tracking-tight">Find Friends</h2>
@@ -85,13 +85,13 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({
         <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
           {loading ? (
             <div className="py-12 text-center flex flex-col items-center gap-3">
-              <Loader2 className="w-7 h-7 text-[#00FF66] animate-spin" />
+              <Loader2 className="w-7 h-7 text-noob animate-spin" />
               <p className="text-xs text-zinc-400">Looking for friends from your contacts...</p>
             </div>
           ) : (
             <>
               {matchedFromContacts ? (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/30 text-[11px] font-semibold text-[#00FF66]">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-noob/10 border border-noob/30 text-[11px] font-semibold text-noob">
                   <Sparkles className="w-3.5 h-3.5 shrink-0" />
                   <span>We found {suggestions.length} friend{suggestions.length === 1 ? '' : 's'} from your contacts!</span>
                 </div>
@@ -133,7 +133,7 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all ${
                         user.isFollowing
                           ? 'bg-zinc-800 text-zinc-300 border border-white/10'
-                          : 'bg-[#00FF66] text-black shadow-[0_0_12px_rgba(0,255,102,0.25)]'
+                          : 'bg-noob text-black shadow-[0_0_12px_rgba(217,119,87,0.25)]'
                       }`}
                     >
                       {user.isFollowing ? (

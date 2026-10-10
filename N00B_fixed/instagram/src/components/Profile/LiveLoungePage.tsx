@@ -165,7 +165,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
                     {duration && <p className="text-[10px] text-zinc-600">Duration: {duration}</p>}
                     {h.roomCode && <p className="text-[10px] text-zinc-600 font-mono">Code: {h.roomCode}</p>}
                   </div>
-                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${h.roomStatus === 'active' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-zinc-800 text-zinc-400'}`}>
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${h.roomStatus === 'active' ? 'bg-emerald-500/20 text-noob' : 'bg-zinc-800 text-zinc-400'}`}>
                     {h.roomStatus === 'active' ? 'Live' : 'Ended'}
                   </span>
                 </div>
@@ -259,9 +259,9 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setMode('purchase')}
-                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#00FF66]/10 hover:bg-[#00FF66]/15 border border-[#00FF66]/30 transition-colors cursor-pointer"
+                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-noob/10 hover:bg-noob/15 border border-noob/30 transition-colors cursor-pointer"
               >
-                <Coins className="w-6 h-6 text-[#00FF66]" />
+                <Coins className="w-6 h-6 text-noob" />
                 <span className="text-xs font-bold text-white">Pay &amp; Purchase</span>
               </button>
               <button
@@ -315,14 +315,14 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
                 onKeyDown={(e) => { if (e.key === 'Enter' && password && !busy) handlePurchase(); }}
                 placeholder="Password"
                 autoFocus
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-lg tracking-widest text-white placeholder:text-sm placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-lg tracking-widest text-white placeholder:text-sm placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-noob/60"
               />
             </div>
             {error && <p className="text-[11px] text-rose-400 flex items-center gap-1.5 bg-rose-950/30 border border-rose-900/40 rounded-xl p-2.5"><AlertCircle className="w-3.5 h-3.5 shrink-0" /> {error}</p>}
             <button
               onClick={handlePurchase}
               disabled={!password || busy || balance < LIVE_LOUNGE_PRICE}
-              className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               {busy ? 'Processing…' : 'Confirm & Unlock'}
             </button>
@@ -373,7 +373,7 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
         {mode === 'ask-friend' && (
           askSent ? (
             <div className="flex flex-col items-center text-center gap-3 py-8">
-              <CheckCircle2 className="w-10 h-10 text-[#00FF66]" />
+              <CheckCircle2 className="w-10 h-10 text-noob" />
               <p className="text-white text-sm font-bold">Request sent to @{friend?.username}</p>
               <p className="text-zinc-400 text-xs max-w-xs">They'll see it in their Wallet's Payment Requests. Live Lounge unlocks the moment they approve it.</p>
             </div>

@@ -92,13 +92,13 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center">
-              <BarChart2 className="w-5 h-5 text-[#00FF66]" />
+            <div className="w-9 h-9 rounded-xl bg-noob/10 border border-noob/30 flex items-center justify-center">
+              <BarChart2 className="w-5 h-5 text-noob" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-black text-white tracking-tight">Professional Creator Dashboard</h3>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30">
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30">
                   REAL DATA
                 </span>
               </div>
@@ -118,7 +118,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
         {/* If account is not business, show upgrade prompt */}
         {!isBusiness ? (
           <div className="p-8 text-center space-y-5">
-            <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-[#00FF66]">
+            <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-noob">
               <Briefcase className="w-8 h-8" />
             </div>
             <div className="max-w-md mx-auto space-y-2">
@@ -137,7 +137,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
               <button
                 onClick={handleSwitchToBusiness}
                 disabled={switchingToBusiness}
-                className="px-6 py-2.5 rounded-2xl bg-[#00FF66] hover:bg-[#00e65c] text-black font-extrabold text-xs shadow-lg shadow-[#00FF66]/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-2xl bg-noob hover:bg-[#00e65c] text-black font-extrabold text-xs shadow-lg shadow-noob/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {switchingToBusiness ? 'Switching...' : 'Switch to Business Account'}
               </button>
@@ -151,7 +151,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                 onClick={() => setActiveSubTab('insights')}
                 className={`py-3 px-4 border-b-2 transition-all cursor-pointer ${
                   activeSubTab === 'insights'
-                    ? 'border-[#00FF66] text-[#00FF66] font-extrabold'
+                    ? 'border-noob text-noob font-extrabold'
                     : 'border-transparent text-zinc-400 hover:text-white'
                 }`}
               >
@@ -161,7 +161,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                 onClick={() => setActiveSubTab('partnerships')}
                 className={`py-3 px-4 border-b-2 transition-all cursor-pointer ${
                   activeSubTab === 'partnerships'
-                    ? 'border-[#00FF66] text-[#00FF66] font-extrabold'
+                    ? 'border-noob text-noob font-extrabold'
                     : 'border-transparent text-zinc-400 hover:text-white'
                 }`}
               >
@@ -171,7 +171,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                 onClick={() => setActiveSubTab('monetization')}
                 className={`py-3 px-4 border-b-2 transition-all cursor-pointer ${
                   activeSubTab === 'monetization'
-                    ? 'border-[#00FF66] text-[#00FF66] font-extrabold'
+                    ? 'border-noob text-noob font-extrabold'
                     : 'border-transparent text-zinc-400 hover:text-white'
                 }`}
               >
@@ -183,7 +183,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
             <div className="p-6 overflow-y-auto space-y-6">
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center space-y-3 text-zinc-400">
-                  <RefreshCw className="w-6 h-6 animate-spin text-[#00FF66]" />
+                  <RefreshCw className="w-6 h-6 animate-spin text-noob" />
                   <span className="text-xs font-medium">Aggregating authentic account metrics...</span>
                 </div>
               ) : (
@@ -199,7 +199,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                           <span className="text-xl font-black text-white mt-1.5 block">
                             {(insights?.accountsReached || 0).toLocaleString()}
                           </span>
-                          <span className="text-[10px] text-[#00FF66] font-bold flex items-center gap-0.5 mt-1">
+                          <span className="text-[10px] text-noob font-bold flex items-center gap-0.5 mt-1">
                             <TrendingUp className="w-3 h-3" /> Live Organic Reach
                           </span>
                         </div>
@@ -252,7 +252,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                               Calculated continuously from your post & story impressions
                             </span>
                           </div>
-                          <span className="text-xs font-extrabold text-[#00FF66] bg-[#00FF66]/10 px-2.5 py-1 rounded-full border border-[#00FF66]/20">
+                          <span className="text-xs font-extrabold text-noob bg-noob/10 px-2.5 py-1 rounded-full border border-noob/20">
                             +100% Real Tracking
                           </span>
                         </div>
@@ -262,8 +262,8 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                             <AreaChart data={insights?.reachHistory || []}>
                               <defs>
                                 <linearGradient id="reachGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#00FF66" stopOpacity={0.4} />
-                                  <stop offset="95%" stopColor="#00FF66" stopOpacity={0.0} />
+                                  <stop offset="5%" stopColor="#d97757" stopOpacity={0.4} />
+                                  <stop offset="95%" stopColor="#d97757" stopOpacity={0.0} />
                                 </linearGradient>
                               </defs>
                               <XAxis dataKey="date" stroke="#666" fontSize={11} tickLine={false} />
@@ -280,7 +280,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                               <Area
                                 type="monotone"
                                 dataKey="value"
-                                stroke="#00FF66"
+                                stroke="#d97757"
                                 strokeWidth={2.5}
                                 fillOpacity={1}
                                 fill="url(#reachGradient)"
@@ -331,7 +331,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                                 </div>
                                 <div className="w-full bg-zinc-800 rounded-full h-1.5">
                                   <div
-                                    className="bg-[#00FF66] h-1.5 rounded-full"
+                                    className="bg-noob h-1.5 rounded-full"
                                     style={{ width: `${demo.percentage}%` }}
                                   />
                                 </div>
@@ -348,7 +348,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                       <div className="p-5 bg-zinc-900/60 border border-white/5 rounded-2xl space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Briefcase className="w-5 h-5 text-[#00FF66]" />
+                            <Briefcase className="w-5 h-5 text-noob" />
                             <div>
                               <h5 className="text-xs font-bold text-white">Brand Deal Inquiries</h5>
                               <span className="text-[11px] text-zinc-400">
@@ -359,7 +359,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                           <button
                             onClick={() => setIsBrandedPartnershipActive(!isBrandedPartnershipActive)}
                             className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                              isBrandedPartnershipActive ? 'bg-[#00FF66]' : 'bg-zinc-800'
+                              isBrandedPartnershipActive ? 'bg-noob' : 'bg-zinc-800'
                             }`}
                           >
                             <div
@@ -377,7 +377,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                           </div>
                           <div className="flex justify-between items-center py-1">
                             <span className="text-zinc-400">Category:</span>
-                            <span className="font-semibold text-[#00FF66]">{currentUser.businessCategory || 'Creator & Brand'}</span>
+                            <span className="font-semibold text-noob">{currentUser.businessCategory || 'Creator & Brand'}</span>
                           </div>
                         </div>
                       </div>
@@ -388,7 +388,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                     <div className="space-y-4">
                       <div className="p-5 bg-zinc-900/60 border border-white/5 rounded-2xl space-y-3">
                         <div className="flex items-center gap-3">
-                          <DollarSign className="w-5 h-5 text-[#00FF66]" />
+                          <DollarSign className="w-5 h-5 text-noob" />
                           <div>
                             <h5 className="text-xs font-bold text-white">Creator Badges & Digital Gifts</h5>
                             <span className="text-[11px] text-zinc-400">
@@ -397,7 +397,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                           </div>
                         </div>
                         <div className="p-3 bg-zinc-950 rounded-xl border border-white/5 text-xs text-zinc-300">
-                          Eligible status: <span className="text-[#00FF66] font-bold">Active & Enrolled</span>
+                          Eligible status: <span className="text-noob font-bold">Active & Enrolled</span>
                         </div>
                       </div>
                     </div>

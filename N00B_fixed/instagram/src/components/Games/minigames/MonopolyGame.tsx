@@ -337,7 +337,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
               key={n}
               onClick={() => updatePlayerCount(n)}
               className={`w-9 h-9 rounded-xl font-bold text-sm cursor-pointer transition-all ${
-                numPlayers === n ? 'bg-[#00FF66] text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                numPlayers === n ? 'bg-noob text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
               }`}
             >
               {n}
@@ -376,7 +376,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         </p>
         <button
           onClick={startGame}
-          className="w-full py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer hover:bg-[#00FF66]/90"
+          className="w-full py-2.5 rounded-2xl bg-noob text-black font-bold text-xs cursor-pointer hover:bg-noob/90"
         >
           Start Game
         </button>
@@ -469,7 +469,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
         </p>
       ) : pendingBuy !== null ? (
         <div className="flex gap-2">
-          <button onClick={buyCurrentProperty} className="px-5 py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-sm cursor-pointer">
+          <button onClick={buyCurrentProperty} className="px-5 py-2.5 rounded-xl bg-noob text-black font-bold text-sm cursor-pointer">
             Buy ${BOARD[pendingBuy].price}
           </button>
           <button onClick={skipBuy} className="px-5 py-2.5 rounded-xl bg-zinc-800 text-white font-bold text-sm cursor-pointer">
@@ -485,7 +485,7 @@ export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMod
           <button
             onClick={rollDice}
             disabled={isRolling || playerTypes[currentPlayer] === 'bot'}
-            className="px-6 py-3 rounded-2xl bg-[#00FF66] text-black font-bold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-noob text-black font-bold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {playerTypes[currentPlayer] === 'bot' ? `Player ${currentPlayer + 1} is rolling...` : diceValue !== null ? `Rolled ${diceValue}` : 'Roll Dice'}
           </button>

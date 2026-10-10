@@ -167,8 +167,8 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
         {successState ? (
           <div className="space-y-5 py-4">
             <div className="flex flex-col items-center text-center gap-3">
-              <div className="w-16 h-16 rounded-full bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center">
-                <CheckCircle2 className="w-8 h-8 text-[#00FF66]" />
+              <div className="w-16 h-16 rounded-full bg-noob/15 border border-noob/40 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-noob" />
               </div>
               <div>
                 <h3 className="text-white text-lg font-bold">Payment Successful</h3>
@@ -185,7 +185,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                   <span className="text-[11px] text-zinc-400 font-bold">Payment ID</span>
                   <button
                     onClick={copyPaymentId}
-                    className="flex items-center gap-1.5 text-[11px] font-bold text-[#00FF66] hover:underline cursor-pointer"
+                    className="flex items-center gap-1.5 text-[11px] font-bold text-noob hover:underline cursor-pointer"
                   >
                     {formatPaymentId(successState.transferId)}
                     {copiedId ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -202,7 +202,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-400">Amount</span>
-                  <span className="text-[#00FF66] font-black">{successState.amount.toLocaleString()} pts</span>
+                  <span className="text-noob font-black">{successState.amount.toLocaleString()} pts</span>
                 </div>
                 {successState.note && (
                   <div className="flex items-center justify-between gap-3">
@@ -216,7 +216,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
                   <span className="text-zinc-400">Status</span>
-                  <span className="text-[#00FF66] font-bold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Success</span>
+                  <span className="text-noob font-bold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Success</span>
                 </div>
               </div>
             </div>
@@ -230,7 +230,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
               </button>
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-bold hover:bg-emerald-400 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-noob text-black text-xs font-bold hover:bg-emerald-400 transition-colors cursor-pointer"
               >
                 Done
               </button>
@@ -242,7 +242,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
               <img
                 src={recipient.avatar || '/noob-logo.svg.jpeg'}
                 alt={recipient.username}
-                className="w-16 h-16 rounded-full object-cover border-2 border-[#00FF66]"
+                className="w-16 h-16 rounded-full object-cover border-2 border-noob"
                 referrerPolicy="no-referrer"
               />
               <div>
@@ -272,7 +272,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 onKeyDown={(e) => { if (e.key === 'Enter' && password && !isSending) handleSend(); }}
                 placeholder="Password"
                 autoFocus
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-lg tracking-widest text-white placeholder:text-sm placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-3 text-lg tracking-widest text-white placeholder:text-sm placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-noob/60"
               />
             </div>
 
@@ -285,7 +285,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
             <button
               onClick={handleSend}
               disabled={!password || isSending}
-              className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
               {isSending ? 'Sending...' : 'Confirm & Send'}
@@ -303,14 +303,14 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                   <button
                     onClick={() => setShowScanner(true)}
                     disabled={resolvingQr}
-                    className="text-[11px] font-bold text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    className="text-[11px] font-bold text-noob hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
                   >
                     <QrCode className="w-3.5 h-3.5" /> {resolvingQr ? 'Looking up...' : 'Scan QR'}
                   </button>
                 )}
               </div>
               {recipient ? (
-                <div className="flex items-center gap-3 p-3 bg-zinc-900 border border-[#00FF66]/40 rounded-2xl">
+                <div className="flex items-center gap-3 p-3 bg-zinc-900 border border-noob/40 rounded-2xl">
                   <img
                     src={recipient.avatar || '/noob-logo.svg.jpeg'}
                     alt={recipient.username}
@@ -374,7 +374,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
               <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
                 Amount to Send
               </label>
-              <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 focus-within:border-[#00FF66]/60">
+              <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 focus-within:border-noob/60">
                 <Coins className="w-4 h-4 text-amber-400 shrink-0" />
                 <input
                   type="number"
@@ -392,7 +392,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                   <button
                     key={q}
                     onClick={() => setAmount(String(q))}
-                    className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-[#00FF66]/50 hover:text-white transition-colors cursor-pointer"
+                    className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-noob/50 hover:text-white transition-colors cursor-pointer"
                   >
                     {q.toLocaleString()}
                   </button>
@@ -400,7 +400,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 <button
                   onClick={() => setAmount(String(balance))}
                   disabled={balance <= 0}
-                  className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-[#00FF66]/50 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                  className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-noob/50 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
                 >
                   Max
                 </button>
@@ -422,7 +422,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 value={note}
                 onChange={(e) => setNote(e.target.value.slice(0, 140))}
                 placeholder="e.g. thanks for the help!"
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-noob/60"
               />
             </div>
 
@@ -435,7 +435,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
             <button
               onClick={() => setConfirmingWithPassword(true)}
               disabled={!recipient || !isValidAmount || exceedsBalance}
-              className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
               {recipient ? `Send to @${recipient.username}` : 'Send Points'}

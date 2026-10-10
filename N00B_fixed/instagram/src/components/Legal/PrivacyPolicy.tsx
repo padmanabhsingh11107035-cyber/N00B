@@ -12,7 +12,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center text-[#00FF66]">
+            <div className="w-10 h-10 rounded-2xl bg-noob/10 border border-noob/30 flex items-center justify-center text-noob">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -31,7 +31,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
         {/* Scrollable Content */}
         <div className="overflow-y-auto pr-2 my-4 space-y-5 text-xs text-zinc-300 leading-relaxed scrollbar-thin scrollbar-thumb-zinc-700">
           <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-[#00FF66] font-bold text-sm">
+            <div className="flex items-center gap-2 text-noob font-bold text-sm">
               <Lock className="w-4 h-4" />
               <span>Your Privacy Matters at NOOB</span>
             </div>
@@ -44,7 +44,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Database className="w-4 h-4 text-[#00FF66]" />
+              <Database className="w-4 h-4 text-noob" />
               1. Information We Collect
             </h3>
             <p>We collect information provided directly when you register and interact on NOOB:</p>
@@ -58,7 +58,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Eye className="w-4 h-4 text-[#00FF66]" />
+              <Eye className="w-4 h-4 text-noob" />
               2. How We Use Your Information
             </h3>
             <p>Your data is used strictly for core social interaction functions:</p>
@@ -72,7 +72,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Lock className="w-4 h-4 text-[#00FF66]" />
+              <Lock className="w-4 h-4 text-noob" />
               3. Data Protection & Security
             </h3>
             <p>
@@ -83,7 +83,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#00FF66]" />
+              <Users className="w-4 h-4 text-noob" />
               4. Sharing & Third Parties
             </h3>
             <p>
@@ -96,7 +96,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Bell className="w-4 h-4 text-[#00FF66]" />
+              <Bell className="w-4 h-4 text-noob" />
               5. Your Controls
             </h3>
             <p>
@@ -107,7 +107,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Trash2 className="w-4 h-4 text-[#00FF66]" />
+              <Trash2 className="w-4 h-4 text-noob" />
               6. Deleting Your Account
             </h3>
             <p>
@@ -124,7 +124,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
         <div className="pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-6 py-2.5 rounded-xl bg-noob text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Understood & Close</span>

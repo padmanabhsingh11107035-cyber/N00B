@@ -879,9 +879,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
         <div className={`w-16 h-16 rounded-full flex items-center justify-center border ${
-          copy.tone === 'bad' ? 'bg-red-500/15 border-red-500/40' : copy.tone === 'warn' ? 'bg-amber-500/15 border-amber-500/40' : 'bg-[#00FF66]/15 border-[#00FF66]/40'
+          copy.tone === 'bad' ? 'bg-red-500/15 border-red-500/40' : copy.tone === 'warn' ? 'bg-amber-500/15 border-amber-500/40' : 'bg-noob/15 border-noob/40'
         }`}>
-          {copy.tone === 'bad' ? <UserX className="w-8 h-8 text-red-400" /> : copy.tone === 'warn' ? <AlertCircle className="w-8 h-8 text-amber-400" /> : <CheckCircle2 className="w-8 h-8 text-[#00FF66]" />}
+          {copy.tone === 'bad' ? <UserX className="w-8 h-8 text-red-400" /> : copy.tone === 'warn' ? <AlertCircle className="w-8 h-8 text-amber-400" /> : <CheckCircle2 className="w-8 h-8 text-noob" />}
         </div>
         <div>
           <h2 className="text-white text-lg font-bold">{copy.title}</h2>
@@ -892,7 +892,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
             <Clock className="w-3.5 h-3.5" /> Call lasted {durationText}
           </div>
         )}
-        <button onClick={onClose} className="mt-2 bg-[#00FF66] text-black font-bold rounded-full px-8 py-2.5 text-sm">Done</button>
+        <button onClick={onClose} className="mt-2 bg-noob text-black font-bold rounded-full px-8 py-2.5 text-sm">Done</button>
       </div>
     );
   }
@@ -1114,7 +1114,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
                   <div key={p.userId} className="flex items-center gap-2 p-2 rounded-xl bg-white/5">
                     <AvatarMedia src={p.avatar} alt={p.username} className="w-8 h-8 rounded-full object-cover" />
                     <span className="flex-1 text-xs text-white truncate">{p.username}</span>
-                    <button onClick={() => admitLiveLoungeParticipant(roomId!, p.userId, true).then(() => refreshParticipants(roomId!))} className="p-1.5 bg-[#00FF66]/20 text-[#00FF66] rounded-lg"><UserCheck className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => admitLiveLoungeParticipant(roomId!, p.userId, true).then(() => refreshParticipants(roomId!))} className="p-1.5 bg-noob/20 text-noob rounded-lg"><UserCheck className="w-3.5 h-3.5" /></button>
                     <button onClick={() => admitLiveLoungeParticipant(roomId!, p.userId, false).then(() => refreshParticipants(roomId!))} className="p-1.5 bg-red-500/20 text-red-400 rounded-lg"><UserX className="w-3.5 h-3.5" /></button>
                   </div>
                 ))}
@@ -1166,7 +1166,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
                 <AvatarMedia src={u.avatar} alt={u.username} className="w-8 h-8 rounded-full object-cover" />
                 <span className="flex-1 text-xs text-white truncate">{u.username}</span>
                 {invitedIds.has(u.id) ? (
-                  <span className="text-[10px] text-[#00FF66] font-bold px-2">Invited</span>
+                  <span className="text-[10px] text-noob font-bold px-2">Invited</span>
                 ) : (
                   <button onClick={() => handleInvite(u.id)} className="p-1.5 bg-purple-500/20 text-purple-300 rounded-lg text-[10px] font-bold px-2">Invite</button>
                 )}

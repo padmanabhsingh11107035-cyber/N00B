@@ -92,7 +92,7 @@ export const ChessOnlineMatch: React.FC<ChessOnlineMatchProps> = ({
   return (
     <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
       <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
-        <div className={`flex items-center gap-1.5 text-xs font-bold ${myTurn ? 'text-[#00FF66]' : 'text-zinc-500'}`}>
+        <div className={`flex items-center gap-1.5 text-xs font-bold ${myTurn ? 'text-noob' : 'text-zinc-500'}`}>
           <UserPlus className="w-3.5 h-3.5" />
           <span>You ({myColor === 'w' ? 'White' : 'Black'})</span>
         </div>

@@ -134,13 +134,13 @@ export const MusicPicker: React.FC<MusicPickerProps> = ({ onSelect, onClose, cur
         <div className="flex items-center gap-1.5 bg-black/60 rounded-full p-1">
           <button
             onClick={() => setTab('library')}
-            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide cursor-pointer ${tab === 'library' ? 'bg-[#00FF66] text-black' : 'text-gray-300'}`}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide cursor-pointer ${tab === 'library' ? 'bg-noob text-black' : 'text-gray-300'}`}
           >
             NOOB Songs
           </button>
           <button
             onClick={() => setTab('record')}
-            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide cursor-pointer ${tab === 'record' ? 'bg-[#00FF66] text-black' : 'text-gray-300'}`}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide cursor-pointer ${tab === 'record' ? 'bg-noob text-black' : 'text-gray-300'}`}
           >
             Record
           </button>
@@ -157,7 +157,7 @@ export const MusicPicker: React.FC<MusicPickerProps> = ({ onSelect, onClose, cur
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search NOOB songs"
-              className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none placeholder:text-zinc-600"
+              className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-noob outline-none placeholder:text-zinc-600"
             />
           </div>
           <div className="flex-1 overflow-y-auto space-y-1.5">
@@ -212,7 +212,7 @@ export const MusicPicker: React.FC<MusicPickerProps> = ({ onSelect, onClose, cur
                 <button onClick={discardRecording} disabled={recordState === 'uploading'} className="px-3.5 py-1.5 rounded-full bg-neutral-800 text-white text-xs font-bold cursor-pointer disabled:opacity-40">
                   Discard
                 </button>
-                <button onClick={useRecording} disabled={recordState === 'uploading'} className="px-3.5 py-1.5 rounded-full bg-[#00FF66] text-black text-xs font-bold cursor-pointer disabled:opacity-40 flex items-center gap-1.5">
+                <button onClick={useRecording} disabled={recordState === 'uploading'} className="px-3.5 py-1.5 rounded-full bg-noob text-black text-xs font-bold cursor-pointer disabled:opacity-40 flex items-center gap-1.5">
                   <Check className="w-3.5 h-3.5" /> {recordState === 'uploading' ? 'Uploading...' : 'Use this recording'}
                 </button>
               </div>

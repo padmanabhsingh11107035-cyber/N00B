@@ -378,7 +378,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               {primaryTaggedUser && (
                 <>
                   <span className="text-[11px] text-zinc-400 font-medium">and</span>
-                  <span className="text-xs font-bold text-[#00FF66] flex items-center gap-1 hover:underline cursor-pointer">
+                  <span className="text-xs font-bold text-noob flex items-center gap-1 hover:underline cursor-pointer">
                     @{primaryTaggedUser.username}
                   </span>
                 </>
@@ -388,7 +388,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="flex items-center gap-2 text-[10px] text-zinc-400">
               {post.location ? (
                 <div className="flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5 text-[#00FF66]" />
+                  <MapPin className="w-2.5 h-2.5 text-noob" />
                   <span className="truncate max-w-[150px]">{post.location}</span>
                 </div>
               ) : (
@@ -447,7 +447,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     }}
                     className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
                   >
-                    <Archive className="w-4 h-4 text-[#00FF66]" /> {post.isArchived ? 'Unarchive Post' : 'Archive Post'}
+                    <Archive className="w-4 h-4 text-noob" /> {post.isArchived ? 'Unarchive Post' : 'Archive Post'}
                   </button>
                   <button
                     onClick={() => {
@@ -606,10 +606,10 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <div className="w-full flex items-center justify-center">
                     <button
                       onClick={(e) => { e.stopPropagation(); onSelectCategory && onSelectCategory(sticker.data?.tag); }}
-                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
                       style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}
                     >
-                      <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                      <span className="font-semibold text-noob" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
                     </button>
                   </div>
                 </div>
@@ -671,17 +671,17 @@ export const PostCard: React.FC<PostCardProps> = ({
                     </span>
                   )}
                 </div>
-                <Tag className="w-3 h-3 text-[#00FF66] ml-1.5" />
+                <Tag className="w-3 h-3 text-noob ml-1.5" />
               </button>
 
               {showTagPill && (
-                <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-[#00FF66]/50 shadow-2xl backdrop-blur-xl min-w-[160px] max-h-48 overflow-y-auto space-y-1.5 animate-in zoom-in-90 duration-150">
+                <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-noob/50 shadow-2xl backdrop-blur-xl min-w-[160px] max-h-48 overflow-y-auto space-y-1.5 animate-in zoom-in-90 duration-150">
                   {currentSlide.taggedUsers.map((t) => (
                     <div key={t.userId} className="flex items-center gap-2">
                       <img
                         src={t.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                         alt={t.username}
-                        className="w-6 h-6 rounded-full object-cover ring-1 ring-[#00FF66]"
+                        className="w-6 h-6 rounded-full object-cover ring-1 ring-noob"
                         referrerPolicy="no-referrer"
                       />
                       <span className="text-[11px] font-bold truncate">{t.displayName || t.username}</span>
@@ -700,23 +700,23 @@ export const PostCard: React.FC<PostCardProps> = ({
                 }}
                 className="px-2.5 py-1 rounded-full bg-black/80 hover:bg-black text-white text-[10px] font-bold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-lg transition-transform hover:scale-105"
               >
-                <Tag className="w-3 h-3 text-[#00FF66]" />
+                <Tag className="w-3 h-3 text-noob" />
                 <span>@{primaryTaggedUser.username}</span>
               </button>
 
               {/* Tag popover bubble */}
               {showTagPill && (
-                <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-[#00FF66]/50 shadow-2xl backdrop-blur-xl flex items-center gap-2 min-w-[140px] animate-in zoom-in-90 duration-150">
+                <div className="absolute bottom-9 left-0 bg-black/95 text-white p-2 rounded-xl border border-noob/50 shadow-2xl backdrop-blur-xl flex items-center gap-2 min-w-[140px] animate-in zoom-in-90 duration-150">
                   <img
                     src={primaryTaggedUser.avatar}
                     alt={primaryTaggedUser.username}
-                    className="w-6 h-6 rounded-full object-cover ring-1 ring-[#00FF66]"
+                    className="w-6 h-6 rounded-full object-cover ring-1 ring-noob"
                   />
                   <div className="min-w-0">
                     <span className="text-[11px] font-bold block truncate">
                       {primaryTaggedUser.displayName || primaryTaggedUser.username}
                     </span>
-                    <span className="text-[9px] text-[#00FF66] block">Tagged Profile</span>
+                    <span className="text-[9px] text-noob block">Tagged Profile</span>
                   </div>
                 </div>
               )}
@@ -753,7 +753,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
           {/* Product / LiDAR Tag Indicator */}
           {currentSlide.productTags && currentSlide.productTags.length > 0 && (
-            <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-md border border-green-500/40 rounded-xl px-2.5 py-1 text-[10px] text-[#00FF66] flex items-center gap-1.5 shadow-lg">
+            <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-md border border-green-500/40 rounded-xl px-2.5 py-1 text-[10px] text-noob flex items-center gap-1.5 shadow-lg">
               <Tag className="w-3 h-3" />
               <span>{currentSlide.productTags[0].name} ({currentSlide.productTags[0].price})</span>
             </div>
@@ -781,7 +781,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           {primaryTaggedUser && (
             <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
               <span className="text-[10px] uppercase tracking-wider text-zinc-400">Co-authored with:</span>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-xs font-bold text-[#00FF66]">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-xs font-bold text-noob">
                 <img
                   src={primaryTaggedUser.avatar}
                   alt={primaryTaggedUser.username}
@@ -850,7 +850,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <div
                   key={idx}
                   className={`h-1.5 rounded-full transition-all duration-200 ${
-                    idx === currentSlideIndex ? 'w-4 bg-[#00FF66]' : 'w-1.5 bg-zinc-700'
+                    idx === currentSlideIndex ? 'w-4 bg-noob' : 'w-1.5 bg-zinc-700'
                   }`}
                 />
               ))}
@@ -862,11 +862,11 @@ export const PostCard: React.FC<PostCardProps> = ({
             id={`save-btn-${post.id}`}
             onClick={() => onToggleSave(post.id)}
             className={`transition-transform active:scale-125 cursor-pointer ${
-              post.isSaved ? 'text-[#00FF66]' : 'text-white hover:text-zinc-300'
+              post.isSaved ? 'text-noob' : 'text-white hover:text-zinc-300'
             }`}
             title={post.isSaved ? 'Remove from Saved' : 'Save to Collection'}
           >
-            <Bookmark className={`w-6 h-6 ${post.isSaved ? 'fill-current stroke-[#00FF66]' : 'stroke-current'}`} />
+            <Bookmark className={`w-6 h-6 ${post.isSaved ? 'fill-current stroke-noob' : 'stroke-current'}`} />
           </button>
         </div>
 
@@ -901,7 +901,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Distinct Slide Caption (if present) */}
         {currentSlide?.caption && (
-          <div className="mt-1 text-[11px] text-[#00FF66] italic flex items-center gap-1">
+          <div className="mt-1 text-[11px] text-noob italic flex items-center gap-1">
             <span>↳ Slide note:</span> {currentSlide.caption}
           </div>
         )}
@@ -913,7 +913,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               <span
                 key={idx}
                 onClick={() => onSelectCategory && onSelectCategory(tag.replace('#', ''))}
-                className="text-[11px] text-[#00FF66]/80 hover:text-[#00FF66] hover:underline cursor-pointer"
+                className="text-[11px] text-noob/80 hover:text-noob hover:underline cursor-pointer"
               >
                 {tag}
               </span>
@@ -927,7 +927,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             href={post.webLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] text-[#00FF66] hover:underline mt-1.5 font-medium"
+            className="inline-flex items-center gap-1 text-[11px] text-noob hover:underline mt-1.5 font-medium"
           >
             <ExternalLink className="w-3 h-3" /> {post.webLink}
           </a>
@@ -940,7 +940,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             onClick={(e) => { e.stopPropagation(); toggleAudioTrackPreview(); }}
             className="flex items-center gap-1.5 text-[10px] text-zinc-400 mt-2 bg-zinc-900/80 hover:bg-zinc-800 rounded-full px-2.5 py-1 w-fit border border-white/5 cursor-pointer transition-colors"
           >
-            {isAudioTrackPlaying ? <Pause className="w-3 h-3 text-[#00FF66]" /> : <Volume2 className="w-3 h-3 text-[#00FF66] animate-pulse" />}
+            {isAudioTrackPlaying ? <Pause className="w-3 h-3 text-noob" /> : <Volume2 className="w-3 h-3 text-noob animate-pulse" />}
             <span className="truncate max-w-[220px]">
               {post.audioTrack.title}{post.audioTrack.artist ? ` · ${post.audioTrack.artist}` : ''}
             </span>

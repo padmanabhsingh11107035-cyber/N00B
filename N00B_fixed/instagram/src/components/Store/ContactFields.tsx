@@ -32,7 +32,7 @@ export function prefillFromProfile(user: User, saved: Partial<ShopDetails>): Sho
 }
 
 export const inputClass =
-  'w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50 placeholder:text-zinc-600';
+  'w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50 placeholder:text-zinc-600';
 
 const Field: React.FC<{ label: string; children: React.ReactNode; hint?: string }> = ({ label, children, hint }) => (
   <label className="block space-y-1">

@@ -75,7 +75,7 @@ export const ColorRushGame: React.FC<ColorRushGameProps> = ({
   return (
     <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
       <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800 text-xs">
-        <span className="font-bold text-zinc-300">Matches: <strong className="text-[#00FF66]">{score} / {targetScore}</strong></span>
+        <span className="font-bold text-zinc-300">Matches: <strong className="text-noob">{score} / {targetScore}</strong></span>
         <span className="font-bold text-zinc-300">Time: <strong className="text-cyan-400">{timeLeft}s</strong></span>
       </div>
 

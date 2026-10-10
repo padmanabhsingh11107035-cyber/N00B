@@ -41,7 +41,7 @@ export const DailyMissions: React.FC<DailyMissionsProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg max-h-[92vh] bg-gradient-to-b from-[#111827] via-[#0f172a] to-[#020617] border border-amber-500/30 rounded-3xl p-5 md:p-6 shadow-2xl overflow-y-auto">
+      <div className="relative w-full max-w-lg max-h-[92vh] bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950 border border-amber-500/30 rounded-3xl p-5 md:p-6 shadow-2xl overflow-y-auto">
         {/* Ambient Top Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-36 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
 

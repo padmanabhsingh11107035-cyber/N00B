@@ -81,7 +81,7 @@ export const AdminOrdersPanel: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by order #, @username, name, phone, or email..."
-            className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+            className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
           />
         </div>
         <button onClick={load} disabled={loading} className="p-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl border border-zinc-800 cursor-pointer disabled:opacity-50" title="Refresh">
@@ -95,7 +95,7 @@ export const AdminOrdersPanel: React.FC = () => {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold capitalize whitespace-nowrap cursor-pointer border ${
-              filter === f ? 'border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
+              filter === f ? 'border-noob text-noob bg-noob/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
             }`}
           >
             {f}

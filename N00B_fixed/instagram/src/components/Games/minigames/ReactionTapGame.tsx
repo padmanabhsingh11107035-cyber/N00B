@@ -57,11 +57,11 @@ export const ReactionTapGame: React.FC<ReactionTapGameProps> = ({ onGameOver }) 
         onClick={handleTap}
         className={`w-full h-64 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all select-none shadow-2xl border-2 ${
           state === 'idle'
-            ? 'bg-zinc-900 border-zinc-700 hover:border-[#00FF66]'
+            ? 'bg-zinc-900 border-zinc-700 hover:border-noob'
             : state === 'waiting'
             ? 'bg-red-950/80 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
             : state === 'ready'
-            ? 'bg-[#00FF66] border-white text-black shadow-[0_0_30px_#00FF66]'
+            ? 'bg-noob border-white text-black shadow-[0_0_30px_#d97757]'
             : state === 'too_early'
             ? 'bg-amber-950 border-amber-500'
             : 'bg-emerald-950 border-emerald-400'
@@ -69,7 +69,7 @@ export const ReactionTapGame: React.FC<ReactionTapGameProps> = ({ onGameOver }) 
       >
         {state === 'idle' && (
           <>
-            <Zap className="w-12 h-12 text-[#00FF66] mb-2" />
+            <Zap className="w-12 h-12 text-noob mb-2" />
             <h3 className="text-xl font-black text-white">Tap to Start</h3>
             <p className="text-xs text-zinc-400 mt-1">When the screen turns GREEN, tap as fast as you can!</p>
           </>
@@ -98,7 +98,7 @@ export const ReactionTapGame: React.FC<ReactionTapGameProps> = ({ onGameOver }) 
 
         {state === 'success' && (
           <>
-            <h3 className="text-3xl font-black text-[#00FF66]">{reactionTime} ms</h3>
+            <h3 className="text-3xl font-black text-noob">{reactionTime} ms</h3>
             <p className="text-xs text-emerald-300 mt-1">
               {reactionTime! <= 380 ? '⚡ Lightning Fast Reflexes! (Win)' : 'Good effort!'}
             </p>

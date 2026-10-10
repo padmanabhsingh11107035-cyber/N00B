@@ -180,7 +180,7 @@ export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value,
   // (much smaller) box instead of covering the viewport.
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-sm bg-[#141418] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl">
+      <div className="w-full sm:max-w-sm bg-zinc-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <button
             type="button"
@@ -228,7 +228,7 @@ export const BirthdayWheelPicker: React.FC<BirthdayWheelPickerProps> = ({ value,
           <button
             type="button"
             onClick={handleConfirm}
-            className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+            className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
           >
             Confirm
           </button>

@@ -162,7 +162,7 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
               <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">{error}</div>
             )}
             {successMsg && (
-              <div className="p-2.5 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/30 text-xs text-[#00FF66]">
+              <div className="p-2.5 rounded-xl bg-noob/10 border border-noob/30 text-xs text-noob">
                 {successMsg}
               </div>
             )}

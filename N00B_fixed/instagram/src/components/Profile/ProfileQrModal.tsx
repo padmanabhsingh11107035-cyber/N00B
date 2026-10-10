@@ -39,7 +39,7 @@ export const ProfileQrModal: React.FC<ProfileQrModalProps> = ({ targetUser, onSe
 
   return (
     <div className="fixed inset-0 z-[95] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-xs bg-zinc-950 border border-[#00FF66]/30 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-xs bg-zinc-950 border border-noob/30 rounded-3xl shadow-2xl overflow-hidden">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
           <h2 className="text-sm font-bold text-white">My QR Code</h2>
           <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
@@ -80,9 +80,9 @@ export const ProfileQrModal: React.FC<ProfileQrModalProps> = ({ targetUser, onSe
             </button>
             <button
               onClick={handleCopyLink}
-              className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-[#00FF66]/50 text-zinc-300 hover:text-white cursor-pointer transition-colors"
+              className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-noob/50 text-zinc-300 hover:text-white cursor-pointer transition-colors"
             >
-              {copied ? <Check className="w-4 h-4 text-[#00FF66]" /> : <Copy className="w-4 h-4 text-[#00FF66]" />}
+              {copied ? <Check className="w-4 h-4 text-noob" /> : <Copy className="w-4 h-4 text-noob" />}
               <span className="text-[10px] font-bold">{copied ? 'Copied' : 'Copy account link'}</span>
             </button>
           </div>

@@ -183,7 +183,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
               onClick={() => setShowMyQr(true)}
               title="Your QR code — let someone scan it to send you NOOB Points"
               aria-label="Show your QR code"
-              className="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#00FF66]/50 flex items-center justify-center text-zinc-300 hover:text-[#00FF66] shrink-0 cursor-pointer transition-colors"
+              className="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-noob/50 flex items-center justify-center text-zinc-300 hover:text-noob shrink-0 cursor-pointer transition-colors"
             >
               <QrCode className="w-4.5 h-4.5" />
             </button>
@@ -239,7 +239,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
 
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-right shrink-0">
               <span className="text-[10px] text-zinc-400 uppercase font-bold block">Badges Earned</span>
-              <span className="text-xl font-extrabold text-[#00FF66]">
+              <span className="text-xl font-extrabold text-noob">
                 {unlockedBadgesCount} / {badges.length}
               </span>
             </div>
@@ -255,7 +255,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
             </div>
             <div className="w-full bg-zinc-800/80 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-yellow-400 to-[#00FF66] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-yellow-400 to-noob h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${Math.min(100, Math.round((exactPoints / (exactPoints < 500 ? 500 : exactPoints < 1000 ? 1000 : 2500)) * 100))}%`
                 }}
@@ -267,20 +267,20 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
         {/* Send / Gift Points */}
         <button
           onClick={() => setShowSendPoints(true)}
-          className="w-full p-3 rounded-2xl bg-[#00FF66]/10 hover:bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-between transition-colors cursor-pointer group"
+          className="w-full p-3 rounded-2xl bg-noob/10 hover:bg-noob/15 border border-noob/30 flex items-center justify-between transition-colors cursor-pointer group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/40 flex items-center justify-center text-[#00FF66] shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-noob/20 border border-noob/40 flex items-center justify-center text-noob shrink-0">
               <Send className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <span className="text-xs font-bold text-white block group-hover:text-[#00FF66] transition-colors">
+              <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
                 Send / Gift Points
               </span>
               <span className="text-[10px] text-zinc-400 block">Transfer NOOB Points to another user</span>
             </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF66] transition-colors" />
+          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-noob transition-colors" />
         </button>
 
         {/* Payment Requests (friends asking you to pay for something) */}
@@ -363,7 +363,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
               <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase block">Gaming Won</span>
                 <span className="text-xl font-black text-white block mt-1">{gamesWon}</span>
-                <span className="text-[10px] text-[#00FF66] font-semibold mt-0.5 block">+50 pts / win</span>
+                <span className="text-[10px] text-noob font-semibold mt-0.5 block">+50 pts / win</span>
               </div>
               <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase block">Matches Played</span>
@@ -384,7 +384,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
 
             {/* Quick Summary Banner */}
             <div className="p-3.5 bg-zinc-900/40 border border-white/5 rounded-2xl flex items-center gap-3">
-              <Info className="w-5 h-5 text-[#00FF66] shrink-0" />
+              <Info className="w-5 h-5 text-noob shrink-0" />
               <div className="text-xs text-zinc-300">
                 <p className="font-semibold text-white">Real-Time Sync</p>
                 <p className="text-[11px] text-zinc-400">
@@ -405,7 +405,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
                   onClick={() => handleCelebrateBadge(b)}
                   className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
                     b.isUnlocked
-                      ? 'bg-zinc-900/80 border-zinc-700 hover:border-[#00FF66]/60 hover:shadow-md'
+                      ? 'bg-zinc-900/80 border-zinc-700 hover:border-noob/60 hover:shadow-md'
                       : 'bg-zinc-950/60 border-zinc-900 opacity-60'
                   }`}
                 >
@@ -422,7 +422,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
                     <div className="flex items-center justify-between gap-1">
                       <h4 className="text-xs font-bold text-white truncate">{b.name}</h4>
                       {b.isUnlocked ? (
-                        <span className="text-[9px] font-extrabold text-[#00FF66] bg-[#00FF66]/10 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                        <span className="text-[9px] font-extrabold text-noob bg-noob/10 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
                           <CheckCircle2 className="w-2.5 h-2.5" /> Unlocked
                         </span>
                       ) : (
@@ -474,7 +474,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
                       </div>
                       <span
                         className={`text-xs font-bold shrink-0 pl-2 ${
-                          tx.amount >= 0 ? 'text-[#00FF66]' : 'text-rose-400'
+                          tx.amount >= 0 ? 'text-noob' : 'text-rose-400'
                         }`}
                       >
                         {tx.amount >= 0 ? '+' : ''}
@@ -493,15 +493,15 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
               <div className="space-y-2.5 text-xs">
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
                   <span className="text-zinc-300">🎮 Win PvP / Mini-Game Matches</span>
-                  <span className="font-bold text-[#00FF66]">+50 to +200 pts</span>
+                  <span className="font-bold text-noob">+50 to +200 pts</span>
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
                   <span className="text-zinc-300">📸 Publish Image Post or Reel</span>
-                  <span className="font-bold text-[#00FF66]">+25 pts</span>
+                  <span className="font-bold text-noob">+25 pts</span>
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
                   <span className="text-zinc-300">💬 Comments &amp; High-Engagement Reactions</span>
-                  <span className="font-bold text-[#00FF66]">+5 pts</span>
+                  <span className="font-bold text-noob">+5 pts</span>
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
                   <span className="text-zinc-300">🏆 Top 10 Global Leaderboard Finish</span>

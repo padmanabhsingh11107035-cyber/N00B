@@ -61,14 +61,14 @@ export const JoinUsModal: React.FC<JoinUsModalProps> = ({ onClose, closed = fals
           </div>
         ) : done ? (
           <div className="p-8 text-center space-y-3">
-            <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
+            <CheckCircle2 className="w-10 h-10 text-noob mx-auto" />
             <h3 className="text-sm font-bold text-white">Application submitted!</h3>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
               Thanks for wanting to help build NOOB. The admin team will review your application.
             </p>
             <button
               onClick={onClose}
-              className="mt-2 px-5 py-2.5 bg-[#00FF66] text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90"
+              className="mt-2 px-5 py-2.5 bg-noob text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90"
             >
               Done
             </button>

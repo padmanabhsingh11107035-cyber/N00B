@@ -151,7 +151,7 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
             </div>
             <button
               onClick={wakeUp}
-              className="px-7 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-bold text-sm shadow-[0_10px_24px_rgba(109,93,252,0.35)] active:scale-95 transition-transform cursor-pointer"
+              className="px-7 py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-white font-bold text-sm shadow-[0_10px_24px_rgba(109,93,252,0.35)] active:scale-95 transition-transform cursor-pointer"
             >
               Wake up NOOB
             </button>

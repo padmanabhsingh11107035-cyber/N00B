@@ -39,7 +39,7 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-[#111111] border border-neutral-800 rounded-2xl p-5 shadow-2xl space-y-4">
+      <div className="w-full max-w-sm bg-zinc-900 border border-neutral-800 rounded-2xl p-5 shadow-2xl space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
           <div className="flex items-center gap-2">
@@ -56,7 +56,7 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
         {/* Note Input bubble simulation */}
         <div className="flex flex-col items-center py-2">
           <div className="relative mb-2">
-            <div className="bg-[#181818] border border-[#00FF66] rounded-2xl px-4 py-2 text-xs text-white shadow-xl max-w-[240px] text-center font-medium">
+            <div className="bg-zinc-900 border border-noob rounded-2xl px-4 py-2 text-xs text-white shadow-xl max-w-[240px] text-center font-medium">
               <input
                 type="text"
                 maxLength={60}
@@ -71,13 +71,13 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
               </span>
             </div>
             {/* Bubble pointer tail */}
-            <div className="w-3 h-3 bg-[#181818] border-r border-b border-[#00FF66] rotate-45 mx-auto -mt-1.5" />
+            <div className="w-3 h-3 bg-zinc-900 border-r border-b border-noob rotate-45 mx-auto -mt-1.5" />
           </div>
 
           <img
             src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
             alt=""
-            className="w-16 h-16 rounded-full object-cover ring-2 ring-[#00FF66] mt-1"
+            className="w-16 h-16 rounded-full object-cover ring-2 ring-noob mt-1"
           />
         </div>
 
@@ -87,7 +87,7 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
             Status Location (Optional)
           </label>
           <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5">
-            <MapPin className="w-3.5 h-3.5 text-[#00FF66] mr-2" />
+            <MapPin className="w-3.5 h-3.5 text-noob mr-2" />
             <input
               type="text"
               placeholder="e.g. Robotics Lab, Akihabara..."
@@ -111,7 +111,7 @@ export const StatusNoteModal: React.FC<StatusNoteModalProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-1.5 bg-[#00FF66] text-black font-bold text-xs rounded-xl hover:scale-105 transition-transform"
+            className="px-4 py-1.5 bg-noob text-black font-bold text-xs rounded-xl hover:scale-105 transition-transform"
           >
             Save Note
           </button>

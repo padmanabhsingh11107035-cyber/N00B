@@ -168,9 +168,9 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
       <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         <header className="p-4 sm:p-5 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#00FF66] to-emerald-400 p-[2px]">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-noob to-noob-strong p-[2px]">
               <div className="w-full h-full bg-black rounded-[14px] flex items-center justify-center">
-                <Layers className="w-4 h-4 text-[#00FF66]" />
+                <Layers className="w-4 h-4 text-noob" />
               </div>
             </div>
             <div>
@@ -200,14 +200,14 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Summer Trip, Gaming Setup..."
-                className="w-full bg-zinc-900 border border-zinc-800 text-sm text-white px-3.5 py-2.5 rounded-2xl focus:border-[#00FF66] outline-none transition-colors"
+                className="w-full bg-zinc-900 border border-zinc-800 text-sm text-white px-3.5 py-2.5 rounded-2xl focus:border-noob outline-none transition-colors"
               />
               {isEditing && title.trim() && title.trim() !== existingHighlight?.title && (
                 <button
                   type="button"
                   onClick={handleSaveName}
                   disabled={isSavingName}
-                  className="shrink-0 px-3 py-2.5 bg-[#00FF66] text-black text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
+                  className="shrink-0 px-3 py-2.5 bg-noob text-black text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50"
                 >
                   {isSavingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 </button>
@@ -235,7 +235,7 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-[#00FF66] rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-[#00FF66] transition-colors group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${isUploading ? 'opacity-50' : ''}`}
+                className={`relative aspect-square bg-zinc-900/90 border border-dashed border-zinc-700 hover:border-noob rounded-2xl flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-noob transition-colors group overflow-hidden cursor-pointer disabled:cursor-not-allowed ${isUploading ? 'opacity-50' : ''}`}
               >
                 {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                 <span className="text-[10px] font-bold text-center px-1">
@@ -264,7 +264,7 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                     <img src={m.url} alt="Highlight media" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   )}
                   {idx === 0 && (
-                    <div className="absolute top-1.5 left-1.5 bg-[#00FF66] text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow">COVER</div>
+                    <div className="absolute top-1.5 left-1.5 bg-noob text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow">COVER</div>
                   )}
                   <button
                     type="button"
@@ -312,7 +312,7 @@ export const HighlightManagerModal: React.FC<HighlightManagerModalProps> = ({ ex
                   type="button"
                   onClick={handleCreate}
                   disabled={isSaving || pendingNew.length === 0}
-                  className="px-5 py-2.5 bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-[#00FF66]/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 bg-noob hover:bg-noob/90 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-noob/20 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save Highlight
                 </button>

@@ -175,7 +175,7 @@ export const LongVideoPlaylistsView: React.FC<Props> = ({ onClose, onOpenVideo }
           <div className="max-w-2xl mx-auto space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Bookmark className="w-4 h-4 text-[#00FF66]" />
+                <Bookmark className="w-4 h-4 text-noob" />
                 <span className="text-sm font-bold text-white">Saved ({saved.length})</span>
               </div>
               {saved.length === 0 ? (
@@ -193,7 +193,7 @@ export const LongVideoPlaylistsView: React.FC<Props> = ({ onClose, onOpenVideo }
                 <button
                   onClick={handleCreate}
                   disabled={creating}
-                  className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 bg-noob text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-noob/90 transition-colors disabled:opacity-50"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> New
                 </button>

@@ -70,7 +70,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                 aria-label="Edit product"
                 title="Edit product"
               >
-                <Pencil className="w-4 h-4 text-[#00FF66]" />
+                <Pencil className="w-4 h-4 text-noob" />
               </button>
             )}
             <button onClick={onClose} className="p-2 rounded-full bg-black/60 hover:bg-black/80 cursor-pointer" aria-label="Close">
@@ -105,7 +105,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         <div className="p-5 space-y-3">
           <h2 className="text-lg font-black text-white leading-snug">{product.title}</h2>
           <div className="flex items-start justify-between gap-3">
-            <span className="text-xl font-black text-[#00FF66]">{formatPrice(product.price)}</span>
+            <span className="text-xl font-black text-noob">{formatPrice(product.price)}</span>
             <span className={`text-[10px] font-bold border px-2 py-1 rounded-full shrink-0 ${TONE[stock.tone]}`}>{stock.text}</span>
           </div>
           <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{product.description}</p>
@@ -128,7 +128,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                       aria-pressed={active}
                       className={`px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
                         active
-                          ? 'border-[#00FF66] bg-[#00FF66]/15 text-[#00FF66]'
+                          ? 'border-noob bg-noob/15 text-noob'
                           : 'border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-500'
                       } ${available ? '' : 'opacity-50 line-through'}`}
                       title={available ? undefined : 'Sold out in this combination'}
@@ -144,7 +144,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
           <button
             onClick={() => onAddToCart(product.id, variantKey)}
             disabled={!buyable}
-            className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <ShoppingCart className="w-4 h-4" /> {buyable ? 'Add to Cart' : 'Out of Stock'}
           </button>

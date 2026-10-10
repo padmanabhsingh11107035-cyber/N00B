@@ -156,7 +156,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-lg bg-[#0e0e0e] border border-neutral-800 sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
           <h3 className="text-sm font-bold text-white">Upload a Video</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer">
@@ -186,7 +186,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
             <button
               onClick={() => videoInputRef.current?.click()}
               disabled={isChecking}
-              className="w-full flex flex-col items-center justify-center gap-2 py-10 rounded-xl border-2 border-dashed border-neutral-700 text-zinc-400 hover:border-[#00FF66]/50 hover:text-[#00FF66] transition-colors cursor-pointer disabled:opacity-60"
+              className="w-full flex flex-col items-center justify-center gap-2 py-10 rounded-xl border-2 border-dashed border-neutral-700 text-zinc-400 hover:border-noob/50 hover:text-noob transition-colors cursor-pointer disabled:opacity-60"
             >
               {isChecking ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Film className="w-6 h-6" />}
               <span className="text-xs font-semibold">{isChecking ? 'Checking video…' : 'Tap to choose a video (up to 2 hours)'}</span>
@@ -202,7 +202,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={150}
                   placeholder="Give your video a title"
-                  className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob"
                 />
               </div>
 
@@ -228,7 +228,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
                 ) : (
                   <button
                     onClick={() => thumbInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-700 text-zinc-400 hover:border-[#00FF66]/50 hover:text-[#00FF66] text-xs font-semibold cursor-pointer transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-700 text-zinc-400 hover:border-noob/50 hover:text-noob text-xs font-semibold cursor-pointer transition-colors"
                   >
                     <ImageIcon className="w-3.5 h-3.5" /> Add a thumbnail
                   </button>
@@ -243,7 +243,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
                   maxLength={2000}
                   rows={3}
                   placeholder="What's this video about?"
-                  className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66] resize-none"
+                  className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob resize-none"
                 />
               </div>
             </>
@@ -258,7 +258,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
           <button
             onClick={handleUpload}
             disabled={!videoFile || isUploading}
-            className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
           >
             {isUploading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
             {isUploading ? 'Uploading…' : 'Upload Video'}

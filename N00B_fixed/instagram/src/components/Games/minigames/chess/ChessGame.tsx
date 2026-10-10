@@ -327,7 +327,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({
   }, [engine, whitePlayer.username, blackPlayer.username, gameStatus, winner, mode, aiDifficulty]);
 
   return (
-    <div className="w-full min-h-[680px] bg-[#0c1017] text-slate-100 flex flex-col p-3 sm:p-6 font-sans">
+    <div className="w-full min-h-[680px] bg-zinc-950 text-slate-100 flex flex-col p-3 sm:p-6 font-sans">
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800 max-w-4xl mx-auto w-full">
         <div>
           <div className="flex items-center gap-2">

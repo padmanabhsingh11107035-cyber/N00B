@@ -90,7 +90,7 @@ export const ProductMediaCarousel: React.FC<ProductMediaCarouselProps> = ({ medi
       {dots && count > 1 && (
         <div className="absolute bottom-1.5 inset-x-0 flex items-center justify-center gap-1 pointer-events-none" aria-hidden="true">
           {media.map((_, i) => (
-            <span key={i} className={`rounded-full transition-all duration-300 ${i === active ? 'w-3 h-1.5 bg-[#00FF66]' : 'w-1.5 h-1.5 bg-white/60'}`} />
+            <span key={i} className={`rounded-full transition-all duration-300 ${i === active ? 'w-3 h-1.5 bg-noob' : 'w-1.5 h-1.5 bg-white/60'}`} />
           ))}
         </div>
       )}

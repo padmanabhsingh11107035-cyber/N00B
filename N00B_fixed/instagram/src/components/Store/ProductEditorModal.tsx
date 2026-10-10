@@ -201,11 +201,11 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
     }
   };
 
-  const inputCls = 'w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50';
+  const inputCls = 'w-full bg-zinc-900 text-sm text-white p-3 rounded-xl border border-zinc-800 outline-none focus:border-noob/50';
 
   return (
     <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full sm:max-w-lg bg-[#0e0e0e] border border-zinc-800 sm:rounded-3xl rounded-t-3xl p-5 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+      <div className="w-full sm:max-w-lg bg-zinc-950 border border-zinc-800 sm:rounded-3xl rounded-t-3xl p-5 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-black text-white">{editing ? 'Edit Product' : 'Add Product'}</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer" aria-label="Close">
@@ -289,7 +289,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
               <button
                 type="button"
                 onClick={addOptionType}
-                className="shrink-0 px-2.5 py-1.5 rounded-xl bg-[#00FF66]/15 hover:bg-[#00FF66]/25 border border-[#00FF66]/40 text-[11px] font-bold text-[#00FF66] flex items-center gap-1 cursor-pointer"
+                className="shrink-0 px-2.5 py-1.5 rounded-xl bg-noob/15 hover:bg-noob/25 border border-noob/40 text-[11px] font-bold text-noob flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Add option
               </button>
@@ -304,7 +304,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
                   onChange={(e) => updateOption(o.id, { name: e.target.value })}
                   maxLength={MAX_NAME}
                   placeholder={index === 0 ? 'Option name, e.g. Colour' : index === 1 ? 'Option name, e.g. Size' : 'Option name, e.g. Model'}
-                  className="flex-1 bg-zinc-950 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50"
+                  className="flex-1 bg-zinc-950 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob/50"
                 />
                 <button type="button" onClick={() => removeOptionType(o.id)} className="p-2 rounded-xl bg-zinc-950 hover:bg-red-500/20 border border-zinc-800 cursor-pointer" aria-label="Remove this option">
                   <Trash2 className="w-4 h-4 text-red-400" />
@@ -331,7 +331,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitDraft(o.id); } }}
                   onBlur={() => commitDraft(o.id)}
                   placeholder="Type a choice and press Enter (e.g. Red)"
-                  className="flex-1 bg-zinc-950 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50"
+                  className="flex-1 bg-zinc-950 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob/50"
                 />
                 <button type="button" onClick={() => commitDraft(o.id)} className="px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white cursor-pointer">
                   Add
@@ -354,7 +354,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
                       value={bulkStock}
                       onChange={(e) => setBulkStock(e.target.value)}
                       placeholder="Set all to"
-                      className="w-24 bg-zinc-950 text-xs text-white p-2 rounded-lg border border-zinc-800 outline-none focus:border-[#00FF66]/50"
+                      className="w-24 bg-zinc-950 text-xs text-white p-2 rounded-lg border border-zinc-800 outline-none focus:border-noob/50"
                     />
                     <button type="button" onClick={applyBulkStock} className="px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold text-white cursor-pointer">
                       Apply
@@ -377,7 +377,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
                         onChange={(e) => setVariantStock((prev) => ({ ...prev, [c.key]: e.target.value }))}
                         placeholder="0"
                         aria-label={`Stock for ${Object.values(c.options).join(' / ')}`}
-                        className="w-20 bg-zinc-950 text-sm text-white p-2 rounded-lg border border-zinc-800 outline-none focus:border-[#00FF66]/50 text-right"
+                        className="w-20 bg-zinc-950 text-sm text-white p-2 rounded-lg border border-zinc-800 outline-none focus:border-noob/50 text-right"
                       />
                     </div>
                   ))}
@@ -398,14 +398,14 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
               <button
                 type="button"
                 onClick={() => setTrackStock(true)}
-                className={`p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${trackStock ? 'border-[#00FF66] bg-[#00FF66]/10 text-[#00FF66]' : 'border-zinc-800 bg-zinc-900/60 text-zinc-400'}`}
+                className={`p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${trackStock ? 'border-noob bg-noob/10 text-noob' : 'border-zinc-800 bg-zinc-900/60 text-zinc-400'}`}
               >
                 Count how many I have
               </button>
               <button
                 type="button"
                 onClick={() => setTrackStock(false)}
-                className={`p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${!trackStock ? 'border-[#00FF66] bg-[#00FF66]/10 text-[#00FF66]' : 'border-zinc-800 bg-zinc-900/60 text-zinc-400'}`}
+                className={`p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${!trackStock ? 'border-noob bg-noob/10 text-noob' : 'border-zinc-800 bg-zinc-900/60 text-zinc-400'}`}
               >
                 Just In Stock / Out
               </button>
@@ -426,7 +426,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
             ) : (
               <label className="flex items-center justify-between cursor-pointer text-xs text-zinc-300 pt-1">
                 <span>In Stock</span>
-                <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} className="accent-[#00FF66]" />
+                <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} className="accent-noob" />
               </label>
             )}
           </div>
@@ -437,7 +437,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({ product,
         <button
           onClick={handleSubmit}
           disabled={submitting || uploading || tooMany}
-          className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+          className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? <Save className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
           {submitting ? (editing ? 'Saving...' : 'Adding...') : editing ? 'Save Changes' : 'Add Product'}

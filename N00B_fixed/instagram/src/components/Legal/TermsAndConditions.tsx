@@ -12,7 +12,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center text-[#00FF66]">
+            <div className="w-10 h-10 rounded-2xl bg-noob/10 border border-noob/30 flex items-center justify-center text-noob">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -44,7 +44,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-[#00FF66]">1</span>
+              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-noob">1</span>
               User Eligibility & Registration
             </h3>
             <p>
@@ -60,7 +60,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-[#00FF66]">2</span>
+              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-noob">2</span>
               Friendly & Safe Community Standards
             </h3>
             <p>
@@ -81,7 +81,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-[#00FF66]">3</span>
+              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-noob">3</span>
               User Content Ownership & Rights
             </h3>
             <p>
@@ -93,7 +93,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-[#00FF66]">4</span>
+              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-noob">4</span>
               Real User Interaction & Fair Use
             </h3>
             <p>
@@ -104,7 +104,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-[#00FF66]">5</span>
+              <span className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-noob">5</span>
               Modifications & Account Deletion
             </h3>
             <p>
@@ -118,7 +118,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose 
         <div className="pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-6 py-2.5 rounded-xl bg-noob text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>I Understand & Agree</span>

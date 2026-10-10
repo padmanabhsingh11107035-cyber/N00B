@@ -148,7 +148,7 @@ export const OrderCard: React.FC<{
       {/* the full order screen: map, steps, items and bill */}
       <button
         onClick={() => onOpen(order)}
-        className="w-full py-2 rounded-xl border border-[#00FF66]/40 text-[#00FF66] text-[11px] font-bold hover:bg-[#00FF66]/10 cursor-pointer flex items-center justify-center gap-1.5"
+        className="w-full py-2 rounded-xl border border-noob/40 text-noob text-[11px] font-bold hover:bg-noob/10 cursor-pointer flex items-center justify-center gap-1.5"
       >
         <MapPin className="w-3.5 h-3.5" /> {order.deliveryMethod === 'delivery' && pinOf(order.contact) ? 'Track order & see location' : 'View order details'}
       </button>
@@ -174,7 +174,7 @@ export const OrderCard: React.FC<{
                 <button
                   onClick={() => onShopStep(order, step.status)}
                   disabled={busy}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-[11px] font-bold cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-noob to-noob-strong text-black text-[11px] font-bold cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-3.5 h-3.5" /> {step.label}
                 </button>
@@ -314,7 +314,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
               key={f}
               onClick={() => setShopFilter(f)}
               className={`px-3 py-1.5 rounded-full text-[11px] font-bold capitalize whitespace-nowrap cursor-pointer border ${
-                shopFilter === f ? 'border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
+                shopFilter === f ? 'border-noob text-noob bg-noob/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
               }`}
             >
               {f}

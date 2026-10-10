@@ -284,7 +284,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           </div>
         )}
         {successMsg && (
-          <div className="p-2.5 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/20 text-xs text-[#00FF66] flex items-center gap-2">
+          <div className="p-2.5 rounded-xl bg-noob/10 border border-noob/20 text-xs text-noob flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
           </div>
@@ -312,7 +312,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
                     placeholder="Group Name"
-                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-noob"
                   />
                   <div className="flex items-center gap-2">
                     <input
@@ -328,14 +328,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                       disabled={isUploading}
                       className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-bold rounded-lg border border-white/10 flex items-center gap-1 cursor-pointer"
                     >
-                      <Upload className="w-3 h-3 text-[#00FF66]" />
+                      <Upload className="w-3 h-3 text-noob" />
                       {isUploading ? 'Uploading...' : 'Change Photo'}
                     </button>
                     <button
                       type="button"
                       onClick={handleSaveInfo}
                       disabled={loading}
-                      className="px-3 py-1 bg-[#00FF66] text-black font-extrabold text-[10px] rounded-lg cursor-pointer"
+                      className="px-3 py-1 bg-noob text-black font-extrabold text-[10px] rounded-lg cursor-pointer"
                     >
                       Save
                     </button>
@@ -398,7 +398,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 onClick={handleToggleSendPolicy}
                 disabled={loading}
                 className={`relative w-11 h-6 rounded-full shrink-0 transition-colors cursor-pointer disabled:opacity-60 ${
-                  chat.onlyAdminsCanSend ? 'bg-[#00FF66]' : 'bg-zinc-700'
+                  chat.onlyAdminsCanSend ? 'bg-noob' : 'bg-zinc-700'
                 }`}
               >
                 <span
@@ -468,7 +468,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                         </div>
                         <div
                           className={`w-4 h-4 rounded flex items-center justify-center border ${
-                            isSelected ? 'bg-[#00FF66] border-[#00FF66] text-black' : 'border-zinc-700 bg-zinc-800'
+                            isSelected ? 'bg-noob border-noob text-black' : 'border-zinc-700 bg-zinc-800'
                           }`}
                         >
                           {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -484,7 +484,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={handleAddSelectedMembers}
                   disabled={loading || selectedNewUserIds.length === 0}
-                  className="w-full py-2 bg-[#00FF66] text-black font-extrabold text-xs rounded-xl hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                  className="w-full py-2 bg-noob text-black font-extrabold text-xs rounded-xl hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                 >
                   Add {selectedNewUserIds.length} {isMasterAdmin ? 'Users' : 'Friends'} to Group
                 </button>
@@ -529,15 +529,15 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                           {member.displayName || member.username}
                         </span>
                         {member.isVerified && <VerifiedBadge size="xs" />}
-                        {isMe && <span className="text-[10px] text-[#00FF66] font-semibold">(You)</span>}
+                        {isMe && <span className="text-[10px] text-noob font-semibold">(You)</span>}
                       </div>
 
                       <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
                         <span>@{member.username}</span>
                         <span className="text-zinc-600">•</span>
                         {isNoobMaster ? (
-                          <span className="text-[#00FF66] font-black flex items-center gap-0.5">
-                            <Shield className="w-2.5 h-2.5 fill-[#00FF66]" /> NOOB Master Admin
+                          <span className="text-noob font-black flex items-center gap-0.5">
+                            <Shield className="w-2.5 h-2.5 fill-noob" /> NOOB Master Admin
                           </span>
                         ) : isMemberCreator ? (
                           <span className="text-amber-400 font-bold flex items-center gap-0.5">

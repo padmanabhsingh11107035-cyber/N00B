@@ -239,7 +239,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
           <div className="w-full max-w-sm space-y-5">
             <div className="text-center">
               <p className="text-[11px] text-zinc-500">Your score</p>
-              <p className="text-2xl font-black text-[#00FF66]">{round.myScore}</p>
+              <p className="text-2xl font-black text-noob">{round.myScore}</p>
             </div>
 
             {/* Live players — who else currently has this screen open */}
@@ -338,7 +338,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
                       className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border text-left text-sm font-bold cursor-pointer disabled:cursor-default transition-colors ${
                         answered
                           ? isRevealedCorrect
-                            ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]'
+                            ? 'bg-noob/15 border-noob/50 text-noob'
                             : isMyChoice
                             ? 'bg-red-500/15 border-red-500/50 text-red-300'
                             : 'bg-zinc-900 border-zinc-800 text-zinc-500'
@@ -347,7 +347,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
                     >
                       <span
                         className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 ${
-                          answered && isRevealedCorrect ? 'bg-[#00FF66] text-black' : answered && isMyChoice ? 'bg-red-400 text-black' : 'bg-zinc-800 text-zinc-400'
+                          answered && isRevealedCorrect ? 'bg-noob text-black' : answered && isMyChoice ? 'bg-red-400 text-black' : 'bg-zinc-800 text-zinc-400'
                         }`}
                       >
                         {OPTION_LETTERS[i]}
@@ -379,7 +379,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
               ) : (
                 <div className="space-y-1.5">
                   {leaderboard.map((e, i) => (
-                    <div key={e.userId} className={`flex items-center gap-2.5 p-2 rounded-xl ${e.userId === currentUser.id ? 'bg-[#00FF66]/10 border border-[#00FF66]/30' : 'bg-zinc-900/60'}`}>
+                    <div key={e.userId} className={`flex items-center gap-2.5 p-2 rounded-xl ${e.userId === currentUser.id ? 'bg-noob/10 border border-noob/30' : 'bg-zinc-900/60'}`}>
                       <span className={`w-5 h-5 rounded-full bg-gradient-to-br ${RANK_STYLE[i] || 'from-zinc-700 to-zinc-800 text-zinc-300'} flex items-center justify-center text-[10px] font-black shrink-0`}>
                         {i === 0 ? <Crown className="w-3 h-3" /> : i + 1}
                       </span>
@@ -387,7 +387,7 @@ export const GuessTheSongView: React.FC<GuessTheSongViewProps> = ({ currentUser,
                       <span className="flex-1 text-xs font-bold text-white truncate flex items-center gap-1">
                         @{e.username} {e.isVerified && <VerifiedBadge size="xs" />}
                       </span>
-                      <span className="text-xs font-black text-[#00FF66]">{e.points}</span>
+                      <span className="text-xs font-black text-noob">{e.points}</span>
                     </div>
                   ))}
                 </div>
@@ -447,21 +447,21 @@ const AdminSongManager: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 max-w-md mx-auto w-full">
         <div className="space-y-2 p-3.5 rounded-2xl border border-zinc-800 bg-zinc-900/40">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]" />
-          <input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Artist (optional)" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]" />
-          <input value={youtubeLink} onChange={(e) => setYoutubeLink(e.target.value)} placeholder="YouTube link (youtube.com/watch?v=... or youtu.be/...)" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]" />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Song title" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob" />
+          <input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Artist (optional)" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob" />
+          <input value={youtubeLink} onChange={(e) => setYoutubeLink(e.target.value)} placeholder="YouTube link (youtube.com/watch?v=... or youtu.be/...)" className="w-full bg-black rounded-xl border border-zinc-700 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob" />
           <div className="flex gap-2">
             <label className="flex-1 text-[10px] text-zinc-400">
               Clip starts at (s)
-              <input type="number" min={0} value={clipStart} onChange={(e) => setClipStart(Math.max(0, Number(e.target.value) || 0))} className="w-full mt-1 bg-black rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#00FF66]" />
+              <input type="number" min={0} value={clipStart} onChange={(e) => setClipStart(Math.max(0, Number(e.target.value) || 0))} className="w-full mt-1 bg-black rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-noob" />
             </label>
             <label className="flex-1 text-[10px] text-zinc-400">
               Clip length (s)
-              <input type="number" min={1} value={clipLength} onChange={(e) => setClipLength(Math.max(1, Number(e.target.value) || 5))} className="w-full mt-1 bg-black rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#00FF66]" />
+              <input type="number" min={1} value={clipLength} onChange={(e) => setClipLength(Math.max(1, Number(e.target.value) || 5))} className="w-full mt-1 bg-black rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-noob" />
             </label>
           </div>
           {error && <p className="text-[11px] text-red-400">{error}</p>}
-          <button onClick={handleAdd} disabled={saving} className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-xs disabled:opacity-40 cursor-pointer">
+          <button onClick={handleAdd} disabled={saving} className="w-full py-2.5 rounded-xl bg-noob text-black font-bold text-xs disabled:opacity-40 cursor-pointer">
             {saving ? 'Adding…' : 'Add song'}
           </button>
           <p className="text-[10px] text-zinc-500">Paste the YouTube video's link — need at least 4 songs in the pool for the game to start.</p>

@@ -35,7 +35,7 @@ export const GameBannerArtwork: React.FC<GameIconProps> = ({ id, className = 'w-
       return renderCartoonFrame(
         'bg-gradient-to-br from-emerald-600 via-green-700 to-teal-900',
         <div className="flex items-center gap-1.5 p-2 bg-zinc-950 border-2 border-black rounded-2xl shadow-[4px_4px_0px_#000]">
-          <div className="w-8 h-8 rounded-xl bg-[#00FF66] border-2 border-black flex items-center justify-center relative shadow-[2px_2px_0px_#000]">
+          <div className="w-8 h-8 rounded-xl bg-noob border-2 border-black flex items-center justify-center relative shadow-[2px_2px_0px_#000]">
             {/* Eyes */}
             <div className="w-2 h-2 bg-black rounded-full absolute top-1.5 left-1 border border-white flex items-center justify-center">
               <div className="w-0.5 h-0.5 bg-white rounded-full" />
@@ -364,7 +364,7 @@ export const GameBannerArtwork: React.FC<GameIconProps> = ({ id, className = 'w-
     case 'reaction_tap':
       return renderCartoonFrame(
         'bg-gradient-to-br from-lime-600 via-emerald-800 to-slate-950',
-        <div className="w-16 h-16 rounded-full bg-[#00FF66] border-4 border-black flex items-center justify-center font-black text-sm text-black shadow-[4px_4px_0px_#000] animate-bounce">
+        <div className="w-16 h-16 rounded-full bg-noob border-4 border-black flex items-center justify-center font-black text-sm text-black shadow-[4px_4px_0px_#000] animate-bounce">
           TAP!
         </div>,
         '⚡ REFLEX'

@@ -161,7 +161,7 @@ export const ScratchCardModal: React.FC<ScratchCardModalProps> = ({ scratchCardI
             {isRevealed && (
               <button
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black font-bold text-sm hover:bg-emerald-400 transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-noob text-black font-bold text-sm hover:bg-emerald-400 transition-colors cursor-pointer"
               >
                 Awesome, Thanks!
               </button>

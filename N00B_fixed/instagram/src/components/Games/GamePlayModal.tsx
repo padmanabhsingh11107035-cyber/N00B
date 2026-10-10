@@ -979,7 +979,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         {/* Top Header */}
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/40 flex items-center justify-center text-sm font-bold text-[#00FF66]">
+            <div className="w-8 h-8 rounded-xl bg-noob/20 border border-noob/40 flex items-center justify-center text-sm font-bold text-noob">
               🎮
             </div>
             <div>
@@ -1008,7 +1008,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
         }`}>
           {!chessLimitChecked ? (
             <div className="py-16 flex flex-col items-center justify-center text-center gap-3">
-              <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#00FF66] rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-zinc-700 border-t-noob rounded-full animate-spin" />
               <p className="text-xs text-zinc-500">Checking availability...</p>
             </div>
           ) : chessLimitBlocked ? (
@@ -1063,14 +1063,14 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 {/* Option 1: Play with Available Users */}
                 <button
                   onClick={startMatchmaking}
-                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-[#00FF66]/50 flex items-center justify-between transition-all group cursor-pointer"
+                  className="w-full p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-noob/50 flex items-center justify-between transition-all group cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#00FF66] group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-noob group-hover:scale-105 transition-transform">
                       <Users className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                      <span className="text-sm font-bold text-white block group-hover:text-[#00FF66] transition-colors">
+                      <span className="text-sm font-bold text-white block group-hover:text-noob transition-colors">
                         1. Play with Available Users
                       </span>
                       <span className="text-[11px] text-zinc-400 block">
@@ -1078,7 +1078,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-[#00FF66] group-hover:translate-x-0.5 transition-all" />
+                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-noob group-hover:translate-x-0.5 transition-all" />
                 </button>
 
                 {/* Option 2: Play with Bot */}
@@ -1200,24 +1200,24 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <>
                   {/* Radar Wave Animation */}
                   <div className="relative w-36 h-36 flex items-center justify-center">
-                    <div className="absolute inset-0 rounded-full border border-[#00FF66]/20 animate-ping" />
-                    <div className="absolute inset-3 rounded-full border border-[#00FF66]/40 animate-pulse" />
-                    <div className="w-20 h-20 rounded-full bg-[#00FF66]/10 border-2 border-[#00FF66] shadow-[0_0_25px_rgba(0,255,102,0.3)] flex flex-col items-center justify-center z-10">
-                      <Radio className="w-6 h-6 text-[#00FF66] animate-spin-slow" />
-                      <span className="text-xs font-mono font-bold text-[#00FF66] mt-0.5">{matchmakingTimeLeft}s</span>
+                    <div className="absolute inset-0 rounded-full border border-noob/20 animate-ping" />
+                    <div className="absolute inset-3 rounded-full border border-noob/40 animate-pulse" />
+                    <div className="w-20 h-20 rounded-full bg-noob/10 border-2 border-noob shadow-[0_0_25px_rgba(217,119,87,0.3)] flex flex-col items-center justify-center z-10">
+                      <Radio className="w-6 h-6 text-noob animate-spin-slow" />
+                      <span className="text-xs font-mono font-bold text-noob mt-0.5">{matchmakingTimeLeft}s</span>
                     </div>
                   </div>
 
                   <div>
                     <h3 className="text-base font-bold text-white">Searching for Available Players...</h3>
                     <p className="text-xs text-zinc-400 mt-1 max-w-xs">
-                      Scanning active users on NOOB server playing <span className="text-[#00FF66] font-semibold">{game.title}</span>
+                      Scanning active users on NOOB server playing <span className="text-noob font-semibold">{game.title}</span>
                     </p>
                   </div>
 
                   <div className="w-full max-w-xs bg-zinc-900 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="bg-[#00FF66] h-full transition-all duration-1000 ease-linear"
+                      className="bg-noob h-full transition-all duration-1000 ease-linear"
                       style={{ width: `${((30 - matchmakingTimeLeft) / 30) * 100}%` }}
                     />
                   </div>
@@ -1247,7 +1247,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                     {/* Option A: Search Again */}
                     <button
                       onClick={startMatchmaking}
-                      className="p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-[#00FF66]/50 flex items-center justify-center gap-2 text-xs font-bold text-white hover:text-[#00FF66] transition-all cursor-pointer"
+                      className="p-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-noob/50 flex items-center justify-center gap-2 text-xs font-bold text-white hover:text-noob transition-all cursor-pointer"
                     >
                       <RotateCcw className="w-4 h-4" />
                       <span>Search Again</span>
@@ -1292,7 +1292,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                         key={n}
                         onClick={() => setBoardInviteCount(n)}
                         className={`w-10 h-10 rounded-xl font-bold text-sm cursor-pointer transition-all ${
-                          boardInviteCount === n ? 'bg-[#00FF66] text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          boardInviteCount === n ? 'bg-noob text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                         }`}
                       >
                         {n}
@@ -1304,7 +1304,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                       setInvitedFriendIds(new Set());
                       setBoardInviteStep('invite');
                     }}
-                    className="w-full py-2.5 rounded-xl bg-[#00FF66] text-black text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90"
+                    className="w-full py-2.5 rounded-xl bg-noob text-black text-xs font-bold cursor-pointer hover:bg-noob/90"
                   >
                     Next — Invite {seatsNeeded} Friend{seatsNeeded === 1 ? '' : 's'}
                   </button>
@@ -1328,7 +1328,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
                   <div className="p-2.5 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
                     <span className="text-[11px] text-zinc-400 font-semibold">Requests Sent</span>
-                    <span className="text-xs font-bold text-[#00FF66]">
+                    <span className="text-xs font-bold text-noob">
                       {invitedFriendIds.size} / {seatsNeeded}
                     </span>
                   </div>
@@ -1340,7 +1340,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                       placeholder="Search registered friends..."
                       value={friendSearchQuery}
                       onChange={(e) => setFriendSearchQuery(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
                     />
                   </div>
 
@@ -1374,7 +1374,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                                 alreadyInvited
                                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                  : 'bg-[#00FF66] hover:bg-[#00FF66]/90 text-black shadow-sm'
+                                  : 'bg-noob hover:bg-noob/90 text-black shadow-sm'
                               }`}
                             >
                               {alreadyInvited ? (
@@ -1400,7 +1400,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                       setBoardPlayerCount(boardInviteCount);
                       startBotGameNow();
                     }}
-                    className="w-full py-2.5 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer hover:bg-[#00FF66]/90"
+                    className="w-full py-2.5 rounded-2xl bg-noob text-black font-bold text-xs cursor-pointer hover:bg-noob/90"
                   >
                     Start Game{invitedFriendIds.size < seatsNeeded ? ' (Bots Fill Remaining Seats)' : ''}
                   </button>
@@ -1429,7 +1429,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between gap-2">
                 <div className="truncate">
                   <span className="text-[10px] text-zinc-500 block">Game Room Code</span>
-                  <span className="text-xs font-mono font-bold text-[#00FF66]">{generatedRoomCode}</span>
+                  <span className="text-xs font-mono font-bold text-noob">{generatedRoomCode}</span>
                 </div>
                 <button
                   onClick={handleCopyLink}
@@ -1447,7 +1447,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   placeholder="Search registered friends..."
                   value={friendSearchQuery}
                   onChange={(e) => setFriendSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
                 />
               </div>
 
@@ -1480,7 +1480,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                           inviteSent && selectedFriend?.id === friend.id
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-[#00FF66] hover:bg-[#00FF66]/90 text-black shadow-sm'
+                            : 'bg-noob hover:bg-noob/90 text-black shadow-sm'
                         }`}
                       >
                         {inviteSent && selectedFriend?.id === friend.id ? (
@@ -1587,7 +1587,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               <p className="text-sm font-bold text-amber-300">📱 Pass the device to Player 2</p>
               <button
                 onClick={handleStartPassAndPlayRound2}
-                className="px-6 py-2.5 rounded-2xl bg-[#00FF66] text-black text-sm font-bold hover:scale-105 transition-transform cursor-pointer"
+                className="px-6 py-2.5 rounded-2xl bg-noob text-black text-sm font-bold hover:scale-105 transition-transform cursor-pointer"
               >
                 Player 2 Ready — Start Round 2
               </button>
@@ -1610,7 +1610,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {game.id === 'tictactoe' && onlineMatch && (
                 <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
                   <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
-                    <div className={`flex items-center gap-1.5 text-xs font-bold ${gameState.turn === currentUser.id ? 'text-[#00FF66]' : 'text-zinc-500'}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-bold ${gameState.turn === currentUser.id ? 'text-noob' : 'text-zinc-500'}`}>
                       <UserPlus className="w-3.5 h-3.5" />
                       <span>You ({onlineMatch.mySymbol})</span>
                     </div>
@@ -1629,7 +1629,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                         disabled={!!cell || gameState.turn !== currentUser.id || isSubmitting}
                         className={`rounded-xl flex items-center justify-center font-black text-3xl transition-all cursor-pointer ${
                           cell === 'X'
-                            ? 'bg-zinc-900 text-[#00FF66] border border-[#00FF66]/30'
+                            ? 'bg-zinc-900 text-noob border border-noob/30'
                             : cell === 'O'
                             ? 'bg-zinc-900 text-pink-400 border border-pink-500/30'
                             : 'bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800/60 text-zinc-600'
@@ -1809,7 +1809,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               <div className="flex gap-3 justify-center pt-2">
                 <button
                   onClick={handlePlayAgain}
-                  className="px-5 py-2.5 rounded-2xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-bold text-xs transition-colors cursor-pointer"
+                  className="px-5 py-2.5 rounded-2xl bg-noob hover:bg-noob/90 text-black font-bold text-xs transition-colors cursor-pointer"
                 >
                   {lastPlayMode === 'matchmaking' ? 'Find Another Match' : lastPlayMode === 'friend' && !isBoardGame ? 'Rematch' : 'Play Again'}
                 </button>

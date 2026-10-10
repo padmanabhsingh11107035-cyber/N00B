@@ -165,7 +165,7 @@ export const AdminFoodStallPanel: React.FC = () => {
             <span className="block font-bold text-white">Show Food Stall</span>
             <span className="block text-[10px] text-zinc-500 leading-snug">Off hides it everywhere — the home page banner and the ☰ menu both disappear for every user.</span>
           </div>
-          <input type="checkbox" checked={foodStallVisible} onChange={(e) => setFoodStallVisible(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
+          <input type="checkbox" checked={foodStallVisible} onChange={(e) => setFoodStallVisible(e.target.checked)} className="w-5 h-5 shrink-0 accent-noob cursor-pointer" />
         </label>
 
         <label className="flex items-center justify-between gap-4 cursor-pointer text-xs text-zinc-300 pt-2 border-t border-zinc-800/80">
@@ -183,7 +183,7 @@ export const AdminFoodStallPanel: React.FC = () => {
             <span className="block font-bold text-white">Accept Food Stall orders</span>
             <span className="block text-[10px] text-zinc-500 leading-snug">Separate from Shop NOOB's own "Accept orders" — people can still browse while this is off, but checkout is paused.</span>
           </div>
-          <input type="checkbox" checked={foodStallEnabled} onChange={(e) => setFoodStallEnabled(e.target.checked)} className="w-5 h-5 shrink-0 accent-[#00FF66] cursor-pointer" />
+          <input type="checkbox" checked={foodStallEnabled} onChange={(e) => setFoodStallEnabled(e.target.checked)} className="w-5 h-5 shrink-0 accent-noob cursor-pointer" />
         </label>
 
         <div className="space-y-1.5">
@@ -193,7 +193,7 @@ export const AdminFoodStallPanel: React.FC = () => {
             min="0"
             value={deliveryFee}
             onChange={(e) => setDeliveryFee(e.target.value)}
-            className="w-full bg-zinc-900 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50"
+            className="w-full bg-zinc-900 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob/50"
           />
         </div>
 
@@ -204,7 +204,7 @@ export const AdminFoodStallPanel: React.FC = () => {
             value={upiId}
             onChange={(e) => setUpiId(e.target.value)}
             placeholder="yourname@okhdfcbank"
-            className="w-full bg-zinc-900 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]/50"
+            className="w-full bg-zinc-900 text-sm text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob/50"
           />
           <p className="text-[10px] text-zinc-500">Leave blank to hide UPI at checkout and only accept Cash.</p>
         </div>
@@ -214,7 +214,7 @@ export const AdminFoodStallPanel: React.FC = () => {
         <button
           onClick={handleSaveSettings}
           disabled={savingSettings}
-          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold cursor-pointer hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold cursor-pointer hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {savingSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {settingsSaved ? 'Saved!' : savingSettings ? 'Saving...' : 'Save Settings'}
@@ -245,7 +245,7 @@ export const AdminFoodStallPanel: React.FC = () => {
                   onClick={() => toggleStock(p)}
                   disabled={stockBusyId === p.id}
                   className={`px-2.5 py-2 rounded-lg text-[10px] font-bold cursor-pointer shrink-0 flex items-center gap-1 disabled:opacity-50 ${
-                    p.inStock ? 'bg-zinc-800 hover:bg-red-500/20 text-zinc-300 hover:text-red-300' : 'bg-[#00FF66]/15 text-[#00FF66] hover:bg-[#00FF66]/25'
+                    p.inStock ? 'bg-zinc-800 hover:bg-red-500/20 text-zinc-300 hover:text-red-300' : 'bg-noob/15 text-noob hover:bg-noob/25'
                   }`}
                   title={p.inStock ? 'Mark out of stock' : 'Bring back in stock'}
                 >
@@ -278,7 +278,7 @@ export const AdminFoodStallPanel: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by order #, @username, name, phone..."
-              className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+              className="w-full bg-zinc-900 text-xs text-white pl-9 pr-3 py-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
             />
           </div>
           <button onClick={loadOrders} disabled={ordersLoading} className="p-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl border border-zinc-800 cursor-pointer disabled:opacity-50" title="Refresh">
@@ -292,7 +292,7 @@ export const AdminFoodStallPanel: React.FC = () => {
               key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-full text-[11px] font-bold capitalize whitespace-nowrap cursor-pointer border ${
-                filter === f ? 'border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
+                filter === f ? 'border-noob text-noob bg-noob/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
               }`}
             >
               {f}

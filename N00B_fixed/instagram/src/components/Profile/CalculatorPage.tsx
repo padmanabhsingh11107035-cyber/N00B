@@ -196,10 +196,10 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
     const variants: Record<string, string> = {
       digit: 'bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/10',
       func: 'bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/25',
-      op: 'bg-[#00FF66]/10 hover:bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/25',
-      'op-active': 'bg-[#00FF66] text-black border border-[#00FF66] shadow-[0_0_20px_rgba(0,255,102,0.5)]',
+      op: 'bg-noob/10 hover:bg-noob/20 text-noob border border-noob/25',
+      'op-active': 'bg-noob text-black border border-noob shadow-[0_0_20px_rgba(217,119,87,0.5)]',
       equals:
-        'bg-gradient-to-br from-[#00FF66] to-emerald-500 text-black shadow-[0_0_25px_rgba(0,255,102,0.45)] border border-emerald-300/40'
+        'bg-gradient-to-br from-noob to-noob-strong text-black shadow-[0_0_25px_rgba(217,119,87,0.45)] border border-emerald-300/40'
     };
     return (
       <button
@@ -220,7 +220,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] bg-black text-white flex flex-col overflow-hidden">
       {/* Ambient glow blobs for depth — purely decorative */}
-      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-[#00FF66]/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-noob/10 blur-[100px]" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-violet-600/10 blur-[110px]" />
 
       {/* Header */}
@@ -244,7 +244,7 @@ export const CalculatorPage: React.FC<CalculatorPageProps> = ({ onClose }) => {
               {expression || ' '}
             </div>
             <div
-              className={`text-right font-black tracking-tight text-[#00FF66] drop-shadow-[0_0_18px_rgba(0,255,102,0.45)] truncate transition-all ${
+              className={`text-right font-black tracking-tight text-noob drop-shadow-[0_0_18px_rgba(217,119,87,0.45)] truncate transition-all ${
                 display.length > 9 ? 'text-4xl' : 'text-6xl'
               }`}
             >

@@ -65,7 +65,7 @@ export const LiveRoomModal: React.FC<LiveRoomModalProps> = ({ currentUser, onClo
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-      <div className="relative w-full max-w-lg bg-[#0c0c0c] border border-red-500/40 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
+      <div className="relative w-full max-w-lg bg-zinc-950 border border-red-500/40 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
         {/* Top Header */}
         <div className="p-3 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between z-20">
           <div className="flex items-center gap-2">
@@ -73,7 +73,7 @@ export const LiveRoomModal: React.FC<LiveRoomModalProps> = ({ currentUser, onClo
               <Radio className="w-3 h-3" /> Live Room
             </span>
             <span className="text-xs text-gray-300 font-semibold flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-[#00FF66]" /> {viewerCount.toLocaleString()} watching
+              <Users className="w-3.5 h-3.5 text-noob" /> {viewerCount.toLocaleString()} watching
             </span>
           </div>
 
@@ -81,7 +81,7 @@ export const LiveRoomModal: React.FC<LiveRoomModalProps> = ({ currentUser, onClo
             {guests.length < 3 && (
               <button
                 onClick={handleAddGuest}
-                className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-[#00FF66] text-xs font-bold rounded-full flex items-center gap-1"
+                className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-noob text-xs font-bold rounded-full flex items-center gap-1"
                 title="Invite Guest Co-Host (Up to 3)"
               >
                 <UserPlus className="w-3.5 h-3.5" /> + Guest ({guests.length}/3)
@@ -96,7 +96,7 @@ export const LiveRoomModal: React.FC<LiveRoomModalProps> = ({ currentUser, onClo
         {/* Live Grid Stream Video Tiles */}
         <div className={`flex-1 grid gap-1.5 p-2 bg-black ${guests.length === 1 ? 'grid-cols-2' : 'grid-cols-2 grid-rows-2'}`}>
           {/* Host Tile */}
-          <div className="relative bg-neutral-900 rounded-xl overflow-hidden flex items-center justify-center border border-[#00FF66]/40">
+          <div className="relative bg-neutral-900 rounded-xl overflow-hidden flex items-center justify-center border border-noob/40">
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80"
               alt="Host Stream"
@@ -131,7 +131,7 @@ export const LiveRoomModal: React.FC<LiveRoomModalProps> = ({ currentUser, onClo
           <div className="overflow-y-auto space-y-1.5 pr-2 mb-2 max-h-28 no-scrollbar">
             {messages.map((m) => (
               <div key={m.id} className="text-xs text-gray-300">
-                <span className="font-bold text-[#00FF66] mr-1.5">@{m.user}:</span>
+                <span className="font-bold text-noob mr-1.5">@{m.user}:</span>
                 <span>{m.text}</span>
               </div>
             ))}
@@ -156,7 +156,7 @@ export const LiveRoomModal: React.FC<LiveRoomModalProps> = ({ currentUser, onClo
                 onChange={(e) => setCommentInput(e.target.value)}
                 className="w-full bg-transparent text-xs text-white focus:outline-none"
               />
-              <button type="submit" className="text-[#00FF66] ml-1">
+              <button type="submit" className="text-noob ml-1">
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>

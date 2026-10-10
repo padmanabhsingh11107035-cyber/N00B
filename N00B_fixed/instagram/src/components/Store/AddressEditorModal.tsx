@@ -65,7 +65,7 @@ export const AddressEditorModal: React.FC<AddressEditorModalProps> = ({ address,
 
   return (
     <div className="fixed inset-0 z-[115] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={editing ? 'Edit address' : 'Add a new address'}>
-      <div className="w-full sm:max-w-md bg-[#0e0e0e] border border-zinc-800 sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[94vh] flex flex-col">
+      <div className="w-full sm:max-w-md bg-zinc-950 border border-zinc-800 sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[94vh] flex flex-col">
         <div className="flex items-center justify-between p-5 pb-3 shrink-0">
           <h3 className="text-sm font-black text-white">{editing ? 'Edit address' : 'Add a new address'}</h3>
           <button onClick={onClose} disabled={saving} className="p-1.5 rounded-full hover:bg-white/10 cursor-pointer" aria-label="Close">
@@ -85,7 +85,7 @@ export const AddressEditorModal: React.FC<AddressEditorModalProps> = ({ address,
                   key={name}
                   type="button"
                   onClick={() => setForm({ ...form, label: name })}
-                  className={`px-3 py-1 rounded-full border text-[11px] font-bold cursor-pointer ${form.label === name ? 'border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-700 text-zinc-300 hover:border-zinc-500'}`}
+                  className={`px-3 py-1 rounded-full border text-[11px] font-bold cursor-pointer ${form.label === name ? 'border-noob text-noob bg-noob/10' : 'border-zinc-700 text-zinc-300 hover:border-zinc-500'}`}
                 >
                   {name}
                 </button>
@@ -110,7 +110,7 @@ export const AddressEditorModal: React.FC<AddressEditorModalProps> = ({ address,
 
           {!isDefaultAlready && !mustBeDefault && (
             <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} className="w-4 h-4 accent-[#00FF66] cursor-pointer" />
+              <input type="checkbox" checked={makeDefault} onChange={(e) => setMakeDefault(e.target.checked)} className="w-4 h-4 accent-noob cursor-pointer" />
               <span className="text-xs text-zinc-300">Make this my default address</span>
             </label>
           )}
@@ -127,7 +127,7 @@ export const AddressEditorModal: React.FC<AddressEditorModalProps> = ({ address,
           <button
             onClick={save}
             disabled={saving}
-            className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />} {saving ? 'Saving…' : editing ? 'Save changes' : 'Save address'}
           </button>

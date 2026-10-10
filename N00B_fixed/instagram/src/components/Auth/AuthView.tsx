@@ -815,13 +815,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#070709] text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen w-full bg-page text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Premium Gen Z Background glow accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute top-1/2 left-5 w-[300px] h-[300px] bg-[#00FF66]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-5 w-[300px] h-[300px] bg-noob/10 rounded-full blur-[120px] pointer-events-none" />
       {/* Corner gradient "blob" accents for depth, with a small crown resting on the left one */}
-      <div className="absolute bottom-0 left-0 w-[220px] h-[180px] sm:w-[380px] sm:h-[320px] bg-gradient-to-tr from-[#00FF66]/25 via-cyan-500/10 to-transparent rounded-tr-[100%] blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[220px] h-[180px] sm:w-[380px] sm:h-[320px] bg-gradient-to-tr from-noob/25 via-cyan-500/10 to-transparent rounded-tr-[100%] blur-3xl pointer-events-none" />
       <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[26%] left-[6%] w-6 h-6 text-amber-400/70 -rotate-12 pointer-events-none select-none z-[1]" fill="currentColor" aria-hidden="true"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
       <div className="hidden sm:block absolute top-0 right-0 w-[320px] h-[260px] bg-gradient-to-bl from-violet-500/15 to-transparent rounded-bl-[100%] blur-3xl pointer-events-none" />
 
@@ -901,10 +901,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           type="button"
           onClick={handleInstallClick}
           disabled={installBusy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 hover:border-[#00FF66]/50 text-xs font-bold text-zinc-200 hover:text-white cursor-pointer transition-colors disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 hover:border-noob/50 text-xs font-bold text-zinc-200 hover:text-white cursor-pointer transition-colors disabled:opacity-60"
           aria-label="Install NOOB"
         >
-          {installBusy ? <Loader2 className="w-3.5 h-3.5 text-[#00FF66] animate-spin" /> : <Download className="w-3.5 h-3.5 text-[#00FF66]" />}
+          {installBusy ? <Loader2 className="w-3.5 h-3.5 text-noob animate-spin" /> : <Download className="w-3.5 h-3.5 text-noob" />}
           <span>Install</span>
         </button>
         {installHint && (
@@ -918,17 +918,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
         <div className="relative transition-transform hover:scale-[1.02]">
           {/* Circular gradient-ring badge */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-[#00FF66] via-cyan-400 to-indigo-600 p-[3px] shadow-[0_0_35px_rgba(0,255,102,0.35)]">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-noob via-cyan-400 to-indigo-600 p-[3px] shadow-[0_0_35px_rgba(217,119,87,0.35)]">
             <div className="w-full h-full rounded-full bg-black flex flex-col items-center justify-center overflow-hidden relative">
               {/* Faint phone-outline silhouette behind the wordmark */}
               <svg viewBox="0 0 24 24" className="absolute w-11 h-11 sm:w-14 sm:h-14 text-white/10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="7" y="2" width="10" height="20" rx="2" /></svg>
               {/* Crown accent */}
               <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 -mb-0.5 relative" fill="currentColor"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
-              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-[#00FF66] to-cyan-300 text-lg sm:text-xl tracking-tighter leading-none relative">
+              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-zinc-50 via-noob to-noob-strong text-lg sm:text-xl tracking-tighter leading-none relative">
                 NOOB
               </span>
               {/* Tiny heart accent, left side */}
-              <svg viewBox="0 0 24 24" className="absolute top-2.5 left-2 w-2.5 h-2.5 text-[#00FF66]/70 relative" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+              <svg viewBox="0 0 24 24" className="absolute top-2.5 left-2 w-2.5 h-2.5 text-noob/70 relative" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
               {/* Tiny chat-bubble accent */}
               <svg viewBox="0 0 24 24" className="absolute top-2 right-2 w-3 h-3 text-cyan-300/70" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
             </div>
@@ -944,13 +944,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         </div>
 
         {/* "NOOB" text lockup below the badge */}
-        <span className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-100 to-zinc-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+        <span className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-50 via-zinc-100 to-zinc-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
           NOOB
         </span>
 
         {/* Tagline */}
         <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm font-bold tracking-wide">
-          <span className="text-[#00FF66]">Connect</span>
+          <span className="text-noob">Connect</span>
           <span className="text-zinc-600">•</span>
           <span className="text-cyan-400">Share</span>
           <span className="text-zinc-600">•</span>
@@ -972,7 +972,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           {/* Top Option: Only Log In indicator at top for login page */}
           {mode === 'login' ? (
             <div className="flex items-center justify-center p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5">
-              <div className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white shadow-md shadow-indigo-500/25 flex items-center justify-center gap-1.5 select-none">
+              <div className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-noob to-noob-strong text-white shadow-md shadow-indigo-500/25 flex items-center justify-center gap-1.5 select-none">
                 <Lock className="w-3.5 h-3.5" />
                 <span>Log In to Your Account</span>
               </div>
@@ -1042,7 +1042,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
             <div className="space-y-3.5">
               {signupOtpSuccess ? (
                 <div className="py-8 text-center space-y-3">
-                  <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
+                  <CheckCircle2 className="w-10 h-10 text-noob mx-auto" />
                   <p className="text-sm font-bold text-white">Email verified!</p>
                   <p className="text-xs text-zinc-400">Creating your account…</p>
                 </div>
@@ -1069,13 +1069,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                         value={signupOtpCode}
                         onChange={(e) => setSignupOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         placeholder="000000"
-                        className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] outline-none transition-all placeholder:text-zinc-700"
+                        className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-700"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={signupOtpLoading}
-                      className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-emerald-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
                       {signupOtpLoading ? 'Verifying…' : 'Verify & Create Account'}
                     </button>
@@ -1083,7 +1083,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       type="button"
                       disabled={signupOtpResending}
                       onClick={() => void handleResendSignupOtp()}
-                      className="w-full py-2 text-xs font-bold text-[#00FF66] hover:opacity-80 disabled:text-zinc-600 cursor-pointer disabled:cursor-not-allowed"
+                      className="w-full py-2 text-xs font-bold text-noob hover:opacity-80 disabled:text-zinc-600 cursor-pointer disabled:cursor-not-allowed"
                     >
                       {signupOtpResending ? 'Sending…' : 'Resend code'}
                     </button>
@@ -1118,7 +1118,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <button
                   type="button"
                   onClick={() => setShowLanguagePicker(true)}
-                  className="w-full flex items-center justify-between gap-2 bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 outline-none transition-all cursor-pointer"
+                  className="w-full flex items-center justify-between gap-2 bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 outline-none transition-all cursor-pointer"
                 >
                   <span className="flex items-center gap-2 min-w-0">
                     <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -1140,7 +1140,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Aarav Verma"
-                  className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                  className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                 />
               </div>
 
@@ -1168,7 +1168,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                         onClick={() => setUserId(suggestedId)}
                         className={`text-xs px-3 py-1.5 rounded-xl font-mono font-bold transition-all cursor-pointer ${
                           userId === suggestedId
-                            ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 text-black shadow-md shadow-cyan-500/30'
+                            ? 'bg-gradient-to-r from-noob to-noob-strong text-black shadow-md shadow-cyan-500/30'
                             : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-white/10'
                         }`}
                       >
@@ -1186,7 +1186,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     <span>User ID / Username</span>
                     <span className="text-cyan-400">*</span>
                   </label>
-                  <span className="text-[11px] text-[#00FF66] font-medium flex items-center gap-1">
+                  <span className="text-[11px] text-noob font-medium flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Unique Handle
                   </span>
                 </div>
@@ -1200,7 +1200,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     value={userId}
                     onChange={(e) => setUserId(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
                     placeholder="Enter or pick username"
-                    className="w-full bg-[#141418] text-sm text-white pl-8 pr-4 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600 font-mono"
+                    className="w-full bg-zinc-900 text-sm text-white pl-8 pr-4 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600 font-mono"
                   />
                 </div>
               </div>
@@ -1219,7 +1219,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                         gender === g.id
                           ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/20'
-                          : 'bg-[#141418] border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+                          : 'bg-zinc-900 border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
                       }`}
                     >
                       <span className="text-sm">{g.emoji}</span>
@@ -1240,7 +1240,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                  className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                 />
               </div>
 
@@ -1254,7 +1254,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="w-full bg-[#141418] text-xs text-white px-3 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 outline-none transition-all cursor-pointer font-medium"
+                      className="w-full bg-zinc-900 text-xs text-white px-3 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 outline-none transition-all cursor-pointer font-medium"
                     >
                       {COUNTRY_OPTIONS.map((c, i) => (
                         <option key={i} value={c.fullLabel}>
@@ -1274,7 +1274,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value)}
                       placeholder="e.g. 9876543210"
-                      className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                      className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                     />
                   </div>
                 </div>
@@ -1288,7 +1288,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <button
                   type="button"
                   onClick={() => setShowBirthdayPicker(true)}
-                  className="w-full flex items-center justify-between bg-[#141418] text-sm px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all cursor-pointer text-left"
+                  className="w-full flex items-center justify-between bg-zinc-900 text-sm px-3.5 py-3 rounded-2xl border border-white/10 hover:border-cyan-400/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all cursor-pointer text-left"
                 >
                   <span className={dateOfBirth ? 'text-white font-medium' : 'text-zinc-500'}>
                     {dateOfBirth
@@ -1314,7 +1314,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a strong password"
-                    className="w-full bg-[#141418] text-sm text-white px-3.5 pr-16 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                    className="w-full bg-zinc-900 text-sm text-white px-3.5 pr-16 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                   />
                   <button
                     type="button"
@@ -1339,7 +1339,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                       accountType === 'public'
                         ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500'
-                        : 'border-white/10 bg-[#141418] hover:border-white/20'
+                        : 'border-white/10 bg-zinc-900 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -1359,7 +1359,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                       accountType === 'private'
                         ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/10 ring-1 ring-purple-500'
-                        : 'border-white/10 bg-[#141418] hover:border-white/20'
+                        : 'border-white/10 bg-zinc-900 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -1378,13 +1378,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     onClick={() => setAccountType('business')}
                     className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                       accountType === 'business'
-                        ? 'border-[#00FF66] bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-[#00FF66]'
-                        : 'border-white/10 bg-[#141418] hover:border-white/20'
+                        ? 'border-noob bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-noob'
+                        : 'border-white/10 bg-zinc-900 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm">💼</span>
-                      {accountType === 'business' && <Check className="w-3.5 h-3.5 text-[#00FF66]" />}
+                      {accountType === 'business' && <Check className="w-3.5 h-3.5 text-noob" />}
                     </div>
                     <span className="text-xs font-bold text-white block">Business</span>
                     <span className="text-[10px] text-zinc-400 leading-tight block mt-0.5">
@@ -1427,7 +1427,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-4 rounded-2xl border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 bg-[#101014] flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    className="w-full py-4 rounded-2xl border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 bg-zinc-900 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <Upload className="w-5 h-5 text-cyan-400" />
                     <span className="text-[11px] text-zinc-400">Tap to upload a photo of yourself</span>
@@ -1449,17 +1449,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Introduce yourself, your vibes or gaming tag... (Required)"
-                  className={`w-full bg-[#141418] text-xs text-white px-3.5 py-3 rounded-2xl border ${
+                  className={`w-full bg-zinc-900 text-xs text-white px-3.5 py-3 rounded-2xl border ${
                     !bio.trim() ? 'border-cyan-500/40 focus:border-cyan-400' : 'border-white/10 focus:border-cyan-400'
                   } outline-none transition-all placeholder:text-zinc-600`}
                 />
               </div>
 
               {/* Row 10: Bot Attack Proof Security Captcha */}
-              <div className="p-3.5 bg-[#101014] border border-white/10 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-zinc-900 border border-white/10 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-[#00FF66]" />
+                    <ShieldCheck className="w-4 h-4 text-noob" />
                     <span>Security Captcha</span>
                     <span className="text-cyan-400">*</span>
                   </label>
@@ -1493,7 +1493,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
-                      className="w-full bg-[#141418] text-sm font-mono tracking-widest text-white px-3 py-2.5 rounded-xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                      className="w-full bg-zinc-900 text-sm font-mono tracking-widest text-white px-3 py-2.5 rounded-xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                     />
                   </div>
                 </div>
@@ -1533,7 +1533,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-400 hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-extrabold text-sm shadow-xl shadow-indigo-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-extrabold text-sm shadow-xl shadow-indigo-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1574,7 +1574,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder="Enter your @user_id or email"
-                    className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                    className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                   />
                 </div>
               </div>
@@ -1598,7 +1598,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full bg-[#141418] text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
+                  className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                 />
                 <div className="text-right mt-1.5">
                   <button
@@ -1619,7 +1619,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-400 hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-black text-sm shadow-[0_0_25px_rgba(99,102,241,0.35)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-black text-sm shadow-[0_0_25px_rgba(99,102,241,0.35)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1708,7 +1708,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           username was confirmed to exist (handleOpenForgotPassword) */}
       {showForgotPassword && (
         <div className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full sm:max-w-sm bg-[#141418] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
+          <div className="w-full sm:max-w-sm bg-zinc-900 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
               <h3 className="text-sm font-bold text-white">Recover @{forgotUsername}</h3>
               <button
@@ -1732,7 +1732,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     setOtpError(null);
                   }}
                   className={`flex-1 py-2 rounded-xl text-[11px] font-bold cursor-pointer transition-colors ${
-                    forgotMode === m ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 text-black' : 'bg-black/40 text-zinc-400 hover:text-white border border-white/10'
+                    forgotMode === m ? 'bg-gradient-to-r from-noob to-noob-strong text-black' : 'bg-black/40 text-zinc-400 hover:text-white border border-white/10'
                   }`}
                 >
                   {m === 'questions' ? 'Answer security questions' : 'Email me a code'}
@@ -1796,7 +1796,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {forgotLoading ? 'Verifying...' : 'Verify & Log In'}
                 </button>
@@ -1821,7 +1821,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       type="button"
                       disabled={otpLoading}
                       onClick={handleSendLoginOtp}
-                      className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
                       {otpLoading ? 'Sending...' : 'Send code to my email'}
                     </button>
@@ -1849,7 +1849,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     <button
                       type="submit"
                       disabled={otpLoading}
-                      className="w-full py-3 bg-gradient-to-r from-cyan-400 to-indigo-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
                       {otpLoading ? 'Verifying...' : 'Verify & Log In'}
                     </button>
@@ -1899,7 +1899,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           the signup form. */}
       {suspendedNotice && (
         <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#141418] border border-red-500/30 rounded-3xl p-6 shadow-2xl text-center space-y-4">
+          <div className="w-full max-w-sm bg-zinc-900 border border-red-500/30 rounded-3xl p-6 shadow-2xl text-center space-y-4">
             <div className="w-14 h-14 mx-auto rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
               <AlertCircle className="w-7 h-7 text-red-400" />
             </div>
@@ -1924,7 +1924,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           out" revokes that device's session and, once no conflict remains, continues straight in. */}
       {deviceConflict && (
         <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#141418] border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 mx-auto rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
                 <Smartphone className="w-7 h-7 text-amber-400" />

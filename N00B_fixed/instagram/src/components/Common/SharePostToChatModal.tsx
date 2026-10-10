@@ -74,10 +74,10 @@ export const SharePostToChatModal: React.FC<SharePostToChatModalProps> = ({ curr
 
         {done ? (
           <div className="p-8 text-center space-y-3">
-            <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
+            <CheckCircle2 className="w-10 h-10 text-noob mx-auto" />
             <h3 className="text-sm font-bold text-white">Sent!</h3>
             <p className="text-xs text-zinc-400">The {itemType} is in their chat now.</p>
-            <button onClick={onClose} className="mt-2 px-5 py-2.5 bg-[#00FF66] text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90">
+            <button onClick={onClose} className="mt-2 px-5 py-2.5 bg-noob text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90">
               Done
             </button>
           </div>
@@ -119,7 +119,7 @@ export const SharePostToChatModal: React.FC<SharePostToChatModalProps> = ({ curr
                         </div>
                         <div
                           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-[#00FF66] border-[#00FF66]' : 'border-zinc-700'
+                            isSelected ? 'bg-noob border-noob' : 'border-zinc-700'
                           }`}
                         >
                           {isSelected && <Check className="w-3 h-3 text-black" />}
@@ -136,7 +136,7 @@ export const SharePostToChatModal: React.FC<SharePostToChatModalProps> = ({ curr
                 <button
                   onClick={handleSend}
                   disabled={selected.size === 0 || sending}
-                  className="w-full py-3 bg-[#00FF66] hover:opacity-90 disabled:opacity-40 text-black text-xs font-bold rounded-2xl cursor-pointer transition-opacity flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-noob hover:opacity-90 disabled:opacity-40 text-black text-xs font-bold rounded-2xl cursor-pointer transition-opacity flex items-center justify-center gap-2"
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {sending ? 'Sending…' : `Send${selected.size > 0 ? ` (${selected.size})` : ''}`}

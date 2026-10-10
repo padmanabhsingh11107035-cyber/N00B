@@ -147,7 +147,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-600 to-[#00FF66] flex items-center justify-center text-black font-extrabold shadow-md shadow-purple-500/20">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-600 to-noob flex items-center justify-center text-black font-extrabold shadow-md shadow-purple-500/20">
               <Users className="w-5 h-5 text-black" />
             </div>
             <div>
@@ -173,7 +173,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
           <div>
             <span className="font-bold text-white">Admin Privileges: </span>
-            You (<span className="text-[#00FF66] font-semibold">@{currentUser.username}</span>) will be the group creator & Admin. You can promote other friends to Admins and remove members anytime.
+            You (<span className="text-noob font-semibold">@{currentUser.username}</span>) will be the group creator & Admin. You can promote other friends to Admins and remove members anytime.
           </div>
         </div>
 
@@ -193,7 +193,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               placeholder="e.g. Cyber Squad 🚀, Friday Gamers 🎮"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66] transition-colors"
+              className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob transition-colors"
             />
           </div>
 
@@ -236,7 +236,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                   disabled={isUploading}
                   className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl border border-white/10 flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <Upload className="w-3.5 h-3.5 text-[#00FF66]" />
+                  <Upload className="w-3.5 h-3.5 text-noob" />
                   {isUploading ? 'Uploading...' : avatarUrl ? 'Change Photo' : 'Upload Photo'}
                 </button>
                 <p className="text-[11px] text-zinc-500">Custom photo required — no presets.</p>
@@ -314,7 +314,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                             {isFriend && (
                               <>
                                 <span className="text-zinc-600">•</span>
-                                <span className="text-[#00FF66] font-semibold flex items-center gap-0.5">
+                                <span className="text-noob font-semibold flex items-center gap-0.5">
                                   <UserCheck className="w-2.5 h-2.5" /> Friend
                                 </span>
                               </>
@@ -326,7 +326,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                       <div
                         className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-all ${
                           isSelected
-                            ? 'bg-[#00FF66] border-[#00FF66] text-black shadow-[0_0_8px_rgba(0,255,102,0.4)]'
+                            ? 'bg-noob border-noob text-black shadow-[0_0_8px_rgba(217,119,87,0.4)]'
                             : 'border-zinc-700 bg-zinc-800'
                         }`}
                       >
@@ -356,7 +356,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
             <button
               type="submit"
               disabled={loading || !groupName.trim() || selectedUserIds.length === 0 || !avatarUrl}
-              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-[#00FF66] text-black font-extrabold text-xs rounded-xl shadow-lg shadow-purple-500/25 hover:opacity-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-noob text-black font-extrabold text-xs rounded-xl shadow-lg shadow-purple-500/25 hover:opacity-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Users className="w-4 h-4" />
               {loading ? 'Creating Group...' : 'Create Group Chat'}

@@ -109,7 +109,7 @@ export const GenericArcadeGame: React.FC<GenericArcadeGameProps> = ({
     <div className="flex flex-col items-center justify-center p-2 w-full max-w-sm mx-auto">
       {/* Top HUD */}
       <div className="flex items-center justify-between w-full mb-3 px-3 py-2 bg-zinc-900 rounded-2xl border border-zinc-800 text-xs">
-        <div className="flex items-center gap-1.5 font-bold text-[#00FF66]">
+        <div className="flex items-center gap-1.5 font-bold text-noob">
           <Target className="w-4 h-4" />
           <span>Score: {score} / {targetScore}</span>
         </div>

@@ -36,7 +36,7 @@ export const InstantsStack: React.FC<InstantsStackProps> = ({ currentUser, onOpe
         type="button"
         onClick={onOpenCamera}
         title="Take an instant"
-        className="shrink-0 w-14 h-14 rounded-2xl bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center rotate-[-6deg] hover:rotate-0 hover:border-[#00FF66] transition-all cursor-pointer"
+        className="shrink-0 w-14 h-14 rounded-2xl bg-zinc-800 border-2 border-dashed border-zinc-600 flex items-center justify-center rotate-[-6deg] hover:rotate-0 hover:border-noob transition-all cursor-pointer"
       >
         <Plus className="w-6 h-6 text-zinc-300" />
       </button>
@@ -47,7 +47,7 @@ export const InstantsStack: React.FC<InstantsStackProps> = ({ currentUser, onOpe
           type="button"
           onClick={() => onOpenViewer(group.items)}
           title={`Open ${group.sender.displayName || group.sender.username}'s instant`}
-          className="shrink-0 relative w-14 h-14 rounded-2xl overflow-hidden rotate-[4deg] hover:rotate-0 transition-transform cursor-pointer ring-2 ring-[#00FF66]"
+          className="shrink-0 relative w-14 h-14 rounded-2xl overflow-hidden rotate-[4deg] hover:rotate-0 transition-transform cursor-pointer ring-2 ring-noob"
         >
           <img src={group.sender.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           {group.items.length > 1 && (

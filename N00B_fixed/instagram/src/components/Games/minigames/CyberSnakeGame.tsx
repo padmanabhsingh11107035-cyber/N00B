@@ -157,7 +157,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
       <div className="flex items-center justify-between w-full mb-3 px-2">
         <div className="flex items-center gap-2">
           <span className="text-xs text-zinc-400 font-semibold">Orbs:</span>
-          <span className="text-sm font-black text-[#00FF66]">{score} / {targetScore}</span>
+          <span className="text-sm font-black text-noob">{score} / {targetScore}</span>
         </div>
         <div className="text-[11px] text-zinc-400 bg-zinc-900 px-2.5 py-1 rounded-full border border-zinc-800">
           Target to Win: <strong className="text-white">{targetScore}</strong>
@@ -168,7 +168,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative w-full aspect-square max-w-[340px] sm:max-w-[400px] bg-zinc-950 border-2 border-[#00FF66]/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(0,255,102,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
+        className="relative w-full aspect-square max-w-[340px] sm:max-w-[400px] bg-zinc-950 border-2 border-noob/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(217,119,87,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
       >
         {/* Render Grid Cells */}
         {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, idx) => {
@@ -183,7 +183,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
               key={idx}
               className={`w-full h-full ${
                 isHead
-                  ? 'bg-[#00FF66] rounded-sm shadow-[0_0_8px_#00FF66]'
+                  ? 'bg-noob rounded-sm shadow-[0_0_8px_#d97757]'
                   : isBody
                   ? 'bg-emerald-500/80 rounded-xs'
                   : isFood
@@ -201,7 +201,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
             <p className="text-xs text-zinc-400 mb-4">Collect {targetScore} glowing power orbs to win!</p>
             <button
               onClick={startGame}
-              className="px-5 py-2.5 bg-[#00FF66] hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-[0_0_15px_rgba(0,255,102,0.4)] flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105"
+              className="px-5 py-2.5 bg-noob hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-[0_0_15px_rgba(217,119,87,0.4)] flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105"
             >
               <Play className="w-4 h-4 fill-black" /> Start Game
             </button>

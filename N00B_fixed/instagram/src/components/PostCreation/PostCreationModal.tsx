@@ -571,7 +571,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       id="post-creation-modal"
       className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto"
     >
-      <div className="relative w-full max-w-2xl bg-[#0f0f0f] border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200 my-auto">
+      <div className="relative w-full max-w-2xl bg-zinc-950 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh] animate-in zoom-in-95 duration-200 my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800/80 bg-neutral-900/60 sticky top-0 z-20 backdrop-blur-md">
           <button
@@ -590,7 +590,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                   🎬 Video Only
                 </span>
               ) : (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/30 uppercase tracking-wider">
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-noob/20 text-noob border border-noob/30 uppercase tracking-wider">
                   📸 Image Only
                 </span>
               )}
@@ -600,7 +600,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           <button
             onClick={handlePublish}
             disabled={!isReadyToSubmit || isUploadingMedia || isPublishing}
-            className="px-4 py-1.5 bg-[#00FF66] disabled:opacity-40 disabled:hover:scale-100 text-black text-xs font-black rounded-full hover:scale-105 transition-all shadow-md shadow-[#00FF66]/30 cursor-pointer"
+            className="px-4 py-1.5 bg-noob disabled:opacity-40 disabled:hover:scale-100 text-black text-xs font-black rounded-full hover:scale-105 transition-all shadow-md shadow-noob/30 cursor-pointer"
           >
             {isPublishing ? 'Publishing...' : creationType === 'reel' ? 'Share Reel' : 'Share Post'}
           </button>
@@ -616,7 +616,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
             }}
             className={`flex-1 py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               creationType === 'post'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-2 border-[#00FF66] text-[#00FF66] shadow-md shadow-[#00FF66]/10'
+                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-2 border-noob text-noob shadow-md shadow-noob/10'
                 : 'bg-neutral-900 border border-neutral-800 text-zinc-400 hover:text-white hover:border-neutral-700'
             }`}
           >
@@ -662,7 +662,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 <img
                   src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                   alt={currentUser.username}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-[#00FF66]/60 shadow-md"
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-noob/60 shadow-md"
                   referrerPolicy="no-referrer"
                 />
                 {taggedUser && (
@@ -687,7 +687,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                   {taggedUser && (
                     <>
                       <span className="text-xs text-zinc-400 font-medium">and</span>
-                      <span className="text-xs font-bold text-[#00FF66] flex items-center gap-1">
+                      <span className="text-xs font-bold text-noob flex items-center gap-1">
                         @{taggedUser.username}
                         {taggedUser.isVerified && <VerifiedBadge size="xs" />}
                       </span>
@@ -832,14 +832,14 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                   setAtMentionQuery(null);
                 }
               }}
-              className="w-full bg-neutral-900/90 text-sm text-white p-3.5 rounded-2xl border border-neutral-800 focus:border-[#00FF66] outline-none leading-relaxed resize-none transition-all placeholder:text-zinc-500"
+              className="w-full bg-neutral-900/90 text-sm text-white p-3.5 rounded-2xl border border-neutral-800 focus:border-noob outline-none leading-relaxed resize-none transition-all placeholder:text-zinc-500"
             />
 
             {/* Dynamic @ Mention Dropdown Triggered by typing '@' */}
             {atMentionQuery !== null && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-950/95 border border-[#00FF66]/40 rounded-2xl p-2 shadow-2xl z-30 max-h-48 overflow-y-auto backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-950/95 border border-noob/40 rounded-2xl p-2 shadow-2xl z-30 max-h-48 overflow-y-auto backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
                 <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-zinc-800">
-                  <span className="text-[10px] font-bold text-[#00FF66] flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-noob flex items-center gap-1">
                     <Users className="w-3 h-3" /> Tag a member (@{atMentionQuery || '...'})
                   </span>
                   <span className="text-[9px] text-zinc-400">Links profiles upon selection</span>
@@ -872,18 +872,18 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                         <img
                           src={u.avatar}
                           alt={u.username}
-                          className="w-6 h-6 rounded-full object-cover ring-1 ring-[#00FF66]/40"
+                          className="w-6 h-6 rounded-full object-cover ring-1 ring-noob/40"
                           referrerPolicy="no-referrer"
                         />
                         <div>
-                          <div className="flex items-center gap-1 text-xs font-bold text-white group-hover:text-[#00FF66]">
+                          <div className="flex items-center gap-1 text-xs font-bold text-white group-hover:text-noob">
                             <span>{u.displayName || u.username}</span>
                             {u.isVerified && <VerifiedBadge size="xs" />}
                           </div>
                           <span className="text-[10px] text-zinc-400 block">@{u.username}</span>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-[#00FF66] opacity-80 group-hover:opacity-100">
+                      <span className="text-[10px] font-bold text-noob opacity-80 group-hover:opacity-100">
                         Tag &amp; Link
                       </span>
                     </button>
@@ -921,7 +921,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                     onClick={() => setSelectedTextBg(t.id)}
                     className={`px-2.5 py-2 rounded-xl text-xs font-semibold border transition-all text-center ${
                       selectedTextBg === t.id
-                        ? 'border-[#00FF66] scale-[1.02] shadow-sm shadow-[#00FF66]/20 ring-1 ring-[#00FF66]'
+                        ? 'border-noob scale-[1.02] shadow-sm shadow-noob/20 ring-1 ring-noob'
                         : 'border-neutral-800 opacity-70 hover:opacity-100 hover:border-neutral-700'
                     } ${t.bgClass}`}
                   >
@@ -937,13 +937,13 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
             <div className="p-3.5 bg-neutral-950 border border-neutral-800 rounded-2xl space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4 text-[#00FF66]" /> Photo Slide {activeSlideIndex + 1} of {slides.length}
+                  <ImageIcon className="w-4 h-4 text-noob" /> Photo Slide {activeSlideIndex + 1} of {slides.length}
                 </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-[11px] text-[#00FF66] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    className="text-[11px] text-noob font-bold hover:underline cursor-pointer flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add more
                   </button>
@@ -1033,8 +1033,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                     )}
                     {sticker.type === 'hashtag' && (
                       <div className="w-full flex items-center justify-center">
-                        <div className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-[#00FF66]/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap" style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}>
-                          <span className="font-semibold text-[#00FF66]" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                        <div className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap" style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}>
+                          <span className="font-semibold text-noob" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
                         </div>
                       </div>
                     )}
@@ -1089,7 +1089,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       {textEditor !== 'new' && (
                         <button onClick={() => { deleteStickerAt(textEditor as number); setTextEditor(null); }} className="p-1 rounded-full bg-black/60 text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                       )}
-                      <button onClick={commitPostText} disabled={!draftPostText.trim()} className="px-2.5 py-0.5 bg-[#00FF66] text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
+                      <button onClick={commitPostText} disabled={!draftPostText.trim()} className="px-2.5 py-0.5 bg-noob text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
                     </div>
                     <div className="flex-1 flex items-center justify-center p-3">
                       <textarea
@@ -1119,9 +1119,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       {hashtagEditor !== 'new' && (
                         <button onClick={() => { deleteStickerAt(hashtagEditor as number); setHashtagEditor(null); }} className="p-1 rounded-full bg-black/60 text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                       )}
-                      <button onClick={commitPostHashtag} disabled={!draftPostHashtag.trim()} className="px-2.5 py-0.5 bg-[#00FF66] text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
+                      <button onClick={commitPostHashtag} disabled={!draftPostHashtag.trim()} className="px-2.5 py-0.5 bg-noob text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
                     </div>
-                    <div className="flex-1 flex items-center justify-center gap-1 text-lg font-extrabold text-[#00FF66]">
+                    <div className="flex-1 flex items-center justify-center gap-1 text-lg font-extrabold text-noob">
                       <span>#</span>
                       <input
                         autoFocus
@@ -1129,7 +1129,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                         onChange={(e) => setDraftPostHashtag(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                         placeholder="hashtag"
                         maxLength={40}
-                        className="bg-transparent text-center focus:outline-none placeholder:text-[#00FF66]/40 min-w-0"
+                        className="bg-transparent text-center focus:outline-none placeholder:text-noob/40 min-w-0"
                         style={{ width: `${Math.max(3, draftPostHashtag.length || 6)}ch` }}
                       />
                     </div>
@@ -1144,11 +1144,11 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       {linkEditor !== 'new' && (
                         <button onClick={() => { deleteStickerAt(linkEditor as number); setLinkEditor(null); }} className="p-1 rounded-full bg-black/60 text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                       )}
-                      <button onClick={commitPostLink} disabled={!draftPostLinkUrl.trim()} className="px-2.5 py-0.5 bg-[#00FF66] text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
+                      <button onClick={commitPostLink} disabled={!draftPostLinkUrl.trim()} className="px-2.5 py-0.5 bg-noob text-black text-[10px] font-bold rounded-full cursor-pointer disabled:opacity-40">Done</button>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center gap-2 p-3">
-                      <input autoFocus value={draftPostLinkUrl} onChange={(e) => setDraftPostLinkUrl(e.target.value)} placeholder="https://example.com" className="w-full bg-white/10 text-center text-xs text-white p-1.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none" />
-                      <input value={draftPostLinkLabel} onChange={(e) => setDraftPostLinkLabel(e.target.value)} placeholder="Label (optional)" maxLength={30} className="w-full bg-white/10 text-center text-xs text-white p-1.5 rounded-lg border border-white/20 focus:border-[#00FF66] outline-none" />
+                      <input autoFocus value={draftPostLinkUrl} onChange={(e) => setDraftPostLinkUrl(e.target.value)} placeholder="https://example.com" className="w-full bg-white/10 text-center text-xs text-white p-1.5 rounded-lg border border-white/20 focus:border-noob outline-none" />
+                      <input value={draftPostLinkLabel} onChange={(e) => setDraftPostLinkLabel(e.target.value)} placeholder="Label (optional)" maxLength={30} className="w-full bg-white/10 text-center text-xs text-white p-1.5 rounded-lg border border-white/20 focus:border-noob outline-none" />
                     </div>
                   </div>
                 )}
@@ -1160,7 +1160,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       <button onClick={() => setShowPostStickerPicker(false)} className="p-1 rounded-full bg-black/60 text-white cursor-pointer"><X className="w-3.5 h-3.5" /></button>
                       <div className="flex items-center gap-1 bg-black/60 rounded-full p-0.5 overflow-x-auto no-scrollbar max-w-[75%]">
                         {(['emoji', 'animated', 'gif', 'upload'] as const).map((tab) => (
-                          <button key={tab} onClick={() => setPostStickerTab(tab)} className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase cursor-pointer shrink-0 ${postStickerTab === tab ? 'bg-[#00FF66] text-black' : 'text-gray-300'}`}>
+                          <button key={tab} onClick={() => setPostStickerTab(tab)} className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase cursor-pointer shrink-0 ${postStickerTab === tab ? 'bg-noob text-black' : 'text-gray-300'}`}>
                             {tab === 'emoji' ? 'Emoji' : tab === 'animated' ? 'Stickers' : tab === 'gif' ? 'GIF' : 'Upload'}
                           </button>
                         ))}
@@ -1177,7 +1177,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                             type="button"
                             onClick={() => postStickerUploadInputRef.current?.click()}
                             disabled={isUploadingPostSticker}
-                            className="flex flex-col items-center gap-2 px-5 py-6 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] transition-colors cursor-pointer disabled:opacity-50"
+                            className="flex flex-col items-center gap-2 px-5 py-6 rounded-2xl border-2 border-dashed border-neutral-700 hover:border-noob text-zinc-400 hover:text-noob transition-colors cursor-pointer disabled:opacity-50"
                           >
                             {isUploadingPostSticker ? <Loader2 className="w-7 h-7 animate-spin" /> : <ImageIcon className="w-7 h-7" />}
                             <span className="text-[11px] font-bold">
@@ -1205,7 +1205,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       <button onClick={() => { setShowPostMentionPicker(false); setPostMentionQuery(''); }} className="p-1 rounded-full bg-black/60 text-white cursor-pointer shrink-0"><X className="w-3.5 h-3.5" /></button>
                       <div className="relative flex-1">
                         <Search className="w-3 h-3 text-zinc-500 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input autoFocus value={postMentionQuery} onChange={(e) => setPostMentionQuery(e.target.value)} placeholder="Search people" className="w-full bg-zinc-900 text-[11px] text-white pl-6 pr-2 py-1.5 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none" />
+                        <input autoFocus value={postMentionQuery} onChange={(e) => setPostMentionQuery(e.target.value)} placeholder="Search people" className="w-full bg-zinc-900 text-[11px] text-white pl-6 pr-2 py-1.5 rounded-xl border border-zinc-800 focus:border-noob outline-none" />
                       </div>
                     </div>
                     <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1">
@@ -1226,7 +1226,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       <button onClick={() => { setShowTagPeoplePicker(false); setTagPeopleQuery(''); }} className="p-1 rounded-full bg-black/60 text-white cursor-pointer shrink-0"><X className="w-3.5 h-3.5" /></button>
                       <div className="relative flex-1">
                         <Search className="w-3 h-3 text-zinc-500 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input autoFocus value={tagPeopleQuery} onChange={(e) => setTagPeopleQuery(e.target.value)} placeholder="Search people to tag" className="w-full bg-zinc-900 text-[11px] text-white pl-6 pr-2 py-1.5 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none" />
+                        <input autoFocus value={tagPeopleQuery} onChange={(e) => setTagPeopleQuery(e.target.value)} placeholder="Search people to tag" className="w-full bg-zinc-900 text-[11px] text-white pl-6 pr-2 py-1.5 rounded-xl border border-zinc-800 focus:border-noob outline-none" />
                       </div>
                       <span className="text-[10px] text-zinc-400 shrink-0">{activeTaggedPeople.length}/{MAX_TAGGED_PEOPLE}</span>
                     </div>
@@ -1270,7 +1270,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       onClick={() => setSelectedFilter(f.id)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
                         selectedFilter === f.id
-                          ? 'bg-[#00FF66]/20 text-[#00FF66] border-[#00FF66]'
+                          ? 'bg-noob/20 text-noob border-noob'
                           : 'bg-neutral-900 text-zinc-400 border-neutral-800 hover:text-white'
                       }`}
                     >
@@ -1289,7 +1289,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       type="button"
                       onClick={() => setActiveSlideIndex(idx)}
                       className={`w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all relative ${
-                        idx === activeSlideIndex ? 'border-[#00FF66] scale-105' : 'border-neutral-800 opacity-60'
+                        idx === activeSlideIndex ? 'border-noob scale-105' : 'border-neutral-800 opacity-60'
                       }`}
                     >
                       <img src={s.mediaUrl} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" />
@@ -1354,9 +1354,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingMedia}
-                className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer hover:border-[#00FF66]/50"
+                className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer hover:border-noob/50"
               >
-                <ImageIcon className="w-4 h-4 text-[#00FF66]" />
+                <ImageIcon className="w-4 h-4 text-noob" />
                 <span>Add Photos (Image Only)</span>
               </button>
             ) : (
@@ -1404,13 +1404,13 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowMusicPicker(true)}
-                className="w-full flex items-center gap-2.5 bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 hover:border-[#00FF66] outline-none cursor-pointer text-left"
+                className="w-full flex items-center gap-2.5 bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 hover:border-noob outline-none cursor-pointer text-left"
               >
                 {audioSelection?.coverUrl ? (
                   <img src={audioSelection.coverUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center shrink-0">
-                    <MusicIcon className="w-3.5 h-3.5 text-[#00FF66]" />
+                    <MusicIcon className="w-3.5 h-3.5 text-noob" />
                   </div>
                 )}
                 <span className="truncate">
@@ -1427,8 +1427,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-1">
                 Location (Optional)
               </label>
-              <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 focus-within:border-[#00FF66]">
-                <MapPin className="w-3.5 h-3.5 text-[#00FF66] mr-2 shrink-0" />
+              <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 focus-within:border-noob">
+                <MapPin className="w-3.5 h-3.5 text-noob mr-2 shrink-0" />
                 <input
                   type="text"
                   placeholder="e.g. Neo Tokyo, Akihabara..."
@@ -1455,7 +1455,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 className={`w-full bg-neutral-900 text-xs text-white p-2.5 rounded-xl border outline-none cursor-pointer ${
                   categoryError
                     ? 'border-rose-500 bg-rose-950/20 ring-1 ring-rose-500'
-                    : 'border-neutral-800 focus:border-[#00FF66]'
+                    : 'border-neutral-800 focus:border-noob'
                 }`}
               >
                 <option value="" disabled>-- Select Content Category (Compulsory) --</option>
@@ -1492,7 +1492,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               placeholder="e.g. gaming, tech, clips (optional)"
               value={hashtags}
               onChange={(e) => setHashtags(e.target.value)}
-              className="w-full bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 focus:border-[#00FF66] outline-none"
+              className="w-full bg-neutral-900 text-xs text-white p-2.5 rounded-xl border border-neutral-800 focus:border-noob outline-none"
             />
           </div>
 
@@ -1501,7 +1501,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
             <button
               type="button"
               onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-              className="text-xs font-bold text-[#00FF66] flex items-center gap-1.5 cursor-pointer hover:underline"
+              className="text-xs font-bold text-noob flex items-center gap-1.5 cursor-pointer hover:underline"
             >
               <Sliders className="w-3.5 h-3.5" />
               {isAdvancedOpen ? 'Hide Additional Settings' : 'Show Additional Settings (Links, Privacy, AI Label)'}
@@ -1512,14 +1512,14 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                 {/* External Link */}
                 <div>
                   <label className="text-[10px] text-zinc-400 block mb-1 font-semibold flex items-center gap-1">
-                    <Link2 className="w-3 h-3 text-[#00FF66]" /> External Project / Web Link
+                    <Link2 className="w-3 h-3 text-noob" /> External Project / Web Link
                   </label>
                   <input
                     type="url"
                     placeholder="https://example.com"
                     value={webLink}
                     onChange={(e) => setWebLink(e.target.value)}
-                    className="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-neutral-800 outline-none focus:border-[#00FF66]"
+                    className="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-neutral-800 outline-none focus:border-noob"
                   />
                 </div>
 
@@ -1532,7 +1532,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                     type="datetime-local"
                     value={scheduledFor}
                     onChange={(e) => setScheduledFor(e.target.value)}
-                    className="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-neutral-800 outline-none focus:border-[#00FF66]"
+                    className="w-full bg-black text-xs text-white p-2.5 rounded-xl border border-neutral-800 outline-none focus:border-noob"
                   />
                 </div>
 
@@ -1543,7 +1543,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       type="checkbox"
                       checked={hideLikes}
                       onChange={(e) => setHideLikes(e.target.checked)}
-                      className="rounded border-neutral-700 bg-black text-[#00FF66] focus:ring-0 cursor-pointer"
+                      className="rounded border-neutral-700 bg-black text-noob focus:ring-0 cursor-pointer"
                     />
                     <span className="text-xs text-zinc-300">Hide like and view counts on this post</span>
                   </label>
@@ -1553,7 +1553,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       type="checkbox"
                       checked={disableComments}
                       onChange={(e) => setDisableComments(e.target.checked)}
-                      className="rounded border-neutral-700 bg-black text-[#00FF66] focus:ring-0 cursor-pointer"
+                      className="rounded border-neutral-700 bg-black text-noob focus:ring-0 cursor-pointer"
                     />
                     <span className="text-xs text-zinc-300">Turn off commenting</span>
                   </label>
@@ -1563,7 +1563,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                       type="checkbox"
                       checked={hasAiLabel}
                       onChange={(e) => setHasAiLabel(e.target.checked)}
-                      className="rounded border-neutral-700 bg-black text-[#00FF66] focus:ring-0 cursor-pointer"
+                      className="rounded border-neutral-700 bg-black text-noob focus:ring-0 cursor-pointer"
                     />
                     <span className="text-xs text-zinc-300">Label post as AI Generated / Augmented</span>
                   </label>

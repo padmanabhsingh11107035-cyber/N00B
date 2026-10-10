@@ -35,8 +35,8 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
     <div className="fixed inset-0 z-[125] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Chat encryption">
       <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
         <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${locked ? 'bg-[#00FF66]/15 border-[#00FF66]/40' : 'bg-amber-500/15 border-amber-500/30'}`}>
-            {locked ? <Lock className="w-4 h-4 text-[#00FF66]" /> : <LockOpen className="w-4 h-4 text-amber-300" />}
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${locked ? 'bg-noob/15 border-noob/40' : 'bg-amber-500/15 border-amber-500/30'}`}>
+            {locked ? <Lock className="w-4 h-4 text-noob" /> : <LockOpen className="w-4 h-4 text-amber-300" />}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-black text-white">{locked ? 'This chat is end-to-end encrypted' : 'This chat is not end-to-end encrypted'}</h3>
@@ -68,7 +68,7 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
 
           {locked && info?.peer && (
             <div>
-              <div className="text-[11px] font-black text-white mb-1.5 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-[#00FF66]" /> Security code</div>
+              <div className="text-[11px] font-black text-white mb-1.5 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-noob" /> Security code</div>
               <div className="grid grid-cols-4 gap-1.5 rounded-2xl bg-black/50 border border-zinc-800 p-3 font-mono text-sm text-white text-center" translate="no" dir="ltr">
                 {groups.map((g, i) => <span key={i}>{g}</span>)}
               </div>
@@ -80,7 +80,7 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3 space-y-1.5">
             <div className="text-[11px] font-black text-white">What is locked, and what is not</div>
-            <p><span className="text-[#00FF66] font-bold">Locked:</span> text messages, replies, edits, and GIFs and stickers.</p>
+            <p><span className="text-noob font-bold">Locked:</span> text messages, replies, edits, and GIFs and stickers.</p>
             <p><span className="text-amber-300 font-bold">Not locked yet:</span> photos, videos, voice notes, shared music and game invites are stored normally.</p>
             <p><span className="text-zinc-400 font-bold">Still visible to NOOB:</span> who is in a chat and when messages are sent. Notifications only say &quot;New message&quot;.</p>
             <p className="text-zinc-400">Pressing translate on a locked message sends that one message to the translator. Messages are also kept on your own device so the app opens quickly.</p>
@@ -89,7 +89,7 @@ export const ChatEncryptionModal: React.FC<ChatEncryptionModalProps> = ({ info, 
 
         <footer className="p-3 border-t border-zinc-800">
           <button type="button" onClick={onOpenSettings} className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-bold text-white flex items-center justify-center gap-2 cursor-pointer">
-            <KeyRound className="w-4 h-4 text-[#00FF66]" /> My encryption keys &amp; backup
+            <KeyRound className="w-4 h-4 text-noob" /> My encryption keys &amp; backup
           </button>
         </footer>
       </div>
@@ -151,15 +151,15 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
     return added > 0 ? 'Done. Older messages can now be opened on this device.' : 'Your backup was read. This device already had all of those keys.';
   });
 
-  const input = 'w-full bg-black/60 text-xs text-white px-3 py-2.5 rounded-xl border border-zinc-700 outline-none focus:border-[#00FF66]/60';
+  const input = 'w-full bg-black/60 text-xs text-white px-3 py-2.5 rounded-xl border border-zinc-700 outline-none focus:border-noob/60';
   const btn = 'px-4 py-2.5 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50';
 
   return (
     <div className="fixed inset-0 z-[130] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Encryption keys and backup">
       <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
         <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center shrink-0">
-            <KeyRound className="w-4 h-4 text-[#00FF66]" />
+          <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/40 flex items-center justify-center shrink-0">
+            <KeyRound className="w-4 h-4 text-noob" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-black text-white">Encryption keys &amp; backup</h3>
@@ -184,7 +184,7 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
                     <Smartphone className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-bold text-white truncate" translate="no">
-                        {d.label || 'Device'} {d.thisDevice && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/30 font-black uppercase">this device</span>}
+                        {d.label || 'Device'} {d.thisDevice && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-noob/15 text-noob border border-noob/30 font-black uppercase">this device</span>}
                       </div>
                       <div className="text-[10px] text-zinc-500" translate="no">{d.kid.slice(0, 8)} · {when(d.createdAt)}{d.active ? '' : ' · switched off'}</div>
                     </div>
@@ -211,14 +211,14 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
                   A new phone, or a cleared browser, can not read older messages unless it has your old keys. A backup keeps them, locked with a passphrase that only you know. Without a backup, older messages can not be recovered by anyone, including NOOB.
                 </p>
                 {status.hasBackup && (
-                  <div className="flex items-center gap-2 rounded-xl border border-[#00FF66]/30 bg-[#00FF66]/10 px-3 py-2 text-[#00FF66]">
+                  <div className="flex items-center gap-2 rounded-xl border border-noob/30 bg-noob/10 px-3 py-2 text-noob">
                     <Check className="w-4 h-4 shrink-0" /> Backup saved {when(status.backupAt)}
                   </div>
                 )}
                 <input type="password" autoComplete="new-password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder={status.hasBackup ? 'New passphrase (to update the backup)' : 'Choose a passphrase (10+ characters)'} className={input} />
                 <input type="password" autoComplete="new-password" value={pass2} onChange={(e) => setPass2(e.target.value)} placeholder="Type it again" className={input} />
                 <div className="flex gap-2">
-                  <button type="button" disabled={busy || !pass} onClick={saveBackup} className={`${btn} bg-[#00FF66] text-black`}>{busy ? 'Working…' : status.hasBackup ? 'Update backup' : 'Create backup'}</button>
+                  <button type="button" disabled={busy || !pass} onClick={saveBackup} className={`${btn} bg-noob text-black`}>{busy ? 'Working…' : status.hasBackup ? 'Update backup' : 'Create backup'}</button>
                   {status.hasBackup && (
                     <button type="button" disabled={busy} onClick={() => run(async () => { await e2ee.deleteBackup(); return 'The backup was deleted.'; })} className={`${btn} bg-zinc-900 border border-zinc-700 text-zinc-200`}>Delete backup</button>
                   )}
@@ -238,7 +238,7 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
           )}
 
           {notice && (
-            <div className={`rounded-xl border px-3 py-2 ${notice.ok ? 'border-[#00FF66]/30 bg-[#00FF66]/10 text-[#00FF66]' : 'border-red-500/40 bg-red-500/10 text-red-300'}`} role="status">{notice.text}</div>
+            <div className={`rounded-xl border px-3 py-2 ${notice.ok ? 'border-noob/30 bg-noob/10 text-noob' : 'border-red-500/40 bg-red-500/10 text-red-300'}`} role="status">{notice.text}</div>
           )}
 
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3 space-y-1.5 text-[11px] text-zinc-400">

@@ -259,7 +259,7 @@ export const LudoGameModule: React.FC<NoobLudoModuleProps> = ({
         />
       ) : (
         /* Standalone Ludo Hub Header when match not in progress */
-        <div className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-2 p-2.5 md:p-3 rounded-2xl bg-[#111827]/90 border border-slate-800/80 backdrop-blur-xl mb-2 shadow-xl shadow-black/40">
+        <div className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-2 p-2.5 md:p-3 rounded-2xl bg-zinc-900/90 border border-slate-800/80 backdrop-blur-xl mb-2 shadow-xl shadow-black/40">
           <div className="flex items-center gap-2 md:gap-3 flex-wrap">
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-xl">🎲</span>
@@ -450,7 +450,7 @@ export const LudoGameModule: React.FC<NoobLudoModuleProps> = ({
         <div className="w-full max-w-4xl flex-1 flex flex-col items-center justify-center text-center my-3 md:my-4 px-2">
           <div className="relative w-full max-w-2xl">
             <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-600/20 rounded-3xl blur-xl opacity-60" />
-            <div className="relative p-5 sm:p-7 md:p-8 rounded-3xl bg-[#111827]/95 border border-amber-500/30 shadow-2xl backdrop-blur-2xl flex flex-col items-center">
+            <div className="relative p-5 sm:p-7 md:p-8 rounded-3xl bg-zinc-900/95 border border-amber-500/30 shadow-2xl backdrop-blur-2xl flex flex-col items-center">
               <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 p-0.5 shadow-lg shadow-amber-500/20 mb-3 flex items-center justify-center">
                 <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-2xl md:text-3xl">
                   🎲

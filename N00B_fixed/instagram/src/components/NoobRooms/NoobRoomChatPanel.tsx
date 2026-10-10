@@ -103,7 +103,7 @@ export const NoobRoomChatPanel: React.FC<NoobRoomChatPanelProps> = ({ roomId, cu
                 ) : m.mediaType === 'gif' || m.mediaType === 'sticker' ? (
                   <img src={m.mediaUrl || ''} alt="" className="max-w-[140px] rounded-xl" />
                 ) : (
-                  <div className={`px-3 py-1.5 rounded-2xl text-xs ${isSelf ? 'bg-[#00FF66] text-black' : 'bg-zinc-800 text-white'}`}>
+                  <div className={`px-3 py-1.5 rounded-2xl text-xs ${isSelf ? 'bg-noob text-black' : 'bg-zinc-800 text-white'}`}>
                     {m.text}
                   </div>
                 )}
@@ -130,14 +130,14 @@ export const NoobRoomChatPanel: React.FC<NoobRoomChatPanelProps> = ({ roomId, cu
         <input ref={videoInputRef} type="file" accept="video/*" className="sr-only" onChange={(e) => void handleAttachFile(e, 'video')} />
         <button
           onClick={() => setPicker(picker === 'stickers' ? 'none' : 'stickers')}
-          className={`shrink-0 p-2 rounded-full cursor-pointer ${picker === 'stickers' ? 'bg-[#00FF66]/20 text-[#00FF66]' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}`}
+          className={`shrink-0 p-2 rounded-full cursor-pointer ${picker === 'stickers' ? 'bg-noob/20 text-noob' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}`}
           title="Stickers"
         >
           <Smile className="w-4.5 h-4.5" />
         </button>
         <button
           onClick={() => setPicker(picker === 'gifs' ? 'none' : 'gifs')}
-          className={`shrink-0 p-2 rounded-full cursor-pointer text-[10px] font-black ${picker === 'gifs' ? 'bg-[#00FF66]/20 text-[#00FF66]' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}`}
+          className={`shrink-0 p-2 rounded-full cursor-pointer text-[10px] font-black ${picker === 'gifs' ? 'bg-noob/20 text-noob' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}`}
           title="GIFs"
         >
           GIF
@@ -157,7 +157,7 @@ export const NoobRoomChatPanel: React.FC<NoobRoomChatPanelProps> = ({ roomId, cu
           disabled={uploading}
           className="flex-1 min-w-0 bg-zinc-900 text-white placeholder-zinc-500 rounded-full px-3.5 py-2 text-xs outline-none disabled:opacity-60"
         />
-        <button onClick={handleSendText} disabled={sending || !input.trim()} className="shrink-0 p-2 text-[#00FF66] disabled:opacity-40 disabled:text-zinc-500 cursor-pointer">
+        <button onClick={handleSendText} disabled={sending || !input.trim()} className="shrink-0 p-2 text-noob disabled:opacity-40 disabled:text-zinc-500 cursor-pointer">
           {uploading ? <Paperclip className="w-4.5 h-4.5 animate-pulse" /> : <Send className="w-4.5 h-4.5" />}
         </button>
       </div>

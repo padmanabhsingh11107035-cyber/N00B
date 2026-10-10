@@ -90,7 +90,7 @@ export const CouponsModal: React.FC<CouponsModalProps> = ({ currentUser, onClose
           </button>
         </div>
         {applyMsg && (
-          <p className={`text-xs mt-2 px-1 ${applyMsg.type === 'success' ? 'text-[#00FF66]' : 'text-rose-400'}`}>
+          <p className={`text-xs mt-2 px-1 ${applyMsg.type === 'success' ? 'text-noob' : 'text-rose-400'}`}>
             {applyMsg.text}
           </p>
         )}
@@ -172,7 +172,7 @@ const CouponCard: React.FC<{
           className={`w-11 h-11 rounded-xl border flex items-center justify-center font-black text-xs shrink-0 ${
             isVerification
               ? 'bg-gradient-to-br from-blue-500/20 to-cyan-600/10 border-blue-500/30 text-blue-400'
-              : 'bg-gradient-to-br from-[#00FF66]/20 to-emerald-600/10 border-[#00FF66]/30 text-[#00FF66]'
+              : 'bg-gradient-to-br from-noob/20 to-noob-strong/20/10 border-noob/30 text-noob'
           }`}
         >
           {isVerification ? <BadgeCheck className="w-5 h-5" /> : `${coupon.discountPercent}%`}
@@ -389,7 +389,7 @@ const CreateCouponModal: React.FC<{
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={isVerification ? 'e.g. Free Verification for @friend' : 'e.g. Flat 20% Off NOOB Pro'}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-noob"
           />
         </div>
 
@@ -402,7 +402,7 @@ const CreateCouponModal: React.FC<{
               max="100"
               value={discountPercent}
               onChange={(e) => setDiscountPercent(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-noob"
             />
           </div>
         )}
@@ -452,7 +452,7 @@ const CreateCouponModal: React.FC<{
                   onClick={() => toggleTermsTemplate(line)}
                   className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border cursor-pointer transition-colors text-left ${
                     checked
-                      ? 'bg-[#00FF66]/15 border-[#00FF66]/50 text-[#00FF66]'
+                      ? 'bg-noob/15 border-noob/50 text-noob'
                       : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
                   }`}
                 >
@@ -473,7 +473,7 @@ const CreateCouponModal: React.FC<{
             onChange={(e) => setTerms(e.target.value)}
             rows={4}
             placeholder={'Tap a quick term above, or type your own\nApplicable only on NOOB Pro upgrades'}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66] resize-none"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-noob resize-none"
           />
         </div>
 
@@ -516,7 +516,7 @@ const CreateCouponModal: React.FC<{
                 onFocus={() => setShowUserPicker(true)}
                 onBlur={() => setTimeout(() => setShowUserPicker(false), 150)}
                 placeholder="Search or type a username..."
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-noob"
               />
               {showUserPicker && filteredPickerUsers.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl">
@@ -554,7 +554,7 @@ const CreateCouponModal: React.FC<{
         <button
           type="submit"
           disabled={submitting}
-          className="w-full py-3 rounded-2xl bg-[#00FF66] text-black font-bold text-xs cursor-pointer disabled:opacity-50 hover:bg-[#00FF66]/90 transition-colors"
+          className="w-full py-3 rounded-2xl bg-noob text-black font-bold text-xs cursor-pointer disabled:opacity-50 hover:bg-noob/90 transition-colors"
         >
           {submitting ? 'Creating...' : 'Create Coupon'}
         </button>

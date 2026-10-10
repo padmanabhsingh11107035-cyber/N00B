@@ -43,8 +43,8 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, linkCopied
             onClick={onCopyLink}
             className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
-              {linkCopied ? <Check className="w-4.5 h-4.5 text-[#00FF66]" /> : <Copy className="w-4.5 h-4.5 text-[#00FF66]" />}
+            <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/30 flex items-center justify-center shrink-0">
+              {linkCopied ? <Check className="w-4.5 h-4.5 text-noob" /> : <Copy className="w-4.5 h-4.5 text-noob" />}
             </div>
             <div>
               <span className="text-xs font-bold text-white block">{linkCopied ? 'Link Copied!' : 'Copy Link'}</span>

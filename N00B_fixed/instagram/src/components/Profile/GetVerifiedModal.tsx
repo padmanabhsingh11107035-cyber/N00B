@@ -197,7 +197,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                   <VerifiedBadge size="xl" />
                 </div>
               </div>
-              <span className="absolute -bottom-1 -right-1 p-1.5 bg-[#00FF66] text-black rounded-full shadow-lg">
+              <span className="absolute -bottom-1 -right-1 p-1.5 bg-noob text-black rounded-full shadow-lg">
                 <Check className="w-4 h-4 stroke-[3]" />
               </span>
             </div>
@@ -210,7 +210,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
             </div>
 
             <div className="w-full max-w-xs bg-zinc-900 rounded-full h-1.5 overflow-hidden mt-3">
-              <div className="bg-gradient-to-r from-white to-[#00FF66] h-full w-full animate-[progress_2.5s_ease-in-out]" />
+              <div className="bg-gradient-to-r from-white to-noob h-full w-full animate-[progress_2.5s_ease-in-out]" />
             </div>
             <span className="text-[11px] text-zinc-500 font-medium">Returning to profile...</span>
           </div>
@@ -312,7 +312,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                 <button
                   type="button"
                   onClick={handleProceedToPayment}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-[#00FF66] hover:bg-[#00e65c] text-black font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#00FF66]/20 transition-all cursor-pointer"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-noob hover:bg-[#00e65c] text-black font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-noob/20 transition-all cursor-pointer"
                 >
                   <VerifiedBadge size="sm" />
                   <span>Verify Account Now</span>
@@ -355,7 +355,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                 </div>
               </div>
               {selectedOption === 'coupon' ? (
-                <span className="text-xs font-black text-[#00FF66]">FREE</span>
+                <span className="text-xs font-black text-noob">FREE</span>
               ) : (
                 <div className="text-right">
                   {appliedDiscount && (
@@ -363,7 +363,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                       {POINTS_PRICE[selectedOption].toLocaleString()}
                     </span>
                   )}
-                  <span className="text-xs font-black text-[#00FF66]">
+                  <span className="text-xs font-black text-noob">
                     {priceFor(selectedOption)?.toLocaleString()} pts
                   </span>
                 </div>
@@ -384,7 +384,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                       setDiscountMsg(null);
                     }}
                     disabled={!!appliedDiscount}
-                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#00FF66] font-mono disabled:opacity-60"
+                    className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-noob font-mono disabled:opacity-60"
                   />
                   {appliedDiscount ? (
                     <button
@@ -410,7 +410,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                   )}
                 </div>
                 {discountMsg && (
-                  <p className={`text-[10px] ${discountMsg.type === 'success' ? 'text-[#00FF66]' : 'text-rose-400'}`}>
+                  <p className={`text-[10px] ${discountMsg.type === 'success' ? 'text-noob' : 'text-rose-400'}`}>
                     {discountMsg.text}
                   </p>
                 )}
@@ -466,7 +466,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#00FF66] hover:bg-[#00e65c] text-black font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-[#00FF66]/20 transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-2xl bg-noob hover:bg-[#00e65c] text-black font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-noob/20 transition-all disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <>

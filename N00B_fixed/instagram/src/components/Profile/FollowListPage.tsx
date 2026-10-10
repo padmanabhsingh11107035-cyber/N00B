@@ -107,7 +107,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
               onClick={() => setTab(t)}
               className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors cursor-pointer ${
                 tab === t
-                  ? 'text-white border-[#00FF66]'
+                  ? 'text-white border-noob'
                   : 'text-zinc-500 border-transparent hover:text-zinc-300'
               }`}
             >
@@ -177,7 +177,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
                       className={`shrink-0 px-3.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
                         isFollowingRow
                           ? 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700'
-                          : 'bg-[#00FF66] text-black hover:bg-emerald-400'
+                          : 'bg-noob text-black hover:bg-emerald-400'
                       }`}
                     >
                       {isFollowingRow ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}

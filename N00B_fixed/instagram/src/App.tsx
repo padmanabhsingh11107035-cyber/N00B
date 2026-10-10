@@ -126,7 +126,7 @@ const UploadVideoModal = React.lazy(() => import('./components/Videos/UploadVide
 // a response right away.
 const LazyFallback: React.FC = () => (
   <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
   </div>
 );
 
@@ -1055,7 +1055,7 @@ export default function App() {
           </div>
           <button
             onClick={loadInitialData}
-            className="px-6 py-2.5 bg-[#00FF66] text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
+            className="px-6 py-2.5 bg-noob text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
           >
             Retry
           </button>
@@ -1194,7 +1194,7 @@ export default function App() {
 
             <button
               onClick={() => handleSelectNavTab('post')}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-[#00FF66] hover:bg-[#00FF66]/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(0,255,102,0.25)]"
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-noob hover:bg-noob/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(217,119,87,0.25)]"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Create</span>
@@ -1209,7 +1209,7 @@ export default function App() {
                 <span>Activity & Alerts</span>
               </div>
               {unreadNotificationCount > 0 ? (
-                <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-[#00FF66] text-black animate-pulse">
+                <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-noob text-black animate-pulse">
                   {unreadNotificationCount}
                 </span>
               ) : (
@@ -1240,11 +1240,11 @@ export default function App() {
               onClick={() => handleSelectNavTab('games')}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'games'
-                  ? 'bg-zinc-900/90 text-[#00FF66] border border-[#00FF66]/30 shadow-[0_0_15px_rgba(0,255,102,0.15)] font-bold'
+                  ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(217,119,87,0.15)] font-bold'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
               }`}
             >
-              <Gamepad2 className={`w-4 h-4 ${activeTab === 'games' ? 'stroke-[#00FF66]' : 'stroke-current'}`} />
+              <Gamepad2 className={`w-4 h-4 ${activeTab === 'games' ? 'stroke-noob' : 'stroke-current'}`} />
               <span>Mini-Games</span>
             </button>
 
@@ -1252,11 +1252,11 @@ export default function App() {
               onClick={() => handleSelectNavTab('music')}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'music'
-                  ? 'bg-zinc-900/90 text-[#00FF66] border border-[#00FF66]/30 shadow-[0_0_15px_rgba(0,255,102,0.15)] font-bold'
+                  ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(217,119,87,0.15)] font-bold'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
               }`}
             >
-              <Music className={`w-4 h-4 ${activeTab === 'music' ? 'stroke-[#00FF66]' : 'stroke-current'}`} />
+              <Music className={`w-4 h-4 ${activeTab === 'music' ? 'stroke-noob' : 'stroke-current'}`} />
               <span>Music Hub</span>
             </button>
 
@@ -1454,7 +1454,7 @@ export default function App() {
                     </p>
                     <button
                       onClick={() => window.location.reload()}
-                      className="w-full py-3 bg-[#00FF66] text-black font-bold rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
+                      className="w-full py-3 bg-noob text-black font-bold rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
                     >
                       Reload NOOB
                     </button>
@@ -1643,7 +1643,7 @@ export default function App() {
             alt="NOOB AI Support"
             className="w-full h-full object-contain group-hover:rotate-12 transition-transform drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
           />
-          <span className="absolute top-0 right-0 w-3 h-3 bg-[#00FF66] rounded-full ring-2 ring-black animate-pulse" />
+          <span className="absolute top-0 right-0 w-3 h-3 bg-noob rounded-full ring-2 ring-black animate-pulse" />
         </button>
       )}
 

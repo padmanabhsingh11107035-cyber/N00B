@@ -194,7 +194,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
   if (phase === 'connecting') {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-[#00FF66] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-700 border-t-noob animate-spin" />
         <p className="text-zinc-400 text-sm">Connecting…</p>
       </div>
     );
@@ -217,9 +217,9 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
         <div className={`w-16 h-16 rounded-full flex items-center justify-center border ${
-          copy.tone === 'warn' ? 'bg-amber-500/15 border-amber-500/40' : 'bg-[#00FF66]/15 border-[#00FF66]/40'
+          copy.tone === 'warn' ? 'bg-amber-500/15 border-amber-500/40' : 'bg-noob/15 border-noob/40'
         }`}>
-          {copy.tone === 'warn' ? <AlertCircle className="w-8 h-8 text-amber-400" /> : <CheckCircle2 className="w-8 h-8 text-[#00FF66]" />}
+          {copy.tone === 'warn' ? <AlertCircle className="w-8 h-8 text-amber-400" /> : <CheckCircle2 className="w-8 h-8 text-noob" />}
         </div>
         <div>
           <h2 className="text-white text-lg font-bold">{copy.title}</h2>
@@ -230,7 +230,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
             <Clock className="w-3.5 h-3.5" /> In the room for {durationText}
           </div>
         )}
-        <button onClick={onClose} className="mt-2 bg-[#00FF66] text-black font-bold rounded-full px-8 py-2.5 text-sm cursor-pointer">Done</button>
+        <button onClick={onClose} className="mt-2 bg-noob text-black font-bold rounded-full px-8 py-2.5 text-sm cursor-pointer">Done</button>
       </div>
     );
   }
@@ -269,7 +269,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
             const speaking = isSelf ? micOn : !!remotes.get(uid)?.hasAudio;
             return (
               <div key={p.userId} className="flex flex-col items-center gap-1.5">
-                <div className={`relative w-16 h-16 rounded-full ${speaking ? 'ring-2 ring-[#00FF66]' : ''}`}>
+                <div className={`relative w-16 h-16 rounded-full ${speaking ? 'ring-2 ring-noob' : ''}`}>
                   <AvatarMedia src={p.avatar} alt={p.username} className="w-full h-full rounded-full object-cover" />
                   {isSelf && !micOn && (
                     <span className="absolute -bottom-1 -right-1 bg-red-500 rounded-full p-1 border-2 border-zinc-950">
@@ -291,7 +291,7 @@ export const NoobVoiceRoomView: React.FC<NoobVoiceRoomViewProps> = ({ currentUse
         >
           {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
         </button>
-        <button onClick={() => setShowChat((v) => !v)} className={`relative p-4 rounded-full cursor-pointer ${showChat ? 'bg-[#00FF66]/20 text-[#00FF66]' : 'bg-zinc-800 text-white'}`}>
+        <button onClick={() => setShowChat((v) => !v)} className={`relative p-4 rounded-full cursor-pointer ${showChat ? 'bg-noob/20 text-noob' : 'bg-zinc-800 text-white'}`}>
           <MessageCircle className="w-6 h-6" />
           {unreadChat > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{unreadChat > 9 ? '9+' : unreadChat}</span>

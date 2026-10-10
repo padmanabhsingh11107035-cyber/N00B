@@ -110,7 +110,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
 
   return (
     <div className="fixed inset-0 z-[100] bg-black text-white flex flex-col overflow-hidden">
-      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-[#00FF66]/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-noob/10 blur-[100px]" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-cyan-600/10 blur-[110px]" />
 
       <div className="relative z-10 flex items-center gap-3 p-4 sm:p-5 border-b border-white/10 shrink-0">
@@ -125,8 +125,8 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
           {/* Install App */}
           <div className="rounded-3xl bg-white/[0.04] border border-white/10 p-5 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
-                <Smartphone className="w-5 h-5 text-[#00FF66]" />
+              <div className="w-10 h-10 rounded-xl bg-noob/15 border border-noob/30 flex items-center justify-center shrink-0">
+                <Smartphone className="w-5 h-5 text-noob" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-white">Install App</h2>
@@ -135,7 +135,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
             </div>
 
             {installed ? (
-              <div className="flex items-center gap-2 text-xs text-[#00FF66] font-semibold bg-[#00FF66]/10 border border-[#00FF66]/25 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2 text-xs text-noob font-semibold bg-noob/10 border border-noob/25 rounded-xl px-3 py-2.5">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 NOOB is already installed on this device.
               </div>
@@ -143,7 +143,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
               <button
                 onClick={handleInstallClick}
                 disabled={installBusy}
-                className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {installBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 {installBusy ? 'Installing…' : 'Add to Home Screen'}
@@ -195,7 +195,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
               className={`w-full py-3 text-xs font-bold rounded-2xl cursor-pointer transition-opacity disabled:opacity-60 ${
                 pushState === 'on'
                   ? 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700'
-                  : 'bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black hover:opacity-90'
+                  : 'bg-gradient-to-r from-noob to-noob-strong text-black hover:opacity-90'
               }`}
             >
               {notifBusy ? 'Updating…' : pushState === 'on' ? 'Turn Off Notifications' : 'Turn on Notifications'}

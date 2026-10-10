@@ -32,7 +32,7 @@ export const OrdersPausedModal: React.FC<{ onClose: () => void }> = ({ onClose }
         <button
           autoFocus
           onClick={onClose}
-          className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+          className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
         >
           OK
         </button>

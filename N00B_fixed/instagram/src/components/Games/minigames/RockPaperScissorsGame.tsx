@@ -133,7 +133,7 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
             <button
               key={c.id}
               onClick={() => handleChoose(c)}
-              className="flex flex-col items-center gap-1 p-3 bg-zinc-900 hover:bg-zinc-800 active:bg-[#00FF66] active:text-black border border-zinc-700/60 rounded-2xl transition-all cursor-pointer hover:scale-105"
+              className="flex flex-col items-center gap-1 p-3 bg-zinc-900 hover:bg-zinc-800 active:bg-noob active:text-black border border-zinc-700/60 rounded-2xl transition-all cursor-pointer hover:scale-105"
             >
               <span className="text-2xl">{c.emoji}</span>
               <span className="text-xs font-bold text-white">{c.name}</span>
@@ -150,7 +150,7 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
       <div className="flex items-center justify-between w-full mb-4 px-4 py-3 bg-zinc-900/90 rounded-2xl border border-zinc-800">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-white">{vsBot ? 'You' : 'Player 1'}</span>
-          <span className="text-lg font-black text-[#00FF66]">{playerScore}</span>
+          <span className="text-lg font-black text-noob">{playerScore}</span>
         </div>
         <div className="text-xs font-black text-zinc-400 bg-zinc-800 px-3 py-1 rounded-full">
           First to {targetWins}
@@ -165,7 +165,7 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
       <div className="w-full bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 mb-4 flex items-center justify-around shadow-inner min-h-[140px]">
         {/* Player Chosen */}
         <div className="flex flex-col items-center gap-1.5">
-          <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-[#00FF66]/40 flex items-center justify-center text-3xl shadow-[0_0_10px_rgba(0,255,102,0.2)]">
+          <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-noob/40 flex items-center justify-center text-3xl shadow-[0_0_10px_rgba(217,119,87,0.2)]">
             {playerChoice && !isRevealing ? playerChoice.emoji : playerChoice ? '❔' : '❔'}
           </div>
           <span className="text-[11px] font-bold text-zinc-300">{vsBot ? 'You' : 'Player 1'}</span>
@@ -198,7 +198,7 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
             key={c.id}
             onClick={() => handleChoose(c)}
             disabled={isRevealing || matchOver}
-            className="flex flex-col items-center gap-1 p-3 bg-zinc-900 hover:bg-zinc-800 active:bg-[#00FF66] active:text-black border border-zinc-700/60 rounded-2xl transition-all cursor-pointer hover:scale-105"
+            className="flex flex-col items-center gap-1 p-3 bg-zinc-900 hover:bg-zinc-800 active:bg-noob active:text-black border border-zinc-700/60 rounded-2xl transition-all cursor-pointer hover:scale-105"
           >
             <span className="text-2xl">{c.emoji}</span>
             <span className="text-xs font-bold text-white">{c.name}</span>

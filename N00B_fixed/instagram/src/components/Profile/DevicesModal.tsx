@@ -51,8 +51,8 @@ export const DevicesModal: React.FC<DevicesModalProps> = ({ onClose, onOpenEncry
     <div className="fixed inset-0 z-[130] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="My devices">
       <div className="w-full max-w-md max-h-[90vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden">
         <header className="p-4 border-b border-zinc-800 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/40 flex items-center justify-center shrink-0">
-            <Smartphone className="w-4 h-4 text-[#00FF66]" />
+          <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/40 flex items-center justify-center shrink-0">
+            <Smartphone className="w-4 h-4 text-noob" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-black text-white">My devices</h3>
@@ -81,7 +81,7 @@ export const DevicesModal: React.FC<DevicesModalProps> = ({ onClose, onOpenEncry
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold text-white truncate" translate="no">
                           {d.label}{' '}
-                          {mine && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/30 font-black uppercase">this device</span>}
+                          {mine && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-noob/15 text-noob border border-noob/30 font-black uppercase">this device</span>}
                         </div>
                         {d.model && <div className="text-[10px] text-zinc-400 truncate" translate="no">{d.model}</div>}
                         <div className="text-[10px] text-zinc-500">Signed in {stamp(d.loggedInAt)}</div>
@@ -116,7 +116,7 @@ export const DevicesModal: React.FC<DevicesModalProps> = ({ onClose, onOpenEncry
                         {h.model && <div className="text-[10px] text-zinc-400 truncate" translate="no">{h.model}</div>}
                       </div>
                       {h.deviceId === thisDeviceId && !h.loggedOutAt && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/30 font-black uppercase shrink-0">this device</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-noob/15 text-noob border border-noob/30 font-black uppercase shrink-0">this device</span>
                       )}
                     </div>
                     <div className="mt-1.5 text-[10px] text-zinc-400 space-y-0.5">
@@ -126,7 +126,7 @@ export const DevicesModal: React.FC<DevicesModalProps> = ({ onClose, onOpenEncry
                         {h.loggedOutAt ? (
                           <>{stamp(h.loggedOutAt)} <span className="text-zinc-500">· {endText(h)}</span></>
                         ) : (
-                          <span className="text-[#00FF66] font-bold">Still signed in</span>
+                          <span className="text-noob font-bold">Still signed in</span>
                         )}
                       </div>
                     </div>

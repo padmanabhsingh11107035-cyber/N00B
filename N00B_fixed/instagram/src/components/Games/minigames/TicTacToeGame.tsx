@@ -160,7 +160,7 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
     <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
       {/* Player Turn Indicator */}
       <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
-        <div className={`flex items-center gap-1.5 text-xs font-bold ${currentTurn === 'X' ? 'text-[#00FF66]' : 'text-zinc-500'}`}>
+        <div className={`flex items-center gap-1.5 text-xs font-bold ${currentTurn === 'X' ? 'text-noob' : 'text-zinc-500'}`}>
           <UserIcon className="w-3.5 h-3.5" />
           <span>{vsBot ? 'You' : 'Player 1'} (X)</span>
         </div>
@@ -183,8 +183,8 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
               className={`rounded-xl flex items-center justify-center font-black text-3xl transition-all cursor-pointer ${
                 cell === 'X'
                   ? isWinningCell
-                    ? 'bg-[#00FF66] text-black shadow-[0_0_15px_#00FF66]'
-                    : 'bg-zinc-900 text-[#00FF66] border border-[#00FF66]/30'
+                    ? 'bg-noob text-black shadow-[0_0_15px_#d97757]'
+                    : 'bg-zinc-900 text-noob border border-noob/30'
                   : cell === 'O'
                   ? isWinningCell
                     ? 'bg-pink-500 text-white shadow-[0_0_15px_#ec4899]'

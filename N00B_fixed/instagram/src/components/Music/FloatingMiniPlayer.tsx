@@ -35,14 +35,14 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onOpenMu
 
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-white truncate group-hover:text-[#00FF66] transition-colors">
+            <span className="text-xs font-bold text-white truncate group-hover:text-noob transition-colors">
               {currentTrack.title}
             </span>
             {isPlaying && (
               <span className="flex items-center gap-0.5">
-                <span className="w-1 h-2 bg-[#00FF66] animate-pulse rounded-full" />
-                <span className="w-1 h-3.5 bg-[#00FF66] animate-pulse delay-75 rounded-full" />
-                <span className="w-1 h-2.5 bg-[#00FF66] animate-pulse delay-150 rounded-full" />
+                <span className="w-1 h-2 bg-noob animate-pulse rounded-full" />
+                <span className="w-1 h-3.5 bg-noob animate-pulse delay-75 rounded-full" />
+                <span className="w-1 h-2.5 bg-noob animate-pulse delay-150 rounded-full" />
               </span>
             )}
           </div>
@@ -89,7 +89,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onOpenMu
       {/* Progress Bar overlay */}
       <div className="absolute -bottom-[1px] left-3 right-3 h-[2px] bg-zinc-800 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-[#00FF66] to-cyan-400 transition-all duration-150"
+          className="h-full bg-gradient-to-r from-noob to-noob-strong transition-all duration-150"
           style={{ width: `${progress}%` }}
         />
       </div>

@@ -40,8 +40,6 @@ import {
   MessageCircle,
   UserX,
   Flag,
-  Sun,
-  Moon,
   ArrowLeft,
   Trash2,
   Trophy,
@@ -105,6 +103,7 @@ import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
 import { Globe as GlobeIcon, KeyRound } from 'lucide-react';
 import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
 import { DevicesModal } from './DevicesModal';
+import { AppearanceSetting } from '../Common/AppearanceSetting';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
@@ -125,7 +124,7 @@ const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupport
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 const LazyFallback: React.FC = () => (
   <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
   </div>
 );
 
@@ -214,43 +213,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [passwordChangeError, setPasswordChangeError] = useState('');
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-
-  // Persistent Theme State (Tailwind class toggling on body element)
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    try {
-      const saved = localStorage.getItem('noob_theme');
-      if (saved === 'light' || saved === 'dark') return saved;
-      if (typeof document !== 'undefined' && document.body.classList.contains('light')) return 'light';
-    } catch (e) {}
-    return 'dark';
-  });
-
-  const handleToggleTheme = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme);
-    try {
-      localStorage.setItem('noob_theme', newTheme);
-      if (newTheme === 'light') {
-        document.body.classList.add('light');
-      } else {
-        document.body.classList.remove('light');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('noob_theme');
-      if (saved === 'light') {
-        document.body.classList.add('light');
-        setTheme('light');
-      } else if (saved === 'dark') {
-        document.body.classList.remove('light');
-        setTheme('dark');
-      }
-    } catch (e) {}
-  }, []);
 
   // Modals for Accounts & Statistics, Blocked Accounts, and Report
   const [showAccountsStatisticsModal, setShowAccountsStatisticsModal] = useState(false);
@@ -587,7 +549,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             onClick={onBackToMyProfile}
             className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer group"
           >
-            <ArrowLeft className="w-4 h-4 text-[#00FF66] group-hover:-translate-x-0.5 transition-transform" />
+            <ArrowLeft className="w-4 h-4 text-noob group-hover:-translate-x-0.5 transition-transform" />
             <span>Back to My Profile</span>
           </button>
           <div className="flex items-center gap-2">
@@ -615,7 +577,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {isOwnProfile && onSwitchToAdminPanel && (
           <button
             onClick={onSwitchToAdminPanel}
-            className="liquid-glass absolute top-4 right-14 sm:top-6 sm:right-16 z-20 p-2 rounded-xl text-zinc-300 hover:text-[#00FF66] transition-all cursor-pointer"
+            className="liquid-glass absolute top-4 right-14 sm:top-6 sm:right-16 z-20 p-2 rounded-xl text-zinc-300 hover:text-noob transition-all cursor-pointer"
             title="Switch back to the Admin Control Panel"
             aria-label="Switch back to the Admin Control Panel"
           >
@@ -627,7 +589,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             onClick={() => setShowThreeDotsMenu(!showThreeDotsMenu)}
             className={`liquid-glass relative p-2 rounded-xl transition-all cursor-pointer ${
               showThreeDotsMenu
-                ? 'liquid-glass-btn-active text-[#00FF66]'
+                ? 'liquid-glass-btn-active text-noob'
                 : 'text-zinc-300 hover:text-white'
             }`}
             title="Options & Settings"
@@ -639,26 +601,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           {/* Dropdown Menu */}
           {showThreeDotsMenu && (
             <div className="liquid-glass absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] rounded-2xl p-2 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-[80vh] overflow-y-auto overscroll-contain">
-              {/* Universal: Theme Toggle */}
-              <button
-                onClick={() => {
-                  handleToggleTheme(theme === 'dark' ? 'light' : 'dark');
-                  setShowThreeDotsMenu(false);
-                }}
-                className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-bold text-white block group-hover:text-amber-400 transition-colors">
-                    Appearance: {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                  </span>
-                  <span className="text-[10px] text-zinc-400 block truncate">
-                    Tap to switch to {theme === 'dark' ? 'Light' : 'Dark'} theme
-                  </span>
-                </div>
-              </button>
+              {/* Universal: Appearance (Dark / Light / System) */}
+              <AppearanceSetting />
 
               {/* Universal: Language */}
               <button
@@ -732,11 +676,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     }}
                     className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Edit3 className="w-4 h-4 text-[#00FF66]" />
+                    <div className="w-8 h-8 rounded-lg bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Edit3 className="w-4 h-4 text-noob" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-[#00FF66] transition-colors">
+                      <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
                         Edit Profile
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
@@ -926,13 +870,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         setShowThreeDotsMenu(false);
                         setShowAdminControlModal(true);
                       }}
-                      className="w-full p-2.5 rounded-xl bg-[#00FF66]/10 hover:bg-[#00FF66]/20 border border-[#00FF66]/40 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                      className="w-full p-2.5 rounded-xl bg-noob/10 hover:bg-noob/20 border border-noob/40 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-[#00FF66]/30 border border-[#00FF66]/50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        <ShieldAlert className="w-4 h-4 text-[#00FF66]" />
+                      <div className="w-8 h-8 rounded-lg bg-noob/30 border border-noob/50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                        <ShieldAlert className="w-4 h-4 text-noob" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-black text-[#00FF66] block group-hover:text-white transition-colors">
+                        <span className="text-xs font-black text-noob block group-hover:text-white transition-colors">
                           ⚡ NOOB Admin Panel
                         </span>
                         <span className="text-[10px] text-zinc-300 block truncate">
@@ -971,11 +915,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     }}
                     className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Headphones className="w-4 h-4 text-[#00FF66]" />
+                    <div className="w-8 h-8 rounded-lg bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Headphones className="w-4 h-4 text-noob" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-[#00FF66] transition-colors">
+                      <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
                         Contact Customer Support
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
@@ -1146,7 +1090,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div
               className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full p-[3.5px] shadow-2xl transition-transform group-hover:scale-105 ${
                 isBusiness
-                  ? 'bg-gradient-to-tr from-[#00FF66] to-emerald-400 shadow-[0_0_20px_rgba(0,255,102,0.3)]'
+                  ? 'bg-gradient-to-tr from-noob to-noob-strong shadow-[0_0_20px_rgba(217,119,87,0.3)]'
                   : isPrivate
                   ? 'bg-gradient-to-tr from-purple-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
                   : 'bg-gradient-to-tr from-[#ff4e6a] via-[#ff758c] to-[#ff9966] shadow-[0_0_20px_rgba(255,78,106,0.3)]'
@@ -1162,7 +1106,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
             {/* Status Note Floating Pill */}
             {targetUser.statusNote && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#121212] border border-[#ff4e6a]/60 rounded-full px-2.5 py-0.5 text-[10px] text-pink-400 font-bold shadow-lg flex items-center gap-1 whitespace-nowrap">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-zinc-900 border border-[#ff4e6a]/60 rounded-full px-2.5 py-0.5 text-[10px] text-pink-400 font-bold shadow-lg flex items-center gap-1 whitespace-nowrap">
                 <span>{targetUser.statusNote.text}</span>
                 {targetUser.statusNote.musicTrack && <Volume2 className="w-3 h-3 text-pink-400 animate-pulse" />}
               </div>
@@ -1191,7 +1135,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {targetUser.isVerified ? (
               <VerifiedBadge size="md" />
             ) : (
-              <CheckCircle2 className="w-4 h-4 text-[#00FF66] fill-[#00FF66]/20" />
+              <CheckCircle2 className="w-4 h-4 text-noob fill-noob/20" />
             )}
             </div>
             </div>
@@ -1209,7 +1153,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           {(isBusiness || isPrivate) && (
             <div className="flex justify-center -mt-2">
               {isBusiness ? (
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30 flex items-center gap-1 whitespace-nowrap">
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1 whitespace-nowrap">
                   <Briefcase className="w-3 h-3" /> Business
                 </span>
               ) : (
@@ -1274,7 +1218,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                         isTargetFollowing || isTargetFollowRequested
                           ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-red-500/40 hover:text-red-400'
-                          : 'bg-[#00FF66] hover:bg-[#00e65c] text-black font-extrabold'
+                          : 'bg-noob hover:bg-[#00e65c] text-black font-extrabold'
                       }`}
                     >
                       {isTargetFollowing ? (
@@ -1447,7 +1391,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           {/* Business Category & Direct Contact */}
           {isBusiness && (
             <div className="pt-2 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold text-[#00FF66] bg-[#00FF66]/10 px-3 py-1 rounded-full border border-[#00FF66]/20">
+              <span className="text-[11px] font-bold text-noob bg-noob/10 px-3 py-1 rounded-full border border-noob/20">
                 {targetUser.businessCategory || 'Digital Creator'}
               </span>
               {targetUser.email && (
@@ -1463,7 +1407,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   href={`tel:${targetUser.mobileNumber}`}
                   className="text-[11px] font-semibold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-800 flex items-center gap-1"
                 >
-                  <Phone className="w-3 h-3 text-[#00FF66]" /> Call / WhatsApp
+                  <Phone className="w-3 h-3 text-noob" /> Call / WhatsApp
                 </a>
               )}
             </div>
@@ -1497,7 +1441,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleAcceptRequest(req.userId)}
-                    className="px-3 py-1 rounded-lg bg-[#00FF66] text-black font-bold text-xs hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
+                    className="px-3 py-1 rounded-lg bg-noob text-black font-bold text-xs hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
                   >
                     <Check className="w-3 h-3" /> Accept
                   </button>
@@ -1516,15 +1460,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 4. Professional Creator Dashboard Banner (Only for Business Accounts) */}
       {isBusiness && (
-        <div className="my-4 p-4 bg-gradient-to-r from-zinc-900 via-zinc-900 to-[#0e2417] border border-[#00FF66]/30 rounded-3xl flex items-center justify-between shadow-xl">
+        <div className="my-4 p-4 bg-gradient-to-r from-zinc-900 via-zinc-900 to-[#0e2417] border border-noob/30 rounded-3xl flex items-center justify-between shadow-xl">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-[#00FF66] shrink-0" />
+            <div className="w-10 h-10 rounded-2xl bg-noob/10 border border-noob/30 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-noob shrink-0" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-white">Professional Creator Insights</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#00FF66]/20 text-[#00FF66] font-bold">LIVE</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-noob/20 text-noob font-bold">LIVE</span>
               </div>
               <span className="text-[11px] text-zinc-400">
                 Live organic impressions, profile engagement &amp; growth metrics
@@ -1533,7 +1477,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
           <button
             onClick={onOpenProfessionalDashboard}
-            className="px-4 py-2 bg-[#00FF66] hover:bg-[#00e65c] text-black text-xs font-black rounded-xl hover:scale-105 transition-transform cursor-pointer"
+            className="px-4 py-2 bg-noob hover:bg-[#00e65c] text-black text-xs font-black rounded-xl hover:scale-105 transition-transform cursor-pointer"
           >
             View Insights
           </button>
@@ -1553,10 +1497,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               }}
               className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
             >
-              <div className="w-14 h-14 rounded-full bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:border-[#00FF66] group-hover:text-[#00FF66] transition-all group-hover:scale-105">
+              <div className="w-14 h-14 rounded-full bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:border-noob group-hover:text-noob transition-all group-hover:scale-105">
                 <Plus className="w-5 h-5" />
               </div>
-              <span className="text-[11px] text-zinc-400 font-bold group-hover:text-[#00FF66] transition-colors">New</span>
+              <span className="text-[11px] text-zinc-400 font-bold group-hover:text-noob transition-colors">New</span>
             </div>
           )}
 
@@ -1564,7 +1508,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div key={hl.id} className="flex flex-col items-center gap-1.5 shrink-0 relative group">
               <div
                 onClick={() => setActiveHighlightForViewer(hl)}
-                className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-[#00FF66] group-hover:to-emerald-400 transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
+                className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-noob group-hover:to-noob-strong transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
               >
                 <img
                   src={hl.coverUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
@@ -1582,7 +1526,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     setEditingHighlight(hl);
                     setShowHighlightManager(true);
                   }}
-                  className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-[#00FF66] text-zinc-400 hover:text-[#00FF66] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
+                  className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 hover:border-noob text-zinc-400 hover:text-noob flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-lg z-10"
                   title={`Edit ${hl.title}`}
                 >
                   <Edit3 className="w-2.5 h-2.5" />
@@ -1604,7 +1548,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               <span
                 onClick={() => setActiveHighlightForViewer(hl)}
-                className="text-[11px] text-zinc-300 font-medium truncate max-w-[68px] text-center cursor-pointer hover:text-[#00FF66] transition-colors"
+                className="text-[11px] text-zinc-300 font-medium truncate max-w-[68px] text-center cursor-pointer hover:text-noob transition-colors"
               >
                 {hl.title}
               </span>
@@ -1618,7 +1562,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <button
           onClick={() => setActiveTab('posts')}
           className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'posts' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            activeTab === 'posts' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
           }`}
         >
           <Grid className="w-4 h-4" />
@@ -1628,7 +1572,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <button
           onClick={() => setActiveTab('reels')}
           className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'reels' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            activeTab === 'reels' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
           }`}
         >
           <Film className="w-4 h-4" />
@@ -1641,7 +1585,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button
               onClick={() => setActiveTab('saved')}
               className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'saved' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                activeTab === 'saved' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
               title="Organized Private Collections"
             >
@@ -1652,7 +1596,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button
               onClick={() => setActiveTab('liked')}
               className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'liked' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                activeTab === 'liked' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
               title="Liked Posts"
             >
@@ -1663,7 +1607,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button
               onClick={() => setActiveTab('archive')}
               className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'archive' ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                activeTab === 'archive' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
               title="Archived Posts Vault"
             >
@@ -1758,7 +1702,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {/* Header & New Collection Button */}
             <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
               <div className="flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-[#00FF66]" />
+                <Bookmark className="w-4 h-4 text-noob" />
                 <span className="text-sm font-bold text-white">
                   Saved Posts Vault ({savedPosts.length})
                 </span>
@@ -1780,7 +1724,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     ]);
                   }
                 }}
-                className="text-xs text-[#00FF66] font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/30 hover:bg-[#00FF66]/20 transition-colors cursor-pointer"
+                className="text-xs text-noob font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-noob/10 border border-noob/30 hover:bg-noob/20 transition-colors cursor-pointer"
               >
                 <FolderPlus className="w-3.5 h-3.5" /> New Collection
               </button>
@@ -1814,7 +1758,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
             ) : (
               <div className="text-center py-12 px-4 bg-zinc-900/40 rounded-3xl border border-zinc-800/60">
-                <Bookmark className="w-10 h-10 text-[#00FF66] mx-auto mb-3 opacity-60" />
+                <Bookmark className="w-10 h-10 text-noob mx-auto mb-3 opacity-60" />
                 <h3 className="text-sm font-bold text-white">No Saved Posts Yet</h3>
                 <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
                   When you bookmark posts from your Feed or Explore, they will be securely organized in your private vault here.
@@ -1832,7 +1776,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   {collections.map((col) => (
                     <div
                       key={col.id}
-                      className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden p-2.5 group hover:border-[#00FF66]/50 transition-colors cursor-pointer shadow-md"
+                      className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden p-2.5 group hover:border-noob/50 transition-colors cursor-pointer shadow-md"
                     >
                       <div className="aspect-square rounded-xl overflow-hidden bg-black mb-2">
                         <img
@@ -2005,7 +1949,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-[#00FF66]" />
+                <Shield className="w-5 h-5 text-noob" />
                 <h3 className="text-sm font-bold text-white">Settings & Account Controls</h3>
               </div>
               <button onClick={() => setShowSettingsModal(false)} className="text-zinc-400 hover:text-white p-1 cursor-pointer">
@@ -2050,7 +1994,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   onClick={() => setAccountTypeSetting('business')}
                   className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     accountTypeSetting === 'business'
-                      ? 'border-[#00FF66] bg-emerald-500/10'
+                      ? 'border-noob bg-emerald-500/10'
                       : 'border-zinc-800 bg-zinc-900'
                   }`}
                 >
@@ -2095,7 +2039,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     type="checkbox"
                     checked={hideTaggedPhotos}
                     onChange={(e) => setHideTaggedPhotos(e.target.checked)}
-                    className="accent-[#00FF66]"
+                    className="accent-noob"
                   />
                 </label>
                 <label className="flex items-center justify-between cursor-pointer">
@@ -2104,7 +2048,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     type="checkbox"
                     checked={pushFavoritesEnabled}
                     onChange={(e) => setPushFavoritesEnabled(e.target.checked)}
-                    className="accent-[#00FF66]"
+                    className="accent-noob"
                   />
                 </label>
 
@@ -2125,7 +2069,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </span>
                   </div>
                   {autoAcceptFollowRequests ? (
-                    <ToggleRight className="w-8 h-8 text-[#00FF66] shrink-0" />
+                    <ToggleRight className="w-8 h-8 text-noob shrink-0" />
                   ) : (
                     <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
                   )}
@@ -2143,9 +2087,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     setShowSettingsModal(false);
                     setShowEditProfileModal(true);
                   }}
-                  className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl border border-zinc-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer hover:border-[#00FF66]/50 shadow-sm"
+                  className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl border border-zinc-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer hover:border-noob/50 shadow-sm"
                 >
-                  <Edit3 className="w-4 h-4 text-[#00FF66]" /> Edit Profile
+                  <Edit3 className="w-4 h-4 text-noob" /> Edit Profile
                 </button>
 
                 {onLogout && (
@@ -2173,7 +2117,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               )}
               {passwordChangeSuccess && (
-                <div className="p-2.5 rounded-xl bg-[#00FF66]/10 border border-[#00FF66]/20 text-xs text-[#00FF66]">
+                <div className="p-2.5 rounded-xl bg-noob/10 border border-noob/20 text-xs text-noob">
                   Password updated successfully!
                 </div>
               )}
@@ -2183,14 +2127,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="New password (min. 6 characters)"
-                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
               />
               <input
                 type="password"
                 value={confirmNewPassword}
                 onChange={(e) => setConfirmNewPassword(e.target.value)}
                 placeholder="Confirm new password"
-                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-[#00FF66]"
+                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
               />
               <button
                 type="button"
@@ -2231,12 +2175,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 }}
                 className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#00FF66]" /> Export Data
+                <Download className="w-3.5 h-3.5 text-noob" /> Export Data
               </button>
 
               <button
                 onClick={handleSavePrivacySettings}
-                className="px-5 py-2 bg-[#00FF66] hover:bg-[#00FF66]/90 text-black font-extrabold text-xs rounded-xl shadow-md cursor-pointer"
+                className="px-5 py-2 bg-noob hover:bg-noob/90 text-black font-extrabold text-xs rounded-xl shadow-md cursor-pointer"
               >
                 Save Settings
               </button>
@@ -2397,7 +2341,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             {reportSuccessNotice ? (
               <div className="py-6 text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-[#00FF66] mx-auto" />
+                <CheckCircle2 className="w-8 h-8 text-noob mx-auto" />
                 <p className="text-sm font-bold text-white">Report submitted</p>
                 <p className="text-xs text-zinc-400">Our Trust &amp; Safety team will review this account.</p>
               </div>

@@ -24,7 +24,7 @@ export const AddressCard: React.FC<AddressCardProps> = ({ address, mode, selecte
   const body = (
     <div className="min-w-0 flex-1 space-y-0.5 text-left">
       <div className="flex items-center gap-2 flex-wrap">
-        {address.isDefault && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/30">Default</span>}
+        {address.isDefault && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-noob/15 text-noob border border-noob/30">Default</span>}
         {address.label && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">{address.label}</span>}
       </div>
       <p className="text-sm font-black text-white truncate">{s.name}</p>
@@ -32,7 +32,7 @@ export const AddressCard: React.FC<AddressCardProps> = ({ address, mode, selecte
       {s.place && <p className="text-xs text-zinc-300 truncate">{s.place}</p>}
       {s.phone && <p className="text-[11px] text-zinc-500">Phone: {s.phone}</p>}
       {pinOf(address) ? (
-        <p className="text-[11px] font-semibold text-[#00FF66]">📍 Exact location pinned</p>
+        <p className="text-[11px] font-semibold text-noob">📍 Exact location pinned</p>
       ) : (
         <p className="text-[11px] text-zinc-500">No map pin yet: edit this address to add one.</p>
       )}
@@ -41,9 +41,9 @@ export const AddressCard: React.FC<AddressCardProps> = ({ address, mode, selecte
 
   if (mode === 'select') {
     return (
-      <div className={`rounded-2xl border p-3 transition-colors ${selected ? 'border-[#00FF66] bg-[#00FF66]/5' : 'border-zinc-800 bg-zinc-900/60'}`}>
+      <div className={`rounded-2xl border p-3 transition-colors ${selected ? 'border-noob bg-noob/5' : 'border-zinc-800 bg-zinc-900/60'}`}>
         <button type="button" onClick={() => onSelect?.(address)} aria-pressed={!!selected} className="w-full flex items-start gap-3 cursor-pointer">
-          {selected ? <CheckCircle2 className="w-5 h-5 text-[#00FF66] shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
+          {selected ? <CheckCircle2 className="w-5 h-5 text-noob shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
           {body}
         </button>
         <div className="pl-8 pt-1.5">

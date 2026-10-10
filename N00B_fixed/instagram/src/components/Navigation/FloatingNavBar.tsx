@@ -39,7 +39,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active, onClick
       {children}
       <span
         className={`text-[9px] tracking-tight leading-none ${
-          active ? 'text-[#00FF66] font-bold' : 'text-gray-300'
+          active ? 'text-noob font-bold' : 'text-gray-300'
         }`}
       >
         {label}
@@ -73,7 +73,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <Home
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'feed' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'feed' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
@@ -88,7 +88,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <Compass
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'explore' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'explore' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
@@ -103,7 +103,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <Film
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'reels' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'reels' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
@@ -118,7 +118,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <Music
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'music' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'music' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
@@ -134,7 +134,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <Youtube
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'videos' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'videos' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
@@ -149,7 +149,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <Gamepad2
             className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'games' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+              activeTab === 'games' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
@@ -165,7 +165,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           <div className="relative">
             <MessageSquare
               className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                activeTab === 'chat' ? 'stroke-[#00FF66] stroke-[2.5]' : 'stroke-gray-300'
+                activeTab === 'chat' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
               }`}
             />
             {unreadChatCount > 0 && (
@@ -186,7 +186,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <div
             className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden p-[1px] ${
-              activeTab === 'profile' ? 'ring-2 ring-[#00FF66]' : 'bg-gradient-to-tr from-[#00FF66] to-[#00E5FF]'
+              activeTab === 'profile' ? 'ring-2 ring-noob' : 'bg-gradient-to-tr from-noob to-[#00E5FF]'
             }`}
           >
             <img

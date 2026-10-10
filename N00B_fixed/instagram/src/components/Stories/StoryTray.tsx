@@ -76,14 +76,14 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 onOpenStatusNoteModal();
               }
             }}
-            className="mb-1 max-w-[86px] bg-zinc-900/95 border border-[#00FF66]/50 rounded-full px-2 py-0.5 text-[9px] text-[#00FF66] font-semibold truncate shadow-md hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
+            className="mb-1 max-w-[86px] bg-zinc-900/95 border border-noob/50 rounded-full px-2 py-0.5 text-[9px] text-noob font-semibold truncate shadow-md hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
             title={isMyNoteValid ? "Click to expand note & play song" : "Add Status Note (24-hour lifespan)"}
           >
             {isMyNoteValid && currentUser.statusNote ? (
               <>
                 <span className="truncate">{currentUser.statusNote.text}</span>
                 {currentUser.statusNote.musicTrack && (
-                  <Volume2 className="w-2.5 h-2.5 flex-shrink-0 animate-pulse text-[#00FF66]" />
+                  <Volume2 className="w-2.5 h-2.5 flex-shrink-0 animate-pulse text-noob" />
                 )}
               </>
             ) : (
@@ -107,7 +107,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#00FF66] text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm">
+              <div className="absolute bottom-0 right-0 w-4 h-4 bg-noob text-black rounded-full flex items-center justify-center border-2 border-black shadow-sm">
                 <Plus className="w-3 h-3 stroke-[3]" />
               </div>
             </button>
@@ -132,7 +132,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                   ? 'p-0'
                   : `p-[2px] ${
                       story.isCloseFriendsOnly
-                        ? 'bg-gradient-to-tr from-[#00FF66] via-emerald-400 to-green-300 shadow-[0_0_10px_rgba(0,255,102,0.3)]'
+                        ? 'bg-gradient-to-tr from-noob via-noob-strong to-noob shadow-[0_0_10px_rgba(217,119,87,0.3)]'
                         : 'bg-gradient-to-tr from-rose-500 via-amber-400 via-emerald-400 via-sky-500 to-purple-600 shadow-[0_0_10px_rgba(236,72,153,0.3)]'
                     }`
               }`}
@@ -151,7 +151,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 {story.username}
               </span>
               {story.isCloseFriendsOnly && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] flex-shrink-0 shadow-[0_0_6px_rgba(0,255,102,0.8)]" title="Close Friends" />
+                <span className="w-1.5 h-1.5 rounded-full bg-noob flex-shrink-0 shadow-[0_0_6px_rgba(217,119,87,0.8)]" title="Close Friends" />
               )}
             </div>
           </button>

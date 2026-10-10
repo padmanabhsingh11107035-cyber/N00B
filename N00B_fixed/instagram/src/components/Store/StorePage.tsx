@@ -53,7 +53,7 @@ type DeliveryMethod = 'pickup' | 'delivery';
 const AccountAvatar: React.FC<{ user: User; size: number; active: boolean }> = ({ user, size, active }) => {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [user.avatar]);
-  const ring = active ? 'ring-2 ring-[#00FF66]' : 'ring-1 ring-white/25';
+  const ring = active ? 'ring-2 ring-noob' : 'ring-1 ring-white/25';
   if (!user.avatar || failed) {
     return (
       <span className={`rounded-full bg-zinc-800 flex items-center justify-center ${ring}`} style={{ width: size, height: size }}>
@@ -342,13 +342,13 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         aria-label={picture ? label : undefined}
         title={picture ? label : undefined}
         className={`relative flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] sm:text-xs font-bold cursor-pointer border-b-2 transition-colors ${
-          active ? 'border-[#00FF66] text-[#00FF66]' : 'border-transparent text-zinc-400 hover:text-white'
+          active ? 'border-noob text-noob' : 'border-transparent text-zinc-400 hover:text-white'
         }`}
       >
         {picture ?? <Icon className="w-4 h-4" />}
         {!picture && <span>{label}</span>}
         {!!badge && badge > 0 && (
-          <span className="min-w-[16px] h-4 px-1 rounded-full bg-[#00FF66] text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
+          <span className="min-w-[16px] h-4 px-1 rounded-full bg-noob text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
         )}
       </button>
     );
@@ -368,9 +368,9 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         className="w-full h-full flex items-center justify-center cursor-pointer"
       >
         <div className={`liquid-glass-btn relative flex items-center justify-center w-12 h-12 ${active ? 'liquid-glass-btn-active' : ''}`}>
-          {picture ?? <Icon className={`w-6 h-6 ${active ? 'text-[#00FF66]' : 'text-gray-300'}`} strokeWidth={active ? 2.5 : 2} />}
+          {picture ?? <Icon className={`w-6 h-6 ${active ? 'text-noob' : 'text-gray-300'}`} strokeWidth={active ? 2.5 : 2} />}
           {!!badge && badge > 0 && (
-            <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-[#00FF66] text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
+            <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-noob text-black text-[9px] font-black flex items-center justify-center">{badge}</span>
           )}
         </div>
       </button>
@@ -379,7 +379,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
   return (
     <div className="fixed inset-0 z-[100] bg-black text-white flex flex-col overflow-hidden">
-      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-[#00FF66]/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full bg-noob/10 blur-[100px]" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-orange-600/10 blur-[110px]" />
 
       {/* Header */}
@@ -398,11 +398,11 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
             aria-label="Accept orders"
             title={acceptingOrders ? 'Orders are ON. Press to stop accepting orders.' : 'Orders are OFF. Press to accept orders again.'}
             className={`flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full border text-[11px] font-black cursor-pointer disabled:opacity-60 transition-colors ${
-              acceptingOrders ? 'border-[#00FF66]/40 text-[#00FF66] bg-[#00FF66]/10' : 'border-red-500/40 text-red-300 bg-red-500/10'
+              acceptingOrders ? 'border-noob/40 text-noob bg-noob/10' : 'border-red-500/40 text-red-300 bg-red-500/10'
             }`}
           >
             <span className="whitespace-nowrap"><span className="hidden sm:inline">Orders </span>{acceptingOrders ? 'ON' : 'OFF'}</span>
-            <span className={`relative inline-block w-8 h-[18px] rounded-full transition-colors ${acceptingOrders ? 'bg-[#00FF66]' : 'bg-zinc-600'}`}>
+            <span className={`relative inline-block w-8 h-[18px] rounded-full transition-colors ${acceptingOrders ? 'bg-noob' : 'bg-zinc-600'}`}>
               <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${acceptingOrders ? 'left-4 bg-black' : 'left-0.5 bg-white'}`} />
             </span>
           </button>
@@ -415,10 +415,10 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
         {view === 'grid' && canManage && (
           <button
             onClick={() => openEditor()}
-            className="p-2 rounded-full bg-[#00FF66]/20 border border-[#00FF66]/40 hover:bg-[#00FF66]/30 transition-colors cursor-pointer"
+            className="p-2 rounded-full bg-noob/20 border border-noob/40 hover:bg-noob/30 transition-colors cursor-pointer"
             aria-label="Add product"
           >
-            <Plus className="w-5 h-5 text-[#00FF66]" />
+            <Plus className="w-5 h-5 text-noob" />
           </button>
         )}
       </div>
@@ -567,7 +567,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-white line-clamp-1">{product.title}</p>
                         {label && <p className="text-[11px] text-zinc-500 line-clamp-1">{label}</p>}
-                        <span className="text-sm font-black text-[#00FF66]">{formatPrice(product.price)}</span>
+                        <span className="text-sm font-black text-noob">{formatPrice(product.price)}</span>
                         {atLimit && <span className="text-[10px] text-amber-300 block">That&apos;s all we have</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -596,7 +596,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                 <button
                   onClick={proceedToCheckout}
                   disabled={checkingOut}
-                  className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {checkingOut && <Loader2 className="w-4 h-4 animate-spin" />} Proceed to Checkout
                 </button>
@@ -620,19 +620,19 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                     <button
                       onClick={() => setDeliveryMethod('pickup')}
                       className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 cursor-pointer transition-colors ${
-                        deliveryMethod === 'pickup' ? 'border-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 bg-zinc-900/60'
+                        deliveryMethod === 'pickup' ? 'border-noob bg-noob/10' : 'border-zinc-800 bg-zinc-900/60'
                       }`}
                     >
-                      <StoreIcon className={`w-5 h-5 ${deliveryMethod === 'pickup' ? 'text-[#00FF66]' : 'text-zinc-400'}`} />
+                      <StoreIcon className={`w-5 h-5 ${deliveryMethod === 'pickup' ? 'text-noob' : 'text-zinc-400'}`} />
                       <span className="text-xs font-bold">Pickup</span>
                     </button>
                     <button
                       onClick={() => setDeliveryMethod('delivery')}
                       className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 cursor-pointer transition-colors ${
-                        deliveryMethod === 'delivery' ? 'border-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 bg-zinc-900/60'
+                        deliveryMethod === 'delivery' ? 'border-noob bg-noob/10' : 'border-zinc-800 bg-zinc-900/60'
                       }`}
                     >
-                      <Truck className={`w-5 h-5 ${deliveryMethod === 'delivery' ? 'text-[#00FF66]' : 'text-zinc-400'}`} />
+                      <Truck className={`w-5 h-5 ${deliveryMethod === 'delivery' ? 'text-noob' : 'text-zinc-400'}`} />
                       <span className="text-xs font-bold">Delivery {settings && settings.storeDeliveryFee > 0 ? `(+${formatPrice(settings.storeDeliveryFee)})` : ''}</span>
                     </button>
                   </div>
@@ -641,7 +641,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                 {deliveryMethod === 'pickup' && (
                   <div className="space-y-2">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#00FF66]" /> Pickup Location
+                      <MapPin className="w-3.5 h-3.5 text-noob" /> Pickup Location
                     </span>
                     <ShopMap />
                     <p className="text-[11px] text-zinc-400">{SHOP_ADDRESS}</p>
@@ -687,7 +687,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
 
                 {deliveryMethod === 'pickup' && (
                   <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input type="checkbox" checked={saveDetails} onChange={(e) => setSaveDetails(e.target.checked)} className="w-4 h-4 accent-[#00FF66] cursor-pointer" />
+                    <input type="checkbox" checked={saveDetails} onChange={(e) => setSaveDetails(e.target.checked)} className="w-4 h-4 accent-noob cursor-pointer" />
                     <span className="text-xs text-zinc-300">Save these details for next time</span>
                   </label>
                 )}
@@ -720,7 +720,7 @@ export const StorePage: React.FC<StorePageProps> = ({ currentUser, onClose }) =>
                 <button
                   onClick={placeOrder}
                   disabled={placing || paused || !contactComplete || (deliveryMethod === 'pickup' ? !contactLoaded : !addressesLoaded)}
-                  className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />} {placing ? 'Placing your order…' : 'Place Order'}
                 </button>

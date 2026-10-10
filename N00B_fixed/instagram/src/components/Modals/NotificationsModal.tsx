@@ -137,9 +137,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     switch (type) {
       case 'admin_broadcast':
       case 'admin_direct':
-        return <Shield className="w-3.5 h-3.5 text-[#00FF66]" />;
+        return <Shield className="w-3.5 h-3.5 text-noob" />;
       case 'follow_request_accepted':
-        return <UserCheck className="w-3.5 h-3.5 text-[#00FF66]" />;
+        return <UserCheck className="w-3.5 h-3.5 text-noob" />;
       case 'follow_request_received':
         return <UserPlus className="w-3.5 h-3.5 text-purple-400" />;
       case 'new_follower':
@@ -159,7 +159,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
       case 'new_message':
         return <MessageCircle className="w-3.5 h-3.5 text-[#00E5FF]" />;
       case 'call_started':
-        return <Phone className="w-3.5 h-3.5 text-[#00FF66]" />;
+        return <Phone className="w-3.5 h-3.5 text-noob" />;
       case 'birthday_wish':
       case 'birthday_follower_alert':
         return <Gift className="w-3.5 h-3.5 text-pink-400" />;
@@ -172,7 +172,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
       case 'ai_feedback_reply':
         return <Bot className="w-3.5 h-3.5 text-violet-400" />;
       default:
-        return <Sparkles className="w-3.5 h-3.5 text-[#00FF66]" />;
+        return <Sparkles className="w-3.5 h-3.5 text-noob" />;
     }
   };
 
@@ -182,9 +182,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         {/* Header */}
         <header className="p-4 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#00FF66] to-cyan-400 p-[1.5px] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-noob to-noob-strong p-[1.5px] flex items-center justify-center">
               <div className="w-full h-full bg-black rounded-[14px] flex items-center justify-center">
-                <BellRing className="w-4 h-4 text-[#00FF66]" />
+                <BellRing className="w-4 h-4 text-noob" />
               </div>
             </div>
             <div>
@@ -193,7 +193,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   Notifications &amp; Activity
                 </h3>
                 {notificationSettings.masterEnabled ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30">
                     Live ON
                   </span>
                 ) : (
@@ -222,7 +222,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
             onClick={() => setActiveTab('all')}
             className={`pb-2.5 transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'all'
-                ? 'border-[#00FF66] text-[#00FF66]'
+                ? 'border-noob text-noob'
                 : 'border-transparent text-zinc-400 hover:text-white'
             }`}
           >
@@ -271,7 +271,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 onClick={() => setFilterType(f.id)}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   filterType === f.id
-                    ? 'bg-[#00FF66] text-black font-bold'
+                    ? 'bg-noob text-black font-bold'
                     : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
                 }`}
               >
@@ -337,7 +337,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           : ''
                       } ${
                         !notif.isRead
-                          ? 'bg-zinc-900/90 border-[#00FF66]/30 shadow-sm'
+                          ? 'bg-zinc-900/90 border-noob/30 shadow-sm'
                           : 'bg-zinc-900/40 border-zinc-800/80 hover:border-zinc-700'
                       }`}
                     >
@@ -358,10 +358,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         {/* Notification text & time */}
                         <div className="flex-1 min-w-0">
                           {notif.title && (
-                            <div className="text-xs font-black text-[#00FF66] mb-0.5 flex items-center gap-1">
+                            <div className="text-xs font-black text-noob mb-0.5 flex items-center gap-1">
                               <span>{notif.title}</span>
                               {notif.senderUsername?.toLowerCase() === 'noob' && (
-                                <span className="text-[10px] bg-[#00FF66]/20 text-[#00FF66] px-1.5 py-0.2 rounded font-bold">
+                                <span className="text-[10px] bg-noob/20 text-noob px-1.5 py-0.2 rounded font-bold">
                                   Official Admin
                                 </span>
                               )}
@@ -369,7 +369,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           )}
 
                           <div className="text-xs text-zinc-300 leading-relaxed">
-                            <span className="font-bold text-white hover:text-[#00FF66] transition-colors cursor-pointer mr-1">
+                            <span className="font-bold text-white hover:text-noob transition-colors cursor-pointer mr-1">
                               {notif.senderDisplayName || notif.actorDisplayName || notif.senderUsername || notif.actorUsername}
                             </span>
                             <span>{notif.message || notif.text}</span>
@@ -393,7 +393,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                                   e.stopPropagation();
                                   notif.actorId && onAcceptFollowRequest(notif.id, notif.actorId);
                                 }}
-                                className="px-3 py-1 bg-[#00FF66] hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                                className="px-3 py-1 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
                               >
                                 <Check className="w-3.5 h-3.5" /> Accept
                               </button>
@@ -425,7 +425,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           )}
 
                           {notif.type === 'follow_request_received' && notif.actionStatus === 'accepted' && (
-                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[#00FF66] font-bold">
+                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-noob font-bold">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Follow request approved
                             </div>
                           )}
@@ -450,7 +450,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                                   e.stopPropagation();
                                   notif.actorId && onRespondSuggestedUser?.(notif.id, notif.actorId, true);
                                 }}
-                                className="px-3 py-1 bg-[#00FF66] hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                                className="px-3 py-1 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
                               >
                                 <UserPlus className="w-3.5 h-3.5" /> Follow
                               </button>
@@ -466,7 +466,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                             </div>
                           )}
                           {notif.type === 'suggested_user' && notif.actionStatus === 'accepted' && (
-                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[#00FF66] font-bold">
+                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-noob font-bold">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Followed
                             </div>
                           )}
@@ -491,7 +491,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       </div>
 
                       {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-[#00FF66] shrink-0 mt-2 shadow-[0_0_8px_rgba(0,255,102,0.8)]" />
+                        <span className="w-2 h-2 rounded-full bg-noob shrink-0 mt-2 shadow-[0_0_8px_rgba(217,119,87,0.8)]" />
                       )}
                     </div>
                       ))}
@@ -508,7 +508,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               {/* Master Push Alert Toggle */}
               <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${notificationSettings.masterEnabled ? 'bg-[#00FF66]/20 text-[#00FF66]' : 'bg-zinc-800 text-zinc-500'}`}>
+                  <div className={`p-2.5 rounded-xl ${notificationSettings.masterEnabled ? 'bg-noob/20 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
                     <Bell className="w-5 h-5" />
                   </div>
                   <div>
@@ -524,7 +524,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, masterEnabled: e.target.checked })}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00FF66]" />
+                  <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-noob" />
                 </label>
               </div>
 
@@ -544,7 +544,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     type="checkbox"
                     checked={notificationSettings.followRequests}
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, followRequests: e.target.checked })}
-                    className="w-4 h-4 accent-[#00FF66] rounded cursor-pointer"
+                    className="w-4 h-4 accent-noob rounded cursor-pointer"
                   />
                 </div>
 
@@ -558,7 +558,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     type="checkbox"
                     checked={notificationSettings.newFollowers}
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, newFollowers: e.target.checked })}
-                    className="w-4 h-4 accent-[#00FF66] rounded cursor-pointer"
+                    className="w-4 h-4 accent-noob rounded cursor-pointer"
                   />
                 </div>
 
@@ -572,7 +572,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     type="checkbox"
                     checked={notificationSettings.likesComments}
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, likesComments: e.target.checked })}
-                    className="w-4 h-4 accent-[#00FF66] rounded cursor-pointer"
+                    className="w-4 h-4 accent-noob rounded cursor-pointer"
                   />
                 </div>
 
@@ -586,7 +586,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     type="checkbox"
                     checked={notificationSettings.gamesLeaderboard}
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, gamesLeaderboard: e.target.checked })}
-                    className="w-4 h-4 accent-[#00FF66] rounded cursor-pointer"
+                    className="w-4 h-4 accent-noob rounded cursor-pointer"
                   />
                 </div>
 
@@ -600,7 +600,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     type="checkbox"
                     checked={notificationSettings.musicHub}
                     onChange={(e) => onUpdateSettings({ ...notificationSettings, musicHub: e.target.checked })}
-                    className="w-4 h-4 accent-[#00FF66] rounded cursor-pointer"
+                    className="w-4 h-4 accent-noob rounded cursor-pointer"
                   />
                 </div>
               </div>

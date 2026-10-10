@@ -47,7 +47,7 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
 
   return (
     <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-lg bg-[#0e0e0e] border border-neutral-800 sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
           <h3 className="text-sm font-bold text-white">Edit Video</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer">
@@ -87,7 +87,7 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
               onChange={(e) => setTitle(e.target.value)}
               maxLength={150}
               placeholder="Give your video a title"
-              className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66]"
+              className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob"
             />
           </div>
 
@@ -99,7 +99,7 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
               maxLength={2000}
               rows={4}
               placeholder="What's this video about?"
-              className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF66] resize-none"
+              className="w-full bg-black rounded-xl border border-neutral-700 px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-noob resize-none"
             />
           </div>
 
@@ -110,7 +110,7 @@ export const EditVideoDetailsModal: React.FC<EditVideoDetailsModalProps> = ({ vi
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
           >
             {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
             {isSaving ? 'Saving…' : 'Save Changes'}

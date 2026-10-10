@@ -289,7 +289,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
         <div className="flex items-center gap-3.5 min-w-0">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.35)] shrink-0"
-            style={{ background: 'conic-gradient(from 180deg, #00FF66, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #00FF66)' }}
+            style={{ background: 'conic-gradient(from 180deg, #d97757, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #d97757)' }}
           >
             <Disc3 className="w-6 h-6 text-white stroke-[2.5] animate-spin-slow" />
           </div>
@@ -298,7 +298,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
 
         <button
           onClick={() => setShowUploadModal(true)}
-          className="p-2.5 rounded-2xl bg-transparent border border-zinc-700 text-white hover:border-[#00FF66] hover:text-[#00FF66] hover:bg-[#00FF66]/10 transition-all cursor-pointer shrink-0"
+          className="p-2.5 rounded-2xl bg-transparent border border-zinc-700 text-white hover:border-noob hover:text-noob hover:bg-noob/10 transition-all cursor-pointer shrink-0"
           title="Upload a track"
         >
           <Plus className="w-5 h-5" />
@@ -356,9 +356,9 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             step={0.1}
             value={Number.isFinite(audioProgress) ? audioProgress : 0}
             onChange={(e) => seekTo(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[#00FF66]"
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-noob"
             style={{
-              background: `linear-gradient(to right, #00FF66 ${audioProgress}%, #3f3f46 ${audioProgress}%)`
+              background: `linear-gradient(to right, #d97757 ${audioProgress}%, #3f3f46 ${audioProgress}%)`
             }}
             aria-label="Seek track position"
           />
@@ -380,7 +380,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             placeholder="Search community tracks, artists, or genres..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+            className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
           />
         </div>
 
@@ -457,7 +457,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                         type="button"
                         disabled={isRenaming}
                         onClick={() => submitRename(track.id)}
-                        className="w-6 h-6 rounded-full bg-[#00FF66] text-black flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
+                        className="w-6 h-6 rounded-full bg-noob text-black flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
                         title="Save name"
                       >
                         <Check className="w-3.5 h-3.5" />
@@ -593,7 +593,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                   placeholder="e.g. Midnight Cyber Drive"
                   value={titleInput}
                   onChange={(e) => setTitleInput(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
                 />
               </div>
 
@@ -604,7 +604,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                   required
                   value={artistInput}
                   onChange={(e) => setArtistInput(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
                 />
               </div>
 
@@ -614,7 +614,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                   required
                   value={genreInput}
                   onChange={(e) => setGenreInput(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
                 >
                   <option value="" disabled>Select a genre…</option>
                   {genres.filter((g) => g !== 'all').map((g) => (
@@ -644,16 +644,16 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                   disabled={isExtractingAudio}
                   className={`p-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                     audioUrlInput
-                      ? 'bg-[#00FF66]/10 border-[#00FF66]/40 text-[#00FF66]'
+                      ? 'bg-noob/10 border-noob/40 text-noob'
                       : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-300'
                   }`}
                 >
                   {isExtractingAudio ? (
                     <>Extracting audio…</>
                   ) : audioUrlInput ? (
-                    <><Check className="w-3 h-3 text-[#00FF66]" /> Audio File</>
+                    <><Check className="w-3 h-3 text-noob" /> Audio File</>
                   ) : (
-                    <><Upload className="w-3 h-3 text-[#00FF66]" /> Audio File</>
+                    <><Upload className="w-3 h-3 text-noob" /> Audio File</>
                   )}
                 </button>
                 <input ref={audioFileRef} type="file" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.m4v,.webm,.mkv" onChange={handleAudioUpload} className="hidden" />
@@ -662,10 +662,10 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
               {/* Auto Duration Status */}
               <div className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 flex items-center justify-between text-xs">
                 <span className="text-zinc-400 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#00FF66]" />
+                  <Clock className="w-3.5 h-3.5 text-noob" />
                   Auto-detected Length:
                 </span>
-                <span className="font-mono font-bold text-[#00FF66] bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
+                <span className="font-mono font-bold text-noob bg-black/40 px-2 py-0.5 rounded-md border border-white/5">
                   {detectedDuration || 'Upload audio…'}
                 </span>
               </div>
@@ -687,7 +687,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
                 <button
                   type="submit"
                   disabled={isUploading || !titleInput.trim() || !genreInput || !audioUrlInput || !coverUrlInput}
-                  className="px-5 py-2 rounded-xl bg-[#00FF66] text-black font-extrabold text-xs shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-2 rounded-xl bg-noob text-black font-extrabold text-xs shadow-md cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isUploading ? 'Publishing...' : 'Publish Track'}
                 </button>

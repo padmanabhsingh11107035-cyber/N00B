@@ -185,7 +185,7 @@ export const AvatarAdjustEditor: React.FC<AvatarAdjustEditorProps> = ({ file, me
           step={0.01}
           value={zoom}
           onChange={(e) => setZoom(parseFloat(e.target.value))}
-          className="w-full accent-[#00FF66] cursor-pointer"
+          className="w-full accent-noob cursor-pointer"
         />
         <ZoomIn className="w-4 h-4 text-zinc-400 shrink-0" />
       </div>
@@ -203,7 +203,7 @@ export const AvatarAdjustEditor: React.FC<AvatarAdjustEditorProps> = ({ file, me
         <button
           onClick={handleConfirm}
           disabled={baking || !natural}
-          className="px-5 py-2.5 bg-[#00FF66] hover:opacity-90 text-black rounded-2xl text-xs font-bold cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+          className="px-5 py-2.5 bg-noob hover:opacity-90 text-black rounded-2xl text-xs font-bold cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
         >
           {baking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           {baking ? 'Processing...' : 'Done'}

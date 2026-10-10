@@ -221,6 +221,7 @@ function renderMessageWithLinks(text: string): React.ReactNode[] {
 }
 
 const THEME_COLORS = [
+  { name: 'Clay', hex: '#d97757' },
   { name: 'Neon Emerald', hex: '#00FF66' },
   { name: 'Cyber Cyan', hex: '#00E5FF' },
   { name: 'Electric Purple', hex: '#D946EF' },
@@ -276,7 +277,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [globalChatTheme, setGlobalChatTheme] = useState<string>(() => {
-    return localStorage.getItem('noob_chat_theme') || '#00FF66';
+    return localStorage.getItem('noob_chat_theme') || '#d97757';
   });
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1458,7 +1459,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="p-3.5 pb-2 border-b border-zinc-900 flex items-center justify-between">
             <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
               Chats
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/30">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-noob/15 text-noob border border-noob/30">
                 {visibleConversations.length + friendsWithoutConversation.length}
               </span>
             </h1>
@@ -1469,7 +1470,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 className="p-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shadow-sm"
                 title="Create New Group"
               >
-                <Plus className="w-4 h-4 text-[#00FF66]" />
+                <Plus className="w-4 h-4 text-noob" />
                 <span className="text-xs font-bold hidden sm:inline">New Group</span>
               </button>
 
@@ -1503,7 +1504,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       }}
                       className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
                     >
-                      <Plus className="w-4 h-4 text-[#00FF66]" /> New Group Chat
+                      <Plus className="w-4 h-4 text-noob" /> New Group Chat
                     </button>
                     <button
                       onClick={() => {
@@ -1530,7 +1531,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Search Bar matching screenshot ("Search or start a new chat") */}
           <div className="px-3 py-2 border-b border-zinc-900">
-            <div className="flex items-center bg-zinc-900/90 border border-zinc-800/80 rounded-xl px-3 py-2 focus-within:border-[#00FF66] transition-colors relative">
+            <div className="flex items-center bg-zinc-900/90 border border-zinc-800/80 rounded-xl px-3 py-2 focus-within:border-noob transition-colors relative">
               <Search className="w-4 h-4 text-zinc-400 mr-2.5 shrink-0" />
               <input
                 type="text"
@@ -1578,7 +1579,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   onClick={() => setActiveFilterTab(tab.id)}
                   className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
                     isActive
-                      ? 'bg-[#00FF66]/20 text-[#00FF66] border border-[#00FF66]/40 font-bold shadow-[0_0_10px_rgba(0,255,102,0.15)]'
+                      ? 'bg-noob/20 text-noob border border-noob/40 font-bold shadow-[0_0_10px_rgba(217,119,87,0.15)]'
                       : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800/80'
                   }`}
                 >
@@ -1586,7 +1587,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   {tab.id !== 'all' && count > 0 && (
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        isActive ? 'bg-[#00FF66] text-black' : 'bg-zinc-800 text-zinc-400'
+                        isActive ? 'bg-noob text-black' : 'bg-zinc-800 text-zinc-400'
                       }`}
                     >
                       {count}
@@ -1628,7 +1629,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   }}
                   className={`p-3.5 flex items-center gap-3 cursor-pointer transition-colors group relative ${
                     isSelected
-                      ? 'bg-zinc-900/95 border-l-3 border-[#00FF66]'
+                      ? 'bg-zinc-900/95 border-l-3 border-noob'
                       : 'hover:bg-zinc-900/50'
                   }`}
                 >
@@ -1656,7 +1657,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           className="w-12 h-12 rounded-full object-cover ring-1 ring-zinc-700"
                         />
                         {isUserOnline(partner.id) && (
-                          <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-[#00FF66] border-2 border-black rounded-full" />
+                          <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-noob border-2 border-black rounded-full" />
                         )}
                       </div>
                     )}
@@ -1667,7 +1668,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Header: Title + Tag ('group' or 'chat') + Time */}
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-sm font-bold text-white truncate group-hover:text-[#00FF66] transition-colors">
+                        <span className="text-sm font-bold text-white truncate group-hover:text-noob transition-colors">
                           {displayName}
                         </span>
 
@@ -1677,7 +1678,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             group
                           </span>
                         ) : (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-[#00FF66] font-bold uppercase border border-[#00FF66]/30 shrink-0">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-noob font-bold uppercase border border-noob/30 shrink-0">
                             chat
                           </span>
                         )}
@@ -1687,7 +1688,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <span
                           className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase border shrink-0 flex items-center gap-0.5 ${
                             c.isEncryptable
-                              ? 'bg-emerald-500/15 text-[#00FF66] border-[#00FF66]/30'
+                              ? 'bg-emerald-500/15 text-noob border-noob/30'
                               : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
                           }`}
                         >
@@ -1730,7 +1731,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                         )}
                         {c.unreadCount && c.unreadCount > 0 ? (
-                          <span className="w-5 h-5 rounded-full bg-[#00FF66] text-black text-[10px] font-black flex items-center justify-center shadow-sm">
+                          <span className="w-5 h-5 rounded-full bg-noob text-black text-[10px] font-black flex items-center justify-center shadow-sm">
                             {c.unreadCount}
                           </span>
                         ) : null}
@@ -1745,7 +1746,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {filteredFriendsWithoutChat.length > 0 && (
               <div className="p-3 bg-zinc-950/90 border-t border-zinc-900 space-y-2">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
-                  <UserCheck className="w-3.5 h-3.5 text-[#00FF66]" /> Connected Friends (
+                  <UserCheck className="w-3.5 h-3.5 text-noob" /> Connected Friends (
                   {filteredFriendsWithoutChat.length})
                 </span>
                 <div className="space-y-1">
@@ -1766,7 +1767,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             <span className="text-xs font-bold text-white truncate">
                               {friend.displayName || friend.username}
                             </span>
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-[#00FF66] font-bold uppercase border border-[#00FF66]/30 shrink-0">
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-noob font-bold uppercase border border-noob/30 shrink-0">
                               chat
                             </span>
                             {friend.isVerified && <VerifiedBadge size="xs" />}
@@ -1778,7 +1779,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                       <button
                         type="button"
-                        className="px-2.5 py-1 bg-[#00FF66] text-black font-bold text-xs rounded-lg transition-colors shrink-0 shadow-sm"
+                        className="px-2.5 py-1 bg-noob text-black font-bold text-xs rounded-lg transition-colors shrink-0 shadow-sm"
                       >
                         Chat
                       </button>
@@ -1791,7 +1792,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Bottom Security Note */}
           <div className="p-2.5 bg-zinc-950 border-t border-zinc-900 text-center flex items-center justify-center gap-1.5 text-[10px] text-zinc-500 font-medium">
-            <Lock className="w-3 h-3 text-[#00FF66]" />
+            <Lock className="w-3 h-3 text-noob" />
             <span>Your personal messages are end-to-end encrypted</span>
           </div>
         </aside>
@@ -1852,10 +1853,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                         }
                         alt=""
-                        className="w-10 h-10 rounded-full object-cover ring-1 ring-[#00FF66]"
+                        className="w-10 h-10 rounded-full object-cover ring-1 ring-noob"
                       />
                       {headerPartner && isUserOnline(headerPartner.id) && (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#00FF66] rounded-full border border-black" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-noob rounded-full border border-black" />
                       )}
                     </div>
                   )}
@@ -1863,7 +1864,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                 <div className="truncate">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-bold text-white truncate group-hover:text-[#00FF66] transition-colors">
+                    <h3 className="text-sm font-bold text-white truncate group-hover:text-noob transition-colors">
                       {activeChat?.isGroup
                         ? activeChat.name || 'Group Chat'
                         : activeChat?.customNickname ||
@@ -1876,7 +1877,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         group
                       </span>
                     ) : (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-[#00FF66] font-bold uppercase border border-[#00FF66]/30">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-noob font-bold uppercase border border-noob/30">
                         chat
                       </span>
                     )}
@@ -1894,7 +1895,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </span>
                     )}
                     {!activeChat?.isGroup && activeChat?.vanishMode && (
-                      <span className="text-[#00FF66] font-medium flex items-center gap-1">
+                      <span className="text-noob font-medium flex items-center gap-1">
                         <ShieldCheck className="w-3 h-3" /> Vanish Mode On
                       </span>
                     )}
@@ -1905,7 +1906,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         e.stopPropagation();
                         setShowEncryption(true);
                       }}
-                      className={`font-medium flex items-center gap-1 cursor-pointer ${chatCrypto?.encryptable ? 'text-[#00FF66]' : 'text-amber-300'}`}
+                      className={`font-medium flex items-center gap-1 cursor-pointer ${chatCrypto?.encryptable ? 'text-noob' : 'text-amber-300'}`}
                       title="About this chat's encryption"
                     >
                       {chatCrypto?.encryptable ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
@@ -1930,7 +1931,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setCallIsOutgoing(true);
                     setShowCallModal(true);
                   }}
-                  className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:bg-[#00FF66] hover:text-black hover:border-[#00FF66] text-zinc-300 transition-all cursor-pointer"
+                  className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:bg-noob hover:text-black hover:border-noob text-zinc-300 transition-all cursor-pointer"
                   title="Start a call"
                 >
                   <Phone className="w-4 h-4" />
@@ -1941,7 +1942,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 onClick={() => setShowChatActionsMenu(!showChatActionsMenu)}
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
                   showChatActionsMenu
-                    ? 'bg-[#00FF66] text-black shadow-[0_0_12px_rgba(0,255,102,0.3)]'
+                    ? 'bg-noob text-black shadow-[0_0_12px_rgba(217,119,87,0.3)]'
                     : 'hover:bg-zinc-800 text-zinc-300 hover:text-white bg-zinc-900/80 border border-zinc-800'
                 }`}
                 title="Chat actions and options"
@@ -2045,7 +2046,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {/* In-Chat Search Bar Drawer */}
           {showInChatSearch && (
             <div className="px-4 py-2 bg-zinc-900 border-b border-zinc-800 flex items-center gap-2 animate-in slide-in-from-top duration-200">
-              <Search className="w-3.5 h-3.5 text-[#00FF66] shrink-0" />
+              <Search className="w-3.5 h-3.5 text-noob shrink-0" />
               <input
                 type="text"
                 autoFocus
@@ -2055,7 +2056,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 className="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
               />
               {inChatSearchQuery && (
-                <span className="text-[10px] text-[#00FF66] font-bold px-2 py-0.5 bg-[#00FF66]/10 rounded-full">
+                <span className="text-[10px] text-noob font-bold px-2 py-0.5 bg-noob/10 rounded-full">
                   {filteredMessages.length} found
                 </span>
               )}
@@ -2077,7 +2078,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {/* Encryption notice banner */}
             <div className="flex justify-center my-2">
               <div className="px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/80 text-zinc-400 text-[10px] font-medium flex items-center gap-1.5 shadow-sm">
-                <Lock className="w-3 h-3 text-[#00FF66]" />
+                <Lock className="w-3 h-3 text-noob" />
                 <span>Messages and calls are end-to-end encrypted. No one outside of this chat can read or listen to them.</span>
               </div>
             </div>
@@ -2122,13 +2123,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   className={`relative flex flex-col group ${isMine ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className="swipe-reply-icon absolute inset-y-0 right-0 flex items-center pr-1 text-[#00FF66] pointer-events-none"
+                    className="swipe-reply-icon absolute inset-y-0 right-0 flex items-center pr-1 text-noob pointer-events-none"
                     style={{ opacity: 0 }}
                   >
                     <Reply className="w-4 h-4" />
                   </div>
                   <div
-                    className="swipe-menu-icon absolute inset-y-0 left-0 flex items-center pl-1 text-[#00FF66] pointer-events-none"
+                    className="swipe-menu-icon absolute inset-y-0 left-0 flex items-center pl-1 text-noob pointer-events-none"
                     style={{ opacity: 0 }}
                   >
                     <MoreVertical className="w-4 h-4" />
@@ -2168,17 +2169,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     style={
                       !isSticker && isMine
                         ? {
-                            backgroundColor: `${activeChat?.themeColor || globalChatTheme || '#00FF66'}26`,
-                            borderColor: activeChat?.themeColor || globalChatTheme || '#00FF66',
-                            boxShadow: `0 2px 14px ${(activeChat?.themeColor || globalChatTheme || '#00FF66')}30`
+                            backgroundColor: `${activeChat?.themeColor || globalChatTheme || '#d97757'}26`,
+                            borderColor: activeChat?.themeColor || globalChatTheme || '#d97757',
+                            boxShadow: `0 2px 14px ${(activeChat?.themeColor || globalChatTheme || '#d97757')}30`
                           }
                         : undefined
                     }
                   >
                     {/* Quoted reply preview */}
                     {m.replyTo && (
-                      <div className="mb-1.5 pl-2 border-l-2 border-[#00FF66]/70 bg-black/30 rounded-md py-1 px-2">
-                        <span className="text-[10px] font-bold text-[#00FF66] block">
+                      <div className="mb-1.5 pl-2 border-l-2 border-noob/70 bg-black/30 rounded-md py-1 px-2">
+                        <span className="text-[10px] font-bold text-noob block">
                           {m.replyTo.senderUsername ? `@${m.replyTo.senderUsername}` : 'Original message'}
                         </span>
                         <span className="text-[10px] text-zinc-400 truncate block">
@@ -2190,7 +2191,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Shared Music track */}
                     {m.sharedTrack && (
                       <div className="mb-2 p-2 bg-black/60 rounded-xl flex items-center gap-2 border border-zinc-700">
-                        <Music className="w-4 h-4 text-[#00FF66] animate-pulse" />
+                        <Music className="w-4 h-4 text-noob animate-pulse" />
                         <div className="truncate">
                           <span className="text-[11px] font-bold text-white block">
                             {m.sharedTrack.title}
@@ -2202,16 +2203,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     {/* Game Invite Challenge Card */}
                     {m.gameInvite && (
-                      <div className="mb-2 p-3 bg-gradient-to-r from-emerald-950/90 via-zinc-900 to-zinc-900 rounded-xl border border-[#00FF66]/40 shadow-lg space-y-2">
+                      <div className="mb-2 p-3 bg-gradient-to-r from-emerald-950/90 via-zinc-900 to-zinc-900 rounded-xl border border-noob/40 shadow-lg space-y-2">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#00FF66]/20 border-[#00FF66]/40 flex items-center justify-center text-[#00FF66]">
+                          <div className="w-8 h-8 rounded-lg bg-noob/20 border-noob/40 flex items-center justify-center text-noob">
                             <Gamepad2 className="w-4 h-4" />
                           </div>
                           <div>
                             <span className="text-xs font-bold text-white block">
                               🎮 {m.gameInvite.gameTitle}
                             </span>
-                            <span className="text-[10px] text-[#00FF66]">
+                            <span className="text-[10px] text-noob">
                               Challenged by @{m.gameInvite.fromUsername}
                             </span>
                           </div>
@@ -2228,7 +2229,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               );
                             }
                           }}
-                          className="w-full py-1.5 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-[#00FF66]/20 cursor-pointer"
+                          className="w-full py-1.5 bg-noob hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-noob/20 cursor-pointer"
                         >
                           <Gamepad2 className="w-3.5 h-3.5" /> Accept & Play Duel
                         </button>
@@ -2244,7 +2245,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           const user = await fetchUserById(m.sharedProfile.userId);
                           if (user) onNavigateToProfile(user);
                         }}
-                        className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-[#00FF66]/50 transition-colors cursor-pointer text-left"
+                        className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-noob/50 transition-colors cursor-pointer text-left"
                       >
                         <img
                           src={m.sharedProfile.avatar || '/noob-logo.svg.jpeg'}
@@ -2261,7 +2262,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </div>
                           <span className="text-[10px] text-zinc-400 truncate block" translate="no">@{m.sharedProfile.username}</span>
                         </div>
-                        <UserCircle2 className="w-4 h-4 text-[#00FF66] shrink-0" />
+                        <UserCircle2 className="w-4 h-4 text-noob shrink-0" />
                       </button>
                     )}
 
@@ -2275,7 +2276,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           else if (m.sharedPost.type === 'video') onNavigateToVideo?.(m.sharedPost.id);
                           else onNavigateToPost?.(m.sharedPost.id);
                         }}
-                        className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-[#00FF66]/50 transition-colors cursor-pointer text-left"
+                        className="mb-2 w-full p-2.5 bg-black/60 rounded-xl flex items-center gap-2.5 border border-zinc-700 hover:border-noob/50 transition-colors cursor-pointer text-left"
                       >
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-700 shrink-0 flex items-center justify-center">
                           {m.sharedPost.thumbnailUrl ? (
@@ -2306,11 +2307,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
                         </div>
                         {m.sharedPost.type === 'reel' ? (
-                          <Film className="w-4 h-4 text-[#00FF66] shrink-0" />
+                          <Film className="w-4 h-4 text-noob shrink-0" />
                         ) : m.sharedPost.type === 'video' ? (
-                          <Youtube className="w-4 h-4 text-[#00FF66] shrink-0" />
+                          <Youtube className="w-4 h-4 text-noob shrink-0" />
                         ) : (
-                          <Image className="w-4 h-4 text-[#00FF66] shrink-0" />
+                          <Image className="w-4 h-4 text-noob shrink-0" />
                         )}
                       </button>
                     )}
@@ -2374,7 +2375,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </button>
                           <button
                             onClick={() => handleSaveEdit(m.id)}
-                            className="px-2 py-0.5 text-[10px] bg-[#00FF66] text-black font-bold rounded"
+                            className="px-2 py-0.5 text-[10px] bg-noob text-black font-bold rounded"
                           >
                             Save
                           </button>
@@ -2413,7 +2414,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setShowEncryptionSettings(true)}
-                              className="text-[10px] font-bold text-[#00FF66] hover:underline cursor-pointer"
+                              className="text-[10px] font-bold text-noob hover:underline cursor-pointer"
                             >
                               Restore my key backup to read older messages
                             </button>
@@ -2470,7 +2471,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           onClick={() => handleToggleReaction(m.id, r.emoji)}
                           className={`px-1.5 py-0.5 rounded-full text-[11px] flex items-center gap-1 border cursor-pointer transition-colors ${
                             r.users.includes(currentUser.id)
-                              ? 'bg-[#00FF66]/15 border-[#00FF66]/40 text-[#00FF66]'
+                              ? 'bg-noob/15 border-noob/40 text-noob'
                               : 'bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
                           }`}
                           title={r.users.includes(currentUser.id) ? 'Tap to remove your reaction' : 'Tap to react'}
@@ -2611,9 +2612,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <>
             {/* Replying-to preview, WhatsApp-style */}
             {replyingToMessage && (
-              <div className="flex items-center gap-2 mb-2 pl-3 pr-2 py-1.5 rounded-xl bg-zinc-800/80 border-l-4 border-[#00FF66]">
+              <div className="flex items-center gap-2 mb-2 pl-3 pr-2 py-1.5 rounded-xl bg-zinc-800/80 border-l-4 border-noob">
                 <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-bold text-[#00FF66] block">
+                  <span className="text-[10px] font-bold text-noob block">
                     Replying to {replyingToMessage.senderId === currentUser.id ? 'yourself' : `@${replyingToMessage.senderUsername || 'them'}`}
                   </span>
                   <span className="text-[11px] text-zinc-400 truncate block">
@@ -2645,7 +2646,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       onClick={() => setActivePickerTab('emojis')}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         activePickerTab === 'emojis'
-                          ? 'bg-[#00FF66] text-black shadow-sm'
+                          ? 'bg-noob text-black shadow-sm'
                           : 'text-zinc-400 hover:text-white'
                       }`}
                     >
@@ -2656,7 +2657,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       onClick={() => setActivePickerTab('gifs')}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         activePickerTab === 'gifs'
-                          ? 'bg-[#00FF66] text-black shadow-sm'
+                          ? 'bg-noob text-black shadow-sm'
                           : 'text-zinc-400 hover:text-white'
                       }`}
                     >
@@ -2667,7 +2668,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       onClick={() => setActivePickerTab('stickers')}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         activePickerTab === 'stickers'
-                          ? 'bg-[#00FF66] text-black shadow-sm'
+                          ? 'bg-noob text-black shadow-sm'
                           : 'text-zinc-400 hover:text-white'
                       }`}
                     >
@@ -2678,7 +2679,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       onClick={() => setActivePickerTab('premium')}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                         activePickerTab === 'premium'
-                          ? 'bg-[#00FF66] text-black shadow-sm'
+                          ? 'bg-noob text-black shadow-sm'
                           : 'text-zinc-400 hover:text-white'
                       }`}
                     >
@@ -2724,7 +2725,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             type="button"
                             onClick={() => stickerFileInputRef.current?.click()}
                             disabled={isUploadingSticker}
-                            className="flex items-center gap-1 text-[10px] font-bold text-[#00FF66] hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                            className="flex items-center gap-1 text-[10px] font-bold text-noob hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
                           >
                             <Plus className="w-3 h-3" /> {isUploadingSticker ? 'Creating...' : 'Add Sticker'}
                           </button>
@@ -2738,7 +2739,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <button
                             type="button"
                             onClick={() => stickerFileInputRef.current?.click()}
-                            className="w-full py-3 rounded-xl border border-dashed border-zinc-700 hover:border-[#00FF66]/60 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                            className="w-full py-3 rounded-xl border border-dashed border-zinc-700 hover:border-noob/60 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                           >
                             Turn any photo into a sticker, kept in your own private gallery
                           </button>
@@ -2747,7 +2748,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             {myStickers.map((stk) => (
                               <div
                                 key={stk.id}
-                                className="group relative rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#00FF66]/50 transition-all"
+                                className="group relative rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-noob/50 transition-all"
                               >
                                 <button
                                   type="button"
@@ -2784,7 +2785,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               key={stk.id}
                               type="button"
                               onClick={() => handleSendSticker(stk.emoji)}
-                              className="flex flex-col items-center justify-center p-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-[#00FF66]/50 transition-all cursor-pointer group"
+                              className="flex flex-col items-center justify-center p-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-noob/50 transition-all cursor-pointer group"
                             >
                               <span className="text-3xl group-hover:scale-110 transition-transform">
                                 {stk.emoji}
@@ -2837,7 +2838,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                     disabled={isPurchasing}
                                     className={`relative flex flex-col items-center justify-center p-2 rounded-2xl border transition-all cursor-pointer group disabled:opacity-50 ${
                                       owned
-                                        ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 hover:border-[#00FF66]/50'
+                                        ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 hover:border-noob/50'
                                         : 'bg-zinc-900/60 border-zinc-800/80 hover:border-amber-500/50'
                                     }`}
                                     title={owned ? `Send ${item.name}` : `Buy for ${item.price.toLocaleString()} pts`}
@@ -2891,7 +2892,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <button
                   type="button"
                   onClick={() => stopRecordingVoice(true)}
-                  className="px-3.5 py-1.5 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 bg-noob hover:bg-emerald-400 text-black font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" /> Send
                 </button>
@@ -2903,7 +2904,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
                   showEmojiPicker
-                    ? 'bg-[#00FF66] text-black border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]'
+                    ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
                     : 'bg-zinc-800 hover:bg-zinc-700 text-amber-400 border-zinc-700'
                 }`}
                 title="Emojis, GIFs & Stickers"
@@ -2918,7 +2919,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   disabled={isUploadingAttachment}
                   className={`p-2.5 rounded-2xl border transition-all cursor-pointer disabled:opacity-50 ${
                     showAttachMenu
-                      ? 'bg-[#00FF66] text-black border-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.3)]'
+                      ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
                       : 'bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border-zinc-700'
                   }`}
                   title="Attach a photo or video"
@@ -2947,7 +2948,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <input ref={chatVideoInputRef} type="file" accept="video/*" onChange={(e) => handleAttachFile(e, 'video')} className="sr-only" />
               </div>
 
-              <div className="flex-1 flex items-center bg-black/80 border border-zinc-700/80 rounded-2xl px-3.5 py-2 focus-within:border-[#00FF66] transition-colors shadow-inner">
+              <div className="flex-1 flex items-center bg-black/80 border border-zinc-700/80 rounded-2xl px-3.5 py-2 focus-within:border-noob transition-colors shadow-inner">
                 <input
                   type="text"
                   placeholder={
@@ -2966,7 +2967,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               {inputText.trim() ? (
                 <button
                   type="submit"
-                  className="p-2.5 sm:px-4 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all shadow-md shadow-[#00FF66]/20 cursor-pointer flex items-center gap-1.5"
+                  className="p-2.5 sm:px-4 bg-noob hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all shadow-md shadow-noob/20 cursor-pointer flex items-center gap-1.5"
                 >
                   <Send className="w-4 h-4" />
                   <span className="text-xs font-bold hidden sm:inline">Send</span>
@@ -3108,7 +3109,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Palette className="w-4 h-4 text-[#00FF66]" /> Chat Customization
+                <Palette className="w-4 h-4 text-noob" /> Chat Customization
               </h3>
               <button
                 onClick={() => setShowSettingsModal(false)}
@@ -3172,7 +3173,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowSettingsModal(false)}
-                className="px-5 py-2 bg-[#00FF66] hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shadow-[#00FF66]/20"
+                className="px-5 py-2 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shadow-noob/20"
               >
                 Done
               </button>
@@ -3187,7 +3188,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <SquarePen className="w-4 h-4 text-[#00FF66]" /> Start a Direct Chat
+                <SquarePen className="w-4 h-4 text-noob" /> Start a Direct Chat
               </h3>
               <button
                 onClick={() => {
@@ -3211,7 +3212,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 placeholder="Search user by @username or name..."
                 value={newChatSearch}
                 onChange={(e) => setNewChatSearch(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
                 autoFocus
               />
             </div>
@@ -3243,7 +3244,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           alt={u.username}
                           className="w-10 h-10 rounded-full object-cover border border-zinc-700"
                         />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#00FF66] ring-2 ring-black absolute bottom-0 right-0" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-noob ring-2 ring-black absolute bottom-0 right-0" />
                       </div>
                       <div>
                         <div className="text-xs font-bold text-white flex items-center gap-1">
@@ -3256,7 +3257,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     <button
                       type="button"
-                      className="px-3.5 py-1.5 bg-[#00FF66]/15 group-hover:bg-[#00FF66] text-[#00FF66] group-hover:text-black rounded-xl text-xs font-bold transition-all"
+                      className="px-3.5 py-1.5 bg-noob/15 group-hover:bg-noob text-noob group-hover:text-black rounded-xl text-xs font-bold transition-all"
                     >
                       Chat
                     </button>

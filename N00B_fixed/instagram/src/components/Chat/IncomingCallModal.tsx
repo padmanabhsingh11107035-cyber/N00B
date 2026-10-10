@@ -74,7 +74,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({ ring, onAc
       aria-label={`Incoming call from ${ring.from.displayName || ring.from.username}`}
     >
       <div className="text-center space-y-1.5">
-        <p className="text-xs font-bold text-[#00FF66] uppercase tracking-widest">
+        <p className="text-xs font-bold text-noob uppercase tracking-widest">
           {ring.isGroup ? 'Incoming Group Call' : 'Incoming Call'}
         </p>
         <p className="text-[11px] text-zinc-500">{ring.chatName}</p>
@@ -82,11 +82,11 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({ ring, onAc
 
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-[#00FF66]/20 animate-ping" />
+          <div className="absolute inset-0 rounded-full bg-noob/20 animate-ping" />
           <img
             src={ring.from.avatar || '/noob-logo-circle.png'}
             alt={ring.from.username}
-            className="relative w-28 h-28 rounded-full object-cover ring-4 ring-[#00FF66]/60"
+            className="relative w-28 h-28 rounded-full object-cover ring-4 ring-noob/60"
             referrerPolicy="no-referrer"
           />
         </div>
@@ -116,7 +116,7 @@ export const IncomingCallModal: React.FC<IncomingCallModalProps> = ({ ring, onAc
           <button
             onClick={onAccept}
             title="Accept"
-            className="p-5 rounded-full bg-[#00FF66] hover:bg-[#00FF66]/90 text-black cursor-pointer shadow-lg shadow-[#00FF66]/30 transition-transform hover:scale-105"
+            className="p-5 rounded-full bg-noob hover:bg-noob/90 text-black cursor-pointer shadow-lg shadow-noob/30 transition-transform hover:scale-105"
           >
             <Phone className="w-6 h-6" />
           </button>

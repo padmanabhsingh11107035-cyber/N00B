@@ -92,7 +92,7 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
         </div>
 
         {doneMessage && (
-          <p className="text-[11px] text-[#00FF66] flex items-center gap-1.5 bg-[#00FF66]/10 border border-[#00FF66]/30 rounded-xl p-2.5">
+          <p className="text-[11px] text-noob flex items-center gap-1.5 bg-noob/10 border border-noob/30 rounded-xl p-2.5">
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> {doneMessage}
           </p>
         )}
@@ -136,7 +136,7 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
                           onKeyDown={(e) => { if (e.key === 'Enter' && password && !busy) handleApprove(r.id); }}
                           placeholder="Password"
                           autoFocus
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-base tracking-widest text-white placeholder:text-xs placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-[#00FF66]/60"
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-base tracking-widest text-white placeholder:text-xs placeholder:tracking-normal placeholder:text-zinc-600 focus:outline-none focus:border-noob/60"
                         />
                       </>
                     )}
@@ -146,7 +146,7 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
                       <button
                         onClick={() => handleApprove(r.id)}
                         disabled={busy || (!isMasterAdmin && !password)}
-                        className="flex-1 py-2 rounded-xl bg-[#00FF66] text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        className="flex-1 py-2 rounded-xl bg-noob text-black text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {busy ? 'Confirming…' : 'Confirm & Pay'}
                       </button>
@@ -155,7 +155,7 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
                 ) : (
                   <div className="flex gap-2">
                     <button onClick={() => handleDecline(r.id)} disabled={busy} className="flex-1 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs font-bold cursor-pointer disabled:opacity-40">Decline</button>
-                    <button onClick={() => setActiveId(r.id)} disabled={busy} className="flex-1 py-2 rounded-xl bg-[#00FF66] text-black text-xs font-bold cursor-pointer disabled:opacity-40">Approve</button>
+                    <button onClick={() => setActiveId(r.id)} disabled={busy} className="flex-1 py-2 rounded-xl bg-noob text-black text-xs font-bold cursor-pointer disabled:opacity-40">Approve</button>
                   </div>
                 )}
               </div>

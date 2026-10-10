@@ -115,7 +115,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
           <button
             type="button"
             onClick={addAnother}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white text-sm font-black cursor-pointer hover:brightness-110 transition"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-white text-sm font-black cursor-pointer hover:brightness-110 transition"
           >
             <UserPlus className="w-4 h-4" />
             Add another account

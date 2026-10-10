@@ -146,9 +146,9 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ 
 
   return (
     <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="w-full max-w-xs bg-[#0e0e0e] border border-[#00FF66]/20 rounded-3xl p-6 shadow-2xl text-center space-y-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-        <div className="w-14 h-14 mx-auto rounded-full bg-[#00FF66]/10 border border-[#00FF66]/30 flex items-center justify-center">
-          <Bell className="w-7 h-7 text-[#00FF66]" />
+      <div className="w-full max-w-xs bg-zinc-950 border border-noob/20 rounded-3xl p-6 shadow-2xl text-center space-y-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+        <div className="w-14 h-14 mx-auto rounded-full bg-noob/10 border border-noob/30 flex items-center justify-center">
+          <Bell className="w-7 h-7 text-noob" />
         </div>
         <div className="space-y-1.5">
           <h3 className="text-sm font-bold text-white">Turn on notifications?</h3>
@@ -159,7 +159,7 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ 
         <button
           onClick={handleEnable}
           disabled={loading}
-          className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60"
+          className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60"
         >
           {loading ? 'Enabling…' : 'Turn on notifications'}
         </button>

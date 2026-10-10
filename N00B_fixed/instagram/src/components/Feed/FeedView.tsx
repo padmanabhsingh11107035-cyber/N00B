@@ -53,7 +53,7 @@ const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupport
 // of these menu items could otherwise look like it did nothing for several seconds.
 const LazyFallback: React.FC = () => (
   <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
   </div>
 );
 
@@ -350,16 +350,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
           opacity: pullDistance > 10 || isRefreshing ? 1 : 0
         }}
       >
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-[#00FF66]/40 text-white text-xs font-bold shadow-lg shadow-[#00FF66]/10">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-noob/40 text-white text-xs font-bold shadow-lg shadow-noob/10">
           {isRefreshing ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 text-[#00FF66] animate-spin" />
-              <span className="text-[#00FF66]">Updating Feed...</span>
+              <Loader2 className="w-3.5 h-3.5 text-noob animate-spin" />
+              <span className="text-noob">Updating Feed...</span>
             </>
           ) : pullDistance > 55 ? (
             <>
-              <RefreshCw className="w-3.5 h-3.5 text-[#00FF66] animate-spin" />
-              <span className="text-[#00FF66]">Release to refresh</span>
+              <RefreshCw className="w-3.5 h-3.5 text-noob animate-spin" />
+              <span className="text-noob">Release to refresh</span>
             </>
           ) : (
             <>
@@ -439,7 +439,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           {onOpenPostCreation && (
             <button
               onClick={onOpenPostCreation}
-              className="p-1.5 bg-[#00FF66] text-black rounded-lg hover:bg-[#00FF66]/90 transition-colors cursor-pointer"
+              className="p-1.5 bg-noob text-black rounded-lg hover:bg-noob/90 transition-colors cursor-pointer"
               title="Create a post, reel or story"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -452,7 +452,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onClick={onOpenNotifications}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               unreadNotificationCount > 0
-                ? 'bg-[#00FF66]/20 border border-[#00FF66] text-[#00FF66] shadow-[0_0_10px_rgba(0,255,102,0.3)]'
+                ? 'bg-noob/20 border border-noob text-noob shadow-[0_0_10px_rgba(217,119,87,0.3)]'
                 : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white'
             }`}
             title="Activity & Notifications Bar"
@@ -460,7 +460,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <BellRing className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Alerts</span>
             {unreadNotificationCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-[#00FF66] text-black font-extrabold text-[9px] rounded-full min-w-[16px] text-center">
+              <span className="px-1.5 py-0.2 bg-noob text-black font-extrabold text-[9px] rounded-full min-w-[16px] text-center">
                 {unreadNotificationCount}
               </span>
             )}
@@ -475,11 +475,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
           onClick={onOpenNotifications}
           className="w-full max-w-[480px] px-3 pt-2 cursor-pointer group"
         >
-          <div className="p-2.5 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-[#00FF66]/40 flex items-center justify-between gap-2 shadow-lg shadow-[#00FF66]/5 group-hover:border-[#00FF66] transition-all">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-noob/40 flex items-center justify-between gap-2 shadow-lg shadow-noob/5 group-hover:border-noob transition-all">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0">
                 {latestNotification.type === 'follow_request_accepted' ? (
-                  <UserCheck className="w-3.5 h-3.5 text-[#00FF66]" />
+                  <UserCheck className="w-3.5 h-3.5 text-noob" />
                 ) : latestNotification.type === 'follow_request_received' ? (
                   <UserPlus className="w-3.5 h-3.5 text-purple-400" />
                 ) : latestNotification.type === 'new_follower' ? (
@@ -498,7 +498,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00FF66] text-black font-extrabold">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob text-black font-extrabold">
                 {unreadNotificationCount} New
               </span>
               <button
@@ -522,14 +522,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
           Deliberately left out of the story/instant creation flows, which don't earn points. */}
       {onOpenPostCreation && !isEarnPointsBannerDismissed && bonusOfferAmount !== null && (
         <div className="w-full max-w-[480px] px-3 pt-2">
-          <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-[#00FF66]/15 via-zinc-900/90 to-zinc-950 border border-[#00FF66]/40 shadow-lg shadow-[#00FF66]/10">
+          <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-noob/15 via-zinc-900/90 to-zinc-950 border border-noob/40 shadow-lg shadow-noob/10">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
-                <Coins className="w-4.5 h-4.5 text-[#00FF66]" />
+              <div className="w-9 h-9 rounded-xl bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0">
+                <Coins className="w-4.5 h-4.5 text-noob" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] text-zinc-400 font-semibold">You've been offered</p>
-                <p className="text-lg font-black text-[#00FF66] leading-tight tracking-tight">
+                <p className="text-lg font-black text-noob leading-tight tracking-tight">
                   {bonusOfferAmount.toLocaleString()} <span className="text-xs font-bold text-zinc-300">NOOB Points</span>
                 </p>
               </div>
@@ -541,7 +541,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   setIsEarnPointsBannerDismissed(true);
                   onOpenPostCreation();
                 }}
-                className="flex-1 py-2 rounded-xl bg-[#00FF66] text-black text-xs font-extrabold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
+                className="flex-1 py-2 rounded-xl bg-noob text-black text-xs font-extrabold cursor-pointer hover:bg-noob/90 transition-colors"
               >
                 Accept &amp; Post
               </button>
@@ -577,7 +577,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onClick={() => setActiveCategory(cat)}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeCategory === cat
-                ? 'bg-[#00FF66] text-black shadow-[0_0_12px_rgba(0,255,102,0.35)] font-bold'
+                ? 'bg-noob text-black shadow-[0_0_12px_rgba(217,119,87,0.35)] font-bold'
                 : 'bg-zinc-900/80 text-zinc-400 hover:text-white border border-white/5'
             }`}
           >
@@ -590,7 +590,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       <main className="w-full max-w-[480px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 ? (
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
-            <Sparkles className="w-10 h-10 text-[#00FF66] mx-auto mb-2 opacity-60" />
+            <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />
             <h3 className="text-sm font-bold text-white">No Posts in this feed</h3>
             <p className="text-xs text-zinc-400 mt-1">
               {activeFeedFilter === 'following'
@@ -627,7 +627,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <div ref={loadMoreSentinelRef} className="w-full py-4 flex items-center justify-center">
               {isLoadingMore ? (
                 <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <Loader2 className="w-4 h-4 text-[#00FF66] animate-spin" />
+                  <Loader2 className="w-4 h-4 text-noob animate-spin" />
                   <span>Loading more posts...</span>
                 </div>
               ) : hasMore ? (
@@ -681,8 +681,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-xl bg-[#00FF66]/15 border border-[#00FF66]/30 flex items-center justify-center shrink-0">
-                  <Flame className="w-4.5 h-4.5 text-[#00FF66]" />
+                <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/30 flex items-center justify-center shrink-0">
+                  <Flame className="w-4.5 h-4.5 text-noob" />
                 </div>
                 <div>
                   <span className="text-xs font-bold text-white block">Daily NOOB</span>

@@ -69,7 +69,7 @@ export const InstantsArchive: React.FC<InstantsArchiveProps> = ({ onClose, onOpe
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {loading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-[#00FF66]" /></div>
+            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-noob" /></div>
           ) : items.length === 0 ? (
             <p className="text-center text-xs text-zinc-500 py-10">Nothing here yet — instants you send stick around here after they're gone from your friends' inbox.</p>
           ) : (

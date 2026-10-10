@@ -28,7 +28,7 @@ function looksLikeClassList(s: string): boolean {
   const words = s.split(/\s+/).filter(Boolean);
   if (!words.length) return false;
   if (!words.every((w) => /^[A-Za-z0-9:\-/[\]().%_!#,'"=&>*~+]+$/.test(w))) return false;
-  // class names are lower-case (capitals only appear inside [...] values like bg-[#00FF66]); "ID:" and "5-Letter Wordle" are text
+  // class names are lower-case (capitals only appear inside [...] values like bg-noob); "ID:" and "5-Letter Wordle" are text
   if (words.some((w) => /[A-Z]/.test(w.replace(/\[[^\]]*\]/g, '')))) return false;
   const marked = words.filter((w) => /[-:[\]/]/.test(w)).length;
   return marked >= Math.max(1, Math.ceil(words.length / 2));

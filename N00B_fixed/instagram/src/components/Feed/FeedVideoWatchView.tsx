@@ -235,7 +235,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
             <button
               onClick={handleToggleSave}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer ${
-                activePost.isSaved ? 'bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/40' : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
+                activePost.isSaved ? 'bg-noob/15 text-noob border border-noob/40' : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${activePost.isSaved ? 'fill-current' : ''}`} /> Save
@@ -333,7 +333,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
                     <span className="text-xs font-semibold text-white">{pl.name}</span>
                     <span className="flex items-center gap-2">
                       <span className="text-[10px] text-zinc-500">{pl.videosCount}</span>
-                      {pl.hasVideo && <Check className="w-4 h-4 text-[#00FF66]" />}
+                      {pl.hasVideo && <Check className="w-4 h-4 text-noob" />}
                     </span>
                   </button>
                 ))
@@ -346,12 +346,12 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
                 onKeyDown={(e) => e.key === 'Enter' && handleCreatePlaylist()}
                 placeholder="New playlist name"
                 maxLength={60}
-                className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-[#00FF66]/50"
+                className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 outline-none focus:border-noob/50"
               />
               <button
                 onClick={handleCreatePlaylist}
                 disabled={!newPlaylistName.trim() || creatingPlaylist}
-                className="p-2 rounded-xl bg-[#00FF66] text-black disabled:opacity-40 disabled:cursor-default cursor-pointer"
+                className="p-2 rounded-xl bg-noob text-black disabled:opacity-40 disabled:cursor-default cursor-pointer"
               >
                 {creatingPlaylist ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               </button>

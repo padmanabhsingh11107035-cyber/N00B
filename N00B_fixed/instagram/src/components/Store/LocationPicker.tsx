@@ -98,7 +98,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({ value, onChange 
         {!value && (
           <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
             <span className="text-[11px] font-bold text-white bg-black/75 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#00FF66]" /> Tap the map to drop the pin
+              <MapPin className="w-3.5 h-3.5 text-noob" /> Tap the map to drop the pin
             </span>
           </div>
         )}

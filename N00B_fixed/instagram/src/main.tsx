@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
+import { initTheme } from './utils/theme.ts';
 import { initLanguage } from './i18n/engine.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
 
@@ -45,6 +46,7 @@ console.log(
 );
 
 // The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
+initTheme();
 void initLanguage();
 
 // Android's browser/WebView renders the "liquid glass" bottom nav and three-dot menus (see

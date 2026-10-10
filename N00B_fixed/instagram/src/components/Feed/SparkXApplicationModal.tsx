@@ -70,14 +70,14 @@ export const SparkXApplicationModal: React.FC<SparkXApplicationModalProps> = ({ 
           </div>
         ) : done ? (
           <div className="p-8 text-center space-y-3">
-            <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
+            <CheckCircle2 className="w-10 h-10 text-noob mx-auto" />
             <h3 className="text-sm font-bold text-white">Application submitted!</h3>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
               Thanks for wanting to represent our school at SparkX. We'll review your application and get back to you — you'll also get an email confirming we received it.
             </p>
             <button
               onClick={onClose}
-              className="mt-2 px-5 py-2.5 bg-[#00FF66] text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90"
+              className="mt-2 px-5 py-2.5 bg-noob text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90"
             >
               Done
             </button>

@@ -233,7 +233,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
             <div className="space-y-3.5">
               {otpSuccess ? (
                 <div className="py-8 text-center space-y-3">
-                  <CheckCircle2 className="w-10 h-10 text-[#00FF66] mx-auto" />
+                  <CheckCircle2 className="w-10 h-10 text-noob mx-auto" />
                   <p className="text-sm font-bold text-white">Email verified!</p>
                   <p className="text-xs text-zinc-400">Finishing your account…</p>
                 </div>
@@ -256,12 +256,12 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="000000"
-                      className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-[#00FF66] focus:ring-1 focus:ring-[#00FF66] outline-none transition-all placeholder:text-zinc-700"
+                      className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-700"
                     />
                     <button
                       type="submit"
                       disabled={otpLoading}
-                      className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-emerald-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
                       {otpLoading ? 'Verifying…' : 'Verify & Finish'}
                     </button>
@@ -269,7 +269,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                       type="button"
                       disabled={otpResending}
                       onClick={() => void handleResendOtp()}
-                      className="w-full py-2 text-xs font-bold text-[#00FF66] hover:opacity-80 disabled:text-zinc-600 cursor-pointer"
+                      className="w-full py-2 text-xs font-bold text-noob hover:opacity-80 disabled:text-zinc-600 cursor-pointer"
                     >
                       {otpResending ? 'Sending…' : 'Resend code'}
                     </button>
@@ -292,14 +292,14 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                   <input type="file" accept="image/*" className="hidden" onChange={handleAvatarFilePick} />
                   <div className="w-20 h-20 rounded-full bg-zinc-900 border-2 border-white/10 overflow-hidden flex items-center justify-center">
                     {avatarPrefilling || isUploadingAvatar ? (
-                      <Loader2 className="w-6 h-6 text-[#00FF66] animate-spin" />
+                      <Loader2 className="w-6 h-6 text-noob animate-spin" />
                     ) : avatarPreview ? (
                       <img src={avatarPreview} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <Camera className="w-6 h-6 text-zinc-500" />
                     )}
                   </div>
-                  <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#00FF66] flex items-center justify-center">
+                  <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-noob flex items-center justify-center">
                     <Camera className="w-3.5 h-3.5 text-black" />
                   </div>
                 </label>
@@ -314,11 +314,11 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                   value={username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   placeholder="username"
-                  className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-[#00FF66] outline-none text-sm"
+                  className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm"
                 />
                 {usernameStatus === 'checking' && <p className="text-[11px] text-zinc-500 mt-1">Checking availability…</p>}
                 {usernameStatus === 'taken' && <p className="text-[11px] text-red-400 mt-1">That User ID is already taken.</p>}
-                {usernameStatus === 'free' && <p className="text-[11px] text-[#00FF66] mt-1 flex items-center gap-1"><Check className="w-3 h-3" /> Available</p>}
+                {usernameStatus === 'free' && <p className="text-[11px] text-noob mt-1 flex items-center gap-1"><Check className="w-3 h-3" /> Available</p>}
               </div>
 
               <div>
@@ -329,7 +329,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                   onChange={(e) => setBio(e.target.value.slice(0, 150))}
                   placeholder="Tell people a little about yourself"
                   rows={2}
-                  className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-[#00FF66] outline-none text-sm resize-none"
+                  className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm resize-none"
                 />
               </div>
 
@@ -337,7 +337,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="bg-black/40 text-white px-2 py-2.5 rounded-2xl border border-white/10 focus:border-[#00FF66] outline-none text-sm max-w-[120px]"
+                  className="bg-black/40 text-white px-2 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm max-w-[120px]"
                 >
                   {COUNTRY_OPTIONS.map((c) => <option key={c.fullLabel} value={c.fullLabel}>{c.flag} {c.code}</option>)}
                 </select>
@@ -349,7 +349,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
                     placeholder="Mobile number"
-                    className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-[#00FF66] outline-none text-sm"
+                    className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm"
                   />
                 </div>
               </div>
@@ -359,7 +359,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                 <button
                   type="button"
                   onClick={() => setShowBirthdayPicker(true)}
-                  className="w-full text-left bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-[#00FF66] outline-none text-sm"
+                  className="w-full text-left bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm"
                 >
                   {dateOfBirth || <span className="text-zinc-500">Select your date of birth</span>}
                 </button>
@@ -373,7 +373,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                       key={g.id}
                       type="button"
                       onClick={() => setGender(g.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${gender === g.id ? 'bg-[#00FF66] text-black border-[#00FF66]' : 'bg-black/40 text-zinc-300 border-white/10 hover:border-white/30'}`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${gender === g.id ? 'bg-noob text-black border-noob' : 'bg-black/40 text-zinc-300 border-white/10 hover:border-white/30'}`}
                     >
                       {g.emoji} {g.label}
                     </button>
@@ -382,14 +382,14 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
               </div>
 
               <label className="flex items-start gap-2.5 cursor-pointer">
-                <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#00FF66]" />
+                <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 w-4 h-4 accent-noob" />
                 <span className="text-xs text-zinc-400 leading-relaxed">I agree to NOOB's general terms and privacy policy.</span>
               </label>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-[#00FF66] to-emerald-500 text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                 {loading ? 'Sending code…' : 'Continue'}

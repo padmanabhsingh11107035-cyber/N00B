@@ -123,7 +123,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-4 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
         <div className="flex items-center justify-between gap-3.5">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-[#00FF66] flex items-center justify-center shadow-[0_0_20px_rgba(0,255,102,0.3)] shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-noob flex items-center justify-center shadow-[0_0_20px_rgba(217,119,87,0.3)] shrink-0">
               <Gamepad2 className="w-6 h-6 text-black stroke-[2.5]" />
             </div>
             <h1 className="text-xl font-black text-white tracking-tight lowercase truncate">
@@ -151,7 +151,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                       button sits in the header or how narrow the screen is. */}
                   <div className="fixed left-4 right-4 top-24 mx-auto max-w-sm z-40 p-4 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 text-left">
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-zinc-800/80">
-                    <Info className="w-4 h-4 text-[#00FF66]" />
+                    <Info className="w-4 h-4 text-noob" />
                     <h3 className="text-xs font-black text-white uppercase tracking-wider">
                       Arena Info &amp; Rules
                     </h3>
@@ -165,7 +165,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                       <div className="space-y-1 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-zinc-300">🏆 Victory:</span>
-                          <span className="text-[#00FF66] font-black">+10M NOOBs</span>
+                          <span className="text-noob font-black">+10M NOOBs</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-zinc-300">🤝 Draw / Tie:</span>
@@ -204,7 +204,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
             onClick={() => setActiveTab('games')}
             className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'games'
-                ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.3)]'
+                ? 'bg-noob text-black shadow-[0_0_15px_rgba(217,119,87,0.3)]'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -236,7 +236,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 placeholder="Search mini-games (e.g. Snake, Tic Tac Toe, Rock Paper Scissors, Math)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66] transition-colors shadow-inner"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob transition-colors shadow-inner"
               />
             </div>
 
@@ -257,7 +257,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   onClick={() => setSelectedCategory(cat.key)}
                   className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategory === cat.key
-                      ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.25)]'
+                      ? 'bg-noob text-black shadow-[0_0_15px_rgba(217,119,87,0.25)]'
                       : 'bg-zinc-900/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
                   }`}
                 >
@@ -284,7 +284,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   </span>
 
                   {/* Mode Player Indicator */}
-                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-[#00FF66] border border-[#00FF66]/30">
+                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-noob border border-noob/30">
                     {game.players}
                   </span>
                 </div>
@@ -293,7 +293,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
                     <div className="flex items-center justify-between gap-1 mb-1">
-                      <h3 className="text-sm font-bold text-white group-hover:text-[#00FF66] transition-colors line-clamp-1">
+                      <h3 className="text-sm font-bold text-white group-hover:text-noob transition-colors line-clamp-1">
                         {game.title}
                       </h3>
                       <span className="text-[10px] font-extrabold text-amber-400 shrink-0">
@@ -318,7 +318,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
 
                     <button
                       onClick={() => setSelectedGameForPlay(game)}
-                      className="px-3.5 py-1.5 rounded-xl bg-[#00FF66] hover:bg-[#00FF66]/90 text-black text-xs font-extrabold flex items-center gap-1 shadow-sm transition-transform active:scale-95 cursor-pointer shrink-0"
+                      className="px-3.5 py-1.5 rounded-xl bg-noob hover:bg-noob/90 text-black text-xs font-extrabold flex items-center gap-1 shadow-sm transition-transform active:scale-95 cursor-pointer shrink-0"
                     >
                       <Play className="w-3 h-3 fill-black" />
                       <span>Play</span>
@@ -337,7 +337,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   setSearchQuery('');
                   setSelectedCategory('all');
                 }}
-                className="mt-3 px-4 py-2 rounded-xl bg-zinc-900 text-xs font-bold text-[#00FF66] hover:bg-zinc-800 cursor-pointer"
+                className="mt-3 px-4 py-2 rounded-xl bg-zinc-900 text-xs font-bold text-noob hover:bg-zinc-800 cursor-pointer"
               >
                 Reset Filters
               </button>
@@ -353,7 +353,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
 
             {isLoadingLeaderboard && leaderboard.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center gap-2 text-zinc-500">
-                <Radio className="w-6 h-6 animate-pulse text-[#00FF66]" />
+                <Radio className="w-6 h-6 animate-pulse text-noob" />
                 <span className="text-xs">Loading rankings...</span>
               </div>
             ) : leaderboardError && leaderboard.length === 0 ? (
@@ -362,7 +362,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 <span className="text-xs text-zinc-400">Couldn't load the leaderboard right now.</span>
                 <button
                   onClick={loadLeaderboardData}
-                  className="mt-1 text-xs text-[#00FF66] hover:underline cursor-pointer font-semibold"
+                  className="mt-1 text-xs text-noob hover:underline cursor-pointer font-semibold"
                 >
                   Try again
                 </button>
@@ -387,7 +387,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   fullUser && onNavigateToUserProfile ? 'cursor-pointer' : ''
                 } ${
                   player.username === currentUser.username
-                    ? 'bg-[#00FF66]/10 border border-[#00FF66]/30'
+                    ? 'bg-noob/10 border border-noob/30'
                     : 'bg-zinc-900/60 border border-zinc-800/80 hover:bg-zinc-900'
                 }`}
               >
@@ -411,7 +411,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                         {player.displayName || player.username}
                       </span>
                       {player.username === currentUser.username && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#00FF66]/20 text-[#00FF66] font-bold">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-noob/20 text-noob font-bold">
                           YOU
                         </span>
                       )}
@@ -423,7 +423,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <span className="text-xs font-black text-[#00FF66] block">
+                  <span className="text-xs font-black text-noob block">
                     {formatNoobPoints(player.noobPoints || 0)} <span className="text-[9px]">noobs</span>
                   </span>
                   <span className="text-[9px] text-zinc-500 block">Score</span>
@@ -440,7 +440,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
       {selectedGameForPlay && (
         <React.Suspense fallback={
           <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00FF66] animate-spin" />
+            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
           </div>
         }>
           <GamePlayModal

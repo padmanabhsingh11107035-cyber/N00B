@@ -94,7 +94,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onClose, onScann
           <>
             <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-64 h-64 max-w-[70vw] max-h-[70vw] border-2 border-[#00FF66]/80 rounded-3xl" />
+              <div className="w-64 h-64 max-w-[70vw] max-h-[70vw] border-2 border-noob/80 rounded-3xl" />
             </div>
           </>
         )}

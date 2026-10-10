@@ -101,7 +101,7 @@ export const AccountDetailsView: React.FC<AccountDetailsViewProps> = ({ currentU
           <p className="text-sm font-black text-white truncate">{currentUser.displayName || currentUser.username}</p>
           <p className="text-[11px] text-zinc-500 truncate">@{currentUser.username}</p>
         </div>
-        <button onClick={onOpenOrders} className="text-[11px] font-bold text-[#00FF66] px-3 py-1.5 rounded-full border border-[#00FF66]/40 hover:bg-[#00FF66]/10 cursor-pointer shrink-0">
+        <button onClick={onOpenOrders} className="text-[11px] font-bold text-noob px-3 py-1.5 rounded-full border border-noob/40 hover:bg-noob/10 cursor-pointer shrink-0">
           My orders
         </button>
       </div>
@@ -176,7 +176,7 @@ export const AccountDetailsView: React.FC<AccountDetailsViewProps> = ({ currentU
               <button
                 onClick={saveContact}
                 disabled={savingContact}
-                className="py-2.5 bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90 disabled:opacity-60"
+                className="py-2.5 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-xl cursor-pointer hover:opacity-90 disabled:opacity-60"
               >
                 {savingContact ? 'Saving…' : 'Save'}
               </button>

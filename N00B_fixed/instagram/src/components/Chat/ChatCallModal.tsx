@@ -39,7 +39,7 @@ const Tile: React.FC<{ p: CallParticipant }> = ({ p }) => {
   const failed = !p.isLocal && (p.connectionState === 'failed' || p.connectionState === 'disconnected');
   return (
     <div className="relative aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 flex items-center justify-center">
-      <div className={`relative w-16 h-16 rounded-full ${p.hasAudio ? 'ring-2 ring-[#00FF66]/60' : 'ring-2 ring-zinc-700'}`}>
+      <div className={`relative w-16 h-16 rounded-full ${p.hasAudio ? 'ring-2 ring-noob/60' : 'ring-2 ring-zinc-700'}`}>
         <img src={p.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
       </div>
       {/* remote audio has to actually play somewhere */}
@@ -205,14 +205,14 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
         {ringing && !error ? (
           <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-400 py-16">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-[#00FF66]/20 animate-ping" />
-              <PhoneIncoming className="relative w-10 h-10 text-[#00FF66]" />
+              <div className="absolute inset-0 rounded-full bg-noob/20 animate-ping" />
+              <PhoneIncoming className="relative w-10 h-10 text-noob" />
             </div>
             <p className="text-xs">Ringing — nothing connects until someone answers…</p>
           </div>
         ) : !joined && !error ? (
           <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-400 py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-[#00FF66]" />
+            <Loader2 className="w-8 h-8 animate-spin text-noob" />
             <p className="text-xs">Connecting…</p>
           </div>
         ) : (

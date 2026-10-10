@@ -136,14 +136,14 @@ export const EditableStickerLayer: React.FC<EditableStickerLayerProps> = ({
     >
       <div
         className={`relative transition-opacity ${overTrash ? 'opacity-30' : 'opacity-100'} ${
-          showHandle ? 'outline outline-2 outline-dashed outline-[#00FF66]/70 outline-offset-4 rounded-md' : ''
+          showHandle ? 'outline outline-2 outline-dashed outline-noob/70 outline-offset-4 rounded-md' : ''
         }`}
       >
         {children}
         {showHandle && (
           <div
             onPointerDown={handleHandlePointerDown}
-            className="absolute -bottom-4 -right-4 w-7 h-7 rounded-full bg-[#00FF66] border-2 border-black shadow-lg flex items-center justify-center cursor-nwse-resize touch-none"
+            className="absolute -bottom-4 -right-4 w-7 h-7 rounded-full bg-noob border-2 border-black shadow-lg flex items-center justify-center cursor-nwse-resize touch-none"
             style={{ transform: `rotate(${-rotation}deg)` }}
           >
             <RotateCw className="w-3.5 h-3.5 text-black" />

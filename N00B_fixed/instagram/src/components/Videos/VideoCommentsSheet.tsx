@@ -141,12 +141,12 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
     return (
       <div
         className={`flex items-start justify-between gap-3 p-2 rounded-xl transition-colors ${
-          c.isPinned ? 'bg-[#00FF66]/5 border border-[#00FF66]/20' : 'hover:bg-neutral-900/40'
+          c.isPinned ? 'bg-noob/5 border border-noob/20' : 'hover:bg-neutral-900/40'
         } ${isReply ? 'ml-8 border-l border-neutral-800 pl-3' : ''}`}
       >
         <div className="flex items-start gap-2.5 flex-1 min-w-0">
           {isBulkMode && !isReply && (
-            <button onClick={() => toggleSelectComment(c.id)} className="mt-1 text-[#00FF66] cursor-pointer">
+            <button onClick={() => toggleSelectComment(c.id)} className="mt-1 text-noob cursor-pointer">
               {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 text-gray-500" />}
             </button>
           )}
@@ -161,7 +161,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
               <span className="text-xs font-bold text-white">{c.username}</span>
               {c.isVerified && <VerifiedBadge size="xs" />}
               {c.isPinned && (
-                <span className="flex items-center gap-0.5 text-[9px] text-[#00FF66] bg-[#00FF66]/10 px-1.5 py-0.2 rounded font-semibold">
+                <span className="flex items-center gap-0.5 text-[9px] text-noob bg-noob/10 px-1.5 py-0.2 rounded font-semibold">
                   <Pin className="w-2.5 h-2.5" /> Pinned
                 </span>
               )}
@@ -169,7 +169,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
             </div>
             <p translate="no" className="text-xs text-gray-200 mt-1 whitespace-pre-line leading-relaxed break-words">
               {isReply && c.replyToUsername && c.replyToUsername !== c.username && (
-                <span className="text-[#00FF66] font-semibold mr-1">@{c.replyToUsername}</span>
+                <span className="text-noob font-semibold mr-1">@{c.replyToUsername}</span>
               )}
               {c.text}
             </p>
@@ -188,7 +188,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
           {canModerate && !isReply && (
             <button
               onClick={() => handleTogglePin(c.id)}
-              className={`p-1 rounded hover:bg-neutral-800 transition-colors ${c.isPinned ? 'text-[#00FF66]' : 'text-gray-400'}`}
+              className={`p-1 rounded hover:bg-neutral-800 transition-colors ${c.isPinned ? 'text-noob' : 'text-gray-400'}`}
               title={c.isPinned ? 'Unpin comment' : 'Pin comment'}
             >
               <Pin className="w-3.5 h-3.5" />
@@ -213,7 +213,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
 
   return (
     <div id="video-comments-sheet-modal" className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-lg bg-[#0e0e0e] border border-neutral-800 sm:rounded-2xl rounded-t-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-white tracking-tight">Comments</h3>
@@ -223,7 +223,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
             {canModerate && comments.length > 0 && (
               <button
                 onClick={() => setIsBulkMode(!isBulkMode)}
-                className={`text-xs font-semibold px-2 py-1 rounded transition-colors ${isBulkMode ? 'bg-[#00FF66] text-black' : 'text-gray-400 hover:text-white'}`}
+                className={`text-xs font-semibold px-2 py-1 rounded transition-colors ${isBulkMode ? 'bg-noob text-black' : 'text-gray-400 hover:text-white'}`}
               >
                 {isBulkMode ? 'Cancel' : 'Bulk Manage'}
               </button>
@@ -292,7 +292,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
           {replyingTo && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-[11px] text-gray-400">
-                Replying to <span className="text-[#00FF66] font-semibold">@{replyingTo.username}</span>
+                Replying to <span className="text-noob font-semibold">@{replyingTo.username}</span>
               </span>
               <button type="button" onClick={() => setReplyingTo(null)} className="text-[11px] text-gray-500 hover:text-white cursor-pointer">
                 Cancel
@@ -310,7 +310,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
               className="w-8 h-8 rounded-full object-cover"
               referrerPolicy="no-referrer"
             />
-            <div className="flex-1 flex items-center bg-black rounded-xl border border-neutral-700 px-3 py-1.5 focus-within:border-[#00FF66]">
+            <div className="flex-1 flex items-center bg-black rounded-xl border border-neutral-700 px-3 py-1.5 focus-within:border-noob">
               <textarea
                 rows={1}
                 placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment (Enter line breaks as needed)...'}
@@ -328,7 +328,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
             <button
               type="submit"
               disabled={!inputText.trim() && !attachment}
-              className="px-3.5 py-2 bg-[#00FF66] text-black font-bold text-xs rounded-xl disabled:opacity-40 hover:scale-105 transition-transform cursor-pointer"
+              className="px-3.5 py-2 bg-noob text-black font-bold text-xs rounded-xl disabled:opacity-40 hover:scale-105 transition-transform cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
             </button>

@@ -164,9 +164,9 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
             <div className="py-16 flex items-center justify-center text-zinc-500 text-xs">Could not load today's challenge. Try again shortly.</div>
           ) : (
             <div className="max-w-2xl mx-auto px-4 py-4 space-y-5">
-              <div className="rounded-2xl bg-gradient-to-br from-[#00FF66]/15 via-zinc-900/80 to-zinc-950 border border-[#00FF66]/40 p-4">
+              <div className="rounded-2xl bg-gradient-to-br from-noob/15 via-zinc-900/80 to-zinc-950 border border-noob/40 p-4">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-extrabold text-[#00FF66] tracking-widest uppercase">Today's NOOB</span>
+                  <span className="text-[10px] font-extrabold text-noob tracking-widest uppercase">Today's NOOB</span>
                   <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-semibold">
                     <Clock className="w-3 h-3" /> {countdown}
                   </span>
@@ -203,7 +203,7 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                   ) : (
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed border-zinc-700 text-zinc-400 hover:border-[#00FF66]/50 hover:text-[#00FF66] transition-colors cursor-pointer"
+                      className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed border-zinc-700 text-zinc-400 hover:border-noob/50 hover:text-noob transition-colors cursor-pointer"
                     >
                       <Upload className="w-6 h-6" />
                       <span className="text-xs font-semibold">Tap to enter a photo or video</span>
@@ -215,14 +215,14 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                       onChange={(e) => setCaption(e.target.value)}
                       maxLength={200}
                       placeholder="Add a caption (optional)"
-                      className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+                      className="w-full bg-black rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
                     />
                   )}
                   {pickedFile && (
                     <button
                       onClick={handleSubmit}
                       disabled={submitting}
-                      className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
                     >
                       {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                       {submitting ? 'Entering…' : 'Enter the Challenge'}

@@ -173,7 +173,7 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
       <div
         onClick={(e) => e.stopPropagation()}
         style={hasDraggedOnce ? { transform: `translateY(${dragY}px)` } : undefined}
-        className={`w-full max-w-lg bg-[#0e0e0e] border border-neutral-800 sm:rounded-2xl rounded-t-2xl h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200 ${
+        className={`w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200 ${
           hasDraggedOnce && !draggingRef.current ? 'transition-transform' : ''
         }`}
       >

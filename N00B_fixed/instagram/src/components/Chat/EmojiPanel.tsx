@@ -101,7 +101,7 @@ export const EmojiPanel: React.FC<EmojiPanelProps> = ({ onPick }) => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search emoji"
-            className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-[#00FF66] outline-none placeholder:text-zinc-600"
+            className="w-full bg-zinc-900 text-xs text-white pl-8 pr-2 py-2 rounded-xl border border-zinc-800 focus:border-noob outline-none placeholder:text-zinc-600"
           />
         </div>
         <div className="relative">
@@ -111,7 +111,7 @@ export const EmojiPanel: React.FC<EmojiPanelProps> = ({ onPick }) => {
           {showTones && (
             <div className="absolute right-0 top-9 z-10 flex gap-1 bg-zinc-950 border border-zinc-700 rounded-xl p-1.5 shadow-xl">
               {TONES.map((t, i) => (
-                <button key={i} type="button" onClick={() => chooseTone(i)} className={`w-7 h-7 rounded-lg text-base cursor-pointer hover:bg-zinc-800 ${tone === i ? 'bg-zinc-800 ring-1 ring-[#00FF66]' : ''}`} translate="no">
+                <button key={i} type="button" onClick={() => chooseTone(i)} className={`w-7 h-7 rounded-lg text-base cursor-pointer hover:bg-zinc-800 ${tone === i ? 'bg-zinc-800 ring-1 ring-noob' : ''}`} translate="no">
                   {'👋' + t}
                 </button>
               ))}

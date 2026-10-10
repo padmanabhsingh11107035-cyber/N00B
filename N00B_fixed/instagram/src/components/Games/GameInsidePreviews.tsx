@@ -22,7 +22,7 @@ function SnakeInside() {
             <div
               key={i}
               className={`w-3.5 h-3.5 rounded-sm ${
-                isFood ? 'bg-rose-500' : isSnake ? (isHead ? 'bg-[#00FF66]' : 'bg-emerald-600') : 'bg-white/5'
+                isFood ? 'bg-rose-500' : isSnake ? (isHead ? 'bg-noob' : 'bg-emerald-600') : 'bg-white/5'
               }`}
             />
           );
@@ -42,7 +42,7 @@ function TicTacToeInside() {
           <div
             key={i}
             className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-black bg-zinc-900 border border-zinc-700 ${
-              c === 'X' ? 'text-[#00FF66]' : c === 'O' ? 'text-pink-400' : ''
+              c === 'X' ? 'text-noob' : c === 'O' ? 'text-pink-400' : ''
             }`}
           >
             {c}
@@ -78,7 +78,7 @@ function RpsInside() {
   return (
     <div className={`${cardBase} bg-gradient-to-br from-purple-800 to-zinc-950`}>
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-[#00FF66]/40 flex items-center justify-center text-3xl">✊</div>
+        <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-noob/40 flex items-center justify-center text-3xl">✊</div>
         <span className="text-xs font-black text-zinc-400">VS</span>
         <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-pink-500/40 flex items-center justify-center text-3xl">✌️</div>
       </div>
@@ -173,10 +173,10 @@ function ColorInside() {
 
 function WordInside() {
   const letters = [
-    { l: 'N', c: 'bg-[#00FF66] text-black' },
+    { l: 'N', c: 'bg-noob text-black' },
     { l: 'O', c: 'bg-amber-400 text-black' },
     { l: 'O', c: 'bg-zinc-700 text-white' },
-    { l: 'B', c: 'bg-[#00FF66] text-black' },
+    { l: 'B', c: 'bg-noob text-black' },
     { l: 'S', c: 'bg-zinc-700 text-white' }
   ];
   return (
@@ -284,7 +284,7 @@ function GenericInside({ game }: { game: MiniGameMeta }) {
         </div>
       </div>
       <div className="w-4/5 h-1.5 rounded-full bg-black/40 overflow-hidden">
-        <div className="w-2/3 h-full bg-[#00FF66]" />
+        <div className="w-2/3 h-full bg-noob" />
       </div>
       <span className="text-[9px] font-black text-white/80 uppercase tracking-wider">Inside the Game</span>
     </div>

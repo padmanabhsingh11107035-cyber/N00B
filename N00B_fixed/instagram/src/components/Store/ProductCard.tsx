@@ -40,7 +40,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, canManage, on
           )}
         </div>
         <h3 className="mt-3 text-sm sm:text-[15px] font-black text-white leading-snug line-clamp-2">{product.title}</h3>
-        <span className="mt-1 text-sm sm:text-base font-black text-[#00FF66] group-hover:text-white transition-colors">{formatPrice(product.price)}</span>
+        <span className="mt-1 text-sm sm:text-base font-black text-noob group-hover:text-white transition-colors">{formatPrice(product.price)}</span>
         {product.options.length > 0 && (
           <span className="mt-0.5 text-[10px] text-zinc-500 group-hover:text-cyan-100 truncate max-w-full">{product.options.map((o) => o.name).join(' · ')}</span>
         )}
@@ -60,7 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, canManage, on
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(product); }}
-            className="p-1.5 rounded-full bg-black/70 hover:bg-[#00FF66]/80 cursor-pointer"
+            className="p-1.5 rounded-full bg-black/70 hover:bg-noob/80 cursor-pointer"
             aria-label="Edit product"
             title="Edit product"
           >

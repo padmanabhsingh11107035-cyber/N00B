@@ -49,8 +49,8 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, au
 
     // Slide 2: how to play
     <div key="howto" className="w-full h-40 bg-gradient-to-br from-zinc-800 to-zinc-950 border-b-2 border-black/80 flex flex-col items-center justify-center text-center px-5 gap-2">
-      <Target className="w-6 h-6 text-[#00FF66]" />
-      <span className="text-[10px] font-black text-[#00FF66] uppercase tracking-wider">How To Play</span>
+      <Target className="w-6 h-6 text-noob" />
+      <span className="text-[10px] font-black text-noob uppercase tracking-wider">How To Play</span>
       <p className="text-xs text-zinc-200 leading-relaxed line-clamp-3">{game.description}</p>
       <div className="flex items-center gap-1.5 mt-1">
         {game.tags.slice(0, 3).map((tag) => (
@@ -219,7 +219,7 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, au
               key={i}
               onClick={() => setActiveSlide(i)}
               className={`rounded-full transition-all cursor-pointer shrink-0 ${
-                i === activeSlide ? 'w-3.5 h-1.5 bg-[#00FF66]' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'
+                i === activeSlide ? 'w-3.5 h-1.5 bg-noob' : 'w-1.5 h-1.5 bg-white/50 hover:bg-white/80'
               }`}
               aria-label={`Slide ${i + 1}`}
             />

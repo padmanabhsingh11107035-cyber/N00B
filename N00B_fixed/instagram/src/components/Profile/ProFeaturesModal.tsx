@@ -136,7 +136,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
         {currentUser.proTier && currentUser.proBilling === 'monthly' && (
           <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className={`p-2 rounded-xl ${currentAutoRenew ? 'bg-[#00FF66]/15 text-[#00FF66]' : 'bg-zinc-800 text-zinc-500'}`}>
+              <div className={`p-2 rounded-xl ${currentAutoRenew ? 'bg-noob/15 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
                 <RefreshCw className="w-4 h-4" />
               </div>
               <div>
@@ -156,7 +156,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                 onChange={handleToggleCurrentAutoRenew}
                 className="sr-only peer"
               />
-              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-[#00FF66]" />
+              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
             </label>
           </div>
         )}
@@ -178,7 +178,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             }`}
           >
             Yearly
-            <span className="text-[10px] font-black text-[#00FF66] bg-[#00FF66]/15 px-1.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-black text-noob bg-noob/15 px-1.5 py-0.5 rounded-full">
               Save 17%
             </span>
           </button>
@@ -190,7 +190,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
         {billing === 'monthly' && (
           <label className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 cursor-pointer">
             <div className="flex items-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5 text-[#00FF66]" />
+              <RefreshCw className="w-3.5 h-3.5 text-noob" />
               <span className="text-xs font-semibold text-white">Reload Monthly</span>
             </div>
             <div className="relative inline-flex items-center">
@@ -200,7 +200,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                 onChange={(e) => setAutoRenew(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-[#00FF66]" />
+              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
             </div>
           </label>
         )}
@@ -217,7 +217,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                 setCouponMsg(null);
               }}
               disabled={!!appliedCoupon}
-              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#00FF66] font-mono disabled:opacity-60"
+              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-noob font-mono disabled:opacity-60"
             />
             {appliedCoupon ? (
               <button
@@ -241,7 +241,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             )}
           </div>
           {couponMsg && (
-            <p className={`text-[10px] ${couponMsg.type === 'success' ? 'text-[#00FF66]' : 'text-rose-400'}`}>
+            <p className={`text-[10px] ${couponMsg.type === 'success' ? 'text-noob' : 'text-rose-400'}`}>
               {couponMsg.text}
             </p>
           )}
@@ -251,7 +251,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           <div
             className={`p-2.5 rounded-xl text-xs font-semibold text-center ${
               purchaseMsg.type === 'success'
-                ? 'bg-[#00FF66]/10 text-[#00FF66] border border-[#00FF66]/30'
+                ? 'bg-noob/10 text-noob border border-noob/30'
                 : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
             }`}
           >
@@ -298,7 +298,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                 <ul className="space-y-1 mb-3">
                   {tier.perks.map((perk, i) => (
                     <li key={i} className="flex items-start gap-1.5 text-[11px] text-zinc-300">
-                      <Check className="w-3 h-3 text-[#00FF66] mt-0.5 shrink-0" />
+                      <Check className="w-3 h-3 text-noob mt-0.5 shrink-0" />
                       {perk}
                     </li>
                   ))}

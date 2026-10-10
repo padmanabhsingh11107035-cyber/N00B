@@ -110,7 +110,7 @@ export const MutualFollowersSheet: React.FC<MutualFollowersSheetProps> = ({
                         className={`shrink-0 px-3.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
                           isFollowing
                             ? 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700'
-                            : 'bg-[#00FF66] text-black hover:bg-emerald-400'
+                            : 'bg-noob text-black hover:bg-emerald-400'
                         }`}
                       >
                         {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}

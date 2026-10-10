@@ -138,7 +138,7 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
           <button
             type="button"
             onClick={() => stopRecording(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#00FF66] text-black text-[11px] font-bold cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-noob text-black text-[11px] font-bold cursor-pointer"
           >
             <Square className="w-3 h-3 fill-current" /> Stop
           </button>
@@ -184,7 +184,7 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
           disabled={disabled}
           onClick={() => setPanel((p) => (p === 'emoji' ? null : 'emoji'))}
           title="Emoji"
-          className={`p-1.5 rounded-lg hover:bg-neutral-800 disabled:opacity-40 cursor-pointer ${panel === 'emoji' ? 'text-[#00FF66]' : 'text-gray-400 hover:text-white'}`}
+          className={`p-1.5 rounded-lg hover:bg-neutral-800 disabled:opacity-40 cursor-pointer ${panel === 'emoji' ? 'text-noob' : 'text-gray-400 hover:text-white'}`}
         >
           <Smile className="w-4 h-4" />
         </button>
@@ -193,7 +193,7 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
           disabled={disabled}
           onClick={() => setPanel((p) => (p === 'sticker' ? null : 'sticker'))}
           title="Sticker"
-          className={`p-1.5 rounded-lg hover:bg-neutral-800 disabled:opacity-40 cursor-pointer ${panel === 'sticker' ? 'text-[#00FF66]' : 'text-gray-400 hover:text-white'}`}
+          className={`p-1.5 rounded-lg hover:bg-neutral-800 disabled:opacity-40 cursor-pointer ${panel === 'sticker' ? 'text-noob' : 'text-gray-400 hover:text-white'}`}
         >
           <StickerIcon className="w-4 h-4" />
         </button>
@@ -202,7 +202,7 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
           disabled={disabled}
           onClick={() => setPanel((p) => (p === 'gif' ? null : 'gif'))}
           title="GIF"
-          className={`px-1.5 py-1 rounded-lg hover:bg-neutral-800 disabled:opacity-40 cursor-pointer text-[10px] font-black ${panel === 'gif' ? 'text-[#00FF66]' : 'text-gray-400 hover:text-white'}`}
+          className={`px-1.5 py-1 rounded-lg hover:bg-neutral-800 disabled:opacity-40 cursor-pointer text-[10px] font-black ${panel === 'gif' ? 'text-noob' : 'text-gray-400 hover:text-white'}`}
         >
           GIF
         </button>
@@ -212,7 +212,7 @@ export const CommentMediaComposer: React.FC<ComposerProps> = ({ onAttachmentChan
       {error && <p className="text-[10px] text-red-400 mt-1 px-1">{error}</p>}
 
       {panel && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto bg-[#0e0e0e] border border-neutral-800 rounded-2xl p-2.5 shadow-2xl z-10">
+        <div className="absolute bottom-full left-0 mb-2 w-72 max-h-72 overflow-y-auto bg-zinc-950 border border-neutral-800 rounded-2xl p-2.5 shadow-2xl z-10">
           {panel === 'emoji' && <EmojiPanel onPick={(e) => onInsertEmoji(e)} />}
           {panel === 'sticker' && (
             <AnimatedStickerPanel
@@ -245,7 +245,7 @@ export const CommentAttachmentPreview: React.FC<{ attachment: CommentAttachment;
     {attachment.type === 'gif' && <img src={attachment.url} alt="" className="w-9 h-9 rounded-lg object-cover" />}
     {attachment.type === 'sticker' && <img src={attachment.url} alt="" className="w-9 h-9 object-contain" />}
     {attachment.type === 'voice' && (
-      <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#00FF66]">
+      <span className="flex items-center gap-1.5 text-[11px] font-bold text-noob">
         <Volume2 className="w-4 h-4" /> Voice note {attachment.duration ? `(${attachment.duration})` : ''}
       </span>
     )}

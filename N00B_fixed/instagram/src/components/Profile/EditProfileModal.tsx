@@ -232,7 +232,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#00FF66] to-cyan-400 flex items-center justify-center text-black font-bold">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-noob to-noob-strong flex items-center justify-center text-black font-bold">
               <User className="w-5 h-5" />
             </div>
             <div>
@@ -258,7 +258,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-semibold text-[#00FF66]">
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-semibold text-noob">
               {successMessage}
             </div>
           )}
@@ -399,7 +399,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </div>
             )}
             {passwordSuccess && (
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-semibold text-[#00FF66]">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-semibold text-noob">
                 {passwordSuccess}
               </div>
             )}
@@ -583,12 +583,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 onClick={() => setAccountType('business')}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                   accountType === 'business'
-                    ? 'bg-emerald-500/10 border-[#00FF66] text-white shadow-sm'
+                    ? 'bg-emerald-500/10 border-noob text-white shadow-sm'
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-bold text-xs">
-                  <Briefcase className="w-3.5 h-3.5 text-[#00FF66]" /> Business / Creator
+                  <Briefcase className="w-3.5 h-3.5 text-noob" /> Business / Creator
                 </div>
                 <span className="text-[10px] text-zinc-400 mt-1 block">Access account analytics &amp; insights</span>
               </button>
@@ -600,7 +600,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <select
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-noob"
                 >
                   <option value="Digital Creator">Digital Creator</option>
                   <option value="Gamer & Streamer">Gamer & Streamer</option>
@@ -721,7 +721,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-400 hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-2"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-2"
             >
               {isSaving ? (
                 <>

@@ -946,7 +946,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               <div className="w-11 h-11 rounded-2xl overflow-hidden">
                 <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#00FF66] border-2 border-black rounded-full animate-pulse" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-noob border-2 border-black rounded-full animate-pulse" />
             </div>
 
             <div>
@@ -954,7 +954,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 <h2 className="text-base sm:text-lg font-black text-white">
                   NOOB Support &amp; Help Desk
                 </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30 flex items-center gap-1">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1">
                   <Zap className="w-2.5 h-2.5" /> Instant AI
                 </span>
               </div>
@@ -998,7 +998,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               title={voiceEnabled ? 'Mute AI Voice' : 'Enable AI Voice'}
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
                 voiceEnabled
-                  ? 'bg-[#00FF66]/10 border-[#00FF66]/40 text-[#00FF66]'
+                  ? 'bg-noob/10 border-noob/40 text-noob'
                   : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -1020,7 +1020,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             <img
               src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
               alt={currentUser.username}
-              className="w-6 h-6 rounded-full object-cover ring-1 ring-[#00FF66]"
+              className="w-6 h-6 rounded-full object-cover ring-1 ring-noob"
               referrerPolicy="no-referrer"
             />
             <div className="flex items-center gap-1.5 truncate">
@@ -1045,7 +1045,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             onClick={() => setActiveSupportTab('ai_chat')}
             className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
               activeSupportTab === 'ai_chat'
-                ? 'text-[#00FF66] border-[#00FF66]'
+                ? 'text-noob border-noob'
                 : 'text-zinc-400 border-transparent hover:text-white'
             }`}
           >
@@ -1078,7 +1078,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             onClick={() => setActiveSupportTab('ticket')}
             className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
               activeSupportTab === 'ticket'
-                ? 'text-[#00FF66] border-[#00FF66]'
+                ? 'text-noob border-noob'
                 : 'text-zinc-400 border-transparent hover:text-white'
             }`}
           >
@@ -1089,7 +1089,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             onClick={() => setActiveSupportTab('faq')}
             className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
               activeSupportTab === 'faq'
-                ? 'text-[#00FF66] border-[#00FF66]'
+                ? 'text-noob border-noob'
                 : 'text-zinc-400 border-transparent hover:text-white'
             }`}
           >
@@ -1105,7 +1105,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               {/* Support Session Header Controls: End Chat & Quick Actions */}
               <div className="flex items-center justify-between pb-2.5 border-b border-zinc-800/80 mb-2 shrink-0">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#00FF66] animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-noob animate-pulse" />
                   <span className="text-xs font-bold text-white">Live Support Session</span>
                 </div>
 
@@ -1217,8 +1217,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                         </div>
                         {currentlySpeakingMsgId === m.id && (
                           <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00FF66] opacity-75" />
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-[#00FF66]" />
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-noob opacity-75" />
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-noob" />
                           </span>
                         )}
                       </div>
@@ -1234,7 +1234,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     <div
                       className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed ${
                         m.sender === 'user'
-                          ? 'bg-gradient-to-r from-emerald-600 to-[#00FF66] text-black font-medium'
+                          ? 'bg-gradient-to-r from-emerald-600 to-noob text-black font-medium'
                           : 'bg-zinc-900/95 border border-zinc-800 text-zinc-100'
                       }`}
                     >
@@ -1249,7 +1249,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                               onClick={() => handleSelectTransaction(t)}
                               className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-black/20 hover:bg-black/35 border border-white/10 text-left transition-colors cursor-pointer"
                             >
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${t.direction === 'sent' ? 'bg-rose-500/20 text-rose-300' : 'bg-[#00FF66]/20 text-[#00FF66]'}`}>
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${t.direction === 'sent' ? 'bg-rose-500/20 text-rose-300' : 'bg-noob/20 text-noob'}`}>
                                 {t.direction === 'sent' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownLeft className="w-3.5 h-3.5" />}
                               </div>
                               <img src={t.otherParty.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
@@ -1259,7 +1259,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                                 </span>
                                 <span className="text-[10px] opacity-70 block">{formatPaymentId(t.transferId)} • {new Date(t.createdAt).toLocaleDateString()}</span>
                               </div>
-                              <span className={`text-xs font-black shrink-0 ${t.direction === 'sent' ? 'text-rose-300' : 'text-[#00FF66]'}`}>
+                              <span className={`text-xs font-black shrink-0 ${t.direction === 'sent' ? 'text-rose-300' : 'text-noob'}`}>
                                 {t.direction === 'sent' ? '-' : '+'}{t.amount.toLocaleString()}
                               </span>
                             </button>
@@ -1296,7 +1296,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                                 speakText(m.text, m.id);
                               }
                             }}
-                            className="flex items-center gap-1 hover:text-[#00FF66] transition-colors cursor-pointer"
+                            className="flex items-center gap-1 hover:text-noob transition-colors cursor-pointer"
                           >
                             {currentlySpeakingMsgId === m.id ? (
                               <>
@@ -1316,9 +1316,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
                 {isTyping && (
                   <div className="flex items-center gap-2 text-xs text-zinc-400 bg-zinc-900/80 p-3 rounded-2xl border border-zinc-800 w-fit">
-                    <div className="w-2 h-2 rounded-full bg-[#00FF66] animate-bounce" />
-                    <div className="w-2 h-2 rounded-full bg-[#00FF66] animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 rounded-full bg-[#00FF66] animate-bounce [animation-delay:0.4s]" />
+                    <div className="w-2 h-2 rounded-full bg-noob animate-bounce" />
+                    <div className="w-2 h-2 rounded-full bg-noob animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-2 h-2 rounded-full bg-noob animate-bounce [animation-delay:0.4s]" />
                     <span className="text-[11px] text-zinc-400 font-medium">Instant AI knowledge lookup...</span>
                   </div>
                 )}
@@ -1337,7 +1337,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Ask about Terms, Privacy, Mini-Games, Music Hub..."
-                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#00FF66] rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors pr-10"
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-noob rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors pr-10"
                   />
                   <button
                     type="button"
@@ -1356,7 +1356,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 <button
                   type="submit"
                   disabled={!inputMessage.trim() || isTyping}
-                  className="px-4 py-3 bg-[#00FF66] text-black font-bold rounded-2xl hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all text-xs sm:text-sm cursor-pointer shadow-md shadow-[#00FF66]/20"
+                  className="px-4 py-3 bg-noob text-black font-bold rounded-2xl hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all text-xs sm:text-sm cursor-pointer shadow-md shadow-noob/20"
                 >
                   <Send className="w-4 h-4" />
                   <span className="hidden sm:inline">Ask AI</span>
@@ -1393,7 +1393,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                       <div>
                         <h4 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
                           Instant AI Voice Call
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00FF66]/20 text-[#00FF66] font-bold border border-[#00FF66]/30">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30">
                             Direct Account Call
                           </span>
                         </h4>
@@ -1415,7 +1415,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
                   <button
                     onClick={handleStartCall}
-                    className="w-full py-3.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-[#00FF66] text-black font-black rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
+                    className="w-full py-3.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-noob text-black font-black rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
                   >
                     <PhoneCall className="w-4 h-4 stroke-[2.5]" /> Request Instant Call to @{currentUser.username}
                   </button>
@@ -1575,13 +1575,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             <div className="space-y-4">
               {ticketSubmitted ? (
                 <div className="bg-emerald-950/40 border border-emerald-500/30 p-6 rounded-2xl text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-[#00FF66] flex items-center justify-center mx-auto">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-noob flex items-center justify-center mx-auto">
                     <Check className="w-6 h-6" />
                   </div>
                   <h3 className="text-base font-bold text-white">Ticket Submitted Successfully!</h3>
                   <p className="text-xs text-zinc-300 max-w-md mx-auto">
                     Your issue has been logged under Reference ID:{' '}
-                    <span className="text-[#00FF66] font-mono font-bold">{ticketId}</span>.
+                    <span className="text-noob font-mono font-bold">{ticketId}</span>.
                   </p>
                   <button
                     onClick={() => {
@@ -1603,7 +1603,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     <select
                       value={ticketCategory}
                       onChange={(e) => setTicketCategory(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-[#00FF66] focus:outline-none"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-noob focus:outline-none"
                     >
                       <option>Terms &amp; Copyright Inquiries</option>
                       <option>Account Security &amp; Bot Defense</option>
@@ -1624,7 +1624,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                       placeholder="Brief overview of your issue..."
                       value={ticketSubject}
                       onChange={(e) => setTicketSubject(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-[#00FF66] focus:outline-none"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-noob focus:outline-none"
                     />
                   </div>
 
@@ -1638,13 +1638,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                       placeholder="Explain your issue in detail..."
                       value={ticketDescription}
                       onChange={(e) => setTicketDescription(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-[#00FF66] focus:outline-none resize-none"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-noob focus:outline-none resize-none"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-[#00FF66] text-black font-bold rounded-xl hover:bg-emerald-400 transition-all text-xs cursor-pointer shadow-lg shadow-[#00FF66]/20"
+                    className="w-full py-3 bg-noob text-black font-bold rounded-xl hover:bg-emerald-400 transition-all text-xs cursor-pointer shadow-lg shadow-noob/20"
                   >
                     Submit Support Ticket
                   </button>
@@ -1662,7 +1662,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   className="bg-zinc-900/80 border border-zinc-800/90 rounded-2xl p-3.5 space-y-1.5 hover:border-zinc-700 transition-colors"
                 >
                   <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4 text-[#00FF66] shrink-0" />
+                    <HelpCircle className="w-4 h-4 text-noob shrink-0" />
                     {f.q}
                   </h4>
                   <p className="text-xs text-zinc-400 leading-relaxed pl-6">{f.a}</p>
@@ -1678,7 +1678,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     }}
                     className="text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
                   >
-                    <FileText className="w-3.5 h-3.5 text-[#00FF66]" /> View Terms &amp; Conditions
+                    <FileText className="w-3.5 h-3.5 text-noob" /> View Terms &amp; Conditions
                   </button>
                 )}
                 {onOpenPrivacy && (
@@ -1708,7 +1708,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 }}
                 className="hover:text-zinc-300 transition-colors cursor-pointer flex items-center gap-1"
               >
-                <FileText className="w-3 h-3 text-[#00FF66]" /> Terms
+                <FileText className="w-3 h-3 text-noob" /> Terms
               </button>
             )}
             {onOpenPrivacy && (
@@ -1786,7 +1786,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     <MicOff className="w-3.5 h-3.5" /> Microphone Muted
                   </span>
                 ) : isSpeaking ? (
-                  <span className="text-[#00FF66] flex items-center gap-1.5">
+                  <span className="text-noob flex items-center gap-1.5">
                     <Volume2 className="w-3.5 h-3.5 animate-pulse" /> Speaking Resolution...
                   </span>
                 ) : isCallProcessing ? (
@@ -1812,7 +1812,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               {[12, 22, 10, 30, 16, 26, 12, 20, 32, 14, 28, 18, 24, 10, 22, 30, 14, 20].map((height, i) => (
                 <div
                   key={i}
-                  className={`w-1.5 bg-gradient-to-t from-cyan-500 to-[#00FF66] rounded-full transition-all duration-150 ${
+                  className={`w-1.5 bg-gradient-to-t from-cyan-500 to-noob rounded-full transition-all duration-150 ${
                     isSpeaking || (isListening && !isMuted) || isCallProcessing ? 'animate-pulse' : 'opacity-25'
                   }`}
                   style={{
@@ -1935,9 +1935,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       {/* Post-Chat / Post-Call 1-5 Star Review Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 force-dark">
-          <div className="bg-zinc-950 border border-[#00FF66]/50 w-full max-w-sm rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#00FF66]/20 border border-[#00FF66]/40 flex items-center justify-center mx-auto text-[#00FF66]">
-              <Star className="w-6 h-6 fill-[#00FF66]" />
+          <div className="bg-zinc-950 border border-noob/50 w-full max-w-sm rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-noob/20 border border-noob/40 flex items-center justify-center mx-auto text-noob">
+              <Star className="w-6 h-6 fill-noob" />
             </div>
 
             <div>
@@ -1946,8 +1946,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             </div>
 
             {reviewSubmitted ? (
-              <div className="p-4 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/30 space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-[#00FF66] mx-auto animate-bounce" />
+              <div className="p-4 rounded-2xl bg-noob/10 border border-noob/30 space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-noob mx-auto animate-bounce" />
                 <p className="text-xs font-bold text-white">Thank you for your review!</p>
                 <p className="text-[11px] text-zinc-400">Your feedback helps us continuously improve NOOB.</p>
               </div>
@@ -1993,7 +1993,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                     );
                   })}
                 </div>
-                <span className="text-xs font-bold text-[#00FF66]">
+                <span className="text-xs font-bold text-noob">
                   {reviewRating === 5
                     ? '⭐⭐⭐⭐⭐ Excellent'
                     : reviewRating === 4
@@ -2010,7 +2010,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   value={reviewFeedback}
                   onChange={(e) => setReviewFeedback(e.target.value)}
                   placeholder="Optional feedback: Did the AI pinpoint your issue accurately?"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#00FF66]"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
                 />
 
                 <div className="flex items-center justify-end gap-2">
@@ -2026,7 +2026,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-[#00FF66] hover:bg-emerald-400 text-black font-bold text-xs rounded-xl transition-all shadow-md shadow-[#00FF66]/20 cursor-pointer"
+                    className="px-5 py-2 bg-noob hover:bg-emerald-400 text-black font-bold text-xs rounded-xl transition-all shadow-md shadow-noob/20 cursor-pointer"
                   >
                     Submit Review
                   </button>

@@ -121,7 +121,7 @@ export const SpeedMathGame: React.FC<SpeedMathGameProps> = ({
           <button
             key={i}
             onClick={() => handleAnswer(opt)}
-            className="py-3.5 px-4 bg-zinc-900 hover:bg-[#00FF66] hover:text-black border border-zinc-700/60 rounded-2xl font-black text-lg text-white transition-all cursor-pointer active:scale-95 shadow-md"
+            className="py-3.5 px-4 bg-zinc-900 hover:bg-noob hover:text-black border border-zinc-700/60 rounded-2xl font-black text-lg text-white transition-all cursor-pointer active:scale-95 shadow-md"
           >
             {opt}
           </button>

@@ -377,7 +377,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 </button>
                 <button
                   onClick={onOpenUpload}
-                  className="flex items-center gap-1 bg-[#00FF66] text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-[#00FF66]/90 transition-colors"
+                  className="flex items-center gap-1 bg-noob text-black rounded-full pl-2 pr-3 py-1.5 text-xs font-bold cursor-pointer hover:bg-noob/90 transition-colors"
                   title="Upload a video"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" /> Create
@@ -516,7 +516,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 onClick={() => { void handleToggleSave(actionVideo); setShowOptionsMenu(false); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
-                <Bookmark className={`w-4.5 h-4.5 shrink-0 ${actionVideo.isSaved ? 'text-[#00FF66] fill-current' : 'text-zinc-400'}`} />
+                <Bookmark className={`w-4.5 h-4.5 shrink-0 ${actionVideo.isSaved ? 'text-noob fill-current' : 'text-zinc-400'}`} />
                 <span className="text-xs font-bold text-white">{actionVideo.isSaved ? 'Saved' : 'Save'}</span>
               </button>
               <button
@@ -585,7 +585,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 onClick={() => copyLiveLink(menuLive.id)}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
-                {liveLinkCopied ? <Check className="w-4.5 h-4.5 text-[#00FF66] shrink-0" /> : <Copy className="w-4.5 h-4.5 text-cyan-400 shrink-0" />}
+                {liveLinkCopied ? <Check className="w-4.5 h-4.5 text-noob shrink-0" /> : <Copy className="w-4.5 h-4.5 text-cyan-400 shrink-0" />}
                 <span className="text-xs font-bold text-white">{liveLinkCopied ? 'Link copied!' : 'Copy link'}</span>
               </button>
               {(isMasterAdmin || menuLive.host.id === currentUser.id) && (
@@ -743,7 +743,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 onClick={() => void handleCreatePlaylistForVideo()}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
               >
-                <Plus className="w-4.5 h-4.5 text-[#00FF66] shrink-0" />
+                <Plus className="w-4.5 h-4.5 text-noob shrink-0" />
                 <span className="text-xs font-bold text-white">New playlist</span>
               </button>
               {addToPlaylistLoading ? (
@@ -758,7 +758,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                     className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer"
                   >
                     <span className="text-xs font-bold text-white truncate">{p.name}</span>
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${p.hasVideo ? 'bg-[#00FF66] border-[#00FF66]' : 'border-zinc-700'}`}>
+                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${p.hasVideo ? 'bg-noob border-noob' : 'border-zinc-700'}`}>
                       {p.hasVideo && <Check className="w-3 h-3 text-black" />}
                     </div>
                   </button>

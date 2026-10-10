@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Clock, Check, X } from 'lucide-react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface ColorRushGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   targetScore?: number;
 }
@@ -17,13 +20,21 @@ const COLOR_CLASSES: Record<string, string> = {
 
 export const ColorRushGame: React.FC<ColorRushGameProps> = ({
   onGameOver,
-  targetScore = 8
+  targetScore = 8,
+  resumeUserId
 }) => {
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15);
-  const [word, setWord] = useState('');
-  const [colorKey, setColorKey] = useState('');
-  const [doesMatch, setDoesMatch] = useState(false);
+  // A refresh carries on with the same score, word and the seconds that were left.
+  const [snap] = useState(() => loadGameSnapshot<{ score: number; timeLeft: number; word: string; colorKey: string; doesMatch: boolean }>(resumeUserId, 'bubble_blitz'));
+  const [score, setScore] = useState(snap?.score ?? 0);
+  const [timeLeft, setTimeLeft] = useState(snap?.timeLeft ?? 15);
+  const [word, setWord] = useState(snap?.word ?? '');
+  const [colorKey, setColorKey] = useState(snap?.colorKey ?? '');
+  const [doesMatch, setDoesMatch] = useState(snap?.doesMatch ?? false);
+  useEffect(() => {
+    if (!resumeUserId || !word) return;
+    if (timeLeft <= 0 || score >= targetScore) clearGameSnapshot(resumeUserId, 'bubble_blitz');
+    else saveGameSnapshot(resumeUserId, 'bubble_blitz', { score, timeLeft, word, colorKey, doesMatch });
+  }, [score, timeLeft, word, colorKey, doesMatch]);
 
   const generateRound = () => {
     const isMatch = Math.random() > 0.5;
@@ -41,7 +52,7 @@ export const ColorRushGame: React.FC<ColorRushGameProps> = ({
   };
 
   useEffect(() => {
-    generateRound();
+    if (!snap?.word) generateRound();
   }, []);
 
   useEffect(() => {

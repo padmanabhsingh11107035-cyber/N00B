@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   Gamepad2,
   Trophy,
@@ -17,7 +17,9 @@ import {
   MoreVertical,
   Info,
   ShieldAlert,
-  HelpCircle
+  HelpCircle,
+  Music,
+  VolumeX
 } from 'lucide-react';
 import { MiniGameMeta, ALL_50_MINI_GAMES, GameCategory } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
@@ -27,6 +29,9 @@ const GamePlayModal = React.lazy(() => import('./GamePlayModal').then((m) => ({ 
 import { User, GameLeaderboardEntry } from '../../types';
 import { fetchGameLeaderboard } from '../../services/api';
 import { formatNoobPoints } from '../../utils/formatPoints';
+import { useResumeState } from '../../utils/useResumeState';
+import { setResumePage, clearResumePageIf, clearGameSnapshot } from '../../utils/pageResume';
+import { startGameMusic, stopGameMusic, isGameMusicOn, setGameMusicOn } from '../../utils/gameMusic';
 
 interface GamesViewProps {
   currentUser: User;
@@ -41,10 +46,33 @@ export const GamesView: React.FC<GamesViewProps> = ({
   onUserUpdated,
   onNavigateToUserProfile
 }) => {
-  const [activeTab, setActiveTab] = useState<'games' | 'leaderboard'>('games');
-  const [selectedCategory, setSelectedCategory] = useState<GameCategory>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGameForPlay, setSelectedGameForPlay] = useState<MiniGameMeta | null>(null);
+  // The Games page is remembered while it is open: closing / refreshing the app brings the person back to this page, to the game
+  // they were playing, with that game's progress (see utils/pageResume.ts and each game). Closing the page forgets all of it.
+  const uid = currentUser.id;
+  useLayoutEffect(() => {
+    setResumePage(uid, 'games');
+    return () => clearResumePageIf(uid, 'games');
+  }, [uid]);
+  const [activeTab, setActiveTab] = useResumeState<'games' | 'leaderboard'>(uid, 'games', 'tab', 'games');
+  const [selectedCategory, setSelectedCategory] = useResumeState<GameCategory>(uid, 'games', 'category', 'all');
+  const [searchQuery, setSearchQuery] = useResumeState(uid, 'games', 'search', '');
+  const [savedGameId, setSavedGameId] = useResumeState<string | null>(uid, 'games', 'gameId', null);
+  const [selectedGameForPlay, setSelectedGameForPlay] = useState<MiniGameMeta | null>(() => ALL_50_MINI_GAMES.find((g) => g.id === savedGameId) ?? null);
+  useEffect(() => { setSavedGameId(selectedGameForPlay?.id ?? null); }, [selectedGameForPlay?.id]);
+  const closeGame = () => {
+    if (selectedGameForPlay) {
+      clearGameSnapshot(uid, selectedGameForPlay.id);
+      clearGameSnapshot(uid, `modal:${selectedGameForPlay.id}`);
+    }
+    setSelectedGameForPlay(null);
+  };
+
+  // Music for the whole Games page: starts when the page opens, keeps playing during a game, stops when the page closes.
+  const [musicOn, setMusicOn] = useState(isGameMusicOn());
+  useEffect(() => {
+    startGameMusic();
+    return () => stopGameMusic();
+  }, []);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -134,6 +162,15 @@ export const GamesView: React.FC<GamesViewProps> = ({
           {/* 3-Dot Button — pinned to the far right of this row via the
               parent's justify-between, instead of sitting right next to the
               title with a large empty gap after it. */}
+          <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => { const next = !musicOn; setMusicOn(next); setGameMusicOn(next); }}
+            aria-label={musicOn ? 'Turn game music off' : 'Turn game music on'}
+            title={musicOn ? 'Game music is on (tap to turn off)' : 'Game music is off (tap to turn on)'}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${musicOn ? 'bg-noob/15 border-noob/40 text-noob' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white'}`}
+          >
+            {musicOn ? <Music className="w-4 h-4 animate-pulse" /> : <VolumeX className="w-4 h-4" />}
+          </button>
           <div className="relative shrink-0" ref={menuRef}>
               <button
                 onClick={() => setShowMenu((prev) => !prev)}
@@ -193,6 +230,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 </>
               )}
             </div>
+          </div>
           </div>
 
         {/* Games / Leaderboard switch — full-width, evenly-split toggle
@@ -276,7 +314,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
               >
                 {/* Looping poster carousel — same slides as the game's own detail page, cycling on its own */}
                 <div className="relative overflow-hidden cursor-pointer group-hover:scale-105 transition-transform duration-500" onClick={() => setSelectedGameForPlay(game)}>
-                  <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} autoAdvanceMs={1000} />
+                  <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} />
 
                   {/* Game Number Badge */}
                   <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono font-black text-white border border-white/10">
@@ -447,7 +485,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
             game={selectedGameForPlay}
             currentUser={currentUser}
             allUsers={allUsers}
-            onClose={() => setSelectedGameForPlay(null)}
+            onClose={closeGame}
             onPointsUpdated={handlePointsUpdated}
           />
         </React.Suspense>

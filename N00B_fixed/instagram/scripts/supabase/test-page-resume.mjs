@@ -62,6 +62,23 @@ R.clearResume();
 R.forgetFirstAskForTests();
 check(R.takeRestorePage('u1', t0 + 2000) === null, 'logging out forgets everything');
 
+section('4b. A game in progress');
+R.setResumePage('u1', 'games', t0);
+R.saveGameSnapshot('u1', 'tictactoe', { board: ['X', null, 'O'], turn: 'X' }, t0 + 1000);
+R.saveGameSnapshot('u1', 'ludo_classic', { moves: 12 }, t0 + 2000);
+check(R.loadGameSnapshot('u1', 'tictactoe', t0 + 3000)?.board[2] === 'O' && R.loadGameSnapshot('u1', 'ludo_classic', t0 + 3000)?.moves === 12, 'each game keeps its own snapshot');
+check(R.loadGameSnapshot('u2', 'tictactoe', t0 + 3000) === null && R.loadGameSnapshot(undefined, 'tictactoe', t0 + 3000) === null, 'another account (or nobody) does not get it');
+R.clearGameSnapshot('u1', 'tictactoe', t0 + 4000);
+check(R.loadGameSnapshot('u1', 'tictactoe', t0 + 5000) === null && R.loadGameSnapshot('u1', 'ludo_classic', t0 + 5000)?.moves === 12, 'finishing one game clears only that game');
+check(R.loadGameSnapshot('u1', 'ludo_classic', t0 + 13 * H) === null, 'a snapshot older than 12 hours is dropped');
+R.setResumePage('u1', 'store', t0 + 6000);
+check(R.loadGameSnapshot('u1', 'ludo_classic', t0 + 7000) === null, 'leaving the Games page forgets every snapshot');
+R.setResumePage('u1', 'games', t0 + 8000);
+R.clearResumePageIf('u1', 'store', t0 + 9000);
+check(R.getResumePage('u1', t0 + 9500) === 'games', 'closing a page that is no longer the open one changes nothing');
+R.clearResumePageIf('u1', 'games', t0 + 10000);
+check(R.getResumePage('u1', t0 + 10500) === null, 'closing the open page forgets it');
+
 section('5. Broken storage');
 data.set('noob.resume.v1', '{not json');
 check(R.getResumePage('u1', t0) === null, 'damaged saved data is ignored');

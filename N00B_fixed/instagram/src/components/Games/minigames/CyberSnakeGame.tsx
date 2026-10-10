@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 import { RotateCcw, Trophy, Play } from 'lucide-react';
 
 interface CyberSnakeGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   targetScore?: number;
 }
@@ -15,14 +18,39 @@ const INITIAL_SNAKE = [
 
 export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
   onGameOver,
-  targetScore = 8
+  targetScore = 8,
+  resumeUserId
 }) => {
-  const [snake, setSnake] = useState<{ x: number; y: number }[]>(INITIAL_SNAKE);
-  const [food, setFood] = useState<{ x: number; y: number }>({ x: 5, y: 5 });
-  const [direction, setDirection] = useState<'UP' | 'DOWN' | 'LEFT' | 'RIGHT'>('UP');
-  const [score, setScore] = useState(0);
+  // A refresh brings the same snake, food and score back, paused: a "Resume" button carries on from there.
+  type Snap = { snake: { x: number; y: number }[]; food: { x: number; y: number }; direction: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'; score: number };
+  const [snap] = useState(() => loadGameSnapshot<Snap>(resumeUserId, 'cyber_snake'));
+  const [resumable, setResumable] = useState(!!snap);
+  const [snake, setSnake] = useState<{ x: number; y: number }[]>(snap?.snake ?? INITIAL_SNAKE);
+  const [food, setFood] = useState<{ x: number; y: number }>(snap?.food ?? { x: 5, y: 5 });
+  const [direction, setDirection] = useState<'UP' | 'DOWN' | 'LEFT' | 'RIGHT'>(snap?.direction ?? 'UP');
+  const [score, setScore] = useState(snap?.score ?? 0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
+
+  // Saved at most twice a second while playing, and once more as the page is closing.
+  const latestRef = useRef<Snap>({ snake, food, direction, score });
+  latestRef.current = { snake, food, direction, score };
+  const lastSavedAtRef = useRef(0);
+  useEffect(() => {
+    if (!resumeUserId) return;
+    if (isGameOver) { clearGameSnapshot(resumeUserId, 'cyber_snake'); return; }
+    if (!isPlaying) return;
+    const now = Date.now();
+    if (now - lastSavedAtRef.current < 500) return;
+    lastSavedAtRef.current = now;
+    saveGameSnapshot(resumeUserId, 'cyber_snake', latestRef.current);
+  }, [snake, score, isPlaying, isGameOver]);
+  useEffect(() => {
+    if (!resumeUserId) return;
+    const onHide = () => { if (isPlaying && !isGameOver) saveGameSnapshot(resumeUserId, 'cyber_snake', latestRef.current); };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, [isPlaying, isGameOver]);
 
   const directionRef = useRef(direction);
   directionRef.current = direction;
@@ -66,7 +94,13 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
     return newFood!;
   };
 
+  const resumeGame = () => {
+    setResumable(false);
+    setIsPlaying(true);
+  };
+
   const startGame = () => {
+    setResumable(false);
     setSnake(INITIAL_SNAKE);
     setDirection('UP');
     setScore(0);
@@ -198,13 +232,16 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
         {!isPlaying && !isGameOver && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center z-10">
             <span className="text-lg font-black text-white mb-1">🐍 Cyber Snake</span>
-            <p className="text-xs text-zinc-400 mb-4">Collect {targetScore} glowing power orbs to win!</p>
+            <p className="text-xs text-zinc-400 mb-4">{resumable ? `Welcome back! You had ${score} of ${targetScore} orbs.` : `Collect ${targetScore} glowing power orbs to win!`}</p>
             <button
-              onClick={startGame}
+              onClick={resumable ? resumeGame : startGame}
               className="px-5 py-2.5 bg-noob hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-[0_0_15px_rgba(217,119,87,0.4)] flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105"
             >
-              <Play className="w-4 h-4 fill-black" /> Start Game
+              <Play className="w-4 h-4 fill-black" /> {resumable ? 'Resume Game' : 'Start Game'}
             </button>
+            {resumable && (
+              <button onClick={startGame} className="mt-2 text-[11px] text-zinc-400 hover:text-white underline cursor-pointer">Start a new game instead</button>
+            )}
           </div>
         )}
       </div>

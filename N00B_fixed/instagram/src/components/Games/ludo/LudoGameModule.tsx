@@ -17,6 +17,7 @@ import { UserProfileModal } from './components/UserProfileModal';
 import { ludoStorage, UserProfile } from './services/ludoStorage';
 import { networkAdapter } from './services/networkAdapter';
 import { LUDO_THEMES, TOKEN_SKINS } from './themes/ludoThemes';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 export interface NoobLudoModuleProps {
   /** The signed-in NOOB account — its name and picture are what the player is shown as. */
@@ -137,6 +138,25 @@ export const LudoGameModule: React.FC<NoobLudoModuleProps> = ({
     };
   }, [profile.id]);
 
+  // A refresh / reopened app: put the saved match back (same board, same turn), then keep it saved while it is being played.
+  // Saved on every move, not every second; cleared when the match ends or the player leaves it.
+  useEffect(() => {
+    const snap = loadGameSnapshot<{ state: LudoGameState; matchDuration: number; entryMode: string }>(currentUser.id, 'ludo_classic');
+    if (!snap || snap.entryMode !== entryMode || !snap.state || snap.state.status !== 'in_progress') return;
+    setMatchDuration(snap.matchDuration || 0);
+    networkAdapter.restoreLocalGame(snap.state);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!gameState) return;
+    if (gameState.status === 'in_progress' && !gameState.winner) {
+      saveGameSnapshot(currentUser.id, 'ludo_classic', { state: gameState, matchDuration: matchDurationRef.current, entryMode });
+    } else {
+      clearGameSnapshot(currentUser.id, 'ludo_classic');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.turnCount, gameState?.currentTurnColor, gameState?.diceRollStatus, gameState?.status, gameState?.winner]);
+
   // Match clock
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -232,6 +252,7 @@ export const LudoGameModule: React.FC<NoobLudoModuleProps> = ({
   };
 
   const handleForfeitExit = () => {
+    clearGameSnapshot(currentUser.id, 'ludo_classic');
     networkAdapter.leaveRoom();
     setGameState(null);
   };

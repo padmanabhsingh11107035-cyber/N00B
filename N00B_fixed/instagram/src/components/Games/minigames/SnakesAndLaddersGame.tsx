@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bot, User as UserIcon } from 'lucide-react';
 import { AnimatedDice } from '../AnimatedDice';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface SnakesAndLaddersGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   // 'bot' (default): obviously just you vs bots — no per-slot toggle shown.
   // 'pass_play': multiple humans sharing this device — slots default to
@@ -43,21 +46,34 @@ function numberToRowCol(num: number): [number, number] {
 export const SnakesAndLaddersGame: React.FC<SnakesAndLaddersGameProps> = ({
   onGameOver,
   entryMode = 'bot',
-  initialPlayerCount
+  initialPlayerCount,
+  resumeUserId
 }) => {
-  const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
-  const [numPlayers, setNumPlayers] = useState(initialPlayerCount || 2);
+  // A refresh puts every counter back where it was, with the same player to roll next.
+  type Snap = { numPlayers: number; playerTypes: ('human' | 'bot')[]; positions: number[]; currentPlayer: number; log: string };
+  const [snap] = useState(() => loadGameSnapshot<Snap>(resumeUserId, 'snakes_ladders'));
+  const [phase, setPhase] = useState<'setup' | 'playing'>(snap ? 'playing' : 'setup');
+  const [numPlayers, setNumPlayers] = useState(snap?.numPlayers ?? (initialPlayerCount || 2));
   const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
+    if (snap) return snap.playerTypes;
     const n = initialPlayerCount || 2;
     return Array.from({ length: n }, (_, i) => (i === 0 ? 'human' : entryMode === 'pass_play' ? 'human' : 'bot'));
   });
-  const [positions, setPositions] = useState<number[]>([]);
-  const [currentPlayer, setCurrentPlayer] = useState(0);
+  const [positions, setPositions] = useState<number[]>(snap?.positions ?? []);
+  const [currentPlayer, setCurrentPlayer] = useState(snap?.currentPlayer ?? 0);
   const [diceValue, setDiceValue] = useState<number | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [winner, setWinner] = useState<number | null>(null);
-  const [log, setLog] = useState<string>('');
+  const [log, setLog] = useState<string>(snap?.log ?? '');
   const hasReported = useRef(false);
+
+  // Saved at the calm moment between turns (never in the middle of a dice roll).
+  useEffect(() => {
+    if (!resumeUserId || phase !== 'playing') return;
+    if (winner !== null) { clearGameSnapshot(resumeUserId, 'snakes_ladders'); return; }
+    if (isRolling || diceValue !== null) return;
+    saveGameSnapshot(resumeUserId, 'snakes_ladders', { numPlayers, playerTypes, positions, currentPlayer, log });
+  }, [phase, positions, currentPlayer, diceValue, isRolling, winner]);
 
   const updatePlayerCount = (n: number) => {
     setNumPlayers(n);

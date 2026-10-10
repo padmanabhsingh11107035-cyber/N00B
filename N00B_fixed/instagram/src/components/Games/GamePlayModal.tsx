@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../utils/pageResume';
 import { User } from '../../types';
 import {
   recordGameMatch,
@@ -119,7 +120,18 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // going through the mode-select screen (e.g. accepting a friend's invite
   // sets initialRoomCode and skips straight past it).
   const isChessBlitz = game.id === 'chess_blitz';
-  const [chessLimitChecked, setChessLimitChecked] = useState(!isChessBlitz);
+  // Refresh / reopening the app: the game comes back at the same step (mode, difficulty, whose turn in pass-and-play...), and the game
+  // itself brings back its own board (see each game). Only for a game opened from the Games list, never from a friend's invite.
+  // A step that can not be resumed (searching for an opponent, a live online match, the result screen) comes back as the mode picker.
+  type ModalSnapshot = { mode: PlayMode; botDifficulty: BotDifficulty; isPassAndPlay: boolean; passPlayStage: 'p1' | 'p2'; passPlayP1Result: RoundResult | null; boardPlayerCount?: number; lastPlayMode: 'bot' | 'matchmaking' | 'friend' | 'pass_and_play' | null; chessStarted?: boolean };
+  const modalKey = `modal:${game.id}`;
+  const restoredRef = useRef<ModalSnapshot | null | undefined>(undefined);
+  if (restoredRef.current === undefined) {
+    restoredRef.current = initialRoomCode || initialChallenger ? null : loadGameSnapshot<ModalSnapshot>(currentUser.id, modalKey);
+  }
+  const restored = restoredRef.current;
+  const [chessLimitChecked, setChessLimitChecked] = useState(!isChessBlitz || !!restored?.chessStarted);
+  const chessStartedRef = useRef(!!restored?.chessStarted);
   const [chessLimitBlocked, setChessLimitBlocked] = useState<{ message: string; nextAvailableAt?: string } | null>(null);
   // Consuming the weekly credit is a real server-side side effect (not an
   // idempotent read), so a ref guards it against ever being sent twice —
@@ -129,7 +141,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // fires at most once per component instance, and since StrictMode's dev
   // "cleanup" isn't a real unmount, guarding on it would just discard the
   // one real in-flight response and leave the check stuck forever.
-  const chessCheckStartedRef = useRef(false);
+  const chessCheckStartedRef = useRef(!!restored?.chessStarted);   // a restored chess game already used its round, never take another
 
   useEffect(() => {
     // Pro accounts used to skip this call entirely (no weekly limit to
@@ -144,6 +156,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     (async () => {
       try {
         const res = await startChessRound();
+        if (res.success) chessStartedRef.current = true;
         if (!res.success) {
           setChessLimitBlocked({
             message: res.error || 'Chess Blitz is limited to once a week on the free plan.',
@@ -164,6 +177,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       ? 'play_match'
       : initialChallenger || SOLO_ONLY_GAME_IDS.includes(game.id)
       ? 'play_bot'
+      : restored
+      ? (['select_mode', 'select_difficulty', 'play_bot', 'pass_play_handoff'] as PlayMode[]).includes(restored.mode) ? restored.mode : 'select_mode'
       : 'select_mode'
   );
   const [opponentChallenger] = useState<string | undefined>(initialChallenger);
@@ -195,7 +210,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // "Play with Available Users" or "Play with Friend" and then hitting Play Again always connected
   // to a bot instead. Stays set until the user explicitly picks a different mode from select_mode.
   const [lastPlayMode, setLastPlayMode] = useState<'bot' | 'matchmaking' | 'friend' | 'pass_and_play' | null>(
-    initialChallenger || initialRoomCode ? 'friend' : null
+    initialChallenger || initialRoomCode ? 'friend' : restored?.lastPlayMode === 'bot' || restored?.lastPlayMode === 'pass_and_play' ? restored.lastPlayMode : null
   );
   const [lastOpponent, setLastOpponent] = useState<{ id: string; username: string } | null>(null);
   const [rematchRequested, setRematchRequested] = useState(false);
@@ -219,7 +234,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Board games ask "how many total players" before inviting, then require
   // sending that many minus one (yourself) requests via chat — tracked here
   // so the chosen total carries into the actual board once it starts.
-  const [boardPlayerCount, setBoardPlayerCount] = useState<number | undefined>(undefined);
+  const [boardPlayerCount, setBoardPlayerCount] = useState<number | undefined>(restored?.boardPlayerCount);
   const [boardInviteStep, setBoardInviteStep] = useState<'count' | 'invite'>('count');
   const [boardInviteCount, setBoardInviteCount] = useState(isBoardGame ? Math.min(4, boardGameMaxPlayers) : 2);
   const [invitedFriendIds, setInvitedFriendIds] = useState<Set<string>>(new Set());
@@ -234,9 +249,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Pass and Play: two humans take turns on this device, each attempting the
   // same game's built-in challenge; whichever round did better (win > tie >
   // loss) wins the match.
-  const [isPassAndPlay, setIsPassAndPlay] = useState(false);
-  const [passPlayStage, setPassPlayStage] = useState<'p1' | 'p2'>('p1');
-  const [passPlayP1Result, setPassPlayP1Result] = useState<RoundResult | null>(null);
+  const [isPassAndPlay, setIsPassAndPlay] = useState(!!restored?.isPassAndPlay);
+  const [passPlayStage, setPassPlayStage] = useState<'p1' | 'p2'>(restored?.passPlayStage === 'p2' ? 'p2' : 'p1');
+  const [passPlayP1Result, setPassPlayP1Result] = useState<RoundResult | null>(restored?.passPlayP1Result ?? null);
 
   const clearMatchmakingTimers = () => {
     if (matchmakingPollRef.current) clearInterval(matchmakingPollRef.current);
@@ -555,7 +570,19 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const [showChessStakesConfirm, setShowChessStakesConfirm] = useState(false);
   // Chosen once per modal session on the difficulty-select screen, then
   // reused for every bot match (including rematches) until changed.
-  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('normal');
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>(restored?.botDifficulty ?? 'normal');
+  // Keep the step up to date so a refresh can come back to it.
+  useEffect(() => {
+    if (initialRoomCode || initialChallenger || onlineMatch) return;
+    const mode: PlayMode = currentMode === 'game_over' ? 'select_mode' : currentMode;
+    saveGameSnapshot(currentUser.id, modalKey, { mode, botDifficulty, isPassAndPlay, passPlayStage, passPlayP1Result, boardPlayerCount, lastPlayMode, chessStarted: chessStartedRef.current });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMode, botDifficulty, isPassAndPlay, passPlayStage, passPlayP1Result, boardPlayerCount, lastPlayMode, chessLimitChecked, !!onlineMatch]);
+  // The result screen means this game is over: whatever the game had saved is no longer needed.
+  useEffect(() => {
+    if (currentMode === 'game_over') clearGameSnapshot(currentUser.id, game.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMode]);
   const handleStartBotGame = () => {
     setLastPlayMode('bot');
     setLastOpponent(null);
@@ -1604,7 +1631,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
               {/* Game Specific Engines */}
               {(game.id === 'cyber_snake' || game.id === 'snake' || game.id === 'pac_grid') && (
-                <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} />
+                <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} />
               )}
 
               {game.id === 'tictactoe' && onlineMatch && (
@@ -1649,7 +1676,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'tictactoe' && !onlineMatch && (
-                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} difficulty={botDifficulty} />
+                <TicTacToeGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} vsBot={!isPassAndPlay} gamesPlayedCount={currentUser.gamesPlayedCount} difficulty={botDifficulty} resumeUserId={currentUser.id} />
               )}
 
               {game.id === 'chess_blitz' && onlineMatch && (
@@ -1674,11 +1701,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   userId={currentUser.id}
                   username={currentUser.username}
                   profilePicture={currentUser.avatar}
+                  resumeUserId={currentUser.id}
                 />
               )}
 
               {game.id === 'snakes_ladders' && (
                 <SnakesAndLaddersGame
+                  resumeUserId={currentUser.id}
                   onGameOver={handleGameOver}
                   entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
                   initialPlayerCount={boardPlayerCount}
@@ -1697,6 +1726,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
               {game.id === 'monopoly_noob' && (
                 <MonopolyGame
+                  resumeUserId={currentUser.id}
                   onGameOver={handleGameOver}
                   entryMode={isPassAndPlay ? 'pass_play' : 'bot'}
                   initialPlayerCount={boardPlayerCount}
@@ -1705,15 +1735,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'rps' && (
-                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} difficulty={botDifficulty} />
+                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} difficulty={botDifficulty} resumeUserId={currentUser.id} />
               )}
 
               {game.id === 'speed_math' && (
-                <SpeedMathGame onGameOver={handleGameOver} targetScore={6} />
+                <SpeedMathGame onGameOver={handleGameOver} targetScore={6} resumeUserId={currentUser.id} />
               )}
 
               {game.id === 'memory_match' && (
-                <MemoryMatchGame onGameOver={handleGameOver} />
+                <MemoryMatchGame onGameOver={handleGameOver} resumeUserId={currentUser.id} />
               )}
 
               {game.id === 'reaction_tap' && (
@@ -1721,7 +1751,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'bubble_blitz' && (
-                <ColorRushGame onGameOver={handleGameOver} targetScore={8} />
+                <ColorRushGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} />
               )}
 
               {/* Every catalog id above maps to a dedicated game; this generic

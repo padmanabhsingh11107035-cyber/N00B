@@ -89,6 +89,26 @@ class LudoNetworkAdapter {
   }
 
   /**
+   * Pick a saved match back up (the app was closed or refreshed in the middle of it). The turn clock starts over, and a computer
+   * player that was half-way through its turn simply rolls again.
+   */
+  public restoreLocalGame(saved: LudoGameState): LudoGameState {
+    this.clearTimers();
+    const state: LudoGameState = JSON.parse(JSON.stringify(saved));
+    state.turnTimeRemaining = state.turnTimeout;
+    const current = state.players.find((p) => p.color === state.currentTurnColor);
+    if (current?.isBot && state.diceRollStatus === 'waiting_move') {
+      state.diceRollStatus = 'waiting_roll';
+      state.diceValue = null;
+      state.legalTokenIds = [];
+    }
+    this.currentGameState = state;
+    this.emit('state_updated', this.currentGameState);
+    this.checkAndTriggerBotTurn();
+    return state;
+  }
+
+  /**
    * Roll the dice (authoritative check)
    */
   public rollDice(): number {

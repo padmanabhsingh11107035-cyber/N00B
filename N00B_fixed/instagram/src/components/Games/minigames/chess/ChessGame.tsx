@@ -29,6 +29,7 @@ import {
   Play,
   Palette,
 } from 'lucide-react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../../utils/pageResume';
 
 // Local-only Chess (vs the built-in bot, or two humans passing the device) — the online, truly
 // synced, server-validated match lives in ChessOnlineMatch.tsx instead (see GamePlayModal.tsx for
@@ -43,6 +44,8 @@ import {
 // record_match (purely from the result string + vsBot flag), never from the finalScore number
 // reported here, so that value only ever needs to be a reasonable one to display, not exact.
 export interface ChessGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   vsBot?: boolean;
   gamesPlayedCount?: number;
@@ -62,6 +65,7 @@ export const ChessGame: React.FC<ChessGameProps> = ({
   userId = 'me',
   username = 'You',
   profilePicture,
+  resumeUserId,
 }) => {
   // GamePlayModal already decided vs-bot vs pass-and-play (and, upstream of that, already offered
   // its own difficulty picker for vs-bot) before this component ever mounts — so there is
@@ -70,10 +74,21 @@ export const ChessGame: React.FC<ChessGameProps> = ({
   const mode: 'vs_ai' | 'local_2p' = vsBot ? 'vs_ai' : 'local_2p';
   const hasExplicitDifficulty = difficulty !== undefined;
 
-  const [inSetup, setInSetup] = useState(true);
-  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>(mapDifficulty(difficulty));
-  const [timePreset, setTimePreset] = useState<TimeControlPreset>(TIME_PRESETS[4]); // 5 + 0 default
-  const [playerSide, setPlayerSide] = useState<PieceColor>('w');
+  // A refresh / reopened app puts the game back exactly as it was: the position, every move played, the clocks and the choices made.
+  type ChessSnap = {
+    mode: 'vs_ai' | 'local_2p'; fen: string; moveHistory: MoveRecord[]; whiteTimeMs: number; blackTimeMs: number; playerSide: PieceColor;
+    aiDifficulty: AIDifficulty; timeInitial: number; timeInc: number; boardOrientation: PieceColor; lastMove: { from: string; to: string } | null;
+  };
+  const [snap] = useState(() => {
+    const saved = loadGameSnapshot<ChessSnap>(resumeUserId, 'chess_blitz');
+    return saved && saved.mode === mode && typeof saved.fen === 'string' ? saved : null;
+  });
+  const [inSetup, setInSetup] = useState(!snap);
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>(snap?.aiDifficulty ?? mapDifficulty(difficulty));
+  const [timePreset, setTimePreset] = useState<TimeControlPreset>(
+    () => TIME_PRESETS.find((p) => p.initialSeconds === snap?.timeInitial && p.incrementSeconds === snap?.timeInc) ?? TIME_PRESETS[4]
+  ); // 5 + 0 default
+  const [playerSide, setPlayerSide] = useState<PieceColor>(snap?.playerSide ?? 'w');
 
   // Theme & Audio customization
   const [paletteId, setPaletteId] = useState<BoardPaletteId>('noob_neon');
@@ -84,11 +99,11 @@ export const ChessGame: React.FC<ChessGameProps> = ({
   const currentUser: PlayerInfo = { id: userId, username, profilePicture };
 
   // Active game engine & board
-  const [engine, setEngine] = useState<ChessEngine>(() => new ChessEngine());
-  const [boardOrientation, setBoardOrientation] = useState<PieceColor>('w');
+  const [engine, setEngine] = useState<ChessEngine>(() => (snap ? new ChessEngine(snap.fen) : new ChessEngine()));
+  const [boardOrientation, setBoardOrientation] = useState<PieceColor>(snap?.boardOrientation ?? 'w');
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
-  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(snap?.lastMove ?? null);
+  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>(snap?.moveHistory ?? []);
 
   // Players
   const [whitePlayer, setWhitePlayer] = useState<PlayerInfo>(currentUser);
@@ -98,13 +113,13 @@ export const ChessGame: React.FC<ChessGameProps> = ({
   });
 
   // Clocks (in ms)
-  const [whiteTimeMs, setWhiteTimeMs] = useState(300 * 1000);
-  const [blackTimeMs, setBlackTimeMs] = useState(300 * 1000);
+  const [whiteTimeMs, setWhiteTimeMs] = useState(snap?.whiteTimeMs ?? 300 * 1000);
+  const [blackTimeMs, setBlackTimeMs] = useState(snap?.blackTimeMs ?? 300 * 1000);
   const lastTickRef = useRef<number>(Date.now());
   const prevLowTickRef = useRef<number>(0);
 
   // Game outcome
-  const [gameStatus, setGameStatus] = useState<GameStatus>('idle');
+  const [gameStatus, setGameStatus] = useState<GameStatus>(snap ? 'in_progress' : 'idle');
   const [winner, setWinner] = useState<PieceColor | 'draw' | null>(null);
   const [resultReason, setResultReason] = useState<string>('');
   // onGameOver must fire exactly once per match — guards against endGame somehow running twice
@@ -158,6 +173,43 @@ export const ChessGame: React.FC<ChessGameProps> = ({
     },
     [mode, playerSide, timePreset, aiDifficulty, username, profilePicture, currentUser]
   );
+
+  // Put the player names back for a restored game (the same thing startGame sets up).
+  useEffect(() => {
+    if (!snap) return;
+    if (mode === 'local_2p') {
+      setWhitePlayer({ id: 'player_1', username: `${username} (P1)`, profilePicture });
+      setBlackPlayer({ id: 'player_2', username: 'Guest (P2)' });
+    } else {
+      const botName = `NOOB AI (${snap.aiDifficulty.toUpperCase()})`;
+      if (snap.playerSide === 'w') {
+        setWhitePlayer(currentUser);
+        setBlackPlayer({ id: 'bot', username: botName });
+      } else {
+        setWhitePlayer({ id: 'bot', username: botName });
+        setBlackPlayer(currentUser);
+      }
+    }
+    lastTickRef.current = Date.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the game saved: after every move, now and then for the clocks, and once more as the page closes. Forgotten when it ends.
+  const latestRef = useRef<ChessSnap | null>(null);
+  latestRef.current = {
+    mode, fen: engine.getFen(), moveHistory, whiteTimeMs, blackTimeMs, playerSide, aiDifficulty,
+    timeInitial: timePreset.initialSeconds, timeInc: timePreset.incrementSeconds, boardOrientation, lastMove
+  };
+  useEffect(() => {
+    if (!resumeUserId) return;
+    if (inSetup || gameStatus === 'idle') return;
+    if (gameStatus !== 'in_progress') { clearGameSnapshot(resumeUserId, 'chess_blitz'); return; }
+    saveGameSnapshot(resumeUserId, 'chess_blitz', latestRef.current);
+    const every = setInterval(() => { if (latestRef.current) saveGameSnapshot(resumeUserId, 'chess_blitz', latestRef.current); }, 5000);
+    const onHide = () => { if (latestRef.current) saveGameSnapshot(resumeUserId, 'chess_blitz', latestRef.current); };
+    window.addEventListener('pagehide', onHide);
+    return () => { clearInterval(every); window.removeEventListener('pagehide', onHide); };
+  }, [inSetup, gameStatus, moveHistory.length]);
 
   // Timer loop
   useEffect(() => {

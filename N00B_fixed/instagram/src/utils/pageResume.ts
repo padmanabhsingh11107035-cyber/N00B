@@ -5,9 +5,9 @@
 // Everything is kept on the person's own device (localStorage), for the account that was signed in, and only for 12 hours.
 // Logging out clears it. A page that gets closed normally clears itself, so the next time it opens fresh.
 
-export type ResumePage = 'daily' | 'rooms' | 'song' | 'lounge' | 'store' | 'food' | 'ai' | 'support' | 'suggestions';
+export type ResumePage = 'daily' | 'rooms' | 'song' | 'lounge' | 'store' | 'food' | 'ai' | 'support' | 'suggestions' | 'games';
 
-const PAGES: ResumePage[] = ['daily', 'rooms', 'song', 'lounge', 'store', 'food', 'ai', 'support', 'suggestions'];
+const PAGES: ResumePage[] = ['daily', 'rooms', 'song', 'lounge', 'store', 'food', 'ai', 'support', 'suggestions', 'games'];
 const PAGE_KEY = 'noob.resume.v1';
 const MEETING_KEY = 'noob.lounge.meeting.v1';
 export const RESUME_MAX_AGE_MS = 12 * 60 * 60 * 1000;
@@ -66,6 +66,30 @@ export function writeResumeField(userId: string, page: ResumePage, field: string
   const s = readSaved();
   if (!fresh(s, userId, now) || s.page !== page) return;
   writeSaved({ ...s, at: now, fields: { ...s.fields, [field]: value } });
+}
+
+// Forget the open page, but only if it is still this one (a page being closed must not wipe the next page that already opened).
+export function clearResumePageIf(userId: string, page: ResumePage, now = Date.now()): void {
+  const s = readSaved();
+  if (s && s.userId === userId && s.page === page) writeSaved(null);
+  void now;
+}
+
+// --- Games: a game in progress (board, score, whose turn...) is kept as one "snapshot" per game, inside the Games page's bucket.
+// A snapshot is only ever read back by the same account within 12 hours, and a game clears its own when it ends.
+
+export function loadGameSnapshot<T>(userId: string | undefined, gameId: string, now = Date.now()): T | null {
+  if (!userId) return null;
+  const v = readResumeField<T>(userId, 'games', `snap:${gameId}`, now);
+  return v === undefined || v === null ? null : v;
+}
+
+export function saveGameSnapshot(userId: string | undefined, gameId: string, value: unknown, now = Date.now()): void {
+  if (userId) writeResumeField(userId, 'games', `snap:${gameId}`, value, now);
+}
+
+export function clearGameSnapshot(userId: string | undefined, gameId: string, now = Date.now()): void {
+  if (userId) writeResumeField(userId, 'games', `snap:${gameId}`, null, now);
 }
 
 // --- Live Lounge meeting

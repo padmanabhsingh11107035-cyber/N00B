@@ -1,6 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface RockPaperScissorsGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   opponentName?: string;
   bestOf?: number;
@@ -41,11 +44,14 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
   opponentName = 'AI Bot',
   bestOf = 3,
   vsBot = true,
-  difficulty
+  difficulty,
+  resumeUserId
 }) => {
+  // A refresh keeps the score of the match (a round that was only half played starts again).
+  const [snap] = useState(() => loadGameSnapshot<{ playerScore: number; opponentScore: number }>(resumeUserId, 'rps'));
   const playerHistory = useRef<string[]>([]);
-  const [playerScore, setPlayerScore] = useState(0);
-  const [opponentScore, setOpponentScore] = useState(0);
+  const [playerScore, setPlayerScore] = useState(snap?.playerScore ?? 0);
+  const [opponentScore, setOpponentScore] = useState(snap?.opponentScore ?? 0);
   const [playerChoice, setPlayerChoice] = useState<typeof CHOICES[0] | null>(null);
   const [opponentChoice, setOpponentChoice] = useState<typeof CHOICES[0] | null>(null);
   const [roundResult, setRoundResult] = useState<string | null>(null);
@@ -54,6 +60,11 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
 
   const targetWins = Math.ceil(bestOf / 2);
   const matchOver = playerScore >= targetWins || opponentScore >= targetWins;
+  useEffect(() => {
+    if (!resumeUserId) return;
+    if (matchOver) clearGameSnapshot(resumeUserId, 'rps');
+    else if (!isRevealing && !awaitingPlayer2) saveGameSnapshot(resumeUserId, 'rps', { playerScore, opponentScore });
+  }, [playerScore, opponentScore, isRevealing, awaitingPlayer2, matchOver]);
 
   const resolveRound = (p1: typeof CHOICES[0], p2: typeof CHOICES[0]) => {
     setOpponentChoice(p2);

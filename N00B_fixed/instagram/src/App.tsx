@@ -76,6 +76,7 @@ import { IncomingCallModal } from './components/Chat/IncomingCallModal';
 import { useIncomingCalls } from './components/Chat/useIncomingCalls';
 import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
+import { takeRestorePage } from './utils/pageResume';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GamesView } from './components/Games/GamesView';
 import { MusicHubView } from './components/Music/MusicHubView';
@@ -146,6 +147,13 @@ export default function App() {
   }, [activeTab]);
   const [chatConversationOpenOnMobile, setChatConversationOpenOnMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Refresh / reopened app while on the Games page: go straight back to it (with the game that was open, see utils/pageResume.ts).
+  // Decided once, as soon as the account is known and before the home screen is ever drawn.
+  const restoredTabRef = useRef(false);
+  if (currentUser && !restoredTabRef.current) {
+    restoredTabRef.current = true;
+    if (takeRestorePage(currentUser.id) === 'games') setActiveTab('games');
+  }
   // Mounted app-wide (not inside ChatView) so an incoming call reaches someone no matter which tab
   // they're currently on — a hook, so it must be called unconditionally, before any early return
   // below. It internally no-ops until currentUser is actually set.

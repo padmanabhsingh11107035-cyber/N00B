@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 import { Bot, User as UserIcon, Landmark } from 'lucide-react';
 import { AnimatedDice } from '../AnimatedDice';
 
 interface MonopolyGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   // 'bot' (default): obviously just you vs bots — no per-slot toggle shown.
   // 'pass_play': multiple humans sharing this device — slots default to
@@ -91,27 +94,42 @@ const SPECIAL_STYLE: Record<string, { icon: string; color: string }> = {
   go_to_jail: { icon: '🚔', color: '#dc2626' }
 };
 
-export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount, difficulty = 'normal' }) => {
-  const [phase, setPhase] = useState<'setup' | 'playing'>('setup');
-  const [numPlayers, setNumPlayers] = useState(initialPlayerCount || 2);
+export const MonopolyGame: React.FC<MonopolyGameProps> = ({ onGameOver, entryMode = 'bot', initialPlayerCount, difficulty = 'normal', resumeUserId }) => {
+  // A refresh puts everything back: cash, owned streets, positions, jail turns and whose turn it is.
+  type Snap = {
+    numPlayers: number; playerTypes: ('human' | 'bot')[]; cash: number[]; positions: number[]; owned: Record<number, number>; bankrupt: boolean[];
+    inJail: number[]; currentPlayer: number; diceValue: number | null; diceFaces: [number, number] | null; log: string; pendingBuy: number | null; turnCount: number;
+  };
+  const [snap] = useState(() => loadGameSnapshot<Snap>(resumeUserId, 'monopoly_noob'));
+  const [phase, setPhase] = useState<'setup' | 'playing'>(snap ? 'playing' : 'setup');
+  const [numPlayers, setNumPlayers] = useState(snap?.numPlayers ?? (initialPlayerCount || 2));
   const [playerTypes, setPlayerTypes] = useState<('human' | 'bot')[]>(() => {
+    if (snap) return snap.playerTypes;
     const n = initialPlayerCount || 2;
     return Array.from({ length: n }, (_, i) => (i === 0 ? 'human' : entryMode === 'pass_play' ? 'human' : 'bot'));
   });
-  const [cash, setCash] = useState<number[]>([]);
-  const [positions, setPositions] = useState<number[]>([]);
-  const [owned, setOwned] = useState<Record<number, number>>({}); // squareIndex -> playerIndex
-  const [bankrupt, setBankrupt] = useState<boolean[]>([]);
-  const [inJail, setInJail] = useState<number[]>([]); // turns remaining in jail per player
-  const [currentPlayer, setCurrentPlayer] = useState(0);
-  const [diceValue, setDiceValue] = useState<number | null>(null);
-  const [diceFaces, setDiceFaces] = useState<[number, number] | null>(null);
+  const [cash, setCash] = useState<number[]>(snap?.cash ?? []);
+  const [positions, setPositions] = useState<number[]>(snap?.positions ?? []);
+  const [owned, setOwned] = useState<Record<number, number>>(snap?.owned ?? {}); // squareIndex -> playerIndex
+  const [bankrupt, setBankrupt] = useState<boolean[]>(snap?.bankrupt ?? []);
+  const [inJail, setInJail] = useState<number[]>(snap?.inJail ?? []); // turns remaining in jail per player
+  const [currentPlayer, setCurrentPlayer] = useState(snap?.currentPlayer ?? 0);
+  const [diceValue, setDiceValue] = useState<number | null>(snap?.diceValue ?? null);
+  const [diceFaces, setDiceFaces] = useState<[number, number] | null>(snap?.diceFaces ?? null);
   const [isRolling, setIsRolling] = useState(false);
-  const [log, setLog] = useState('');
-  const [pendingBuy, setPendingBuy] = useState<number | null>(null);
+  const [log, setLog] = useState(snap?.log ?? '');
+  const [pendingBuy, setPendingBuy] = useState<number | null>(snap?.pendingBuy ?? null);
   const [winner, setWinner] = useState<number | null>(null);
-  const [turnCount, setTurnCount] = useState(0);
+  const [turnCount, setTurnCount] = useState(snap?.turnCount ?? 0);
   const hasReported = useRef(false);
+
+  // Saved at a calm moment: between turns, or while waiting for the "buy this street?" answer (never in the middle of a roll).
+  useEffect(() => {
+    if (!resumeUserId || phase !== 'playing') return;
+    if (winner !== null) { clearGameSnapshot(resumeUserId, 'monopoly_noob'); return; }
+    if (isRolling || (diceValue !== null && pendingBuy === null)) return;
+    saveGameSnapshot(resumeUserId, 'monopoly_noob', { numPlayers, playerTypes, cash, positions, owned, bankrupt, inJail, currentPlayer, diceValue, diceFaces, log, pendingBuy, turnCount });
+  }, [phase, cash, positions, owned, bankrupt, inJail, currentPlayer, diceValue, isRolling, pendingBuy, winner, turnCount]);
 
   const updatePlayerCount = (n: number) => {
     setNumPlayers(n);

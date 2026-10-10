@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw } from 'lucide-react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface MemoryMatchGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
 }
 
@@ -14,14 +17,23 @@ interface CardItem {
   isMatched: boolean;
 }
 
-export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onGameOver }) => {
-  const [cards, setCards] = useState<CardItem[]>([]);
+export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onGameOver, resumeUserId }) => {
+  // A refresh puts the same cards back: the matched pairs stay matched, and a pair that was half-turned goes face down again.
+  const [snap] = useState(() => loadGameSnapshot<{ cards: CardItem[]; flipsCount: number; matchesFound: number }>(resumeUserId, 'memory_match'));
+  const [cards, setCards] = useState<CardItem[]>(() => (snap?.cards ? snap.cards.map((c) => ({ ...c, isFlipped: c.isMatched })) : []));
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
-  const [flipsCount, setFlipsCount] = useState(0);
-  const [matchesFound, setMatchesFound] = useState(0);
+  const [flipsCount, setFlipsCount] = useState(snap?.flipsCount ?? 0);
+  const [matchesFound, setMatchesFound] = useState(snap?.matchesFound ?? 0);
   const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
+    if (!resumeUserId || cards.length === 0) return;
+    if (matchesFound >= ICONS.length) clearGameSnapshot(resumeUserId, 'memory_match');
+    else saveGameSnapshot(resumeUserId, 'memory_match', { cards: cards.map((c) => ({ ...c, isFlipped: c.isMatched })), flipsCount, matchesFound });
+  }, [cards, flipsCount, matchesFound]);
+
+  useEffect(() => {
+    if (snap?.cards?.length) return;
     // Generate 12 shuffled cards (6 pairs)
     const deck: CardItem[] = [...ICONS, ...ICONS]
       .sort(() => Math.random() - 0.5)

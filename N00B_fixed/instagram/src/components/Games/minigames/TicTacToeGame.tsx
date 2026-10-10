@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 import { Bot, User as UserIcon, Users } from 'lucide-react';
 
 interface TicTacToeGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   opponentName?: string;
   // false = Pass and Play: the second tap on the board is a real human
@@ -92,15 +95,49 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
   opponentName = 'AI Bot',
   vsBot = true,
   gamesPlayedCount = 9999,
-  difficulty
+  difficulty,
+  resumeUserId
 }) => {
   const imperfectChance = difficulty
     ? IMPERFECT_CHANCE_BY_DIFFICULTY[difficulty]
     : imperfectChanceForExperience(gamesPlayedCount);
-  const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
-  const [currentTurn, setCurrentTurn] = useState<'X' | 'O'>('X');
+  // A refresh / reopened app puts the board back as it was (see utils/pageResume.ts).
+  const [snap] = useState(() => loadGameSnapshot<{ board: Cell[]; currentTurn: 'X' | 'O' }>(resumeUserId, 'tictactoe'));
+  const [board, setBoard] = useState<Cell[]>(snap?.board ?? Array(9).fill(null));
+  const [currentTurn, setCurrentTurn] = useState<'X' | 'O'>(snap?.currentTurn ?? 'X');
   const [winner, setWinner] = useState<'X' | 'O' | 'Tie' | null>(null);
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
+
+  useEffect(() => {
+    if (!resumeUserId) return;
+    if (winner) clearGameSnapshot(resumeUserId, 'tictactoe');
+    else saveGameSnapshot(resumeUserId, 'tictactoe', { board, currentTurn });
+  }, [board, currentTurn, winner]);
+
+  // The bot's move after the human's (also used when the app was closed in the middle of the bot's turn).
+  const playBotTurn = (fromBoard: Cell[]) => {
+    setTimeout(() => {
+      const botIndex = pickBotMove(fromBoard, 'O', imperfectChance);
+      const afterBot = [...fromBoard];
+      afterBot[botIndex] = 'O';
+      setBoard(afterBot);
+
+      const botResult = checkWinner(afterBot);
+      if (botResult) {
+        setWinner(botResult.winner);
+        setWinningLine(botResult.line);
+        setTimeout(() => {
+          onGameOver(botResult.winner === 'Tie' ? 'tie' : 'loss', botResult.winner === 'Tie' ? 50 : 0);
+        }, 700);
+      } else {
+        setCurrentTurn('X');
+      }
+    }, 450);
+  };
+  useEffect(() => {
+    if (snap && vsBot && snap.currentTurn === 'O' && !winner) playBotTurn(snap.board);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCellClick = (index: number) => {
     if (board[index] || winner) return;
@@ -133,25 +170,7 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
     const nextTurn = currentTurn === 'X' ? 'O' : 'X';
     setCurrentTurn(nextTurn);
 
-    if (vsBot && nextTurn === 'O') {
-      setTimeout(() => {
-        const botIndex = pickBotMove(newBoard, 'O', imperfectChance);
-        const afterBot = [...newBoard];
-        afterBot[botIndex] = 'O';
-        setBoard(afterBot);
-
-        const botResult = checkWinner(afterBot);
-        if (botResult) {
-          setWinner(botResult.winner);
-          setWinningLine(botResult.line);
-          setTimeout(() => {
-            onGameOver(botResult.winner === 'Tie' ? 'tie' : 'loss', botResult.winner === 'Tie' ? 50 : 0);
-          }, 700);
-        } else {
-          setCurrentTurn('X');
-        }
-      }, 450);
-    }
+    if (vsBot && nextTurn === 'O') playBotTurn(newBoard);
   };
 
   const opponentLabel = vsBot ? opponentName : 'Player 2';

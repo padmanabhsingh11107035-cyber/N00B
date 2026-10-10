@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Zap, Clock } from 'lucide-react';
+import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface SpeedMathGameProps {
+  // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
+  resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
   targetScore?: number;
 }
@@ -14,12 +17,20 @@ interface MathQuestion {
 
 export const SpeedMathGame: React.FC<SpeedMathGameProps> = ({
   onGameOver,
-  targetScore = 6
+  targetScore = 6,
+  resumeUserId
 }) => {
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(20);
-  const [currentQ, setCurrentQ] = useState<MathQuestion | null>(null);
-  const [streak, setStreak] = useState(0);
+  // A refresh carries on with the same score, question and the seconds that were left.
+  const [snap] = useState(() => loadGameSnapshot<{ score: number; timeLeft: number; currentQ: MathQuestion | null; streak: number }>(resumeUserId, 'speed_math'));
+  const [score, setScore] = useState(snap?.score ?? 0);
+  const [timeLeft, setTimeLeft] = useState(snap?.timeLeft ?? 20);
+  const [currentQ, setCurrentQ] = useState<MathQuestion | null>(snap?.currentQ ?? null);
+  const [streak, setStreak] = useState(snap?.streak ?? 0);
+  useEffect(() => {
+    if (!resumeUserId) return;
+    if (timeLeft <= 0 || score >= targetScore) clearGameSnapshot(resumeUserId, 'speed_math');
+    else saveGameSnapshot(resumeUserId, 'speed_math', { score, timeLeft, currentQ, streak });
+  }, [score, timeLeft, currentQ, streak]);
 
   const generateQuestion = (): MathQuestion => {
     const ops = ['+', '-', '×'];
@@ -56,7 +67,7 @@ export const SpeedMathGame: React.FC<SpeedMathGameProps> = ({
   };
 
   useEffect(() => {
-    setCurrentQ(generateQuestion());
+    if (!snap?.currentQ) setCurrentQ(generateQuestion());
   }, []);
 
   useEffect(() => {

@@ -17,9 +17,8 @@ const DIFFICULTY_LEVEL: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3 }
 
 interface GamePosterCarouselProps {
   game: MiniGameMeta;
-  // Cycles through the slides on a continuous loop at this interval — on by default (500ms) in both
-  // the gallery card and the game's own detail page. A manual swipe/dot-tap/arrow-key just jumps to
-  // that slide; the loop keeps going from wherever it's left.
+  // Cycles through the slides on its own at this interval. OFF by default: the picture on a game stays the game's own
+  // artwork and does not keep changing. Swipe / dot-tap / arrow keys (where shown) still move through the slides by hand.
   autoAdvanceMs?: number;
   // The gallery card wraps this whole thing in its own "tap to open the game" handler, so swipe and
   // the dot indicators are turned off there — they'd otherwise fight the card's own tap/scroll.
@@ -27,7 +26,7 @@ interface GamePosterCarouselProps {
   swipeEnabled?: boolean;
 }
 
-export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, autoAdvanceMs = 500, showDots = true, swipeEnabled = true }) => {
+export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, autoAdvanceMs = 0, showDots = true, swipeEnabled = true }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   // Plays one rotate-in transition right when this game's page (the modal) opens, then settles.
   const [justEntered, setJustEntered] = useState(true);

@@ -18,6 +18,7 @@ import { createE2ee } from '../e2ee/service.ts';
 import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
 import { markSeen, mergeSeen } from '../utils/seenContent';
+import { getDeviceId, getDeviceModel } from '../utils/deviceId';
 
 // ----------------------------------------------------------------------------- plumbing
 
@@ -496,7 +497,20 @@ export async function verifyLoginOtp(payload: { username: string; code: string }
 // out on the phone used to sign the laptop out within the hour.) The note lets other tabs of this browser say why they were signed out.
 export async function logoutUser(): Promise<{ success: boolean }> {
   recordDiag({ kind: 'explicit-logout' });
+  // Mark this device as signed out in the account's device list / login history while the session is
+  // still valid. Best-effort and time-boxed: it must never hold up or break the logout itself.
+  selfEndingLogin = true;
+  try {
+    await Promise.race([
+      rpc('end_login', { p_device_id: getDeviceId(), p_reason: 'logout' }).catch(() => undefined),
+      new Promise((resolve) => setTimeout(resolve, 1500))
+    ]);
+  } catch {
+    // ignore
+  }
   await supabase.auth.signOut({ scope: 'local' });
+  // The row update above also reaches this device's own "was I logged out remotely?" listener; ignore that echo.
+  setTimeout(() => { selfEndingLogin = false; }, 5000);
   return { success: true };
 }
 
@@ -513,6 +527,9 @@ export async function requestPostBonusOffer(): Promise<{ available: boolean; amo
 }
 
 // ----------------------------------------------------------------------------- single-device login
+// true while this device is in the middle of signing itself out (see logoutUser).
+let selfEndingLogin = false;
+
 export interface ActiveDeviceSession {
   deviceId: string;
   label: string;
@@ -527,6 +544,12 @@ export interface ActiveDeviceSession {
 export async function checkAndRegisterDevice(deviceId: string, deviceLabel: string): Promise<{ conflict: boolean; devices: ActiveDeviceSession[] }> {
   try {
     const res = await rpc<{ conflict: boolean; devices?: ActiveDeviceSession[] }>('upsert_device_session', { p_device_id: deviceId, p_device_label: deviceLabel });
+    if (!res.conflict) {
+      // Accepted: note it in the login history (best-effort — older databases without it just skip this).
+      void getDeviceModel()
+        .then((model) => rpc('record_login', { p_device_id: deviceId, p_device_label: deviceLabel, p_device_model: model }))
+        .catch(() => undefined);
+    }
     return { conflict: !!res.conflict, devices: res.devices || [] };
   } catch {
     // Can't reach the device check — fail OPEN (let the person in) rather than locking everyone out
@@ -538,9 +561,39 @@ export async function checkAndRegisterDevice(deviceId: string, deviceLabel: stri
 // Self-service: revoke one of THIS account's own other devices — never anyone else's.
 export async function revokeDeviceSession(deviceId: string): Promise<{ success: boolean }> {
   try {
-    return await rpc('revoke_device_session', { p_device_id: deviceId });
+    const res = await rpc<{ success: boolean }>('revoke_device_session', { p_device_id: deviceId });
+    void rpc('end_login', { p_device_id: deviceId, p_reason: 'removed' }).catch(() => undefined);
+    return res;
   } catch {
     return { success: false };
+  }
+}
+
+export interface ActiveDevice {
+  deviceId: string;
+  label: string;
+  model?: string | null;
+  loggedInAt: string;
+  lastSeenAt: string;
+}
+export interface LoginHistoryEntry {
+  id: string;
+  deviceId: string;
+  label?: string | null;
+  model?: string | null;
+  loggedInAt: string;
+  loggedOutAt?: string | null;
+  endReason?: 'logout' | 'removed' | 'replaced' | null;
+}
+
+// The devices signed in right now, plus the recent login history. null = couldn't load (offline, or
+// the database update that adds this hasn't been applied yet).
+export async function fetchMyDevices(): Promise<{ active: ActiveDevice[]; history: LoginHistoryEntry[] } | null> {
+  try {
+    const res = await rpc<{ active?: ActiveDevice[]; history?: LoginHistoryEntry[] }>('my_devices');
+    return { active: res?.active || [], history: res?.history || [] };
+  } catch {
+    return null;
   }
 }
 
@@ -559,6 +612,7 @@ export function subscribeToDeviceRevoked(deviceId: string, userId: string, onRev
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'device_sessions', filter: `device_id=eq.${deviceId}` },
       (payload) => {
         const row = payload.new as any;
+        if (selfEndingLogin) return; // this device just signed itself out — not a remote logout
         if (row?.revoked_at && row?.user_id === userId) onRevoked();
       })
     .subscribe();

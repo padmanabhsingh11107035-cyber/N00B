@@ -178,8 +178,8 @@ export const EncryptionSettingsModal: React.FC<EncryptionSettingsModalProps> = (
           ) : (
             <>
               <section className="space-y-2">
-                <div className="text-[11px] font-black text-white uppercase tracking-wider">My devices</div>
-                {status.devices.map((d) => (
+                <div className="text-[11px] font-black text-white uppercase tracking-wider">Chat key devices</div>
+                {status.devices.filter((d) => d.active).map((d) => (
                   <div key={d.kid} className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
                     <Smartphone className="w-4 h-4 text-zinc-400 shrink-0" />
                     <div className="flex-1 min-w-0">

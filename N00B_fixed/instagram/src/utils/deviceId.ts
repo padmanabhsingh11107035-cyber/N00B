@@ -42,3 +42,51 @@ export function getDeviceLabel(): string {
   const standalone = (navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   return standalone ? `NOOB app on ${device}` : `${browser} on ${device}`;
 }
+
+let cachedModel: Promise<string> | null = null;
+
+// The best "model name" a web page is allowed to learn. Android Chrome can reveal the phone model
+// (e.g. "SM-S918B", "Pixel 7"); Apple never exposes iPhone/iPad models to a browser, so those show
+// the device family and iOS version instead; computers show their OS.
+export function getDeviceModel(): Promise<string> {
+  if (!cachedModel) {
+    cachedModel = (async () => {
+      const ua = navigator.userAgent || '';
+      let model = '';
+      let platformVersion = '';
+      try {
+        const uaData = (navigator as any).userAgentData;
+        if (uaData?.getHighEntropyValues) {
+          const hv = await uaData.getHighEntropyValues(['model', 'platformVersion']);
+          model = String(hv?.model || '').trim();
+          platformVersion = String(hv?.platformVersion || '').trim();
+        }
+      } catch {
+        // not available — fall back to the user-agent text below
+      }
+
+      if (/android/i.test(ua)) {
+        if (!model) {
+          const m = ua.match(/Android [\d.]+; ([^;)]+?)(?: Build|\)|;)/i);
+          if (m && m[1].trim().length > 1) model = m[1].trim();
+        }
+        const ver = ua.match(/Android ([\d.]+)/i)?.[1];
+        return model ? `${model}${ver ? ` · Android ${ver}` : ''}` : `Android phone${ver ? ` · Android ${ver}` : ''}`;
+      }
+      if (/iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        const family = /ipad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iPad' : 'iPhone';
+        const v = ua.match(/OS (\d+)[_.](\d+)/i);
+        return v ? `${family} · iOS ${v[1]}.${v[2]}` : family;
+      }
+      if (/windows/i.test(ua)) {
+        const major = parseInt(platformVersion.split('.')[0] || '', 10);
+        return major >= 13 ? 'Windows 11 PC' : major > 0 ? 'Windows 10 PC' : 'Windows PC';
+      }
+      if (/macintosh/i.test(ua)) return 'Mac';
+      if (/cros/i.test(ua)) return 'Chromebook';
+      if (/linux/i.test(ua)) return 'Linux PC';
+      return 'Unknown device';
+    })();
+  }
+  return cachedModel;
+}

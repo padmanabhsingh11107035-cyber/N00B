@@ -104,6 +104,7 @@ import { HideProfileModal } from '../Modals/HideProfileModal';
 import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
 import { Globe as GlobeIcon, KeyRound } from 'lucide-react';
 import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
+import { DevicesModal } from './DevicesModal';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
@@ -260,6 +261,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showSwitchAccount, setShowSwitchAccount] = useState(false);
   const [showEncryptionSettings, setShowEncryptionSettings] = useState(false);
+  const [showDevices, setShowDevices] = useState(false);
   const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
@@ -675,12 +677,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </button>
 
-              {/* Own account: chat encryption keys & backup */}
+              {/* Own account: signed-in devices and login history (with a way on to the chat encryption keys) */}
               {isOwnProfile && (
                 <button
                   onClick={() => {
                     setShowThreeDotsMenu(false);
-                    setShowEncryptionSettings(true);
+                    setShowDevices(true);
                   }}
                   className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
                 >
@@ -689,7 +691,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">My devices</span>
-                    <span className="text-[10px] text-zinc-400 block truncate">Chat encryption keys and backup</span>
+                    <span className="text-[10px] text-zinc-400 block truncate">Signed-in devices and login history</span>
                   </div>
                 </button>
               )}
@@ -1919,6 +1921,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         />
       )}
       {showSwitchAccount && <SwitchAccountModal onClose={() => setShowSwitchAccount(false)} />}
+      {showDevices && (
+        <DevicesModal
+          onClose={() => setShowDevices(false)}
+          onOpenEncryption={() => {
+            setShowDevices(false);
+            setShowEncryptionSettings(true);
+          }}
+        />
+      )}
       {showEncryptionSettings && <EncryptionSettingsModal onClose={() => setShowEncryptionSettings(false)} />}
 
       {showBlockedAccountsModal && (

@@ -51,6 +51,10 @@ const j = (v) => JSON.stringify(v);
 section('1. Sign-up');
 const good = { firstName: 'Test', lastName: 'Person', username: 'Brand_New.User', email: 'new@example.com', mobileNumber: '9000000000', dateOfBirth: '2005-05-05', password: 'secret123', bio: 'hello', avatar: 'avatars/test-signup.jpg', agreedToTerms: true };
 const chk = (o) => asAnon(db, async () => (await db.query('select public.check_signup($1::jsonb) r', [j(o)])).rows[0].r);
+// Since 20260929000012 a sign-up needs an email the person has already verified with a code (a row in signup_otps).
+const verifyEmail = (email) => db.query(`insert into signup_otps (email, code_hash, verified_at, expires_at) values (lower($1), 'x', now(), now() + interval '1 hour')`, [email]);
+check((await chk(good)).error?.startsWith('Please verify your email'), 'an email that has not been verified with a code is refused');
+for (const e of ['new@example.com', 'a@b.co', 'first.last+tag@sub.example.com', 'Weird_But-Valid99@example.io']) await verifyEmail(e);
 check((await chk(good)).ok === true, 'a valid sign-up passes the pre-check');
 check((await chk({ ...good, firstName: '' })).error === 'Please enter your name', 'missing name is refused with the old message');
 check((await chk({ ...good, bio: '  ' })).error.startsWith('Bio is compulsory'), 'bio is compulsory');
@@ -69,6 +73,7 @@ for (const ok of ['a@b.co', 'first.last+tag@sub.example.com', 'Weird_But-Valid99
 {
   const victim = (await db.query('select p.id, pp.email from profiles p join profile_private pp on pp.user_id = p.id where not p.is_admin limit 1')).rows[0];
   await db.query('update profiles set is_suspended = true where id = $1', [victim.id]);
+  await verifyEmail(victim.email);
   const r = await chk({ ...good, email: victim.email });
   check(r.suspended === true, 'a suspended person can NOT sign up again with the same email');
   await db.query('update profiles set is_suspended = false where id = $1', [victim.id]);
@@ -331,7 +336,8 @@ await expectFail(() => run(a, 'update profiles set avatar = $1 where id = $2', [
 await expectFail(() => rpc(a, 'create_post', [{ mediaUrl: big, mediaType: 'image' }], 'x', 'tech', [], null, null), /too large/, 'a huge inline picture in a post is refused');
 check((await run(a, 'update profiles set avatar = $1 where id = $2', ['avatars/normal-key.jpg', a])).affectedRows === 1, 'a normal file key is accepted');
 check((await run(a, 'update profiles set avatar = $1 where id = $2', ['data:image/png;base64,iVBORw0KGgo=', a])).affectedRows === 1, 'a tiny inline image is still fine');
-await expectFail(() => db.query(`insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'big@users.nooob.xyz', $1::jsonb)`, [j({ username: 'bigphoto', avatar: big })]), /too large/, 'a sign-up carrying a huge inline photo is refused');
+await verifyEmail('big@example.com');
+await expectFail(() => db.query(`insert into auth.users (id, email, raw_user_meta_data) values (gen_random_uuid(), 'big@users.nooob.xyz', $1::jsonb)`, [j({ username: 'bigphoto', avatar: big, email: 'big@example.com' })]), /too large/, 'a sign-up carrying a huge inline photo is refused');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

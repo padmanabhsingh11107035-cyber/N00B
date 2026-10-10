@@ -359,7 +359,7 @@ const lb = await rpc(b, 'game_leaderboard');
 check(lb.leaderboard.length === 10 && lb.leaderboard.every((e, i) => e.rank === i + 1) && lb.leaderboard.every((e, i, arr) => i === 0 || arr[i - 1].noobPoints >= e.noobPoints), 'the top 10 are ranked by points');
 check(!lb.leaderboard.some((e) => e.userId === d), 'AI accounts are not on the leaderboard');
 check(lb.leaderboard[0].userId === a && lb.leaderboard[0].noobPoints === 900_000_000_000_000 && lb.leaderboard[0].displayName && 'gamesWon' in lb.leaderboard[0] && 'isVerified' in lb.leaderboard[0] && !('email' in lb.leaderboard[0]), 'each entry has only public details');
-const higher = (await db.query('select count(*)::int n from profiles where not is_ai and noob_points > 800')).rows[0].n;
+const higher = (await db.query(`select count(*)::int n from profiles where not is_ai and lower(username) <> 'noob' and noob_points > 800`)).rows[0].n;   // the official NOOB account is never ranked
 check(lb.currentUserPoints === 800 && lb.currentUserRank === higher + 1, 'you see your own points and rank');
 await expectFail(() => asAnon(db, () => db.query('select public.game_leaderboard()')), /permission denied/, 'a logged-out visitor can not see it');
 
@@ -391,16 +391,13 @@ check((await db.query('select games_played_count, games_won_count from profiles 
 await rpc(a, 'join_game_room', 'ROOM2', 'quiz'); await rpc(b, 'join_game_room', 'ROOM2', 'quiz');
 await rpc(a, 'submit_game_room_result', 'ROOM2', 'win'); const tieRoom = await rpc(b, 'submit_game_room_result', 'ROOM2', 'win');
 check(tieRoom.room.outcome.results[a] === 'tie' && tieRoom.room.outcome.points[a] === 5_000_000 && tieRoom.room.outcome.points[b] === 5_000_000, 'equal results are a tie: 5 million each');
-// chess room stakes
+// Chess Blitz is a live-synced board now (the chess-move Edge Function validates every move and settles the stakes), so the old
+// "each side reports its own result" relay has to refuse it — otherwise anybody could skip real move validation.
 await resetPeople(); await setPts(a, 4000); await setPts(b, 9000);
 await rpc(a, 'start_chess_round'); await rpc(b, 'start_chess_round');
 await rpc(a, 'join_game_room', 'CH1', 'chess_blitz', 'Chess Blitz'); await rpc(b, 'join_game_room', 'CH1', 'chess_blitz', 'Chess Blitz');
-await rpc(a, 'submit_game_room_result', 'CH1', 'win'); const chessDone = await rpc(b, 'submit_game_room_result', 'CH1', 'loss');
-check(chessDone.room.outcome.points[a] === 50_000_000 && chessDone.room.outcome.points[b] === -9000 && (await pts(a)) === 50_004_000 && (await pts(b)) === 0, 'a matched chess game has the real stakes: 50 million to the winner, the loser\'s balance wiped');
-await resetPeople(); await setPts(a, 4000); await setPts(b, 9000);
-await rpc(a, 'join_game_room', 'CH2', 'chess_blitz', 'Chess Blitz'); await rpc(b, 'join_game_room', 'CH2', 'chess_blitz', 'Chess Blitz');
-await rpc(a, 'submit_game_room_result', 'CH2', 'win'); await rpc(b, 'submit_game_room_result', 'CH2', 'loss');
-check((await pts(a)) === 10_004_000 && (await pts(b)) === 9000, 'without having started a round, the chess stakes do NOT apply (no skipping the weekly limit)');
+await expectFail(() => rpc(a, 'submit_game_room_result', 'CH1', 'win'), /live moves/, 'a chess match can no longer be settled by reporting a result');
+check((await pts(a)) === 4000 && (await pts(b)) === 9000, '...and nobody was paid or charged by trying');
 await expectFail(() => call(a, 'select * from game_rooms'), /permission denied/, 'the rooms table is not readable directly');
 await expectFail(() => call(a, `update game_rooms set status = 'finished' where code = 'CH2'`), /permission denied/, 'nor editable');
 
@@ -644,7 +641,9 @@ check((await rpc(a, 'get_vapid_public_key')) === 'BPUBLICKEY123', 'it is read fr
 section('20. The physical-goods store');
 const prod = await rpc(admin, 'create_store_product', { price: 499.5, description: '  A cool T-shirt ', media: [{ type: 'photo', url: 'products/a.jpg' }, { type: 'video', url: 'products/b.mp4' }, { type: 'weird', url: 'products/c.jpg' }], inStock: false });
 check(prod.success && prod.product.price === 499.5 && prod.product.description === 'A cool T-shirt' && prod.product.media.length === 3 && prod.product.media[2].type === 'photo' && prod.product.inStock === false, 'the admin adds a product (odd media types become photos)');
-check((await rpc(b, 'list_store_products')).length === 1 && (await rpc(b, 'list_store_products'))[0].id === prod.product.id, 'everyone can browse the products');
+// (the Food Stall's own items live in the same table; the shop screen filters them out by category, so do the same here)
+const shopItems = async (uid) => (await rpc(uid, 'list_store_products')).filter((x) => x.category !== 'food_stall');
+check((await shopItems(b)).length === 1 && (await shopItems(b))[0].id === prod.product.id, 'everyone can browse the products');
 await expectFail(() => rpc(a, 'create_store_product', { price: 5, description: 'x', media: [{ type: 'photo', url: 'p' }] }), /Only the NOOB admin account can add products/, 'an ordinary user can not add products');
 await expectFail(() => rpc(admin, 'create_store_product', { price: 0, description: 'x', media: [{ type: 'photo', url: 'p' }] }), /valid price/, 'a zero price is refused');
 await expectFail(() => rpc(admin, 'create_store_product', { price: '5', description: 'x', media: [{ type: 'photo', url: 'p' }] }), /valid price/, 'a price that is text is refused');
@@ -657,7 +656,7 @@ await expectFail(() => rpc(admin, 'create_store_product', { price: 5, descriptio
 await expectFail(() => call(a, `insert into store_products (price, description) values (1, 'x')`), /permission denied/, 'nobody can write products straight into the table');
 await expectFail(() => rpc(a, 'delete_store_product', prod.product.id), /Only the NOOB admin account can manage products/, 'an ordinary user can not delete products');
 await expectFail(() => rpc(admin, 'delete_store_product', '00000000-0000-0000-0000-000000000001'), /Product not found/, 'an unknown product is refused');
-check((await rpc(admin, 'delete_store_product', prod.product.id)).success && (await rpc(b, 'list_store_products')).length === 0, 'the admin can remove a product');
+check((await rpc(admin, 'delete_store_product', prod.product.id)).success && (await shopItems(b)).length === 0, 'the admin can remove a product');
 
 // =====================================================================================
 section('21. A creator\'s own insights');

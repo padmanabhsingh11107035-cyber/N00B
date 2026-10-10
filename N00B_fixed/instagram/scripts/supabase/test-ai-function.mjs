@@ -27,7 +27,7 @@ export function createClient(url, key, opts) {
   };
 }
 `);
-const src = fs.readFileSync(path.join('supabase', 'functions', 'ai', 'index.ts'), 'utf8').replace("'npm:@supabase/supabase-js@2'", "'./stub-supabase.mjs'");
+const src = fs.readFileSync(path.join('supabase', 'functions', 'dynamic-handler', 'index.ts'), 'utf8').replace("'npm:@supabase/supabase-js@2'", "'./stub-supabase.mjs'");
 fs.writeFileSync(path.join(tmp, 'ai.ts'), src);
 
 let handler = null;
@@ -42,6 +42,8 @@ let reports = [], groqCalls = [], groqPlan = [];
 globalThis.__fake = {
   getUser: async (t) => (PEOPLE[`Bearer ${t}`] ? { data: { user: PEOPLE[`Bearer ${t}`] }, error: null } : { data: { user: null }, error: { message: 'bad jwt' } }),
   rpc: async (auth, fn, args) => {
+    // the shared guest quota (a guest may ask a handful of questions a minute, see the function): always has room in this test
+    if (fn === 'ui_usage_take') return { data: true, error: null };
     if (fn === 'get_my_user') return { data: auth === 'Bearer tok-ana' ? PROFILE : { ...PROFILE, username: 'bob', displayName: 'Bob', gender: 'male' }, error: null };
     if (fn === 'submit_report') {
       reports.push({ auth, args });
@@ -89,10 +91,13 @@ check(bad.status === 400, 'garbage input is refused');
 
 section('2. Quick answers (no AI needed)');
 reset();
+// A bare "hi" no longer gets a canned reply: it goes to the AI like any other message (see the note in the function).
+groqPlan = [{ ok: true, text: 'Hello! How can I help you with NOOB today?' }, { ok: true, text: 'Hi Ana! What can I help you with today?' }];
 let r = await call({ message: 'Hi' }, null);
-check(r.status === 200 && r.json.success && r.json.reply.startsWith('Hey NOOB Explorer!') && r.json.model === 'instant-knowledge-engine' && groqCalls.length === 0, 'a guest saying hi gets an instant greeting');
+check(r.status === 200 && r.json.success && r.json.reply === 'Hello! How can I help you with NOOB today?' && r.json.model === 'groq' && groqCalls.length === 1, 'a guest saying hi gets a real AI answer, not a canned one');
 r = await call({ message: 'hello!' }, 'tok-ana');
-check(r.json.reply === 'Hey Ana! 👋 What can I help you with?', 'a signed-in person is greeted by name');
+check(r.json.reply === 'Hi Ana! What can I help you with today?' && r.json.user.displayName === 'Ana' && groqCalls.length === 2, 'a signed-in person saying hello also gets a real AI answer');
+reset();
 r = await call({ message: 'Thanks a lot' }, 'tok-ana');
 check(r.json.reply.includes('**Ana**') && r.json.reply.includes('12,345,678 NOOB points') && r.json.reply.includes('**3 posts**') && r.json.reply.includes('Verified') && groqCalls.length === 0, 'thanks gets a warm reply using their real name and numbers');
 check(r.json.user.username === 'ana' && !('email' in r.json.user), 'only public details are sent back about the person');

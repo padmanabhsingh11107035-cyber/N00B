@@ -80,7 +80,7 @@ export function createClient(url, key, opts) {
   };
 }
 `);
-const src = fs.readFileSync(path.join('supabase', 'functions', 'ai', 'index.ts'), 'utf8').replace("'npm:@supabase/supabase-js@2'", "'./stub-supabase.mjs'");
+const src = fs.readFileSync(path.join('supabase', 'functions', 'dynamic-handler', 'index.ts'), 'utf8').replace("'npm:@supabase/supabase-js@2'", "'./stub-supabase.mjs'");
 fs.writeFileSync(path.join(tmp, 'ai.ts'), src);
 
 let handler = null;

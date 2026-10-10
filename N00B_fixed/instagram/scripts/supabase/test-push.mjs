@@ -141,7 +141,7 @@ export function createClient(url, key, opts) {
   return { auth: { getUser: async () => ({ data: { user: null }, error: { message: 'no' } }) }, rpc: async (fn, args) => globalThis.__rpc(fn, args), from: () => { throw new Error('unexpected table access'); } };
 }
 `);
-fs.writeFileSync(path.join(tmp, 'ai.ts'), fs.readFileSync(path.join('supabase', 'functions', 'ai', 'index.ts'), 'utf8').replace("'npm:@supabase/supabase-js@2'", "'./stub-supabase.mjs'"));
+fs.writeFileSync(path.join(tmp, 'ai.ts'), fs.readFileSync(path.join('supabase', 'functions', 'dynamic-handler', 'index.ts'), 'utf8').replace("'npm:@supabase/supabase-js@2'", "'./stub-supabase.mjs'"));
 let handler = null;
 const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'svc', SUPABASE_ANON_KEY: 'anon', VAPID_PRIVATE_KEY: VAPID_PRIV, GROQ_API_KEY: 'gk' };
 globalThis.Deno = { env: { get: (k) => env[k] }, serve: (h) => { handler = h; } };

@@ -276,7 +276,8 @@ check((await run(admin, 'delete from reels where id = $1', [reel3.id])).affected
 
 // =====================================================================================
 section('3. Music');
-const trk = await rpc(a, 'upload_music_track', { title: '  My Song  ', audioUrl: 'music/a.mp3', genre: 'Rock' });
+await expectFail(() => rpc(a, 'upload_music_track', { title: 'No cover', audioUrl: 'music/a.mp3' }), /cover image is required/, 'a track needs a cover image (since 20260930000005)');
+const trk = await rpc(a, 'upload_music_track', { title: '  My Song  ', audioUrl: 'music/a.mp3', genre: 'Rock', coverUrl: 'https://example.com/cover.jpg' });
 check(trk.track.title === 'My Song' && trk.track.uploaderId === a && trk.track.genre === 'Rock' && trk.track.duration === '3:00' && trk.track.artist && trk.track.coverUrl.startsWith('http'), 'a track is uploaded with sensible defaults');
 await expectFail(() => rpc(a, 'upload_music_track', { title: '', audioUrl: 'x' }), /title and audio/, 'a track needs a title and audio');
 check((await rpc(b, 'list_music_tracks')).length === 1, 'everyone sees the track list');

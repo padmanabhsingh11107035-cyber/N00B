@@ -5,6 +5,7 @@ import { fetchComments, addComment, deleteComment, togglePinComment, toggleComme
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type CommentAttachment } from './CommentMediaComposer';
 import confetti from 'canvas-confetti';
+import { AvatarMedia } from '../Common/AvatarMedia';
 
 interface CommentsSheetProps {
   post: Post;
@@ -161,11 +162,12 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
               {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 text-gray-500" />}
             </button>
           )}
-          <img
+          <AvatarMedia
             src={c.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+            isLiveAvatar={c.authorIsLiveAvatar}
+            liveAvatarVideoUrl={c.authorLiveAvatarVideoUrl}
             alt={c.username}
             className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-            referrerPolicy="no-referrer"
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">

@@ -7,9 +7,7 @@ import {
 } from 'lucide-react';
 import { StoreProduct, User } from '../../types';
 import { fetchStoreProducts, placeStoreOrder, getShopDetails, fetchSettings } from '../../services/api';
-import { ProductMediaCarousel } from './ProductMediaCarousel';
 import { OrdersView } from './OrdersView';
-import { ShopMap } from './ShopMap';
 import { FoodHeroMount } from './FoodHeroMount';
 import { formatPrice } from './formatPrice';
 import { loadCart, saveCart, type CartMap } from './cartStorage';
@@ -20,20 +18,8 @@ interface FoodStallViewProps {
   onClose: () => void;
 }
 
-// A static tilt (no running animation) that only reacts on an actual press, via :active — a
-// continuously-running CSS animation on a transform-style:preserve-3d element is a known source of
-// unreliable touch hit-testing on iOS Safari (the first tap can get "eaten" while the browser is
-// mid-recompositing), which is exactly the "need two taps" bug this replaces.
 const CSS = `
 .fs-root button, .fs-root a, .fs-root input[type="checkbox"], .fs-root label{touch-action:manipulation}
-.fs-stage{perspective:1000px}
-.fs-card{transform-style:preserve-3d;transition:transform .2s ease-out}
-.fs-card:active{transform:rotateX(2deg) rotateY(-3deg) scale(.97)}
-.fs-media{transform:translateZ(18px)}
-.fs-chip{transform:translateZ(36px)}
-.fs-tilt-0{transform:rotateX(4deg) rotateY(-6deg)}
-.fs-tilt-1{transform:rotateX(-3deg) rotateY(6deg)}
-.fs-tilt-2{transform:rotateX(5deg) rotateY(4deg)}
 @keyframes fs-pop{0%{transform:scale(1)}35%{transform:scale(1.35)}65%{transform:scale(.92)}100%{transform:scale(1)}}
 .fs-bump{animation:fs-pop .4s ease-out}
 @keyframes fs-toast-in{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -44,70 +30,6 @@ const CSS = `
 
 const FOOD_CATEGORY = 'food_stall';
 const cartStorageId = (userId: string) => `${userId}::food_stall`;
-
-// The Food Stall's own pickup spot — Podar International School's main branch, Chandkheda —
-// deliberately separate from SHOP_LAT/SHOP_LNG in ShopMap.tsx (Shop NOOB's own pickup address);
-// coordinates resolved from OpenStreetMap's own geocoder, not guessed.
-const FOOD_STALL_LAT = 23.1097883;
-const FOOD_STALL_LNG = 72.5906670;
-const FOOD_STALL_ADDRESS =
-  'Podar International School, Behind Vitthal Complex, Opposite Sakaar School, Near Trishala Complex Cross Road, New C.G. Road, Chandkheda, Ahmedabad, Gujarat - 382424';
-
-// The scroll-assembly hero (FoodHeroMount) covers exactly these 5 real products by name — anything
-// else in the food_stall catalog (Bhel, the other Coke sizes) shows in a plain grid below it instead.
-const HERO_COVERED_NAMES = new Set(['Burger', 'Fries', 'Manchurian', 'Coke (Medium Cup)', 'Diet Coke']);
-
-// Defined at module scope (not inside FoodStallView) on purpose: a component declared inside
-// another component's function body is a brand-new function identity every render, so React
-// treats every <Card> as a different component type each time and fully unmounts/remounts the
-// whole product grid (and every ProductMediaCarousel inside it) on every single state change —
-// opening the cart, toggling checkout, anything. That churn is exactly the kind of disruption that
-// can eat a tap on iOS, which is almost certainly why every button on this page needed two taps.
-const FoodCard: React.FC<{
-  product: StoreProduct;
-  name: string;
-  tiltIndex: number;
-  foodStallEnabled: boolean;
-  onAddToCart: (productId: string) => void;
-  children?: React.ReactNode;
-}> = ({ product, name, tiltIndex, foodStallEnabled, onAddToCart, children }) => {
-  const comingSoon = !product.inStock;
-  return (
-    <div className="fs-stage">
-      <div className={`fs-card fs-tilt-${tiltIndex % 3} bg-zinc-900/80 border border-zinc-800 rounded-3xl overflow-hidden ${comingSoon ? 'opacity-70' : ''}`}>
-        <div className="fs-media relative aspect-square">
-          <ProductMediaCarousel media={product.media} />
-          {comingSoon && (
-            <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
-              <span className="bg-black/80 backdrop-blur-md text-amber-300 text-xs font-black px-3 py-1.5 rounded-full border border-amber-400/40">
-                Coming Soon
-              </span>
-            </div>
-          )}
-          <span className="fs-chip absolute top-2 right-2 bg-black/75 backdrop-blur-md text-[#00FF66] text-xs font-black px-2.5 py-1 rounded-full border border-[#00FF66]/30">
-            {formatPrice(product.price)}
-          </span>
-        </div>
-        <div className="p-3 space-y-2">
-          <h3 className="text-sm font-black text-white">{name}</h3>
-          <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-2">{product.description}</p>
-          {children}
-          <button
-            onClick={() => onAddToCart(product.id)}
-            disabled={!foodStallEnabled || comingSoon}
-            className="touch-manipulation w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF66] to-cyan-400 text-black text-xs font-black cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-          >
-            {comingSoon ? 'Coming Soon' : (
-              <>
-                <Plus className="w-3.5 h-3.5" /> Add to Cart
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClose }) => {
   const [products, setProducts] = useState<StoreProduct[]>([]);
@@ -162,7 +84,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
   }, []);
 
   const foodProducts = useMemo(() => products.filter((p) => p.category === FOOD_CATEGORY), [products]);
-  const leftoverProducts = useMemo(() => foodProducts.filter((p) => !HERO_COVERED_NAMES.has(p.name)), [foodProducts]);
 
   const persistCart = (next: CartMap) => {
     setCart(next);
@@ -306,25 +227,6 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
           onOpenOrders={() => setShowMyOrders(true)}
         />
       )}
-
-      <div className="p-3 space-y-3 max-w-md mx-auto">
-        {!loading && leftoverProducts.length > 0 && (
-          <div>
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 px-1">More from the menu</h3>
-            <div className="grid grid-cols-1 gap-3">
-              {leftoverProducts.map((p, i) => (
-                <FoodCard key={p.id} product={p} name={p.name} tiltIndex={i} foodStallEnabled={foodStallEnabled} onAddToCart={addToCart} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
-          <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Find the stall</h3>
-          <ShopMap lat={FOOD_STALL_LAT} lng={FOOD_STALL_LNG} address={FOOD_STALL_ADDRESS} label="NOOB Food Stall" className="w-full h-44 rounded-xl overflow-hidden" />
-          <p className="text-[11px] text-zinc-400 leading-relaxed">{FOOD_STALL_ADDRESS}</p>
-        </div>
-      </div>
 
       {/* Cart drawer */}
       {showCart && (

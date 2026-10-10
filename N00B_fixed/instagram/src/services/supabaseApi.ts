@@ -13,7 +13,7 @@ import { recordDiag } from './authDiag';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
-import { supabase, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
+import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 import { createE2ee } from '../e2ee/service.ts';
 import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
@@ -325,7 +325,7 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
   try {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } }
     });
     return error ? { success: false, error: error.message } : { success: true };
   } catch (err) {
@@ -355,6 +355,74 @@ export async function checkPendingOAuthSignup(): Promise<{ pending: boolean; ema
   } catch {
     return { pending: false };
   }
+}
+
+// A NOOB account that was made with the email Google just confirmed.
+export interface OAuthAccountChoice {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+}
+
+// Logs in as one of those accounts. Google gave this person an empty, temporary login of its own (no NOOB profile); the server
+// checks that the chosen account really was made with the same confirmed email, and hands back a one-time sign-in token for it.
+// The temporary Google login is then dropped from this tab, and the real account takes its place.
+export async function signInToExistingOAuthAccount(accountId: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  const unavailable = 'Could not sign you in right now. Please try again.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'oauth-login-existing', accountId } });
+    if (error) return { success: false, error: await functionError(error, unavailable) };
+    if (!data?.tokenHash) return { success: false, error: data?.error || unavailable };
+    await supabase.auth.signOut({ scope: 'local' }); // leave the temporary Google identity (this tab only)
+    const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
+    if (signInError) return { success: false, error: 'Could not sign you in. Please try again.' };
+    const user = await rpc<any>('get_my_user');
+    if (!user) return { success: false, error: unavailable };
+    return { success: true, user: startChatKeys(mapUser(user)) as User };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
+// What to do with someone who has just come back from "Continue with Google" (or Apple):
+//   signed-in  they already have a NOOB account with that email: they are logged straight into it
+//   choose     more than one NOOB account has that email: they pick which one
+//   new        no NOOB account yet: they fill in the details Google did not give us (the sign-up page)
+//   error      something stopped the automatic login (for example the account is suspended)
+//   none       nothing to do (not signed in, or the account is already set up)
+export type OAuthSignInResult =
+  | { status: 'none' }
+  | { status: 'signed-in'; user: User }
+  | { status: 'choose'; accounts: OAuthAccountChoice[] }
+  | { status: 'new'; email: string; fullName?: string; pictureUrl?: string }
+  | { status: 'error'; error: string };
+
+export async function checkOAuthSignIn(): Promise<OAuthSignInResult> {
+  const pending = await checkPendingOAuthSignup();
+  if (!pending.pending) return { status: 'none' };
+  let accounts: OAuthAccountChoice[] = [];
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'oauth-existing-accounts' } });
+    if (!error && Array.isArray(data?.accounts)) {
+      accounts = data.accounts.map((a: any) => ({
+        id: String(a.id),
+        username: String(a.username || ''),
+        displayName: String(a.displayName || a.username || ''),
+        avatar: resolveMedia(a.avatar)
+      }));
+    }
+  } catch {
+    // the lookup is unavailable: fall through to the sign-up page rather than leaving the person stuck
+  }
+  if (accounts.length === 1) {
+    const res = await signInToExistingOAuthAccount(accounts[0].id);
+    if (res.success && res.user) return { status: 'signed-in', user: res.user };
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined); // drop the temporary Google login: the login screen is clean again
+    return { status: 'error', error: res.error || 'Could not sign you in.' };
+  }
+  if (accounts.length > 1) return { status: 'choose', accounts };
+  return { status: 'new', email: pending.email || '', fullName: pending.fullName, pictureUrl: pending.pictureUrl };
 }
 
 export type OAuthSignupPayload = Omit<SignupPayload, 'password'>;
@@ -499,12 +567,18 @@ export async function logoutUser(): Promise<{ success: boolean }> {
   recordDiag({ kind: 'explicit-logout' });
   // Mark this device as signed out in the account's device list / login history while the session is
   // still valid. Best-effort and time-boxed: it must never hold up or break the logout itself.
+  // If this same account is still logged in from the other context on this device (the installed app while this is the
+  // browser, or the other way round), the device stays registered: ending it would log that other one out too.
   selfEndingLogin = true;
   try {
-    await Promise.race([
-      rpc('end_login', { p_device_id: getDeviceId(), p_reason: 'logout' }).catch(() => undefined),
-      new Promise((resolve) => setTimeout(resolve, 1500))
-    ]);
+    const { data: current } = await supabase.auth.getSession();
+    const accountId = current.session?.user.id;
+    if (!(accountId && tabSessions.hasLoginInOtherContext(accountId))) {
+      await Promise.race([
+        rpc('end_login', { p_device_id: getDeviceId(), p_reason: 'logout' }).catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, 1500))
+      ]);
+    }
   } catch {
     // ignore
   }

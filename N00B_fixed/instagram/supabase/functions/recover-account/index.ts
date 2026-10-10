@@ -17,6 +17,8 @@
 // The database (check_signup / handle_new_user) still refuses to create any account at all unless that specific email was verified
 // in the last 30 minutes, so this can't be bypassed by calling auth.signUp() directly either.
 //
+// (actions: "oauth-existing-accounts" / "oauth-login-existing") "Continue with Google" for someone who already has a NOOB account
+// made with that email: signs them straight into it, no new account and no code to type.
 // (action: "oauth-complete-signup") "Sign in with Google": that OAuth redirect already made a real,
 // logged-in auth.users row with no NOOB profile on it yet — this proves the email the same way
 // (signup_otp_verify, same as above) and then writes the profile itself (complete_oauth_profile),
@@ -63,6 +65,39 @@ async function issueSignInToken(admin: ReturnType<typeof createClient>, userId: 
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email: found.user.email });
   const tokenHash = link?.properties?.hashed_token;
   return linkErr || !tokenHash ? null : tokenHash;
+}
+
+// "Continue with Google" for someone who ALREADY has a NOOB account. The Google sign-in itself created a brand-new, empty login
+// (no NOOB profile); the person's real account is a different login, found by the email address on it. This reads who the caller
+// is from their own Google session (its bearer token) and only trusts an email address the provider has confirmed.
+async function oauthCaller(admin: ReturnType<typeof createClient>, req: Request) {
+  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return null;
+  const { data } = await admin.auth.getUser(token);
+  const user = data?.user;
+  if (!user) return null;
+  const providers: string[] = Array.isArray(user.app_metadata?.providers)
+    ? user.app_metadata.providers
+    : [String(user.app_metadata?.provider || '')];
+  const email = String(user.email || '').trim().toLowerCase();
+  const trusted = providers.some((x) => x === 'google' || x === 'apple') && !!user.email_confirmed_at && email.includes('@');
+  return { id: user.id, email, trusted };
+}
+
+// The NOOB accounts that were made with this (provider-confirmed) email, other than the caller's own empty Google login.
+// A real email may be on more than one NOOB account (that is allowed), so this can be a list.
+async function accountsForEmail(admin: ReturnType<typeof createClient>, email: string, exceptId: string) {
+  const { data: rows } = await admin.from('profile_private').select('user_id').in('email', [email, email.toUpperCase()]);
+  const ids = Array.from(new Set((rows || []).map((r: any) => String(r.user_id)).filter((id: string) => id && id !== exceptId)));
+  if (ids.length === 0) return [];
+  const { data: profiles } = await admin.from('profiles').select('id, username, display_name, avatar, is_suspended').in('id', ids);
+  return (profiles || []).map((p: any) => ({
+    id: String(p.id),
+    username: String(p.username || ''),
+    displayName: String(p.display_name || p.username || ''),
+    avatar: String(p.avatar || ''),
+    suspended: !!p.is_suspended
+  }));
 }
 
 // j***@g***.com — enough for the person to recognise their own address without showing it whole on screen.
@@ -323,6 +358,31 @@ Deno.serve(async (req) => {
       return json({ error: result?.error || 'Could not create the account.', suspended: result?.suspended, message: result?.message, stage: 'form' }, 400);
     }
     return json({ success: true });
+  }
+
+  // -------------------------------------------------------------- Google (etc.) sign-in for an existing NOOB account
+  // Step 1: which NOOB accounts belong to the email address Google just confirmed? (none -> the app shows the sign-up form instead)
+  if (body?.action === 'oauth-existing-accounts') {
+    const who = await oauthCaller(admin, req);
+    if (!who) return json({ error: 'Please sign in again.' }, 401);
+    if (!who.trusted) return json({ success: true, accounts: [] });
+    const accounts = await accountsForEmail(admin, who.email, who.id);
+    return json({ success: true, accounts });
+  }
+
+  // Step 2: log in as the chosen one of them. Google has already proved the person owns the email, and the NOOB account's own email
+  // was proved with a code when it was made, so this hands back the same one-time sign-in token the emailed-code login does.
+  if (body?.action === 'oauth-login-existing') {
+    const who = await oauthCaller(admin, req);
+    if (!who) return json({ error: 'Please sign in again.' }, 401);
+    if (!who.trusted) return json({ error: 'Google could not confirm your email address.' }, 403);
+    const accounts = await accountsForEmail(admin, who.email, who.id);
+    const chosen = accounts.find((a: any) => a.id === String(body?.accountId || ''));
+    if (!chosen) return json({ error: 'That account is not linked to your Google email.' }, 403);
+    if (chosen.suspended) return json({ error: 'This account has been suspended by NOOB Administrator.' }, 403);
+    const tokenHash = await issueSignInToken(admin, chosen.id);
+    if (!tokenHash) return json(unavailable, 500);
+    return json({ success: true, tokenHash });
   }
 
   // -------------------------------------------------------------- emailed one-time code

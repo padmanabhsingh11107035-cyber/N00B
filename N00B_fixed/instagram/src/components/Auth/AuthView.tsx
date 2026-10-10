@@ -36,8 +36,9 @@ import {
   LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, signInWithGoogle, checkPendingOAuthSignup, type ActiveDeviceSession } from '../../services/api';
+import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, signInWithGoogle, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession } from '../../services/api';
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
+import { tabSessions } from '../../services/supabase';
 import { getDeviceId, getDeviceLabel } from '../../utils/deviceId';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
@@ -239,15 +240,43 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
   };
 
-  // "Sign in with Google": checked once on load, since a brand-new Google sign-in lands back here
-  // (via a full-page redirect) already logged in, just with no NOOB profile yet — see
-  // checkPendingOAuthSignup. A RETURNING Google sign-in already has one and never shows this; it
-  // goes straight into the app the normal way, before AuthView is even rendered at all.
-  const [oauthPending, setOauthPending] = useState<Awaited<ReturnType<typeof checkPendingOAuthSignup>> | null>(null);
+  // "Continue with Google": checked once on load, since a Google sign-in lands back here (via a full-page redirect) already
+  // logged in, just with no NOOB profile on that login yet. What happens next depends on the Google email address:
+  //   * a NOOB account was made with it  -> straight into that account (or a pick, if several share the email)
+  //   * no NOOB account has it           -> the page asking for the details Google did not give (CompleteOAuthProfile)
+  // A person whose Google login already has its own NOOB profile never gets here: they go into the app the normal way.
+  const [oauthPending, setOauthPending] = useState<{ pending: true; email?: string; fullName?: string; pictureUrl?: string } | null>(null);
+  const [oauthChoices, setOauthChoices] = useState<OAuthAccountChoice[] | null>(null);
+  const [oauthChoosingId, setOauthChoosingId] = useState<string | null>(null);
+  // a spinner instead of the login form only when there is a login to look at (coming back from Google)
+  const [oauthChecking, setOauthChecking] = useState(() => !!tabSessions.currentAccount());
   const [googleBusy, setGoogleBusy] = useState(false);
   useEffect(() => {
-    void checkPendingOAuthSignup().then((res) => { if (res.pending) setOauthPending(res); });
+    let alive = true;
+    void checkOAuthSignIn()
+      .then((res) => {
+        if (!alive) return;
+        if (res.status === 'new') setOauthPending({ pending: true, email: res.email, fullName: res.fullName, pictureUrl: res.pictureUrl });
+        else if (res.status === 'choose') setOauthChoices(res.accounts);
+        else if (res.status === 'signed-in') void proceedAfterAuth(res.user);
+        else if (res.status === 'error') setErrorMessage(res.error);
+      })
+      .finally(() => { if (alive) setOauthChecking(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleChooseOauthAccount = async (id: string) => {
+    setOauthChoosingId(id);
+    const res = await signInToExistingOAuthAccount(id);
+    setOauthChoosingId(null);
+    if (res.success && res.user) {
+      setOauthChoices(null);
+      void proceedAfterAuth(res.user);
+    } else {
+      setErrorMessage(res.error || 'Could not sign you in. Please try again.');
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setGoogleBusy(true);
@@ -809,6 +838,54 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       setOtpLoading(false);
     }
   };
+
+  if (oauthChecking) {
+    return (
+      <div className="min-h-screen w-full bg-page text-white flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-7 h-7 animate-spin text-noob" />
+        <p className="text-xs text-zinc-400">Signing you in…</p>
+      </div>
+    );
+  }
+
+  if (oauthChoices) {
+    return (
+      <div className="min-h-screen w-full bg-page text-white flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-3xl p-5 space-y-4">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl text-white">Which account?</h2>
+            <p className="text-xs text-zinc-400">More than one NOOB account uses this email. Pick the one you want to continue with.</p>
+          </div>
+          {errorMessage && <p className="text-xs text-red-400 text-center" role="alert">{errorMessage}</p>}
+          <div className="space-y-2">
+            {oauthChoices.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                disabled={oauthChoosingId !== null}
+                onClick={() => void handleChooseOauthAccount(a.id)}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-noob/60 text-left cursor-pointer disabled:opacity-60"
+              >
+                <img src={a.avatar || '/noob-logo-circle.png'} alt="" className="w-10 h-10 rounded-full object-cover bg-zinc-800 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white truncate" translate="no">{a.displayName || a.username}</p>
+                  <p className="text-xs text-zinc-400 truncate" translate="no">@{a.username}</p>
+                </div>
+                {oauthChoosingId === a.id && <Loader2 className="w-4 h-4 animate-spin text-noob shrink-0" />}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={async () => { await logoutUser(); setOauthChoices(null); setErrorMessage(null); }}
+            className="w-full py-2 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (oauthPending) {
     return <CompleteOAuthProfile pending={oauthPending} onDone={(user) => { setOauthPending(null); void proceedAfterAuth(user); }} />;

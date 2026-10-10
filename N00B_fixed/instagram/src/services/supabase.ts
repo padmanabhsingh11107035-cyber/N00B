@@ -25,10 +25,23 @@ const browserKV = (store: () => Storage): KV => {
 };
 const localKV = browserKV(() => localStorage);
 const tabKV = browserKV(() => sessionStorage);
+// The installed app (home-screen app, desktop app window, native shell) keeps its own logins, apart from the browser's — see tabSessions.ts.
+const isInstalledApp = (() => {
+  try {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone === true ||
+      (window as any).Capacitor?.isNativePlatform?.() === true
+    );
+  } catch {
+    return false;
+  }
+})();
 export const tabSessions = createTabSessions(localKV, tabKV, () => {
   try { return Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i) as string).filter(Boolean); } catch { return []; }
-});
+}, { app: isInstalledApp });
 tabSessions.migrateLegacy(); // the one login this browser kept before becomes the first saved account
+tabSessions.claimFromBrowser(); // installed app, first start only: takes over the logins the shared storage held
 // A key that is new for every page load: the login library announces sign-ins and renewals to the other tabs using the SAME key, and
 // tabs on different accounts must not hear each other's (each tab renews its own login and reads its own account's saved login).
 const TAB_STORAGE_KEY = `sb-noob-tab-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`;

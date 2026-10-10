@@ -66,6 +66,7 @@ import {
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
+import { AdminSignInPanel } from './AdminSignInPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
@@ -97,7 +98,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1229,6 +1230,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('signIn')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'signIn'
+                  ? 'border-noob text-noob'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <KeyRound className="w-4 h-4" /> Sign-in
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('joinRequests')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'joinRequests'
@@ -2132,6 +2146,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminOrdersPanel />
           ) : activeTab === 'foodStall' && canManageStore ? (
             <AdminFoodStallPanel />
+          ) : activeTab === 'signIn' && main ? (
+            <AdminSignInPanel />
           ) : activeTab === 'joinRequests' && main ? (
             /* "Apply to join us" submissions */
             <div className="space-y-3">

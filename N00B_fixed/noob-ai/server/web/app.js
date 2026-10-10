@@ -298,9 +298,14 @@ function setState(next, text) {
     thinking: "Thinking…", speaking: "Speaking… (tap to stop)" }[next];
 }
 
+// [face:happy] and [en] are instructions for NOOB's screen and voice, never part of what is said or shown.
+const cleanText = (t) => String(t ?? "")
+  .replace(/\s*\[face:\w+\]/gi, "")
+  .replace(/^(\s*\[[a-z]{2,3}(-[a-z]+)?\])+\s*/i, "")
+  .trim();
 function addBubble(who, text, extraClass = "") {
   $("chatEmpty")?.remove();
-  const b = el("div", `bubble ${who} ${extraClass}`, text);
+  const b = el("div", `bubble ${who} ${extraClass}`, cleanText(text));
   $("chat").append(b);
   $("chat").scrollTop = $("chat").scrollHeight;
   return b;
@@ -570,7 +575,7 @@ loaders.talk = async () => {
   if ($("chat").querySelector(".bubble")) return;
   try {                                               // show the last few messages
     const log = await api("/api/conversation");
-    log.slice(-6).forEach((m) => addBubble(m.role === "user" ? "you" : "noob", m.text.replace(/^\[[a-z-]+\]\s*/i, "")));
+    log.slice(-6).forEach((m) => addBubble(m.role === "user" ? "you" : "noob", m.text));
   } catch { /* offline overlay handles it */ }
 };
 
@@ -758,7 +763,7 @@ function renderHistory() {
   shown.forEach((m) => {
     const d = m.time.slice(0, 10);
     if (d !== day) { day = d; box.append(el("div", "day", new Date(d + "T00:00").toDateString())); }
-    const b = el("div", "bubble " + (m.role === "user" ? "you" : "noob"), m.text.replace(/^\[[a-z-]+\]\s*/i, ""));
+    const b = el("div", "bubble " + (m.role === "user" ? "you" : "noob"), cleanText(m.text));
     b.append(el("small", "", m.time.slice(11)));
     box.append(b);
   });

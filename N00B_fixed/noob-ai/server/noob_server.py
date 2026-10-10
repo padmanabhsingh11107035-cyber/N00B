@@ -86,7 +86,8 @@ Remember what they told you and bring it up when it helps ("How is your knee tod
 Your answers are converted to speech, so:
 - Start EVERY reply with TWO tags, back to back, both removed before speaking: first your face, in square
   brackets as [face:NAME] (see "Your face" below), then the language code of the language you are replying in,
-  also in square brackets, e.g. [face:happy][en], [face:thinking][hi], [face:love][es].
+  also in square brackets, e.g. [face:happy][en], [face:thinking][hi], [face:love][es]. Write these two tags ONCE, only
+  at the very start of the reply — never repeat them, never put them anywhere else, and never mention them.
 - Reply in the same language the user spoke, unless they ask for another language. If they mix Hindi and English, reply in Hindi.
 - Write every language in its own script (Hindi and Marathi in Devanagari, Tamil in Tamil script, and so on), never in English
   letters, so the voice pronounces it correctly. The one exception is Hinglish: if the user asks you to speak Hinglish
@@ -449,6 +450,23 @@ FACE_NAMES = {
 }
 DEFAULT_FACE = "normal"
 FACE_TAG = re.compile(r"^\s*\[face:(\w+)\]\s*", re.IGNORECASE)
+# One control tag at the very start of text: [face:NAME] or [language]. The model is told to start every reply with
+# one of each, but it sometimes repeats them (it copies the shape of its own earlier replies), so every leading one is
+# removed, never just the first.
+LEADING_TAG = re.compile(r"\s*\[(?:face:\w+|[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)\]\s*", re.IGNORECASE)
+ANY_FACE_TAG = re.compile(r"\s*\[face:\w+\]", re.IGNORECASE)
+
+
+def strip_control_tags(text):
+    """Takes the [face:..] / [language] control tags out of a reply: they are instructions for NOOB's screen and
+    voice, never words to show or say. Leading ones go (however many), and a stray [face:..] anywhere goes too."""
+    text = text or ""
+    while True:
+        match = LEADING_TAG.match(text)
+        if not match:
+            break
+        text = text[match.end():]
+    return ANY_FACE_TAG.sub("", text).strip()
 OLLAMA_HEARD_ECHO = re.compile(r"^\s*HEARD\s*:.*?(?:\n|$)", re.IGNORECASE)
 # The offline backup model (no BYE: true training like Gemini gets) can't be trusted to write that line
 # itself, so when it is the one answering, we decide from the user's own words instead — English/Hindi
@@ -541,9 +559,22 @@ class AnswerStream:
             tag = LANG_TAG.match(body)
             if tag:
                 self.lang = tag.group(1).lower()
-                self.text_start = self.answer_start + tag.end()
+                start = self.answer_start + tag.end()
             else:
-                self.text_start = self.answer_start + len(body) - len(stripped)
+                start = self.answer_start + len(body) - len(stripped)
+            while True:                               # the model sometimes repeats the tags: skip every one
+                rest = self.raw[start:]
+                repeated = LEADING_TAG.match(rest)
+                if repeated:
+                    again = LANG_TAG.match(rest)
+                    if again and not rest.lstrip().lower().startswith("[face:"):
+                        self.lang = again.group(1).lower()
+                    start += repeated.end()
+                    continue
+                if rest.lstrip().startswith("[") and "]" not in rest and len(rest) < 20 and not final:
+                    return events                     # a tag is still arriving: wait for the rest of it
+                break
+            self.text_start = start
         speakable = self.raw[self.text_start:]
         mark = MEMORY_MARK.search(speakable)
         if mark:
@@ -575,7 +606,7 @@ class AnswerStream:
             return ""
         text = self.raw[self.text_start:]
         mark = MEMORY_MARK.search(text)
-        return (text[:mark.start()] if mark else text).strip()
+        return strip_control_tags(text[:mark.start()] if mark else text)
 
 
 def voice_for_ai(pcm):
@@ -603,8 +634,18 @@ def gemini_key():
     return settings()["gemini_api_key"] or os.environ.get("GEMINI_API_KEY", "")
 
 
+def history_text(m):
+    """An earlier message as the AI sees it again. Replies were stored as "[en] words"; older ones may also carry
+    repeated [face:..] / [language] tags — show it exactly one language tag and no face tag, so it does not copy them."""
+    if m["role"] != "assistant":
+        return m["content"]
+    lead = LANG_TAG.match(m["content"] or "")
+    words = strip_control_tags(m["content"])
+    return f"[{lead.group(1).lower()}] {words}" if lead and words else words
+
+
 def history_contents(user_id):
-    return [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}
+    return [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": history_text(m)}]}
             for m in memory.recent_messages(user_id, RECENT_MESSAGES)]
 
 
@@ -658,7 +699,7 @@ def converse(user_id, text=None, pcm=None):
             else:
                 stream = AnswerStream(False)
                 stream.heard = text
-            messages = [{"role": m["role"], "content": m["content"]}
+            messages = [{"role": m["role"], "content": history_text(m)}
                         for m in memory.recent_messages(user_id, RECENT_MESSAGES)] + [
                         {"role": "user", "content": stream.heard}]
             try:
@@ -760,6 +801,7 @@ def questions_left(user_id):
 # ------------------------------ step 3: answer -> speech ------------------------------
 def clean_for_speech(text):
     text = re.sub(r"https?://\S+", "", text)                        # drop links
+    text = ANY_FACE_TAG.sub("", text)                                 # drop face tags ([face:happy]) so they are never read out
     text = re.sub(r"\[[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?\]", "", text)    # drop stray language tags
     text = re.sub(r"[*#_`>|~\[\]]", "", text)                        # drop markdown symbols
     return re.sub(r"\s+", " ", text).strip()

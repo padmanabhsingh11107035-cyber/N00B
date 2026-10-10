@@ -1672,29 +1672,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           {displayName}
                         </span>
 
-                        {/* Explicit Tags: "group" or "chat" */}
-                        {c.isGroup ? (
+                        {/* Only groups carry a tag. A normal chat has none, and no row shows "encrypted" any more, so the
+                            name gets the whole line (one line only: a very long name is cut with "…", the row never grows). */}
+                        {c.isGroup && (
                           <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold uppercase border border-purple-500/30 shrink-0">
                             group
                           </span>
-                        ) : (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-noob font-bold uppercase border border-noob/30 shrink-0">
-                            chat
-                          </span>
                         )}
-
-                        {/* Says "encrypted" only when this chat really is right now — every personal AND
-                            group chat gets this tag, not just the Lounge/AI exceptions which stay "not encrypted" */}
-                        <span
-                          className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase border shrink-0 flex items-center gap-0.5 ${
-                            c.isEncryptable
-                              ? 'bg-emerald-500/15 text-noob border-noob/30'
-                              : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                          }`}
-                        >
-                          {c.isEncryptable ? <Lock className="w-2.5 h-2.5" /> : <LockOpen className="w-2.5 h-2.5" />}
-                          {c.isEncryptable ? 'encrypted' : 'not encrypted'}
-                        </span>
 
                         {!c.isGroup && partner.isVerified && <VerifiedBadge size="xs" />}
                       </div>

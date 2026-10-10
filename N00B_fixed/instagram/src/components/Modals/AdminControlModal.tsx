@@ -97,7 +97,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -170,6 +170,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [aiFeedbackReplyDrafts, setAiFeedbackReplyDrafts] = useState<Record<string, string>>({});
   const [aiFeedbackBusyId, setAiFeedbackBusyId] = useState<string | null>(null);
+  const [aiFeedbackFilter, setAiFeedbackFilter] = useState<'open' | 'replied' | 'closed' | 'all'>('open');
   const [searchQuery, setSearchQuery] = useState('');
   // Set by tapping the "Suspended" stat card — filters Account Moderation down to just those accounts.
   const [suspendedOnlyFilter, setSuspendedOnlyFilter] = useState(false);
@@ -342,6 +343,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   useEffect(() => {
     if (activeTab === 'activity' && main) loadAudit();
     if (activeTab === 'content' && main) loadContent(contentType);
+    if (activeTab === 'noobAi' && main) loadAiFeedback();
     if (activeTab === 'joinRequests' && main) loadJoinRequests();
     if (activeTab === 'sparkxRequests' && main) loadSparkxRequests();
     if (activeTab === 'accountRequests' && main) loadAccountRequests();
@@ -1209,6 +1211,24 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('noobAi')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'noobAi'
+                  ? 'border-[#00FF66] text-[#00FF66]'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Bot className="w-4 h-4" /> NOOB AI
+              {aiFeedbackList.filter((f) => f.status === 'open').length > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
+                  {aiFeedbackList.filter((f) => f.status === 'open').length}
+                </span>
+              )}
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('joinRequests')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'joinRequests'
@@ -1540,76 +1560,6 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
           ) : activeTab === 'reports' ? (
             /* Safety Reports Moderation Tab */
             <div className="space-y-3">
-              {main && (
-                <div className="space-y-3 pb-4 mb-1 border-b border-zinc-800">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-violet-400" />
-                      <span className="text-xs font-bold text-white">NOOB AI Feedback ({aiFeedbackList.filter((f) => f.status !== 'closed').length} open)</span>
-                    </div>
-                    <button
-                      onClick={loadAiFeedback}
-                      className="text-xs text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${loadingAiFeedback ? 'animate-spin' : ''}`} /> Refresh
-                    </button>
-                  </div>
-                  {loadingAiFeedback ? (
-                    <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto" /></div>
-                  ) : aiFeedbackList.length === 0 ? (
-                    <p className="text-xs text-zinc-500 py-2">Nothing reported or suggested yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {aiFeedbackList.map((f) => (
-                        <div key={f.id} className="p-3 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <img src={f.avatar || '/noob-logo.svg.jpeg'} alt={f.username} className="w-6 h-6 rounded-full object-cover shrink-0" />
-                              <span className="text-xs font-bold text-white truncate">@{f.username}</span>
-                              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${f.category === 'issue' ? 'bg-rose-500/20 text-rose-300' : 'bg-sky-500/20 text-sky-300'}`}>
-                                {f.category === 'issue' ? 'Issue' : 'Suggestion'}
-                              </span>
-                            </div>
-                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
-                              f.status === 'closed' ? 'bg-zinc-800 text-zinc-400' : f.status === 'replied' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-amber-500/20 text-amber-300'
-                            }`}>
-                              {f.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-300">{f.message}</p>
-                          {f.adminReply && <p className="text-[11px] text-zinc-500"><span className="text-zinc-400 font-bold">Your reply: </span>{f.adminReply}</p>}
-                          {f.status !== 'closed' && (
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                value={aiFeedbackReplyDrafts[f.id] || ''}
-                                onChange={(e) => setAiFeedbackReplyDrafts((prev) => ({ ...prev, [f.id]: e.target.value }))}
-                                placeholder={f.adminReply ? 'Send another reply…' : 'Reply — they get a notification'}
-                                maxLength={2000}
-                                className="flex-1 bg-zinc-950 text-xs text-white px-2.5 py-1.5 rounded-lg border border-zinc-800 outline-none focus:border-violet-400"
-                              />
-                              <button
-                                onClick={() => handleReplyAiFeedback(f.id)}
-                                disabled={aiFeedbackBusyId === f.id || !(aiFeedbackReplyDrafts[f.id] || '').trim()}
-                                className="px-2.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold rounded-lg cursor-pointer disabled:opacity-40"
-                              >
-                                Reply
-                              </button>
-                              <button
-                                onClick={() => handleCloseAiFeedback(f.id)}
-                                disabled={aiFeedbackBusyId === f.id}
-                                className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold rounded-lg cursor-pointer disabled:opacity-40"
-                              >
-                                Close
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-amber-400" />
@@ -1753,6 +1703,112 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          ) : activeTab === 'noobAi' && main ? (
+            /* NOOB AI: every issue report and suggestion sent from inside NOOB AI */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-violet-400" />
+                  <span className="text-xs font-bold text-white">NOOB AI — issues &amp; suggestions</span>
+                </div>
+                <button
+                  onClick={loadAiFeedback}
+                  className="text-xs text-[#00FF66] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAiFeedback ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-snug">
+                Sent from the About Me page of NOOB AI. Reply to send the person a notification, and mark it solved once it is dealt with.
+              </p>
+
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {([
+                  ['open', 'Open'],
+                  ['replied', 'Replied'],
+                  ['closed', 'Solved'],
+                  ['all', 'All']
+                ] as const).map(([key, label]) => {
+                  const count = key === 'all' ? aiFeedbackList.length : aiFeedbackList.filter((f) => f.status === key).length;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setAiFeedbackFilter(key)}
+                      className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer border ${
+                        aiFeedbackFilter === key ? 'border-[#00FF66] text-[#00FF66] bg-[#00FF66]/10' : 'border-zinc-800 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      {label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {loadingAiFeedback && aiFeedbackList.length === 0 ? (
+                <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin text-[#00FF66] mx-auto" /></div>
+              ) : (
+                (() => {
+                  const shown = aiFeedbackList.filter((f) => aiFeedbackFilter === 'all' || f.status === aiFeedbackFilter);
+                  if (shown.length === 0) {
+                    return (
+                      <div className="py-10 text-center text-xs text-zinc-500">
+                        {aiFeedbackList.length === 0 ? 'Nothing has been reported or suggested yet.' : 'Nothing here.'}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {shown.map((f) => (
+                        <div key={f.id} className="p-3 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img src={f.avatar || '/noob-logo.svg.jpeg'} alt={f.username} className="w-6 h-6 rounded-full object-cover shrink-0" />
+                              <span className="text-xs font-bold text-white truncate">@{f.username}</span>
+                              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${f.category === 'issue' ? 'bg-rose-500/20 text-rose-300' : 'bg-sky-500/20 text-sky-300'}`}>
+                                {f.category === 'issue' ? 'Issue' : 'Suggestion'}
+                              </span>
+                            </div>
+                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                              f.status === 'closed' ? 'bg-zinc-800 text-zinc-400' : f.status === 'replied' ? 'bg-emerald-500/20 text-[#00FF66]' : 'bg-amber-500/20 text-amber-300'
+                            }`}>
+                              {f.status === 'closed' ? 'solved' : f.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-300 whitespace-pre-wrap break-words">{f.message}</p>
+                          <p className="text-[10px] text-zinc-600">{new Date(f.createdAt).toLocaleString()}</p>
+                          {f.adminReply && <p className="text-[11px] text-zinc-500"><span className="text-zinc-400 font-bold">Your reply: </span>{f.adminReply}</p>}
+                          {f.status !== 'closed' && (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                value={aiFeedbackReplyDrafts[f.id] || ''}
+                                onChange={(e) => setAiFeedbackReplyDrafts((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                                placeholder={f.adminReply ? 'Send another reply…' : 'Reply — they get a notification'}
+                                maxLength={2000}
+                                className="flex-1 min-w-0 bg-zinc-950 text-xs text-white px-2.5 py-1.5 rounded-lg border border-zinc-800 outline-none focus:border-violet-400"
+                              />
+                              <button
+                                onClick={() => handleReplyAiFeedback(f.id)}
+                                disabled={aiFeedbackBusyId === f.id || !(aiFeedbackReplyDrafts[f.id] || '').trim()}
+                                className="px-2.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[11px] font-bold rounded-lg cursor-pointer disabled:opacity-40"
+                              >
+                                Reply
+                              </button>
+                              <button
+                                onClick={() => handleCloseAiFeedback(f.id)}
+                                disabled={aiFeedbackBusyId === f.id}
+                                className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold rounded-lg cursor-pointer disabled:opacity-40 whitespace-nowrap"
+                              >
+                                Mark solved
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()
               )}
             </div>
           ) : activeTab === 'notify' ? (

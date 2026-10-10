@@ -104,10 +104,9 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
 
   const google = providers.find((p) => p.id === 'google');
   const others = providers.filter((p) => p.id !== 'google');
-  // Up to three others share a row with their names; with more, they become a tidy row of icon-only buttons.
-  const iconOnly = others.length > 3;
 
-  const button = (p: EnabledSocialProvider, layout: 'wide' | 'named' | 'icon') => {
+  // Every provider is a full-width "Continue with …" button, one under the other (Google first).
+  const button = (p: EnabledSocialProvider) => {
     const m = META[p.id];
     const label = `Continue with ${m.name}`;
     return (
@@ -117,29 +116,18 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
         disabled={busy !== null}
         onClick={() => void start(p)}
         aria-label={label}
-        title={label}
-        className={`${m.className} ${layout === 'icon' ? 'h-11 w-[calc(25%-6px)] min-w-[56px]' : 'w-full py-2.5'} font-bold text-sm rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2.5`}
+        className={`${m.className} w-full py-2.5 font-bold text-sm rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2.5`}
       >
-        {busy === p.id ? <Loader2 className={layout === 'icon' ? 'w-5 h-5 animate-spin' : 'w-4 h-4 animate-spin'} /> : <m.Icon className={layout === 'icon' ? 'w-5 h-5' : 'w-4 h-4'} />}
-        {layout !== 'icon' && (
-          <span className={layout === 'wide' ? '' : 'text-xs'}>{busy === p.id ? `Opening ${m.name}…` : layout === 'wide' ? label : m.name}</span>
-        )}
+        {busy === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <m.Icon className="w-4 h-4" />}
+        <span>{busy === p.id ? `Opening ${m.name}…` : label}</span>
       </button>
     );
   };
 
   return (
     <div className="space-y-2">
-      {google && button(google, 'wide')}
-      {others.length > 0 && (iconOnly ? (
-        <div className="flex flex-wrap justify-center gap-2">
-          {others.map((p) => button(p, 'icon'))}
-        </div>
-      ) : (
-        <div className={`grid gap-2 ${others.length === 1 ? 'grid-cols-1' : others.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-          {others.map((p) => button(p, others.length === 1 ? 'wide' : 'named'))}
-        </div>
-      ))}
+      {google && button(google)}
+      {others.map((p) => button(p))}
     </div>
   );
 };

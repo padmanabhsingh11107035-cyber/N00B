@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NOOB</title>
   <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -92,6 +93,15 @@
       <button class="btn primary" id="saveProfile">Save</button>
     </header>
     <div class="card"><div class="form-grid" id="profileForm"></div></div>
+    <div class="card" id="themeCard">
+      <h2>Colour theme</h2>
+      <p class="muted small">Choose how NOOB looks. <b>System</b> follows your device: light or dark, whichever your phone or computer is set to, and it changes when your device does.</p>
+      <div class="theme-options" role="radiogroup" aria-label="Colour theme">
+        <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme-choice="dark"><span class="theme-swatch dark"></span><b>Dark</b></button>
+        <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme-choice="light"><span class="theme-swatch light"></span><b>Light</b></button>
+        <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme-choice="system"><span class="theme-swatch system"></span><b>System</b></button>
+      </div>
+    </div>
     <div class="card account-card">
         <h2>My account</h2>
         <dl class="facts-dl" id="accountInfo"></dl>

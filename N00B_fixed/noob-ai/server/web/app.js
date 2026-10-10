@@ -602,6 +602,23 @@ $("saveProfile").onclick = async () => {
   refreshStatus();
 };
 
+// Colour theme (Dark / Light / System): applied the moment it is tapped, remembered on this device.
+function paintThemeChoice() {
+  const current = window.NoobTheme ? window.NoobTheme.get() : "system";
+  document.querySelectorAll("[data-theme-choice]").forEach((b) => {
+    const on = b.dataset.themeChoice === current;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", on ? "true" : "false");
+  });
+}
+document.querySelectorAll("[data-theme-choice]").forEach((b) => {
+  b.onclick = () => {
+    if (window.NoobTheme) window.NoobTheme.set(b.dataset.themeChoice);
+    paintThemeChoice();
+  };
+});
+paintThemeChoice();
+
 // Report an issue / suggest a change — goes to the NOOB admin panel, replies come back here too.
 async function loadFeedback() {
   const res = await api("/api/feedback").catch(() => ({ linked: true, items: [] }));

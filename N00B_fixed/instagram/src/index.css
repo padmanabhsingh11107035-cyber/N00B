@@ -114,6 +114,12 @@
 
 .bg-page { background-color: var(--page); }
 
+/* The strip above the app on a phone. An iPhone's installed app ignores theme-color: the strip behind the clock is simply the
+   page's own (canvas) background. So the canvas is the accent colour, and the app body is drawn over everything inside the screen
+   (it always fills the whole screen, so none of the red shows there). Android and desktop use theme-color instead (index.html). */
+html { background-color: #d97757; }
+body { min-height: 100vh; min-height: 100dvh; }
+
 /* The verified badge: a white badge with a black tick in dark mode, a black badge with a white tick in light mode.
    Dark surfaces inside light mode (media, calls: .force-dark) keep the dark-mode version so it stays visible. */
 :root, .force-dark {

@@ -17,6 +17,7 @@ import {
   togglePostInPlaylist,
   createLongVideoPlaylist
 } from '../../services/api';
+import { LazyVideo } from '../Common/LazyVideo';
 
 interface FeedVideoWatchViewProps {
   post: Post;
@@ -274,7 +275,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
               return (
                 <button key={v.id} onClick={() => handleSelectUpNext(v)} className="w-full flex items-center gap-3 text-left cursor-pointer">
                   <div className="relative w-28 aspect-video rounded-lg overflow-hidden bg-zinc-900 shrink-0">
-                    <video src={vSlide.mediaUrl} className="w-full h-full object-cover" muted preload="metadata" />
+                    <LazyVideo src={vSlide.mediaUrl} className="w-full h-full object-cover" muted />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-bold text-white line-clamp-2 leading-snug">{v.caption || 'Untitled video'}</p>

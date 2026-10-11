@@ -458,3 +458,9 @@ html[data-i18n-loading] body {
 @media (prefers-reduced-motion: no-preference) { .dd-btn:not(:hover) .dd-shine { animation: dd-shine-idle 6s ease-in-out infinite; } }
 .dd-mask-l { -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent); mask-image: linear-gradient(90deg, #000 58%, transparent); }
 .dd-mask-r { -webkit-mask-image: linear-gradient(270deg, #000 58%, transparent); mask-image: linear-gradient(270deg, #000 58%, transparent); }
+
+/* Sign-in page doodles (components/Auth/LoginDoodles.tsx): a fixed tilt, drifting gently only for people who allow motion */
+.login-doodle { transform: rotate(var(--r, 0deg)); transform-origin: center; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.06)); }
+@keyframes login-bob { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-7px) rotate(calc(var(--r, 0deg) + 7deg)); } }
+@media (prefers-reduced-motion: no-preference) { .login-doodle { animation: login-bob 6.5s ease-in-out infinite; } }
+@media (max-width: 639px) { .login-doodle { transform: rotate(var(--r, 0deg)) scale(.8); } }

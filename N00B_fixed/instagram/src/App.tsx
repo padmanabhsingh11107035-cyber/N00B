@@ -65,8 +65,6 @@ import {
 } from './services/api';
 import { FloatingNavBar, NavTab } from './components/Navigation/FloatingNavBar';
 import { FeedView } from './components/Feed/FeedView';
-import { ExploreView } from './components/Explore/ExploreView';
-import { ReelsView } from './components/Reels/ReelsView';
 // Statically imported before, which meant every single page load of the whole app (not just opening
 // Chat) paid for its full weight upfront — E2EE crypto setup, the Instants camera/viewer, encryption
 // modals, sticker/GIF panels, confetti, group management, all bundled into the one main chunk. Lazy
@@ -79,22 +77,13 @@ import { armNotificationSound, playNotificationSound } from './utils/notificatio
 import { takeRestorePage } from './utils/pageResume';
 import { buildStoryTray, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { GamesView } from './components/Games/GamesView';
-import { MusicHubView } from './components/Music/MusicHubView';
-import { ProfileView } from './components/Profile/ProfileView';
-import { StoryViewerModal } from './components/Stories/StoryViewerModal';
-import { CreateStoryModal } from './components/Stories/CreateStoryModal';
-import { PostCreationModal } from './components/PostCreation/PostCreationModal';
-import { NotificationsModal, NotificationSettingsState } from './components/Modals/NotificationsModal';
-import { ScratchCardModal } from './components/Modals/ScratchCardModal';
-import { StatusNoteModal } from './components/Modals/StatusNoteModal';
+import type { NotificationSettingsState } from './components/Modals/NotificationsModal';
 import { AuthView } from './components/Auth/AuthView';
 import { TermsAndConditions } from './components/Legal/TermsAndConditions';
 import { PrivacyPolicy } from './components/Legal/PrivacyPolicy';
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
-import { FindFriendsModal } from './components/Modals/FindFriendsModal';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { useUpdateAvailable } from './utils/appVersion';
@@ -108,10 +97,23 @@ import { installContentProtection } from './utils/contentProtection';
 import { applyAccountLanguage, setSignedIn } from './i18n/account.ts';
 import { isMainAdmin } from './adminAccess';
 import { fetchPublicPlatformSettings, type PlatformSettings } from './services/api';
+import { setVisibleInterval } from './utils/visibleInterval';
 
 // Lazy-loaded: each of these pulls a large, rarely-needed chunk out of the main bundle (the admin
 // console alone is ~3000 lines nobody but the admin ever opens; Live Streaming/Lounge additionally
 // drag in the Agora SDK) — loaded on first use instead of on every visit, no matter who's using the app.
+const ExploreView = React.lazy(() => import('./components/Explore/ExploreView').then((m) => ({ default: m.ExploreView })));
+const ReelsView = React.lazy(() => import('./components/Reels/ReelsView').then((m) => ({ default: m.ReelsView })));
+const GamesView = React.lazy(() => import('./components/Games/GamesView').then((m) => ({ default: m.GamesView })));
+const MusicHubView = React.lazy(() => import('./components/Music/MusicHubView').then((m) => ({ default: m.MusicHubView })));
+const ProfileView = React.lazy(() => import('./components/Profile/ProfileView').then((m) => ({ default: m.ProfileView })));
+const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
+const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
+const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
+const NotificationsModal = React.lazy(() => import('./components/Modals/NotificationsModal').then((m) => ({ default: m.NotificationsModal })));
+const ScratchCardModal = React.lazy(() => import('./components/Modals/ScratchCardModal').then((m) => ({ default: m.ScratchCardModal })));
+const StatusNoteModal = React.lazy(() => import('./components/Modals/StatusNoteModal').then((m) => ({ default: m.StatusNoteModal })));
+const FindFriendsModal = React.lazy(() => import('./components/Modals/FindFriendsModal').then((m) => ({ default: m.FindFriendsModal })));
 const AdminControlModal = React.lazy(() => import('./components/Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 const CustomerSupportModal = React.lazy(() => import('./components/Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
 const GamePlayModal = React.lazy(() => import('./components/Games/GamePlayModal').then((m) => ({ default: m.GamePlayModal })));
@@ -285,9 +287,13 @@ export default function App() {
   } | null>(null);
   const [sharedProfileUsername, setSharedProfileUsername] = useState<string | null>(null);
   const [sharedLiveLoungeCode, setSharedLiveLoungeCode] = useState<string | null>(null);
+  const [sharedLiveLoungePasscode, setSharedLiveLoungePasscode] = useState<string | null>(null);
+  const [liveLoungeMeetingId, setLiveLoungeMeetingId] = useState<string | null>(null);   // a planned meeting opened from a notification
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
   const [sharedReelId, setSharedReelId] = useState<string | null>(null);
   const [sharedVideoId, setSharedVideoId] = useState<string | null>(null);
+  // "Pay with NOOB Points" link from an email (?pro=<plan>&billing=<monthly|yearly>): opens that plan's payment page once signed in
+  const [proLink, setProLink] = useState<{ tier: string; billing: 'monthly' | 'yearly' } | null>(null);
   const [pendingJoinTeam, setPendingJoinTeam] = useState(false);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
   const [sessionEndedNotice, setSessionEndedNotice] = useState<string | null>(null);
@@ -308,6 +314,12 @@ export default function App() {
         const reelParam = params.get('reel');
         const videoParam = params.get('video');
         const liveLoungeParam = params.get('liveLounge');
+        const proParam = params.get('pro');
+        const proBillingParam = params.get('billing');
+
+        if (proParam && ['starter', 'plus', 'pro', 'elite', 'ultimate'].includes(proParam)) {
+          setProLink({ tier: proParam, billing: proBillingParam === 'yearly' ? 'yearly' : 'monthly' });
+        }
 
         if (gameParam) {
           const matched = ALL_50_MINI_GAMES.find(
@@ -345,6 +357,8 @@ export default function App() {
 
         if (liveLoungeParam) {
           setSharedLiveLoungeCode(liveLoungeParam);
+          const pwdParam = params.get('pwd');
+          if (pwdParam) setSharedLiveLoungePasscode(pwdParam);
         }
       } catch (err) {
         console.error('URL param parse error:', err);
@@ -379,6 +393,7 @@ export default function App() {
     setShowLiveLoungeUpsell(true);
     const url = new URL(window.location.href);
     url.searchParams.delete('liveLounge');
+    url.searchParams.delete('pwd');   // the passcode is not left sitting in the address bar
     window.history.replaceState({}, '', url.toString());
     // sharedLiveLoungeCode itself is left set — LiveLoungePage reads it as initialJoinCode below.
   }, [sharedLiveLoungeCode, currentUser]);
@@ -400,6 +415,16 @@ export default function App() {
     url.searchParams.delete('reel');
     window.history.replaceState({}, '', url.toString());
   }, [sharedReelId, currentUser]);
+
+  // Only resolved once someone is signed in (the link may arrive before login), then the link is removed from the address bar.
+  useEffect(() => {
+    if (!proLink || !currentUser) return;
+    setShowSubscriptionsModal(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('pro');
+    url.searchParams.delete('billing');
+    window.history.replaceState({}, '', url.toString());
+  }, [proLink, currentUser]);
 
   useEffect(() => {
     if (!sharedVideoId || !currentUser) return;
@@ -477,14 +502,14 @@ export default function App() {
         checking = false;
       }
     };
-    const interval = setInterval(check, 30000);
+    const stopInterval = setVisibleInterval(check, 30000);   // rests while the page is hidden
     const onVisible = () => {
       if (document.visibilityState === 'visible') check();
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', check);
     return () => {
-      clearInterval(interval);
+      stopInterval();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', check);
     };
@@ -503,6 +528,21 @@ export default function App() {
       setCurrentUser(null);
     });
     return unsubscribe;
+  }, [currentUser?.id]);
+
+  // The big screens are loaded on demand (smaller first download). Once the app is idle after sign-in, the most-used ones are fetched
+  // quietly in the background so switching tabs is instant. Skipped when the phone is set to save data.
+  useEffect(() => {
+    if (!currentUser) return;
+    if ((navigator as any).connection?.saveData) return;
+    const idle: (cb: () => void) => any = (window as any).requestIdleCallback ? (cb) => (window as any).requestIdleCallback(cb, { timeout: 8000 }) : (cb) => setTimeout(cb, 3000);
+    const handle = idle(() => {
+      void import('./components/Profile/ProfileView');
+      void import('./components/Explore/ExploreView');
+      void import('./components/Reels/ReelsView');
+      void import('./components/Games/GamesView');
+    });
+    return () => { try { (window as any).cancelIdleCallback ? (window as any).cancelIdleCallback(handle) : clearTimeout(handle); } catch { /* ignore */ } };
   }, [currentUser?.id]);
 
   // Content protection (see utils/contentProtection.ts): no saving of pictures or videos, and the screen goes black for screenshot
@@ -537,13 +577,13 @@ export default function App() {
       }
     };
     const unsubscribe = subscribeToNotificationChanges(refresh);
-    const interval = setInterval(refresh, 60000);
+    const stopInterval = setVisibleInterval(refresh, 60000);   // rests while the page is hidden
     const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       stopped = true;
       unsubscribe();
-      clearInterval(interval);
+      stopInterval();
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [currentUser?.id]);
@@ -1444,6 +1484,7 @@ export default function App() {
             onRefreshFeed={loadInitialData}
             onNavigateToPost={handleNavigateToPost}
             onNavigateToReel={handleNavigateToReel}
+            onNavigateToVideo={handleNavigateToVideo}
             onNavigateToProfile={handleNavigateToUserProfile}
             onToggleFollowUser={handleToggleFollowUser}
             allUsers={registeredUsers}
@@ -1456,7 +1497,7 @@ export default function App() {
         )}
 
         {activeTab === 'explore' && (
-          <ExploreView
+          <React.Suspense fallback={<LazyFallback />}><ExploreView
             currentUser={currentUser}
             posts={posts.filter((p) => !p.isArchived)}
             reels={reels}
@@ -1476,19 +1517,19 @@ export default function App() {
             joinTeamOpen={platformSettings?.joinTeamOpen !== false}
             initialSearchQuery={pendingExploreSearch || undefined}
             onInitialSearchQueryHandled={() => setPendingExploreSearch(null)}
-          />
+          /></React.Suspense>
         )}
 
         {activeTab === 'reels' && (
           <div className="py-2 px-2">
-            <ReelsView
+            <React.Suspense fallback={<LazyFallback />}><ReelsView
               reels={reels}
               currentUser={currentUser}
               initialReelId={selectedReelId}
               onToggleFollowUser={handleToggleFollowUser}
               onGoBack={handleReelsGoBack}
               onNavigateToProfile={handleNavigateToUserProfile}
-            />
+            /></React.Suspense>
           </div>
         )}
 
@@ -1560,20 +1601,20 @@ export default function App() {
         )}
 
         {activeTab === 'games' && (
-          <GamesView
+          <React.Suspense fallback={<LazyFallback />}><GamesView
             currentUser={currentUser}
             allUsers={registeredUsers}
             onUserUpdated={(u) => setCurrentUser(u)}
             onNavigateToUserProfile={handleNavigateToUserProfile}
-          />
+          /></React.Suspense>
         )}
 
         {activeTab === 'music' && (
-          <MusicHubView currentUser={currentUser} />
+          <React.Suspense fallback={<LazyFallback />}><MusicHubView currentUser={currentUser} /></React.Suspense>
         )}
 
         {activeTab === 'profile' && (
-          <ProfileView
+          <React.Suspense fallback={<LazyFallback />}><ProfileView
             currentUser={currentUser}
             viewingUser={viewingProfileUser}
             allUsers={registeredUsers}
@@ -1596,7 +1637,7 @@ export default function App() {
             }}
             onNavigateToUserProfile={handleNavigateToUserProfile}
             onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
-          />
+          /></React.Suspense>
         )}
       </main>
 
@@ -1726,12 +1767,12 @@ export default function App() {
 
       {/* 0.5 Find Friends from Contacts (native app only, shown once per install) */}
       {showFindFriendsModal && currentUser && (
-        <FindFriendsModal
+        <React.Suspense fallback={null}><FindFriendsModal
           currentUser={currentUser}
           registeredUsers={registeredUsers}
           onClose={() => setShowFindFriendsModal(false)}
           onToggleFollowUser={handleToggleFollowUser}
-        />
+        /></React.Suspense>
       )}
 
       {/* 0.6 Push notification soft-ask (website only, shown once per browser) */}
@@ -1739,7 +1780,7 @@ export default function App() {
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (
-        <StoryViewerModal
+        <React.Suspense fallback={null}><StoryViewerModal
           stories={storyViewerStories}
           initialIndex={activeStoryViewerIndex}
           onClose={() => setActiveStoryViewerIndex(null)}
@@ -1754,27 +1795,27 @@ export default function App() {
             setPendingExploreSearch(tag);
             setActiveTab('explore');
           }}
-        />
+        /></React.Suspense>
       )}
 
       {/* 2. Story Creation Modal */}
       {showCreateStoryModal && (
-        <CreateStoryModal
+        <React.Suspense fallback={null}><CreateStoryModal
           onClose={() => setShowCreateStoryModal(false)}
           onSubmitStory={handleCreateStory}
           allUsers={registeredUsers}
-        />
+        /></React.Suspense>
       )}
 
       {/* 3. Post & Carousel Creation Modal */}
       {showPostCreationModal && (
-        <PostCreationModal
+        <React.Suspense fallback={null}><PostCreationModal
           currentUser={currentUser}
           allUsers={registeredUsers}
           onClose={() => setShowPostCreationModal(false)}
           onSubmitPost={handleCreatePostOrReel}
           onGoLive={handleGoLiveTap}
-        />
+        /></React.Suspense>
       )}
 
       {/* 3b. Long-form Video Upload Modal (Home tab's "+") */}
@@ -1807,7 +1848,9 @@ export default function App() {
             allUsers={registeredUsers}
             initialRoomId={liveLoungeInviteRoomId || undefined}
             initialJoinCode={sharedLiveLoungeCode || undefined}
-            onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); setSharedLiveLoungeCode(null); }}
+            initialJoinPasscode={sharedLiveLoungePasscode || undefined}
+            initialMeetingId={liveLoungeMeetingId || undefined}
+            onClose={() => { setShowLiveLoungeUpsell(false); setLiveLoungeInviteRoomId(null); setSharedLiveLoungeCode(null); setSharedLiveLoungePasscode(null); setLiveLoungeMeetingId(null); }}
             onUserUpdated={(u) => setCurrentUser(u)}
           />
         </React.Suspense>
@@ -1834,8 +1877,11 @@ export default function App() {
         <React.Suspense fallback={<LazyFallback />}>
           <ProFeaturesModal
             currentUser={currentUser}
-            onClose={() => setShowSubscriptionsModal(false)}
+            onClose={() => { setShowSubscriptionsModal(false); setProLink(null); }}
             onUserUpdated={(u) => setCurrentUser(u)}
+            allUsers={registeredUsers}
+            focusTier={proLink?.tier}
+            focusBilling={proLink?.billing}
           />
         </React.Suspense>
       )}
@@ -1853,7 +1899,7 @@ export default function App() {
 
       {/* 6. Notifications & Following Activity Modal */}
       {showNotificationsModal && (
-        <NotificationsModal
+        <React.Suspense fallback={null}><NotificationsModal
           currentUser={currentUser}
           notifications={notifications}
           notificationSettings={notificationSettings}
@@ -1872,27 +1918,35 @@ export default function App() {
           }}
           onOpenLiveLoungeInvite={(roomId) => {
             setLiveLoungeInviteRoomId(roomId);
+            setLiveLoungeMeetingId(null);
             setShowLiveLoungeUpsell(true);
             setShowNotificationsModal(false);
           }}
-        />
+          onOpenLiveLoungeMeeting={(meetingId) => {
+            setLiveLoungeInviteRoomId(null);
+            setSharedLiveLoungeCode(null);
+            setLiveLoungeMeetingId(meetingId);
+            setShowLiveLoungeUpsell(true);
+            setShowNotificationsModal(false);
+          }}
+        /></React.Suspense>
       )}
 
       {activeScratchCardId && (
-        <ScratchCardModal
+        <React.Suspense fallback={null}><ScratchCardModal
           scratchCardId={activeScratchCardId}
           onClose={() => setActiveScratchCardId(null)}
           onUserUpdated={(u) => setCurrentUser(u)}
-        />
+        /></React.Suspense>
       )}
 
       {/* 7. Status Note & Music Snippet Modal */}
       {showStatusNoteModal && (
-        <StatusNoteModal
+        <React.Suspense fallback={null}><StatusNoteModal
           currentUser={currentUser}
           onClose={() => setShowStatusNoteModal(false)}
           onSaveNote={handleUpdateStatusNote}
-        />
+        /></React.Suspense>
       )}
 
       {/* 8. Legal Modals */}

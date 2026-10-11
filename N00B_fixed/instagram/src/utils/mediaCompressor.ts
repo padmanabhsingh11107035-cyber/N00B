@@ -256,10 +256,10 @@ export async function compressVideo(file: File): Promise<File> {
  * Universal media compressor that invisibly detects whether the file is an image or video
  * and compresses it accordingly.
  */
-export async function compressMedia(file: File): Promise<File> {
+export async function compressMedia(file: File, opts?: { maxSide?: number; quality?: number }): Promise<File> {
   try {
     if (file.type.startsWith('image/')) {
-      return await compressImage(file);
+      return await compressImage(file, opts?.maxSide ?? 1600, opts?.maxSide ?? 1600, opts?.quality ?? 0.82);
     } else if (file.type.startsWith('video/')) {
       return await compressVideo(file);
     }

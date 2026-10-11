@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Sparkles, Ticket, Coins, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Users, Search, HeartHandshake, Radio, KeyRound, History, Bell } from 'lucide-react';
+import { ArrowLeft, Sparkles, Ticket, Coins, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Users, Search, HeartHandshake, Radio, KeyRound, History, Bell, CalendarPlus, CalendarClock } from 'lucide-react';
 import { User } from '../../types';
 import { LIVE_LOUNGE_PRICE, purchaseLiveLounge, redeemLiveLoungeCoupon, requestFriendPayment, fetchPendingLiveLoungeInvites, fetchLiveLoungeHistory, fetchLiveLoungeRoomMyStatus } from '../../services/api';
 import { readMeeting, clearMeeting } from '../../utils/pageResume';
@@ -10,6 +10,10 @@ import { formatNoobPoints } from '../../utils/formatPoints';
 // screen slow to open the first time, which looked like tapping "Live Lounge" did nothing for a while.
 const LiveLoungeRoomView = React.lazy(() => import('../LiveStream/LiveLoungeRoomView').then((m) => ({ default: m.LiveLoungeRoomView })));
 import confetti from 'canvas-confetti';
+import { MeetingForm } from './meeting/MeetingForm';
+import { MeetingList } from './meeting/MeetingList';
+import { MeetingDetails } from './meeting/MeetingDetails';
+import type { LiveLoungeMeeting } from '../../services/api';
 
 interface LiveLoungePageProps {
   currentUser: User;
@@ -18,11 +22,17 @@ interface LiveLoungePageProps {
   onUserUpdated?: (user: User) => void;
   initialRoomId?: string;
   initialJoinCode?: string;
+  // the passcode from a shared link (?liveLounge=CODE&pwd=...)
+  initialJoinPasscode?: string;
+  // a planned meeting to open (from a notification)
+  initialMeetingId?: string;
 }
+
+type Sub = { kind: 'form'; mode: 'now' | 'schedule' | 'edit'; existing?: LiveLoungeMeeting } | { kind: 'list' } | { kind: 'details'; id: string; justCreated?: boolean } | null;
 
 type Mode = 'menu' | 'purchase' | 'coupon' | 'ask-friend' | 'history';
 
-export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, allUsers, onClose, onUserUpdated, initialRoomId, initialJoinCode }) => {
+export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, allUsers, onClose, onUserUpdated, initialRoomId, initialJoinCode, initialJoinPasscode, initialMeetingId }) => {
   const alreadyUnlocked = !!currentUser.hasLiveLounge;
   const [mode, setMode] = useState<Mode>('menu');
   const [password, setPassword] = useState('');
@@ -37,6 +47,13 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
   const [friend, setFriend] = useState<User | null>(null);
   const [askSent, setAskSent] = useState(false);
   const [roomFlow, setRoomFlow] = useState<'host' | 'join' | null>(initialRoomId || initialJoinCode ? 'join' : null);
+  // planned meetings: the planning form, the upcoming list, one meeting's page
+  const [sub, setSub] = useState<Sub>(initialMeetingId ? { kind: 'details', id: initialMeetingId } : null);
+  const [startMeetingId, setStartMeetingId] = useState<string | undefined>();
+  const [joinCodePrefill, setJoinCodePrefill] = useState<string | undefined>();
+  const [joinPasscode, setJoinPasscode] = useState<string | undefined>(initialJoinPasscode);
+  const startMeetingNow = (m: LiveLoungeMeeting) => { setResumeRoomId(undefined); setJoinCodePrefill(undefined); setStartMeetingId(m.id); setSub(null); setRoomFlow('host'); };
+  const joinMeeting = (m: LiveLoungeMeeting) => { setResumeRoomId(undefined); setStartMeetingId(undefined); setJoinCodePrefill(m.meetingCode); setJoinPasscode(m.passcode || undefined); setSub(null); setRoomFlow('join'); };
   const [resumeRoomId, setResumeRoomId] = useState<string | undefined>(initialRoomId);
   // Refreshing / reopening the app while in a meeting: go straight back into that meeting (if it is still running and the person has
   // not left it). Checked with the server first so a finished meeting does not flash an "ended" screen.
@@ -163,10 +180,54 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
           mode={roomFlow}
           allUsers={allUsers}
           initialRoomId={resumeRoomId}
-          initialJoinCode={resumeRoomId ? undefined : initialJoinCode}
-          onClose={() => { setRoomFlow(null); setResumeRoomId(undefined); }}
+          initialJoinCode={resumeRoomId ? undefined : joinCodePrefill || initialJoinCode}
+          initialPasscode={joinPasscode}
+          startMeetingId={startMeetingId}
+          onClose={() => { setRoomFlow(null); setResumeRoomId(undefined); setStartMeetingId(undefined); setJoinCodePrefill(undefined); setJoinPasscode(undefined); }}
         />
       </React.Suspense>
+    );
+  }
+
+  if (sub?.kind === 'form') {
+    return (
+      <MeetingForm
+        currentUser={currentUser}
+        allUsers={allUsers}
+        mode={sub.mode}
+        existing={sub.existing}
+        onClose={() => setSub(sub.mode === 'edit' && sub.existing ? { kind: 'details', id: sub.existing.id } : null)}
+        onDone={(meeting, action) => (action === 'start' ? startMeetingNow(meeting) : setSub({ kind: 'details', id: meeting.id, justCreated: sub.mode !== 'edit' }))}
+        onLegacyStart={() => { setResumeRoomId(undefined); setStartMeetingId(undefined); setSub(null); setRoomFlow('host'); }}
+      />
+    );
+  }
+  if (sub?.kind === 'list') {
+    return (
+      <MeetingList
+        currentUser={currentUser}
+        allUsers={allUsers}
+        onBack={() => setSub(null)}
+        onOpen={(m) => setSub({ kind: 'details', id: m.id })}
+        onStart={startMeetingNow}
+        onJoin={joinMeeting}
+        onSchedule={() => setSub({ kind: 'form', mode: 'schedule' })}
+      />
+    );
+  }
+  if (sub?.kind === 'details') {
+    return (
+      <MeetingDetails
+        key={sub.id}
+        meetingId={sub.id}
+        currentUser={currentUser}
+        allUsers={allUsers}
+        justCreated={sub.justCreated}
+        onBack={() => setSub({ kind: 'list' })}
+        onStart={startMeetingNow}
+        onJoin={joinMeeting}
+        onEdit={(m) => setSub({ kind: 'form', mode: 'edit', existing: m })}
+      />
     );
   }
 
@@ -242,13 +303,21 @@ export const LiveLoungePage: React.FC<LiveLoungePageProps> = ({ currentUser, all
           </div>
         )}
         <div className="w-full max-w-sm grid grid-cols-2 gap-3 mt-2">
-          <button onClick={() => { setResumeRoomId(undefined); setRoomFlow('host'); }} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-purple-500/15 border border-purple-500/30">
+          <button onClick={() => setSub({ kind: 'form', mode: 'now' })} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-purple-500/15 border border-purple-500/30">
             <Radio className="w-5 h-5 text-purple-300" />
             <span className="text-xs font-bold text-white">Start a Room</span>
           </button>
           <button onClick={() => { setResumeRoomId(undefined); setRoomFlow('join'); }} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
             <KeyRound className="w-5 h-5 text-zinc-300" />
             <span className="text-xs font-bold text-white">Join with Code</span>
+          </button>
+          <button onClick={() => setSub({ kind: 'form', mode: 'schedule' })} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
+            <CalendarPlus className="w-5 h-5 text-zinc-300" />
+            <span className="text-xs font-bold text-white">Schedule a Meeting</span>
+          </button>
+          <button onClick={() => setSub({ kind: 'list' })} className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-zinc-900 border border-zinc-800">
+            <CalendarClock className="w-5 h-5 text-zinc-300" />
+            <span className="text-xs font-bold text-white">Upcoming meetings</span>
           </button>
         </div>
       </div>

@@ -26,5 +26,5 @@ export const AvatarMedia: React.FC<AvatarMediaProps> = ({ src, isLiveAvatar, liv
       />
     );
   }
-  return <img src={src || '/noob-logo.svg.jpeg'} alt={alt} className={className} referrerPolicy="no-referrer" />;
+  return <img loading="lazy" decoding="async" src={src || '/noob-logo.svg.jpeg'} alt={alt} className={className} referrerPolicy="no-referrer" />;
 };

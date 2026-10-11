@@ -8,6 +8,7 @@ function formatCountdown(expiresAt: string, now: number): string {
   const remainingMs = new Date(expiresAt).getTime() - now;
   if (remainingMs <= 0) return 'Expired';
   const totalSeconds = Math.floor(remainingMs / 1000);
+  if (totalSeconds >= 3600) return `${Math.floor(totalSeconds / 3600)}h ${Math.floor((totalSeconds % 3600) / 60)}m`;   // a NOOB Pro request stays open for 24 hours
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
 }
 
@@ -109,7 +110,17 @@ export const PaymentRequestsModal: React.FC<PaymentRequestsModalProps> = ({ curr
                   <img src={r.requester.avatar || '/noob-logo.svg.jpeg'} alt={r.requester.username} className="w-10 h-10 rounded-full object-cover border border-zinc-700" referrerPolicy="no-referrer" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-white"><span className="font-bold">@{r.requester.username}</span> is asking you to pay for</p>
-                    <p className="text-xs font-bold text-amber-400">{PURCHASE_LABEL[r.purchaseType] || r.purchaseType}</p>
+                    <p className="text-xs font-bold text-amber-400">
+                      {r.purchaseType === 'pro' || r.purchaseType === 'pro_topup'
+                        ? `NOOB Pro ${r.planName || ''} · ${r.planBilling === 'yearly' ? 'Yearly' : 'Monthly'}`
+                        : PURCHASE_LABEL[r.purchaseType] || r.purchaseType}
+                    </p>
+                    {r.purchaseType === 'pro_topup' && (
+                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                        Plan price {formatNoobPoints(r.planPrice || 0)} pts · they add {formatNoobPoints(r.requesterPays || 0)} pts of their own, you pay the missing part
+                      </p>
+                    )}
+                    {r.purchaseType === 'pro' && <p className="text-[10px] text-zinc-400 mt-0.5">You pay the whole plan price.</p>}
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-sm font-black text-white block">{formatNoobPoints(r.amount)} pts</span>

@@ -48,6 +48,7 @@ import { BirthdayWheelPicker } from './BirthdayWheelPicker';
 import { AvatarAdjustEditor, AvatarAdjustResult } from '../Common/AvatarAdjustEditor';
 import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
+import { LoginDoodles } from './LoginDoodles';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
@@ -965,6 +966,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
       </div>
 
+      <LoginDoodles />
+
       {/* Install to Home Screen: available before logging in or signing up, on any device */}
       <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
         <button
@@ -984,42 +987,23 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         )}
       </div>
 
-      {/* Top Header: Circular brand badge + wordmark, centered */}
+      {/* Top Header: the real NOOB logo, centered */}
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
-        <div className="relative transition-transform hover:scale-[1.02]">
-          {/* Circular gradient-ring badge */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-noob via-cyan-400 to-indigo-600 p-[3px] shadow-[0_0_35px_rgba(217,119,87,0.35)]">
-            <div className="w-full h-full rounded-full bg-black flex flex-col items-center justify-center overflow-hidden relative">
-              {/* Faint phone-outline silhouette behind the wordmark */}
-              <svg viewBox="0 0 24 24" className="absolute w-11 h-11 sm:w-14 sm:h-14 text-white/10" fill="none" stroke="currentColor" strokeWidth="1"><rect x="7" y="2" width="10" height="20" rx="2" /></svg>
-              {/* Crown accent */}
-              <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 -mb-0.5 relative" fill="currentColor"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
-              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-zinc-50 via-noob to-noob-strong text-lg sm:text-xl tracking-tighter leading-none relative">
-                NOOB
-              </span>
-              {/* Tiny heart accent, left side */}
-              <svg viewBox="0 0 24 24" className="absolute top-2.5 left-2 w-2.5 h-2.5 text-noob/70 relative" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
-              {/* Tiny chat-bubble accent */}
-              <svg viewBox="0 0 24 24" className="absolute top-2 right-2 w-3 h-3 text-cyan-300/70" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
-            </div>
+        <div className="relative transition-transform hover:scale-[1.03]">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[30px] sm:rounded-[34px] overflow-hidden bg-black ring-1 ring-white/15 shadow-[0_0_40px_rgba(217,119,87,0.35)]">
+            <img src="/noob-logo-circle.png" alt="NOOB" className="w-full h-full object-cover scale-[1.12]" draggable={false} />
           </div>
-          {/* Sparkle accent beside the badge */}
-          <svg viewBox="0 0 24 24" className="absolute -top-1 -right-2 w-5 h-5 text-amber-300 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-          {/* Tiny confetti dashes around the badge */}
-          <span className="absolute -top-2 left-1 w-2.5 h-0.5 rounded-full bg-amber-300 -rotate-45" />
-          <span className="absolute top-1 -left-3 w-2 h-0.5 rounded-full bg-cyan-300 rotate-12" />
-          <span className="absolute -bottom-1 -left-2 w-2.5 h-0.5 rounded-full bg-pink-400 rotate-45" />
-          {/* Tiny paper-plane accent */}
-          <svg viewBox="0 0 24 24" className="absolute -bottom-2 -right-1 w-3.5 h-3.5 text-teal-300/80 rotate-[15deg]" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
+          {/* A few sparkles and dashes around the logo */}
+          <svg viewBox="0 0 24 24" className="absolute -top-2 -right-3 w-5 h-5 text-amber-300 rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+          <svg viewBox="0 0 24 24" className="absolute -bottom-2 -left-3 w-4 h-4 text-cyan-300 -rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+          <span className="absolute -top-2 left-2 w-2.5 h-0.5 rounded-full bg-amber-300 -rotate-45" />
+          <span className="absolute top-3 -left-3.5 w-2 h-0.5 rounded-full bg-cyan-300 rotate-12" />
+          <span className="absolute -bottom-1 -right-3 w-2.5 h-0.5 rounded-full bg-pink-400 rotate-45" />
+          <svg viewBox="0 0 24 24" className="absolute -bottom-3 right-3 w-4 h-4 text-teal-300/80 rotate-[15deg]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>
         </div>
 
-        {/* "NOOB" text lockup below the badge */}
-        <span className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-50 via-zinc-100 to-zinc-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-          NOOB
-        </span>
-
         {/* Tagline */}
-        <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm font-bold tracking-wide">
+        <div className="flex items-center gap-2 mt-3 text-xs sm:text-sm font-bold tracking-wide">
           <span className="text-noob">Connect</span>
           <span className="text-zinc-600">•</span>
           <span className="text-cyan-400">Share</span>

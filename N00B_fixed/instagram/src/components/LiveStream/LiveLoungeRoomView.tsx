@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   X, Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PenTool, MessageCircle, Users,
   Send, Copy, Check, UserCheck, UserX, LogOut, Radio, Eraser, Hand, Wand2, CheckCircle2, AlertCircle, Clock,
-  MoreVertical, Share2, SwitchCamera
+  MoreVertical, Share2, SwitchCamera, Lock, Unlock
 } from 'lucide-react';
 import AgoraRTC, {
   IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack,
@@ -14,7 +14,11 @@ import { AvatarMedia } from '../Common/AvatarMedia';
 import {
   LiveLoungeParticipant,
   LiveLoungeRoomChatMessage,
+  LiveLoungeRoomSettings,
   startLiveLoungeRoom,
+  startLiveLoungeMeeting,
+  registerForLiveLoungeMeeting,
+  setLiveLoungeRoomLocked,
   joinLiveLoungeRoomByCode,
   fetchLiveLoungeRoomMyStatus,
   fetchLiveLoungeRoomParticipants,
@@ -45,6 +49,10 @@ interface LiveLoungeRoomViewProps {
   // From a shared link (?liveLounge=CODE) rather than a targeted invite — joins straight into the
   // waiting room the same way typing the code in by hand would, no re-typing needed.
   initialJoinCode?: string;
+  // a planned meeting to start (the host pressed Start on it): the room is made from that meeting, with its rules
+  startMeetingId?: string;
+  // the passcode that came with a shared link (?liveLounge=CODE&pwd=...)
+  initialPasscode?: string;
 }
 
 type Phase = 'lobby' | 'waiting-room' | 'connecting' | 'live' | 'ended';
@@ -106,10 +114,14 @@ const VideoTile: React.FC<{
   );
 };
 
-export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentUser, mode, onClose, allUsers, initialRoomId, initialJoinCode }) => {
+export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentUser, mode, onClose, allUsers, initialRoomId, initialJoinCode, startMeetingId, initialPasscode }) => {
   const [phase, setPhase] = useState<Phase>(initialRoomId ? 'waiting-room' : 'lobby');
   const [title, setTitle] = useState('');
   const [codeInput, setCodeInput] = useState('');
+  const [passcodeInput, setPasscodeInput] = useState(initialPasscode || '');
+  const [settings, setSettings] = useState<LiveLoungeRoomSettings | null>(null);   // the rules of a planned meeting (null for a plain room)
+  const [roomLocked, setRoomLocked] = useState(false);
+  const [needRegister, setNeedRegister] = useState(false);
   const [roomId, setRoomId] = useState<string | undefined>(initialRoomId);
   const [roomCode, setRoomCode] = useState<string | undefined>();
   const [isHost, setIsHost] = useState(mode === 'host');
@@ -264,7 +276,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const handleStartRoom = async () => {
     setError('');
     setBusy(true);
-    const res = await startLiveLoungeRoom(title);
+    const res = startMeetingId ? await startLiveLoungeMeeting(startMeetingId) : await startLiveLoungeRoom(title);
     setBusy(false);
     if (!res.success || !res.roomId) {
       setError(res.error || 'Could not start the room.');
@@ -280,18 +292,40 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   const handleJoinByCode = async (codeOverride?: string) => {
     const code = (codeOverride ?? codeInput).trim();
     if (!code) return;
+    if (codeOverride) setCodeInput(codeOverride);
     setError('');
+    setNeedRegister(false);
     setBusy(true);
-    const res = await joinLiveLoungeRoomByCode(code);
+    const res = await joinLiveLoungeRoomByCode(code, passcodeInput);
     setBusy(false);
     if (!res.success || !res.roomId) {
       setError(res.error || 'Could not join that room.');
+      setNeedRegister(/registration is required/i.test(res.error || ''));
       return;
     }
     setRoomId(res.roomId);
     setTitle(res.title || '');
     setPhase('waiting-room');
   };
+
+  // A meeting that asks people to register first: register, then try to join again.
+  const handleRegisterForMeeting = async () => {
+    const code = codeInput.trim();
+    if (!code) return;
+    setBusy(true);
+    const res = await registerForLiveLoungeMeeting(code, '');
+    setBusy(false);
+    if (!res.success) { setError(res.error || 'Could not register.'); return; }
+    if (res.status === 'approved') { void handleJoinByCode(code); return; }
+    setNeedRegister(false);
+    setError('You are registered. The host has to approve you first. Try again in a little while.');
+  };
+
+  // A planned meeting the host just pressed Start on: make the room straight away, no lobby screen.
+  useEffect(() => {
+    if (startMeetingId && mode === 'host' && !initialRoomId) void handleStartRoom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
 
   // A shared-link join (?liveLounge=CODE): joins straight away instead of waiting for the person
   // to type the code into the lobby screen by hand.
@@ -312,6 +346,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       if (status?.title) setTitle(status.title);
       if (status?.roomCode) setRoomCode(status.roomCode);
       if (status?.role === 'host') setIsHost(true);
+      if (status) { setSettings(status.settings || null); setRoomLocked(!!status.locked); }
       if (status?.status === 'admitted') { setPhase('connecting'); connectAgora(roomId); }
       else if (status?.status === 'removed' || status?.roomStatus === 'ended') {
         setError(status?.roomStatus === 'ended' ? 'This room has ended.' : 'The host removed you from this room.');
@@ -533,6 +568,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const tick = async () => {
       const status = await fetchLiveLoungeRoomMyStatus(roomId);
       if (!alive) return;
+      if (status) { setSettings(status.settings || null); setRoomLocked(!!status.locked); }
       // 'left' here means we left from somewhere else (another tab or device) — leaving from this screen closes it first.
       if (status?.roomStatus === 'ended' || status?.status === 'removed' || status?.status === 'left') {
         const ended = status?.roomStatus === 'ended';
@@ -546,6 +582,25 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     const interval = setInterval(tick, 4000);
     return () => { alive = false; clearInterval(interval); };
   }, [phase, roomId, isHost, cleanup]);
+
+  // The host does not poll their own status above, so read the meeting's rules and the lock once the call is live, then now and then.
+  useEffect(() => {
+    if (phase !== 'live' || !roomId || !isHost) return;
+    let alive = true;
+    const tick = async () => {
+      const status = await fetchLiveLoungeRoomMyStatus(roomId);
+      if (alive && status) { setSettings(status.settings || null); setRoomLocked(!!status.locked); }
+    };
+    void tick();
+    const interval = setInterval(tick, 10000);
+    return () => { alive = false; clearInterval(interval); };
+  }, [phase, roomId, isHost]);
+
+  const handleToggleLock = async () => {
+    if (!roomId) return;
+    const res = await setLiveLoungeRoomLocked(roomId, !roomLocked);
+    if (res.success) setRoomLocked(!!res.locked); else setError(res.error || 'Could not change the lock.');
+  };
 
   // The track itself is only ever acquired here, on first tap — this is the one moment the browser's
   // permission prompt should appear. Every tap after that just enables/disables the track already
@@ -765,7 +820,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   // actually useful — sharing into WhatsApp etc.), clipboard copy as the desktop fallback.
   const shareRoomLink = () => {
     if (!roomCode) return '';
-    return `${window.location.origin}/?liveLounge=${roomCode}`;
+    return `${window.location.origin}/?liveLounge=${roomCode}${isHost && settings?.passcode ? `&pwd=${encodeURIComponent(settings.passcode)}` : ''}`;
   };
   const handleShareRoom = async () => {
     const link = shareRoomLink();
@@ -819,6 +874,15 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
     );
   }
 
+  if (phase === 'lobby' && startMeetingId && mode === 'host' && !error) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
+        <p className="text-white/70 text-sm">Starting your meeting…</p>
+      </div>
+    );
+  }
+
   if (phase === 'lobby') {
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center px-6 gap-5">
@@ -827,8 +891,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           <p className="text-amber-400 text-[11px] text-center max-w-sm">Locked for everyone else right now — you can still host/join as admin.</p>
         )}
         <Radio className="w-10 h-10 text-purple-400" />
-        <h2 className="text-white text-lg font-semibold">{mode === 'host' ? 'Start a Live Lounge room' : 'Join a Live Lounge room'}</h2>
-        {mode === 'host' ? (
+        <h2 className="text-white text-lg font-semibold">{startMeetingId ? 'Could not start the meeting' : mode === 'host' ? 'Start a Live Lounge room' : 'Join a Live Lounge room'}</h2>
+        {mode === 'host' && startMeetingId ? null : mode === 'host' ? (
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -841,12 +905,25 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
             value={codeInput}
             onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
             onKeyDown={(e) => { if (e.key === 'Enter' && codeInput.trim() && !busy) handleJoinByCode(); }}
-            placeholder="Room code"
+            placeholder="Room code or Meeting ID"
             autoFocus
             className="w-full max-w-sm bg-white/10 text-white placeholder-white/40 rounded-full px-4 py-3 text-sm text-center tracking-widest font-bold outline-none"
           />
         )}
-        {error && <p className="text-red-400 text-xs">{error}</p>}
+        {mode === 'join' && (
+          <input
+            value={passcodeInput}
+            onChange={(e) => setPasscodeInput(e.target.value.trim())}
+            onKeyDown={(e) => { if (e.key === 'Enter' && codeInput.trim() && !busy) handleJoinByCode(); }}
+            placeholder="Passcode (if the host set one)"
+            maxLength={10}
+            className="w-full max-w-sm bg-white/10 text-white placeholder-white/40 rounded-full px-4 py-3 text-sm text-center tracking-widest outline-none"
+          />
+        )}
+        {error && <p className="text-red-400 text-xs text-center max-w-sm">{error}</p>}
+        {needRegister && (
+          <button onClick={handleRegisterForMeeting} disabled={busy} className="w-full max-w-sm bg-amber-500 text-black font-semibold rounded-full py-3 disabled:opacity-40">Register for this meeting</button>
+        )}
         <button
           onClick={() => (mode === 'host' ? handleStartRoom() : handleJoinByCode())}
           disabled={busy || (mode === 'join' && !codeInput.trim())}
@@ -863,8 +940,9 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center gap-3 px-6 text-center">
         <button onClick={handleEndOrLeave} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
         <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-purple-400 animate-spin" />
-        <p className="text-white text-sm font-semibold">{title || 'Live Lounge room'}</p>
-        <p className="text-white/60 text-xs">Waiting for the host to let you in…</p>
+        <p className="text-white text-sm font-semibold">{settings?.waitingRoomTitle || title || 'Live Lounge room'}</p>
+        <p className="text-white/60 text-xs max-w-xs">{settings?.waitingRoomMessage || 'Waiting for the host to let you in…'}</p>
+        {settings?.description && <p className="text-white/40 text-[11px] max-w-xs whitespace-pre-line">{settings.description}</p>}
       </div>
     );
   }
@@ -929,6 +1007,8 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
               Code: <span className="font-mono font-bold">{roomCode}</span> {codeCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
             </button>
           )}
+          {isHost && settings?.passcode && <p className="text-[11px] text-white/50">Passcode: <span className="font-mono font-bold text-white/80">{settings.passcode}</span></p>}
+          {settings?.myBreakoutRoom && <p className="text-[11px] text-amber-300">Your breakout room: <b>{settings.myBreakoutRoom}</b></p>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isHost && (
@@ -1022,9 +1102,11 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         >
           <SwitchCamera className="w-5 h-5" />
         </button>
-        <button onClick={handleToggleScreenShare} className={`shrink-0 p-3 rounded-full ${sharingScreen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
-          <MonitorUp className="w-5 h-5" />
-        </button>
+        {(isHost || !settings?.hostOnlyScreenShare) && (
+          <button onClick={handleToggleScreenShare} className={`shrink-0 p-3 rounded-full ${sharingScreen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+            <MonitorUp className="w-5 h-5" />
+          </button>
+        )}
         <button onClick={() => handleToggleWhiteboard(!whiteboardOpen)} className={`shrink-0 p-3 rounded-full ${whiteboardOpen ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <PenTool className="w-5 h-5" />
         </button>
@@ -1039,12 +1121,12 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         >
           <Wand2 className="w-5 h-5" />
         </button>
-        <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`relative shrink-0 p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
+        {settings?.chatEnabled !== false && <button onClick={() => setPanel(panel === 'chat' ? 'none' : 'chat')} className={`relative shrink-0 p-3 rounded-full ${panel === 'chat' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <MessageCircle className="w-5 h-5" />
           {unreadChat > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{unreadChat > 9 ? '9+' : unreadChat}</span>
           )}
-        </button>
+        </button>}
         <button onClick={() => setPanel(panel === 'people' ? 'none' : 'people')} className={`relative shrink-0 p-3 rounded-full ${panel === 'people' ? 'bg-purple-500/30 text-purple-300' : 'bg-white/10 text-white'}`}>
           <Users className="w-5 h-5" />
           {raisedHands.size > 0 && (
@@ -1115,6 +1197,11 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
             <span className="text-white text-xs font-bold">People</span>
             <div className="flex items-center gap-2">
+              {isHost && (
+                <button onClick={handleToggleLock} title={roomLocked ? 'Unlock the meeting so people can join' : 'Lock the meeting so nobody new can join'} className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg ${roomLocked ? 'bg-amber-500/25 text-amber-200' : 'bg-white/10 text-white/70'}`}>
+                  {roomLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />} {roomLocked ? 'Locked' : 'Lock'}
+                </button>
+              )}
               {isHost && (
                 <button onClick={handleMuteAll} className="flex items-center gap-1 text-[11px] text-white/70 px-2 py-1 rounded-lg bg-white/10">
                   <MicOff className="w-3.5 h-3.5" /> Mute all

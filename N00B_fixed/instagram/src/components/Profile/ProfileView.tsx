@@ -121,6 +121,7 @@ import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
 import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
+import { LazyVideo } from '../Common/LazyVideo';
 
 // Lazy-loaded: large, rarely-opened screens pulled out of the main bundle rather than loaded on
 // every visit — dynamic import() here and in App.tsx (which also renders AdminControlModal) share
@@ -1702,7 +1703,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className="relative aspect-[9/16] bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800/80 shadow-md"
               >
                 {reel.thumbnailUrl ? (
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={reel.thumbnailUrl}
                     alt={reel.caption}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -1711,11 +1712,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   // Older reels with no captured thumbnail — the video's own
                   // first frame is still the real reel, not a generic stock
                   // photo shared by every un-thumbnailed reel in the app.
-                  <video
+                  <LazyVideo
                     src={reel.videoUrl}
                     muted
                     playsInline
-                    preload="metadata"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 )}
@@ -1856,7 +1856,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden p-2.5 group hover:border-noob/50 transition-colors cursor-pointer shadow-md"
                     >
                       <div className="aspect-square rounded-xl overflow-hidden bg-black mb-2">
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={col.coverUrl || '/noob-logo-circle.png'}
                           alt={col.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
@@ -2512,6 +2512,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           currentUser={currentUser}
           onClose={() => setShowProFeaturesModal(false)}
           onUserUpdated={onUserUpdated}
+          allUsers={allUsers}
         />
       )}
 

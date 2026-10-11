@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { LongVideo } from '../../types';
+import { LazyVideo } from '../Common/LazyVideo';
 
 interface LongVideoListPageProps {
   title: string;
@@ -59,7 +60,7 @@ export const LongVideoListPage: React.FC<LongVideoListPageProps> = ({ title, ico
                   {v.thumbnailUrl ? (
                     <img src={v.thumbnailUrl} alt={v.title} className="w-full h-full object-cover" />
                   ) : (
-                    <video src={v.videoUrl} className="w-full h-full object-cover" muted preload="metadata" />
+                    <LazyVideo src={v.videoUrl} className="w-full h-full object-cover" muted />
                   )}
                   <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 py-0.5 rounded">{formatDuration(v.durationSeconds)}</span>
                 </div>

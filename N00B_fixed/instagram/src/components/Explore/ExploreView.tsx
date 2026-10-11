@@ -34,6 +34,7 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
 import { POST_FILTERS } from '../../data/mockData';
 import { JoinUsModal } from './JoinUsModal';
+import { LazyVideo } from '../Common/LazyVideo';
 
 // Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
 // exactly the kind of nagging that makes people distrust a permission prompt.
@@ -395,7 +396,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   key={user.id}
                   className="shrink-0 w-32 bg-zinc-950 border border-zinc-800/80 rounded-2xl p-3 flex flex-col items-center text-center gap-1.5"
                 >
-                  <img
+                  <img loading="lazy" decoding="async"
                     onClick={() => onNavigateToUserProfile?.(user)}
                     src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                     alt={user.username}
@@ -580,7 +581,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                         className="relative shrink-0 cursor-pointer group/avatar"
                         title={`View @${user.username}'s profile`}
                       >
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                           alt={user.username}
                           className="w-12 h-12 rounded-2xl object-cover border border-white/10 group-hover/avatar:scale-105 transition-transform"
@@ -801,7 +802,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               className="group relative aspect-[9/16] bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
             >
               {reel.thumbnailUrl ? (
-                <img
+                <img loading="lazy" decoding="async"
                   src={reel.thumbnailUrl}
                   alt={reel.caption}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -812,11 +813,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 // own first frame here is still the ACTUAL reel, unlike the
                 // generic stock photo this used to fall back to (the same
                 // one for every un-thumbnailed reel, regardless of creator).
-                <video
+                <LazyVideo
                   src={reel.videoUrl}
                   muted
                   playsInline
-                  preload="metadata"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               )}

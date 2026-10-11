@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
-import { can } from '../../adminAccess';
+import { can, isMainAdmin } from '../../adminAccess';
+import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 import {
   Heart,
   MessageCircle,
@@ -14,6 +15,7 @@ import {
   Tag,
   ShieldCheck,
   Archive,
+  Pin,
   MessageSquareOff,
   EyeOff,
   Trash2,
@@ -117,6 +119,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isOwner = post.userId === currentUser.id || post.username === currentUser.username;
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
   const isMasterAdmin = can(currentUser, 'moderate_content');
+  const pinnedPosts = usePinnedFeedItems();
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
   const [showTagPill, setShowTagPill] = useState(false);
@@ -478,6 +481,18 @@ export const PostCard: React.FC<PostCardProps> = ({
                   </button>
                 </>
               )}
+              {isMainAdmin(currentUser) && (
+                <button
+                  onClick={async () => {
+                    setShowOptionsMenu(false);
+                    const res = await toggleFeedPin('post', post.id);
+                    if (!res.success) alert(res.error || 'Could not change the pin.');
+                  }}
+                  className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                >
+                  <Pin className="w-4 h-4 text-noob" /> {pinnedPosts.some((p) => p.kind === 'post' && p.itemId === post.id) ? 'Unpin from Feed' : 'Pin to Feed'}
+                </button>
+              )}
               {(isOwner || isMasterAdmin) && (
                 <button
                   onClick={() => {
@@ -522,6 +537,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               loop
               muted
               playsInline
+              preload="metadata"
               autoPlay={isInView}
               onLoadedMetadata={(e) => {
                 const video = e.currentTarget;

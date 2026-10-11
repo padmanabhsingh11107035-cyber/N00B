@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { orderUnseenFirst } from '../../utils/seenContent';
 import { navKey } from '../../utils/keyboardNav';
-import { can } from '../../adminAccess';
+import { can, isMainAdmin } from '../../adminAccess';
 import {
   Heart,
   MessageCircle,
@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Trash2,
   MoreHorizontal,
+  Pin,
   MessageSquareOff,
   EyeOff,
   CornerDownRight,
@@ -51,6 +52,7 @@ import { SharePostSheet } from '../Common/SharePostSheet';
 import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
+import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -144,11 +146,23 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const currentReel = localReels[currentIndex] || localReels[0];
   const nextReel = localReels[currentIndex + 1];
   const nextNextReel = localReels[currentIndex + 2];
+  // The NEXT reel is only downloaded ahead of time once the person has stayed on this one for a moment, and only on a fast connection
+  // that is not set to save data. Skimming past reels used to download every one of them in full (the biggest source of wasted data).
+  const [nextWarm, setNextWarm] = useState(false);
+  useEffect(() => {
+    setNextWarm(false);
+    const t = setTimeout(() => setNextWarm(true), 2000);
+    return () => clearTimeout(t);
+  }, [currentReel?.id]);
+  const connection = (typeof navigator !== 'undefined' ? (navigator as any).connection : undefined) as { saveData?: boolean; effectiveType?: string } | undefined;
+  const fastConnection = !connection || (!connection.saveData && (!connection.effectiveType || connection.effectiveType === '4g'));
+  const nextPreload: 'auto' | 'metadata' = nextWarm && fastConnection ? 'auto' : 'metadata';
   const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
   const isReelOwner = !!currentReel && currentReel.userId === currentUser.id;
   useScreenshotAlert('reel', currentReel?.id, !!currentReel && !isReelOwner);
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
   const isMasterAdmin = can(currentUser, 'moderate_content');
+  const pinnedItems = usePinnedFeedItems();
 
   useEffect(() => {
     for (const r of [currentReel, nextReel]) {
@@ -636,7 +650,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             src={nextReel.videoUrl}
             muted
             playsInline
-            preload="auto"
+            preload={nextPreload}
             className="absolute w-px h-px opacity-0 pointer-events-none"
             aria-hidden="true"
           />
@@ -746,6 +760,18 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                         <EyeOff className="w-4 h-4 text-cyan-400" /> {currentReel.isLikeCountHidden ? 'Unhide Like Count' : 'Hide Like Count'}
                       </button>
                     </>
+                  )}
+                  {isMainAdmin(currentUser) && (
+                    <button
+                      onClick={async () => {
+                        setShowReelOptionsMenu(false);
+                        const res = await toggleFeedPin('reel', currentReel.id);
+                        if (!res.success) alert(res.error || 'Could not change the pin.');
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Pin className="w-4 h-4 text-noob" /> {pinnedItems.some((p) => p.kind === 'reel' && p.itemId === currentReel.id) ? 'Unpin from Feed' : 'Pin to Feed'}
+                    </button>
                   )}
                   {(isReelOwner || isMasterAdmin) && (
                     <button

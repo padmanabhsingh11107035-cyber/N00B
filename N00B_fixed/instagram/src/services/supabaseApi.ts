@@ -4,7 +4,7 @@
 // Every function keeps the exact name, arguments and return shape of the old Express version in
 // api.ts, so no screen has to change. The old server's rules now live in the database (see
 // supabase/migrations); this file only translates between the screens and those database functions.
-import type { Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant, NoobRoomChatMessage, SongGuessRound, SongGuessLeaderboardEntry } from '../types';
+import type { PinnedFeedItem, Post, User, StatusNote, AppSettings, AppNotification, Story, Reel, LongVideo, LongVideoPlaylist, DailyChallenge, DailyChallengeEntry, DailyChampion, StoryHighlight, SavedCollection, MusicTrack, Message, ChatConversation, GameLeaderboardEntry, ShopItem, StoreProduct, StoreProductMedia, StoreProductInput, StoreOrder, ShopDetails, ShopAddress, ProfessionalInsights, NoobRoom, NoobRoomParticipant, NoobRoomChatMessage, SongGuessRound, SongGuessLeaderboardEntry } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
@@ -1354,7 +1354,9 @@ export async function uploadMediaFile(
   folder: MediaFolder = 'posts'
 ): Promise<{ success: boolean; objectKey: string; url: string }> {
   // Invisibly compress images/videos to reduce latency and bandwidth
-  const optimizedFile = await compressMedia(file);
+  // Smaller pictures cost less data every single time they are shown: a profile picture is never displayed bigger than a phone screen
+  // (640 px is plenty), and a post picture at 1440 px is sharp on any phone.
+  const optimizedFile = await compressMedia(file, folder === 'avatars' ? { maxSide: 640, quality: 0.82 } : { maxSide: 1440, quality: 0.8 });
 
   if (!(await currentSession())) {
     if (folder === 'avatars') {
@@ -1637,6 +1639,34 @@ export async function fetchReels(): Promise<Reel[]> {
 
 function mapLongVideo(v: any): LongVideo {
   return { ...v, userAvatar: resolveMedia(v.userAvatar), videoUrl: resolveMedia(v.videoUrl), thumbnailUrl: v.thumbnailUrl ? resolveMedia(v.thumbnailUrl) : v.thumbnailUrl };
+}
+
+// ----------------------------------------------------------------------------- pinned to the Feed page by the admin (migration 20261011000002)
+
+export async function fetchPinnedFeedItems(): Promise<PinnedFeedItem[]> {
+  try {
+    if (!(await currentSession())) return [];
+    const list = (await rpc<any[]>('pinned_feed_items')) || [];
+    return list.map((x): PinnedFeedItem => ({
+      kind: x.kind,
+      itemId: x.itemId,
+      pinnedAt: x.pinnedAt,
+      post: x.post ? mapPost(x.post) : undefined,
+      reel: x.reel ? mapReel(x.reel) : undefined,
+      video: x.video ? mapLongVideo(x.video) : undefined
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function setFeedItemPinned(kind: 'post' | 'reel' | 'video', itemId: string, pinned: boolean): Promise<{ success: boolean; pinned?: boolean; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_set_feed_pin', { p_kind: kind, p_item: itemId, p_pinned: pinned });
+    return { success: !!res?.success, pinned: !!res?.pinned };
+  } catch (err) {
+    return { success: false, error: errorText(err, pinned ? 'Could not pin that.' : 'Could not unpin that.') };
+  }
 }
 
 export async function fetchLongVideos(): Promise<LongVideo[]> {
@@ -1939,7 +1969,11 @@ export async function fetchDailyChallengeEntries(date?: string): Promise<DailyCh
 export async function fetchDailyChampions(limit = 20): Promise<DailyChampion[]> {
   try {
     const res = await rpc<any[]>('fetch_daily_champions', { p_limit: limit });
-    return (res || []).map((c: any) => ({ ...c, userAvatar: resolveMedia(c.userAvatar) }));
+    return (res || []).map((c: any) => ({
+      ...c,
+      userAvatar: resolveMedia(c.userAvatar),
+      podium: Array.isArray(c.podium) ? c.podium.map((p: any) => ({ ...p, userAvatar: resolveMedia(p.userAvatar) })) : undefined
+    }));
   } catch {
     return [];
   }
@@ -2334,6 +2368,19 @@ export async function fetchChats(): Promise<ChatConversation[]> {
     return chats;
   } catch {
     return [];
+  }
+}
+
+// Just the numbers behind the unread-chats badge (migration 20261011000001) instead of the whole chat list. null = not installed yet
+// or the call failed, so the caller can fall back to the full list.
+export async function fetchUnreadChatSummary(): Promise<{ unreadChats: number; unreadMessages: number } | null> {
+  try {
+    if (!(await currentSession())) return { unreadChats: 0, unreadMessages: 0 };
+    const res = await rpc<any>('my_unread_chat_summary');
+    if (res && typeof res.unreadChats === 'number') return { unreadChats: res.unreadChats, unreadMessages: Number(res.unreadMessages) || 0 };
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -4438,11 +4485,50 @@ export async function requestFriendPayment(payerId: string, purchaseType: 'live_
 
 export interface PaymentRequestSummary {
   id: string;
-  purchaseType: 'live_lounge';
+  purchaseType: 'live_lounge' | 'pro' | 'pro_topup';
   amount: number;
   createdAt: string;
   expiresAt: string;
+  // NOOB Pro requests: which plan, its price, and the part the person adds from their own wallet (friend pays only the rest)
+  planTier?: string | null;
+  planBilling?: 'monthly' | 'yearly' | null;
+  planName?: string | null;
+  planPrice?: number | null;
+  requesterPays?: number;
   requester: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+export interface SentPaymentRequest extends Omit<PaymentRequestSummary, 'requester'> {
+  payer: { id: string; username: string; displayName?: string; avatar?: string };
+}
+
+// Requests I sent and that are still waiting for an answer (migration 20261011000003).
+export async function fetchMySentPaymentRequests(): Promise<SentPaymentRequest[]> {
+  try {
+    const list = (await rpc<any[]>('my_sent_payment_requests')) || [];
+    return list.map((r) => ({ ...r, payer: { ...r.payer, avatar: resolveMedia(r.payer?.avatar) } }));
+  } catch {
+    return [];
+  }
+}
+
+// Ask a friend to pay for a NOOB Pro plan: 'full' = the whole price, 'topup' = only the points I am missing (my own are taken too).
+export async function requestProPayment(payerId: string, tier: string, billing: 'monthly' | 'yearly', mode: 'full' | 'topup', autoRenew = true): Promise<{ success: boolean; requestId?: string; amount?: number; ownPart?: number; error?: string }> {
+  try {
+    const res = await rpc<any>('request_pro_payment', { p_payer: payerId, p_tier: tier, p_billing: billing, p_mode: mode, p_auto_renew: autoRenew });
+    return { success: !!res?.success, requestId: res?.requestId, amount: Number(res?.amount), ownPart: Number(res?.ownPart) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not send that request.') };
+  }
+}
+
+export async function cancelPaymentRequest(requestId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await rpc<any>('cancel_payment_request', { p_request_id: requestId });
+    return { success: !!res?.success };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not cancel that request.') };
+  }
 }
 
 export async function fetchMyPaymentRequests(): Promise<{ success: boolean; requests: PaymentRequestSummary[]; error?: string }> {
@@ -4525,17 +4611,202 @@ export async function fetchLiveLoungeHistory(limit = 30): Promise<LiveLoungeHist
   }
 }
 
-export async function joinLiveLoungeRoomByCode(code: string): Promise<{ success: boolean; roomId?: string; title?: string; error?: string }> {
+export async function joinLiveLoungeRoomByCode(code: string, passcode?: string): Promise<{ success: boolean; roomId?: string; title?: string; status?: 'waiting' | 'admitted'; meetingId?: string; error?: string }> {
   try {
-    const res = await rpc<any>('join_live_lounge_room_by_code', { p_code: code });
+    // The passcode is only sent when there is one, so an ordinary room code keeps working even before the meetings update is installed.
+    const pass = passcode?.trim();
+    const res = await rpc<any>('join_live_lounge_room_by_code', pass ? { p_code: code, p_passcode: pass } : { p_code: code });
     return { success: true, ...res };
   } catch (err) {
     return failWith(err, 'Could not join that room.');
   }
 }
 
-export async function fetchLiveLoungeRoomMyStatus(roomId: string): Promise<{ status?: string; role?: string; roomStatus?: string; title?: string; roomCode?: string } | null> {
+// The rules of the meeting a room was made from (null for an ordinary room), as far as this person may know them.
+export interface LiveLoungeRoomSettings {
+  chatEnabled: boolean;
+  hostOnlyScreenShare: boolean;
+  waitingRoomTitle: string;
+  waitingRoomMessage: string;
+  hasPasscode: boolean;
+  passcode?: string | null;
+  meetingCode: string;
+  description: string;
+  breakoutEnabled: boolean;
+  myBreakoutRoom?: string | null;
+}
+
+export async function fetchLiveLoungeRoomMyStatus(roomId: string): Promise<{ status?: string; role?: string; roomStatus?: string; title?: string; roomCode?: string; locked?: boolean; meetingId?: string; settings?: LiveLoungeRoomSettings } | null> {
   try { return await rpc('live_lounge_room_my_status', { p_room_id: roomId }); } catch { return null; }
+}
+
+// ----------------------------------------------------------------------------- planned meetings (migration 20261011000004)
+
+export type MeetingKind = 'meeting' | 'class' | 'webinar' | 'interview' | 'hangout';
+export type MeetingRepeat = 'none' | 'daily' | 'weekly' | 'monthly';
+
+export interface LiveLoungeMeeting {
+  id: string;
+  hostId: string;
+  createdBy: string;
+  hostUsername: string;
+  hostDisplayName?: string;
+  hostAvatar?: string;
+  title: string;
+  description: string;
+  meetingType: MeetingKind;
+  instant: boolean;
+  scheduledFor: string;
+  durationMinutes: number;
+  timezone: string;
+  recurrence: MeetingRepeat;
+  recurrenceInterval: number;
+  recurrenceEndDate?: string | null;
+  recurrenceCount?: number | null;
+  meetingCode: string;
+  usesPersonalId: boolean;
+  hasPasscode: boolean;
+  passcode?: string | null;
+  waitingRoom: boolean;
+  waitingRoomTitle: string;
+  waitingRoomMessage: string;
+  joinBeforeHost: boolean;
+  chatEnabled: boolean;
+  hostOnlyScreenShare: boolean;
+  registrationRequired: boolean;
+  registrationApproval: 'auto' | 'manual';
+  breakoutEnabled: boolean;
+  breakoutRooms: { name: string; members: string[] }[];
+  interpretation: { language: string; interpreterId?: string }[];
+  restrictUsers?: boolean | null;
+  restrictDomains?: boolean | null;
+  allowedDomains?: string[] | null;
+  autoLock?: boolean | null;
+  reminderMinutes: number;
+  includePasscodeInInvite: boolean;
+  status: 'scheduled' | 'cancelled';
+  createdAt: string;
+  // only in lists and details
+  occurrenceStart?: string;
+  isHost?: boolean;
+  canManage?: boolean;
+  liveRoomId?: string | null;
+  invitedCount?: number;
+  nextOccurrence?: string | null;
+  myRegistration?: { status: 'pending' | 'approved' | 'declined'; note: string } | null;
+  invitees?: { userId: string; username: string; displayName?: string; avatar?: string; registration?: string | null; joined: boolean }[] | null;
+  registrations?: { userId: string; username: string; displayName?: string; avatar?: string; note: string; status: 'pending' | 'approved' | 'declined'; createdAt: string }[] | null;
+}
+
+// What the planning form sends.
+export interface LiveLoungeMeetingForm {
+  hostId?: string;
+  title: string;
+  description?: string;
+  meetingType?: MeetingKind;
+  instant?: boolean;
+  scheduledFor?: string;
+  durationMinutes?: number;
+  timezone?: string;
+  recurrence?: MeetingRepeat;
+  recurrenceInterval?: number;
+  recurrenceEndDate?: string | null;
+  recurrenceCount?: number | null;
+  usesPersonalId?: boolean;
+  passcode?: string;
+  waitingRoom?: boolean;
+  waitingRoomTitle?: string;
+  waitingRoomMessage?: string;
+  joinBeforeHost?: boolean;
+  restrictUsers?: boolean;
+  restrictDomains?: boolean;
+  allowedDomains?: string[];
+  autoLock?: boolean;
+  chatEnabled?: boolean;
+  hostOnlyScreenShare?: boolean;
+  registrationRequired?: boolean;
+  registrationApproval?: 'auto' | 'manual';
+  breakoutEnabled?: boolean;
+  breakoutRooms?: { name: string; members: string[] }[];
+  interpretation?: { language: string; interpreterId?: string }[];
+  reminderMinutes?: number;
+  includePasscodeInInvite?: boolean;
+  inviteeIds?: string[];
+}
+
+const mapMeeting = (m: any): LiveLoungeMeeting => ({
+  ...m,
+  hostAvatar: resolveMedia(m.hostAvatar),
+  invitees: Array.isArray(m.invitees) ? m.invitees.map((i: any) => ({ ...i, avatar: resolveMedia(i.avatar) })) : m.invitees,
+  registrations: Array.isArray(m.registrations) ? m.registrations.map((i: any) => ({ ...i, avatar: resolveMedia(i.avatar) })) : m.registrations
+});
+
+export async function saveLiveLoungeMeeting(form: LiveLoungeMeetingForm, meetingId?: string): Promise<{ success: boolean; meeting?: LiveLoungeMeeting; error?: string }> {
+  try {
+    const res = await rpc<any>('save_live_lounge_meeting', { p: form, p_id: meetingId || null });
+    return { success: true, meeting: mapMeeting(res) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not save the meeting.') };
+  }
+}
+
+export async function fetchMyLiveLoungeMeetings(days = 60): Promise<LiveLoungeMeeting[] | null> {
+  try {
+    return ((await rpc<any[]>('my_live_lounge_meetings', { p_days: days })) || []).map(mapMeeting);
+  } catch {
+    return null;   // not installed yet, or no connection
+  }
+}
+
+export async function fetchLiveLoungeMeetingDetails(id: string): Promise<{ success: boolean; meeting?: LiveLoungeMeeting; error?: string }> {
+  try { return { success: true, meeting: mapMeeting(await rpc<any>('live_lounge_meeting_details', { p_id: id })) }; } catch (err) { return { success: false, error: errorText(err, 'Could not open that meeting.') }; }
+}
+
+export async function cancelLiveLoungeMeeting(id: string, occurrence?: string): Promise<{ success: boolean; error?: string }> {
+  try { await rpc('cancel_live_lounge_meeting', { p_id: id, p_occurrence: occurrence || null }); return { success: true }; } catch (err) { return { success: false, error: errorText(err, 'Could not cancel the meeting.') }; }
+}
+
+export async function startLiveLoungeMeeting(id: string, occurrence?: string): Promise<{ success: boolean; roomId?: string; roomCode?: string; channelName?: string; title?: string; error?: string }> {
+  try {
+    const res = await rpc<any>('start_live_lounge_meeting', { p_id: id, p_occurrence: occurrence || null });
+    return { success: true, ...res };
+  } catch (err) {
+    return failWith(err, 'Could not start the meeting.');
+  }
+}
+
+export async function inviteToLiveLoungeMeeting(id: string, userIds: string[], resend = false): Promise<{ success: boolean; sent?: number; error?: string }> {
+  try { const res = await rpc<any>('invite_to_live_lounge_meeting', { p_id: id, p_user_ids: userIds, p_resend: resend }); return { success: true, sent: res?.sent }; } catch (err) { return { success: false, error: errorText(err, 'Could not send the invitations.') }; }
+}
+
+export async function registerForLiveLoungeMeeting(code: string, note = ''): Promise<{ success: boolean; status?: 'pending' | 'approved' | 'declined'; error?: string }> {
+  try { const res = await rpc<any>('register_for_live_lounge_meeting', { p_code: code, p_note: note }); return { success: true, status: res?.status }; } catch (err) { return { success: false, error: errorText(err, 'Could not register.') }; }
+}
+
+export async function reviewLiveLoungeRegistration(meetingId: string, userId: string, approve: boolean): Promise<{ success: boolean; error?: string }> {
+  try { await rpc('review_live_lounge_registration', { p_meeting: meetingId, p_user: userId, p_approve: approve }); return { success: true }; } catch (err) { return { success: false, error: errorText(err, 'Could not save that decision.') }; }
+}
+
+export async function fetchMyLiveLoungePersonalId(): Promise<string | null> {
+  try { return (await rpc<string>('live_lounge_my_personal_id')) || null; } catch { return null; }
+}
+
+export async function setLiveLoungeRoomLocked(roomId: string, locked: boolean): Promise<{ success: boolean; locked?: boolean; error?: string }> {
+  try { const res = await rpc<any>('set_live_lounge_room_locked', { p_room_id: roomId, p_locked: locked }); return { success: true, locked: !!res?.locked }; } catch (err) { return { success: false, error: errorText(err, 'Could not change the lock.') }; }
+}
+
+export async function fetchMyLiveLoungeAssistants(): Promise<{ allowed: { userId: string; username: string; avatar?: string }[]; hostsForMe: { userId: string; username: string; avatar?: string }[] }> {
+  try {
+    const res = await rpc<any>('my_live_lounge_assistants');
+    const fix = (l: any[]) => (l || []).map((x) => ({ ...x, avatar: resolveMedia(x.avatar) }));
+    return { allowed: fix(res?.allowed), hostsForMe: fix(res?.hostsForMe) };
+  } catch {
+    return { allowed: [], hostsForMe: [] };
+  }
+}
+
+export async function setLiveLoungeAssistant(userId: string, allowed: boolean): Promise<{ success: boolean; error?: string }> {
+  try { await rpc('set_live_lounge_assistant', { p_user: userId, p_allowed: allowed }); return { success: true }; } catch (err) { return { success: false, error: errorText(err, 'Could not save that.') }; }
 }
 
 export async function fetchLiveLoungeRoomParticipants(roomId: string): Promise<{ admitted: LiveLoungeParticipant[]; waiting: LiveLoungeParticipant[] }> {

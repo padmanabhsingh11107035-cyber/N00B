@@ -4,7 +4,7 @@ import { User, DailyChallenge, DailyChallengeEntry, DailyChampion } from '../../
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatRelativeTime } from '../../utils/formatTime';
-import { can } from '../../adminAccess';
+import { can, isMainAdmin } from '../../adminAccess';
 import { useResumeState } from '../../utils/useResumeState';
 import {
   fetchDailyChallenge,
@@ -13,6 +13,7 @@ import {
   fetchDailyChallengeEntries,
   fetchDailyChampions,
   deleteDailyChallengeEntry,
+  adminAssignDailyChallengeWinners,
   uploadMediaFile,
   fetchUserById
 } from '../../services/api';
@@ -121,6 +122,41 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
   };
 
   const isMasterAdmin = can(currentUser, 'moderate_content');
+
+  // The NOOB admin can crown today's top three straight from the entries, instead of waiting for the votes: tap 1st / 2nd / 3rd under
+  // an entry, then "Assign & pay out" (10,000 / 5,000 / 2,500 points; the day is then settled for good).
+  const canCrown = isMainAdmin(currentUser);
+  const [picks, setPicks] = useState<{ first?: string; second?: string; third?: string }>({});
+  const [crowning, setCrowning] = useState(false);
+  const rankOf = (userId: string): 1 | 2 | 3 | null => (picks.first === userId ? 1 : picks.second === userId ? 2 : picks.third === userId ? 3 : null);
+  const togglePick = (userId: string, rank: 1 | 2 | 3) => {
+    setPicks((prev) => {
+      const next = { ...prev };
+      // the same person can only hold one place, and a place only has one person
+      (['first', 'second', 'third'] as const).forEach((k) => { if (next[k] === userId) delete next[k]; });
+      const key = rank === 1 ? 'first' : rank === 2 ? 'second' : 'third';
+      if (prev[key] !== userId) next[key] = userId;
+      return next;
+    });
+  };
+  const nameOf = (userId?: string) => entries.find((e) => e.userId === userId)?.username;
+  const handleCrown = async () => {
+    if (!challenge || !picks.first) return;
+    const summary = `1st @${nameOf(picks.first)} (10,000 pts)` + (picks.second ? `
+2nd @${nameOf(picks.second)} (5,000 pts)` : '') + (picks.third ? `
+3rd @${nameOf(picks.third)} (2,500 pts)` : '');
+    if (!confirm(`Pay out and close today's challenge?
+
+${summary}
+
+This cannot be undone.`)) return;
+    setCrowning(true);
+    setError('');
+    const res = await adminAssignDailyChallengeWinners(challenge.challengeDate, picks.first, picks.second || null, picks.third || null);
+    setCrowning(false);
+    if (res.success) { setPicks({}); setChampions([]); await load(); }
+    else setError(res.error || 'Could not assign the winners.');
+  };
 
   const handleDelete = async (entry: DailyChallengeEntry) => {
     if (!confirm("Delete this entry? This can't be undone.")) return;
@@ -232,6 +268,27 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                 </div>
               )}
 
+              {canCrown && (picks.first || picks.second || picks.third) && (
+                <div className="sticky top-2 z-10 rounded-2xl border border-amber-400/50 bg-zinc-950/95 backdrop-blur p-3 space-y-2 shadow-xl">
+                  <p className="text-[11px] font-bold text-amber-300">
+                    {picks.first ? `1st @${nameOf(picks.first)}` : '1st — not chosen yet'}
+                    {picks.second ? ` · 2nd @${nameOf(picks.second)}` : ''}
+                    {picks.third ? ` · 3rd @${nameOf(picks.third)}` : ''}
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setPicks({})} className="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-200 text-xs font-bold cursor-pointer">Clear</button>
+                    <button
+                      onClick={handleCrown}
+                      disabled={!picks.first || crowning}
+                      className="flex-1 py-2 rounded-xl bg-amber-500 text-black text-xs font-extrabold disabled:opacity-40 cursor-pointer"
+                    >
+                      {crowning ? 'Paying out…' : 'Assign & pay out'}
+                    </button>
+                  </div>
+                  {!picks.first && <p className="text-[10px] text-zinc-500">Choose a 1st place first — 2nd and 3rd are optional.</p>}
+                </div>
+              )}
+
               <div className="space-y-3">
                 {entries.length === 0 ? (
                   <div className="py-10 text-center text-zinc-500 text-xs">No entries yet — be the first!</div>
@@ -243,7 +300,7 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                       <div key={entry.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 overflow-hidden">
                         <div className="relative w-full aspect-video bg-black">
                           {entry.mediaType === 'video' ? (
-                            <video src={entry.mediaUrl} controls className="w-full h-full object-cover" />
+                            <video src={entry.mediaUrl} controls preload="metadata" className="w-full h-full object-cover" />
                           ) : (
                             <img src={entry.mediaUrl} alt={entry.caption} className="w-full h-full object-cover" />
                           )}
@@ -284,6 +341,24 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                             </button>
                           </div>
                         </div>
+                        {canCrown && (
+                          <div className="px-3 pb-3 flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mr-1">Make</span>
+                            {([1, 2, 3] as const).map((rank) => (
+                              <button
+                                key={rank}
+                                onClick={() => togglePick(entry.userId, rank)}
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold cursor-pointer border transition-colors ${
+                                  rankOf(entry.userId) === rank
+                                    ? rank === 1 ? 'bg-amber-400 text-black border-amber-300' : rank === 2 ? 'bg-zinc-300 text-black border-zinc-200' : 'bg-orange-500 text-black border-orange-400'
+                                    : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-zinc-500'
+                                }`}
+                              >
+                                {rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd'}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })
@@ -312,6 +387,15 @@ export const DailyNoobView: React.FC<DailyNoobViewProps> = ({ currentUser, onClo
                     </div>
                     <p className="text-[11px] text-zinc-400 truncate">{c.prompt}</p>
                     <p className="text-[10px] text-zinc-500 mt-0.5">{formatRelativeTime(c.challengeDate)} • {c.votesCount} votes</p>
+                    {c.podium && c.podium.length > 1 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {c.podium.filter((p) => p.rank > 1).map((p) => (
+                          <span key={p.rank} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800/80 text-zinc-300">
+                            {p.rank === 2 ? '🥈' : '🥉'} @{p.username}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

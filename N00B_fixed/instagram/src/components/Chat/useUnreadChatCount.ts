@@ -7,8 +7,9 @@
 // unread messages — sending someone 2 messages should show 1, two different people messaging should
 // show 2, matching ChatView's own "Unread" filter tab, which already counts it exactly this way.
 import { useEffect, useRef, useState } from 'react';
-import { fetchChats, subscribeToChatChanges } from '../../services/api';
+import { fetchChats, fetchUnreadChatSummary, subscribeToChatChanges } from '../../services/api';
 import type { User } from '../../types';
+import { setVisibleInterval } from '../../utils/visibleInterval';
 
 // Same "genuine user chat" filter ChatView's own loadChats applies, so the two never disagree.
 function isRealChat(c: any): boolean {
@@ -30,23 +31,33 @@ export function useUnreadChatCount(me: User | null, onIncoming?: () => void): nu
     let lastTotal: number | null = null;
 
     const refresh = async () => {
-      const chats = await fetchChats();
+      // Just the two numbers (a few bytes). Only if that is not available (migration not run yet) is the whole chat list downloaded.
+      let unreadChats: number;
+      let total: number;
+      const summary = await fetchUnreadChatSummary();
+      if (summary) {
+        unreadChats = summary.unreadChats;
+        total = summary.unreadMessages;
+      } else {
+        const chats = await fetchChats();
+        const real = chats.filter(isRealChat);
+        unreadChats = real.filter((c) => (c.unreadCount || 0) > 0).length;
+        total = real.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      }
       if (!alive) return;
-      const real = chats.filter(isRealChat);
-      setCount(real.filter((c) => (c.unreadCount || 0) > 0).length);
-      const total = real.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+      setCount(unreadChats);
       if (lastTotal !== null && total > lastTotal) onIncomingRef.current?.();
       lastTotal = total;
     };
 
     refresh();
     const unsubscribe = subscribeToChatChanges(refresh);
-    const interval = setInterval(refresh, 30000);
+    const stopInterval = setVisibleInterval(refresh, 30000);   // rests while the page is hidden
 
     return () => {
       alive = false;
       unsubscribe();
-      clearInterval(interval);
+      stopInterval();
     };
   }, [me?.id]);
 

@@ -149,6 +149,7 @@ export type NotificationType =
   | 'store_order'
   | 'call_started'
   | 'live_lounge_invite'
+  | 'live_lounge_meeting'
   | 'ai_feedback_reply'
   | 'suggestion_reply'
   | 'suggested_user'
@@ -575,6 +576,16 @@ export interface LongVideo {
   createdAt: string;
 }
 
+// Something the NOOB admin pinned to the top of the Feed page: a post, a reel or a video.
+export interface PinnedFeedItem {
+  kind: 'post' | 'reel' | 'video';
+  itemId: string;
+  pinnedAt: string;
+  post?: Post;
+  reel?: Reel;
+  video?: LongVideo;
+}
+
 export interface LongVideoPlaylist {
   id: string;
   name: string;
@@ -663,6 +674,8 @@ export interface DailyChampion {
   isVerified: boolean;
   votesCount: number;
   prompt: string;
+  // 1st, 2nd and 3rd of that day (older days only have the winner)
+  podium?: { rank: number; userId: string; username: string; userAvatar: string; isVerified: boolean; votesCount: number }[];
 }
 
 export interface Message {

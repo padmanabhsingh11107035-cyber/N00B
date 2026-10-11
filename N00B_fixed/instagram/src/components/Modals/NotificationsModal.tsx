@@ -56,6 +56,8 @@ interface NotificationsModalProps {
   onOpenScratchCard?: (scratchCardId: string) => void;
   onOpenChat?: (chatId: string) => void;
   onOpenLiveLoungeInvite?: (roomId: string) => void;
+  // a planned meeting (invitation, reminder, cancellation, a registration to approve): opens that meeting's page
+  onOpenLiveLoungeMeeting?: (meetingId: string) => void;
 }
 
 export const NotificationsModal: React.FC<NotificationsModalProps> = ({
@@ -72,7 +74,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onNavigateToUser,
   onOpenScratchCard,
   onOpenChat,
-  onOpenLiveLoungeInvite
+  onOpenLiveLoungeInvite,
+  onOpenLiveLoungeMeeting
 }) => {
   const [soundOn, setSoundOn] = useState(isNotificationSoundOn());
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'settings'>('all');
@@ -172,6 +175,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />;
       case 'live_lounge_invite':
         return <Radio className="w-3.5 h-3.5 text-purple-400" />;
+      case 'live_lounge_meeting':
+        return <Radio className="w-3.5 h-3.5 text-purple-300" />;
       case 'ai_feedback_reply':
         return <Bot className="w-3.5 h-3.5 text-violet-400" />;
       case 'suggestion_reply':
@@ -339,13 +344,15 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                           onOpenChat?.(notif.chatId);
                         } else if (notif.type === 'live_lounge_invite' && notif.message) {
                           onOpenLiveLoungeInvite?.(notif.message);
+                        } else if (notif.type === 'live_lounge_meeting' && notif.message) {
+                          onOpenLiveLoungeMeeting?.(notif.message);
                         } else {
                           const username = notif.senderUsername || notif.actorUsername;
                           if (username) onNavigateToUser?.(username);
                         }
                       }}
                       className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                        ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || notif.senderUsername || notif.actorUsername
+                        ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername
                           ? 'cursor-pointer'
                           : ''
                       } ${

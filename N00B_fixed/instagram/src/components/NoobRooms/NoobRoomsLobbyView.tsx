@@ -4,6 +4,7 @@ import { NoobRoom, NoobRoomActivityType, User } from '../../types';
 import { listNoobRooms, startNoobRoom, fetchPublicPlatformSettings } from '../../services/api';
 import { isMainAdmin } from '../../adminAccess';
 import { useResumeState } from '../../utils/useResumeState';
+import { setVisibleInterval } from '../../utils/visibleInterval';
 
 // Agora (plus everything NoobVoiceRoomView pulls in for it) only needs to load once someone actually
 // joins a room — bundling it into the lobby's own chunk made just opening the room LIST slow, which
@@ -92,8 +93,8 @@ export const NoobRoomsLobbyView: React.FC<NoobRoomsLobbyViewProps> = ({ currentU
     load();
     // 25s, not a few seconds — this is just a browsing list (no realtime channel backs it), so it
     // doesn't need to be near-instant, and polling it aggressively was pure wasted Supabase egress.
-    const interval = setInterval(load, 25000);
-    return () => clearInterval(interval);
+    const stopInterval = setVisibleInterval(load, 25000);   // rests while the page is hidden
+    return () => stopInterval();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lock.checked, blocked]);
 

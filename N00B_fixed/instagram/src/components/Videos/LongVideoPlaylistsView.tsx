@@ -10,6 +10,7 @@ import {
   deleteLongVideoPlaylist,
   toggleVideoInPlaylist
 } from '../../services/api';
+import { LazyVideo } from '../Common/LazyVideo';
 
 interface Props {
   onClose: () => void;
@@ -31,7 +32,7 @@ const VideoRow: React.FC<{ video: LongVideo; onOpen: () => void; onRemove?: () =
         {video.thumbnailUrl ? (
           <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
         ) : (
-          <video src={video.videoUrl} className="w-full h-full object-cover" muted preload="metadata" />
+          <LazyVideo src={video.videoUrl} className="w-full h-full object-cover" muted />
         )}
         <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 py-0.5 rounded">{formatDuration(video.durationSeconds)}</span>
       </div>

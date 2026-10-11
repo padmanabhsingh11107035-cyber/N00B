@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus } from 'lucide-react';
+import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin } from 'lucide-react';
 import { User, LongVideo, LongVideoPlaylist } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -11,7 +11,7 @@ import { VideoCommentsSheet } from './VideoCommentsSheet';
 import { EditVideoDetailsModal } from './EditVideoDetailsModal';
 import { LongVideoListPage } from './LongVideoListPage';
 import { LongVideoPlaylistsView } from './LongVideoPlaylistsView';
-import { can } from '../../adminAccess';
+import { can, isMainAdmin } from '../../adminAccess';
 import {
   fetchLongVideos,
   fetchLongVideoById,
@@ -33,6 +33,9 @@ import {
   toggleVideoInPlaylist,
   type LiveStreamSummary
 } from '../../services/api';
+import { setVisibleInterval } from '../../utils/visibleInterval';
+import { LazyVideo } from '../Common/LazyVideo';
+import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 
 const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 
@@ -79,6 +82,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   onInitialOpenVideoIdHandled
 }) => {
   const isMasterAdmin = can(currentUser, 'moderate_content');
+  const pinnedItems = usePinnedFeedItems();
   const [videos, setVideos] = useState<LongVideo[]>([]);
   const [liveStreams, setLiveStreams] = useState<LiveStreamSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,8 +132,8 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     let alive = true;
     const load = () => fetchLiveStreams().then((res) => { if (alive && res.success) setLiveStreams(res.streams); });
     load();
-    const interval = setInterval(load, 15000);
-    return () => { alive = false; clearInterval(interval); };
+    const stopInterval = setVisibleInterval(load, 15000);   // rests while the page is hidden
+    return () => { alive = false; stopInterval(); };
   }, []);
 
   // A deep link / shared-chat-card tap for a video that may not be in the freshly-loaded list yet.
@@ -290,7 +294,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         {video.thumbnailUrl ? (
           <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
         ) : (
-          <video src={video.videoUrl} className="w-full h-full object-cover" muted preload="metadata" />
+          <LazyVideo src={video.videoUrl} className="w-full h-full object-cover" muted />
         )}
         <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{formatDuration(video.durationSeconds)}</span>
       </button>
@@ -526,6 +530,20 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 <ListPlus className="w-4.5 h-4.5 text-zinc-400 shrink-0" />
                 <span className="text-xs font-bold text-white">Add to playlist</span>
               </button>
+
+              {isMainAdmin(currentUser) && (
+                <button
+                  onClick={async () => {
+                    setShowOptionsMenu(false);
+                    const res = await toggleFeedPin('video', actionVideo.id);
+                    if (!res.success) alert(res.error || 'Could not change the pin.');
+                  }}
+                  className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+                >
+                  <Pin className="w-4.5 h-4.5 text-noob shrink-0" />
+                  <span className="text-xs font-bold text-white">{pinnedItems.some((p) => p.kind === 'video' && p.itemId === actionVideo.id) ? 'Unpin from Feed' : 'Pin to Feed'}</span>
+                </button>
+              )}
 
               {canModerate(actionVideo) && (
                 <>

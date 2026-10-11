@@ -8,6 +8,7 @@
 //                                                           GIPHY_API_KEY, without it the answer is { configured: false }
 //   { action: "translate-ui", lang, items: [{id,text}] } -> translate the app's own texts into a language, once, and keep them
 //                                                           (table ui_translations, see the migration "languages")
+//   { action: "event_email", emailId }                 -> send an email the database queued (receipts, NOOB Pro warnings); called by the database
 //   { action: "push", notificationId }                   -> deliver a notification to the person's phone/browser (called by the
 //                                                           database; needs the secret VAPID_PRIVATE_KEY)
 //   { action: "record_signup_device" }                    -> stamp the caller's OWN profile_private row with the real IP and
@@ -84,6 +85,183 @@ function emailShell(title: string, bodyHtml: string): string {
     ${bodyHtml}
     <p style="font-size:13px;color:#666;margin-top:20px">— The NOOB team</p>
   </div>`;
+}
+
+// ---------------------------------------------------------------------------- event emails (receipts, Pro warnings)
+// { action: "event_email", emailId } — sent by the DATABASE (queue_email / retry_pending_emails) with the private password in the
+// x-noob-push header. The database decides what to send and to whom (table email_outbox); this code only writes the email and sends it.
+// Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, pro_expiring, pro_ended, pro_gift_receipt.
+const SITE_URL = (Deno.env.get('SITE_URL') || 'https://nooob.xyz').trim().replace(/\/+$/, '');
+const BRAND = '#D97757';
+const fmtWhen = (v: unknown): string => {
+  const t = Date.parse(String(v ?? ''));
+  if (!Number.isFinite(t)) return '';
+  return new Date(t).toLocaleString('en-GB', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC';
+};
+const receiptNo = (id: string) => 'NOOB-' + String(id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
+const billingWord = (b: string) => (b === 'yearly' ? 'Yearly (365 days)' : 'Monthly (30 days)');
+const payLink = (tier: string, billing: string) => `${SITE_URL}/?pro=${encodeURIComponent(tier)}&billing=${encodeURIComponent(billing === 'yearly' ? 'yearly' : 'monthly')}`;
+
+type Row = [label: string, value: string, strong?: boolean];
+const rowsHtml = (rows: Row[]) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:12px 0;background:#f7f7f8;border-radius:10px">${rows
+    .filter((r) => r[1] !== '' && r[1] != null)
+    .map(
+      (r) =>
+        `<tr><td style="padding:8px 14px;font-size:13px;color:#666;border-bottom:1px solid #eaeaec;vertical-align:top">${escapeHtml(r[0])}</td><td style="padding:8px 14px;font-size:13px;color:#111;text-align:right;border-bottom:1px solid #eaeaec;${r[2] ? 'font-weight:800' : 'font-weight:600'}">${escapeHtml(r[1])}</td></tr>`
+    )
+    .join('')}</table>`;
+const rowsText = (rows: Row[]) => rows.filter((r) => r[1] !== '' && r[1] != null).map((r) => `${r[0]}: ${r[1]}`).join('\n');
+const listHtml = (title: string, items: string[]) =>
+  items.length
+    ? `<p style="font-size:13px;font-weight:800;margin:16px 0 6px">${escapeHtml(title)}</p><ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#222">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
+    : '';
+const listText = (title: string, items: string[]) => (items.length ? `\n${title}\n${items.map((i) => `  - ${i}`).join('\n')}\n` : '');
+const buttonHtml = (label: string, href: string) =>
+  `<p style="margin:20px 0 6px"><a href="${escapeHtml(href)}" style="display:inline-block;background:${BRAND};color:#000;font-weight:800;font-size:14px;text-decoration:none;padding:12px 22px;border-radius:12px">${escapeHtml(label)}</a></p><p style="font-size:11px;color:#888;margin:4px 0 0;word-break:break-all">${escapeHtml(href)}</p>`;
+function eventShell(title: string, bodyHtml: string): string {
+  return `<div style="background:#efeff1;padding:20px 0"><div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;color:#111">
+    <div style="background:${BRAND};padding:16px 22px"><span style="font-size:22px;font-weight:900;letter-spacing:-0.5px;color:#000">NOOB</span></div>
+    <div style="padding:22px">
+      <p style="font-size:19px;font-weight:800;margin:0 0 10px;line-height:1.3">${escapeHtml(title)}</p>
+      ${bodyHtml}
+      <p style="font-size:12px;color:#777;margin:22px 0 0;line-height:1.6">You are getting this email because of an action on your NOOB account. If you did not do this, open NOOB and change your password straight away.<br/>— The NOOB team</p>
+    </div></div></div>`;
+}
+
+function renderEventEmail(kind: string, d: any, name: string, emailId: string): { subject: string; text: string; html: string } | null {
+  const hi = `Hi ${name},`;
+  if (kind === 'pro_upgraded') {
+    const renewal = d.method === 'renewal';
+    const byFriend = d.method === 'friend' || d.method === 'friend_topup';
+    const paidBy = d.paidBy?.username ? String(d.paidBy.username) : '';
+    const method =
+      d.method === 'friend' ? `Paid by @${paidBy} (${d.paidBy?.amount} points)`
+      : d.method === 'friend_topup' ? `@${paidBy} paid ${d.paidBy?.amount} points + your own ${d.ownShare} points`
+      : renewal ? 'Automatic renewal from your NOOB Points wallet' : 'NOOB Points wallet';
+    const rows: Row[] = [
+      ['Receipt number', receiptNo(emailId)],
+      ['Date', fmtWhen(d.startedAt)],
+      ['Plan', `NOOB Pro ${d.planName}`],
+      ['Billing', billingWord(d.billing)],
+      ['Payment method', method],
+      ['Plan price', `${d.listPrice} points`],
+      ['Discount', d.couponCode ? `${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : ''],
+      ['Total paid', byFriend ? `${d.listPrice} points (shared as above)` : `${d.pricePaid} points`, true],
+      ['Your wallet balance now', `${d.walletAfter} points`],
+      [renewal ? 'Next renewal' : 'Active until', fmtWhen(d.renewsAt)],
+      ['Reloads automatically', d.autoRenew ? `Yes — ${d.renewalPrice} points are taken on that date` : 'No — it ends on that date']
+    ];
+    const perks: string[] = Array.isArray(d.perks) ? d.perks : [];
+    const common: string[] = Array.isArray(d.common) ? d.common : [];
+    const subject = renewal ? `NOOB Pro ${d.planName} renewed — receipt ${receiptNo(emailId)}` : `You're now on NOOB Pro ${d.planName} — receipt ${receiptNo(emailId)}`;
+    const intro = renewal ? `Your NOOB Pro ${d.planName} plan renewed.` : byFriend ? `@${paidBy} helped you get NOOB Pro ${d.planName} — it is active now. 🎉` : `Thank you! NOOB Pro ${d.planName} is active on your account now. 🎉`;
+    return {
+      subject,
+      text: `${hi}\n\n${intro}\n\n${rowsText(rows)}\n${listText('Included in your plan', [...perks, ...common])}\nManage it any time in NOOB: Profile → Unlock Pro Features.\n— The NOOB team`,
+      html: eventShell(intro, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} here is your receipt.</p>${rowsHtml(rows)}${listHtml('Included in your plan', perks)}${listHtml('Included with every NOOB Pro plan', common)}${buttonHtml('Open NOOB', SITE_URL)}`)
+    };
+  }
+  if (kind === 'verified_badge') {
+    const rows: Row[] = [
+      ['Receipt number', receiptNo(emailId)],
+      ['Date', fmtWhen(d.at)],
+      ['Item', d.label || 'Verification badge'],
+      ['Type', d.permanent ? 'Permanent' : 'Monthly'],
+      ['Payment method', d.pricePaid ? 'NOOB Points wallet' : 'Verification coupon'],
+      ['Discount', d.couponCode ? `${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : ''],
+      ['Total paid', d.pricePaid ? `${d.pricePaid} points` : '0 points (coupon)', true],
+      ['Your wallet balance now', `${d.walletAfter} points`]
+    ];
+    const items = ['A verification badge next to your name everywhere in NOOB (profile, posts, reels, comments and chats)', 'A clear sign to other people that your account is real'];
+    return {
+      subject: `Your NOOB verification badge is active — receipt ${receiptNo(emailId)}`,
+      text: `${hi}\n\nYour NOOB verification badge is active. ✅\n\n${rowsText(rows)}\n${listText('What you get', items)}\n— The NOOB team`,
+      html: eventShell('Your verification badge is active ✅', `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} here is your receipt.</p>${rowsHtml(rows)}${listHtml('What you get', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
+    };
+  }
+  if (kind === 'pro_expiring') {
+    const days = Number(d.daysLeft) || 0;
+    const when = days <= 1 ? 'tomorrow' : `in ${days} days`;
+    const reload = d.autoRenew === true;
+    const rows: Row[] = [
+      ['Plan', `NOOB Pro ${d.planName}`],
+      ['Billing', billingWord(d.billing)],
+      [reload ? 'Renews on' : 'Ends on', fmtWhen(d.endsAt)],
+      ['Your wallet balance now', `${d.balance} points`],
+      ['Price to continue', `${d.price} points`],
+      ['Still needed', reload ? `${d.shortfall} points` : `${d.price} points`, true]
+    ];
+    const why = reload
+      ? `Your plan is set to renew by itself, but your wallet does not have enough points yet. Add ${d.shortfall} more points before then and it will continue without a break.`
+      : 'Reload Monthly is turned off, so the plan ends on that date. Pay with NOOB Points to keep it.';
+    const url = payLink(String(d.tier), String(d.billing));
+    return {
+      subject: `Your NOOB Pro ${d.planName} ends ${when}`,
+      text: `${hi}\n\nYour NOOB Pro ${d.planName} plan ends ${when}.\n\n${why}\n\n${rowsText(rows)}\n\nPay with NOOB Points: ${url}\n— The NOOB team`,
+      html: eventShell(`Your NOOB Pro ${d.planName} ends ${when}`, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(why)}</p>${rowsHtml(rows)}${buttonHtml('Pay with NOOB Points', url)}`)
+    };
+  }
+  if (kind === 'pro_ended') {
+    const insufficient = d.reason === 'insufficient_points';
+    const why = insufficient
+      ? `We could not renew it because your wallet had ${d.balance} points and the renewal costs ${d.price} points (${d.shortfall} points short).`
+      : 'It ended because Reload Monthly was turned off, so it was not renewed.';
+    const rows: Row[] = [
+      ['Plan', `NOOB Pro ${d.planName}`],
+      ['Billing', billingWord(d.billing)],
+      ['Ended on', fmtWhen(d.endedAt)],
+      ['Reason', insufficient ? 'Not enough NOOB Points to renew' : 'Reload Monthly was off'],
+      ['Your wallet balance', `${d.balance} points`],
+      ['Price to start again', `${d.price} points`, true]
+    ];
+    const url = payLink(String(d.tier), String(d.billing));
+    return {
+      subject: `Your NOOB Pro ${d.planName} has ended`,
+      text: `${hi}\n\nYour NOOB Pro ${d.planName} plan has ended. ${why}\n\n${rowsText(rows)}\n\nStart it again with NOOB Points: ${url}\n— The NOOB team`,
+      html: eventShell(`Your NOOB Pro ${d.planName} has ended`, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(why)}</p>${rowsHtml(rows)}<p style="font-size:13px;line-height:1.6;color:#444;margin:0">The button below opens the payment page for this exact plan.</p>${buttonHtml('Pay with NOOB Points', url)}`)
+    };
+  }
+  if (kind === 'pro_gift_receipt') {
+    const rows: Row[] = [
+      ['Receipt number', receiptNo(emailId)],
+      ['Date', fmtWhen(d.at)],
+      ['For', `@${d.friend}`],
+      ['Plan', `NOOB Pro ${d.planName}`],
+      ['Billing', billingWord(d.billing)],
+      ['Plan price', `${d.planPrice} points`],
+      ['You paid', `${d.amount} points`, true],
+      ['Your wallet balance now', `${d.walletAfter} points`]
+    ];
+    const note = d.partial ? `You paid the points @${d.friend} was missing; they added the rest from their own wallet.` : `You paid the full price for @${d.friend}.`;
+    return {
+      subject: `You paid for @${d.friend}'s NOOB Pro — receipt ${receiptNo(emailId)}`,
+      text: `${hi}\n\n${note}\n\n${rowsText(rows)}\n— The NOOB team`,
+      html: eventShell(`You paid for @${d.friend}'s NOOB Pro 💛`, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(note)}</p>${rowsHtml(rows)}${buttonHtml('Open NOOB', SITE_URL)}`)
+    };
+  }
+  return null;
+}
+
+async function handleEventEmail(req: Request, body: any, admin: any): Promise<Response> {
+  const secret = req.headers.get('x-noob-push') || '';
+  const id = String(body?.emailId ?? '');
+  if (!secret || !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid request.' }, 400);
+  const { data, error } = await admin.rpc('email_claim', { p_secret: secret, p_id: id });
+  if (error) {
+    const denied = /unauthorized/i.test(String(error.message));
+    if (!denied) console.error(`event_email: email_claim failed: ${String(error.message).slice(0, 200)}`);
+    return json({ error: denied ? 'Unauthorized' : 'Failed.' }, denied ? 401 : 500);
+  }
+  if (!data?.claimed) return json({ success: true, sent: false, note: data?.skipped ? 'No email address on that account.' : 'Already handled.' });
+  const mail = renderEventEmail(String(data.kind), data.payload || {}, String(data.name || data.username || 'there'), id);
+  if (!mail) {
+    await admin.rpc('email_done', { p_secret: secret, p_id: id, p_ok: false, p_error: `unknown kind: ${data.kind}` });
+    return json({ error: 'Unknown email kind.' }, 400);
+  }
+  const ok = await sendEmail(String(data.email), mail.subject, mail.text, mail.html);
+  await admin.rpc('email_done', { p_secret: secret, p_id: id, p_ok: ok, p_error: ok ? null : lastEmailDebug || 'send failed' });
+  return json({ success: true, sent: ok });
 }
 
 // ---------------------------------------------------------------------------- push notifications
@@ -781,6 +959,8 @@ Deno.serve(async (req) => {
 
   // Pushing a notification: called by the database itself (proved by the private password), so no per-person limit applies.
   if (body?.action === 'push') return await handlePush(req, body, admin);
+  // Sending an email the database queued (a receipt, a Pro warning): same private-password check, no per-person limit.
+  if (body?.action === 'event_email') return await handleEventEmail(req, body, admin);
 
   // Who is asking? (a real signed-in person, or a guest)
   const token =(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();

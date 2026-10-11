@@ -25,6 +25,7 @@ import {
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
 import { can } from '../../adminAccess';
+import { setVisibleInterval } from '../../utils/visibleInterval';
 
 interface LiveStreamViewProps {
   currentUser: User;
@@ -182,8 +183,8 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
       const mine = res.streams.find((s) => s.id === streamId);
       if (mine) setViewerCount(mine.viewerCount);
     });
-    const interval = setInterval(tick, 10000);
-    return () => clearInterval(interval);
+    const stopInterval = setVisibleInterval(tick, 10000);   // rests while the page is hidden
+    return () => stopInterval();
   }, [streamId, phase]);
 
   useEffect(() => {

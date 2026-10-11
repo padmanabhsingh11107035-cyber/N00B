@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
+import { setVisibleInterval } from '../../utils/visibleInterval';
 
 const CURATED_GIFS = [
   { id: 'g1', title: 'Victory Dance', url: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -489,13 +490,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       () => { syncLiveChatData(); },
       (deletedId) => { setMessages((prev) => (prev.some((m) => m.id === deletedId) ? prev.filter((m) => m.id !== deletedId) : prev)); }
     );
-    const interval = setInterval(() => {
+    const stopInterval = setVisibleInterval(() => {
       syncLiveChatData();
-    }, 30000);
+    }, 30000);   // rests while the page is hidden
 
     return () => {
       unsubscribe();
-      clearInterval(interval);
+      stopInterval();
     };
   }, []);
 
@@ -644,8 +645,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   // Fast live sync across all tabs & devices
+  // The chat LIST (every chat, its last message, and up to 500 people for the everyone-included Lounge) is the heavy part of this
+  // refresh, and a busy chat fires a refresh for every message. So the list is downloaded at most once every few seconds (a burst of
+  // messages becomes one download); the open chat's NEW MESSAGES are still fetched at once, every time, so nothing feels slower.
+  const lastListFetchRef = useRef(0);
+  const listRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (listRefreshTimerRef.current) clearTimeout(listRefreshTimerRef.current); }, []);
+  const CHAT_LIST_MIN_GAP_MS = 4000;
+
   const syncLiveChatData = async () => {
     try {
+      const sinceList = Date.now() - lastListFetchRef.current;
+      if (sinceList >= CHAT_LIST_MIN_GAP_MS) {
+      lastListFetchRef.current = Date.now();
       const data = await fetchChats();
       const realChats = (data || []).filter(
         (c: any) =>
@@ -660,6 +672,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
       );
       setConversations(realChats);
       safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+      } else if (!listRefreshTimerRef.current) {
+        // too soon: do the list refresh once the gap is over (a single trailing refresh covers every event in between)
+        listRefreshTimerRef.current = setTimeout(() => { listRefreshTimerRef.current = null; void syncLiveChatData(); }, CHAT_LIST_MIN_GAP_MS - sinceList + 50);
+      }
 
       const currentActiveId = activeChatIdRef.current;
       if (currentActiveId) {

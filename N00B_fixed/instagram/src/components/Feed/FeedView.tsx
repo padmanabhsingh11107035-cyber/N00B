@@ -32,6 +32,8 @@ import {
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
 import type { StoryTrayModel } from '../../utils/storyTray';
+import { PinnedFeedSection } from './PinnedFeedSection';
+import { usePinnedFeedItems, refreshPinnedFeed } from '../../services/pinnedFeed';
 import { PostCard } from './PostCard';
 import { CommentsSheet } from './CommentsSheet';
 import { FeedVideoWatchView } from './FeedVideoWatchView';
@@ -89,6 +91,7 @@ interface FeedViewProps {
   onRefreshFeed: () => void;
   onNavigateToPost?: (postId: string) => void;
   onNavigateToReel?: (reelId: string) => void;
+  onNavigateToVideo?: (videoId: string) => void;
   // A specific post to scroll to and highlight (e.g. tapped from a profile grid or Explore) — the
   // feed is shuffled and paginated, so without this the target post may not even be rendered yet.
   initialPostId?: string;
@@ -135,6 +138,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onRefreshFeed,
   onNavigateToPost,
   onNavigateToReel,
+  onNavigateToVideo,
   onNavigateToProfile,
   onToggleFollowUser,
   sparkxOpen = true,
@@ -230,6 +234,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const handleRefresh = async () => {
     setIsRefreshing(true);
     onRefreshFeed();
+    void refreshPinnedFeed(true);
     setVisibleCount(POSTS_PER_PAGE);
     setTimeout(() => {
       setIsRefreshing(false);
@@ -266,6 +271,36 @@ export const FeedView: React.FC<FeedViewProps> = ({
     const following = new Set(currentUser.followingIds || []);
     filteredPosts = filteredPosts.filter((p) => following.has(p.userId));
   }
+
+  // What the admin pinned to the top of the Feed: shown above everything in the plain "For You / All" view, and a pinned post is not
+  // repeated further down the list.
+  const pinnedItems = usePinnedFeedItems();
+  const showPinned = activeCategory === 'All' && activeFeedFilter === 'foryou' && pinnedItems.length > 0;
+  const pinnedPostIds = new Set(showPinned ? pinnedItems.filter((i) => i.kind === 'post' && i.post).map((i) => i.itemId) : []);
+  if (pinnedPostIds.size > 0) filteredPosts = filteredPosts.filter((p) => !pinnedPostIds.has(p.id));
+  useEffect(() => { void refreshPinnedFeed(true); }, [currentUser.id]);
+
+  const renderPostCard = (post: Post) => (
+    <PostCard
+      key={post.id}
+      post={post}
+      currentUser={currentUser}
+      onToggleLike={onToggleLike}
+      onToggleSave={onToggleSave}
+      onOpenComments={(p) => setSelectedPostForComments(p)}
+      onToggleArchive={onToggleArchive}
+      onToggleComments={onToggleComments}
+      onToggleLikeCount={onToggleLikeCount}
+      onDeletePost={onDeletePost}
+      onDeleteSlide={onDeleteSlide}
+      onHideAd={handleHideAd}
+      onSelectCategory={(cat) => setActiveCategory(cat)}
+      onNavigateToProfile={onNavigateToProfile}
+      allUsers={allUsers}
+      onToggleFollowUser={onToggleFollowUser}
+      onOpenVideoWatch={(p) => setWatchVideoPost(p)}
+    />
+  );
 
   const paginatedPosts = filteredPosts.slice(0, visibleCount);
   const hasMore = visibleCount < filteredPosts.length;
@@ -317,6 +352,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // scroll attempt below.
   useEffect(() => {
     if (!initialPostId) return;
+    // a pinned post is drawn in the pinned section at the top: it is already on the page
+    if (pinnedPostIds.has(initialPostId)) {
+      if (alignSessionRef.current?.id !== initialPostId) startAlignToPost(initialPostId);
+      return;
+    }
     const idx = filteredPosts.findIndex((p) => p.id === initialPostId);
     if (idx === -1) {
       if (activeFeedFilter !== 'foryou') setActiveFeedFilter('foryou');
@@ -657,27 +697,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </div>
         ) : (
           <>
-            {paginatedPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUser={currentUser}
-                onToggleLike={onToggleLike}
-                onToggleSave={onToggleSave}
-                onOpenComments={(p) => setSelectedPostForComments(p)}
-                onToggleArchive={onToggleArchive}
-                onToggleComments={onToggleComments}
-                onToggleLikeCount={onToggleLikeCount}
-                onDeletePost={onDeletePost}
-                onDeleteSlide={onDeleteSlide}
-                onHideAd={handleHideAd}
-                onSelectCategory={(cat) => setActiveCategory(cat)}
-                onNavigateToProfile={onNavigateToProfile}
-                allUsers={allUsers}
-                onToggleFollowUser={onToggleFollowUser}
-                onOpenVideoWatch={(p) => setWatchVideoPost(p)}
-              />
-            ))}
+            {showPinned && <PinnedFeedSection items={pinnedItems} renderPost={renderPostCard} onOpenReel={onNavigateToReel} onOpenVideo={onNavigateToVideo} />}
+            {paginatedPosts.map((post) => renderPostCard(post))}
 
             {/* Infinite Scroll Load More Sentinel */}
             <div ref={loadMoreSentinelRef} className="w-full py-4 flex items-center justify-center">

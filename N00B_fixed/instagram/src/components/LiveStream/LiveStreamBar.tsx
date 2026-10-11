@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { fetchLiveStreams, LiveStreamSummary } from '../../services/api';
+import { setVisibleInterval } from '../../utils/visibleInterval';
 
 interface LiveStreamBarProps {
   onOpenLive: (stream: LiveStreamSummary) => void;
@@ -17,8 +18,8 @@ export const LiveStreamBar: React.FC<LiveStreamBarProps> = ({ onOpenLive }) => {
     let alive = true;
     const load = () => fetchLiveStreams().then((res) => { if (alive && res.success) setStreams(res.streams); });
     load();
-    const interval = setInterval(load, 15000);
-    return () => { alive = false; clearInterval(interval); };
+    const stopInterval = setVisibleInterval(load, 15000);   // rests while the page is hidden
+    return () => { alive = false; stopInterval(); };
   }, []);
 
   if (streams.length === 0) return null;

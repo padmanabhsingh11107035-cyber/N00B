@@ -23,6 +23,8 @@ class LudoNetworkAdapter {
   private listeners: Map<NetworkEventType, Set<NetworkEventListener>> = new Map();
   private localPlayerId: string = '';
   private botTimer: ReturnType<typeof setTimeout> | null = null;
+  // Bumped whenever the computer's plan changes, so a timer that was already on its way can never act on an outdated plan.
+  private botPlan = 0;
   private turnCountdownTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
@@ -250,49 +252,43 @@ class LudoNetworkAdapter {
   }
 
   /**
-   * Bot AI decision trigger
+   * Computer players: whenever it is a computer player's turn, ONE timer is set for its next step (roll the dice, or move a token after
+   * a rolled dice). Every roll / move / turn change comes back through here, so there is only ever one timer, and it always looks at the
+   * live game when it fires. (An earlier version let a roll leave a second, forgotten timer behind; that one later made the computer
+   * act on a stale picture of its own tokens, found no move, and the match sat still until the turn clock ran out.)
    */
   private checkAndTriggerBotTurn() {
-    if (this.botTimer) clearTimeout(this.botTimer);
-    if (!this.currentGameState || this.currentGameState.status !== 'in_progress') return;
+    this.clearTimers();
+    const state = this.currentGameState;
+    if (!state || state.status !== 'in_progress') return;
 
-    const currentPlayer = this.currentGameState.players.find(
-      (p) => p.color === this.currentGameState!.currentTurnColor
-    );
+    const currentPlayer = state.players.find((p) => p.color === state.currentTurnColor);
+    if (!currentPlayer || !currentPlayer.isBot || currentPlayer.hasFinished) return;
+    if (state.diceRollStatus !== 'waiting_roll' && state.diceRollStatus !== 'waiting_move') return;
 
-    if (!currentPlayer || !currentPlayer.isBot) return;
+    // thinking delay: a little longer before rolling than before moving
+    const delay = state.diceRollStatus === 'waiting_roll' ? 650 + Math.random() * 450 : 550 + Math.random() * 400;
+    const plan = ++this.botPlan;
+    this.botTimer = setTimeout(() => this.runBotStep(plan), delay);
+  }
 
-    // AI bot thinking delay (realistic 600 - 1100ms)
-    const rollDelay = 650 + Math.random() * 450;
-    this.botTimer = setTimeout(() => {
-      if (!this.currentGameState || this.currentGameState.currentTurnColor !== currentPlayer.color) return;
+  private runBotStep(plan: number) {
+    if (plan !== this.botPlan) return;
+    this.botTimer = null;
+    const state = this.currentGameState;
+    if (!state || state.status !== 'in_progress') return;
+    const player = state.players.find((p) => p.color === state.currentTurnColor);
+    if (!player || !player.isBot) return;
 
-      if (this.currentGameState.diceRollStatus === 'waiting_roll') {
-        const rolled = this.rollDice();
-
-        // Move after brief observation delay
-        const moveDelay = 550 + Math.random() * 400;
-        this.botTimer = setTimeout(() => {
-          if (
-            this.currentGameState &&
-            this.currentGameState.diceRollStatus === 'waiting_move' &&
-            this.currentGameState.currentTurnColor === currentPlayer.color
-          ) {
-            const chosenToken = chooseBotMove(
-              currentPlayer,
-              rolled,
-              this.currentGameState.players,
-              this.currentGameState.mode,
-              currentPlayer.botDifficulty || 'medium'
-            );
-
-            if (chosenToken !== null) {
-              this.moveToken(chosenToken);
-            }
-          }
-        }, moveDelay);
-      }
-    }, rollDelay);
+    if (state.diceRollStatus === 'waiting_roll') {
+      this.rollDice();                       // schedules the move (or the next player's turn) itself
+      return;
+    }
+    if (state.diceRollStatus === 'waiting_move') {
+      let tokenId = chooseBotMove(player, state.diceValue ?? 0, state.players, state.mode, player.botDifficulty || 'medium');
+      if (tokenId === null) tokenId = state.legalTokenIds[0] ?? null;   // never leave a legal move unplayed
+      if (tokenId !== null) this.moveToken(tokenId);
+    }
   }
 
   public forfeitGame(playerId: string) {
@@ -309,6 +305,7 @@ class LudoNetworkAdapter {
   }
 
   public clearTimers() {
+    this.botPlan++;                          // anything already on its way is now outdated
     if (this.botTimer) clearTimeout(this.botTimer);
     this.botTimer = null;
   }

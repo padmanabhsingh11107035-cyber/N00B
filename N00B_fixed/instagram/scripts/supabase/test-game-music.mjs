@@ -106,5 +106,26 @@ reset();
 try { M.startGameMusic(); } catch { ok = false; }
 check(ok, 'a browser that refuses to start audio just stays quiet');
 
+section('7. The person\'s own music wins');
+globalThis.AudioContext = FakeAudioContext;
+reset();
+check(M.isAppMusicPlaying() === false, 'no music of their own to begin with');
+M.setAppMusicPlaying(true);
+M.startGameMusic();
+check(!M.isGameMusicPlaying() && M.isAppMusicPlaying() === true, 'opening the Games page while their music plays: the arcade music stays silent');
+M.setAppMusicPlaying(false);
+check(M.isGameMusicPlaying(), 'it starts by itself once their music stops (the page is still open)');
+M.setAppMusicPlaying(true);
+check(!M.isGameMusicPlaying(), 'their music starting while the arcade music plays stops the arcade music');
+M.stopGameMusic();
+M.setAppMusicPlaying(false);
+check(!M.isGameMusicPlaying(), 'but if they have left the Games page, nothing starts when their music stops');
+reset();
+M.setGameMusicOn(false);
+M.startGameMusic();
+M.setAppMusicPlaying(true); M.setAppMusicPlaying(false);
+check(!M.isGameMusicPlaying(), 'and with the arcade music switched off it stays off');
+M.setGameMusicOn(true);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

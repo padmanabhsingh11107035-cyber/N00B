@@ -73,7 +73,7 @@ import { AdminSignInPanel } from './AdminSignInPanel';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
-  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
+  sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification,
   fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory, deleteLongVideo,
@@ -955,6 +955,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
       setStatusMessage({ text: err?.message || 'Error communicating with server.', type: 'error' });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Give (or take away) the verified badge. The person is told by notification, and for a new badge by e-mail too.
+  const handleSetVerification = async (target: User, verified: boolean) => {
+    if (!verified && !confirm(`Remove the verified badge from @${target.username}?`)) return;
+    setActionLoading(target.id);
+    const res = await adminSetVerification(target.id, verified);
+    setActionLoading(null);
+    if (res.success) {
+      setStatusMessage({ text: res.message || (verified ? 'Verified.' : 'Badge removed.'), type: 'success' });
+      setSelectedUserForDetails((cur) => (cur && cur.id === target.id ? { ...cur, isVerified: verified, verificationTier: verified ? 'premium' : undefined } : cur));
+      void loadUsers();
+    } else {
+      setStatusMessage({ text: res.error || 'Could not change the badge.', type: 'error' });
     }
   };
 
@@ -3210,6 +3225,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       {selectedUserForDetails.isVerified ? selectedUserForDetails.verificationTier || 'Verified' : 'Not Verified'}
                     </span>
                   </div>
+                  {main && (
+                    <button
+                      onClick={() => handleSetVerification(selectedUserForDetails, !selectedUserForDetails.isVerified)}
+                      disabled={actionLoading === selectedUserForDetails.id}
+                      className={`w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors ${
+                        selectedUserForDetails.isVerified
+                          ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700'
+                          : 'bg-white text-black hover:bg-zinc-200'
+                      }`}
+                    >
+                      {actionLoading === selectedUserForDetails.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                      {selectedUserForDetails.isVerified ? 'Remove verified badge' : 'Verify this account (badge + notification + e-mail)'}
+                    </button>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-zinc-500 flex items-center gap-1">
                       {selectedUserForDetails.pushEnabled ? <BellRing className="w-3 h-3" /> : <BellOff className="w-3 h-3" />} Notifications

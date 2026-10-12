@@ -90,7 +90,7 @@ function emailShell(title: string, bodyHtml: string): string {
 // ---------------------------------------------------------------------------- event emails (receipts, Pro warnings)
 // { action: "event_email", emailId } — sent by the DATABASE (queue_email / retry_pending_emails) with the private password in the
 // x-noob-push header. The database decides what to send and to whom (table email_outbox); this code only writes the email and sends it.
-// Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, pro_expiring, pro_ended, pro_gift_receipt.
+// Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, verified_by_admin, pro_expiring, pro_ended, pro_gift_receipt.
 const SITE_URL = (Deno.env.get('SITE_URL') || 'https://nooob.xyz').trim().replace(/\/+$/, '');
 const BRAND = '#D97757';
 const fmtWhen = (v: unknown): string => {
@@ -180,6 +180,25 @@ function renderEventEmail(kind: string, d: any, name: string, emailId: string): 
       html: eventShell('Your verification badge is active ✅', `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} here is your receipt.</p>${rowsHtml(rows)}${listHtml('What you get', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
     };
   }
+  if (kind === 'verified_by_admin') {
+    const rows: Row[] = [
+      ['Account', `@${d.username}`],
+      ['Date', fmtWhen(d.at)],
+      ['Verified by', 'The NOOB team', true]
+    ];
+    const items = ['The verified badge shows next to your name on your profile, posts, reels, comments and chats', 'It tells other people that your account is real', 'It is free: the NOOB team gave it to you'];
+    return {
+      subject: `You're verified on NOOB ✅`,
+      text: `${hi}
+
+The NOOB team has verified your account @${d.username}. ✅
+
+${rowsText(rows)}
+${listText('What it means', items)}
+— The NOOB team`,
+      html: eventShell('You are verified on NOOB ✅', `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} the NOOB team has verified your account.</p>${rowsHtml(rows)}${listHtml('What it means', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
+    };
+  }
   if (kind === 'pro_expiring') {
     const days = Number(d.daysLeft) || 0;
     const when = days <= 1 ? 'tomorrow' : `in ${days} days`;
@@ -194,7 +213,7 @@ function renderEventEmail(kind: string, d: any, name: string, emailId: string): 
     ];
     const why = reload
       ? `Your plan is set to renew by itself, but your wallet does not have enough points yet. Add ${d.shortfall} more points before then and it will continue without a break.`
-      : 'Reload Monthly is turned off, so the plan ends on that date. Pay with NOOB Points to keep it.';
+      : `Reload ${d.billing === 'yearly' ? 'Yearly' : 'Monthly'} is turned off, so the plan ends on that date. Pay with NOOB Points to keep it.`;
     const url = payLink(String(d.tier), String(d.billing));
     return {
       subject: `Your NOOB Pro ${d.planName} ends ${when}`,
@@ -206,12 +225,12 @@ function renderEventEmail(kind: string, d: any, name: string, emailId: string): 
     const insufficient = d.reason === 'insufficient_points';
     const why = insufficient
       ? `We could not renew it because your wallet had ${d.balance} points and the renewal costs ${d.price} points (${d.shortfall} points short).`
-      : 'It ended because Reload Monthly was turned off, so it was not renewed.';
+      : `It ended because Reload ${d.billing === 'yearly' ? 'Yearly' : 'Monthly'} was turned off, so it was not renewed.`;
     const rows: Row[] = [
       ['Plan', `NOOB Pro ${d.planName}`],
       ['Billing', billingWord(d.billing)],
       ['Ended on', fmtWhen(d.endedAt)],
-      ['Reason', insufficient ? 'Not enough NOOB Points to renew' : 'Reload Monthly was off'],
+      ['Reason', insufficient ? 'Not enough NOOB Points to renew' : `Reload ${d.billing === 'yearly' ? 'Yearly' : 'Monthly'} was off`],
       ['Your wallet balance', `${d.balance} points`],
       ['Price to start again', `${d.price} points`, true]
     ];

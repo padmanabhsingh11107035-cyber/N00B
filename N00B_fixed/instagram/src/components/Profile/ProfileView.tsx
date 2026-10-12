@@ -54,6 +54,7 @@ import {
   AlertCircle,
   Clock,
   Calculator as CalculatorIcon,
+  ScanLine,
   Zap,
   Smartphone,
   EyeOff,
@@ -62,7 +63,7 @@ import {
   ToggleRight,
   ChevronDown
 } from 'lucide-react';
-import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight } from '../../types';
+import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight, LongVideo } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
 import {
   fetchCollections,
@@ -82,6 +83,7 @@ import {
   deleteHighlight,
   fetchMutualFollowers,
   fetchUserFeedVideos,
+  fetchUserLongVideos,
   type MutualFollower
 } from '../../services/api';
 import confetti from 'canvas-confetti';
@@ -90,7 +92,6 @@ import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { HighlightManagerModal } from './HighlightManagerModal';
-import { safeJsonStringify } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { AvatarMedia } from '../Common/AvatarMedia';
@@ -114,6 +115,9 @@ import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
 import { CalculatorPage } from './CalculatorPage';
+import { QrScannerPage } from './QrScannerPage';
+import { ExportDataModal } from './ExportDataModal';
+import { buildDataExport } from '../../utils/exportMyData';
 import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
@@ -157,6 +161,8 @@ interface ProfileViewProps {
   onBackToMyProfile?: () => void;
   onNavigateToChatWithUser?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
+  // Opens one of the long videos (Home > Videos) listed in the profile's Feed tab
+  onOpenLongVideo?: (videoId: string) => void;
   // Present only for the main NOOB admin while they're using the app in "Use as User" mode (see
   // App.tsx's viewAsUser + AdminControlModal's "Use as User" button) — switches back to the admin
   // console. Absent for every other account, so the icon simply never renders for them.
@@ -184,12 +190,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onBackToMyProfile,
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
+  onOpenLongVideo,
   onSwitchToAdminPanel
 }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'feed' | 'saved' | 'liked' | 'archive'>('posts');
   // The "Feed" tab: this person's video posts, one wide card per row. Loaded from the server when the tab is opened (the app itself only
   // holds the latest 200 posts of everyone); until then / if that is unavailable, the video posts already on hand are shown.
   const [feedVideos, setFeedVideos] = useState<{ userId: string; posts: Post[] } | null>(null);
+  const [longVideos, setLongVideos] = useState<{ userId: string; videos: LongVideo[] } | null>(null);
   const [watchVideoPost, setWatchVideoPost] = useState<Post | null>(null);
   const [collections, setCollections] = useState<SavedCollection[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
@@ -236,6 +244,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showDevices, setShowDevices] = useState(false);
   const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
+  const [showQrScannerPage, setShowQrScannerPage] = useState(false);
+  // Export Data: the readable text of the person's own details (utils/exportMyData.ts); null while the window is closed
+  const [exportText, setExportText] = useState<string | null>(null);
   const [showFollowUsModal, setShowFollowUsModal] = useState(false);
   const [showInstallPermissionsPage, setShowInstallPermissionsPage] = useState(false);
   const [showMutualFollowersSheet, setShowMutualFollowersSheet] = useState(false);
@@ -376,10 +387,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const feedVideoPosts: Post[] = (feedVideos && feedVideos.userId === targetUser.id ? feedVideos.posts : displayedPosts.filter(isVideoPost))
     .filter((p) => !p.isArchived)
     .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+  // The Feed tab lists the video posts AND the long videos (Home > Videos), newest first, in one list.
+  const feedLongVideos: LongVideo[] = longVideos && longVideos.userId === targetUser.id ? longVideos.videos : [];
+  type FeedTabItem = { kind: 'post'; at: number; post: Post } | { kind: 'video'; at: number; video: LongVideo };
+  const feedTabItems: FeedTabItem[] = [
+    ...feedVideoPosts.map((post): FeedTabItem => ({ kind: 'post', at: Date.parse(post.createdAt) || 0, post })),
+    ...feedLongVideos.map((video): FeedTabItem => ({ kind: 'video', at: Date.parse(video.createdAt) || 0, video }))
+  ].sort((a, b) => b.at - a.at);
+  const formatVideoLength = (totalSeconds: number): string => {
+    const s = Math.max(0, Math.round(totalSeconds));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+  };
   useEffect(() => {
     if (activeTab !== 'feed') return;
     let alive = true;
     fetchUserFeedVideos(targetUser.id).then((list) => { if (alive && list) setFeedVideos({ userId: targetUser.id, posts: list }); });
+    fetchUserLongVideos(targetUser.id).then((list) => { if (alive && list) setLongVideos({ userId: targetUser.id, videos: list }); });
     return () => { alive = false; };
   }, [activeTab, targetUser.id]);
 
@@ -749,6 +773,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         NOOB Points, transactions &amp; badges
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Option: QR Scanner — find someone by scanning their profile QR code */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowQrScannerPage(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <ScanLine className="w-4 h-4 text-noob" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
+                        QR Scanner
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        Scan a profile QR code to open it
                       </span>
                     </div>
                   </button>
@@ -1729,15 +1774,48 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* B2. FEED VIDEOS: the video posts, each as a wide card across the full width, one under the other */}
         {activeTab === 'feed' && (
-          feedVideoPosts.length === 0 ? (
+          feedTabItems.length === 0 ? (
             <div className="text-center py-16 bg-zinc-950 rounded-3xl border border-zinc-800 space-y-2">
               <PlaySquare className="w-10 h-10 text-zinc-600 mx-auto" />
-              <span className="text-sm font-bold text-zinc-300 block">No feed videos shared yet</span>
-              <p className="text-xs text-zinc-500">Videos posted to the Feed show up here.</p>
+              <span className="text-sm font-bold text-zinc-300 block">No videos shared yet</span>
+              <p className="text-xs text-zinc-500">Videos you post to the Feed or upload to Videos show up here.</p>
             </div>
           ) : (
             <div className="space-y-5">
-              {feedVideoPosts.map((post) => {
+              {feedTabItems.map((item) => {
+                if (item.kind === 'video') {
+                  const video = item.video;
+                  return (
+                    <button
+                      key={`lv-${video.id}`}
+                      type="button"
+                      onClick={() => onOpenLongVideo?.(video.id)}
+                      className="group block w-full text-left cursor-pointer"
+                      aria-label={`Watch ${video.title || 'video'}`}
+                    >
+                      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800/80 shadow-md">
+                        {video.thumbnailUrl ? (
+                          <img src={video.thumbnailUrl} alt={video.title} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" referrerPolicy="no-referrer" />
+                        ) : (
+                          <PostThumbnailMedia src={video.videoUrl} mediaType="video" alt={video.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+                        )}
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="w-12 h-12 rounded-full bg-black/55 backdrop-blur-md border border-white/25 flex items-center justify-center">
+                            <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                          </span>
+                        </span>
+                        <span className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{formatVideoLength(video.durationSeconds)}</span>
+                      </div>
+                      <div className="mt-2 px-1">
+                        <p className="text-sm font-bold text-white line-clamp-2 break-words">{video.title || 'Untitled video'}</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          {video.viewsCount.toLocaleString()} {video.viewsCount === 1 ? 'view' : 'views'} · {video.likesCount.toLocaleString()} {video.likesCount === 1 ? 'like' : 'likes'} · {formatRelativeTime(video.createdAt)}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                }
+                const post = item.post;
                 const videoSlide = post.slides.find((s) => s.mediaType === 'video') || post.slides[0];
                 return (
                   <button
@@ -1964,6 +2042,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {showCalculatorPage && <CalculatorPage onClose={() => setShowCalculatorPage(false)} />}
 
+      {exportText !== null && <ExportDataModal text={exportText} onClose={() => setExportText(null)} />}
+
+      {showQrScannerPage && (
+        <QrScannerPage
+          allUsers={allUsers}
+          currentUser={currentUser}
+          onClose={() => setShowQrScannerPage(false)}
+          onOpenProfile={(user) => { setShowQrScannerPage(false); onNavigateToUserProfile?.(user); }}
+        />
+      )}
+
       {showInstallPermissionsPage && (
         <InstallAndPermissionsPage
           currentUser={currentUser}
@@ -2138,28 +2227,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   />
                 </label>
 
-                {/* Shown for every account, not just private ones — it only has an effect once the account
-                    IS private, but it's on by default for everyone, so this lets anyone see and, if they
-                    want, turn it off ahead of time rather than only once they've already switched. */}
-                <button
-                  type="button"
-                  onClick={() => setAutoAcceptFollowRequests((v) => !v)}
-                  className="w-full flex items-center justify-between cursor-pointer pt-1"
-                >
-                  <div className="text-left">
-                    <span className="block">Auto-Accept Follow Requests</span>
-                    <span className="text-[10px] text-zinc-500 block">
-                      {accountTypeSetting === 'private'
-                        ? "Anyone who requests to follow you is accepted right away — you won't follow them back automatically."
-                        : 'Only applies if your account is private — on by default. Switch it off now if you don’t want it, even before going private.'}
-                    </span>
-                  </div>
-                  {autoAcceptFollowRequests ? (
-                    <ToggleRight className="w-8 h-8 text-noob shrink-0" />
-                  ) : (
-                    <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
-                  )}
-                </button>
+                {/* Only private accounts have follow requests, so only they see this switch (it is kept as it was for everyone else). */}
+                {accountTypeSetting === 'private' && (
+                  <button
+                    type="button"
+                    onClick={() => setAutoAcceptFollowRequests((v) => !v)}
+                    className="w-full flex items-center justify-between cursor-pointer pt-1"
+                  >
+                    <div className="text-left">
+                      <span className="block">Auto-Accept Follow Requests</span>
+                      <span className="text-[10px] text-zinc-500 block">
+                        Anyone who requests to follow you is accepted right away — you won't follow them back automatically.
+                      </span>
+                    </div>
+                    {autoAcceptFollowRequests ? (
+                      <ToggleRight className="w-8 h-8 text-noob shrink-0" />
+                    ) : (
+                      <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2253,11 +2340,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
               <button
                 onClick={() => {
-                  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(safeJsonStringify(currentUser, 2));
-                  const dlAnchor = document.createElement('a');
-                  dlAnchor.setAttribute('href', dataStr);
-                  dlAnchor.setAttribute('download', 'noob_profile_archive.json');
-                  dlAnchor.click();
+                  const mine = (p: { userId?: string; username?: string }) => p.userId === currentUser.id || p.username === currentUser.username;
+                  setExportText(
+                    buildDataExport(
+                      currentUser,
+                      posts.filter((p) => mine(p) && !p.isArchived).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)),
+                      reels.filter(mine).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
+                    )
+                  );
                 }}
                 className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white cursor-pointer"
               >

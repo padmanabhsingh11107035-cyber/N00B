@@ -1,3 +1,4 @@
+import { isAppMusicPlaying } from '../../../../utils/gameMusic';
 // High-quality Web Audio API acoustic synthesizer for NOOB Chess
 
 class ChessAudioManager {
@@ -31,7 +32,7 @@ class ChessAudioManager {
   }
 
   private getContext(): AudioContext | null {
-    if (!this.soundEnabled || typeof window === 'undefined') return null;
+    if (!this.soundEnabled || isAppMusicPlaying() || typeof window === 'undefined') return null;
 
     if (!this.ctx) {
       const AudioCtx =

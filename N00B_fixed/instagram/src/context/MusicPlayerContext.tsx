@@ -1,3 +1,4 @@
+import { setAppMusicPlaying } from '../utils/gameMusic';
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { MusicTrack } from '../types';
 import { fetchMusicTracks, toggleLikeMusicTrack } from '../services/api';
@@ -32,6 +33,9 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // While the person's own music plays, the Games page keeps quiet (see utils/gameMusic.ts).
+  useEffect(() => { setAppMusicPlaying(isPlaying); }, [isPlaying]);
 
   useEffect(() => {
     loadTracks();

@@ -22,8 +22,12 @@ interface NavButtonProps {
   children: React.ReactNode;
 }
 
+// The order of the buttons below (left to right), used to slide the marker under the open one.
+const TAB_ORDER: NavTab[] = ['feed', 'explore', 'reels', 'music', 'videos', 'games', 'chat', 'profile'];
+
 // Every nav item shares the same liquid-glass pill: idle items get a faint
-// glass surface that brightens on hover/press, the active item stays lit.
+// glass surface that brightens on hover/press. The lit marker behind the open item is ONE shape that slides from icon to icon
+// (see .nav-marker in index.css), so changing page moves it instead of switching it off here and on there.
 const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active, onClick, children }) => (
   <button
     id={id}
@@ -32,9 +36,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active, onClick
     className="w-full h-full flex items-center justify-center cursor-pointer"
   >
     <div
-      className={`liquid-glass-btn flex flex-col items-center justify-center gap-0.5 px-2.5 sm:px-3 py-1.5 min-w-[46px] ${
-        active ? 'liquid-glass-btn-active' : ''
-      }`}
+      className="liquid-glass-btn flex flex-col items-center justify-center gap-0.5 px-2.5 sm:px-3 py-1.5 min-w-[46px]"
     >
       {children}
       <span
@@ -63,6 +65,11 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
       }`}
     >
       <div className="liquid-glass relative rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1">
+        <span
+          aria-hidden="true"
+          className="nav-marker"
+          style={{ ['--nav-i' as any]: Math.max(0, TAB_ORDER.indexOf(activeTab)), opacity: TAB_ORDER.includes(activeTab) ? 1 : 0 }}
+        />
         {/* 1. Feed (posts/stories) — labeled "Home", the app's main landing tab */}
         <NavButton
           id="nav-item-feed"

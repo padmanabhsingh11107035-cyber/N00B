@@ -199,8 +199,8 @@ export const MeetingDetails: React.FC<MeetingDetailsProps> = ({ meetingId, curre
 
         {calOpen && !cancelled && (
           <div className="rounded-2xl bg-zinc-900/60 border border-zinc-800 p-3 grid grid-cols-3 gap-2">
-            <a href={googleCalendarUrl(calendarM)} target="_blank" rel="noreferrer" className="py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center text-[11px] font-bold text-white hover:border-purple-400">Google</a>
-            <a href={outlookCalendarUrl(calendarM)} target="_blank" rel="noreferrer" className="py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center text-[11px] font-bold text-white hover:border-purple-400">Outlook</a>
+            <a href={googleCalendarUrl(calendarM)} target="_blank" data-no-inapp rel="noreferrer" className="py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center text-[11px] font-bold text-white hover:border-purple-400">Google</a>
+            <a href={outlookCalendarUrl(calendarM)} target="_blank" data-no-inapp rel="noreferrer" className="py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center text-[11px] font-bold text-white hover:border-purple-400">Outlook</a>
             <button onClick={downloadIcs} className="py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] font-bold text-white hover:border-purple-400 cursor-pointer flex items-center justify-center gap-1"><Download className="w-3 h-3" /> .ics file</button>
             <p className="col-span-3 text-[10px] text-zinc-500">The .ics file works with Apple Calendar and most calendar apps.</p>
           </div>

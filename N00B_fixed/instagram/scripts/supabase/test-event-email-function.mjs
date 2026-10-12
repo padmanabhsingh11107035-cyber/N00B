@@ -106,6 +106,14 @@ await ask();
 m = sent[0].body;
 check(/verification badge is active/.test(m.subject) && m.html.includes('Monthly') && m.html.includes('5,000,000,000 points') && m.html.includes('1,000,000,000 points'), 'badge receipt: type, price and balance');
 
+section('4b. Verified by the NOOB team');
+reset();
+claim = mail('verified_by_admin', { username: 'ann', at: '2026-10-12T10:30:00Z' });
+await ask();
+m = sent[0].body;
+check(/verified on NOOB/.test(m.subject) && m.html.includes('@ann') && m.html.includes('The NOOB team') && m.text.includes('verified your account @ann'), 'the verified-by-admin e-mail says who and by whom');
+check(!/points|price|paid|wallet/i.test(m.text), 'and carries no payment information (it was a gift)');
+
 section('5. "About to end" and "ended" emails open the exact payment page');
 reset();
 claim = mail('pro_expiring', { planName: 'Starter', tier: 'starter', billing: 'monthly', endsAt: '2026-10-14T10:30:00Z', daysLeft: 3, autoRenew: true, price: '5,000,000,000', balance: '1,000,000,000', shortfall: '4,000,000,000' });
@@ -117,7 +125,7 @@ check(m.html.includes('href="https://nooob.xyz/?pro=starter&amp;billing=monthly"
 reset();
 claim = mail('pro_expiring', { planName: 'Plus', tier: 'plus', billing: 'yearly', endsAt: '2026-10-12T10:30:00Z', daysLeft: 1, autoRenew: false, price: '99,000,000,000', balance: '0', shortfall: '99,000,000,000' });
 await ask();
-check(/ends tomorrow/.test(sent[0].body.subject) && /Reload Monthly is turned off/.test(sent[0].body.text) && sent[0].body.text.includes('?pro=plus&billing=yearly'), 'reload off: says so, and links to the yearly Plus plan');
+check(/ends tomorrow/.test(sent[0].body.subject) && /Reload Yearly is turned off/.test(sent[0].body.text) && sent[0].body.text.includes('?pro=plus&billing=yearly'), 'reload off: says so (Reload Yearly for a yearly plan), and links to the yearly Plus plan');
 reset();
 claim = mail('pro_ended', { planName: 'Elite', tier: 'elite', billing: 'monthly', reason: 'insufficient_points', price: '12,500,000,000', balance: '2,000,000,000', shortfall: '10,500,000,000', endedAt: '2026-10-11T10:30:00Z' });
 await ask();

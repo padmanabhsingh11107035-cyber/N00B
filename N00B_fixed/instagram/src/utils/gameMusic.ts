@@ -2,6 +2,9 @@
 // that is played by the browser itself, note by note. There is no song file to download, nothing is streamed, and nothing here is
 // taken from anyone else's recording.
 //
+// When the person is listening to their OWN music in NOOB (the Music player), the games stay quiet: no arcade music and no game tones
+// (the game sound effects check isAppMusicPlaying() too). The arcade music comes back by itself when their music stops.
+//
 // It starts when the Games page opens, keeps going while a game is being played, and stops the moment the person leaves the Games
 // page. The speaker button on the Games page turns it off (and back on); that choice is kept on their device. It pauses while the
 // app is in the background, and phones that only allow sound after a first tap are handled (it starts on the first tap).
@@ -60,6 +63,18 @@ let step = 0;
 let wanted = false;       // the Games page is open
 let unlockArmed = false;
 let visHandler: (() => void) | null = null;
+
+// Is the person playing their own music in NOOB right now? (Set by the Music player, src/context/MusicPlayerContext.tsx.)
+let appMusicPlaying = false;
+export function isAppMusicPlaying(): boolean {
+  return appMusicPlaying;
+}
+export function setAppMusicPlaying(playing: boolean): void {
+  if (appMusicPlaying === playing) return;
+  appMusicPlaying = playing;
+  if (playing) haltPlayback();                                   // their music wins: the arcade loop stops
+  else if (wanted && isGameMusicOn()) startGameMusic();          // and comes back when theirs stops, if the Games page is still open
+}
 
 export function isGameMusicOn(): boolean {
   try { return storage()?.getItem(KEY) !== 'off'; } catch { return true; }
@@ -174,7 +189,7 @@ function begin(): void {
       if (!ctx) return;
       try {
         if (g.document.visibilityState === 'hidden') void ctx.suspend?.();
-        else if (wanted && isGameMusicOn()) void ctx.resume?.();
+        else if (wanted && isGameMusicOn() && !appMusicPlaying) void ctx.resume?.();
       } catch { /* ignore */ }
     };
     g.document.addEventListener('visibilitychange', visHandler);
@@ -188,7 +203,7 @@ function armUnlock(): void {
   const unlock = () => {
     for (const ev of ['pointerdown', 'touchstart', 'keydown']) g.removeEventListener(ev, unlock);
     unlockArmed = false;
-    if (!wanted || !isGameMusicOn()) return;
+    if (!wanted || !isGameMusicOn() || appMusicPlaying) return;
     try { if (ctx && ctx.state === 'suspended') void ctx.resume?.(); } catch { /* ignore */ }
     begin();
   };
@@ -198,7 +213,7 @@ function armUnlock(): void {
 // The Games page opened.
 export function startGameMusic(): void {
   wanted = true;
-  if (!isGameMusicOn()) return;
+  if (!isGameMusicOn() || appMusicPlaying) return;
   begin();
   if (!ctx || ctx.state === 'suspended') armUnlock();
 }
@@ -235,6 +250,7 @@ export function setGameMusicOn(on: boolean): void {
 export function resetGameMusicForTests(): void {
   haltPlayback();
   wanted = false;
+  appMusicPlaying = false;
   unlockArmed = false;
   step = 0;
   nextTime = 0;

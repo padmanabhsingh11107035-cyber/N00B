@@ -161,7 +161,7 @@ export const OrderTrackingScreen: React.FC<OrderTrackingScreenProps> = ({ order,
             (delivery && pin) || !delivery ? (
               <a
                 href={delivery && pin ? mapsLink(pin) : `https://www.google.com/maps?q=${SHOP_LAT},${SHOP_LNG}`}
-                target="_blank"
+                target="_blank" data-no-inapp
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-[11px] font-extrabold"
                 style={{ color: GREEN }}

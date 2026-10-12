@@ -255,7 +255,7 @@ export const AdminSignInPanel: React.FC = () => {
               <a
                 key={link.href}
                 href={link.href}
-                target="_blank"
+                target="_blank" data-no-inapp
                 rel="noopener noreferrer"
                 className="p-2.5 bg-zinc-900/60 rounded-xl border border-zinc-800 hover:border-noob/50 flex items-center gap-2 transition-colors"
               >

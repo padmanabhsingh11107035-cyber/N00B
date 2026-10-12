@@ -86,6 +86,8 @@ import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
+import { InAppBrowserHost } from './components/Common/InAppBrowser';
+import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
@@ -549,6 +551,9 @@ export default function App() {
     });
     return () => { try { (window as any).cancelIdleCallback ? (window as any).cancelIdleCallback(handle) : clearTimeout(handle); } catch { /* ignore */ } };
   }, [currentUser?.id]);
+
+  // Links to other websites open inside NOOB, under a bar that says NOOB (utils/inAppBrowser.ts), like Instagram does.
+  useEffect(() => installLinkInterceptor(), []);
 
   // Content protection (see utils/contentProtection.ts): no saving of pictures or videos, and the screen goes black for screenshot
   // shortcuts and when the tab is hidden. The main administrator is exempt (needs their own screenshots to look after the app).
@@ -1138,7 +1143,8 @@ export default function App() {
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
         <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white">
-          <div className="w-12 h-12 rounded-full border-2 border-red-500 border-t-transparent animate-spin mb-4" />
+          <img src="/noob-logo-circle.png" alt="" className="w-16 h-16 rounded-full mb-5 shadow-[0_0_40px_rgba(217,119,87,0.3)]" />
+          <div className="w-8 h-8 rounded-full border-2 border-noob border-t-transparent animate-spin mb-4" />
           <span className="text-sm font-extrabold tracking-tight text-white">
             NOOB
           </span>
@@ -1642,6 +1648,7 @@ export default function App() {
               setActiveTab('chat');
             }}
             onNavigateToUserProfile={handleNavigateToUserProfile}
+            onOpenLongVideo={handleNavigateToVideo}
             onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
           /></React.Suspense>
         )}
@@ -1784,6 +1791,7 @@ export default function App() {
       {/* 0.6 Push notification soft-ask (website only, shown once per browser) */}
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
       <MiniToast />
+      <InAppBrowserHost />
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (

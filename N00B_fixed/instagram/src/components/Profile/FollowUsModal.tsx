@@ -32,7 +32,7 @@ export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
         <div className="space-y-3">
           <a
             href={INSTAGRAM_URL}
-            target="_blank"
+            target="_blank" data-no-inapp
             rel="noopener noreferrer"
             className="flex items-center gap-3.5 p-4 rounded-2xl bg-gradient-to-r from-fuchsia-600/20 via-pink-600/20 to-amber-500/20 border border-pink-500/30 hover:border-pink-400/60 transition-all group"
           >
@@ -48,7 +48,7 @@ export const FollowUsModal: React.FC<FollowUsModalProps> = ({ onClose }) => {
 
           <a
             href={YOUTUBE_URL}
-            target="_blank"
+            target="_blank" data-no-inapp
             rel="noopener noreferrer"
             className="flex items-center gap-3.5 p-4 rounded-2xl bg-red-600/10 border border-red-500/30 hover:border-red-400/60 transition-all group"
           >

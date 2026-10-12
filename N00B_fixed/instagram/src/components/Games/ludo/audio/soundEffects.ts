@@ -1,3 +1,5 @@
+import { isAppMusicPlaying } from '../../../../utils/gameMusic';
+
 class LudoSoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
@@ -56,7 +58,7 @@ class LudoSoundEngine {
 
   // Tactile button click
   public playButtonClick() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -79,7 +81,7 @@ class LudoSoundEngine {
 
   // Dice rolling clatter
   public playDiceRoll() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -107,7 +109,7 @@ class LudoSoundEngine {
 
   // Token hop / step sound
   public playTokenStep() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -130,7 +132,7 @@ class LudoSoundEngine {
 
   // Capture opponent token (punchy bounce sound)
   public playCapture() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -165,7 +167,7 @@ class LudoSoundEngine {
 
   // Safe square celestial chime
   public playSafeSquare() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -191,7 +193,7 @@ class LudoSoundEngine {
 
   // Reaching home triangle
   public playHomeReached() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -217,7 +219,7 @@ class LudoSoundEngine {
 
   // Victory fanfare
   public playVictory() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -251,7 +253,7 @@ class LudoSoundEngine {
 
   // Match start cue
   public playMatchStart() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 
@@ -277,7 +279,7 @@ class LudoSoundEngine {
 
   // Turn alert (when user's turn starts)
   public playYourTurn() {
-    if (this.isMuted) return;
+    if (this.isMuted || isAppMusicPlaying()) return;
     this.initContext();
     if (!this.ctx) return;
 

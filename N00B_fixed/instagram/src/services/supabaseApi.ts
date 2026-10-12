@@ -1109,6 +1109,17 @@ export async function fetchUserFeedVideos(userId: string): Promise<Post[] | null
   }
 }
 
+// One person's long videos (Home > Videos) for their profile "Feed" tab (migration 20261012000004). null when that function is not
+// installed yet or the call failed, so the tab can still show the video posts.
+export async function fetchUserLongVideos(userId: string): Promise<LongVideo[] | null> {
+  try {
+    const res = await rpc<any[]>('user_long_videos', { p_user: userId });
+    return Array.isArray(res) ? res.map(mapLongVideo) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function toggleArchivePost(postId: string): Promise<{ isArchived: boolean }> {
   try { return await rpc('toggle_post_flag', { p_post: postId, p_flag: 'archive' }); } catch (err) { return { error: errorText(err, 'You can only modify your own posts.') } as any; }
 }
@@ -3623,6 +3634,15 @@ export async function adjustUserPoints(
     return { ...res, user: mapUser(res.user) };
   } catch (err) {
     return failWith(err, 'Could not adjust the balance.');
+  }
+}
+
+// The NOOB administrator gives (or takes away) the verified badge. The person is told by notification and e-mail.
+export async function adminSetVerification(targetUserId: string, verified: boolean): Promise<{ success: boolean; verified?: boolean; message?: string; error?: string }> {
+  try {
+    return await rpc('admin_set_verification', { p_target: targetUserId, p_verified: verified });
+  } catch (err) {
+    return failWith(err, verified ? 'Could not verify this account.' : 'Could not remove the badge.');
   }
 }
 

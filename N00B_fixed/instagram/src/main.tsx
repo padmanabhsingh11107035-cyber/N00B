@@ -71,11 +71,12 @@ if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
 // what makes the Install and Permissions page's one-tap install button actually appear.
 registerServiceWorkerForInstallability();
 
-// The opening splash (index.html): stays for at least about a second so the logo is really seen, then fades out and is removed. The loading
+// The opening splash (index.html): the logo stays for 4 seconds from the moment the app is opened, then fades out and is removed. The loading
 // screen and the app are already underneath it by then.
+const SPLASH_SECONDS = 4;
 const splash = document.getElementById('noob-splash');
 if (splash) {
-  const wait = Math.max(0, 1100 - (typeof performance !== 'undefined' ? performance.now() : 0));
+  const wait = Math.max(0, SPLASH_SECONDS * 1000 - (typeof performance !== 'undefined' ? performance.now() : 0));
   window.setTimeout(() => {
     splash.style.opacity = '0';
     window.setTimeout(() => splash.remove(), 400);

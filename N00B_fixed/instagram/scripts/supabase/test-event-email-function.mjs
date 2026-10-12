@@ -114,6 +114,21 @@ m = sent[0].body;
 check(/verified on NOOB/.test(m.subject) && m.html.includes('@ann') && m.html.includes('The NOOB team') && m.text.includes('verified your account @ann'), 'the verified-by-admin e-mail says who and by whom');
 check(!/points|price|paid|wallet/i.test(m.text), 'and carries no payment information (it was a gift)');
 
+section('4c. NOOB Draw: an email for the grand prizes');
+reset();
+claim = mail('draw_prize', { prize: 'pro', label: 'NOOB Pro Elite', subtitle: '30 days of Pro', tier: 'elite', days: 30, packName: 'Royal Spin', message: 'Your NOOB Pro plan is active until 11 Nov 2026. It does not renew by itself.', endsAt: '2026-11-11T10:30:00Z', at: '2026-10-12T10:30:00Z' });
+await ask();
+m = sent[0].body;
+check(/You won NOOB Pro Elite \(30 days of Pro\) in NOOB Draw/.test(m.subject) && m.html.includes('Royal Spin') && m.html.includes('11 Nov 2026') && m.text.includes('active until 11 Nov 2026'), 'a NOOB Pro prize: the plan, the days, the spin and the end date');
+check(m.html.includes('it ends on that date unless you pay again') && m.text.includes('does not renew by itself') && !/wallet|total paid|price/i.test(m.text), 'it says the plan does not renew by itself, and is a prize, not a receipt');
+reset();
+claim = mail('draw_prize', { prize: 'verified', label: 'Verified Tick', subtitle: 'The blue tick, forever', packName: 'Galaxy Spin', message: 'The blue verified tick now shows next to your name everywhere in NOOB.', at: '2026-10-12T10:30:00Z' });
+await ask();
+m = sent[0].body;
+check(/Verified Tick in NOOB Draw/.test(m.subject) && m.html.includes('Galaxy Spin') && m.html.includes('For good') && !m.html.includes('Active until'), 'the verified tick: says it is for good, no end date');
+check(done.length === 1 && done[0].p_ok === true, 'the database is told it was sent');
+reset();
+
 section('5. "About to end" and "ended" emails open the exact payment page');
 reset();
 claim = mail('pro_expiring', { planName: 'Starter', tier: 'starter', billing: 'monthly', endsAt: '2026-10-14T10:30:00Z', daysLeft: 3, autoRenew: true, price: '5,000,000,000', balance: '1,000,000,000', shortfall: '4,000,000,000' });

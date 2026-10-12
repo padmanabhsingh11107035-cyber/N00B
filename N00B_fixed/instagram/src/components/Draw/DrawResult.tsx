@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Loader2, PartyPopper } from 'lucide-react';
-import { DrawWonPrize, RARITY } from '../../utils/noobDraw';
+import { DrawWonPrize, RARITY, winBuzz } from '../../utils/noobDraw';
 import { PrizeVisual } from './PrizeVisual';
+import { buzz, winSound } from './drawFx';
 
 interface DrawResultProps {
   prize: DrawWonPrize;
@@ -27,7 +28,8 @@ export const DrawResult: React.FC<DrawResultProps> = ({ prize, packName, onClose
       timers.push(window.setTimeout(() => confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors, zIndex: 1000, disableForReducedMotion: true }), 420));
     }
     if (r.rank >= 4) timers.push(window.setTimeout(() => confetti({ particleCount: 160, spread: 120, startVelocity: 38, origin: { y: 0.45 }, colors, zIndex: 1000, disableForReducedMotion: true }), 800));
-    try { navigator.vibrate?.(r.rank >= 4 ? [30, 60, 30, 60, 90] : r.rank >= 2 ? [30, 50, 30] : 25); } catch { /* not supported */ }
+    winSound(prize.rarity);
+    buzz(winBuzz(prize.rarity));
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [prize.id, prize.rarity, r.color, r.rank]);
 

@@ -3282,10 +3282,10 @@ export async function fetchNoobDraw(): Promise<DrawState | null> {
   }
 }
 
-// One spin. The prize is chosen and paid out by the server in the same step; the answer carries the prize and the updated account.
-export async function spinNoobDraw(packId: string): Promise<DrawSpinResult & { user?: User }> {
+// One spin: the free one, or (paid = true) one more for NOOB Points. The prize is chosen and paid out by the server in the same step; the answer carries the prize and the updated account.
+export async function spinNoobDraw(packId: string, paid = false): Promise<DrawSpinResult & { user?: User }> {
   try {
-    const res = await rpc<any>('noob_draw_spin', { p_pack: packId });
+    const res = await rpc<any>('noob_draw_spin', paid ? { p_pack: packId, p_paid: true } : { p_pack: packId });
     return { ...res, user: res?.user ? mapUser(res.user) : undefined };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not spin right now. Please try again.') };

@@ -19,17 +19,19 @@ export interface DrawPack {
   id: string;
   name: string;
   tagline: string;
-  availableAt: string | null; // null: open now; otherwise when it opens again
+  price: number;              // NOOB Points for one more spin once the free one is used
+  availableAt: string | null; // null: the free spin is open now; otherwise when it comes back
   lastSpinAt: string | null;
   prizes: DrawPrize[];
 }
 
-export interface DrawHistoryItem { pack: string; packName: string | null; label: string; rarity: DrawRarity; kind: DrawKind; message: string | null; at: string }
+export interface DrawHistoryItem { pack: string; packName: string | null; label: string; rarity: DrawRarity; kind: DrawKind; message: string | null; paid?: boolean; cost?: number; at: string }
 export interface DrawTickerItem { username: string; label: string; rarity: DrawRarity; packName: string | null; at: string }
 export interface DrawUnlockedAvatar { id: string; name: string; url: string }
 
 export interface DrawState {
   now: string;
+  freePeriod?: 'week' | 'month';   // how often the free spin of each pack comes back
   packs: DrawPack[];
   history: DrawHistoryItem[];
   ticker: DrawTickerItem[];
@@ -49,6 +51,11 @@ export interface DrawSpinResult {
   success: boolean;
   error?: string;
   availableAt?: string;
+  paid?: boolean;
+  cost?: number;
+  price?: number;
+  needPoints?: number;          // a paid spin was refused: this many points are needed
+  freeReady?: boolean;          // a paid spin was refused: the free one is still waiting
   prize?: DrawWonPrize;
   user?: unknown;
 }
@@ -140,3 +147,47 @@ export function formatCountdown(ms: number): string {
 }
 
 export const isPackOpen = (pack: Pick<DrawPack, 'availableAt'>, now: number = Date.now()): boolean => !pack.availableAt || msUntil(pack.availableAt, now) <= 0;
+
+// ---- sound and vibration: what is played (the engine that plays it is src/components/Draw/drawFx.ts)
+export const SPIN_MS = 6400;                // how long the reel runs
+export const TICK_BUZZ_MS = 9;              // one short buzz for every card that passes the marker
+export const MIN_TICK_GAP_MS = 38;          // at the very start cards fly past faster than this: not every one gets a click
+
+export interface Tone { f: number; at: number; dur: number; gain: number; type: 'sine' | 'triangle' | 'square' | 'sawtooth'; slideTo?: number }
+
+// the click of a card passing the marker: high and light while the reel is fast, lower and heavier as it slows (progress 0 to 1)
+export const tickFreq = (progress: number): number => Math.round(1500 - 650 * Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0)));
+export const tickGapOk = (now: number, last: number, gap: number = MIN_TICK_GAP_MS): boolean => now - last >= gap;
+
+const SCALE = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98, 2093];   // C5 E5 G5 C6 E6 G6 C7: always consonant
+
+// The winning sound, different (longer, richer) for every rarity: a rising run of notes, then for the better prizes a deep thump, a
+// chord and sparkles. Fixed notes, so the same prize always sounds the same.
+export function winTones(rarity: DrawRarity): Tone[] {
+  const rank = RARITY[rarity].rank;
+  const start = rank === 0 ? 1 : 0;
+  const notes = SCALE.slice(start, start + 2 + rank);
+  const gap = 0.115 - rank * 0.008;
+  const tones: Tone[] = notes.map((f, i) => ({ f, at: i * gap, dur: 0.34, gain: 0.2, type: 'triangle' }));
+  const end = notes.length * gap;
+  if (rank >= 2) tones.push({ f: 120, slideTo: 40, at: 0, dur: 0.24, gain: 0.5, type: 'sine' });
+  if (rank >= 3) for (const f of [SCALE[2], SCALE[3], SCALE[4]]) tones.push({ f, at: end + 0.04, dur: 0.9 + 0.25 * (rank - 3), gain: 0.14, type: 'sine' });
+  if (rank >= 2) for (let k = 0; k <= rank; k++) tones.push({ f: 2349 + 260 * k, at: end + 0.1 + k * 0.07, dur: 0.14, gain: 0.07, type: 'sine' });
+  return tones.sort((a, b) => a.at - b.at);
+}
+
+// the vibration pattern when the reel stops (milliseconds: buzz, pause, buzz, ...)
+export function winBuzz(rarity: DrawRarity): number[] {
+  const rank = RARITY[rarity].rank;
+  if (rank >= 5) return [40, 50, 40, 50, 40, 50, 160];
+  if (rank >= 4) return [30, 60, 30, 60, 90];
+  if (rank >= 2) return [30, 50, 30];
+  return [25];
+}
+
+// ---- paying for another spin
+export const periodWord = (period: string | undefined): 'week' | 'month' => (period === 'week' ? 'week' : 'month');
+export const canAfford = (balance: number | null | undefined, price: number): boolean => Number.isFinite(Number(balance)) && Number(balance) >= price && price > 0;
+export const pointsNeeded = (balance: number | null | undefined, price: number): number => Math.max(0, price - (Number.isFinite(Number(balance)) ? Number(balance) : 0));
+// "100,000,000" -> "100M"
+export const priceShort = (price: number): string => pointsShort(price) || String(price);

@@ -10,7 +10,7 @@ let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
 const section = (t) => console.log(`\n${t}`);
 const M = await import(pathToFileURL(path.resolve('src/utils/noobDraw.ts')).href);
-const { buildReel, reelOffset, cardAtMarker, formatCountdown, msUntil, isPackOpen, pointsShort, RARITY, RARITY_ORDER, rarityOf, byRarityDesc, livePictureUrl, firstStickerUrl } = M;
+const { buildReel, reelOffset, cardAtMarker, formatCountdown, msUntil, isPackOpen, pointsShort, RARITY, RARITY_ORDER, rarityOf, byRarityDesc, livePictureUrl, firstStickerUrl, winTones, winBuzz, tickFreq, tickGapOk, SPIN_MS, TICK_BUZZ_MS, MIN_TICK_GAP_MS, periodWord, canAfford, pointsNeeded, priceShort } = M;
 
 // a repeatable "random" so the checks never flake
 const seeded = (seed) => () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -74,6 +74,41 @@ check(/fetchNoobDraw,/.test(api) && /spinNoobDraw,/.test(api), 'the two server c
 check(/\.draw-stage\.force-dark/.test(css) && /@layer base \{[^}]*\.draw-stage\.force-dark/.test(css), 'the Draw keeps its own deep colours over the theme\'s dark-surface rule');
 const host = fs.readFileSync('src/components/Draw/NoobDrawHost.tsx', 'utf8');
 check(/React\.lazy\(\(\) => import\('\.\/NoobDrawPage'\)\)/.test(host), 'the heavy page is fetched only when opened');
+
+section('6. Sound and vibration');
+const sig = (r) => JSON.stringify(winTones(r));
+check(new Set(RARITY_ORDER.map(sig)).size === 6, 'every rarity has its OWN winning sound');
+const counts = RARITY_ORDER.map((r) => winTones(r).length);
+check(counts.every((n, i) => i === 0 || n > counts[i - 1]), `the better the prize, the richer the sound (${counts.join(' < ')} tones)`);
+const length = (r) => Math.max(...winTones(r).map((t) => t.at + t.dur));
+check(RARITY_ORDER.every((r, i) => i === 0 || length(r) > length(RARITY_ORDER[i - 1])) && length('common') < 1 && length('mythic') < 3.5, 'and longer, but never longer than a few seconds');
+check(RARITY_ORDER.every((r) => winTones(r).every((t) => t.f > 20 && t.f < 4000 && t.at >= 0 && t.dur > 0 && t.gain > 0 && t.gain <= 0.5)) && RARITY_ORDER.every((r) => winTones(r).every((t, i, a) => i === 0 || t.at >= a[i - 1].at)), 'every note is audible, safe in loudness and in time order');
+check(winTones('common').every((t) => t.f > 400) && !winTones('common').some((t) => t.slideTo) && winTones('epic').some((t) => t.slideTo && t.slideTo < t.f) && winTones('mythic').some((t) => t.type === 'sine' && t.dur > 1.2), 'a common win is a light chime; epic and above get a deep thump and a long chord');
+check(sig('legendary') === sig('legendary'), 'the same prize always sounds the same');
+check(winBuzz('common').length === 1 && winBuzz('rare').length === 3 && winBuzz('legendary').length === 5 && winBuzz('mythic').length === 7 && RARITY_ORDER.every((r) => winBuzz(r).every((n) => n > 0 && n <= 200)), 'the vibration when the reel stops grows with the rarity');
+check(tickFreq(0) === 1500 && tickFreq(1) === 850 && tickFreq(0.5) < tickFreq(0.1) && tickFreq(-3) === 1500 && tickFreq(9) === 850 && tickFreq(NaN) === 1500, 'the click gets lower and heavier as the reel slows (and odd values stay in range)');
+check(tickGapOk(100, 50) && !tickGapOk(100, 80) && tickGapOk(100, 100 - MIN_TICK_GAP_MS) && tickGapOk(0, -1000), 'clicks are spaced: the fastest part of the spin does not turn into one buzz');
+check(SPIN_MS === 6400 && TICK_BUZZ_MS > 0 && TICK_BUZZ_MS < 30, 'the spin lasts 6.4 seconds and each card buzzes briefly');
+const reelSrc = fs.readFileSync('src/components/Draw/DrawReel.tsx', 'utf8');
+const resSrc = fs.readFileSync('src/components/Draw/DrawResult.tsx', 'utf8');
+const pageSrc = fs.readFileSync('src/components/Draw/NoobDrawPage.tsx', 'utf8');
+check(/startSpinSound\(SPIN_MS\)/.test(reelSrc) && /tickSound\(/.test(reelSrc) && /buzz\(TICK_BUZZ_MS\)/.test(reelSrc) && /thumpSound\(\)/.test(reelSrc) && /stopSpinSound\(\)/.test(reelSrc), 'the reel plays the rushing sound, a click and a buzz per card, and a thump when it stops');
+check(/winSound\(prize\.rarity\)/.test(resSrc) && /buzz\(winBuzz\(prize\.rarity\)\)/.test(resSrc), 'the reveal plays the winning sound and vibration of that rarity');
+check(pageSrc.indexOf('unlockAudio();') > 0 && pageSrc.indexOf('unlockAudio();') < pageSrc.indexOf('await spinNoobDraw'), 'sound is unlocked inside the tap, before the spin is awaited (phones refuse it later)');
+check(/setFxEnabled\(next\)/.test(pageSrc) && /Volume2/.test(pageSrc) && /VolumeX/.test(pageSrc), 'a speaker button turns sound and vibration off and on');
+
+section('7. Spinning again with NOOB Points');
+check(periodWord('week') === 'week' && periodWord('month') === 'month' && periodWord(undefined) === 'month' && periodWord('weird') === 'month', 'the free spin comes back every month (week only if the settings say so)');
+check(canAfford(100000000, 100000000) && canAfford(250000000, 100000000) && !canAfford(99999999, 100000000) && !canAfford(0, 100000000) && !canAfford(undefined, 100000000) && !canAfford(null, 100000000) && !canAfford(5e8, 0), 'can the person pay: exactly the price is enough, one point short is not, missing balance is not');
+check(pointsNeeded(30000000, 100000000) === 70000000 && pointsNeeded(100000000, 100000000) === 0 && pointsNeeded(500000000, 100000000) === 0 && pointsNeeded(undefined, 100000000) === 100000000, 'how many more points are needed (never negative)');
+check(priceShort(100000000) === '100M' && priceShort(250000000) === '250M' && priceShort(1500000000) === '1.5B', 'the price in short form on the buttons');
+const pageSrc2 = fs.readFileSync('src/components/Draw/NoobDrawPage.tsx', 'utf8');
+const apiSrc = fs.readFileSync('src/services/supabaseApi.ts', 'utf8');
+check(/spinNoobDraw\(pack\.id, paid\)/.test(pageSrc2) && /p_paid: true/.test(apiSrc) && /paid \? \{ p_pack: packId, p_paid: true \} : \{ p_pack: packId \}/.test(apiSrc), 'the app asks for a paid spin only when it was confirmed, and a normal spin sends no payment flag');
+check(/setConfirming\(true\)/.test(pageSrc2) && /void spin\(true\)/.test(pageSrc2) && /Spin the \{pack\.name\} again\?/.test(pageSrc2), 'a paid spin asks first ("This takes 100,000,000 points") and only the Spin button of that question pays');
+check(/\(paid && isPackOpen\(pack\)\)/.test(pageSrc2) && /!free && !afford/.test(pageSrc2), 'no paid spin while the free one is waiting, and the button is off when the points are short');
+check(/Need \{priceShort\(pointsNeeded\(balance, pack\.price\)\)\} more points/.test(pageSrc2) && /Free in <Countdown/.test(pageSrc2) && /Spin again · \{priceShort\(pack\.price\)\}/.test(pageSrc2), 'the cards and the button say how long until the free spin and what another spin costs');
+check(/periodWord\(state\.freePeriod\)/.test(pageSrc2) && !/once every 7 days|Weekly free spins/.test(pageSrc2), 'the page talks about the month (or the week if the settings say so), never a fixed "7 days"');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

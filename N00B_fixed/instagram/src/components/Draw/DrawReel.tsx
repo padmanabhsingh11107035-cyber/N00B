@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { DrawPrize, buildReel, cardAtMarker, reelOffset } from '../../utils/noobDraw';
+import { DrawPrize, SPIN_MS, TICK_BUZZ_MS, buildReel, cardAtMarker, reelOffset, tickGapOk } from '../../utils/noobDraw';
 import { CARD_GAP, CARD_W, PrizeCard } from './PrizeVisual';
+import { buzz, startSpinSound, stopSpinSound, thumpSound, tickSound } from './drawFx';
 
 interface DrawReelProps {
   prizes: DrawPrize[];
@@ -11,7 +12,6 @@ interface DrawReelProps {
   onLanded: () => void;
 }
 
-const SPIN_MS = 6400;
 const WINNER_INDEX = 46;
 const STRIP_LENGTH = 56;
 const IDLE_INDEX = 4;
@@ -60,21 +60,28 @@ export const DrawReel: React.FC<DrawReelProps> = React.memo(({ prizes, accent, s
     el.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.09, 0.77, 0.14, 1)`;
     el.style.transform = `translate3d(${reelOffset(CARD_W, CARD_GAP, WINNER_INDEX, running.viewport, jitter)}px,0,0)`;
 
-    // a tiny tick for every card that passes the marker (phones that can vibrate)
+    // the rushing sound, and a click and a short buzz for every card that passes the marker
+    startSpinSound(SPIN_MS);
+    const t0 = performance.now();
     let last = -1;
+    let lastTick = 0;
     const watch = () => {
+      const now = performance.now();
       const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
       const at = cardAtMarker(CARD_W, CARD_GAP, m.m41, running.viewport);
-      if (at !== last) { last = at; try { navigator.vibrate?.(3); } catch { /* not supported */ } }
+      if (at !== last) {
+        last = at;
+        if (tickGapOk(now, lastTick)) { lastTick = now; tickSound(Math.min(1, (now - t0) / SPIN_MS)); buzz(TICK_BUZZ_MS); }
+      }
       frame.current = requestAnimationFrame(watch);
     };
     frame.current = requestAnimationFrame(watch);
     window.clearTimeout(doneTimer.current);
-    doneTimer.current = window.setTimeout(() => { cancelAnimationFrame(frame.current); landedRef.current(); }, SPIN_MS + 250);
+    doneTimer.current = window.setTimeout(() => { cancelAnimationFrame(frame.current); stopSpinSound(); thumpSound(); buzz(40); landedRef.current(); }, SPIN_MS + 250);
   }, [strip]);
 
   // leaving the page mid-spin: stop the watcher (the prize is already paid by the server)
-  useEffect(() => () => { cancelAnimationFrame(frame.current); window.clearTimeout(doneTimer.current); }, []);
+  useEffect(() => () => { cancelAnimationFrame(frame.current); window.clearTimeout(doneTimer.current); stopSpinSound(); }, []);
 
   return (
     <div ref={viewportRef} className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-black/40 py-4" style={{ boxShadow: `inset 0 0 40px ${accent}22, 0 18px 50px -20px ${accent}66` }}>

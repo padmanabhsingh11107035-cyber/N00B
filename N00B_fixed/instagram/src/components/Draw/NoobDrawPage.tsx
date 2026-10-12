@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Coins, Gift, History, Info, Loader2, Lock, Sparkles, Timer, Zap } from 'lucide-react';
+import { ChevronLeft, Coins, Gift, History, Info, Loader2, Lock, Sparkles, Timer, Volume2, VolumeX, Zap } from 'lucide-react';
 import type { User } from '../../types';
 import { applyLiveAvatar, fetchNoobDraw, spinNoobDraw } from '../../services/api';
 import { showNotice } from '../../utils/likeSync';
 import {
-  DrawHistoryItem, DrawPack, DrawPrize, DrawState, DrawWonPrize, RARITY, byRarityDesc, formatCountdown, isPackOpen, msUntil, rarityOf
+  DrawHistoryItem, DrawPack, DrawPrize, DrawState, DrawWonPrize, RARITY, byRarityDesc, canAfford, formatCountdown, isPackOpen, msUntil, periodWord, pointsNeeded, priceShort, rarityOf
 } from '../../utils/noobDraw';
 import { PackArt, packLook } from './PackArt';
 import { PrizeVisual } from './PrizeVisual';
 import { DrawReel } from './DrawReel';
 import { DrawResult } from './DrawResult';
+import { buzz, fxEnabled, setFxEnabled, tickSound, unlockAudio } from './drawFx';
 
 interface NoobDrawPageProps {
   currentUser: User;
@@ -65,8 +66,13 @@ const PackCard: React.FC<{ pack: DrawPack; index: number; wide: boolean; lastWin
             <Zap className="w-3.5 h-3.5" /> Spin free
           </div>
         ) : (
-          <div className="mt-3 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full text-[11px] font-bold text-zinc-200 bg-white/8 border border-white/10">
-            <Timer className="w-3.5 h-3.5 text-zinc-400" /> Opens in <Countdown to={pack.availableAt as string} onDone={onRefresh} />
+          <div className={`mt-3 flex flex-col gap-1.5 ${wide ? 'items-start' : 'items-center'}`}>
+            <div className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full text-[11px] font-bold text-zinc-200 bg-white/8 border border-white/10">
+              <Timer className="w-3.5 h-3.5 text-zinc-400" /> Free in <Countdown to={pack.availableAt as string} onDone={onRefresh} />
+            </div>
+            <div className="inline-flex items-center gap-1 text-[11px] font-black" style={{ color: look.accent }}>
+              <Coins className="w-3 h-3" /> Spin again · {priceShort(pack.price)}
+            </div>
           </div>
         )}
         {!open && lastWin && <p className="text-[10px] text-zinc-500 mt-2 truncate">Last win: <span style={{ color: RARITY[rarityOf(lastWin.rarity)].color }}>{lastWin.label}</span></p>}
@@ -76,7 +82,7 @@ const PackCard: React.FC<{ pack: DrawPack; index: number; wide: boolean; lastWin
 };
 
 // ------------------------------------------------------------------------------------------------ the spin screen of one pack
-const SpinScreen: React.FC<{ pack: DrawPack; onUserUpdated: (u: User) => void; onRefresh: () => Promise<void>; onSpun: () => void }> = ({ pack, onUserUpdated, onRefresh, onSpun }) => {
+const SpinScreen: React.FC<{ pack: DrawPack; balance: number; period: 'week' | 'month'; onUserUpdated: (u: User) => void; onRefresh: () => Promise<void>; onSpun: () => void }> = ({ pack, balance, period, onUserUpdated, onRefresh, onSpun }) => {
   const look = packLook(pack.id);
   const [spinKey, setSpinKey] = useState(0);
   const [winner, setWinner] = useState<DrawPrize | null>(null);
@@ -84,24 +90,30 @@ const SpinScreen: React.FC<{ pack: DrawPack; onUserUpdated: (u: User) => void; o
   const [error, setError] = useState('');
   const [result, setResult] = useState<DrawWonPrize | null>(null);
   const [wearing, setWearing] = useState(false);
+  const [confirming, setConfirming] = useState(false);     // asking before NOOB Points are spent
   const held = useRef<{ user?: User; prize: DrawWonPrize } | null>(null);
   const onUserUpdatedRef = useRef(onUserUpdated);
   onUserUpdatedRef.current = onUserUpdated;
   const sorted = useMemo(() => [...pack.prizes].sort(byRarityDesc), [pack.prizes]);
-  const open = isPackOpen(pack) && !spinning;
+  const free = isPackOpen(pack);
+  const afford = canAfford(balance, pack.price);
 
   // the balance must not change before the reel stops (it would give the prize away); if the person leaves mid-spin it is applied then
   useEffect(() => () => { if (held.current?.user) onUserUpdatedRef.current(held.current.user); }, []);
 
-  const spin = async () => {
-    if (spinning || !isPackOpen(pack)) return;
+  // paid = false: the free spin. paid = true: one more spin for NOOB Points (only once the free one is used).
+  const spin = async (paid: boolean) => {
+    if (spinning || (!paid && !isPackOpen(pack)) || (paid && isPackOpen(pack))) return;
+    unlockAudio();                       // phones only allow sound that starts inside a tap: do it before anything is awaited
+    buzz(15);
+    setConfirming(false);
     setSpinning(true);
     setError('');
-    const res = await spinNoobDraw(pack.id);
+    const res = await spinNoobDraw(pack.id, paid);
     if (!res.success || !res.prize) {
       setSpinning(false);
       setError(friendlyError(res.error));
-      if (res.availableAt) void onRefresh();
+      if (res.availableAt || res.freeReady || res.needPoints) void onRefresh();
       return;
     }
     held.current = { user: res.user, prize: res.prize };
@@ -147,16 +159,27 @@ const SpinScreen: React.FC<{ pack: DrawPack; onUserUpdated: (u: User) => void; o
         {error && <p className="text-xs font-semibold text-rose-300 bg-rose-500/10 border border-rose-500/25 rounded-2xl px-3.5 py-2.5 text-center">{error}</p>}
 
         <button
-          onClick={spin}
-          disabled={!open}
-          className={`w-full py-4 rounded-2xl font-black text-[15px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-transform ${open ? 'draw-glow draw-shine text-black active:scale-[0.98] cursor-pointer' : 'bg-white/8 border border-white/10 text-zinc-300 cursor-not-allowed'}`}
-          style={open ? { background: `linear-gradient(90deg, ${look.accent}, #fff 55%, ${look.accent})`, ['--glow' as any]: look.glow } : undefined}
+          onClick={() => (free ? void spin(false) : setConfirming(true))}
+          disabled={spinning || (!free && !afford)}
+          className={`w-full py-4 rounded-2xl font-black text-[15px] uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-transform ${
+            spinning ? 'bg-white/8 border border-white/10 text-zinc-300 cursor-not-allowed'
+            : free ? 'draw-glow draw-shine text-black active:scale-[0.98] cursor-pointer'
+            : afford ? 'text-white border active:scale-[0.98] cursor-pointer'
+            : 'bg-white/8 border border-white/10 text-zinc-400 cursor-not-allowed'}`}
+          style={spinning ? undefined
+            : free ? { background: `linear-gradient(90deg, ${look.accent}, #fff 55%, ${look.accent})`, ['--glow' as any]: look.glow }
+            : afford ? { background: `linear-gradient(90deg, ${look.accent}33, rgba(14,14,22,0.9))`, borderColor: `${look.accent}88`, boxShadow: `0 10px 34px -12px ${look.accent}` } : undefined}
         >
           {spinning ? <><Loader2 className="w-5 h-5 animate-spin" /> Spinning</>
-            : isPackOpen(pack) ? <><Sparkles className="w-5 h-5" /> Spin now · Free</>
-            : <><Lock className="w-4.5 h-4.5" /> Opens in <Countdown to={pack.availableAt as string} onDone={() => void onRefresh()} /></>}
+            : free ? <><Sparkles className="w-5 h-5" /> Spin now · Free</>
+            : afford ? <><Coins className="w-5 h-5" style={{ color: look.accent }} /> Spin again · {priceShort(pack.price)} points</>
+            : <><Coins className="w-4.5 h-4.5" /> Need {priceShort(pointsNeeded(balance, pack.price))} more points</>}
         </button>
-        <p className="text-[11px] text-zinc-500 text-center -mt-2">One free spin of every pack, every 7 days.</p>
+        <p className="text-[11px] text-zinc-500 text-center -mt-2 leading-relaxed">
+          {free
+            ? <>One free spin of every pack each {period}. After that you can spin again for {priceShort(pack.price)} points, as often as you like.</>
+            : <>Your free spin comes back in <b className="text-zinc-300"><Countdown to={pack.availableAt as string} onDone={() => void onRefresh()} /></b>. Until then every spin is {priceShort(pack.price)} points.</>}
+        </p>
 
         <section>
           <div className="flex items-center justify-between mb-2.5">
@@ -183,6 +206,18 @@ const SpinScreen: React.FC<{ pack: DrawPack; onUserUpdated: (u: User) => void; o
           </div>
         </section>
       </div>
+      {confirming && (
+        <div className="fixed inset-0 z-[40] flex items-end sm:items-center justify-center p-4 bg-black/75 draw-rise" onClick={() => setConfirming(false)}>
+          <div className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#101018] p-5 space-y-3" onClick={(e) => e.stopPropagation()} style={{ boxShadow: `0 30px 80px -20px ${look.accent}88` }}>
+            <p className="text-[15px] font-black text-white">Spin the {pack.name} again?</p>
+            <p className="text-xs text-zinc-400 leading-relaxed">This takes <b className="text-white">{Number(pack.price).toLocaleString('en-US')}</b> NOOB Points from your wallet (you have {Number(balance).toLocaleString('en-US')}). The prize is paid out the moment the reel stops.</p>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button onClick={() => setConfirming(false)} className="py-3 rounded-xl bg-white/8 border border-white/10 text-white text-sm font-bold cursor-pointer">Cancel</button>
+              <button onClick={() => void spin(true)} className="py-3 rounded-xl text-black text-sm font-black cursor-pointer active:scale-[0.98] transition-transform" style={{ background: `linear-gradient(90deg, ${look.accent}, #fff)` }}>Spin · {priceShort(pack.price)}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {result && <DrawResult prize={result} packName={pack.name} wearing={wearing} onWear={result.presetId ? wear : undefined} onClose={() => { setResult(null); void onRefresh(); }} />}
     </div>
   );
@@ -194,6 +229,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
   const [failed, setFailed] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [wearing, setWearing] = useState('');
+  const [fx, setFx] = useState(fxEnabled());      // sound and vibration on / off
 
   const refresh = useCallback(async () => {
     const s = await fetchNoobDraw();
@@ -235,11 +271,21 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
       <div className="shrink-0 flex items-center gap-3 px-4 pb-2.5 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-white/8 bg-black/30 backdrop-blur-xl">
         <button onClick={goBack} className="w-9 h-9 rounded-full bg-white/8 border border-white/10 flex items-center justify-center cursor-pointer" aria-label={active ? 'Back to all spins' : 'Close'}><ChevronLeft className="w-5 h-5" /></button>
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#c9c6ff] to-[#f0abfc] flex items-center justify-center"><Gift className="w-4 h-4 text-black" /></span>
-          <span className="text-[15px] font-black italic tracking-tight">NOOB DRAW</span>
+          <span className="hidden min-[400px]:flex w-7 h-7 rounded-lg bg-gradient-to-br from-[#c9c6ff] to-[#f0abfc] items-center justify-center"><Gift className="w-4 h-4 text-black" /></span>
+          <span className="text-[14px] font-black italic tracking-tight whitespace-nowrap">NOOB DRAW</span>
         </div>
-        <div className="ml-auto flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-full bg-white/8 border border-white/10 text-[12px] font-extrabold tabular-nums">
-          <Coins className="w-3.5 h-3.5 text-amber-300" /> {Number(currentUser.noobPoints || 0).toLocaleString('en-US')}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => { const next = !fx; setFxEnabled(next); setFx(next); if (next) { unlockAudio(); tickSound(0.5); buzz(20); } }}
+            className="w-9 h-9 rounded-full bg-white/8 border border-white/10 flex items-center justify-center cursor-pointer"
+            aria-label={fx ? 'Turn sound and vibration off' : 'Turn sound and vibration on'}
+            title={fx ? 'Sound and vibration on' : 'Sound and vibration off'}
+          >
+            {fx ? <Volume2 className="w-4 h-4 text-white" /> : <VolumeX className="w-4 h-4 text-zinc-500" />}
+          </button>
+          <div className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-full bg-white/8 border border-white/10 text-[12px] font-extrabold tabular-nums">
+            <Coins className="w-3.5 h-3.5 text-amber-300" /> {Number(currentUser.noobPoints || 0).toLocaleString('en-US')}
+          </div>
         </div>
       </div>
 
@@ -260,7 +306,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
             )}
           </div>
         ) : active ? (
-          <SpinScreen key={active.id} pack={active} onUserUpdated={onUserUpdated} onRefresh={refresh} onSpun={() => { /* the list is refreshed when the result is closed */ }} />
+          <SpinScreen key={active.id} pack={active} balance={Number(currentUser.noobPoints || 0)} period={periodWord(state.freePeriod)} onUserUpdated={onUserUpdated} onRefresh={refresh} onSpun={() => { /* the list is refreshed when the result is closed */ }} />
         ) : (
           <div className="px-4 pt-4 pb-24 max-w-lg mx-auto space-y-5">
             {/* hero */}
@@ -271,13 +317,13 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
                 <span className="draw-twinkle absolute bottom-8 left-14 w-1 h-1 rounded-full bg-white" style={{ animationDelay: '1.6s' }} />
                 <span className="draw-twinkle absolute bottom-5 right-6 w-1.5 h-1.5 rounded-full bg-white" style={{ animationDelay: '0.4s' }} />
               </div>
-              <p className="relative text-[10px] font-bold uppercase tracking-[0.36em] text-[#c9c6ff]">Weekly free spins</p>
+              <p className="relative text-[10px] font-bold uppercase tracking-[0.36em] text-[#c9c6ff]">Free spins every {periodWord(state.freePeriod)}</p>
               <h1 className="relative draw-title draw-sans text-[38px] italic tracking-tight leading-none mt-2">NOOB DRAW</h1>
-              <p className="relative text-xs text-zinc-300/90 mt-3 leading-relaxed max-w-xs mx-auto">Open every pack once a week, for free. Win NOOB Pro, the verified tick, live profile pictures, stickers and millions of points.</p>
+              <p className="relative text-xs text-zinc-300/90 mt-3 leading-relaxed max-w-xs mx-auto">Open every pack once a {periodWord(state.freePeriod)}, for free, or spin again with NOOB Points. Win NOOB Pro, the verified tick, live profile pictures, stickers and millions of points.</p>
               <div className="relative mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/35 border border-white/12 text-[11px] font-bold">
-                {ready > 0 ? <><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> {ready} of {state.packs.length} spins ready</>
-                  : nextOpening ? <><Timer className="w-3.5 h-3.5 text-zinc-400" /> Next spin in <Countdown to={nextOpening} onDone={() => void refresh()} /></>
-                  : <>All spins used this week</>}
+                {ready > 0 ? <><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> {ready} of {state.packs.length} free spins ready</>
+                  : nextOpening ? <><Timer className="w-3.5 h-3.5 text-zinc-400" /> Next free spin in <Countdown to={nextOpening} onDone={() => void refresh()} /></>
+                  : <>All free spins used this {periodWord(state.freePeriod)}</>}
               </div>
             </section>
 
@@ -307,7 +353,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
                   <PackCard key={p.id} pack={p} index={i} wide={i === state.packs.length - 1 && state.packs.length % 2 === 1} lastWin={lastWinOf(p.id)} onOpen={() => setActiveId(p.id)} onRefresh={() => void refresh()} />
                 ))}
               </div>
-              <p className="flex items-start gap-2 text-[11px] text-zinc-500 mt-3 leading-relaxed"><Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> You can spin each of the five packs once every 7 days. The prize is picked by NOOB's server, never by your phone, and paid out the moment the reel stops.</p>
+              <p className="flex items-start gap-2 text-[11px] text-zinc-500 mt-3 leading-relaxed"><Info className="w-3.5 h-3.5 shrink-0 mt-0.5" /> Every pack gives one free spin each {periodWord(state.freePeriod)}. After that you can spin again for {priceShort(state.packs[0]?.price || 100000000)} points, as often as you like. The prize is picked by NOOB's server, never by your phone, and paid out the moment the reel stops.</p>
             </section>
 
             {/* live pictures won */}
@@ -343,7 +389,7 @@ export const NoobDrawPage: React.FC<NoobDrawPageProps> = ({ currentUser, onUserU
                           <p className="text-[13px] font-bold text-white truncate">{h.label}</p>
                           <span className="text-[9px] font-black uppercase tracking-[0.14em] shrink-0" style={{ color: r.color }}>{r.label}</span>
                         </div>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">{h.packName || 'Spin'} · {new Date(h.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{h.packName || 'Spin'} · {new Date(h.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{h.paid ? ` · paid ${priceShort(Number(h.cost) || 0)}` : ' · free'}</p>
                         {h.message && <p className="text-[11px] text-zinc-400 mt-1 leading-snug">{h.message}</p>}
                       </div>
                     );

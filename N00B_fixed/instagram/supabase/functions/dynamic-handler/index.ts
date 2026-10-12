@@ -90,7 +90,8 @@ function emailShell(title: string, bodyHtml: string): string {
 // ---------------------------------------------------------------------------- event emails (receipts, Pro warnings)
 // { action: "event_email", emailId } — sent by the DATABASE (queue_email / retry_pending_emails) with the private password in the
 // x-noob-push header. The database decides what to send and to whom (table email_outbox); this code only writes the email and sends it.
-// Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, verified_by_admin, pro_expiring, pro_ended, pro_gift_receipt.
+// Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, verified_by_admin, draw_prize (NOOB Draw: only the verified tick and
+// NOOB Pro plans), pro_expiring, pro_ended, pro_gift_receipt.
 const SITE_URL = (Deno.env.get('SITE_URL') || 'https://nooob.xyz').trim().replace(/\/+$/, '');
 const BRAND = '#D97757';
 const fmtWhen = (v: unknown): string => {
@@ -197,6 +198,41 @@ ${rowsText(rows)}
 ${listText('What it means', items)}
 — The NOOB team`,
       html: eventShell('You are verified on NOOB ✅', `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} the NOOB team has verified your account.</p>${rowsHtml(rows)}${listHtml('What it means', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
+    };
+  }
+  if (kind === 'draw_prize') {
+    const isPro = d.prize === 'pro';
+    const rows: Row[] = isPro
+      ? [
+          ['Prize', String(d.label || 'NOOB Pro'), true],
+          ['Length', String(d.subtitle || '')],
+          ['Won in', `NOOB Draw — ${d.packName || 'weekly spin'}`],
+          ['Date', fmtWhen(d.at)],
+          ['Active until', fmtWhen(d.endsAt)],
+          ['Reloads automatically', 'No — it ends on that date unless you pay again']
+        ]
+      : [
+          ['Prize', String(d.label || 'Verified Tick'), true],
+          ['Won in', `NOOB Draw — ${d.packName || 'weekly spin'}`],
+          ['Date', fmtWhen(d.at)],
+          ['Lasts', 'For good']
+        ];
+    const items = isPro
+      ? ['Everything in your plan is switched on now', 'See it in NOOB: Profile → Unlock Pro Features', 'It does not renew by itself: pay with NOOB Points before the end date to keep it']
+      : ['The verified badge shows next to your name on your profile, posts, reels, comments and chats', 'It tells other people that your account is real', 'It is yours for good'];
+    const intro = isPro ? `You won ${d.label || 'NOOB Pro'} in NOOB Draw. 🎉` : 'You won the Verified Tick in NOOB Draw. ✅';
+    return {
+      subject: isPro ? `You won ${d.label || 'NOOB Pro'}${d.subtitle ? ` (${d.subtitle})` : ''} in NOOB Draw 🎉` : 'You won the Verified Tick in NOOB Draw ✅',
+      text: `${hi}
+
+${intro}
+
+${String(d.message || '')}
+
+${rowsText(rows)}
+${listText('What it means', items)}
+— The NOOB team`,
+      html: eventShell(intro, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(String(d.message || ''))}</p>${rowsHtml(rows)}${listHtml('What it means', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
     };
   }
   if (kind === 'pro_expiring') {

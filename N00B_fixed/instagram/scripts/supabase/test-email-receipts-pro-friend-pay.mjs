@@ -129,7 +129,11 @@ check((await pts(paul)) === 30_000_000_000n - STARTER && (await pts(rita)) === 0
 check((await db.query(`select pro_tier, pro_billing from public.profiles where id = $1`, [rita])).rows[0].pro_tier === 'starter', 'rita\'s NOOB Pro started at once');
 const rr = (await mails(rita, 'pro_upgraded'))[0];
 check(rr.payload.method === 'friend' && rr.payload.paidBy.username === 'paul' && rr.payload.paidBy.amount === '5,000,000,000', 'rita\'s receipt says who paid and how much', JSON.stringify(rr.payload));
+const rc = (await db.query(`select public.email_claim($1, $2) as r`, [secret, rr.id])).rows[0].r;
+check(rc.claimed && rc.userId === rita && rc.username === 'rita' && rc.related?.username === 'paul' && rc.related.id === paul && !!rc.related.name && rc.related.requestId === req.requestId && !!rc.related.requestedAt, 'what the email function is handed for rita\'s receipt: her account ID, and the friend who paid (User ID, account ID, name) and the payment request');
 const pg = (await mails(paul, 'pro_gift_receipt'))[0];
+const pgc = (await db.query(`select public.email_claim($1, $2) as r`, [secret, pg.id])).rows[0].r;
+check(pgc.claimed && pgc.userId === paul && pgc.related?.username === 'rita' && pgc.related.id === rita, 'and for paul\'s receipt: the friend he paid for');
 check(pg && pg.payload.friend === 'rita' && pg.payload.partial === false && pg.payload.amount === '5,000,000,000', 'paul gets a receipt too');
 
 section('7. A friend pays only the missing points');

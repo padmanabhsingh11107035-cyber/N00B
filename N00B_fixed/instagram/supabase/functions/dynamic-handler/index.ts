@@ -87,13 +87,16 @@ function emailShell(title: string, bodyHtml: string): string {
   </div>`;
 }
 
-// ---------------------------------------------------------------------------- event emails (receipts, Pro warnings)
+// ---------------------------------------------------------------------------- event emails (receipts, prizes, NOOB Pro warnings)
 // { action: "event_email", emailId } — sent by the DATABASE (queue_email / retry_pending_emails) with the private password in the
 // x-noob-push header. The database decides what to send and to whom (table email_outbox); this code only writes the email and sends it.
+// Every email carries the whole picture: the receipt, WHERE it came from (the wallet, a coupon, a friend: name, User ID, payment request;
+// a NOOB Draw spin: which one, free or paid, what it cost), and the account it belongs to (name, User ID, account ID, address).
 // Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, verified_by_admin, draw_prize (NOOB Draw: only the verified tick and
 // NOOB Pro plans), pro_expiring, pro_ended, pro_gift_receipt.
 const SITE_URL = (Deno.env.get('SITE_URL') || 'https://nooob.xyz').trim().replace(/\/+$/, '');
 const BRAND = '#D97757';
+const FONT = "system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 const fmtWhen = (v: unknown): string => {
   const t = Date.parse(String(v ?? ''));
   if (!Number.isFinite(t)) return '';
@@ -102,198 +105,246 @@ const fmtWhen = (v: unknown): string => {
 const receiptNo = (id: string) => 'NOOB-' + String(id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
 const billingWord = (b: string) => (b === 'yearly' ? 'Yearly (365 days)' : 'Monthly (30 days)');
 const payLink = (tier: string, billing: string) => `${SITE_URL}/?pro=${encodeURIComponent(tier)}&billing=${encodeURIComponent(billing === 'yearly' ? 'yearly' : 'monthly')}`;
+const initcap = (s: unknown) => String(s ?? '').replace(/^./, (c) => c.toUpperCase());
+const pts = (v: unknown) => (v === '' || v == null ? '' : `${v} points`);
+const bigOf = (s: unknown): bigint | null => { const t = String(s ?? '').replace(/[^\d]/g, ''); return t ? BigInt(t) : null; };
+const withCommas = (n: bigint) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const requestNo = (id: unknown) => 'REQ-' + String(id || '').replace(/-/g, '').slice(0, 8).toUpperCase();
 
 type Row = [label: string, value: string, strong?: boolean];
-const rowsHtml = (rows: Row[]) =>
-  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:12px 0;background:#f7f7f8;border-radius:10px">${rows
-    .filter((r) => r[1] !== '' && r[1] != null)
-    .map(
-      (r) =>
-        `<tr><td style="padding:8px 14px;font-size:13px;color:#666;border-bottom:1px solid #eaeaec;vertical-align:top">${escapeHtml(r[0])}</td><td style="padding:8px 14px;font-size:13px;color:#111;text-align:right;border-bottom:1px solid #eaeaec;${r[2] ? 'font-weight:800' : 'font-weight:600'}">${escapeHtml(r[1])}</td></tr>`
-    )
-    .join('')}</table>`;
-const rowsText = (rows: Row[]) => rows.filter((r) => r[1] !== '' && r[1] != null).map((r) => `${r[0]}: ${r[1]}`).join('\n');
-const listHtml = (title: string, items: string[]) =>
-  items.length
-    ? `<p style="font-size:13px;font-weight:800;margin:16px 0 6px">${escapeHtml(title)}</p><ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#222">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
-    : '';
-const listText = (title: string, items: string[]) => (items.length ? `\n${title}\n${items.map((i) => `  - ${i}`).join('\n')}\n` : '');
-const buttonHtml = (label: string, href: string) =>
-  `<p style="margin:20px 0 6px"><a href="${escapeHtml(href)}" style="display:inline-block;background:${BRAND};color:#000;font-weight:800;font-size:14px;text-decoration:none;padding:12px 22px;border-radius:12px">${escapeHtml(label)}</a></p><p style="font-size:11px;color:#888;margin:4px 0 0;word-break:break-all">${escapeHtml(href)}</p>`;
-function eventShell(title: string, bodyHtml: string): string {
-  return `<div style="background:#efeff1;padding:20px 0"><div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;color:#111">
-    <div style="background:${BRAND};padding:16px 22px"><span style="font-size:22px;font-weight:900;letter-spacing:-0.5px;color:#000">NOOB</span></div>
-    <div style="padding:22px">
-      <p style="font-size:19px;font-weight:800;margin:0 0 10px;line-height:1.3">${escapeHtml(title)}</p>
-      ${bodyHtml}
-      <p style="font-size:12px;color:#777;margin:22px 0 0;line-height:1.6">You are getting this email because of an action on your NOOB account. If you did not do this, open NOOB and change your password straight away.<br/>— The NOOB team</p>
-    </div></div></div>`;
+type Tone = 'green' | 'violet' | 'blue' | 'amber' | 'red' | 'gold';
+const TONES: Record<Tone, [string, string]> = { green: ['#e7f8ee', '#157f3b'], violet: ['#efe9ff', '#5b34d6'], blue: ['#e6f1ff', '#1d5fd0'], amber: ['#fff3dc', '#a65f00'], red: ['#ffe9e7', '#c0301f'], gold: ['#fff4d6', '#9a6a00'] };
+interface Account { id?: string; username?: string; name?: string; email?: string }
+interface Related { id?: string; username?: string; name?: string; requestId?: string; requestedAt?: string }
+interface Spec {
+  subject: string; preheader: string; kicker: string; emoji: string; title: string; intro: string;
+  pill?: { text: string; tone: Tone };
+  hero?: { label: string; value: string; note?: string };
+  sections: { title: string; rows: Row[] }[];
+  lists?: { title: string; items: string[] }[];
+  button?: { label: string; href: string; note?: string };
 }
 
-function renderEventEmail(kind: string, d: any, name: string, emailId: string): { subject: string; text: string; html: string } | null {
+const keepRows = (rows: Row[]) => rows.filter((r) => r[1] !== '' && r[1] != null);
+const person = (rel: Related | null, fallbackUser: string) => (rel?.name && rel?.username ? `${rel.name} (@${rel.username})` : fallbackUser ? `@${fallbackUser}` : '');
+
+const sectionHtml = (title: string, rows: Row[]): string => {
+  const r = keepRows(rows);
+  if (!r.length) return '';
+  const cell = (i: number) => `padding:10px 14px;${i ? 'border-top:1px solid #f1eef3;' : ''}vertical-align:top;`;
+  return `<tr><td style="padding:18px 26px 0"><p style="margin:0 0 8px;font:800 11px/1 ${FONT};letter-spacing:.14em;text-transform:uppercase;color:#9a8f8a">${escapeHtml(title)}</p>`
+    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #efeaf0;border-radius:14px;border-collapse:separate;background:#ffffff">`
+    + r.map((x, i) => `<tr><td style="${cell(i)}font:500 12.5px/1.5 ${FONT};color:#6b6b78;width:42%">${escapeHtml(x[0])}</td><td align="right" style="${cell(i)}font:${x[2] ? 800 : 600} 13px/1.5 ${FONT};color:#16161d;word-break:break-word">${escapeHtml(x[1])}</td></tr>`).join('')
+    + `</table></td></tr>`;
+};
+const listBlockHtml = (title: string, items: string[]): string => !items.length ? '' :
+  `<tr><td style="padding:18px 26px 0"><p style="margin:0 0 8px;font:800 11px/1 ${FONT};letter-spacing:.14em;text-transform:uppercase;color:#9a8f8a">${escapeHtml(title)}</p>`
+  + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${items.map((i) => `<tr><td width="24" valign="top" style="padding:3px 0;font:900 14px/1.5 ${FONT};color:${BRAND}">&#10003;</td><td style="padding:3px 0;font:500 13px/1.6 ${FONT};color:#2a2a33">${escapeHtml(i)}</td></tr>`).join('')}</table></td></tr>`;
+
+// One look for every event email: a coloured header, the headline with a status pill, one big figure, titled detail tables, a button, a footer.
+function composeEmail(spec: Spec, hi: string, acct: Account | null): { subject: string; text: string; html: string } {
+  const accountRows: Row[] = acct ? [['Name', acct.name || ''], ['User ID', acct.username ? `@${acct.username}` : ''], ['Account ID', acct.id || ''], ['Email address', acct.email || '']] : [];
+  const sections = [...spec.sections, { title: 'Your account', rows: accountRows }];
+  const pill = spec.pill ? `<p style="margin:14px 0 0"><span style="display:inline-block;background:${TONES[spec.pill.tone][0]};color:${TONES[spec.pill.tone][1]};border-radius:999px;padding:6px 14px;font:800 11px/1 ${FONT};letter-spacing:.1em;text-transform:uppercase">${escapeHtml(spec.pill.text)}</span></p>` : '';
+  const hero = spec.hero
+    ? `<tr><td style="padding:20px 26px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf6f3;background-image:linear-gradient(135deg,#fff7f1 0%,#f6f0ff 100%);border:1px solid #f0e2da;border-radius:18px"><tr><td align="center" style="padding:22px 16px">`
+      + `<p style="margin:0;font:800 11px/1 ${FONT};letter-spacing:.16em;text-transform:uppercase;color:#b8714f">${escapeHtml(spec.hero.label)}</p>`
+      + `<p style="margin:10px 0 0;font:900 28px/1.2 ${FONT};letter-spacing:-.5px;color:#16161d">${escapeHtml(spec.hero.value)}</p>`
+      + (spec.hero.note ? `<p style="margin:8px 0 0;font:500 12px/1.5 ${FONT};color:#6b6b78">${escapeHtml(spec.hero.note)}</p>` : '')
+      + `</td></tr></table></td></tr>` : '';
+  const button = spec.button
+    ? `<tr><td align="center" style="padding:26px 26px 0">${spec.button.note ? `<p style="margin:0 0 12px;font:500 12px/1.6 ${FONT};color:#6b6b78">${escapeHtml(spec.button.note)}</p>` : ''}`
+      + `<a href="${escapeHtml(spec.button.href)}" style="display:inline-block;background:${BRAND};color:#1a0f0a;font:800 14px/1 ${FONT};text-decoration:none;padding:15px 30px;border-radius:14px">${escapeHtml(spec.button.label)}</a>`
+      + `<p style="margin:10px 0 0;font:400 11px/1.4 ${FONT};color:#9a8f8a;word-break:break-all">${escapeHtml(spec.button.href)}</p></td></tr>` : '';
+  const html = `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${escapeHtml(spec.preheader)}</div>`
+    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f2f7"><tr><td align="center" style="padding:24px 12px">`
+    + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:24px;border:1px solid #e8e6ef;border-collapse:separate;overflow:hidden">`
+    + `<tr><td style="background:${BRAND};background-image:linear-gradient(135deg,#f0996d 0%,#D97757 46%,#8b5cf6 150%);padding:20px 26px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>`
+    + `<td style="font:900 24px/1 ${FONT};letter-spacing:-.5px;color:#ffffff">NOOB</td><td align="right" style="font:800 11px/1 ${FONT};letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.88)">${escapeHtml(spec.kicker)}</td></tr></table></td></tr>`
+    + `<tr><td align="center" style="padding:30px 26px 0"><p style="margin:0;font-size:46px;line-height:1">${spec.emoji}</p>`
+    + `<p style="margin:14px 0 0;font:800 24px/1.25 ${FONT};letter-spacing:-.4px;color:#16161d">${escapeHtml(spec.title)}</p>`
+    + `<p style="margin:10px 0 0;font:400 14px/1.65 ${FONT};color:#5d5d6b">${escapeHtml(hi)} ${escapeHtml(spec.intro)}</p>${pill}</td></tr>`
+    + hero
+    + sections.map((s) => sectionHtml(s.title, s.rows)).join('')
+    + (spec.lists || []).map((l) => listBlockHtml(l.title, l.items)).join('')
+    + button
+    + `<tr><td style="padding:28px 26px 26px"><p style="margin:0;padding-top:18px;border-top:1px solid #f0edf3;font:400 12px/1.7 ${FONT};color:#8a8794">You are getting this email because of an action on your NOOB account. If you did not do this, open NOOB and change your password straight away.<br/>— The NOOB team</p></td></tr>`
+    + `</table></td></tr></table>`;
+  const textSections = sections.map((s) => { const r = keepRows(s.rows); return r.length ? `${s.title.toUpperCase()}\n${r.map((x) => `${x[0]}: ${x[1]}`).join('\n')}` : ''; }).filter(Boolean);
+  const textLists = (spec.lists || []).filter((l) => l.items.length).map((l) => `${l.title}\n${l.items.map((i) => `  - ${i}`).join('\n')}`);
+  const text = [`${hi} ${spec.intro}`, spec.hero ? `${spec.hero.label}: ${spec.hero.value}${spec.hero.note ? ` (${spec.hero.note})` : ''}` : '', ...textSections, ...textLists,
+    spec.button ? `${spec.button.label}: ${spec.button.href}` : '', '— The NOOB team'].filter(Boolean).join('\n\n');
+  return { subject: spec.subject, text, html };
+}
+
+function renderEventEmail(kind: string, d: any, name: string, emailId: string, acct: Account | null = null, rel: Related | null = null): { subject: string; text: string; html: string } | null {
   const hi = `Hi ${name},`;
+  const open = { label: 'Open NOOB', href: SITE_URL };
+
   if (kind === 'pro_upgraded') {
     const renewal = d.method === 'renewal';
     const byFriend = d.method === 'friend' || d.method === 'friend_topup';
-    const paidBy = d.paidBy?.username ? String(d.paidBy.username) : '';
-    const method =
-      d.method === 'friend' ? `Paid by @${paidBy} (${d.paidBy?.amount} points)`
-      : d.method === 'friend_topup' ? `@${paidBy} paid ${d.paidBy?.amount} points + your own ${d.ownShare} points`
-      : renewal ? 'Automatic renewal from your NOOB Points wallet' : 'NOOB Points wallet';
-    const rows: Row[] = [
-      ['Receipt number', receiptNo(emailId)],
-      ['Date', fmtWhen(d.startedAt)],
-      ['Plan', `NOOB Pro ${d.planName}`],
-      ['Billing', billingWord(d.billing)],
-      ['Payment method', method],
-      ['Plan price', `${d.listPrice} points`],
-      ['Discount', d.couponCode ? `${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : ''],
-      ['Total paid', byFriend ? `${d.listPrice} points (shared as above)` : `${d.pricePaid} points`, true],
-      ['Your wallet balance now', `${d.walletAfter} points`],
-      [renewal ? 'Next renewal' : 'Active until', fmtWhen(d.renewsAt)],
-      ['Reloads automatically', d.autoRenew ? `Yes — ${d.renewalPrice} points are taken on that date` : 'No — it ends on that date']
-    ];
-    const perks: string[] = Array.isArray(d.perks) ? d.perks : [];
-    const common: string[] = Array.isArray(d.common) ? d.common : [];
-    const subject = renewal ? `NOOB Pro ${d.planName} renewed — receipt ${receiptNo(emailId)}` : `You're now on NOOB Pro ${d.planName} — receipt ${receiptNo(emailId)}`;
-    const intro = renewal ? `Your NOOB Pro ${d.planName} plan renewed.` : byFriend ? `@${paidBy} helped you get NOOB Pro ${d.planName} — it is active now. 🎉` : `Thank you! NOOB Pro ${d.planName} is active on your account now. 🎉`;
-    return {
-      subject,
-      text: `${hi}\n\n${intro}\n\n${rowsText(rows)}\n${listText('Included in your plan', [...perks, ...common])}\nManage it any time in NOOB: Profile → Unlock Pro Features.\n— The NOOB team`,
-      html: eventShell(intro, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} here is your receipt.</p>${rowsHtml(rows)}${listHtml('Included in your plan', perks)}${listHtml('Included with every NOOB Pro plan', common)}${buttonHtml('Open NOOB', SITE_URL)}`)
-    };
+    const friend = person(rel, d.paidBy?.username ? String(d.paidBy.username) : '');
+    const source = d.method === 'friend' ? `Paid in full by your friend ${friend}`
+      : d.method === 'friend_topup' ? `Paid together with your friend ${friend}`
+      : renewal ? 'Automatic renewal from your NOOB Points wallet'
+      : d.couponCode ? 'NOOB Points wallet, with a coupon' : 'NOOB Points wallet';
+    const intro = renewal ? `Your NOOB Pro ${d.planName} plan renewed.` : byFriend ? `${friend} helped you get NOOB Pro ${d.planName}. It is active now. 🎉` : `Thank you! NOOB Pro ${d.planName} is active on your account now. 🎉`;
+    return composeEmail({
+      subject: renewal ? `NOOB Pro ${d.planName} renewed — receipt ${receiptNo(emailId)}` : `You're now on NOOB Pro ${d.planName} — receipt ${receiptNo(emailId)}`,
+      preheader: `${renewal ? 'Renewed' : 'Active'}: NOOB Pro ${d.planName}, ${billingWord(d.billing)}. ${source}.`,
+      kicker: 'Receipt', emoji: renewal ? '🔄' : byFriend ? '🎁' : '💎',
+      title: renewal ? `NOOB Pro ${d.planName} renewed` : `You are on NOOB Pro ${d.planName}`, intro,
+      pill: byFriend ? { text: 'Paid by a friend', tone: 'violet' } : renewal ? { text: 'Renewed', tone: 'green' } : { text: 'Paid', tone: 'green' },
+      hero: { label: 'Total', value: byFriend ? pts(d.listPrice) : pts(d.pricePaid), note: byFriend ? `Paid by ${friend}${d.method === 'friend_topup' ? ' and you' : ''}` : d.couponCode ? `After ${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : '' },
+      sections: [
+        { title: 'Receipt', rows: [
+          ['Receipt number', receiptNo(emailId)], ['Date', fmtWhen(d.startedAt)], ['Plan', `NOOB Pro ${d.planName}`], ['Billing', billingWord(d.billing)],
+          ['Plan price', pts(d.listPrice)],
+          ['Coupon', d.couponCode ? `${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : ''],
+          ['Total paid', byFriend ? `${pts(d.listPrice)} (shared as below)` : pts(d.pricePaid), true]] },
+        { title: 'Where the payment came from', rows: [
+          ['Method', source],
+          ['Paid by', byFriend ? friend : ''],
+          ['Their User ID', byFriend && (rel?.username || d.paidBy?.username) ? `@${rel?.username || d.paidBy.username}` : ''],
+          ['Their account ID', byFriend ? rel?.id || '' : ''],
+          ['They paid', byFriend ? pts(d.paidBy?.amount) : ''],
+          ['Your own part', d.method === 'friend_topup' ? pts(d.ownShare) : ''],
+          ['Request', byFriend && rel?.requestId ? requestNo(rel.requestId) : ''],
+          ['Requested on', byFriend ? fmtWhen(rel?.requestedAt) : ''],
+          ['Wallet now', pts(d.walletAfter)]] },
+        { title: 'Your plan', rows: [
+          [renewal ? 'Next renewal' : 'Active until', fmtWhen(d.renewsAt)],
+          ['Auto-reload', d.autoRenew ? `Yes: ${d.renewalPrice} points are taken on that date` : 'No: it ends on that date']] }
+      ],
+      lists: [{ title: 'Included in your plan', items: Array.isArray(d.perks) ? d.perks : [] }, { title: 'Included with every NOOB Pro plan', items: Array.isArray(d.common) ? d.common : [] }],
+      button: { ...open, note: 'Manage it any time in NOOB: Profile → Unlock Pro Features.' }
+    }, hi, acct);
   }
+
+  if (kind === 'pro_gift_receipt') {
+    const friend = person(rel, d.friend ? String(d.friend) : '');
+    const price = bigOf(d.planPrice), paid = bigOf(d.amount);
+    const theirs = d.partial && price != null && paid != null && price >= paid ? withCommas(price - paid) : '';
+    const note = d.partial ? `You paid the points @${d.friend} was missing; they added the rest from their own wallet.` : `You paid the full price for @${d.friend}.`;
+    return composeEmail({
+      subject: `You paid for @${d.friend}'s NOOB Pro — receipt ${receiptNo(emailId)}`,
+      preheader: `You paid ${pts(d.amount)} for ${friend}'s NOOB Pro ${d.planName}.`,
+      kicker: 'Receipt', emoji: '💛', title: `You paid for @${d.friend}'s NOOB Pro`, intro: note,
+      pill: { text: 'Gift sent', tone: 'violet' },
+      hero: { label: 'You paid', value: pts(d.amount), note: `For ${friend}` },
+      sections: [
+        { title: 'Receipt', rows: [['Receipt number', receiptNo(emailId)], ['Date', fmtWhen(d.at)], ['You paid', pts(d.amount), true], ['Wallet now', pts(d.walletAfter)]] },
+        { title: 'Who you paid for', rows: [['Friend', friend], ['Their User ID', d.friend ? `@${d.friend}` : ''], ['Their account ID', rel?.id || '']] },
+        { title: 'The plan', rows: [['Plan', `NOOB Pro ${d.planName}`], ['Billing', billingWord(d.billing)], ['Plan price', pts(d.planPrice)], ['Their own part', theirs ? pts(theirs) : '']] }
+      ],
+      button: open
+    }, hi, acct);
+  }
+
   if (kind === 'verified_badge') {
-    const rows: Row[] = [
-      ['Receipt number', receiptNo(emailId)],
-      ['Date', fmtWhen(d.at)],
-      ['Item', d.label || 'Verification badge'],
-      ['Type', d.permanent ? 'Permanent' : 'Monthly'],
-      ['Payment method', d.pricePaid ? 'NOOB Points wallet' : 'Verification coupon'],
-      ['Discount', d.couponCode ? `${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : ''],
-      ['Total paid', d.pricePaid ? `${d.pricePaid} points` : '0 points (coupon)', true],
-      ['Your wallet balance now', `${d.walletAfter} points`]
-    ];
-    const items = ['A verification badge next to your name everywhere in NOOB (profile, posts, reels, comments and chats)', 'A clear sign to other people that your account is real'];
-    return {
+    const paid = !!d.pricePaid;
+    return composeEmail({
       subject: `Your NOOB verification badge is active — receipt ${receiptNo(emailId)}`,
-      text: `${hi}\n\nYour NOOB verification badge is active. ✅\n\n${rowsText(rows)}\n${listText('What you get', items)}\n— The NOOB team`,
-      html: eventShell('Your verification badge is active ✅', `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} here is your receipt.</p>${rowsHtml(rows)}${listHtml('What you get', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
-    };
+      preheader: `Your ${d.permanent ? 'permanent' : 'monthly'} verification badge is active.`,
+      kicker: 'Receipt', emoji: '✅', title: 'Your verification badge is active', intro: 'Your NOOB verification badge is active. Here is your receipt.',
+      pill: { text: paid ? 'Paid' : 'Coupon', tone: 'blue' },
+      hero: { label: 'Total', value: paid ? pts(d.pricePaid) : '0 points', note: paid ? '' : 'Paid with a verification coupon' },
+      sections: [
+        { title: 'Receipt', rows: [['Receipt number', receiptNo(emailId)], ['Date', fmtWhen(d.at)], ['Item', d.label || 'Verification badge'], ['Type', d.permanent ? 'Permanent' : 'Monthly']] },
+        { title: 'Where the payment came from', rows: [
+          ['Method', paid ? 'NOOB Points wallet' : 'Verification coupon'],
+          ['Coupon', d.couponCode ? `${d.couponCode}${d.discountPercent ? ` (${Math.round(Number(d.discountPercent))}% off)` : ''}` : ''],
+          ['Total paid', paid ? pts(d.pricePaid) : '0 points (coupon)', true],
+          ['Wallet now', pts(d.walletAfter)]] }
+      ],
+      lists: [{ title: 'What you get', items: ['A verification badge next to your name everywhere in NOOB (profile, posts, reels, comments and chats)', 'A clear sign to other people that your account is real'] }],
+      button: open
+    }, hi, acct);
   }
+
   if (kind === 'verified_by_admin') {
-    const rows: Row[] = [
-      ['Account', `@${d.username}`],
-      ['Date', fmtWhen(d.at)],
-      ['Verified by', 'The NOOB team', true]
-    ];
-    const items = ['The verified badge shows next to your name on your profile, posts, reels, comments and chats', 'It tells other people that your account is real', 'It is free: the NOOB team gave it to you'];
-    return {
+    const by = rel?.name && rel?.username ? `The NOOB team (${rel.name}, @${rel.username})` : rel?.username ? `The NOOB team (@${rel.username})` : 'The NOOB team';
+    return composeEmail({
       subject: `You're verified on NOOB ✅`,
-      text: `${hi}
-
-The NOOB team has verified your account @${d.username}. ✅
-
-${rowsText(rows)}
-${listText('What it means', items)}
-— The NOOB team`,
-      html: eventShell('You are verified on NOOB ✅', `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} the NOOB team has verified your account.</p>${rowsHtml(rows)}${listHtml('What it means', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
-    };
+      preheader: 'The NOOB team verified your account.',
+      kicker: 'Verified', emoji: '✅', title: 'You are verified on NOOB', intro: `The NOOB team has verified your account @${d.username}.`,
+      pill: { text: 'Verified', tone: 'blue' },
+      hero: { label: 'Status', value: 'Verified account', note: 'A gift from the NOOB team' },
+      sections: [{ title: 'Details', rows: [['Account', `@${d.username}`], ['Date', fmtWhen(d.at)], ['Verified by', by], ['Admin User ID', rel?.username ? `@${rel.username}` : ''], ['Admin account ID', rel?.id || ''], ['Cost', 'Free: it was given to you'], ['Lasts', 'Until the NOOB team changes it']] }],
+      lists: [{ title: 'What it means', items: ['The verified badge shows next to your name on your profile, posts, reels, comments and chats', 'It tells other people that your account is real'] }],
+      button: open
+    }, hi, acct);
   }
+
   if (kind === 'draw_prize') {
     const isPro = d.prize === 'pro';
-    const rows: Row[] = isPro
-      ? [
-          ['Prize', String(d.label || 'NOOB Pro'), true],
-          ['Length', String(d.subtitle || '')],
-          ['Won in', `NOOB Draw — ${d.packName || 'weekly spin'}`],
-          ['Date', fmtWhen(d.at)],
-          ['Active until', fmtWhen(d.endsAt)],
-          ['Reloads automatically', 'No — it ends on that date unless you pay again']
-        ]
-      : [
-          ['Prize', String(d.label || 'Verified Tick'), true],
-          ['Won in', `NOOB Draw — ${d.packName || 'weekly spin'}`],
-          ['Date', fmtWhen(d.at)],
-          ['Lasts', 'For good']
-        ];
-    const items = isPro
-      ? ['Everything in your plan is switched on now', 'See it in NOOB: Profile → Unlock Pro Features', 'It does not renew by itself: pay with NOOB Points before the end date to keep it']
-      : ['The verified badge shows next to your name on your profile, posts, reels, comments and chats', 'It tells other people that your account is real', 'It is yours for good'];
-    const intro = isPro ? `You won ${d.label || 'NOOB Pro'} in NOOB Draw. 🎉` : 'You won the Verified Tick in NOOB Draw. ✅';
-    return {
+    const paidSpin = d.paid === true;
+    const planNow = d.tier ? `NOOB Pro ${initcap(d.tier)}` : '';
+    const before = d.previousTier ? `NOOB Pro ${initcap(d.previousTier)}${d.previousEndsAt ? `, until ${fmtWhen(d.previousEndsAt)}` : ''}` : isPro ? 'No plan' : '';
+    const intro = isPro ? `You won ${d.label || 'NOOB Pro'} in NOOB Draw. 🎉 ${String(d.message || '')}` : `You won the Verified Tick in NOOB Draw. ✅ ${String(d.message || '')}`;
+    return composeEmail({
       subject: isPro ? `You won ${d.label || 'NOOB Pro'}${d.subtitle ? ` (${d.subtitle})` : ''} in NOOB Draw 🎉` : 'You won the Verified Tick in NOOB Draw ✅',
-      text: `${hi}
-
-${intro}
-
-${String(d.message || '')}
-
-${rowsText(rows)}
-${listText('What it means', items)}
-— The NOOB team`,
-      html: eventShell(intro, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(String(d.message || ''))}</p>${rowsHtml(rows)}${listHtml('What it means', items)}${buttonHtml('Open NOOB', SITE_URL)}`)
-    };
+      preheader: `${isPro ? d.label : 'The Verified Tick'} from ${d.packName || 'NOOB Draw'}${paidSpin ? ' (paid spin)' : ' (free spin)'}.`,
+      kicker: 'NOOB Draw', emoji: isPro ? '🎉' : '✅', title: isPro ? `You won ${d.label || 'NOOB Pro'}` : 'You won the Verified Tick', intro,
+      pill: { text: `${d.rarity ? `${initcap(d.rarity)} ` : ''}prize`.trim(), tone: 'gold' },
+      hero: { label: 'You won', value: String(d.label || (isPro ? 'NOOB Pro' : 'Verified Tick')), note: String(d.subtitle || '') },
+      sections: [
+        { title: 'The prize', rows: isPro
+          ? [['Prize', String(d.label || 'NOOB Pro'), true], ['Type', 'NOOB Pro plan'], ['Rarity', initcap(d.rarity)], ['Length', String(d.subtitle || '')], ['Plan before', before], ['Plan now', planNow],
+             ['Active until', fmtWhen(d.endsAt)], ['Auto-reload', 'No: it ends on that date unless you pay again']]
+          : [['Prize', String(d.label || 'Verified Tick'), true], ['Type', 'Verified tick'], ['Rarity', initcap(d.rarity)], ['Lasts', 'For good']] },
+        { title: 'Where it came from', rows: [
+          ['Source', 'NOOB Draw'], ['Spin', String(d.packName || '')], ['Spin type', paidSpin ? 'Paid spin' : 'Free spin'], ['Cost', paidSpin ? pts(d.cost) : 'Free'],
+          ['Spin number', d.spinNo ? `#${d.spinNo}` : ''], ['Date', fmtWhen(d.at)], ['Balance now', pts(d.walletAfter)]] }
+      ],
+      lists: [{ title: 'What it means', items: isPro
+        ? ['Everything in your plan is switched on now', 'See it in NOOB: Profile → Unlock Pro Features', 'It does not renew by itself: pay with NOOB Points before the end date to keep it']
+        : ['The verified badge shows next to your name on your profile, posts, reels, comments and chats', 'It tells other people that your account is real', 'It is yours for good'] }],
+      button: open
+    }, hi, acct);
   }
+
   if (kind === 'pro_expiring') {
     const days = Number(d.daysLeft) || 0;
     const when = days <= 1 ? 'tomorrow' : `in ${days} days`;
     const reload = d.autoRenew === true;
-    const rows: Row[] = [
-      ['Plan', `NOOB Pro ${d.planName}`],
-      ['Billing', billingWord(d.billing)],
-      [reload ? 'Renews on' : 'Ends on', fmtWhen(d.endsAt)],
-      ['Your wallet balance now', `${d.balance} points`],
-      ['Price to continue', `${d.price} points`],
-      ['Still needed', reload ? `${d.shortfall} points` : `${d.price} points`, true]
-    ];
+    const word = d.billing === 'yearly' ? 'Yearly' : 'Monthly';
     const why = reload
       ? `Your plan is set to renew by itself, but your wallet does not have enough points yet. Add ${d.shortfall} more points before then and it will continue without a break.`
-      : `Reload ${d.billing === 'yearly' ? 'Yearly' : 'Monthly'} is turned off, so the plan ends on that date. Pay with NOOB Points to keep it.`;
-    const url = payLink(String(d.tier), String(d.billing));
-    return {
+      : `Reload ${word} is turned off, so the plan ends on that date. Pay with NOOB Points to keep it.`;
+    return composeEmail({
       subject: `Your NOOB Pro ${d.planName} ends ${when}`,
-      text: `${hi}\n\nYour NOOB Pro ${d.planName} plan ends ${when}.\n\n${why}\n\n${rowsText(rows)}\n\nPay with NOOB Points: ${url}\n— The NOOB team`,
-      html: eventShell(`Your NOOB Pro ${d.planName} ends ${when}`, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(why)}</p>${rowsHtml(rows)}${buttonHtml('Pay with NOOB Points', url)}`)
-    };
+      preheader: `NOOB Pro ${d.planName} ends ${when}. ${reload ? `${d.shortfall} points still needed.` : 'Reload is off.'}`,
+      kicker: 'NOOB Pro', emoji: '⏳', title: `Your NOOB Pro ${d.planName} ends ${when}`, intro: why,
+      pill: { text: `Ends ${when}`, tone: 'amber' },
+      hero: { label: 'Still needed', value: reload ? pts(d.shortfall) : pts(d.price), note: reload ? 'To renew without a break' : 'To keep your plan' },
+      sections: [
+        { title: 'Your plan', rows: [['Plan', `NOOB Pro ${d.planName}`], ['Billing', billingWord(d.billing)], [reload ? 'Renews on' : 'Ends on', fmtWhen(d.endsAt)], [`Reload ${word}`, reload ? 'On: it renews by itself' : 'Off']] },
+        { title: 'Your wallet', rows: [['Balance now', pts(d.balance)], ['Price to continue', pts(d.price)], ['Still needed', reload ? pts(d.shortfall) : pts(d.price), true]] }
+      ],
+      button: { label: 'Pay with NOOB Points', href: payLink(String(d.tier), String(d.billing)) }
+    }, hi, acct);
   }
+
   if (kind === 'pro_ended') {
     const insufficient = d.reason === 'insufficient_points';
+    const word = d.billing === 'yearly' ? 'Yearly' : 'Monthly';
     const why = insufficient
       ? `We could not renew it because your wallet had ${d.balance} points and the renewal costs ${d.price} points (${d.shortfall} points short).`
-      : `It ended because Reload ${d.billing === 'yearly' ? 'Yearly' : 'Monthly'} was turned off, so it was not renewed.`;
-    const rows: Row[] = [
-      ['Plan', `NOOB Pro ${d.planName}`],
-      ['Billing', billingWord(d.billing)],
-      ['Ended on', fmtWhen(d.endedAt)],
-      ['Reason', insufficient ? 'Not enough NOOB Points to renew' : `Reload ${d.billing === 'yearly' ? 'Yearly' : 'Monthly'} was off`],
-      ['Your wallet balance', `${d.balance} points`],
-      ['Price to start again', `${d.price} points`, true]
-    ];
-    const url = payLink(String(d.tier), String(d.billing));
-    return {
+      : `It ended because Reload ${word} was turned off, so it was not renewed.`;
+    return composeEmail({
       subject: `Your NOOB Pro ${d.planName} has ended`,
-      text: `${hi}\n\nYour NOOB Pro ${d.planName} plan has ended. ${why}\n\n${rowsText(rows)}\n\nStart it again with NOOB Points: ${url}\n— The NOOB team`,
-      html: eventShell(`Your NOOB Pro ${d.planName} has ended`, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(why)}</p>${rowsHtml(rows)}<p style="font-size:13px;line-height:1.6;color:#444;margin:0">The button below opens the payment page for this exact plan.</p>${buttonHtml('Pay with NOOB Points', url)}`)
-    };
-  }
-  if (kind === 'pro_gift_receipt') {
-    const rows: Row[] = [
-      ['Receipt number', receiptNo(emailId)],
-      ['Date', fmtWhen(d.at)],
-      ['For', `@${d.friend}`],
-      ['Plan', `NOOB Pro ${d.planName}`],
-      ['Billing', billingWord(d.billing)],
-      ['Plan price', `${d.planPrice} points`],
-      ['You paid', `${d.amount} points`, true],
-      ['Your wallet balance now', `${d.walletAfter} points`]
-    ];
-    const note = d.partial ? `You paid the points @${d.friend} was missing; they added the rest from their own wallet.` : `You paid the full price for @${d.friend}.`;
-    return {
-      subject: `You paid for @${d.friend}'s NOOB Pro — receipt ${receiptNo(emailId)}`,
-      text: `${hi}\n\n${note}\n\n${rowsText(rows)}\n— The NOOB team`,
-      html: eventShell(`You paid for @${d.friend}'s NOOB Pro 💛`, `<p style="font-size:14px;line-height:1.6;margin:0">${escapeHtml(hi)} ${escapeHtml(note)}</p>${rowsHtml(rows)}${buttonHtml('Open NOOB', SITE_URL)}`)
-    };
+      preheader: `NOOB Pro ${d.planName} has ended. ${insufficient ? 'Not enough NOOB Points to renew.' : `Reload ${word} was off.`}`,
+      kicker: 'NOOB Pro', emoji: '🌙', title: `Your NOOB Pro ${d.planName} has ended`, intro: `Your NOOB Pro ${d.planName} plan has ended. ${why}`,
+      pill: { text: 'Ended', tone: 'red' },
+      hero: { label: 'Price to start again', value: pts(d.price), note: `NOOB Pro ${d.planName}, ${billingWord(d.billing)}` },
+      sections: [
+        { title: 'Your plan', rows: [['Plan', `NOOB Pro ${d.planName}`], ['Billing', billingWord(d.billing)], ['Ended on', fmtWhen(d.endedAt)], ['Reason', insufficient ? 'Not enough NOOB Points to renew' : `Reload ${word} was off`]] },
+        { title: 'Your wallet', rows: [['Balance', pts(d.balance)], ['Price to start again', pts(d.price), true], ['Short by', insufficient ? pts(d.shortfall) : '']] }
+      ],
+      button: { label: 'Pay with NOOB Points', href: payLink(String(d.tier), String(d.billing)), note: 'The button below opens the payment page for this exact plan.' }
+    }, hi, acct);
   }
   return null;
 }
@@ -309,7 +360,8 @@ async function handleEventEmail(req: Request, body: any, admin: any): Promise<Re
     return json({ error: denied ? 'Unauthorized' : 'Failed.' }, denied ? 401 : 500);
   }
   if (!data?.claimed) return json({ success: true, sent: false, note: data?.skipped ? 'No email address on that account.' : 'Already handled.' });
-  const mail = renderEventEmail(String(data.kind), data.payload || {}, String(data.name || data.username || 'there'), id);
+  const account: Account = { id: data.userId ? String(data.userId) : '', username: data.username ? String(data.username) : '', name: String(data.name || data.username || ''), email: data.email ? String(data.email) : '' };
+  const mail = renderEventEmail(String(data.kind), data.payload || {}, String(data.name || data.username || 'there'), id, account, data.related || null);
   if (!mail) {
     await admin.rpc('email_done', { p_secret: secret, p_id: id, p_ok: false, p_error: `unknown kind: ${data.kind}` });
     return json({ error: 'Unknown email kind.' }, 400);

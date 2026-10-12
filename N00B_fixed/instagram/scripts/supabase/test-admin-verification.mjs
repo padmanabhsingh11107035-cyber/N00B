@@ -45,6 +45,7 @@ const note = (await db.query(`select message, title, type from public.notificati
 check(note?.type === 'admin_direct' && /verified/i.test(note.message) && /verified/i.test(note.title), 'ann got a notification', JSON.stringify(note));
 const mail = (await db.query(`select kind, payload, status from public.email_outbox where user_id = $1`, [ann])).rows;
 check(mail.length === 1 && mail[0].kind === 'verified_by_admin' && mail[0].payload.username === 'ann', 'and an e-mail was queued', JSON.stringify(mail));
+check(mail[0].payload.by?.username === 'noob', 'the e-mail carries which admin account granted it');
 check((await db.query(`select 1 from public.admin_audit_log where action = 'verification_granted' and target_id = $1`, [ann])).rows.length === 1, 'the activity log has it');
 const asSeen = await rpc(bob, 'user_by_id', ann);
 check(asSeen.isVerified === true, 'everyone sees the badge at once');

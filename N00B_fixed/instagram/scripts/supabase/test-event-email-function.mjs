@@ -55,7 +55,8 @@ const send = async (body, headers = {}) => {
 };
 const ask = (headers = { 'x-noob-push': SECRET }) => send({ action: 'event_email', emailId: ID }, headers);
 const reset = () => { claim = null; done = []; sent = []; resendOk = true; };
-const mail = (kind, payload, extra = {}) => ({ claimed: true, id: ID, kind, payload, email: 'ann@example.com', name: 'Ann', username: 'ann', ...extra });
+const ACCOUNT = '9b2f6c1e-1111-4222-8333-444455556666';
+const mail = (kind, payload, extra = {}) => ({ claimed: true, id: ID, kind, payload, email: 'ann@example.com', name: 'Ann', username: 'ann', userId: ACCOUNT, related: null, ...extra });
 
 section('1. Only the database may ask');
 reset();
@@ -93,11 +94,26 @@ reset();
 claim = mail('pro_upgraded', { planName: 'Starter', tier: 'starter', billing: 'monthly', perks: [], common: [], listPrice: '5,000,000,000', pricePaid: '5,000,000,000', walletAfter: '0', startedAt: '2026-10-11T10:30:00Z', renewsAt: '2026-11-10T10:30:00Z', autoRenew: true, renewalPrice: '5,000,000,000', method: 'friend_topup', paidBy: { username: 'paul', amount: '2,000,000,000' }, ownShare: '3,000,000,000' });
 await ask();
 m = sent[0].body;
-check(m.html.includes('@paul paid 2,000,000,000 points + your own 3,000,000,000 points') && /@paul helped you/.test(m.text), 'the receipt shows who paid and the two parts');
+check(m.html.includes('Paid together with your friend @paul') && m.html.includes('2,000,000,000 points') && m.html.includes('3,000,000,000 points') && m.html.includes('Your own part') && /@paul helped you/.test(m.text), 'the receipt shows who paid and the two parts');
+reset();
+claim = mail('pro_upgraded', { planName: 'Starter', tier: 'starter', billing: 'monthly', perks: [], common: [], listPrice: '5,000,000,000', pricePaid: '5,000,000,000', walletAfter: '0', startedAt: '2026-10-11T10:30:00Z', renewsAt: '2026-11-10T10:30:00Z', autoRenew: true, renewalPrice: '5,000,000,000', method: 'friend', paidBy: { username: 'paul', amount: '5,000,000,000' } },
+  { related: { id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', username: 'paul', name: 'Paul Mehta', requestId: '12345678-9abc-4def-8123-456789abcdef', requestedAt: '2026-10-11T09:00:00Z' } });
+await ask();
+m = sent[0].body;
+for (const needle of ['Paid in full by your friend Paul Mehta (@paul)', 'Paul Mehta (@paul)', '@paul', 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', 'REQ-12345678', '11 Oct 2026', 'Paid by a friend']) {
+  check(m.html.includes(needle) && (needle === 'Paid by a friend' || m.text.includes(needle)), `a friend paid in full: the receipt says "${needle}"`);
+}
+check(m.subject.includes('NOOB Pro Starter') && m.html.includes('They paid') && m.html.includes('5,000,000,000 points'), 'and the amount the friend paid');
 reset();
 claim = mail('pro_gift_receipt', { friend: 'rita', planName: 'Starter', billing: 'monthly', amount: '5,000,000,000', planPrice: '5,000,000,000', partial: false, at: '2026-10-11T10:30:00Z', walletAfter: '25,000,000,000' });
 await ask();
 check(/@rita's NOOB Pro/.test(sent[0].body.subject) && sent[0].body.html.includes('You paid') && sent[0].body.text.includes('full price'), 'the friend who paid gets a receipt too');
+reset();
+claim = mail('pro_gift_receipt', { friend: 'rita', planName: 'Starter', billing: 'monthly', amount: '2,000,000,000', planPrice: '5,000,000,000', partial: true, at: '2026-10-11T10:30:00Z', walletAfter: '25,000,000,000' },
+  { related: { id: 'ffffffff-0000-4000-8000-111111111111', username: 'rita', name: 'Rita Shah' } });
+await ask();
+m = sent[0].body;
+check(m.html.includes('Rita Shah (@rita)') && m.html.includes('ffffffff-0000-4000-8000-111111111111') && m.html.includes('Their own part') && m.html.includes('3,000,000,000 points') && m.text.includes('the rest from their own wallet'), 'the person who paid sees the friend\'s name, User ID and account ID, and how the price was split');
 
 section('4. The verification badge');
 reset();
@@ -113,14 +129,27 @@ await ask();
 m = sent[0].body;
 check(/verified on NOOB/.test(m.subject) && m.html.includes('@ann') && m.html.includes('The NOOB team') && m.text.includes('verified your account @ann'), 'the verified-by-admin e-mail says who and by whom');
 check(!/points|price|paid|wallet/i.test(m.text), 'and carries no payment information (it was a gift)');
+reset();
+claim = mail('verified_by_admin', { username: 'ann', at: '2026-10-12T10:30:00Z', by: { username: 'noob' } }, { related: { id: '00000000-aaaa-4000-8000-000000000abc', username: 'noob', name: 'NOOB' } });
+await ask();
+m = sent[0].body;
+check(m.html.includes('The NOOB team (NOOB, @noob)') && m.html.includes('00000000-aaaa-4000-8000-000000000abc') && m.html.includes('Free: it was given to you'), 'and says which admin account granted it');
 
 section('4c. NOOB Draw: an email for the grand prizes');
 reset();
-claim = mail('draw_prize', { prize: 'pro', label: 'NOOB Pro Elite', subtitle: '30 days of Pro', tier: 'elite', days: 30, packName: 'Royal Spin', message: 'Your NOOB Pro plan is active until 11 Nov 2026. It does not renew by itself.', endsAt: '2026-11-11T10:30:00Z', at: '2026-10-12T10:30:00Z' });
+claim = mail('draw_prize', { prize: 'pro', label: 'NOOB Pro Elite', subtitle: '30 days of Pro', tier: 'elite', days: 30, packName: 'Royal Spin', rarity: 'legendary', paid: true, cost: '1,000,000,000', spinNo: 7, walletAfter: '4,000,000,000', previousTier: 'plus', previousEndsAt: '2026-10-20T10:30:00Z', message: 'Your NOOB Pro plan is active until 11 Nov 2026. It does not renew by itself.', endsAt: '2026-11-11T10:30:00Z', at: '2026-10-12T10:30:00Z' });
 await ask();
 m = sent[0].body;
 check(/You won NOOB Pro Elite \(30 days of Pro\) in NOOB Draw/.test(m.subject) && m.html.includes('Royal Spin') && m.html.includes('11 Nov 2026') && m.text.includes('active until 11 Nov 2026'), 'a NOOB Pro prize: the plan, the days, the spin and the end date');
-check(m.html.includes('it ends on that date unless you pay again') && m.text.includes('does not renew by itself') && !/wallet|total paid|price/i.test(m.text), 'it says the plan does not renew by itself, and is a prize, not a receipt');
+check(m.html.includes('it ends on that date unless you pay again') && m.text.includes('does not renew by itself') && !/total paid|plan price/i.test(m.text), 'it says the plan does not renew by itself, and is a prize, not a receipt');
+for (const needle of ['Paid spin', '1,000,000,000 points', '#7', '4,000,000,000 points', 'NOOB Pro Plus, until 20 Oct 2026', 'NOOB Pro Elite', 'Legendary', 'NOOB Draw']) {
+  check(m.html.includes(needle) && m.text.includes(needle), `the source of the win is spelled out: "${needle}"`);
+}
+reset();
+claim = mail('draw_prize', { prize: 'pro', label: 'NOOB Pro Starter', subtitle: '7 days of Pro', tier: 'starter', days: 7, packName: 'Rookie Spin', rarity: 'epic', paid: false, cost: '0', spinNo: 1, walletAfter: '10', message: 'Active.', endsAt: '2026-10-19T10:30:00Z', at: '2026-10-12T10:30:00Z' });
+await ask();
+m = sent[0].body;
+check(m.html.includes('Free spin') && m.text.includes('Cost: Free') && m.text.includes('Plan before: No plan'), 'a free spin says free, with no cost, and that there was no plan before');
 reset();
 claim = mail('draw_prize', { prize: 'verified', label: 'Verified Tick', subtitle: 'The blue tick, forever', packName: 'Galaxy Spin', message: 'The blue verified tick now shows next to your name everywhere in NOOB.', at: '2026-10-12T10:30:00Z' });
 await ask();
@@ -151,6 +180,29 @@ reset();
 claim = mail('pro_ended', { planName: 'Elite', tier: 'elite', billing: 'monthly', reason: 'auto_renew_off', price: '12,500,000,000', balance: '2,000,000,000', shortfall: '10,500,000,000', endedAt: '2026-10-11T10:30:00Z' });
 await ask();
 check(/Reload Monthly was turned off/.test(sent[0].body.text), 'ended because reloading was off: says that');
+
+section('5b. Every email carries the account it belongs to');
+for (const [kind, payload] of [
+  ['pro_upgraded', { planName: 'Pro', tier: 'pro', billing: 'monthly', perks: [], common: [], listPrice: '1', pricePaid: '1', walletAfter: '0', startedAt: '2026-10-11T10:30:00Z', renewsAt: '2026-11-10T10:30:00Z', autoRenew: false, renewalPrice: '1', method: 'wallet' }],
+  ['verified_badge', { label: 'x', pricePaid: '1', walletAfter: '0', at: '2026-10-11T10:30:00Z' }],
+  ['verified_by_admin', { username: 'ann', at: '2026-10-11T10:30:00Z' }],
+  ['draw_prize', { prize: 'verified', label: 'Verified Tick', packName: 'Galaxy Spin', at: '2026-10-11T10:30:00Z' }],
+  ['pro_expiring', { planName: 'Plus', tier: 'plus', billing: 'monthly', endsAt: '2026-10-14T10:30:00Z', daysLeft: 3, autoRenew: true, price: '1', balance: '0', shortfall: '1' }],
+  ['pro_ended', { planName: 'Plus', tier: 'plus', billing: 'monthly', reason: 'auto_renew_off', price: '1', balance: '0', shortfall: '1', endedAt: '2026-10-11T10:30:00Z' }],
+  ['pro_gift_receipt', { friend: 'rita', planName: 'Plus', billing: 'monthly', amount: '1', planPrice: '1', partial: false, at: '2026-10-11T10:30:00Z', walletAfter: '0' }]
+]) {
+  reset();
+  claim = mail(kind, payload);
+  await ask();
+  m = sent[0]?.body;
+  check(m && m.html.includes('Your account') && m.html.includes('@ann') && m.html.includes(ACCOUNT) && m.html.includes('ann@example.com') && m.text.includes(`Account ID: ${ACCOUNT}`) && m.text.includes('Email address: ann@example.com'), `${kind}: name, User ID, account ID and e-mail address are in the e-mail`);
+}
+reset();
+claim = mail('verified_badge', { label: 'x', pricePaid: '1', walletAfter: '0', at: '2026-10-11T10:30:00Z' });
+await ask();
+m = sent[0].body;
+check(m.html.startsWith('<div style="display:none') && m.html.includes('role="presentation"') && m.html.includes('linear-gradient') && /<a href="https:\/\/nooob\.xyz"/.test(m.html), 'the HTML is built for e-mail programs: tables, inline styles, a hidden preview line, a button');
+check(!/\n\n\n/.test(m.text) && m.text.endsWith('— The NOOB team'), 'and the plain-text version is tidy');
 
 section('6. Safety');
 reset();

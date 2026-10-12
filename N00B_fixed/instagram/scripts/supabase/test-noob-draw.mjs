@@ -277,6 +277,16 @@ const sp = await mkUser('sp');
 const spun = await rpc(sp, 'noob_draw_spin', 't_mail');
 const spm = await mails(sp);
 check(spun.success && spm.length === 1 && spm[0].kind === 'draw_prize' && spm[0].payload.prize === 'pro', 'a real spin that lands on a Pro plan queues the email in the same step');
+const secret = (await q(`select value from public.internal_config where key = 'push_secret'`))[0].value;
+await db.query(`insert into public.profile_private (user_id, email) values ($1, 'sp@example.com') on conflict (user_id) do update set email = excluded.email`, [sp]);
+await db.query(`update public.profiles set noob_points = 500000000 where id = $1`, [sp]);
+const spPaid = await rpc(sp, 'noob_draw_spin', 't_mail', true);
+const spMails = await mails(sp);
+check(spPaid.success && spMails.length === 2, 'a paid spin that wins a plan sends its email too');
+const claimFree = (await q(`select public.email_claim($1, $2) as r`, [secret, (await q(`select id from public.email_outbox where user_id = $1 order by created_at limit 1`, [sp]))[0].id]))[0].r;
+check(claimFree.claimed && claimFree.userId === sp && claimFree.payload.paid === false && claimFree.payload.cost === '0' && claimFree.payload.spinNo === 1 && claimFree.payload.packName === 'Test Mail' && claimFree.payload.rarity === 'epic' && claimFree.payload.previousTier === null && /^[\d,]+$/.test(claimFree.payload.walletAfter), 'the first email says: free spin, no cost, spin number 1, which spin, how rare, and no plan before');
+const claimPaid = (await q(`select public.email_claim($1, $2) as r`, [secret, (await q(`select id from public.email_outbox where user_id = $1 order by created_at desc limit 1`, [sp]))[0].id]))[0].r;
+check(claimPaid.payload.paid === true && claimPaid.payload.cost === '100,000,000' && claimPaid.payload.spinNo === 2 && claimPaid.payload.previousTier === 'elite' && !!claimPaid.payload.previousEndsAt && claimPaid.payload.walletAfter === '400,000,000', 'the second says: paid spin, cost 100,000,000 points, spin number 2, the plan before (Elite, until when) and the balance after paying');
 await db.query(`delete from public.noob_draw_packs where id = 't_mail'`);
 await expectFail(() => call(sp, `select public.noob_draw_mail($1, (select p from public.noob_draw_prizes p limit 1), 'x', 'x')`, [sp]), /permission denied/, 'nobody can queue these emails themselves');
 

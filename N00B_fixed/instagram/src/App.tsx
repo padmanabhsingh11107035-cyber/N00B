@@ -69,7 +69,7 @@ import { FeedView } from './components/Feed/FeedView';
 // Chat) paid for its full weight upfront — E2EE crypto setup, the Instants camera/viewer, encryption
 // modals, sticker/GIF panels, confetti, group management, all bundled into the one main chunk. Lazy
 // just like every other heavy, occasional screen in this file.
-const ChatView = React.lazy(() => import('./components/Chat/ChatView').then((m) => ({ default: m.ChatView })));
+const { View: ChatView, preload: preloadChat } = lazyTab(() => import('./components/Chat/ChatView').then((m) => m.ChatView));
 import { IncomingCallModal } from './components/Chat/IncomingCallModal';
 import { useIncomingCalls } from './components/Chat/useIncomingCalls';
 import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
@@ -89,6 +89,7 @@ import { MiniToast } from './components/Common/MiniToast';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
+import { lazyTab } from './utils/lazyTab';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { useUpdateAvailable } from './utils/appVersion';
@@ -107,11 +108,11 @@ import { setVisibleInterval } from './utils/visibleInterval';
 // Lazy-loaded: each of these pulls a large, rarely-needed chunk out of the main bundle (the admin
 // console alone is ~3000 lines nobody but the admin ever opens; Live Streaming/Lounge additionally
 // drag in the Agora SDK) — loaded on first use instead of on every visit, no matter who's using the app.
-const ExploreView = React.lazy(() => import('./components/Explore/ExploreView').then((m) => ({ default: m.ExploreView })));
-const ReelsView = React.lazy(() => import('./components/Reels/ReelsView').then((m) => ({ default: m.ReelsView })));
-const GamesView = React.lazy(() => import('./components/Games/GamesView').then((m) => ({ default: m.GamesView })));
-const MusicHubView = React.lazy(() => import('./components/Music/MusicHubView').then((m) => ({ default: m.MusicHubView })));
-const ProfileView = React.lazy(() => import('./components/Profile/ProfileView').then((m) => ({ default: m.ProfileView })));
+const { View: ExploreView, preload: preloadExplore } = lazyTab(() => import('./components/Explore/ExploreView').then((m) => m.ExploreView));
+const { View: ReelsView, preload: preloadReels } = lazyTab(() => import('./components/Reels/ReelsView').then((m) => m.ReelsView));
+const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./components/Games/GamesView').then((m) => m.GamesView));
+const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
+const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
 const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
 const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
@@ -128,7 +129,12 @@ const LiveLoungePage = React.lazy(() => import('./components/Profile/LiveLoungeP
 const NoobAiPage = React.lazy(() => import('./components/Profile/NoobAiPage').then((m) => ({ default: m.NoobAiPage })));
 const AccountsStatisticsModal = React.lazy(() => import('./components/Profile/AccountsStatisticsModal').then((m) => ({ default: m.AccountsStatisticsModal })));
 const ProFeaturesModal = React.lazy(() => import('./components/Profile/ProFeaturesModal').then((m) => ({ default: m.ProFeaturesModal })));
-const HomeVideoFeedView = React.lazy(() => import('./components/Videos/HomeVideoFeedView').then((m) => ({ default: m.HomeVideoFeedView })));
+const { View: HomeVideoFeedView, preload: preloadVideos } = lazyTab(() => import('./components/Videos/HomeVideoFeedView').then((m) => m.HomeVideoFeedView));
+// The bottom bar's pages, in the order they are fetched ahead of time (see the effect below) and by tab, so a tap can start the fetch early.
+const TAB_PRELOADS: [NavTab, () => Promise<unknown>][] = [
+  ['profile', preloadProfile], ['explore', preloadExplore], ['reels', preloadReels], ['videos', preloadVideos],
+  ['music', preloadMusic], ['games', preloadGames], ['chat', preloadChat]
+];
 const UploadVideoModal = React.lazy(() => import('./components/Videos/UploadVideoModal').then((m) => ({ default: m.UploadVideoModal })));
 
 // Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
@@ -537,19 +543,21 @@ export default function App() {
     return unsubscribe;
   }, [currentUser?.id]);
 
-  // The big screens are loaded on demand (smaller first download). Once the app is idle after sign-in, the most-used ones are fetched
-  // quietly in the background so switching tabs is instant. Skipped when the phone is set to save data.
+  // The big screens are loaded on demand (smaller first download). Right after sign-in every page of the bottom bar is fetched quietly in the
+  // background, one after the other, so that opening one for the first time shows the page at once instead of a loading spinner.
+  // Skipped when the phone is set to save data (a tap still fetches just that page).
   useEffect(() => {
     if (!currentUser) return;
     if ((navigator as any).connection?.saveData) return;
-    const idle: (cb: () => void) => any = (window as any).requestIdleCallback ? (cb) => (window as any).requestIdleCallback(cb, { timeout: 8000 }) : (cb) => setTimeout(cb, 3000);
-    const handle = idle(() => {
-      void import('./components/Profile/ProfileView');
-      void import('./components/Explore/ExploreView');
-      void import('./components/Reels/ReelsView');
-      void import('./components/Games/GamesView');
-    });
-    return () => { try { (window as any).cancelIdleCallback ? (window as any).cancelIdleCallback(handle) : clearTimeout(handle); } catch { /* ignore */ } };
+    let stopped = false;
+    const timer = window.setTimeout(async () => {
+      for (const [, preload] of TAB_PRELOADS) {
+        if (stopped) return;
+        try { await preload(); } catch { /* the page loads when opened instead */ }
+        await new Promise((r) => window.setTimeout(r, 150));
+      }
+    }, 1500);
+    return () => { stopped = true; window.clearTimeout(timer); };
   }, [currentUser?.id]);
 
   // Links to other websites open inside NOOB, under a bar that says NOOB (utils/inAppBrowser.ts), like Instagram does.
@@ -1744,6 +1752,7 @@ export default function App() {
       <FloatingNavBar
         activeTab={activeTab}
         onSelectTab={handleSelectNavTab}
+        onPressTab={(tab) => { const hit = TAB_PRELOADS.find(([t]) => t === tab); if (hit) void hit[1]().catch(() => {}); }}
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
         hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile}

@@ -11,6 +11,8 @@ interface FloatingNavBarProps {
   // Hide the bar on phone-width screens while an active chat conversation
   // fills the screen; it stays available on the chat list and on md+ split view.
   hideOnMobile?: boolean;
+  // Called as soon as a finger / pointer goes down on a tab (before the tap completes), so its page can start downloading early.
+  onPressTab?: (tab: NavTab) => void;
 }
 
 interface NavButtonProps {
@@ -55,7 +57,8 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   onSelectTab,
   userAvatar,
   unreadChatCount = 0,
-  hideOnMobile = false
+  hideOnMobile = false,
+  onPressTab
 }) => {
   return (
     <nav
@@ -64,7 +67,13 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         hideOnMobile ? 'max-md:hidden' : ''
       }`}
     >
-      <div className="liquid-glass relative rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1">
+      <div
+        className="liquid-glass relative rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1"
+        onPointerDown={(e) => {
+          const id = (e.target as HTMLElement).closest('button')?.id || '';
+          if (id.startsWith('nav-item-')) onPressTab?.(id.slice('nav-item-'.length) as NavTab);
+        }}
+      >
         <span
           aria-hidden="true"
           className="nav-marker"

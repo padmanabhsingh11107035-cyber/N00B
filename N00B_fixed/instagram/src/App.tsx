@@ -87,6 +87,7 @@ import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
 import { sendLike } from './utils/likeSync';
+import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
@@ -745,11 +746,13 @@ export default function App() {
   // --- POST ACTIONS ---
   // The heart changes at once; the server is told in the background (see utils/likeSync.ts).
   const handleToggleLike = (postId: string) => {
-    const before = postsRef.current.find((p) => p.id === postId);
+    const before = postsRef.current.find((p) => p.id === postId) ?? findPinnedPost(postId);   // a pinned post may not be in the loaded feed
     if (!before) return;
     const want = !before.isLiked;
-    const show = (isLiked: boolean, likesCount: number) =>
+    const show = (isLiked: boolean, likesCount: number) => {
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, isLiked, likesCount } : p)));
+      patchPinnedPost(postId, { isLiked, likesCount });
+    };
     show(want, Math.max(0, before.likesCount + (want ? 1 : -1)));
     sendLike(`post:${postId}`, want, () => toggleLikePost(postId), (r) => show(r.isLiked, r.likesCount), () => show(before.isLiked, before.likesCount));
   };
@@ -760,6 +763,7 @@ export default function App() {
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, isSaved: res.isSaved } : p))
       );
+      patchPinnedPost(postId, { isSaved: res.isSaved });
     } catch (err) {
       console.error(err);
     }

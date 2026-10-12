@@ -2,7 +2,7 @@
 // all agree and update together.
 import { useSyncExternalStore } from 'react';
 import { fetchPinnedFeedItems, setFeedItemPinned } from './api';
-import type { PinnedFeedItem } from '../types';
+import type { PinnedFeedItem, Post } from '../types';
 
 let items: PinnedFeedItem[] = [];
 let loadedAt = 0;
@@ -27,6 +27,17 @@ export function refreshPinnedFeed(force = false): Promise<void> {
 }
 
 export function clearPinnedFeed(): void { items = []; loadedAt = 0; emit(); }
+
+// A pinned post is drawn from this saved copy when the feed itself has not loaded that post, so a like (or any other change) made on it
+// has to be written here too, or the heart would stay empty until the next reload.
+export function findPinnedPost(id: string): Post | undefined {
+  return items.find((p) => p.kind === 'post' && p.itemId === id)?.post;
+}
+export function patchPinnedPost(id: string, patch: Partial<Post>): void {
+  if (!findPinnedPost(id)) return;
+  items = items.map((p) => (p.kind === 'post' && p.itemId === id && p.post ? { ...p, post: { ...p.post, ...patch } } : p));
+  emit();
+}
 
 export async function toggleFeedPin(kind: PinnedFeedItem['kind'], id: string): Promise<{ success: boolean; pinned?: boolean; error?: string }> {
   const res = await setFeedItemPinned(kind, id, !isFeedItemPinned(kind, id));

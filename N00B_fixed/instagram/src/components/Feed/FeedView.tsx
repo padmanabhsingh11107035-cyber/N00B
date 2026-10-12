@@ -698,7 +698,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </div>
         ) : (
           <>
-            {showPinned && <PinnedFeedSection items={pinnedItems} renderPost={renderPostCard} onOpenReel={onNavigateToReel} onOpenVideo={onNavigateToVideo} />}
+            {showPinned && <PinnedFeedSection items={pinnedItems} renderPost={(p) => renderPostCard(postsById.get(p.id) ?? p)} onOpenReel={onNavigateToReel} onOpenVideo={onNavigateToVideo} />}
             {paginatedPosts.map((post) => renderPostCard(post))}
 
             {/* Infinite Scroll Load More Sentinel */}

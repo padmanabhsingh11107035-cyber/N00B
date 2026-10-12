@@ -1151,7 +1151,6 @@ export default function App() {
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
         <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white">
-          <img src="/noob-logo-circle.png" alt="" className="w-16 h-16 rounded-full mb-5 shadow-[0_0_40px_rgba(217,119,87,0.3)]" />
           <div className="w-8 h-8 rounded-full border-2 border-noob border-t-transparent animate-spin mb-4" />
           <span className="text-sm font-extrabold tracking-tight text-white">
             NOOB

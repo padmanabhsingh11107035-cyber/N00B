@@ -15,6 +15,8 @@ const OWN = 'nooob.xyz';
 section('1. Which clicks open in NOOB');
 check(shouldOpenInApp({ href: 'https://example.com/shop', button: 0 }, OWN) === true, 'an ordinary click on a link to another website');
 check(shouldOpenInApp({ href: 'http://example.com' }, OWN) === true, 'a plain http link too');
+check(shouldOpenInApp({ href: 'https://www.nooob.xyz/' }, OWN) === false && shouldOpenInApp({ href: 'https://nooob.xyz/?pro=plus' }, 'www.nooob.xyz') === false && shouldOpenInApp({ href: 'https://www.nooob.xyz/x' }, 'n00b.example.workers.dev') === false, 'the NOOB address itself (with or without www) is never shown inside the in-app browser (its pages forbid it: it came out as an empty white page)');
+check(isFrameBlocked('https://nooob.xyz/x') && isFrameBlocked('https://www.nooob.xyz') && !isFrameBlocked('https://ai.nooob.xyz') && shouldOpenInApp({ href: 'https://ai.nooob.xyz/' }, OWN) === true, 'if NOOB itself ever got there, it shows the Open in browser card (not a blank page); NOOB AI keeps working');
 check(shouldOpenInApp({ href: 'https://nooob.xyz/?post=1' }, OWN) === false && shouldOpenInApp({ href: 'https://NOOOB.xyz/' }, OWN) === false && shouldOpenInApp({ href: 'https://noob.xyz/x' }, OWN) === true, 'links inside NOOB itself are left alone (any capital letters), a look-alike address is another website');
 for (const [name, href] of [['mailto', 'mailto:a@b.co'], ['tel', 'tel:+911234567890'], ['sms', 'sms:123'], ['UPI', 'upi://pay?pa=a@b'], ['javascript', 'javascript:alert(1)'], ['data', 'data:text/html,hi'], ['blob', 'blob:https://nooob.xyz/abc']]) {
   check(shouldOpenInApp({ href }, OWN) === false, `${name}: links are never touched`);

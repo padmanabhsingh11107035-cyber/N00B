@@ -17,10 +17,15 @@ export const hostOf = (url: string): string => {
   try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return ''; }
 };
 
+// NOOB's own website (with or without www). It forbids being shown inside any other page (X-Frame-Options, see public/_headers), so a link to it
+// must never be put in the in-app browser: it would be an empty white page. It is also never "another website" for this app.
+const NOOB_SITE = 'nooob.xyz';
+const bare = (host: string): string => host.toLowerCase().replace(/^www\./, '');
+
 // Is this a site that is known to refuse being shown inside another page?
 export function isFrameBlocked(url: string): boolean {
   const host = hostOf(url);
-  return !!host && NO_FRAME_HOSTS.some((h) => host === h || host.endsWith('.' + h));
+  return !!host && (host === NOOB_SITE || NO_FRAME_HOSTS.some((h) => host === h || host.endsWith('.' + h)));
 }
 
 export interface LinkClickLike {
@@ -34,14 +39,15 @@ export interface LinkClickLike {
   noInApp?: boolean;     // the link says data-no-inapp: it must open the usual way
 }
 
-// Should a click on this link open in the in-app browser? Only ordinary clicks on web links to OTHER sites.
+// Should a click on this link open in the in-app browser? Only ordinary clicks on web links to OTHER sites (never NOOB's own, www or not).
 export function shouldOpenInApp(link: LinkClickLike, ownHost: string): boolean {
   if (!link.href || link.noInApp || link.hasDownload) return false;
   if ((link.button ?? 0) !== 0 || link.ctrlKey || link.metaKey || link.shiftKey || link.altKey) return false;   // new-tab / save shortcuts keep working
   try {
     const url = new URL(link.href);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;     // mailto:, tel:, upi:, javascript: ... are never touched
-    return url.host.toLowerCase() !== ownHost.toLowerCase();
+    const host = bare(url.host);
+    return host !== bare(ownHost) && host !== NOOB_SITE;     // NOOB itself (also its www address) opens the normal way
   } catch {
     return false;
   }

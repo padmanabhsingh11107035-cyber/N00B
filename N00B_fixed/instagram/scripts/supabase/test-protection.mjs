@@ -50,5 +50,29 @@ section('5. Printing');
 check(/@media print\s*\{[^}]*display:\s*none\s*!important/.test(PROTECTION_CSS), 'printing or "save as PDF" gives a blank page');
 check(/user-drag:\s*none/.test(PROTECTION_CSS) && /-webkit-touch-callout:\s*none/.test(PROTECTION_CSS), 'no dragging media, and no long-press "save image" menu on iPhone');
 
+section('6. Text can not be selected or copied');
+const { isTextAllowedTarget, isTextShortcut, TEXT_ALLOWED_SELECTOR } = P;
+const textEl = (allowed, nodeType = 1) => nodeType === 3 ? { nodeType: 3, parentElement: textEl(allowed) } : { nodeType: 1, closest: (sel) => (sel === TEXT_ALLOWED_SELECTOR && allowed ? {} : null) };
+check(['input', 'textarea', 'contenteditable', 'data-allow-copy'].every((w) => TEXT_ALLOWED_SELECTOR.includes(w)), 'only text boxes and anything marked data-allow-copy are selectable');
+check(isTextAllowedTarget(textEl(true)) === true && isTextAllowedTarget(textEl(false)) === false, 'a text box yes, ordinary text no');
+check(isTextAllowedTarget(textEl(true, 3)) === true && isTextAllowedTarget(textEl(false, 3)) === false, 'a text node counts as the element around it');
+check(isTextAllowedTarget(null) === false && isTextAllowedTarget(undefined) === false && isTextAllowedTarget({}) === false, 'nothing / an odd target: not allowed, no crash');
+check(isTextAllowedTarget({ nodeType: 1, closest: () => { throw new Error('x'); } }) === false, 'a target that misbehaves is not allowed, no crash');
+check(/html,\s*body\s*\{[^}]*user-select:\s*none/.test(PROTECTION_CSS) && /-webkit-user-select:\s*none/.test(PROTECTION_CSS), 'the whole page has text selection switched off (also on iPhone)');
+check(/input,\s*textarea[^{]*\{[^}]*user-select:\s*text/.test(PROTECTION_CSS), '...except text boxes, so typing, pasting and editing still work');
+check(/html,\s*body\s*\{[^}]*-webkit-touch-callout:\s*none/.test(PROTECTION_CSS), 'no long-press Copy / Look up menu on phones');
+const key = (k, extra = {}) => ({ key: k, code: 'Key' + k.toUpperCase(), ...extra });
+check(isTextShortcut(key('c', { ctrlKey: true })) && isTextShortcut(key('C', { metaKey: true })), 'Ctrl/Cmd+C is blocked');
+check(isTextShortcut(key('x', { ctrlKey: true })) && isTextShortcut(key('a', { ctrlKey: true })) && isTextShortcut(key('u', { ctrlKey: true })), 'Ctrl+X, Ctrl+A and Ctrl+U (page source) are blocked');
+check(!isTextShortcut(key('v', { ctrlKey: true })) && !isTextShortcut(key('z', { ctrlKey: true })) && !isTextShortcut(key('c')) && !isTextShortcut(key('c', { ctrlKey: true, shiftKey: true })) && !isTextShortcut(key('c', { ctrlKey: true, altKey: true })), 'Paste, Undo, a plain letter and other combinations are never blocked');
+
+// the chat "Copy" option
+const C = await import(pathToFileURL(path.resolve('src/utils/clipboard.ts')).href);
+const o = 'https://nooob.xyz';
+check(C.messageCopyText({ text: '  hello there ' }, o) === 'hello there', 'Copy on a text message gives the text');
+check(C.messageCopyText({ text: '', sharedPostId: 'abc', sharedPostType: 'post' }, o) === 'https://nooob.xyz/?post=abc' && C.messageCopyText({ text: '', sharedPostId: 'r1', sharedPostType: 'reel' }, o) === 'https://nooob.xyz/?reel=r1', 'a shared post or reel gives its link');
+check(C.messageCopyText({ text: '', sharedProfile: { username: 'ann' } }, o) === '@ann' && C.messageCopyText({ text: '', sharedTrack: { title: 'Song', artist: 'Band' } }, o) === 'Song – Band', 'a shared profile or track gives its name');
+check(C.messageCopyText({ text: 'secret', locked: 'no-key' }, o) === '' && C.messageCopyText({ text: '' }, o) === '' && C.messageCopyText(null, o) === '', 'a message that can not be opened, or has nothing to copy, gives nothing (no Copy option)');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

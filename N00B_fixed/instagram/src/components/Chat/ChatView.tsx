@@ -54,11 +54,14 @@ import {
   Filter,
   Smile,
   Reply,
+  Copy,
   Paperclip,
   Film,
   UserCircle2,
   Youtube
 } from 'lucide-react';
+import { copyText, messageCopyText } from '../../utils/clipboard';
+import { showNotice } from '../../utils/likeSync';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
 import { setVisibleInterval } from '../../utils/visibleInterval';
@@ -2633,6 +2636,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 >
                   <Reply className="w-3.5 h-3.5" /> Reply
                 </button>
+                {!!messageCopyText(activeMessageMenu.message) && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await copyText(messageCopyText(activeMessageMenu.message));
+                      setActiveMessageMenu(null);
+                      showNotice(ok ? 'Copied' : 'Could not copy');
+                    }}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer text-left"
+                  >
+                    <Copy className="w-3.5 h-3.5" /> Copy
+                  </button>
+                )}
                 {!activeMessageMenu.message.locked && (
                   <button
                     type="button"

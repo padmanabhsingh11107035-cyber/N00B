@@ -10,6 +10,11 @@
 //     whenever the tab is hidden (so app-switcher previews show nothing);
 //   * Ctrl/Cmd+S is best-effort blocked too, though modern browsers increasingly refuse to let any page cancel it (the
 //     same policy that stops a page from blocking DevTools — this file does not try to fight that one at all: it can't be won).
+//   * TEXT can not be selected or copied anywhere on the screen. The only text that can be selected is what is typed into a text box
+//     (so typing, pasting and editing still work) and anything marked data-allow-copy. What people CAN copy, they copy through the
+//     app's own "Copy" options (a chat message's Copy, copy-link and copy-invite buttons: utils/clipboard.ts), which write to the
+//     clipboard directly and are not touched by any of this. No selection handles, no long-press "Copy / Look up" menu, no
+//     right-click menu, no Ctrl/Cmd+C, X or A, and no "view source" shortcut.
 // (There is deliberately NO watermark over the screen: it was tried and removed because it was in the way.)
 // The pure parts are exported so they can be tested without a browser.
 
@@ -53,8 +58,33 @@ export function isProtectedTarget(target: { closest?: (selector: string) => unkn
   }
 }
 
+// Where text IS allowed to be selected: text boxes, and anything that says so with data-allow-copy.
+export const TEXT_ALLOWED_SELECTOR = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [data-allow-copy]';
+
+// May the text at this place be selected / copied? (A text node counts as the element around it.)
+export function isTextAllowedTarget(target: unknown): boolean {
+  try {
+    let node: any = target;
+    if (node && node.nodeType === 3) node = node.parentElement;
+    return !!node && typeof node.closest === 'function' && !!node.closest(TEXT_ALLOWED_SELECTOR);
+  } catch {
+    return false;
+  }
+}
+
+// Shortcuts that copy, cut, select everything or open the page source. (Never a plain letter, never Ctrl+V or Ctrl+Z.)
+export function isTextShortcut(e: KeyLike): boolean {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return false;
+  const key = (e.key || '').toLowerCase();
+  if (key === 'c' || key === 'x' || key === 'a') return !e.shiftKey || key === 'a';
+  if (key === 'u') return !e.shiftKey;
+  return false;
+}
+
 export const PROTECTION_CSS = `
 img, video, canvas, picture { -webkit-user-drag: none; user-drag: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select, [contenteditable]:not([contenteditable="false"]), [data-allow-copy], [data-allow-copy] * { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 @media print { html, body { display: none !important; } }
 `;
 
@@ -159,12 +189,33 @@ export function installContentProtection(options: ProtectionOptions = {}): () =>
   });
   on(win, 'beforeprint', () => coverFor(1500));
 
-  // -- saving media: no context menu, no dragging
+  // -- saving media and copying text: no context menu (except in a text box, which needs its Paste), no dragging
   on(doc, 'contextmenu', (e: Event) => {
-    if (isProtectedTarget(e.target as Element)) e.preventDefault();
+    if (isProtectedTarget(e.target as Element) || !isTextAllowedTarget(e.target)) e.preventDefault();
   }, true);
   on(doc, 'dragstart', (e: Event) => {
     if (isProtectedTarget(e.target as Element)) e.preventDefault();
+  }, true);
+
+  // -- copying text: copy / cut do nothing outside a text box, nothing can be selected, and a selection that sneaks in is cleared
+  const refuseCopy = (e: ClipboardEvent) => {
+    if (isTextAllowedTarget(e.target)) return;
+    e.preventDefault();
+    try { e.clipboardData?.setData('text/plain', ''); } catch { /* no clipboard data on this event */ }
+  };
+  on(doc, 'copy', refuseCopy, true);
+  on(doc, 'cut', refuseCopy, true);
+  on(doc, 'selectstart', (e: Event) => {
+    if (!isTextAllowedTarget(e.target)) e.preventDefault();
+  }, true);
+  on(doc, 'selectionchange', () => {
+    const sel = doc.getSelection?.();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    if (isTextAllowedTarget(doc.activeElement) || isTextAllowedTarget(sel.anchorNode)) return;
+    sel.removeAllRanges();
+  });
+  on(win, 'keydown', (e: KeyboardEvent) => {
+    if (isTextShortcut(e) && !isTextAllowedTarget(doc.activeElement)) e.preventDefault();
   }, true);
 
   // -- Ctrl/Cmd+S ("Save Page As..."): best-effort only. Modern Chrome and Firefox deliberately do

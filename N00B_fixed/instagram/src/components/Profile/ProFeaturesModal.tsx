@@ -134,7 +134,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
     if (!askTier || !friend || askBusy) return;
     setAskBusy(true);
     setAskError('');
-    const res = await requestProPayment(friend.id, askTier.id, billing, askMode, billing === 'monthly' ? autoRenew : true);
+    const res = await requestProPayment(friend.id, askTier.id, billing, askMode, autoRenew);
     setAskBusy(false);
     if (res.success) {
       setAskSent(`Request sent to @${friend.username}. It stays open for 24 hours, and your NOOB Pro ${askTier.name} starts the moment they pay.`);
@@ -177,7 +177,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
       tierId: tier.id,
       billing,
       couponCode: appliedCoupon?.code,
-      autoRenew: billing === 'monthly' ? autoRenew : true
+      autoRenew
     });
     setSubscribingTier(null);
     if (res.success && res.user) {
@@ -217,17 +217,17 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
 
         {/* Manage an existing subscription's auto-renew — only shown once
             already subscribed, since there's nothing to "reload" yet. */}
-        {currentUser.proTier && currentUser.proBilling === 'monthly' && (
+        {currentUser.proTier && (
           <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className={`p-2 rounded-xl ${currentAutoRenew ? 'bg-noob/15 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
                 <RefreshCw className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white">Reload Monthly</h4>
+                <h4 className="text-xs font-bold text-white">{currentUser.proBilling === 'yearly' ? 'Reload Yearly' : 'Reload Monthly'}</h4>
                 <p className="text-[10px] text-zinc-400">
                   {currentAutoRenew
-                    ? 'Your Wallet is billed automatically each month to keep Pro active.'
+                    ? `Your Wallet is billed automatically each ${currentUser.proBilling === 'yearly' ? 'year' : 'month'} to keep Pro active.`
                     : `Pro ends on ${currentUser.proRenewsAt ? new Date(currentUser.proRenewsAt).toLocaleDateString() : 'your renewal date'} unless you turn this back on.`}
                 </p>
               </div>
@@ -268,26 +268,23 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           </button>
         </div>
 
-        {/* Reload Monthly — whether this new subscription auto-renews each
-            month by deducting NOOB Points from the Wallet, or ends after one
-            period. Only meaningful for monthly billing. */}
-        {billing === 'monthly' && (
-          <label className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 cursor-pointer">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5 text-noob" />
-              <span className="text-xs font-semibold text-white">Reload Monthly</span>
-            </div>
-            <div className="relative inline-flex items-center">
-              <input
-                type="checkbox"
-                checked={autoRenew}
-                onChange={(e) => setAutoRenew(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
-            </div>
-          </label>
-        )}
+        {/* Reload Monthly / Reload Yearly — whether this new subscription auto-renews each
+            month (or year) by deducting NOOB Points from the Wallet, or ends after one period. */}
+        <label className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 cursor-pointer">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-3.5 h-3.5 text-noob" />
+            <span className="text-xs font-semibold text-white">{billing === 'yearly' ? 'Reload Yearly' : 'Reload Monthly'}</span>
+          </div>
+          <div className="relative inline-flex items-center">
+            <input
+              type="checkbox"
+              checked={autoRenew}
+              onChange={(e) => setAutoRenew(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
+          </div>
+        </label>
 
         {/* Discount coupon — applies to whichever tier you subscribe to */}
         <div className="space-y-1">

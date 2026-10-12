@@ -4110,13 +4110,22 @@ export async function adminSetExplorePin(userId: string, pinned: boolean): Promi
 
 // ---- Admin content browser (every post/reel/story, not scoped to who the admin follows) ----
 
-export async function fetchAdminContentFeed(type: 'posts' | 'reels' | 'stories', limit = 60): Promise<{ success: boolean; items: any[]; error?: string }> {
+export type AdminContentType = 'posts' | 'reels' | 'videos' | 'stories' | 'instants';
+
+export async function fetchAdminContentFeed(type: AdminContentType, limit = 60): Promise<{ success: boolean; items: any[]; error?: string }> {
   try {
+    if (type === 'videos' || type === 'instants') {
+      // their own functions (migration 20261012000001); before that update is installed the answer is a clear message, not a wrong list
+      const res = await rpc<any>(type === 'videos' ? 'admin_content_videos' : 'admin_content_instants', { p_limit: limit });
+      const map = type === 'videos' ? mapLongVideo : (i: any) => ({ ...i, userAvatar: resolveMedia(i.userAvatar), mediaUrl: resolveMedia(i.mediaUrl) });
+      return { success: true, items: (res.items || []).map(map) };
+    }
     const res = await rpc<any>('admin_content_feed', { p_type: type, p_limit: limit });
     const map = type === 'reels' ? mapReel : type === 'stories' ? mapStory : mapPost;
     return { success: true, items: (res.items || []).map(map) };
   } catch (err) {
-    return { success: false, items: [], error: errorText(err, 'Could not load content.') };
+    const missing = /could not find the function|schema cache/i.test(String((err as any)?.message || ''));
+    return { success: false, items: [], error: missing ? 'This part needs the latest database update to be installed first.' : errorText(err, 'Could not load content.') };
   }
 }
 

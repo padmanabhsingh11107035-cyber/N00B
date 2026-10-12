@@ -76,13 +76,14 @@ import {
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints,
   fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
-  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory,
+  fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory, deleteLongVideo,
   fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
   fetchAdminExplorePins, adminSetExplorePin,
   adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
   subscribeToOnlinePresence,
   fetchDailyChallenge, adminSetDailyChallenge, fetchDailyChallengeEntries, adminAssignDailyChallengeWinners
 } from '../../services/api';
+import { usePinnedFeedItems, toggleFeedPin, refreshPinnedFeed } from '../../services/pinnedFeed';
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem, PresenceEntry } from '../../services/api';
 import type { DailyChallengeEntry } from '../../types';
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
@@ -239,8 +240,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [pointsInput, setPointsInput] = useState('');
   const [pointsReason, setPointsReason] = useState('');
 
-  // Content browser (posts / reels / stories, admin-wide — not scoped to who the admin follows)
-  const [contentType, setContentType] = useState<'posts' | 'reels' | 'stories'>('posts');
+  // Content browser (posts / reels / videos / stories / instants, admin-wide — not scoped to who the admin follows)
+  const [contentType, setContentType] = useState<'posts' | 'reels' | 'videos' | 'stories' | 'instants'>('posts');
+  const pinnedNow = usePinnedFeedItems();
+  const [pinningId, setPinningId] = useState<string | null>(null);
   const [contentItems, setContentItems] = useState<any[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
   const [deletingContentId, setDeletingContentId] = useState<string | null>(null);
@@ -363,12 +366,29 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (activeTab === 'content' && main) loadContent(contentType);
   }, [contentType]);
 
-  const loadContent = async (type: 'posts' | 'reels' | 'stories') => {
+  const loadContent = async (type: 'posts' | 'reels' | 'videos' | 'stories' | 'instants') => {
     setLoadingContent(true);
+    setContentItems([]);
+    refreshPinnedFeed(true);
     const res = await fetchAdminContentFeed(type);
     if (res.success) setContentItems(res.items);
     else setStatusMessage({ text: res.error || 'Could not load content.', type: 'error' });
     setLoadingContent(false);
+  };
+
+  // What can be pinned to the Feed page: posts, reels and videos (stories vanish after a day and instants are private photos).
+  const pinKindOf = (): 'post' | 'reel' | 'video' | null => (contentType === 'posts' ? 'post' : contentType === 'reels' ? 'reel' : contentType === 'videos' ? 'video' : null);
+  const handleToggleFeedPin = async (item: any) => {
+    const kind = pinKindOf();
+    if (!kind) return;
+    setPinningId(item.id);
+    const res = await toggleFeedPin(kind, item.id);
+    setStatusMessage(
+      res.success
+        ? { text: res.pinned ? 'Pinned to the top of the Feed.' : 'Unpinned from the Feed.', type: 'success' }
+        : { text: res.error || 'Could not change the pin.', type: 'error' }
+    );
+    setPinningId(null);
   };
 
   const loadJoinRequests = async () => {
@@ -573,7 +593,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (!confirm('Permanently remove this?')) return;
     setDeletingContentId(item.id);
     const ok =
-      contentType === 'posts' ? await deletePost(item.id) : contentType === 'reels' ? await deleteReel(item.id) : await deleteStory(item.id);
+      contentType === 'posts' ? await deletePost(item.id)
+      : contentType === 'reels' ? await deleteReel(item.id)
+      : contentType === 'videos' ? await deleteLongVideo(item.id)
+      : await deleteStory(item.id);
     if (ok) setContentItems((prev) => prev.filter((x) => x.id !== item.id));
     else setStatusMessage({ text: 'Could not remove this.', type: 'error' });
     setDeletingContentId(null);
@@ -714,7 +737,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const mediaOf = (item: any): { url: string; type: string; poster?: string }[] =>
     contentType === 'posts'
       ? (item.slides || []).map((s: any) => ({ url: s.mediaUrl, type: s.mediaType }))
-      : contentType === 'reels'
+      : contentType === 'reels' || contentType === 'videos'
         ? [{ url: item.videoUrl, type: 'video', poster: item.thumbnailUrl }]
         : [{ url: item.mediaUrl, type: item.mediaType || 'image' }];
 
@@ -2111,11 +2134,11 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               )}
             </div>
           ) : activeTab === 'content' && main ? (
-            /* Content browser: every post/reel/story on the platform, not just who the admin follows */
+            /* Content browser: every post/reel/video/story/instant on the platform, not just who the admin follows */
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-xl border border-zinc-800">
-                  {(['posts', 'reels', 'stories'] as const).map((t) => (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 p-1 bg-zinc-900 rounded-xl border border-zinc-800 overflow-x-auto">
+                  {(['posts', 'reels', 'videos', 'stories', 'instants'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setContentType(t)}
@@ -2127,10 +2150,17 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     </button>
                   ))}
                 </div>
-                <button onClick={() => loadContent(contentType)} className="text-xs text-noob hover:underline flex items-center gap-1 cursor-pointer font-medium">
+                <button onClick={() => loadContent(contentType)} className="text-xs text-noob hover:underline flex items-center gap-1 cursor-pointer font-medium shrink-0">
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingContent ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
+              {pinKindOf() ? (
+                <p className="text-[11px] text-zinc-500">Tap <Pin className="w-3 h-3 inline -mt-0.5" /> on any {contentType === 'posts' ? 'post' : contentType === 'reels' ? 'reel' : 'video'} to pin it to the top of the Feed (up to 5 pins in all).</p>
+              ) : contentType === 'instants' ? (
+                <p className="text-[11px] text-zinc-500">Instants are private photos people send to their friends, so you can look at them here but they cannot be pinned.</p>
+              ) : (
+                <p className="text-[11px] text-zinc-500">Stories disappear after 24 hours, so they cannot be pinned.</p>
+              )}
 
               {loadingContent ? (
                 <div className="py-12 text-center">
@@ -2142,22 +2172,27 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                   No {contentType} yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className={`grid gap-3 ${contentType === 'videos' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}`}>
                   {contentItems.map((item) => {
                     const media = mediaOf(item);
                     const first = media[0];
+                    const pinKind = pinKindOf();
+                    const isPinned = !!pinKind && pinnedNow.some((p) => p.kind === pinKind && p.itemId === item.id);
                     return (
                       <div key={item.id} className="rounded-2xl bg-zinc-900/60 border border-zinc-800/80 overflow-hidden flex flex-col">
                         {/* the picture / video itself — tap to see it full size */}
                         <button
                           type="button"
                           onClick={() => first?.url && setContentPreview({ item, index: 0 })}
-                          className={`relative w-full bg-black cursor-pointer group ${contentType === 'posts' ? 'aspect-[4/5]' : 'aspect-[9/16]'}`}
+                          className={`relative w-full bg-black cursor-pointer group ${contentType === 'posts' ? 'aspect-[4/5]' : contentType === 'videos' ? 'aspect-video' : contentType === 'instants' ? 'aspect-[3/4]' : 'aspect-[9/16]'}`}
                           title="Open full size"
                         >
+                          {isPinned && (
+                            <span className="absolute top-2 left-2 z-10 flex items-center gap-1 text-[10px] font-bold bg-noob text-black px-1.5 py-0.5 rounded-full"><Pin className="w-3 h-3" /> Pinned</span>
+                          )}
                           {!first?.url ? (
                             <span className="absolute inset-0 flex items-center justify-center text-zinc-600">
-                              {contentType === 'reels' ? <Film className="w-7 h-7" /> : contentType === 'stories' ? <Camera className="w-7 h-7" /> : <Image className="w-7 h-7" />}
+                              {contentType === 'reels' || contentType === 'videos' ? <Film className="w-7 h-7" /> : contentType === 'stories' || contentType === 'instants' ? <Camera className="w-7 h-7" /> : <Image className="w-7 h-7" />}
                             </span>
                           ) : first.type === 'video' ? (
                             <>
@@ -2182,17 +2217,32 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         <div className="p-2.5 flex items-start gap-2">
                           <div className="min-w-0 flex-1">
                             <span className="text-xs font-bold text-white block truncate">@{item.username}</span>
-                            <span className="text-[11px] text-zinc-400 block truncate">{(item.caption || item.text || 'No caption').slice(0, 80)}</span>
-                            <span className="text-[10px] text-zinc-500">{formatExactDateTime(item.createdAt)}</span>
+                            <span className="text-[11px] text-zinc-400 block truncate">{(item.title || item.caption || item.text || 'No caption').slice(0, 80)}</span>
+                            <span className="text-[10px] text-zinc-500">
+                              {formatExactDateTime(item.createdAt)}
+                              {contentType === 'instants' ? ` · sent to ${item.sentTo} (${item.audience === 'close_friends' ? 'close friends' : 'friends'})` : ''}
+                            </span>
                           </div>
-                          <button
-                            onClick={() => handleDeleteContent(item)}
-                            disabled={deletingContentId === item.id}
-                            title="Remove"
-                            className="p-2 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {pinKind && (
+                            <button
+                              onClick={() => handleToggleFeedPin(item)}
+                              disabled={pinningId === item.id}
+                              title={isPinned ? 'Unpin from the Feed' : 'Pin to the top of the Feed'}
+                              className={`p-2 border rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50 ${isPinned ? 'bg-noob text-black border-noob' : 'bg-zinc-900 hover:bg-noob hover:text-black text-zinc-400 border-zinc-800 hover:border-noob'}`}
+                            >
+                              {isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
+                          {contentType !== 'instants' && (
+                            <button
+                              onClick={() => handleDeleteContent(item)}
+                              disabled={deletingContentId === item.id}
+                              title="Remove"
+                              className="p-2 bg-zinc-900 hover:bg-red-600 text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-xl transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -3363,9 +3413,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </>
               )}
             </div>
-            {(contentPreview.item.caption || contentPreview.item.text) && (
+            {(contentPreview.item.title || contentPreview.item.caption || contentPreview.item.text) && (
               <p className="w-full max-w-lg text-xs text-zinc-300 mt-3" onClick={(e) => e.stopPropagation()}>
-                {contentPreview.item.caption || contentPreview.item.text}
+                {contentPreview.item.title || contentPreview.item.caption || contentPreview.item.text}
               </p>
             )}
           </div>

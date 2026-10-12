@@ -121,6 +121,10 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
     return () => clearTimeout(t);
   }, [focusTier]);
 
+  // The Reload switch belongs to the open tab: on the tab of the plan you already have it is that plan's auto-renew, otherwise it is the choice for the plan being bought.
+  const isCurrentPlanTab = !!currentUser.proTier && (currentUser.proBilling === 'yearly' ? 'yearly' : 'monthly') === billing;
+  const reloadOn = isCurrentPlanTab ? currentAutoRenew : autoRenew;
+
   const openAsk = (tier: ProTier) => {
     setAskTier(tier);
     setAskMode(myPoints < fullPrice(tier) && myPoints > 0 ? 'topup' : 'full');
@@ -134,7 +138,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
     if (!askTier || !friend || askBusy) return;
     setAskBusy(true);
     setAskError('');
-    const res = await requestProPayment(friend.id, askTier.id, billing, askMode, autoRenew);
+    const res = await requestProPayment(friend.id, askTier.id, billing, askMode, reloadOn);
     setAskBusy(false);
     if (res.success) {
       setAskSent(`Request sent to @${friend.username}. It stays open for 24 hours, and your NOOB Pro ${askTier.name} starts the moment they pay.`);
@@ -177,7 +181,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
       tierId: tier.id,
       billing,
       couponCode: appliedCoupon?.code,
-      autoRenew
+      autoRenew: reloadOn
     });
     setSubscribingTier(null);
     if (res.success && res.user) {
@@ -215,36 +219,6 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           </button>
         </div>
 
-        {/* Manage an existing subscription's auto-renew — only shown once
-            already subscribed, since there's nothing to "reload" yet. */}
-        {currentUser.proTier && (
-          <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className={`p-2 rounded-xl ${currentAutoRenew ? 'bg-noob/15 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
-                <RefreshCw className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white">{currentUser.proBilling === 'yearly' ? 'Reload Yearly' : 'Reload Monthly'}</h4>
-                <p className="text-[10px] text-zinc-400">
-                  {currentAutoRenew
-                    ? `Your Wallet is billed automatically each ${currentUser.proBilling === 'yearly' ? 'year' : 'month'} to keep Pro active.`
-                    : `Pro ends on ${currentUser.proRenewsAt ? new Date(currentUser.proRenewsAt).toLocaleDateString() : 'your renewal date'} unless you turn this back on.`}
-                </p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer shrink-0">
-              <input
-                type="checkbox"
-                checked={currentAutoRenew}
-                disabled={savingAutoRenew}
-                onChange={handleToggleCurrentAutoRenew}
-                className="sr-only peer"
-              />
-              <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
-            </label>
-          </div>
-        )}
-
         {/* Monthly / Yearly toggle */}
         <div className="flex items-center justify-center gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1">
           <button
@@ -268,23 +242,42 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           </button>
         </div>
 
-        {/* Reload Monthly / Reload Yearly — whether this new subscription auto-renews each
-            month (or year) by deducting NOOB Points from the Wallet, or ends after one period. */}
-        <label className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 cursor-pointer">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-3.5 h-3.5 text-noob" />
-            <span className="text-xs font-semibold text-white">{billing === 'yearly' ? 'Reload Yearly' : 'Reload Monthly'}</span>
-          </div>
-          <div className="relative inline-flex items-center">
-            <input
-              type="checkbox"
-              checked={autoRenew}
-              onChange={(e) => setAutoRenew(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
-          </div>
-        </label>
+        {/* Reload Monthly / Reload Yearly: ONE switch for the tab that is open. On the tab of the plan you already have it manages that
+            plan's auto-renew; on any other tab it decides whether the plan you are about to buy renews by itself. */}
+        {(() => {
+          const word = billing === 'yearly' ? 'Yearly' : 'Monthly';
+          const per = billing === 'yearly' ? 'year' : 'month';
+          const on = reloadOn;
+          return (
+            <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className={`p-2 rounded-xl ${on ? 'bg-noob/15 text-noob' : 'bg-zinc-800 text-zinc-500'}`}>
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Reload {word}</h4>
+                  <p className="text-[10px] text-zinc-400">
+                    {on
+                      ? `Your Wallet is billed automatically each ${per} to keep Pro active.`
+                      : isCurrentPlanTab
+                        ? `Pro ends on ${currentUser.proRenewsAt ? new Date(currentUser.proRenewsAt).toLocaleDateString() : 'your renewal date'} unless you turn this back on.`
+                        : `Pro ends after one ${per} unless you subscribe again.`}
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={on}
+                  disabled={isCurrentPlanTab && savingAutoRenew}
+                  onChange={(e) => (isCurrentPlanTab ? handleToggleCurrentAutoRenew() : setAutoRenew(e.target.checked))}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5.5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-noob" />
+              </label>
+            </div>
+          );
+        })()}
 
         {/* Discount coupon — applies to whichever tier you subscribe to */}
         <div className="space-y-1">

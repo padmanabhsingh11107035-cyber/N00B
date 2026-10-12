@@ -221,6 +221,8 @@ export {
   redeemCouponCode,
   verifyAccount,
   upgradeProTier,
+  fetchNoobDraw,
+  spinNoobDraw,
   toggleProAutoRenew,
   transferNoobPoints,
   fetchMyWalletTransfers,

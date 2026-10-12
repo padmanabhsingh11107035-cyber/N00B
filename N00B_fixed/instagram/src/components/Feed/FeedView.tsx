@@ -27,8 +27,11 @@ import {
   Trophy,
   ShoppingBag,
   Music2,
-  Lightbulb
+  Lightbulb,
+  Gift
 } from 'lucide-react';
+import { openNoobDraw } from '../Draw/drawStore';
+import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
 import type { StoryTrayModel } from '../../utils/storyTray';
@@ -756,6 +759,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
               </button>
             </div>
             <div className="space-y-1">
+              {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
+              <button
+                onClick={() => { setShowNoobMenu(false); openNoobDraw(); }}
+                onPointerDown={preloadNoobDraw}
+                className="force-dark draw-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#9e9cff]/40 active:scale-[0.99] transition-transform"
+                style={{ background: 'linear-gradient(120deg, rgba(158,156,255,0.30), rgba(236,72,153,0.22) 60%, rgba(251,191,36,0.2))' }}
+              >
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c9c6ff] to-[#f0abfc] flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(201,198,255,0.6)]">
+                  <Gift className="w-[18px] h-[18px] text-black" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Draw <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                  <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
+                </div>
+              </button>
               <button
                 onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"

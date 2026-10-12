@@ -14,6 +14,7 @@ import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
 import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
+import type { DrawState, DrawSpinResult } from '../utils/noobDraw';
 import { createE2ee } from '../e2ee/service.ts';
 import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
@@ -3268,6 +3269,26 @@ export async function verifyAccount(payload: {
     return { ...res, user: mapUser(res.user) };
   } catch (err) {
     return failWith(err, 'Verification failed. Please check your credentials.');
+  }
+}
+
+// NOOB Draw (weekly prize spins, migration 20261012000005). null when the page data could not be read (the function is not installed yet / offline).
+export async function fetchNoobDraw(): Promise<DrawState | null> {
+  try {
+    const res = await rpc<DrawState>('noob_draw_state');
+    return res && Array.isArray(res.packs) ? { ...res, history: res.history || [], ticker: res.ticker || [], unlockedAvatars: res.unlockedAvatars || [] } : null;
+  } catch {
+    return null;
+  }
+}
+
+// One spin. The prize is chosen and paid out by the server in the same step; the answer carries the prize and the updated account.
+export async function spinNoobDraw(packId: string): Promise<DrawSpinResult & { user?: User }> {
+  try {
+    const res = await rpc<any>('noob_draw_spin', { p_pack: packId });
+    return { ...res, user: res?.user ? mapUser(res.user) : undefined };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not spin right now. Please try again.') };
   }
 }
 

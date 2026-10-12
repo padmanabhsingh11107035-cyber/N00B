@@ -87,6 +87,7 @@ import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
+import { NoobDrawHost } from './components/Draw/NoobDrawHost';
 import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
@@ -1800,6 +1801,7 @@ export default function App() {
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
       <MiniToast />
       <InAppBrowserHost />
+      <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (

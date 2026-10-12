@@ -106,7 +106,9 @@ import { LiveProfilePictureModal } from './LiveProfilePictureModal';
 import { BlockedAccountsModal } from './BlockedAccountsModal';
 import { HideProfileModal } from '../Modals/HideProfileModal';
 import { SwitchAccountModal } from '../Modals/SwitchAccountModal';
-import { Globe as GlobeIcon, KeyRound } from 'lucide-react';
+import { Globe as GlobeIcon, KeyRound, Gift as GiftIcon } from 'lucide-react';
+import { openNoobDraw } from '../Draw/drawStore';
+import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { EncryptionSettingsModal } from '../Chat/EncryptionModals';
 import { DevicesModal } from './DevicesModal';
 import { AppearanceSetting } from '../Common/AppearanceSetting';
@@ -646,6 +648,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           {/* Dropdown Menu */}
           {showThreeDotsMenu && (
             <div className="liquid-glass absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] rounded-2xl p-2 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-[80vh] overflow-y-auto overscroll-contain">
+              {/* Own account: NOOB Draw, the weekly free prize spins */}
+              {isOwnProfile && (
+                <button
+                  onClick={() => { setShowThreeDotsMenu(false); openNoobDraw(); }}
+                  onPointerDown={preloadNoobDraw}
+                  className="force-dark draw-banner draw-shine relative w-full p-3 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#9e9cff]/40 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(158,156,255,0.30), rgba(236,72,153,0.22) 60%, rgba(251,191,36,0.2))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c9c6ff] to-[#f0abfc] flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(201,198,255,0.6)]">
+                    <GiftIcon className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Draw <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
+                  </div>
+                </button>
+              )}
+
               {/* Universal: Appearance (Dark / Light / System) */}
               <AppearanceSetting />
 

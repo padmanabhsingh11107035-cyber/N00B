@@ -85,6 +85,8 @@ import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
+import { MiniToast } from './components/Common/MiniToast';
+import { sendLike } from './utils/likeSync';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
@@ -198,6 +200,8 @@ export default function App() {
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
+  const postsRef = useRef<Post[]>([]);
+  postsRef.current = posts;
   const [stories, setStories] = useState<Story[]>([]);
   // The home-page story tray: the stories this person may see plus up to 10 random accounts to follow (reshuffled each time the
   // feed loads or is refreshed), worked out in utils/storyTray.ts. The full-screen viewer plays the same list in the same order;
@@ -739,17 +743,15 @@ export default function App() {
   };
 
   // --- POST ACTIONS ---
-  const handleToggleLike = async (postId: string) => {
-    try {
-      const res = await toggleLikePost(postId);
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, isLiked: res.isLiked, likesCount: res.likesCount } : p
-        )
-      );
-    } catch (err) {
-      console.error(err);
-    }
+  // The heart changes at once; the server is told in the background (see utils/likeSync.ts).
+  const handleToggleLike = (postId: string) => {
+    const before = postsRef.current.find((p) => p.id === postId);
+    if (!before) return;
+    const want = !before.isLiked;
+    const show = (isLiked: boolean, likesCount: number) =>
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, isLiked, likesCount } : p)));
+    show(want, Math.max(0, before.likesCount + (want ? 1 : -1)));
+    sendLike(`post:${postId}`, want, () => toggleLikePost(postId), (r) => show(r.isLiked, r.likesCount), () => show(before.isLiked, before.likesCount));
   };
 
   const handleToggleSave = async (postId: string) => {
@@ -1777,6 +1779,7 @@ export default function App() {
 
       {/* 0.6 Push notification soft-ask (website only, shown once per browser) */}
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
+      <MiniToast />
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (

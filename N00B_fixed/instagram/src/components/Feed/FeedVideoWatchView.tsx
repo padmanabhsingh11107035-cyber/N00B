@@ -17,6 +17,7 @@ import {
   togglePostInPlaylist,
   createLongVideoPlaylist
 } from '../../services/api';
+import { sendLike } from '../../utils/likeSync';
 import { LazyVideo } from '../Common/LazyVideo';
 
 interface FeedVideoWatchViewProps {
@@ -76,11 +77,15 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
     }
   };
 
-  const handleToggleLike = async () => {
-    const wasLiked = activePost.isLiked;
-    const res = await toggleLikePost(activePost.id);
-    if ('error' in res) return;
-    setActivePost((p) => ({ ...p, isLiked: res.isLiked, likesCount: res.likesCount, isDisliked: wasLiked ? p.isDisliked : false }));
+  const handleToggleLike = () => {
+    const before = activePost;
+    const want = !before.isLiked;
+    setActivePost((p) => ({ ...p, isLiked: want, likesCount: Math.max(0, p.likesCount + (want ? 1 : -1)), isDisliked: want ? false : p.isDisliked }));
+    sendLike(
+      `post:${before.id}`, want, () => toggleLikePost(before.id),
+      (r) => setActivePost((p) => ({ ...p, isLiked: r.isLiked, likesCount: r.likesCount })),
+      () => setActivePost((p) => ({ ...p, isLiked: before.isLiked, likesCount: before.likesCount, isDisliked: before.isDisliked }))
+    );
   };
 
   const handleToggleDislike = async () => {

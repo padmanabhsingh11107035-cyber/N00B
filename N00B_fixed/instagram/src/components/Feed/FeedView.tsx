@@ -39,8 +39,6 @@ import { CommentsSheet } from './CommentsSheet';
 import { FeedVideoWatchView } from './FeedVideoWatchView';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
-import { StorePage } from '../Store/StorePage';
-import { FoodStallView } from '../Store/FoodStallView';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
@@ -49,6 +47,9 @@ import { takeRestorePage, setResumePage } from '../../utils/pageResume';
 import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 
+// The shop and the food stall (with the map and QR code libraries they use) are only fetched when somebody opens them.
+const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
+const FoodStallView = React.lazy(() => import('../Store/FoodStallView').then((m) => ({ default: m.FoodStallView })));
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
 const GuessTheSongView = React.lazy(() => import('../NoobRooms/GuessTheSongView').then((m) => ({ default: m.GuessTheSongView })));
@@ -905,8 +906,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </React.Suspense>
         </ErrorBoundary>
       )}
-      {showStorePage && <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />}
-      {showFoodStall && <FoodStallView currentUser={currentUser} onClose={() => setShowFoodStall(false)} />}
+      {showStorePage && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <StorePage currentUser={currentUser} onClose={() => setShowStorePage(false)} />
+        </React.Suspense>
+      )}
+      {showFoodStall && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <FoodStallView currentUser={currentUser} onClose={() => setShowFoodStall(false)} />
+        </React.Suspense>
+      )}
       {showNoobAi && <NoobAiPage onClose={() => setShowNoobAi(false)} isMainAdmin={isMainAdmin(currentUser)} onBye={() => setShowNoobAi(false)} />}
       {showSuggestionBox && <SuggestionBoxModal userId={currentUser.id} onClose={() => setShowSuggestionBox(false)} />}
       {showSupportModal && (

@@ -33,6 +33,7 @@ import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type 
 // shares the same chunk as App.tsx's own dynamic import() of this component.
 const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 import type { LiveStreamSummary } from '../../services/api';
+import { sendLike } from '../../utils/likeSync';
 import {
   toggleLikeReel,
   toggleSaveReel,
@@ -282,19 +283,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     };
   }, [showComments, currentReel]);
 
-  const handleToggleLike = async () => {
+  const handleToggleLike = () => {
     if (!currentReel) return;
-    if (!currentReel.isLiked) setLikeBurstKey((k) => k + 1);
-    try {
-      const res = await toggleLikeReel(currentReel.id);
-      setLocalReels(
-        localReels.map((r) =>
-          r.id === currentReel.id ? { ...r, isLiked: res.isLiked, likesCount: res.likesCount } : r
-        )
-      );
-    } catch (err) {
-      console.error(err);
-    }
+    const before = currentReel;
+    const want = !before.isLiked;
+    if (want) setLikeBurstKey((k) => k + 1);
+    const show = (isLiked: boolean, likesCount: number) =>
+      setLocalReels((prev) => prev.map((r) => (r.id === before.id ? { ...r, isLiked, likesCount } : r)));
+    show(want, Math.max(0, before.likesCount + (want ? 1 : -1)));
+    sendLike(`reel:${before.id}`, want, () => toggleLikeReel(before.id), (r) => show(r.isLiked, r.likesCount), () => show(before.isLiked, before.likesCount));
   };
 
   const goToProfile = async (userId: string) => {

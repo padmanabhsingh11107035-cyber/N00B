@@ -33,6 +33,7 @@ import {
   toggleVideoInPlaylist,
   type LiveStreamSummary
 } from '../../services/api';
+import { sendLike } from '../../utils/likeSync';
 import { setVisibleInterval } from '../../utils/visibleInterval';
 import { LazyVideo } from '../Common/LazyVideo';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
@@ -219,9 +220,14 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     setActionVideo((cur) => (cur && cur.id === videoId ? { ...cur, ...patch } : cur));
   };
 
-  const handleToggleLike = async (video: LongVideo) => {
-    const res = await toggleLikeLongVideo(video.id);
-    if ('isLiked' in res) patchVideo(video.id, { isLiked: res.isLiked, likesCount: res.likesCount });
+  const handleToggleLike = (video: LongVideo) => {
+    const want = !video.isLiked;
+    patchVideo(video.id, { isLiked: want, likesCount: Math.max(0, video.likesCount + (want ? 1 : -1)) });
+    sendLike(
+      `video:${video.id}`, want, () => toggleLikeLongVideo(video.id),
+      (r) => patchVideo(video.id, { isLiked: r.isLiked, likesCount: r.likesCount }),
+      () => patchVideo(video.id, { isLiked: video.isLiked, likesCount: video.likesCount })
+    );
   };
 
   const handleToggleSave = async (video: LongVideo) => {

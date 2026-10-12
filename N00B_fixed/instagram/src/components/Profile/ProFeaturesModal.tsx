@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Sparkles, Check, Crown, Loader2, RefreshCw, HeartHandshake, Search, Timer } from 'lucide-react';
+import { X, Sparkles, Check, Crown, Loader2, RefreshCw, HeartHandshake, Search, Timer, Wallet, Ticket } from 'lucide-react';
 import { User } from '../../types';
 import { redeemCouponCode, upgradeProTier, toggleProAutoRenew, requestProPayment, fetchMySentPaymentRequests, cancelPaymentRequest, fetchCurrentUser } from '../../services/api';
 import type { SentPaymentRequest } from '../../services/api';
@@ -71,6 +71,8 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
   const [purchaseMsg, setPurchaseMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentAutoRenew, setCurrentAutoRenew] = useState(currentUser.proAutoRenew !== false);
   const [savingAutoRenew, setSavingAutoRenew] = useState(false);
+  // "Subscribe" opens this sheet: pay from the Wallet, use a coupon, or ask a friend to pay. A "Pay with NOOB Points" link opens it at once.
+  const [payTier, setPayTier] = useState<ProTier | null>(() => (focusTier && !currentUser.proTier ? TIERS.find((t) => t.id === focusTier) ?? null : null));
 
   // ---- ask a friend to pay (the whole price, or only the points I am missing)
   const [askTier, setAskTier] = useState<ProTier | null>(null);
@@ -126,6 +128,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
   const reloadOn = isCurrentPlanTab ? currentAutoRenew : autoRenew;
 
   const openAsk = (tier: ProTier) => {
+    setPayTier(null);
     setAskTier(tier);
     setAskMode(myPoints < fullPrice(tier) && myPoints > 0 ? 'topup' : 'full');
     setFriend(null);
@@ -188,6 +191,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
       onUserUpdated?.(res.user);
       setCurrentAutoRenew(res.user.proAutoRenew !== false);
       setPurchaseMsg({ type: 'success', text: `You're now on the ${tier.name} plan!` });
+      setPayTier(null);
     } else {
       setPurchaseMsg({ type: 'error', text: res.error || 'Could not complete the upgrade.' });
     }
@@ -279,49 +283,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           );
         })()}
 
-        {/* Discount coupon — applies to whichever tier you subscribe to */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Have a coupon code?"
-              value={couponInput}
-              onChange={(e) => {
-                setCouponInput(e.target.value);
-                setCouponMsg(null);
-              }}
-              disabled={!!appliedCoupon}
-              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-noob font-mono disabled:opacity-60"
-            />
-            {appliedCoupon ? (
-              <button
-                onClick={() => {
-                  setAppliedCoupon(null);
-                  setCouponInput('');
-                  setCouponMsg(null);
-                }}
-                className="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-bold cursor-pointer hover:bg-zinc-700"
-              >
-                Remove
-              </button>
-            ) : (
-              <button
-                onClick={handleApplyCoupon}
-                disabled={!couponInput.trim() || checkingCoupon}
-                className="px-3 py-2 rounded-xl bg-zinc-800 text-white text-xs font-bold cursor-pointer hover:bg-zinc-700 disabled:opacity-50"
-              >
-                {checkingCoupon ? '...' : 'Apply'}
-              </button>
-            )}
-          </div>
-          {couponMsg && (
-            <p className={`text-[10px] ${couponMsg.type === 'success' ? 'text-noob' : 'text-rose-400'}`}>
-              {couponMsg.text}
-            </p>
-          )}
-        </div>
-
-        {purchaseMsg && (
+        {purchaseMsg && !payTier && (
           <div
             className={`p-2.5 rounded-xl text-xs font-semibold text-center ${
               purchaseMsg.type === 'success'
@@ -407,34 +369,111 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   ))}
                 </ul>
                 <button
-                  onClick={() => handleSubscribe(tier)}
-                  disabled={subscribingTier === tier.id || isCurrentTier}
+                  onClick={() => { setPurchaseMsg(null); setPayTier(tier); }}
+                  disabled={isCurrentTier}
                   className={`w-full py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
                     tier.highlight
                       ? 'bg-violet-500 text-white hover:bg-violet-400'
                       : 'bg-white text-black hover:bg-zinc-200'
                   }`}
                 >
-                  {subscribingTier === tier.id ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : isCurrentTier ? (
-                    'Current Plan'
-                  ) : (
-                    `Subscribe to ${tier.name}`
-                  )}
+                  {isCurrentTier ? 'Current Plan' : `Subscribe to ${tier.name}`}
                 </button>
-                {!isCurrentTier && (
-                  <button
-                    onClick={() => openAsk(tier)}
-                    className="w-full mt-2 py-2 rounded-xl text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <HeartHandshake className="w-3.5 h-3.5" /> Ask a friend to pay
-                  </button>
-                )}
               </div>
             );
           })}
         </div>
+
+        {/* Payment methods: opened by "Subscribe" */}
+        {payTier && (() => {
+          const price = priceFor(payTier);
+          const enough = myPoints >= price.display;
+          const busy = subscribingTier === payTier.id;
+          const word = billing === 'yearly' ? 'Yearly' : 'Monthly';
+          return (
+            <div className="fixed inset-0 z-[110] bg-black/80 flex items-end sm:items-center justify-center p-3" onClick={() => { if (!busy) setPayTier(null); }}>
+              <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-white">How do you want to pay?</h3>
+                  <button onClick={() => setPayTier(null)} disabled={busy} className="text-zinc-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white">NOOB Pro {payTier.name} · {word.toLowerCase()}</p>
+                    <p className="text-[10px] text-zinc-400">Reload {word}: {reloadOn ? 'on' : 'off'}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {appliedCoupon && <span className="text-[10px] text-zinc-500 line-through block">{price.base.toLocaleString()}</span>}
+                    <span className="text-sm font-black text-white">{price.display.toLocaleString()}</span>
+                    <span className="text-[10px] text-zinc-400 ml-1">noobs{price.suffix}</span>
+                  </div>
+                </div>
+
+                {purchaseMsg && purchaseMsg.type === 'error' && (
+                  <p className="p-2.5 rounded-xl text-xs font-semibold text-center bg-rose-500/10 text-rose-400 border border-rose-500/30">{purchaseMsg.text}</p>
+                )}
+
+                {/* 1. Wallet */}
+                <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                  <div className="flex items-center gap-2"><Wallet className="w-4 h-4 text-noob" /><span className="text-xs font-bold text-white">Pay from my Wallet</span></div>
+                  <p className="text-[11px] text-zinc-400">
+                    Your Wallet has <span className="text-white font-bold">{myPoints.toLocaleString()}</span> noobs.
+                    {enough ? '' : ` You need ${(price.display - myPoints).toLocaleString()} more — use a coupon or ask a friend below.`}
+                  </p>
+                  <button
+                    onClick={() => handleSubscribe(payTier)}
+                    disabled={!enough || busy}
+                    className="w-full py-2.5 rounded-xl bg-white text-black text-xs font-extrabold hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `Pay ${price.display.toLocaleString()} noobs`}
+                  </button>
+                </div>
+
+                {/* 2. Coupon */}
+                <div className="p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+                  <div className="flex items-center gap-2"><Ticket className="w-4 h-4 text-violet-300" /><span className="text-xs font-bold text-white">Use a coupon code</span></div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Have a coupon code?"
+                      value={couponInput}
+                      onChange={(e) => { setCouponInput(e.target.value); setCouponMsg(null); }}
+                      disabled={!!appliedCoupon}
+                      className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-noob font-mono disabled:opacity-60"
+                    />
+                    {appliedCoupon ? (
+                      <button
+                        onClick={() => { setAppliedCoupon(null); setCouponInput(''); setCouponMsg(null); }}
+                        className="px-3 py-2 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-bold cursor-pointer hover:bg-zinc-700"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={!couponInput.trim() || checkingCoupon}
+                        className="px-3 py-2 rounded-xl bg-zinc-800 text-white text-xs font-bold cursor-pointer hover:bg-zinc-700 disabled:opacity-50"
+                      >
+                        {checkingCoupon ? '...' : 'Apply'}
+                      </button>
+                    )}
+                  </div>
+                  {couponMsg && <p className={`text-[10px] ${couponMsg.type === 'success' ? 'text-noob' : 'text-rose-400'}`}>{couponMsg.text}</p>}
+                </div>
+
+                {/* 3. Ask a friend */}
+                <button
+                  onClick={() => openAsk(payTier)}
+                  className="w-full p-3.5 rounded-2xl text-left bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 cursor-pointer flex items-center gap-2.5"
+                >
+                  <HeartHandshake className="w-4 h-4 text-amber-300 shrink-0" />
+                  <span className="text-xs font-bold text-amber-300">Ask a friend to pay<span className="block text-[10px] font-normal text-zinc-400">They pay all of it, or only the noobs you are missing.</span></span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Ask a friend to pay: the sheet */}
         {askTier && (

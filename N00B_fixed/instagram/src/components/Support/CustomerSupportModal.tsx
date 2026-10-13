@@ -33,6 +33,7 @@ import {
   Star,
   LogOut
 } from 'lucide-react';
+import { createSpeaker } from '../../utils/supportSpeech';
 import { User } from '../../types';
 import {
   askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary, fetchUsers,
@@ -262,6 +263,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const micPermissionDeniedRef = useRef(false);
   const stallTimerRef = useRef<any>(null);
   const stalledStopRef = useRef(false);
+  // The CURRENT value of the two voice switches. A function made earlier (for example the microphone's "I heard you" callback, which lives for the whole
+  // listening session) must see today's choice, not the one from the moment it was made: that is why "voice off" did not always mean off, or on.
+  const voiceEnabledRef = useRef(voiceEnabled);
+  const isSpeakerOnRef = useRef(isSpeakerOn);
+  voiceEnabledRef.current = voiceEnabled;
+  isSpeakerOnRef.current = isSpeakerOn;
+  const speakerRef = useRef<ReturnType<typeof createSpeaker> | null>(null);
   // window.speechSynthesis.getVoices() famously returns an empty list until the browser has
   // finished loading its voice roster asynchronously — if speakText() calls it too early (which
   // it did, right when the call greeting fires), no voice ever gets chosen and the browser falls
@@ -315,6 +323,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
   useEffect(() => {
     return () => {
+      speakerRef.current?.stop();
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
@@ -332,128 +341,75 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     };
   }, []);
 
-  // Soft Indian-accented FEMALE TTS narrator (used in the voice call)
+  // Puts the microphone fully OFF. On an iPhone (and on some Androids) the voice can not be heard properly while the microphone is listening: the phone
+  // switches to "phone call" sound and the answer goes to the earpiece, very quietly, or not at all. That is why it only spoke once the microphone had been
+  // muted. So the microphone is switched off BEFORE the assistant speaks, and switched on again when it has finished.
+  const stopMicNow = () => {
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (stallTimerRef.current) { clearTimeout(stallTimerRef.current); stallTimerRef.current = null; }
+    stalledStopRef.current = false;
+    const rec = recognitionRef.current;
+    if (rec) {
+      rec.onresult = null;   // an old listening session must never answer, or restart itself, after this
+      rec.onend = null;
+      try { if (rec.abort) rec.abort(); else rec.stop(); } catch (e) {}
+    }
+    recognitionRef.current = null;
+    setIsListening(false);
+  };
+  const resumeListeningSoon = (ms = 450) => {
+    setTimeout(() => {
+      if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current && !isSpeakingRef.current) startVoiceListening();
+    }, ms);
+  };
+
+  // The assistant's voice: a woman's voice, the most natural one this phone has for the language of each sentence (Hindi in Hindi, English in the Indian
+  // accent), said sentence by sentence with small pauses, and with no punctuation ever read out aloud (see utils/supportSpeech.ts).
   const speakText = (text: string, msgId?: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-
+    speakerRef.current?.stop();
     window.speechSynthesis.cancel();
-    if (!voiceEnabled) return;
-
-    // Clean emojis and markdown characters for clear speech — order matters: turn a symbol into a
-    // spoken WORD before the generic strip below would otherwise just delete it and leave an
-    // unnatural gap (e.g. "order #42" reading as "order 42" instead of "order number 42").
-    const cleanSpeech = text
-      .replace(/#(\d)/g, 'number $1')
-      .replace(/₹\s?(\d)/g, 'rupees $1')
-      .replace(/[#*_`~🎮✨🎵📸🔐👋✏️💬🛡️👑•]/g, '')
-      .replace(/@\w+/g, (match) => match.replace('@', 'at '))
-      .trim();
-
-    const utterance = new SpeechSynthesisUtterance(cleanSpeech);
-    // Soft, gentle conversational cadence
-    utterance.rate = 0.94;
-    utterance.pitch = 1.08;
-    utterance.volume = 0.88;
-
-    // Prefer a fresh read, but fall back to the pre-warmed cache from mount — on some browsers
-    // getVoices() can still come back empty right at this exact moment even after voiceschanged
-    // has already fired once before, and an empty list here is exactly what causes the flat,
-    // robotic default voice.
-    const freshVoices = window.speechSynthesis.getVoices();
-    if (freshVoices.length) cachedVoicesRef.current = freshVoices;
-    const voices = freshVoices.length ? freshVoices : cachedVoicesRef.current;
-    const isIndian = (v: SpeechSynthesisVoice) =>
-      v.lang === 'en-IN' || v.lang.startsWith('hi') || v.name.toLowerCase().includes('india') || v.name.toLowerCase().includes('hindi');
-    // Only unambiguous female names/markers — "Ravi" and "Prabhat" (both
-    // common male Indian names) were previously in this list by mistake,
-    // which could silently pick a male voice.
-    const FEMALE_NAMES = [
-      'heera', 'veena', 'lekha', 'neerja', 'kavya', 'samantha', 'victoria', 'karen', 'moira', 'tessa',
-      'fiona', 'susan', 'zira', 'aria', 'jenny', 'salli', 'joanna', 'kendra', 'kimberly', 'ivy', 'zoe',
-      'emma', 'amy', 'nicole', 'female'
-    ];
-    const isFemale = (v: SpeechSynthesisVoice) => {
-      const n = v.name.toLowerCase();
-      return FEMALE_NAMES.some((name) => n.includes(name));
-    };
-    const isMale = (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('male') && !isFemale(v);
-
-    const englishVoices = voices.filter((v) => v.lang.startsWith('en') || isIndian(v));
-    // Prefer a network ("remote") voice over a local one: on Windows, Chrome/Edge only expose the
-    // old built-in SAPI voices (e.g. "Microsoft Zira Desktop") as local — these read in a flat,
-    // clipped, syllable-by-syllable cadence that sounds like it's reading word by word. Google's
-    // network voices ("Google UK English Female", etc.) sound like a real, fluent sentence and are
-    // usually reported later in the same voices list, so a plain .find() over the whole list tends
-    // to pick the robotic local one first unless we explicitly prefer non-local voices.
-    const pickFrom = (pool: SpeechSynthesisVoice[]) =>
-      pool.find((v) => isIndian(v) && isFemale(v) && !isMale(v)) ||
-      pool.find((v) => isFemale(v) && !isMale(v)) ||
-      pool.find((v) => isIndian(v) && !isMale(v)) ||
-      pool.find((v) => !isMale(v));
-    const remoteVoices = englishVoices.filter((v) => !v.localService);
-    const localVoices = englishVoices.filter((v) => v.localService);
-    const chosenVoice = pickFrom(remoteVoices) || pickFrom(localVoices) || englishVoices[0];
-
-    if (chosenVoice) {
-      utterance.voice = chosenVoice;
+    if (!voiceEnabledRef.current) return;
+    if (!speakerRef.current) {
+      speakerRef.current = createSpeaker({
+        synth: window.speechSynthesis as any,
+        Utterance: (window as any).SpeechSynthesisUtterance,
+        setTimer: (fn, ms) => window.setTimeout(fn, ms),
+        clearTimer: (id) => window.clearTimeout(id as number)
+      });
     }
-
-    // Whichever fires first (the real event, or the poll below) wins; guarded so the mic is
-    // never reopened twice for the same utterance.
-    let settled = false;
-    const afterSpeaking = () => {
-      if (settled) return;
-      settled = true;
-      setIsSpeaking(false);
-      setCurrentlySpeakingMsgId(null);
-      // Auto-resume microphone listening after AI finishes speaking
-      if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current) {
-        setTimeout(() => {
-          startVoiceListening();
-        }, 400);
+    // the very first thing said in a call (the greeting) is said at once, inside the tap that started the call; later answers wait a moment
+    // after the microphone has been switched off, so the phone has time to change its sound over
+    const delay = recognitionRef.current ? 350 : 0;
+    stopMicNow();
+    isSpeakingRef.current = true;           // no listening session may start while the answer is being said
+    setIsSpeaking(true);
+    if (msgId) setCurrentlySpeakingMsgId(msgId);
+    speakerRef.current.speak(text, {
+      startDelayMs: delay,
+      lang: 'en-IN',
+      onEnd: () => {
+        isSpeakingRef.current = false;
+        setIsSpeaking(false);
+        setCurrentlySpeakingMsgId(null);
+        if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current) resumeListeningSoon(400);   // listen again
       }
-    };
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      if (msgId) setCurrentlySpeakingMsgId(msgId);
-      // Pause microphone listening so AI does not transcribe its own audio output
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-      setIsListening(false);
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    };
-
-    utterance.onend = afterSpeaking;
-    utterance.onerror = afterSpeaking;
-
-    window.speechSynthesis.speak(utterance);
-
-    // Chrome/Edge sometimes never fire onend/onerror for an utterance queued immediately after a
-    // cancel() — a known engine race, and exactly what happens here every time (this function
-    // always calls cancel() right before speak()). Without a backstop, the mic would just never
-    // reopen and the call would silently need a typed message to "unstick" it. Poll the real
-    // synthesis state as a guarantee, independent of whether the events ever fire.
-    const pollDone = () => {
-      if (settled) return;
-      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-        afterSpeaking();
-      } else {
-        setTimeout(pollDone, 200);
-      }
-    };
-    setTimeout(pollDone, 300);
+    });
   };
 
   const stopSpeaking = () => {
+    speakerRef.current?.stop();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+    isSpeakingRef.current = false;
     setIsSpeaking(false);
     setCurrentlySpeakingMsgId(null);
+  };
+  // the person silences the voice in the middle of a call: stop talking, and listen again
+  const interruptSpeech = () => {
+    stopSpeaking();
+    if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current) resumeListeningSoon(400);
   };
 
   // Continuous speech recognition for hands-free AI voice calling
@@ -498,7 +454,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      recognition.lang = 'en-IN';
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -771,6 +727,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     // Speak the greeting BEFORE anything else — any `await` here would break
     // the user-gesture chain that unlocked speechSynthesis above.
     speakText(greeting);
+    if (!voiceEnabledRef.current) resumeListeningSoon(300);   // the voice is switched off: no greeting to wait for, just listen
 
     // Note: we deliberately do NOT call getUserMedia() here. SpeechRecognition
     // requests and manages its own microphone access internally — grabbing a
@@ -802,9 +759,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
   // Submit and answer an issue live during the voice call
   const handleAskCallQuestion = async (queryText: string) => {
-    if (!queryText.trim() || isCallProcessing) return;
+    if (!queryText.trim() || isCallProcessingRef.current) return;
     const cleanQuery = queryText.trim();
     setCallInputText('');
+    isCallProcessingRef.current = true;
+    stopMicNow();             // the microphone is off while the answer is fetched and said (see stopMicNow)
     setIsCallProcessing(true);
     setMicStalled(false);
 
@@ -820,8 +779,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const text = goodbyeMessage(currentUser.username, 'call');
       setCallTranscript((prev) => [...prev, { sender: 'ai' as const, text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
       setLastAiReply(text);
-      const speak = isSpeakerOn && voiceEnabled;
+      const speak = isSpeakerOnRef.current && voiceEnabledRef.current;
       if (speak) speakText(goodbyeSpoken(currentUser.username));
+      isCallProcessingRef.current = false;
       setIsCallProcessing(false);
       endCallByRequest(speak);
       return;
@@ -841,11 +801,13 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       setCallTranscript((prev) => [...prev, aiEntry]);
       setLastAiReply(aiReply);
 
-      if (isSpeakerOn && voiceEnabled) {
+      if (isSpeakerOnRef.current && voiceEnabledRef.current) {
         speakText(aiReply);
+      } else if (response?.action !== 'END_SESSION') {
+        resumeListeningSoon();        // nothing to say out loud: just listen again
       }
       // (the assistant understood a request to end the call in another language)
-      if (response?.action === 'END_SESSION') endCallByRequest(isSpeakerOn && voiceEnabled);
+      if (response?.action === 'END_SESSION') endCallByRequest(isSpeakerOnRef.current && voiceEnabledRef.current);
     } catch (err) {
       const fallbackReply = `I understand your question regarding ${cleanQuery}. On NOOB, all features operate instantly in real-time. You have complete data control and 24/7 access to mini-games, music, and encrypted media routing.`;
       setCallTranscript((prev) => [
@@ -857,8 +819,10 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         }
       ]);
       setLastAiReply(fallbackReply);
-      if (isSpeakerOn && voiceEnabled) speakText(fallbackReply);
+      if (isSpeakerOnRef.current && voiceEnabledRef.current) speakText(fallbackReply);
+      else resumeListeningSoon();
     } finally {
+      isCallProcessingRef.current = false;
       setIsCallProcessing(false);
     }
   };
@@ -995,7 +959,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
             {/* Voice Toggle */}
             <button
               onClick={() => {
-                if (voiceEnabled) stopSpeaking();
+                if (voiceEnabled) interruptSpeech();
                 setVoiceEnabled(!voiceEnabled);
               }}
               title={voiceEnabled ? 'Mute AI Voice' : 'Enable AI Voice'}
@@ -1920,7 +1884,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
               {/* Speaker On / Off */}
               <button
                 type="button"
-                onClick={() => setIsSpeakerOn(!isSpeakerOn)}
+                onClick={() => { const on = !isSpeakerOn; setIsSpeakerOn(on); if (!on) interruptSpeech(); }}
                 className={`p-3.5 rounded-full border transition-all cursor-pointer ${
                   isSpeakerOn
                     ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'

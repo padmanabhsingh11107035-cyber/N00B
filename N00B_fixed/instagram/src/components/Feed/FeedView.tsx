@@ -919,7 +919,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
       )}
       {showOurTeam && (
         <React.Suspense fallback={<LazyFallback />}>
-          <OurTeamPage currentUser={currentUser} onClose={() => setShowOurTeam(false)} />
+          <OurTeamPage
+            currentUser={currentUser}
+            onClose={() => setShowOurTeam(false)}
+            onOpenProfile={(m) => {
+              if (!m.userId || !onNavigateToProfile) return;
+              const known = allUsers.find((u) => u.id === m.userId);
+              setShowOurTeam(false);
+              onNavigateToProfile(known || ({ id: m.userId, username: m.username || '', displayName: m.name, avatar: m.avatar || '' } as unknown as User));
+            }}
+          />
         </React.Suspense>
       )}
       {showDailyNoob && (

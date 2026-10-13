@@ -9,6 +9,15 @@ export interface TeamMember {
   photo: string | null;     // the picture's address, ready to show
   photoKey: string | null;  // the stored file ("team/…"), what is saved back when the member is edited
   position: number;
+  // The NOOB account behind the card (everyone who joined through the form has one; the administrator can link anyone). null: none.
+  userId: string | null;
+  username: string | null;
+  avatar: string | null;
+  isVerified: boolean;
+  isMe: boolean;
+  following: boolean;      // I follow this person
+  requested: boolean;      // I asked to follow them (private account)
+  blocked: boolean;        // either of us blocked the other: no Follow button
 }
 
 export const TEAM_LIMITS = { name: 80, qualification: 160, description: 1200 } as const;
@@ -59,3 +68,44 @@ export function validateTeamForm(f: TeamForm): string | null {
   if (description.length > TEAM_LIMITS.description) return `The description can be at most ${TEAM_LIMITS.description} characters.`;
   return null;
 }
+
+// ---- the link people open to join the team page (shared by the administrator)
+export const TEAM_JOIN_LINK = 'https://nooob.xyz/?team=join';
+export const teamJoinRequested = (search: string): boolean => {
+  try { return new URLSearchParams(search).get('team') === 'join'; } catch { return false; }
+};
+
+// "Follow on NOOB" for a card: what the button says, whether there is one, and what a tap does.
+export type FollowState = 'none' | 'follow' | 'requested' | 'following';
+export function followState(m: Pick<TeamMember, 'userId' | 'isMe' | 'blocked' | 'following' | 'requested'>): FollowState {
+  if (!m.userId || m.isMe || m.blocked) return 'none';
+  if (m.following) return 'following';
+  if (m.requested) return 'requested';
+  return 'follow';
+}
+export const followLabel = (state: FollowState): string => (state === 'following' ? 'Following' : state === 'requested' ? 'Requested' : state === 'follow' ? 'Follow on NOOB' : '');
+
+// ---- applications (the person's own, and what the administrator sees)
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+export interface MyTeamApplication {
+  open: boolean;           // applications are being taken
+  onTeam: boolean;         // already on the page
+  application: { status: ApplicationStatus; name: string; qualification: string; description: string; photo: string | null; photoUrl: string | null } | null;
+}
+export interface TeamApplicationRow {
+  id: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar: string | null;
+  name: string;
+  qualification: string;
+  description: string;
+  photo: string | null;
+  photoUrl: string | null;
+  status: ApplicationStatus;
+  createdAt: string;
+  decidedAt: string | null;
+  onTeam: boolean;
+}
+export interface TeamAdminState { open: boolean; autoPublish: boolean; applications: TeamApplicationRow[] }

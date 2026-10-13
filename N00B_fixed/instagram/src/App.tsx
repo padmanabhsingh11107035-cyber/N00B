@@ -88,6 +88,9 @@ import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Commo
 import { MiniToast } from './components/Common/MiniToast';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
+import { TeamJoinHost } from './components/Team/TeamJoinHost';
+import { openTeamJoin, rememberTeamJoin, hasRememberedTeamJoin, forgetTeamJoin } from './components/Team/teamJoinStore';
+import { teamJoinRequested } from './utils/ourTeam';
 import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
@@ -309,6 +312,8 @@ export default function App() {
   // "Pay with NOOB Points" link from an email (?pro=<plan>&billing=<monthly|yearly>): opens that plan's payment page once signed in
   const [proLink, setProLink] = useState<{ tier: string; billing: 'monthly' | 'yearly' } | null>(null);
   const [pendingJoinTeam, setPendingJoinTeam] = useState(false);
+  // The shared "join the Our Team page" link (?team=join): opens the form once someone is signed in (it is remembered for a day, in case sign-in leaves the page and comes back)
+  const [pendingTeamPageJoin, setPendingTeamPageJoin] = useState(false);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
   const [sessionEndedNotice, setSessionEndedNotice] = useState<string | null>(null);
 
@@ -355,6 +360,13 @@ export default function App() {
 
         if (joinParam === 'team') {
           setPendingJoinTeam(true);
+        }
+
+        if (teamJoinRequested(window.location.search)) {
+          rememberTeamJoin();
+          setPendingTeamPageJoin(true);
+        } else if (hasRememberedTeamJoin()) {
+          setPendingTeamPageJoin(true);
         }
 
         if (postParam) {
@@ -452,6 +464,16 @@ export default function App() {
   // Same deep-link pattern as the shared-profile one above: only resolved once someone is actually
   // logged in (a login/signup can happen first), lands on Explore with the "apply to join us" form
   // already open.
+  useEffect(() => {
+    if (!pendingTeamPageJoin || !currentUser) return;
+    setPendingTeamPageJoin(false);
+    forgetTeamJoin();
+    openTeamJoin();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('team');
+    window.history.replaceState({}, '', url.toString());
+  }, [pendingTeamPageJoin, currentUser]);
+
   useEffect(() => {
     if (!pendingJoinTeam || !currentUser) return;
     setActiveTab('explore');
@@ -1802,6 +1824,7 @@ export default function App() {
       <MiniToast />
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
+      <TeamJoinHost currentUser={currentUser} />
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (

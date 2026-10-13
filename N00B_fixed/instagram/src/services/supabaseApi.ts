@@ -15,7 +15,7 @@ import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
 import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 import type { DrawState, DrawSpinResult } from '../utils/noobDraw';
-import type { TeamMember } from '../utils/ourTeam';
+import type { TeamMember, MyTeamApplication, TeamAdminState, TeamApplicationRow, ApplicationStatus } from '../utils/ourTeam';
 import { isTeamPhotoKey } from '../utils/ourTeam';
 import { createE2ee } from '../e2ee/service.ts';
 import { bindMessages } from '../e2ee/messages.ts';
@@ -3299,7 +3299,10 @@ const mapTeam = (rows: any): TeamMember[] => (Array.isArray(rows) ? rows : [])
   .filter((m) => m && m.id)
   .map((m): TeamMember => ({
     id: String(m.id), name: String(m.name || ''), qualification: String(m.qualification || ''), description: String(m.description || ''),
-    photo: m.photo ? resolveMedia(String(m.photo)) : null, photoKey: m.photo ? String(m.photo) : null, position: Number(m.position) || 0
+    photo: m.photo ? resolveMedia(String(m.photo)) : null, photoKey: m.photo ? String(m.photo) : null, position: Number(m.position) || 0,
+    userId: m.userId ? String(m.userId) : null, username: m.username ? String(m.username) : null,
+    avatar: m.avatar ? resolveMedia(String(m.avatar)) : null, isVerified: !!m.isVerified, isMe: !!m.isMe,
+    following: !!m.following, requested: !!m.requested, blocked: !!m.blocked
   }));
 
 // null when the list could not be read (the function is not installed yet / offline), so the page can say so instead of showing "empty".
@@ -3331,10 +3334,12 @@ export const discardTeamPhoto = (key: string | null | undefined): void => dropTe
 
 export async function saveTeamMember(payload: {
   id?: string | null; name: string; qualification: string; description: string; photoKey: string | null; replacedPhotoKey?: string | null;
+  username?: string | null;   // the NOOB User ID this card belongs to (blank: none), so "Follow on NOOB" works for them
 }): Promise<{ success: boolean; team?: TeamMember[]; error?: string }> {
   try {
     const res = await rpc<any>('admin_team_save', {
-      p_id: payload.id || null, p_name: payload.name, p_qualification: payload.qualification, p_description: payload.description, p_photo: payload.photoKey
+      p_id: payload.id || null, p_name: payload.name, p_qualification: payload.qualification, p_description: payload.description, p_photo: payload.photoKey,
+      p_username: (payload.username || '').trim() || null
     });
     if (payload.replacedPhotoKey && payload.replacedPhotoKey !== payload.photoKey) dropTeamPhoto(payload.replacedPhotoKey);
     return { success: true, team: mapTeam(res?.team) };
@@ -3343,13 +3348,38 @@ export async function saveTeamMember(payload: {
   }
 }
 
-export async function deleteTeamMember(id: string): Promise<{ success: boolean; team?: TeamMember[]; error?: string }> {
+// The stored photo files of someone erased from the page are deleted for real (SQL cannot do that; the Storage API can). Awaited, so that a problem
+// can be told to the administrator instead of leaving a photo behind unnoticed. null: all well.
+const removeTeamFiles = async (keys: unknown): Promise<string | null> => {
+  const list = (Array.isArray(keys) ? keys : []).filter((k): k is string => isTeamPhotoKey(k as string));
+  if (list.length === 0) return null;
+  try {
+    const { error } = await supabase.storage.from(MEDIA_BUCKET).remove(list);
+    return error ? 'their photo file could not be deleted from storage' : null;
+  } catch {
+    return 'their photo file could not be deleted from storage';
+  }
+};
+
+// Removes a person from the page for good: the card, everything they filled in (the joining form too), and their photo files. Never their account.
+export async function deleteTeamMember(id: string): Promise<{ success: boolean; team?: TeamMember[]; state?: TeamAdminState; warning?: string; error?: string }> {
   try {
     const res = await rpc<any>('admin_team_delete', { p_id: id });
-    dropTeamPhoto(res?.removedPhoto);
-    return { success: true, team: mapTeam(res?.team) };
+    const warning = await removeTeamFiles(res?.removedPhotos);
+    return { success: true, team: mapTeam(res?.team), state: mapTeamAdmin(res?.admin), warning: warning || undefined };
   } catch (err) {
     return { success: false, error: errorText(err, 'The team member could not be removed. Please try again.') };
+  }
+}
+
+// Deletes what someone sent through the joining form, whatever its state (and takes them off the page if they are on it).
+export async function eraseTeamApplication(id: string): Promise<{ success: boolean; team?: TeamMember[]; state?: TeamAdminState; warning?: string; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_application_erase', { p_application: id });
+    const warning = await removeTeamFiles(res?.removedPhotos);
+    return { success: true, team: mapTeam(res?.team), state: mapTeamAdmin(res?.admin), warning: warning || undefined };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'That application could not be deleted. Please try again.') };
   }
 }
 
@@ -3359,6 +3389,73 @@ export async function moveTeamMember(id: string, direction: 'up' | 'down'): Prom
     return { success: true, team: mapTeam(res?.team) };
   } catch (err) {
     return { success: false, error: errorText(err, 'The team could not be reordered. Please try again.') };
+  }
+}
+
+// ---- joining the team page from the link (migration 20261013000002)
+const mapApplicationRow = (a: any): TeamApplicationRow => ({
+  id: String(a.id), userId: String(a.userId), username: String(a.username || ''), displayName: String(a.displayName || a.username || ''),
+  avatar: a.avatar ? resolveMedia(String(a.avatar)) : null, name: String(a.name || ''), qualification: String(a.qualification || ''),
+  description: String(a.description || ''), photo: a.photo ? String(a.photo) : null, photoUrl: a.photo ? resolveMedia(String(a.photo)) : null,
+  status: (['pending', 'approved', 'rejected'].includes(a.status) ? a.status : 'pending') as ApplicationStatus,
+  createdAt: String(a.createdAt || ''), decidedAt: a.decidedAt ? String(a.decidedAt) : null, onTeam: !!a.onTeam
+});
+const mapTeamAdmin = (res: any): TeamAdminState => ({
+  open: res?.settings?.open !== false, autoPublish: res?.settings?.autoPublish === true,
+  applications: (Array.isArray(res?.applications) ? res.applications : []).filter((a: any) => a && a.id).map(mapApplicationRow)
+});
+
+// What the join form needs: are applications open, am I already on the page, what I sent before. null when it could not be read.
+export async function fetchMyTeamApplication(): Promise<MyTeamApplication | null> {
+  try {
+    const res = await rpc<any>('team_my_application');
+    const a = res?.application;
+    return {
+      open: res?.open !== false, onTeam: !!res?.onTeam,
+      application: a ? {
+        status: (['pending', 'approved', 'rejected'].includes(a.status) ? a.status : 'pending') as ApplicationStatus,
+        name: String(a.name || ''), qualification: String(a.qualification || ''), description: String(a.description || ''),
+        photo: a.photo ? String(a.photo) : null, photoUrl: a.photo ? resolveMedia(String(a.photo)) : null
+      } : null
+    };
+  } catch {
+    return null;
+  }
+}
+
+// The account (User ID, account ID) is the signed-in one; it is never sent from the phone.
+export async function submitTeamJoin(payload: { name: string; qualification: string; description: string; photoKey: string | null }): Promise<{ success: boolean; status?: 'pending' | 'approved'; error?: string }> {
+  try {
+    const res = await rpc<any>('team_apply', { p_name: payload.name, p_qualification: payload.qualification, p_description: payload.description, p_photo: payload.photoKey });
+    return { success: true, status: res?.status === 'approved' ? 'approved' : 'pending' };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Your application could not be sent. Please try again.') };
+  }
+}
+
+export async function fetchTeamApplications(): Promise<{ success: boolean; state?: TeamAdminState; error?: string }> {
+  try {
+    return { success: true, state: mapTeamAdmin(await rpc<any>('admin_team_page_applications')) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The applications could not load.') };
+  }
+}
+
+export async function decideTeamApplication(id: string, approve: boolean): Promise<{ success: boolean; state?: TeamAdminState; team?: TeamMember[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_decide', { p_application: id, p_approve: approve });
+    return { success: true, state: mapTeamAdmin(res?.admin), team: mapTeam(res?.team) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'That did not work. Please try again.') };
+  }
+}
+
+export async function saveTeamSettings(settings: { open?: boolean; autoPublish?: boolean }): Promise<{ success: boolean; state?: TeamAdminState; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_settings', { p_open: settings.open ?? null, p_auto_publish: settings.autoPublish ?? null });
+    return { success: true, state: mapTeamAdmin(res) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The setting could not be saved.') };
   }
 }
 

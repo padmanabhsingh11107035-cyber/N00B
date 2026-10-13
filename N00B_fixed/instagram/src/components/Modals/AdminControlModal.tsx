@@ -82,7 +82,8 @@ import {
   fetchAdminExplorePins, adminSetExplorePin,
   adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
   subscribeToOnlinePresence,
-  fetchDailyChallenge, adminSetDailyChallenge, fetchDailyChallengeEntries, adminAssignDailyChallengeWinners
+  fetchDailyChallenge, adminSetDailyChallenge, fetchDailyChallengeEntries, adminAssignDailyChallengeWinners,
+  fetchTeamApplications
 } from '../../services/api';
 import { usePinnedFeedItems, toggleFeedPin, refreshPinnedFeed } from '../../services/pinnedFeed';
 import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplication, AccountActionRequest, LiveLoungeCoupon, NoobAiFeedbackItem, PresenceEntry } from '../../services/api';
@@ -139,9 +140,12 @@ function describeAudit(e: AdminAuditEntry): string {
       ].filter(Boolean);
       return `${who} changed platform settings${parts.length ? ': ' + parts.join(', ') : ''}.`;
     }
+    case 'team_application_approved': return `${who} added ${d.name || target || 'an applicant'} to the Our Team page.`;
+    case 'team_application_rejected': return `${who} turned down ${d.name || target || 'an applicant'} for the Our Team page.`;
+    case 'team_settings_changed': return `${who} changed the Our Team page settings${d.open === true ? ': applications OPEN' : d.open === false ? ': applications CLOSED' : ''}${d.autoPublish === true ? ': publish straight away ON' : d.autoPublish === false ? ': publish straight away OFF' : ''}.`;
     case 'team_member_added': return `${who} added ${d.name || 'someone'} to the Our Team page.`;
     case 'team_member_updated': return `${who} edited ${d.name || 'a member'} on the Our Team page.`;
-    case 'team_member_removed': return `${who} removed ${d.name || 'a member'} from the Our Team page.`;
+    case 'team_member_removed': return `${who} removed ${target || 'someone'} from the Our Team page and deleted what they filled in.`;
     case 'team_member_moved': return `${who} moved ${d.name || 'a member'} ${d.direction === 'up' ? 'up' : 'down'} on the Our Team page.`;
     case 'explore_pin': return `${who} pinned ${target || 'an account'} to the top of Explore.`;
     case 'explore_unpin': return `${who} unpinned ${target || 'an account'} from Explore.`;
@@ -161,6 +165,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const canManageStore = can(currentUser, 'manage_store');
   const canOpenAccounts = canViewAccounts || canSuspend || canDelete || canAdjustPoints || canHandleReports;
 
+  const [teamPendingCount, setTeamPendingCount] = useState(0);   // people waiting to be added to the Our Team page
+  // the number on the "Our Team" tab: people who sent the joining form and wait for a yes (read once when the console opens)
+  useEffect(() => {
+    if (!main) return;
+    let alive = true;
+    void fetchTeamApplications().then((r) => { if (alive && r.success && r.state) setTeamPendingCount(r.state.applications.filter((a) => a.status === 'pending').length); });
+    return () => { alive = false; };
+  }, [main]);
   const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : canManageStore ? 'orders' : 'users');
   const [usersList, setUsersList] = useState<User[]>([]);
 
@@ -1362,6 +1374,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <Users className="w-4 h-4" /> Our Team
+              {teamPendingCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">{teamPendingCount}</span>
+              )}
             </button>
           )}
 
@@ -2594,7 +2609,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               )}
             </div>
           ) : activeTab === 'team' && main ? (
-            <AdminTeamPanel />
+            <AdminTeamPanel onPendingChange={setTeamPendingCount} />
           ) : activeTab === 'settings' && main ? (
             /* Platform-wide toggles */
             <div className="space-y-3">

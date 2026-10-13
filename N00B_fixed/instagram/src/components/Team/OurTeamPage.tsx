@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, GraduationCap, Heart, RefreshCw, Sparkles, Users, X } from 'lucide-react';
+import { BadgeCheck, Check, ChevronLeft, GraduationCap, Heart, Loader2, RefreshCw, Sparkles, UserPlus, Users, X } from 'lucide-react';
 import type { User } from '../../types';
-import { fetchTeamMembers } from '../../services/api';
+import { fetchTeamMembers, toggleFollowUser } from '../../services/api';
 import { isMainAdmin } from '../../adminAccess';
 import type { TeamMember } from '../../utils/ourTeam';
-import { accentFor, cardNumber, initials, memberCountLabel, needsReadMore } from '../../utils/ourTeam';
+import { accentFor, cardNumber, followLabel, followState, initials, memberCountLabel, needsReadMore } from '../../utils/ourTeam';
 
 // "Our Team": the people behind NOOB, as a page in the Home menu. The main administrator fills it in from the Admin Control Panel → Our Team.
 
 interface Props {
   currentUser: User;
   onClose: () => void;
+  // Opens a member's NOOB profile (the page closes first).
+  onOpenProfile?: (member: TeamMember) => void;
 }
 
 const SPARKLES: Array<{ left: string; top: string; size: number; delay: string }> = [
@@ -18,12 +20,16 @@ const SPARKLES: Array<{ left: string; top: string; size: number; delay: string }
   { left: '24%', top: '66%', size: 6, delay: '2.1s' }, { left: '50%', top: '8%', size: 4, delay: '0.4s' }
 ];
 
-const MemberCard: React.FC<{ member: TeamMember; index: number; onZoom: (m: TeamMember) => void }> = ({ member, index, onZoom }) => {
+const MemberCard: React.FC<{
+  member: TeamMember; index: number; onZoom: (m: TeamMember) => void;
+  onFollow: (m: TeamMember) => void; followBusy: boolean; followError: string | null; onOpenProfile?: (m: TeamMember) => void;
+}> = ({ member, index, onZoom, onFollow, followBusy, followError, onOpenProfile }) => {
   const accent = accentFor(index);
   const [broken, setBroken] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const photo = member.photo && !broken ? member.photo : null;
   const long = needsReadMore(member.description);
+  const fstate = followState(member);
   return (
     <article
       className="team-card draw-rise"
@@ -68,15 +74,46 @@ const MemberCard: React.FC<{ member: TeamMember; index: number; onZoom: (m: Team
             )}
           </div>
         )}
+        {member.username && (
+          <div className="px-4 pb-4 pt-1">
+            <div className="flex items-center gap-2.5 pt-3 border-t border-white/8">
+              <button type="button" onClick={() => onOpenProfile?.(member)} className="min-w-0 flex items-center gap-2 text-left cursor-pointer" aria-label={`Open the NOOB profile of @${member.username}`}>
+                <span className="w-7 h-7 rounded-full overflow-hidden bg-white/10 shrink-0 ring-1 ring-white/15">
+                  {member.avatar ? <img src={member.avatar} alt="" loading="lazy" className="w-full h-full object-cover" /> : null}
+                </span>
+                <span className="min-w-0 text-[12px] font-bold text-zinc-200 truncate flex items-center gap-1">
+                  @{member.username}{member.isVerified && <BadgeCheck className="w-3.5 h-3.5 shrink-0 text-sky-400" />}
+                </span>
+              </button>
+              {fstate !== 'none' && (
+                <button
+                  type="button"
+                  onClick={() => onFollow(member)}
+                  disabled={followBusy}
+                  className={`ml-auto shrink-0 px-3.5 py-1.5 rounded-full text-[11px] font-black flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform disabled:opacity-60 ${
+                    fstate === 'follow' ? 'text-black' : 'text-white border border-white/25 bg-white/8'
+                  }`}
+                  style={fstate === 'follow' ? { background: `linear-gradient(90deg, ${accent.from}, ${accent.to})`, boxShadow: `0 8px 22px -10px ${accent.glow}` } : undefined}
+                >
+                  {followBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : fstate === 'follow' ? <UserPlus className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                  {followLabel(fstate)}
+                </button>
+              )}
+            </div>
+            {followError && <p className="mt-2 text-[11px] text-rose-300 leading-snug">{followError}</p>}
+          </div>
+        )}
       </div>
     </article>
   );
 };
 
-export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose }) => {
+export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose, onOpenProfile }) => {
   const [team, setTeam] = useState<TeamMember[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [zoom, setZoom] = useState<TeamMember | null>(null);
+  const [followBusy, setFollowBusy] = useState<string | null>(null);
+  const [followError, setFollowError] = useState<{ id: string; text: string } | null>(null);
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -84,6 +121,20 @@ export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose }) => {
     if (t) setTeam(t); else setFailed(true);
   }, []);
   useEffect(() => { void load(); }, [load]);
+
+  // "Follow on NOOB": the same follow as on a profile (a private account gets a request instead).
+  const toggleFollow = async (m: TeamMember) => {
+    if (!m.userId || followBusy) return;
+    setFollowBusy(m.id);
+    setFollowError(null);
+    const res: any = await toggleFollowUser(m.userId);
+    setFollowBusy(null);
+    if (res?.success) {
+      setTeam((cur) => (cur ? cur.map((x) => (x.id === m.id ? { ...x, following: !!res.isFollowing, requested: !!res.isFollowRequested } : x)) : cur));
+    } else {
+      setFollowError({ id: m.id, text: String(res?.error || res?.message || 'Could not follow right now. Please try again.') });
+    }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (zoom) setZoom(null); else onClose(); } };
@@ -140,7 +191,13 @@ export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-md sm:max-w-none mx-auto">
-              {team.map((m, i) => <MemberCard key={m.id} member={m} index={i} onZoom={setZoom} />)}
+              {team.map((m, i) => (
+                <MemberCard
+                  key={m.id} member={m} index={i} onZoom={setZoom} onFollow={(x) => void toggleFollow(x)}
+                  followBusy={followBusy === m.id} followError={followError?.id === m.id ? followError.text : null}
+                  onOpenProfile={onOpenProfile ? (x) => onOpenProfile(x) : undefined}
+                />
+              ))}
             </div>
           )}
 

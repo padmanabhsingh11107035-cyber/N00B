@@ -49,6 +49,7 @@ import { AvatarAdjustEditor, AvatarAdjustResult } from '../Common/AvatarAdjustEd
 import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
 import { LoginDoodles } from './LoginDoodles';
+import { LoginBigDoodles } from './LoginBigDoodles';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
@@ -967,6 +968,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       </div>
 
       <LoginDoodles />
+      <LoginBigDoodles />
 
       {/* Install to Home Screen: available before logging in or signing up, on any device */}
       <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">

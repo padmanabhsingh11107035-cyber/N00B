@@ -70,6 +70,7 @@ import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
 import { AdminSignInPanel } from './AdminSignInPanel';
+import { AdminTeamPanel } from './AdminTeamPanel';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
@@ -103,7 +104,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -138,6 +139,10 @@ function describeAudit(e: AdminAuditEntry): string {
       ].filter(Boolean);
       return `${who} changed platform settings${parts.length ? ': ' + parts.join(', ') : ''}.`;
     }
+    case 'team_member_added': return `${who} added ${d.name || 'someone'} to the Our Team page.`;
+    case 'team_member_updated': return `${who} edited ${d.name || 'a member'} on the Our Team page.`;
+    case 'team_member_removed': return `${who} removed ${d.name || 'a member'} from the Our Team page.`;
+    case 'team_member_moved': return `${who} moved ${d.name || 'a member'} ${d.direction === 'up' ? 'up' : 'down'} on the Our Team page.`;
     case 'explore_pin': return `${who} pinned ${target || 'an account'} to the top of Explore.`;
     case 'explore_unpin': return `${who} unpinned ${target || 'an account'} from Explore.`;
     default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;
@@ -1344,6 +1349,19 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <Inbox className="w-4 h-4" /> Approvals ({accountRequests.filter((r) => r.status === 'pending').length})
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('team')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'team'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Users className="w-4 h-4" /> Our Team
             </button>
           )}
 
@@ -2575,6 +2593,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 </div>
               )}
             </div>
+          ) : activeTab === 'team' && main ? (
+            <AdminTeamPanel />
           ) : activeTab === 'settings' && main ? (
             /* Platform-wide toggles */
             <div className="space-y-3">

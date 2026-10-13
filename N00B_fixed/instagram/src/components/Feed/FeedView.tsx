@@ -53,6 +53,8 @@ import { requestPostBonusOffer, fetchSettings } from '../../services/api';
 // The shop and the food stall (with the map and QR code libraries they use) are only fetched when somebody opens them.
 const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
 const FoodStallView = React.lazy(() => import('../Store/FoodStallView').then((m) => ({ default: m.FoodStallView })));
+const OurTeamPage = React.lazy(() => import('../Team/OurTeamPage'));
+const preloadOurTeam = () => { void import('../Team/OurTeamPage'); };
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
 const GuessTheSongView = React.lazy(() => import('../NoobRooms/GuessTheSongView').then((m) => ({ default: m.GuessTheSongView })));
@@ -167,6 +169,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [restoredPage] = useState(() => takeRestorePage(currentUser.id));
   const [showSuggestionBox, setShowSuggestionBox] = useState(restoredPage === 'suggestions');
   const [showDailyNoob, setShowDailyNoob] = useState(restoredPage === 'daily');
+  const [showOurTeam, setShowOurTeam] = useState(false);
   const [showNoobRooms, setShowNoobRooms] = useState(restoredPage === 'rooms');
   const [showGuessTheSong, setShowGuessTheSong] = useState(restoredPage === 'song');
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(restoredPage === 'lounge');
@@ -774,6 +777,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
                 </div>
               </button>
+              {/* Our Team: the people behind NOOB */}
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowOurTeam(true); }}
+                onPointerDown={preloadOurTeam}
+                className="force-dark team-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-amber-300/35 active:scale-[0.99] transition-transform"
+                style={{ background: 'linear-gradient(120deg, rgba(251,191,36,0.24), rgba(244,114,182,0.18) 62%, rgba(167,139,250,0.2))' }}
+              >
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-pink-400 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(251,191,36,0.5)]">
+                  <Users className="w-[18px] h-[18px] text-black" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-black text-white block">Our Team</span>
+                  <span className="text-[10px] text-zinc-300 block truncate">Meet the people behind NOOB</span>
+                </div>
+              </button>
               <button
                 onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
@@ -897,6 +915,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {showOurTeam && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <OurTeamPage currentUser={currentUser} onClose={() => setShowOurTeam(false)} />
+        </React.Suspense>
       )}
       {showDailyNoob && (
         <React.Suspense fallback={<LazyFallback />}>

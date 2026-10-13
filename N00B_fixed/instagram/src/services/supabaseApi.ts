@@ -15,6 +15,8 @@ import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
 import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
 import type { DrawState, DrawSpinResult } from '../utils/noobDraw';
+import type { TeamMember } from '../utils/ourTeam';
+import { isTeamPhotoKey } from '../utils/ourTeam';
 import { createE2ee } from '../e2ee/service.ts';
 import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
@@ -1334,7 +1336,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily' | 'songs';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily' | 'songs' | 'team';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -1368,7 +1370,7 @@ export async function uploadMediaFile(
   // Invisibly compress images/videos to reduce latency and bandwidth
   // Smaller pictures cost less data every single time they are shown: a profile picture is never displayed bigger than a phone screen
   // (640 px is plenty), and a post picture at 1440 px is sharp on any phone.
-  const optimizedFile = await compressMedia(file, folder === 'avatars' ? { maxSide: 640, quality: 0.82 } : { maxSide: 1440, quality: 0.8 });
+  const optimizedFile = await compressMedia(file, folder === 'avatars' ? { maxSide: 640, quality: 0.82 } : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : { maxSide: 1440, quality: 0.8 });
 
   if (!(await currentSession())) {
     if (folder === 'avatars') {
@@ -3289,6 +3291,74 @@ export async function spinNoobDraw(packId: string, paid = false): Promise<DrawSp
     return { ...res, user: res?.user ? mapUser(res.user) : undefined };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not spin right now. Please try again.') };
+  }
+}
+
+// "Our Team" (migration 20261013000001): everyone signed in reads the list; the main administrator changes it from the Admin Control Panel.
+const mapTeam = (rows: any): TeamMember[] => (Array.isArray(rows) ? rows : [])
+  .filter((m) => m && m.id)
+  .map((m): TeamMember => ({
+    id: String(m.id), name: String(m.name || ''), qualification: String(m.qualification || ''), description: String(m.description || ''),
+    photo: m.photo ? resolveMedia(String(m.photo)) : null, photoKey: m.photo ? String(m.photo) : null, position: Number(m.position) || 0
+  }));
+
+// null when the list could not be read (the function is not installed yet / offline), so the page can say so instead of showing "empty".
+export async function fetchTeamMembers(): Promise<TeamMember[] | null> {
+  try {
+    return mapTeam(await rpc<any>('team_list'));
+  } catch {
+    return null;
+  }
+}
+
+// A picture the file has been taken from: compressed and stored in the media bucket's "team" folder; only its key is saved with the member.
+export async function uploadTeamPhoto(file: File): Promise<{ success: boolean; key?: string; url?: string; error?: string }> {
+  try {
+    const up = await uploadMediaFile(file, 'team');
+    return { success: true, key: up.objectKey, url: up.url };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The photo could not be uploaded. Please try again.') };
+  }
+}
+
+// Files this page uploaded are cleaned up when they are no longer used; a failure here never matters to the person.
+const dropTeamPhoto = (key: string | null | undefined) => {
+  if (isTeamPhotoKey(key)) void supabase.storage.from(MEDIA_BUCKET).remove([key]).then(() => undefined, () => undefined);
+};
+
+// A photo that was uploaded in the admin form but not used in the end (cancelled, or replaced by another one).
+export const discardTeamPhoto = (key: string | null | undefined): void => dropTeamPhoto(key);
+
+export async function saveTeamMember(payload: {
+  id?: string | null; name: string; qualification: string; description: string; photoKey: string | null; replacedPhotoKey?: string | null;
+}): Promise<{ success: boolean; team?: TeamMember[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_save', {
+      p_id: payload.id || null, p_name: payload.name, p_qualification: payload.qualification, p_description: payload.description, p_photo: payload.photoKey
+    });
+    if (payload.replacedPhotoKey && payload.replacedPhotoKey !== payload.photoKey) dropTeamPhoto(payload.replacedPhotoKey);
+    return { success: true, team: mapTeam(res?.team) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The team member could not be saved. Please try again.') };
+  }
+}
+
+export async function deleteTeamMember(id: string): Promise<{ success: boolean; team?: TeamMember[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_delete', { p_id: id });
+    dropTeamPhoto(res?.removedPhoto);
+    return { success: true, team: mapTeam(res?.team) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The team member could not be removed. Please try again.') };
+  }
+}
+
+export async function moveTeamMember(id: string, direction: 'up' | 'down'): Promise<{ success: boolean; team?: TeamMember[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_move', { p_id: id, p_direction: direction });
+    return { success: true, team: mapTeam(res?.team) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The team could not be reordered. Please try again.') };
   }
 }
 

@@ -48,6 +48,9 @@ export const DrawResult: React.FC<DrawResultProps> = ({ prize, packName, onClose
           <h2 className="draw-sans mt-1 text-[26px] leading-tight text-white" style={{ textShadow: `0 0 28px ${r.color}88` }}>{prize.label}</h2>
           {prize.subtitle && <p className="text-xs font-semibold mt-1" style={{ color: r.color }}>{prize.subtitle}</p>}
           <p className="text-[13px] text-zinc-300 leading-relaxed mt-4 px-2">{prize.message}</p>
+          {(prize.kind === 'pro' || prize.kind === 'verified') && prize.applied === 'ok' && (
+            <p data-draw-mail-hint className="text-[11px] text-zinc-400 leading-relaxed mt-3 px-3">We also email you the details. Not in your inbox? Check Spam and tap “Not spam”.</p>
+          )}
           <p className="text-[10px] text-zinc-500 mt-1">{packName}</p>
           <div className="mt-7 space-y-2.5">
             {onWear && prize.applied === 'ok' && (

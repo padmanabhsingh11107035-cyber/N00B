@@ -109,6 +109,7 @@ check(/setConfirming\(true\)/.test(pageSrc2) && /void spin\(true\)/.test(pageSrc
 check(/\(paid && isPackOpen\(pack\)\)/.test(pageSrc2) && /!free && !afford/.test(pageSrc2), 'no paid spin while the free one is waiting, and the button is off when the points are short');
 check(/Need \{priceShort\(pointsNeeded\(balance, pack\.price\)\)\} more points/.test(pageSrc2) && /Free in <Countdown/.test(pageSrc2) && /Spin again · \{priceShort\(pack\.price\)\}/.test(pageSrc2), 'the cards and the button say how long until the free spin and what another spin costs');
 check(/periodWord\(state\.freePeriod\)/.test(pageSrc2) && !/once every 7 days|Weekly free spins/.test(pageSrc2), 'the page talks about the month (or the week if the settings say so), never a fixed "7 days"');
+check(/prize\.kind === 'pro' \|\| prize\.kind === 'verified'\) && prize\.applied === 'ok'/.test(resSrc) && /Check Spam and tap “Not spam”/.test(resSrc), 'a Pro or verified-tick win tells the winner an email is on its way and to check Spam, only when the prize really applied (the only time the email is sent)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

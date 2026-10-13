@@ -755,13 +755,14 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="shrink-0 flex items-center justify-between mb-4">
               <h2 className="text-sm font-black italic tracking-tighter text-white">NOOB</h2>
               <button onClick={() => setShowNoobMenu(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
                 <X className="w-4.5 h-4.5" />
               </button>
             </div>
-            <div className="space-y-1">
+            {/* every page button of the menu: it scrolls when they do not all fit (short phones, many pages) */}
+            <div className="space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
               <button
                 onClick={() => { setShowNoobMenu(false); openNoobDraw(); }}

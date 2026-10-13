@@ -87,6 +87,14 @@ await rpc(ann, 'study_sketch_save', J({ id: s1.id, strokes: [stroke(), stroke(),
 check((await rpc(ann, 'study_sketch_get', s1.id)).strokes.length === 3 && (await rpc(ann, 'study_sketch_get', s1.id)).title === 'Free body diagram' && (await rpc(ann, 'study_sketch_get', s1.id)).paper === 'light', 'a sketch can be updated (the title stays)');
 check((await rpc(ann, 'study_sketch_save', J({ id: s1.id, strokes: [], paper: 'wallpaper' }))).id && (await rpc(ann, 'study_sketch_get', s1.id)).paper === 'dark', 'an unknown paper becomes the plain one');
 await expectFail(() => rpc(ann, 'study_sketch_save', J({ strokes: [{ t: 'pen', c: 'red', w: 2 }] })), /could not be saved/, 'a line with no points is refused');
+{
+  const kinds = await rpc(ann, 'study_sketch_save', J({ clientRef: ref(), title: 'pens', strokes: [stroke(), { t: 'pen', c: '#fdd835', w: 6, m: 'h', p: [[1, 1], [9, 9]] }, { t: 'pen', c: '#e53935', w: 6, m: 's', p: [[2, 2], [8, 8]] }], width: 1000, height: 1250, paper: 'light' }));
+  const back = await rpc(ann, 'study_sketch_get', kinds.id);
+  check(back.strokes[1].m === 'h' && back.strokes[2].m === 's' && back.strokes[0].m === undefined && back.paper === 'light', 'a highlighter and a sketch pen are kept as they were drawn, on the white board ("light")');
+  await rpc(ann, 'study_sketch_save', J({ id: kinds.id, strokes: back.strokes, width: 1000, height: 1250, paper: 'dark' }));
+  check((await rpc(ann, 'study_sketch_get', kinds.id)).paper === 'dark', 'and the black board ("dark") is kept too');
+  await rpc(ann, 'study_sketch_delete', kinds.id);
+}
 await expectFail(() => rpc(ann, 'study_sketch_save', J({ strokes: [{ t: 'knife', p: [[1, 1]] }] })), /could not be saved/, 'an unknown tool is refused');
 await expectFail(() => rpc(ann, 'study_sketch_save', J({ strokes: 'nope' })), /too many lines|could not be saved/, 'something that is not a list is refused');
 await expectFail(() => rpc(ann, 'study_sketch_save', J({ strokes: Array.from({ length: 3001 }, () => stroke(1)) })), /too many lines/, 'more than 3,000 lines is refused');

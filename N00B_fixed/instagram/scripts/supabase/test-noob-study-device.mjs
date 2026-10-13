@@ -79,11 +79,16 @@ section('5. Sketch board: pens, ink and paper');
 {
   check(K.defaultInk('white') === K.INK_DARK && K.defaultInk('dark') === K.INK_LIGHT, 'dark ink on light paper, light ink on dark paper');
   check(K.inkFor(K.INK_DARK, 'dark') === K.INK_LIGHT && K.inkFor(K.INK_LIGHT, 'grid') === K.INK_DARK && K.inkFor('#d93a3a', 'dark') === '#d93a3a', 'changing paper changes only the plain ink; a colour the student picked stays');
-  check(K.isPaper('grid') && K.isPaper('dark') && !K.isPaper('gold') && !K.isPaper(null), 'only the four papers are known');
-  check(K.PAPERS.length === 4 && K.PEN_COLORS.length >= 8 && K.PEN_WIDTHS.length === 4, 'four papers, a good range of colours and four widths');
+  check(K.isPaper('grid') && K.isPaper('dark') && !K.isPaper('gold') && !K.isPaper(null), 'only the known papers are accepted');
+  check(K.PAPERS.length === 2 && K.PAPERS[0].id === 'white' && K.PAPERS[1].id === 'dark', 'two boards to choose: white and black');
+  check(K.normalizePaper('dark') === 'dark' && K.normalizePaper('white') === 'white' && K.normalizePaper('grid') === 'white' && K.normalizePaper('lined') === 'white' && K.normalizePaper(null) === 'white', 'a sketch saved on squared or lined paper opens on the white board');
+  check(K.paperToWire('white') === 'light' && K.paperToWire('dark') === 'dark' && K.paperToWire('grid') === 'light' && K.normalizePaper('light') === 'white' && K.normalizePaper('lines') === 'white', 'the boards are saved under the names the database uses (light, dark) and read back as white and black');
+  check(K.PEN_COLORS.length === 12 && new Set(K.PEN_COLORS).size === 12 && K.COLOR_NAMES.length === 12 && new Set(K.COLOR_NAMES).size === 12, 'twelve different colours, each with its own name');
+  check(K.PEN_COLORS.includes(K.INK_DARK) && K.PEN_COLORS.includes(K.INK_LIGHT) && K.PEN_COLORS.includes(K.HIGHLIGHT_YELLOW), 'black, white and yellow are among them');
+  check(K.PEN_WIDTHS.length === 4, 'four widths');
   check(K.PEN_COLORS.every((c) => /^#[0-9a-f]{6}$/i.test(c)), 'every pen colour is a plain colour code');
   const g = K.paperCss('grid'), l = K.paperCss('lined'), w = K.paperCss('white'), d = K.paperCss('dark');
-  check(g.backgroundImage && g.backgroundSize === '4% 3.2%' && l.backgroundSize === '100% 4%' && !w.backgroundImage && d.backgroundColor === '#15171f', 'the paper on screen uses percentages, so it fits any width');
+  check(g.backgroundImage && g.backgroundSize === '4% 3.2%' && l.backgroundSize === '100% 4%' && !w.backgroundImage && w.backgroundColor === '#ffffff' && d.backgroundColor === '#000000', 'the white board is white, the black board is black, and old squared and lined paper still draw (in percentages, so they fit any width)');
 }
 section('6. Sketch board: drawing');
 const fakeCtx = () => {
@@ -119,10 +124,29 @@ const fakeCtx = () => {
   const dark = fakeCtx(); K.drawPaper(dark, 'dark', 1);
   check(grid.calls.filter((c) => c[0] === 'stroke').length === 24 + 31, 'squared paper has its rule lines (24 up and down, 31 across)');
   check(lined.calls.filter((c) => c[0] === 'stroke').length === 24 && plain.calls.filter((c) => c[0] === 'stroke').length === 0, 'lined paper has 24 lines, plain paper none');
-  check(dark.calls.some((c) => c[0] === 'fillRect') && dark.fillStyle === '#15171f', 'dark paper is filled dark');
+  check(dark.calls.some((c) => c[0] === 'fillRect') && dark.fillStyle === '#000000', 'the black board is filled black in the saved picture');
 }
 
 // ---------------------------------------------------------------------------------------------------------------- looks and sounds
+section('6b. Sketch board: pen, sketch pen, highlighter and eraser');
+{
+  const pen = K.newStroke('pen', '#e53935', 6), sk = K.newStroke('sketch', '#e53935', 6), hl = K.newStroke('highlighter', '#fdd835', 6), er = K.newStroke('eraser', '#000000', 6);
+  check(pen.t === 'pen' && pen.m === undefined && sk.t === 'pen' && sk.m === 's' && hl.t === 'pen' && hl.m === 'h' && er.t === 'eraser' && er.m === undefined, 'each tool makes its own kind of line; to the database every pen line is a "pen" and the eraser is an "eraser"');
+  check(K.toolOf(pen) === 'pen' && K.toolOf(sk) === 'sketch' && K.toolOf(hl) === 'highlighter' && K.toolOf(er) === 'eraser', 'a saved line knows which tool made it');
+  check(K.strokeWidth(pen) === 6 && K.strokeWidth(sk) === 12 && K.strokeWidth(hl) === 24 && Math.abs(K.strokeWidth(er) - 6 * K.ERASER_FACTOR) < 1e-9, 'a sketch pen is twice as thick as a pen, a highlighter four times, the eraser wider still');
+  check(K.isTranslucent(hl) && !K.isTranslucent(pen) && !K.isTranslucent(sk) && !K.isTranslucent(er), 'only the highlighter is see-through');
+  const hctx = fakeCtx(); K.drawStroke(hctx, { ...hl, p: [[10, 10], [50, 50], [90, 20]] }, 1);
+  check(hctx.globalAlpha === K.HIGHLIGHT_ALPHA && hctx.globalCompositeOperation === 'source-over' && hctx.lineWidth === 24 && hctx.strokeStyle === '#fdd835', 'a highlighter draws wide, in its colour, and lets what is under it show through');
+  const sctx = fakeCtx(); K.drawStroke(sctx, { ...sk, p: [[10, 10], [50, 50]] }, 1);
+  check(sctx.globalAlpha === 1 && sctx.lineWidth === 12 && sctx.lineCap === 'round', 'a sketch pen is solid, thick and round-tipped');
+  const octx = fakeCtx(); K.drawStroke(octx, { ...er, p: [[10, 10], [50, 50]] }, 1);
+  check(octx.globalAlpha === 1 && octx.globalCompositeOperation === 'destination-out', 'the eraser is never see-through: it removes what is under it completely');
+  const back = K.cleanStrokes(JSON.parse(JSON.stringify([{ ...hl, p: [[1, 1], [9, 9]] }, { ...sk, p: [[2, 2]] }, { ...pen, p: [[3, 3]] }, { ...er, m: 'h', p: [[4, 4]] }, { t: 'pen', c: '#000', w: 3, m: 'x', p: [[5, 5]] }])));
+  check(back[0].m === 'h' && back[1].m === 's' && back[2].m === undefined && back[3].m === undefined && back[4].m === undefined, 'a saved sketch keeps which pen drew each line; an eraser can not be a highlighter and an unknown kind becomes a pen');
+  check(K.cleanStrokes([{ t: 'pen', c: '#000', w: 3, p: [[1, 1]] }])[0].m === undefined, 'a sketch saved before these pens existed draws as plain pens');
+  check(JSON.stringify([{ ...hl, p: [[1, 1]] }]).includes('"m":"h"') && JSON.stringify([{ ...pen, p: [[1, 1]] }]).includes('"m"') === false, 'a plain pen line costs no extra space in the saved sketch');
+}
+
 section('7. Looks and sounds: kept safely on this phone');
 {
   const store = new Map();

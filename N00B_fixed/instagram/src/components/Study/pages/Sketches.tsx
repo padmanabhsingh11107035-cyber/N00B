@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { PenTool, Plus } from 'lucide-react';
 import { studyApi } from '../../../services/studyApi';
-import { PAPERS } from '../../../utils/studySketch';
 import { useStudy } from '../StudyContext';
 import { goStudy } from '../studyStore';
 import type { PageProps } from '../StudyApp';
@@ -28,16 +27,16 @@ const Sketches: React.FC<PageProps> = () => {
       <div style={{ display: 'grid', gap: 12 }}>
         {error && <ErrorBox text={error} onRetry={() => void load()} />}
         {!rows && !error && <Loading rows={3} />}
-        {rows && rows.length === 0 && <Empty icon={<PenTool size={26} />} title="A blank board is waiting" text="Draw a diagram, work out a sum, or sketch an idea. Pens, an eraser, undo, and four kinds of paper. Only you can see your sketches." action={<Btn kind="primary" onClick={() => goStudy('draw')}><Plus size={16} /> New sketch</Btn>} />}
+        {rows && rows.length === 0 && <Empty icon={<PenTool size={26} />} title="A blank board is waiting" text="Draw a diagram, work out a sum, or sketch an idea. A pen, a sketch pen, a highlighter and an eraser in 12 colours, on a white or a black board. Only you can see your sketches." action={<Btn kind="primary" onClick={() => goStudy('draw')}><Plus size={16} /> New sketch</Btn>} />}
         <div className="st-grid2">
           {rows?.map((s) => (
             <button key={s.id} className="st-row-btn" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }} onClick={() => goStudy('draw', { id: s.id })}>
-              <span style={{ display: 'block', height: 70, borderRadius: 12, border: '1px solid var(--st-border)', background: s.paper === 'dark' ? '#15171f' : '#fffdf9', position: 'relative', overflow: 'hidden' }} aria-hidden="true">
-                <PenTool size={26} style={{ position: 'absolute', inset: 0, margin: 'auto', color: s.paper === 'dark' ? '#f4f1ec' : '#1f1f24', opacity: 0.35 }} />
+              <span style={{ display: 'block', height: 70, borderRadius: 12, border: '1px solid var(--st-border)', background: s.paper === 'dark' ? '#000000' : '#ffffff', position: 'relative', overflow: 'hidden' }} aria-hidden="true">
+                <PenTool size={26} style={{ position: 'absolute', inset: 0, margin: 'auto', color: s.paper === 'dark' ? '#ffffff' : '#111111', opacity: 0.35 }} />
               </span>
               <span style={{ minWidth: 0 }}>
                 <span className="st-title st-h3" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title || 'Untitled sketch'}</span>
-                <span className="st-tiny st-faint" style={{ display: 'block' }}>{PAPERS.find((p) => p.id === s.paper)?.label || 'Plain'} paper · {s.strokes} {s.strokes === 1 ? 'line' : 'lines'}</span>
+                <span className="st-tiny st-faint" style={{ display: 'block' }}>{s.paper === 'dark' ? 'Black board' : 'White board'} · {s.strokes} {s.strokes === 1 ? 'line' : 'lines'}</span>
                 <span className="st-tiny st-faint" style={{ display: 'block' }}>{fmtWhen(s.updatedAt, tz)}</span>
               </span>
             </button>

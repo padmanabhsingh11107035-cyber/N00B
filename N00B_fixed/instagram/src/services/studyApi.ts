@@ -7,7 +7,7 @@ import type { StudyConversation, StudyMessage, StudyMaterial, MaterialHit, Mater
 // A call never throws: it returns { ok, data } or { ok: false, error }, where the error is a plain sentence a student can read.
 
 // (both fields exist on both shapes so the code reads the same under the project's lenient TypeScript settings)
-export interface SketchStroke { t: 'pen' | 'eraser'; c: string; w: number; p: Array<[number, number]> }
+export interface SketchStroke { t: 'pen' | 'eraser'; c: string; w: number; p: Array<[number, number]>; m?: 's' | 'h' }
 export interface StudyProgress {
   days: number;
   totals: { minutes: number; activeDays: number; tasksDone: number; quizzes: number; cards: number; openMistakes: number };

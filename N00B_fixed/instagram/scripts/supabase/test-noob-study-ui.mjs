@@ -399,5 +399,30 @@ check(/administrator of NOOB STUDY can see your admission form, your marks and h
 check(/no copy is kept/.test(priv) && /For each weekly test, only its name/.test(priv), 'it says pictures are not kept, and what is kept for a weekly test');
 check(/setAsk\('notepad'\)/.test(priv) && /Your admission, profile/.test(priv), 'notes and sketches can be deleted on their own, and "delete everything" says it removes the admission too');
 
+section('25. Sketch board: boards, pens and colours');
+const drawSrc = read('src/components/Study/pages/Draw.tsx');
+const sketchUtil = read('src/utils/studySketch.ts');
+check(/pickTool\('pen'\)/.test(drawSrc) && /pickTool\('sketch'\)/.test(drawSrc) && /pickTool\('highlighter'\)/.test(drawSrc) && /pickTool\('eraser'\)/.test(drawSrc) && /Sketch pen/.test(drawSrc) && /Highlighter/.test(drawSrc), 'the pen, sketch pen, highlighter and eraser are all there');
+check(/PEN_COLORS\.map/.test(drawSrc) && /COLOR_NAMES\[i\]/.test(drawSrc) && (sketchUtil.match(/export const PEN_COLORS = \[([^\]]*)\]/)?.[1].match(/#[0-9a-f]{6}|INK_DARK|INK_LIGHT|HIGHLIGHT_YELLOW/gi) || []).length === 12, 'twelve colours are offered, each named for screen readers');
+check(/White board/.test(sketchUtil) && /Black board/.test(sketchUtil) && /aria-label="Board"/.test(drawSrc), 'the white and the black board can be chosen');
+check(/paper: paperToWire\(meta\.current\.paper\)/.test(drawSrc), 'the board is saved under the names the database accepts (light, dark): saving "white" would have turned it black');
+check(/ref=\{liveCanvas\}/.test(drawSrc) && /isTranslucent\(s\)/.test(drawSrc) && /pointerEvents: 'none'/.test(drawSrc), 'a highlighter is drawn on its own layer while the pen moves');
+check(/setColor\(\(c\) => \(c === INK_DARK \|\| c === INK_LIGHT \? HIGHLIGHT_YELLOW : c\)\)/.test(drawSrc), 'choosing the highlighter starts with yellow, not black or white');
+
+section('26. The End-to-End Encryption page');
+const e2eeSrc = read('src/components/Legal/EndToEndEncryption.tsx');
+const chatView = read('src/components/Chat/ChatView.tsx');
+const profileView = read('src/components/Profile/ProfileView.tsx');
+check(/bg-blue-500 hover:bg-blue-400/.test(chatView) && /Your personal messages are end-to-end encrypted/.test(chatView) && /setShowE2eePage\(true\)/.test(chatView), 'the notice under the chat list is a blue button that opens the page');
+check(/\{showE2eePage && <EndToEndEncryption onClose=\{\(\) => setShowE2eePage\(false\)\} \/>\}/.test(chatView), 'the page opens over the chat list and closes again');
+check(/Text messages here are end-to-end encrypted when the top of the chat says so/.test(chatView) && !/Messages and calls are end-to-end encrypted/.test(chatView), 'the banner inside a chat no longer claims calls are locked, and also opens the page');
+check(/showE2eeModal/.test(profileView) && /End-to-End Encryption/.test(profileView), 'the page is also in the Profile menu, next to the Terms and the Privacy Policy');
+check(/Photos, videos and voice notes/.test(e2eeSrc) && /Voice and video calls, live streams and rooms/.test(e2eeSrc) && /Chats with the NOOB AI/.test(e2eeSrc) && /more than 100 people/.test(e2eeSrc) && /public NOOB Lounge/.test(e2eeSrc), 'the page says plainly what is NOT locked: pictures, videos, voice notes, calls, the Lounge, the AI chat and big groups');
+check(/ratchet/.test(e2eeSrc) && /security code/.test(e2eeSrc) && /Nobody, including NOOB, can recover that passphrase/.test(e2eeSrc) && /The one exception: reports/.test(e2eeSrc), 'and the limits: no ratchet, comparing security codes, the passphrase can not be recovered, and the report exception');
+check(/Escape/.test(e2eeSrc) && /aria-modal="true"/.test(e2eeSrc), 'it closes with the Escape key and works as a dialog');
+const cryptoSrc = read('src/e2ee/crypto.ts');
+check(/AES-GCM/.test(cryptoSrc) && /P-256/.test(cryptoSrc) && /AES-GCM/.test(e2eeSrc) && /P-256/.test(e2eeSrc), 'the algorithms the page names are the ones the code really uses');
+check(/Pictures, video and voice notes are not locked yet/.test(read('src/e2ee/messages.ts')) && /Photos, videos and voice notes/.test(e2eeSrc), 'the page agrees with the code about what is not locked yet');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

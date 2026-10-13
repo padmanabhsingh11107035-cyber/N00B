@@ -1,6 +1,10 @@
 // NOOB STUDY's sketch board: the rules and the drawing, kept apart from the screen so they can be tested. A sketch is a list of strokes (each a colour, a
 // width and a list of points on a fixed 1000 x 1250 page), never a picture, so it is small, stays sharp at any size, and can be undone stroke by stroke.
-export interface Stroke { t: 'pen' | 'eraser'; c: string; w: number; p: Array<[number, number]> }
+// "t" is what the database knows ('pen' or 'eraser'); "m" says which kind of pen: absent = a pen, 's' = a sketch pen (a thick felt tip), 'h' = a highlighter
+// (wide and see-through). A sketch saved before these existed has no "m" and simply draws as a pen.
+export interface Stroke { t: 'pen' | 'eraser'; c: string; w: number; p: Array<[number, number]>; m?: 's' | 'h' }
+export type Tool = 'pen' | 'sketch' | 'highlighter' | 'eraser';
+// two boards: white and black (older sketches on squared or lined paper open on the white board)
 export type Paper = 'white' | 'grid' | 'lined' | 'dark';
 
 export const SKETCH_W = 1000;
@@ -9,21 +13,44 @@ export const MAX_STROKES = 3000;          // the same limits as the database
 export const MAX_BYTES = 300000;
 export const MAX_HISTORY = 100;
 
-export const PAPERS: Array<{ id: Paper; label: string }> = [{ id: 'white', label: 'Plain' }, { id: 'grid', label: 'Squares' }, { id: 'lined', label: 'Lines' }, { id: 'dark', label: 'Dark' }];
-export const INK_DARK = '#1f1f24';
-export const INK_LIGHT = '#f4f1ec';
-export const PEN_COLORS = [INK_DARK, '#d93a3a', '#e8872b', '#d9b100', '#2f9e5b', '#2f7fc0', '#6a4fd1', '#c2478d', INK_LIGHT];
+export const PAPERS: Array<{ id: Paper; label: string }> = [{ id: 'white', label: 'White board' }, { id: 'dark', label: 'Black board' }];
+export const INK_DARK = '#111111';
+export const INK_LIGHT = '#ffffff';
+export const HIGHLIGHT_YELLOW = '#fdd835';
+// twelve colours, each easy to tell from the others
+export const PEN_COLORS = [INK_DARK, INK_LIGHT, '#e53935', '#fb8c00', HIGHLIGHT_YELLOW, '#43a047', '#00acc1', '#1e88e5', '#5e35b1', '#d81b60', '#6d4c41', '#8e9aa6'];
+export const COLOR_NAMES = ['Black', 'White', 'Red', 'Orange', 'Yellow', 'Green', 'Cyan', 'Blue', 'Purple', 'Pink', 'Brown', 'Grey'];
 export const PEN_WIDTHS = [3, 6, 10, 18];
 export const ERASER_FACTOR = 3.2;
+export const SKETCH_FACTOR = 2;          // a sketch pen is twice as thick as a pen of the same size
+export const HIGHLIGHT_FACTOR = 4;       // a highlighter is four times as thick,
+export const HIGHLIGHT_ALPHA = 0.35;     // and lets what is under it show through
+export const TOOLS: Array<{ id: Tool; label: string }> = [{ id: 'pen', label: 'Pen' }, { id: 'sketch', label: 'Sketch pen' }, { id: 'highlighter', label: 'Highlighter' }, { id: 'eraser', label: 'Eraser' }];
+
+// the stroke a tool makes (without its points yet)
+export function newStroke(tool: Tool, color: string, width: number): Stroke {
+  if (tool === 'eraser') return { t: 'eraser', c: color, w: width, p: [] };
+  if (tool === 'sketch') return { t: 'pen', c: color, w: width, p: [], m: 's' };
+  if (tool === 'highlighter') return { t: 'pen', c: color, w: width, p: [], m: 'h' };
+  return { t: 'pen', c: color, w: width, p: [] };
+}
+export const toolOf = (s: Pick<Stroke, 't' | 'm'>): Tool => (s.t === 'eraser' ? 'eraser' : s.m === 'h' ? 'highlighter' : s.m === 's' ? 'sketch' : 'pen');
+// how wide a stroke really is on the page
+export const strokeWidth = (s: Pick<Stroke, 't' | 'm' | 'w'>): number => s.w * (s.t === 'eraser' ? ERASER_FACTOR : s.m === 'h' ? HIGHLIGHT_FACTOR : s.m === 's' ? SKETCH_FACTOR : 1);
+// a see-through stroke is drawn on its own layer while the pen moves, so it never gets darker where it overlaps itself
+export const isTranslucent = (s: Pick<Stroke, 'm'>): boolean => s.m === 'h';
+export const normalizePaper = (v: unknown): Paper => (v === 'dark' ? 'dark' : 'white');
+// the database calls the boards 'light' and 'dark' (and older sketches may say 'grid' or 'lines', which open as the white board): what is saved must be one of those
+export const paperToWire = (p: Paper): 'light' | 'dark' => (p === 'dark' ? 'dark' : 'light');
 
 export const isPaper = (v: unknown): v is Paper => v === 'white' || v === 'grid' || v === 'lined' || v === 'dark';
 
 // the colours of the paper: its fill and its rule lines
 export const PAPER_STYLE: Record<Paper, { bg: string; line: string }> = {
-  white: { bg: '#fffdf9', line: 'transparent' },
-  grid: { bg: '#fffdf9', line: 'rgba(60, 90, 140, 0.22)' },
-  lined: { bg: '#fffdf9', line: 'rgba(60, 90, 140, 0.26)' },
-  dark: { bg: '#15171f', line: 'transparent' }
+  white: { bg: '#ffffff', line: 'transparent' },
+  grid: { bg: '#ffffff', line: 'rgba(60, 90, 140, 0.22)' },
+  lined: { bg: '#ffffff', line: 'rgba(60, 90, 140, 0.26)' },
+  dark: { bg: '#000000', line: 'transparent' }
 };
 // the pen that reads well on a paper
 export const defaultInk = (paper: Paper): string => (paper === 'dark' ? INK_LIGHT : INK_DARK);
@@ -57,12 +84,13 @@ export function cleanStrokes(raw: unknown): Stroke[] {
     if (!s || typeof s !== 'object' || !Array.isArray((s as Stroke).p)) continue;
     const t = (s as Stroke).t === 'eraser' ? 'eraser' : 'pen';
     const w = Number((s as Stroke).w);
+    const m = (s as Stroke).m === 'h' || (s as Stroke).m === 's' ? (s as Stroke).m : undefined;
     const c = typeof (s as Stroke).c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test((s as Stroke).c) ? (s as Stroke).c : INK_DARK;
     const p: Array<[number, number]> = [];
     for (const pt of (s as Stroke).p) {
       if (Array.isArray(pt) && Number.isFinite(Number(pt[0])) && Number.isFinite(Number(pt[1]))) p.push([Math.min(SKETCH_W, Math.max(0, Number(pt[0]))), Math.min(SKETCH_H, Math.max(0, Number(pt[1])))]);
     }
-    if (p.length) out.push({ t, c, w: Number.isFinite(w) ? Math.min(80, Math.max(1, w)) : 4, p });
+    if (p.length) out.push({ t, c, w: Number.isFinite(w) ? Math.min(80, Math.max(1, w)) : 4, p, ...(t === 'pen' && m ? { m } : {}) });
   }
   return out.slice(0, MAX_STROKES);
 }
@@ -72,9 +100,10 @@ export function cleanStrokes(raw: unknown): Stroke[] {
 type Ctx = CanvasRenderingContext2D;
 function setup(ctx: Ctx, s: Stroke, scale: number): void {
   ctx.globalCompositeOperation = s.t === 'eraser' ? 'destination-out' : 'source-over';
+  ctx.globalAlpha = s.t === 'pen' && s.m === 'h' ? HIGHLIGHT_ALPHA : 1;
   ctx.strokeStyle = s.t === 'eraser' ? '#000' : s.c;
   ctx.fillStyle = ctx.strokeStyle;
-  ctx.lineWidth = (s.t === 'eraser' ? s.w * ERASER_FACTOR : s.w) * scale;
+  ctx.lineWidth = strokeWidth(s) * scale;
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 }
 export function drawStroke(ctx: Ctx, s: Stroke, scale = 1): void {

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, Eraser, MessageCircle, Pen, Redo2, Trash2, Undo2 } from 'lucide-react';
+import { Brush, Download, Eraser, Highlighter, MessageCircle, Pen, Redo2, Trash2, Undo2 } from 'lucide-react';
 import { newRef, studyApi, type SketchStroke } from '../../../services/studyApi';
 import {
-  INK_DARK, PAPERS, PEN_COLORS, PEN_WIDTHS, SKETCH_H, SKETCH_W, addPoint, cleanStrokes, defaultInk, drawAll, drawPaper, drawTail, fullness, inkFor, isPaper, newHistory, paperCss, pushHistory, redo, undo,
-  type Paper, type Stroke
+  COLOR_NAMES, HIGHLIGHT_FACTOR, HIGHLIGHT_YELLOW, INK_DARK, INK_LIGHT, PAPERS, PEN_COLORS, PEN_WIDTHS, SKETCH_FACTOR, SKETCH_H, SKETCH_W, addPoint, cleanStrokes, defaultInk, drawAll, drawPaper, drawStroke, drawTail,
+  fullness, inkFor, isTranslucent, newHistory, newStroke, normalizePaper, paperCss, paperToWire, pushHistory, redo, undo,
+  type Paper, type Stroke, type Tool
 } from '../../../utils/studySketch';
 import { useStudy } from '../StudyContext';
 import { backStudy, goStudy, replaceStudy } from '../studyStore';
@@ -12,7 +13,8 @@ import { Btn, Chip, ErrorBox, Head, Loading, Sheet } from '../ui';
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
 
-// The sketch board: pen, eraser, colours, widths, undo and redo, four papers. A sketch is kept as lines (small, sharp), saved by itself, and private.
+// The sketch board: a white board and a black board; a pen, a sketch pen, a highlighter and an eraser; twelve colours; four widths; undo and redo.
+// A sketch is kept as lines (small, sharp), saved by itself, and private.
 const Draw: React.FC<PageProps> = ({ params }) => {
   const { toast } = useStudy();
   const [sketchId, setSketchId] = useState<string | null>(typeof params.id === 'string' && params.id ? params.id : null);
@@ -20,7 +22,7 @@ const Draw: React.FC<PageProps> = ({ params }) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [paper, setPaper] = useState<Paper>('white');
-  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const [tool, setTool] = useState<Tool>('pen');
   const [color, setColor] = useState(INK_DARK);
   const [width, setWidth] = useState(PEN_WIDTHS[1]);
   const [, bump] = useState(0);
@@ -29,6 +31,7 @@ const Draw: React.FC<PageProps> = ({ params }) => {
   const [confirm, setConfirm] = useState<'clear' | 'delete' | null>(null);
 
   const canvas = useRef<HTMLCanvasElement | null>(null);
+  const liveCanvas = useRef<HTMLCanvasElement | null>(null);   // a see-through stroke (the highlighter) is drawn here while the pen moves
   const strokes = useRef<Stroke[]>([]);
   const hist = useRef(newHistory());
   const live = useRef<Stroke | null>(null);
@@ -54,7 +57,7 @@ const Draw: React.FC<PageProps> = ({ params }) => {
       if (!alive) return;
       if (!r.ok) { setLoadError(r.error); return; }
       strokes.current = cleanStrokes(r.data.strokes);
-      setTitle(r.data.title); const pp = isPaper(r.data.paper) ? r.data.paper : 'white'; setPaper(pp); setColor(defaultInk(pp));
+      setTitle(r.data.title); const pp = normalizePaper(r.data.paper); setPaper(pp); setColor(defaultInk(pp));
       setLoaded(true);
     });
     return () => { alive = false; };
@@ -71,7 +74,7 @@ const Draw: React.FC<PageProps> = ({ params }) => {
     setState('saving');
     let failed = false;
     const job = (async () => {
-      const r = await studyApi.saveSketch({ id: idRef.current || undefined, clientRef: idRef.current ? undefined : ref.current, title: meta.current.title, strokes: list as SketchStroke[], width: SKETCH_W, height: SKETCH_H, paper: meta.current.paper });
+      const r = await studyApi.saveSketch({ id: idRef.current || undefined, clientRef: idRef.current ? undefined : ref.current, title: meta.current.title, strokes: list as SketchStroke[], width: SKETCH_W, height: SKETCH_H, paper: paperToWire(meta.current.paper) });
       if (!r.ok) { failed = true; dirty.current = true; setSaveError(r.error); setState('error'); return; }
       idRef.current = r.data.id; setSketchId(r.data.id); setSaveError(null);
       setState(dirty.current ? 'dirty' : 'saved');
@@ -99,26 +102,36 @@ const Draw: React.FC<PageProps> = ({ params }) => {
     const r = canvas.current!.getBoundingClientRect();
     return [((e.clientX - r.left) * SKETCH_W) / r.width, ((e.clientY - r.top) * SKETCH_H) / r.height];
   };
+  // the newest part of a stroke goes straight onto the board; a see-through stroke is drawn whole on its own layer each time, so it never gets darker where it crosses itself
+  const paintLive = (s: Stroke) => {
+    if (isTranslucent(s)) {
+      const lc = liveCanvas.current; const lx = lc?.getContext('2d');
+      if (lc && lx) { lx.clearRect(0, 0, lc.width, lc.height); drawStroke(lx, s, 1); }
+    } else {
+      const ctx = canvas.current?.getContext('2d'); if (ctx) drawTail(ctx, s, 1);
+    }
+  };
+  const clearLive = () => { const lc = liveCanvas.current; lc?.getContext('2d')?.clearRect(0, 0, lc.width, lc.height); };
   const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (pointer.current !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
     if (fullness(strokes.current).state === 'full') { toast('This sketch is full. Start a new sketch, or clear some lines.'); return; }
     pointer.current = e.pointerId;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* not every browser lets a pointer be captured */ }
-    const s: Stroke = { t: tool, c: color, w: width, p: [] };
+    const s: Stroke = newStroke(tool, color, width);
     const [x, y] = toLogical(e);
     addPoint(s.p, x, y, 0);
     live.current = s;
-    const ctx = canvas.current?.getContext('2d'); if (ctx) drawTail(ctx, s, 1);
+    paintLive(s);
   };
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const s = live.current;
     if (!s || pointer.current !== e.pointerId) return;
-    const ctx = canvas.current?.getContext('2d');
     const evs = typeof e.nativeEvent.getCoalescedEvents === 'function' ? e.nativeEvent.getCoalescedEvents() : [];
     const r = canvas.current!.getBoundingClientRect();
     for (const ev of evs.length ? evs : [e.nativeEvent]) {
-      if (addPoint(s.p, ((ev.clientX - r.left) * SKETCH_W) / r.width, ((ev.clientY - r.top) * SKETCH_H) / r.height) && ctx) drawTail(ctx, s, 1);
+      if (addPoint(s.p, ((ev.clientX - r.left) * SKETCH_W) / r.width, ((ev.clientY - r.top) * SKETCH_H) / r.height) && !isTranslucent(s)) paintLive(s);
     }
+    if (isTranslucent(s)) paintLive(s);
   };
   const up = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const s = live.current;
@@ -127,15 +140,18 @@ const Draw: React.FC<PageProps> = ({ params }) => {
     pushHistory(hist.current, strokes.current);
     strokes.current = [...strokes.current, s];
     redraw();                      // the whole stroke is drawn again, smoothly, now that it is finished
+    clearLive();
     bump((n) => n + 1);
     touch();
   };
-  const cancel = () => { pointer.current = null; live.current = null; redraw(); };
+  const cancel = () => { pointer.current = null; live.current = null; clearLive(); redraw(); };
 
   const doUndo = () => { const prev = undo(hist.current, strokes.current); if (prev) { strokes.current = prev; redraw(); bump((n) => n + 1); touch(600); } };
   const doRedo = () => { const next = redo(hist.current, strokes.current); if (next) { strokes.current = next; redraw(); bump((n) => n + 1); touch(600); } };
   const clearAll = () => { if (!strokes.current.length) { setConfirm(null); return; } pushHistory(hist.current, strokes.current); strokes.current = []; redraw(); bump((n) => n + 1); setConfirm(null); touch(600); };
   const changePaper = (p: Paper) => { setPaper(p); setColor((c) => inkFor(c, p)); touch(600); };
+  const pickTool = (t: Tool) => { setTool(t); if (t === 'highlighter') setColor((c) => (c === INK_DARK || c === INK_LIGHT ? HIGHLIGHT_YELLOW : c)); };
+  const factor = tool === 'highlighter' ? HIGHLIGHT_FACTOR : tool === 'sketch' ? SKETCH_FACTOR : tool === 'eraser' ? 3.2 : 1;
 
   // ---- the finished picture: the paper and the drawing together
   const compose = (): HTMLCanvasElement | null => {
@@ -195,22 +211,24 @@ const Draw: React.FC<PageProps> = ({ params }) => {
           <input className="st-input" placeholder="Name this sketch" value={title} maxLength={100} onChange={(e) => { setTitle(e.target.value); touch(); }} aria-label="Sketch name" />
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }} role="toolbar" aria-label="Drawing tools">
-            <Chip on={tool === 'pen'} onClick={() => setTool('pen')}><Pen size={15} /> Pen</Chip>
-            <Chip on={tool === 'eraser'} onClick={() => setTool('eraser')}><Eraser size={15} /> Eraser</Chip>
+            <Chip on={tool === 'pen'} onClick={() => pickTool('pen')}><Pen size={15} /> Pen</Chip>
+            <Chip on={tool === 'sketch'} onClick={() => pickTool('sketch')}><Brush size={15} /> Sketch pen</Chip>
+            <Chip on={tool === 'highlighter'} onClick={() => pickTool('highlighter')}><Highlighter size={15} /> Highlighter</Chip>
+            <Chip on={tool === 'eraser'} onClick={() => pickTool('eraser')}><Eraser size={15} /> Eraser</Chip>
             <button className="st-icon-btn" onClick={doUndo} disabled={!hist.current.past.length} aria-label="Undo" style={{ opacity: hist.current.past.length ? 1 : 0.4 }}><Undo2 size={17} /></button>
             <button className="st-icon-btn" onClick={doRedo} disabled={!hist.current.future.length} aria-label="Redo" style={{ opacity: hist.current.future.length ? 1 : 0.4 }}><Redo2 size={17} /></button>
           </div>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            {tool === 'pen' && PEN_COLORS.map((c) => (
-              <button key={c} type="button" aria-label={'Colour ' + c} aria-pressed={color === c} onClick={() => setColor(c)}
+            {tool !== 'eraser' && PEN_COLORS.map((c, i) => (
+              <button key={c} type="button" aria-label={'Colour ' + COLOR_NAMES[i]} title={COLOR_NAMES[i]} aria-pressed={color === c} onClick={() => setColor(c)}
                 style={{ width: 30, height: 30, borderRadius: 99, background: c, border: color === c ? '3px solid var(--st-accent)' : '2px solid var(--st-border)', boxShadow: 'inset 0 0 0 1px rgba(128, 128, 128, 0.45)', cursor: 'pointer', padding: 0 }} />
             ))}
             <span style={{ width: 1, height: 24, background: 'var(--st-border)', margin: '0 2px' }} />
             {PEN_WIDTHS.map((w) => (
               <button key={w} type="button" aria-label={'Width ' + w} aria-pressed={width === w} onClick={() => setWidth(w)}
                 style={{ width: 34, height: 34, borderRadius: 12, display: 'grid', placeItems: 'center', cursor: 'pointer', border: '1px solid ' + (width === w ? 'var(--st-accent)' : 'var(--st-border)'), background: width === w ? 'var(--st-accent-soft)' : 'var(--st-surface)' }}>
-                <i style={{ display: 'block', width: Math.max(4, Math.min(22, w * (tool === 'eraser' ? 1.4 : 1))), height: Math.max(4, Math.min(22, w * (tool === 'eraser' ? 1.4 : 1))), borderRadius: 99, background: 'var(--st-text)' }} />
+                <i style={{ display: 'block', width: Math.max(4, Math.min(24, w * factor * 0.7)), height: Math.max(4, Math.min(24, w * factor * 0.7)), borderRadius: 99, background: tool === 'highlighter' ? color : 'var(--st-text)', opacity: tool === 'highlighter' ? 0.55 : 1 }} />
               </button>
             ))}
           </div>
@@ -219,9 +237,10 @@ const Draw: React.FC<PageProps> = ({ params }) => {
             <canvas ref={canvas} width={SKETCH_W} height={SKETCH_H} aria-label="Drawing area" role="img"
               onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onContextMenu={(e) => e.preventDefault()}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }} />
+            <canvas ref={liveCanvas} width={SKETCH_W} height={SKETCH_H} aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
           </div>
 
-          <div className="st-hscroll" role="group" aria-label="Paper">
+          <div className="st-hscroll" role="group" aria-label="Board">
             {PAPERS.map((p) => <Chip key={p.id} on={paper === p.id} onClick={() => changePaper(p.id)}>{p.label}</Chip>)}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

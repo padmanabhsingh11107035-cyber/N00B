@@ -90,6 +90,7 @@ import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
 import { TermsAndConditions } from '../Legal/TermsAndConditions';
 import { PrivacyPolicy } from '../Legal/PrivacyPolicy';
+import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { HighlightManagerModal } from './HighlightManagerModal';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
@@ -208,6 +209,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showE2eeModal, setShowE2eeModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showGetVerifiedModal, setShowGetVerifiedModal] = useState(false);
@@ -1031,6 +1033,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         Community rules &amp; service terms
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* End-to-End Encryption: what is locked, what is not, and the limits */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      setShowE2eeModal(true);
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Lock className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-blue-400 transition-colors">
+                        End-to-End Encryption
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        How your private chats are locked
                       </span>
                     </div>
                   </button>
@@ -2417,6 +2440,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* 10. Legal & Support Modals */}
       {showTermsModal && <TermsAndConditions onClose={() => setShowTermsModal(false)} />}
       {showPrivacyModal && <PrivacyPolicy onClose={() => setShowPrivacyModal(false)} />}
+      {showE2eeModal && <EndToEndEncryption onClose={() => setShowE2eeModal(false)} />}
       {showSupportModal && (
         <React.Suspense fallback={<LazyFallback />}>
           <CustomerSupportModal

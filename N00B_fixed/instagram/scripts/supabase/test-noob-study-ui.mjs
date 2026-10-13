@@ -137,7 +137,7 @@ for (const f of fs.readdirSync('src/components/Study', { recursive: true }).filt
   for (const m of read(`src/components/Study/${f}`).matchAll(/goStudy\('(\w+)'/g)) goTargets.add(m[1]);
 }
 const registered = new Set(routes.map(([p]) => p));
-const planned = ['plan', 'planGen', 'day', 'library', 'research', 'practice', 'decks', 'rooms', 'progress', 'topics'];
+const planned = ['library', 'research', 'practice', 'decks', 'rooms', 'progress', 'topics'];
 const dead = [...goTargets].filter((p) => !registered.has(p) && !planned.includes(p));
 check(dead.length === 0, 'every goStudy target is either a real screen or one of the screens still to come (and those are only shown when they exist)', dead.join());
 check(/export const hasRoute = \(page: string\): boolean => page in ROUTES;/.test(app) && /NAV\.filter\(\(n\) => hasRoute\(n\.page\)\)/.test(app), 'the bottom bar shows only screens that exist');
@@ -223,6 +223,27 @@ check(/describeVoiceError/.test(voiceP) && /No microphone|unsupported/.test(read
 const aiSrc = read('src/services/studyAi.ts');
 check(/FN = `\$\{BASE\}\/functions\/v1\/study-ai`/.test(aiSrc) && !/GROQ|GEMINI|OPENROUTER|TAVILY|api[_-]?key\s*[:=]/i.test(aiSrc.replace(/VITE_SUPABASE_PUBLISHABLE_KEY/g, '').replace(/apikey: KEY/g, '')), 'the app only talks to the study-ai function; no AI key is anywhere in it');
 check(/signedUrls\(/.test(chat) && /createSignedUrls\(need, 3600\)/.test(aiSrc), 'pictures are shown through short-lived private links');
+
+section('15. The plan screens');
+const planPage = read('src/components/Study/pages/Plan.tsx');
+const genPage = read('src/components/Study/pages/PlanGen.tsx');
+const dayPage = read('src/components/Study/pages/Day.tsx');
+const plannerSrc = read('src/utils/studyPlanner.ts');
+check(['plan', 'planGen', 'day'].every((p) => registered.has(p)), 'the plan, the plan maker and the day page are real screens');
+check(!/Math\.random|Date\.now\(\)|new Date\(\)/.test(plannerSrc), 'the timetable maker uses no randomness and no clock of its own (it is given "now"), so the same facts give the same plan');
+check(!/fetch\(|supabase|studyApi/.test(plannerSrc), 'the timetable maker talks to nothing: it is pure arithmetic');
+check(/planStudy\(/.test(genPage) && /Nothing is saved until you press/.test(genPage) && /setResult\(null\)/.test(genPage), 'the plan is shown in full, with a reason for each session, and nothing is saved until the student says so');
+check(/examId \? await studyApi\.addPlan\(sessions\) : await studyApi\.replacePlan\(sessions, range\.from, range\.to\)/.test(genPage), 'a whole plan replaces only the old plan sessions; one exam\'s revision only adds');
+check(/onlyExamId: examId, replaceAi: !examId/.test(genPage), 'an exam\'s revision works around everything already planned');
+check(/Anything you added, moved, finished or skipped stays exactly as it is/.test(genPage), 'the plan maker tells the student what it will never touch');
+check(/missedSessions\(/.test(planPage) && /for me<\/Btn>/.test(planPage) && /That is okay/.test(planPage), 'a missed session is met with kindness and a way to move it (no shame)');
+check(/nextFreeSlot\(/.test(planPage) && /existing = \[\.\.\.existing, r\.data\]/.test(planPage), 'moved sessions do not pile on top of each other (each one counts as busy for the next)');
+check(/goStudy\('day', \{ date: ymd \}\)/.test(planPage) && /SessionSheet/.test(dayPage) && /Add a session/.test(dayPage), 'each day opens in full, where a session can be added');
+check(/A rest day/.test(dayPage) && /Rest is part of learning well/.test(dayPage), 'a free day is shown as rest, not as a gap');
+check(/Made by your plan\. If you change it, it becomes yours/.test(read('src/components/Study/SessionSheet.tsx')), 'the session sheet explains that a changed plan session becomes the student\'s own');
+check(/studyApi\.savePlanPrefs\(set\.restDays/.test(genPage) && /Remember these choices/.test(genPage), 'the student\'s free days and choices can be remembered (and need not be)');
+check(/hasRoute\('planGen'\)/.test(read('src/components/Study/pages/Exams.tsx')), 'the Exams screen offers "Plan my revision for this" once the plan maker exists');
+check(read('package.json').includes('test-noob-study-plan.mjs') && read('package.json').includes('test-noob-study-plan-db.mjs'), 'both plan test files are part of the test run');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

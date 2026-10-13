@@ -61,6 +61,11 @@ export const studyApi = {
   replacePlan: (plan: Partial<StudySession>[], fromIso: string, toIso: string) =>
     call<{ made: number; kept: number; sessions: StudySession[] }>('study_sessions_replace_plan', { p_plan: plan, p_from: fromIso, p_to: toIso }),
 
+  // plan settings, and adding a plan's sessions without replacing anything (used for one exam's revision)
+  planPrefs: () => call<{ saved: boolean; restDays: number[]; horizonDays: number }>('study_plan_prefs_get'),
+  savePlanPrefs: (restDays: number[], horizonDays: number) => call<{ saved: boolean; restDays: number[]; horizonDays: number }>('study_plan_prefs_save', { p_rest: restDays, p_horizon: horizonDays }),
+  addPlan: (plan: Partial<StudySession>[]) => call<{ made: number; clashed: number }>('study_sessions_add_plan', { p_plan: plan }),
+
   focusStart: (subjectId: string | null, plannedMin: number, kind: 'focus' | 'break' = 'focus') =>
     call<{ id: string; startedAt: string; plannedMin: number; kind: string }>('study_focus_start', { p_subject: subjectId, p_planned: plannedMin, p_kind: kind }),
   focusFinish: (id: string, focusSeconds: number, completed: boolean) =>

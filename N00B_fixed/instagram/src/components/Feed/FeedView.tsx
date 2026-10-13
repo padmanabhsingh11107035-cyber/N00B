@@ -28,9 +28,12 @@ import {
   ShoppingBag,
   Music2,
   Lightbulb,
-  Gift
+  Gift,
+  GraduationCap
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
+import { openStudy, STUDY_OPEN_TO_ALL } from '../Study/studyStore';
+import { preloadNoobStudy } from '../Study/StudyHost';
 import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
@@ -778,6 +781,23 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
                 </div>
               </button>
+              {/* NOOB STUDY: the student's personal learning space (for everyone once it is switched on; until then for the main administrator) */}
+              {(STUDY_OPEN_TO_ALL || isMainAdmin(currentUser)) && (
+                <button
+                  onClick={() => { setShowNoobMenu(false); openStudy('home'); }}
+                  onPointerDown={preloadNoobStudy}
+                  className="force-dark study-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#e38b69]/40 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(227,139,105,0.26), rgba(185,168,242,0.2) 60%, rgba(127,209,172,0.16))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#f2b79c] to-[#b9a8f2] flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(227,139,105,0.5)]">
+                    <GraduationCap className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Study <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Your AI tutor, plan and study space</span>
+                  </div>
+                </button>
+              )}
               {/* Our Team: the people behind NOOB */}
               <button
                 onClick={() => { setShowNoobMenu(false); setShowOurTeam(true); }}

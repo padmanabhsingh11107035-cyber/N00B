@@ -89,6 +89,7 @@ import { MiniToast } from './components/Common/MiniToast';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
+import { StudyHost } from './components/Study/StudyHost';
 import { openTeamJoin, rememberTeamJoin, hasRememberedTeamJoin, forgetTeamJoin } from './components/Team/teamJoinStore';
 import { teamJoinRequested } from './utils/ourTeam';
 import { installLinkInterceptor } from './utils/inAppBrowser';
@@ -1825,6 +1826,7 @@ export default function App() {
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
       <TeamJoinHost currentUser={currentUser} />
+      <StudyHost currentUser={currentUser} />
 
       {/* 1. Fullscreen Story Viewer */}
       {activeStoryViewerIndex !== null && storyViewerStories[activeStoryViewerIndex] && (

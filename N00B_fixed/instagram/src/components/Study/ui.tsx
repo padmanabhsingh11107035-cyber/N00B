@@ -25,19 +25,23 @@ export const SubjectTag: React.FC<{ name: string; color?: SubjectColor }> = ({ n
 };
 
 // ---- a screen: a header (back, title, a way out to NOOB) and a scrolling body
+export const Head: React.FC<{ title: string; subtitle?: string; right?: React.ReactNode; onBack?: () => void; hideBack?: boolean }> = ({ title, subtitle, right, onBack, hideBack }) => (
+  <div className="st-head">
+    {!hideBack && <button className="st-icon-btn" onClick={onBack || backStudy} aria-label="Back"><ArrowLeft size={18} /></button>}
+    <div style={{ minWidth: 0, flex: 1 }}>
+      <h1 className="st-title st-h3" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
+      {subtitle && <p className="st-tiny st-faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</p>}
+    </div>
+    {right}
+    <button className="st-icon-btn" onClick={closeStudy} aria-label="Back to NOOB" title="Back to NOOB"><X size={18} /></button>
+  </div>
+);
+
 export const Page: React.FC<{
   title: string; subtitle?: string; right?: React.ReactNode; onBack?: () => void; hideBack?: boolean; wide?: boolean; children: React.ReactNode;
 }> = ({ title, subtitle, right, onBack, hideBack, wide, children }) => (
   <>
-    <div className="st-head">
-      {!hideBack && <button className="st-icon-btn" onClick={onBack || backStudy} aria-label="Back"><ArrowLeft size={18} /></button>}
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <h1 className="st-title st-h3" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
-        {subtitle && <p className="st-tiny st-faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</p>}
-      </div>
-      {right}
-      <button className="st-icon-btn" onClick={closeStudy} aria-label="Back to NOOB" title="Back to NOOB"><X size={18} /></button>
-    </div>
+    <Head title={title} subtitle={subtitle} right={right} onBack={onBack} hideBack={hideBack} />
     <div className="st-scroll">
       <div className={`st-wrap ${wide ? 'st-wrap-wide' : ''}`}>{children}</div>
     </div>

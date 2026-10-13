@@ -36,3 +36,6 @@ export interface StudyDashboard {
   week: { date: string; minutes: number }[]; subjects: DashSubject[];
   stats: { activeDays7: number; minutes7: number; tasksDone7: number; streak: number };
 }
+
+export interface StudyConversation { id: string; title: string; subjectId: string | null; mode: 'chat' | 'teach' | 'photo' | 'voice' | 'document'; topic: string; materialId: string | null; createdAt: string; lastMessageAt: string; preview: string }
+export interface StudyMessage { id: string; role: 'user' | 'assistant'; content: string; attachments: Array<{ key: string; kind: 'image' }>; meta: Record<string, unknown>; createdAt: string }

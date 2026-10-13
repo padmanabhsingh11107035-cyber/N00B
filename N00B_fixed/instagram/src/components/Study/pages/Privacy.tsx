@@ -9,7 +9,7 @@ import type { PageProps } from '../StudyApp';
 // Plain words about what is saved, and real ways to delete it. Nothing here touches the student's NOOB account.
 const Privacy: React.FC<PageProps> = () => {
   const { reload, toast } = useStudy();
-  const [ask, setAsk] = useState<'activity' | 'all' | null>(null);
+  const [ask, setAsk] = useState<'activity' | 'conversations' | 'all' | null>(null);
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ const Privacy: React.FC<PageProps> = () => {
     const r = await studyApi.deleteMyData(ask);
     setBusy(false);
     if (!r.ok) { setError(r.error); return; }
-    toast(ask === 'all' ? 'Everything in NOOB STUDY was deleted.' : 'Your activity history was deleted.');
+    toast(ask === 'all' ? 'Everything in NOOB STUDY was deleted.' : ask === 'conversations' ? 'Your tutor chats were deleted.' : 'Your activity history was deleted.');
     setAsk(null); setTyped('');
     await reload();
     if (ask === 'all') closeStudy();
@@ -50,15 +50,18 @@ const Privacy: React.FC<PageProps> = () => {
           <p className="st-small st-muted" style={{ marginTop: 4 }}>Your NOOB account, posts and chats are never touched by these.</p>
           <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
             <Btn onClick={() => setAsk('activity')}><Trash2 size={16} /> Delete my activity history</Btn>
+            <Btn onClick={() => setAsk('conversations')}><Trash2 size={16} /> Delete my tutor chats and pictures</Btn>
             <Btn kind="warn" onClick={() => setAsk('all')}><Trash2 size={16} /> Delete everything in NOOB STUDY</Btn>
           </div>
         </Card>
       </div>
       {ask && (
-        <Sheet title={ask === 'all' ? 'Delete everything?' : 'Delete your activity history?'} onClose={() => { setAsk(null); setTyped(''); }}>
+        <Sheet title={ask === 'all' ? 'Delete everything?' : ask === 'conversations' ? 'Delete all your tutor chats?' : 'Delete your activity history?'} onClose={() => { setAsk(null); setTyped(''); }}>
           <p className="st-small st-muted">{ask === 'all'
             ? 'Your profile, subjects, tasks, exams, timetable, focus history, chats, notes and practice records in NOOB STUDY will be erased for good. You can set up again any time.'
-            : 'Your focus history and the log of finished work (which feeds your week and progress) will be erased. Your tasks, subjects and profile stay.'}</p>
+            : ask === 'conversations'
+              ? 'Every chat with your tutor, and the pictures you sent in them, will be erased for good. Your tasks, subjects and profile stay.'
+              : 'Your focus history and the log of finished work (which feeds your week and progress) will be erased. Your tasks, subjects and profile stay.'}</p>
           {ask === 'all' && <div style={{ marginTop: 12 }}><Field label='Type DELETE to confirm'><input className="st-input" value={typed} onChange={(e) => setTyped(e.target.value)} autoCapitalize="characters" /></Field></div>}
           {error && <div className="st-notice st-notice-warn" role="alert" style={{ marginTop: 12 }}>{error}</div>}
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>

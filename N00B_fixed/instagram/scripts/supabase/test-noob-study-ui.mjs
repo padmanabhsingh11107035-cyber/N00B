@@ -12,6 +12,9 @@ const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(
 const section = (t) => console.log(`\n${t}`);
 const load = (f) => import(pathToFileURL(path.resolve(f)).href);
 const C = await load('src/utils/studyCatalog.ts');
+const MD = await load('src/utils/studyMarkdown.ts');
+const V = await load('src/utils/studyVoice.ts');
+const ST = await load('src/utils/studyStream.ts');
 const T = await load('src/utils/studyTime.ts');
 const F = await load('src/utils/studyFocus.ts');
 const read = (f) => fs.readFileSync(f, 'utf8');
@@ -134,7 +137,7 @@ for (const f of fs.readdirSync('src/components/Study', { recursive: true }).filt
   for (const m of read(`src/components/Study/${f}`).matchAll(/goStudy\('(\w+)'/g)) goTargets.add(m[1]);
 }
 const registered = new Set(routes.map(([p]) => p));
-const planned = ['tutor', 'plan', 'planGen', 'day', 'photo', 'voice', 'library', 'research', 'practice', 'decks', 'rooms', 'progress', 'topics'];
+const planned = ['plan', 'planGen', 'day', 'library', 'research', 'practice', 'decks', 'rooms', 'progress', 'topics'];
 const dead = [...goTargets].filter((p) => !registered.has(p) && !planned.includes(p));
 check(dead.length === 0, 'every goStudy target is either a real screen or one of the screens still to come (and those are only shown when they exist)', dead.join());
 check(/export const hasRoute = \(page: string\): boolean => page in ROUTES;/.test(app) && /NAV\.filter\(\(n\) => hasRoute\(n\.page\)\)/.test(app), 'the bottom bar shows only screens that exist');
@@ -153,8 +156,73 @@ check(!/user_?id|userId|p_user\b/.test(api.replace(/study_me|useStudy/g, '')), '
 check(!/service_role|SERVICE_ROLE|sk-[A-Za-z0-9]{8,}|api[_-]?key/i.test(api), 'no secret in the service layer');
 const everything = fs.readdirSync('src/components/Study', { recursive: true }).filter((x) => String(x).endsWith('.tsx') || String(x).endsWith('.ts')).map((f) => read(`src/components/Study/${f}`)).join('\n');
 check(!/dangerouslySetInnerHTML|innerHTML\s*=|eval\(|new Function\(/.test(everything), 'no screen renders raw HTML or runs generated code');
-check(!/GROQ|GEMINI|Bearer /.test(everything), 'no provider key or token is anywhere in the screens');
+check(!/gsk_[A-Za-z0-9]{8}|AIza[0-9A-Za-z_-]{20}|sk-or-|tvly-|Bearer /.test(everything), 'no provider key or token is anywhere in the screens (the admin hint only names the secret to add)');
 check(/trackActivity/.test(read('src/components/Study/pages/Settings.tsx')) && /trackActivity/.test(read('supabase/migrations/20261014000001_noob_study_core.sql')), 'the "Remember what I study" switch is the very setting the database honours');
+
+section('11. The tutor\'s answers are drawn safely (Markdown and maths, never HTML)');
+let b = MD.parseMarkdown('# Newton\n\nForce is **mass** times *acceleration*, written `F = ma`.\n\n1. First\n2. Second\n\n- one\n- two\n\n> a quote\n\n---\n\n```python\nprint(1)\n```');
+check(b.map((x) => x.t).join() === 'h,p,list,list,quote,hr,code', 'headings, paragraphs, numbered and bulleted lists, quotes, rules and code blocks');
+check(b[2].ordered === true && b[2].items.length === 2 && b[3].ordered === false && b[6].lang === 'python' && b[6].v === 'print(1)', 'lists know if they are numbered; code keeps its language and its text');
+const inl = MD.parseInline('**bold *both*** and `code`');
+check(inl[0].t === 'b' && inl[0].c.some((x) => x.t === 'i') && inl.some((x) => x.t === 'code' && x.v === 'code'), 'bold, italic inside bold, and inline code');
+check(MD.parseInline('see [NCERT](https://ncert.nic.in/a?b=1)').some((x) => x.t === 'link' && x.href.startsWith('https://ncert.nic.in/')), 'a web link becomes a link');
+const bad = MD.parseInline('[click](javascript:alert(1)) [x](data:text/html,hi) [f](file:///etc/passwd)');
+check(!bad.some((x) => x.t === 'link') && MD.inlineText(bad).includes('click'), 'a javascript:, data: or file: link is never a link (its words stay)');
+check(MD.safeHref('https://a.com/x') !== null && MD.safeHref('http://a.com') !== null && MD.safeHref('ftp://a.com') === null && MD.safeHref('//evil.com') === null && MD.safeHref('https://a.com/"onmouseover=') === null, 'only ordinary web addresses are accepted');
+const html = MD.parseMarkdown('<script>alert(1)</script> <img src=x onerror=alert(1)> **ok**');
+check(html.every((x) => x.t === 'p') && MD.inlineText(html[0].c).includes('<script>alert(1)</script>') && !JSON.stringify(html).includes('"t":"html"'), 'HTML typed into an answer stays as plain text, never markup');
+check(MD.parseInline('Energy is $E = mc^2$ here').some((x) => x.t === 'math' && x.v === 'E = mc^2'), 'inline maths between dollar signs');
+check(!MD.parseInline('It costs $5 and $10 today').some((x) => x.t === 'math'), 'prices like "$5 and $10" are not mistaken for maths');
+check(MD.parseMarkdown('$$\n\\frac{a}{b}\n$$')[0].t === 'math' && MD.parseMarkdown('$$x^2$$')[0].v === 'x^2' && MD.parseMarkdown('\\[ y = 2 \\]')[0].t === 'math', 'display maths: $$ over lines, $$ on one line, and \\[ \\]');
+check(MD.parseInline('so \\(a+b\\) works').some((x) => x.t === 'math' && x.v === 'a+b'), 'maths written \\( ... \\) too');
+const tbl = MD.parseMarkdown('| Name | Unit |\n|---|---|\n| Force | N |\n| Work | J |');
+check(tbl[0].t === 'table' && tbl[0].head.length === 2 && tbl[0].rows.length === 2, 'a table');
+check(MD.parseMarkdown('plain\nsecond line')[0].c.some((x) => x.t === 'br'), 'single line breaks are kept');
+check(MD.parseMarkdown('x\n\n'.repeat(1000)).length <= 400 && MD.parseMarkdown('').length === 0 && MD.parseMarkdown(null).length === 0, 'huge or empty input is handled');
+check(MD.parseMarkdown('a\n\n```js\nunfinished code').some((x) => x.t === 'code'), 'a code block that was never closed (an answer cut short) still shows');
+
+section('12. Speaking and listening');
+check(V.cleanForSpeech('Use $\\frac{a}{b}$ and $x^2$.').includes('a over b') && V.cleanForSpeech('Use $x^2$.').includes('x squared'), 'maths is read as words ("a over b", "x squared")');
+check(V.cleanForSpeech('Here is code:\n```python\nprint(1)\n```\nDone.').includes('a code example is shown on screen') && !V.cleanForSpeech('```x```').includes('```'), 'code is not read out symbol by symbol');
+check(V.cleanForSpeech('## Title\n- **bold** item\n[the link](https://a.com)') === 'Title. bold item. the link', 'Markdown symbols and web addresses are not read aloud', V.cleanForSpeech('## Title\n- **bold** item\n[the link](https://a.com)'));
+check(V.cleanForSpeech('$$\\sqrt{x} = y$$').includes('square root of x') && V.cleanForSpeech('It costs $5 and $10.').includes('$5'), 'square roots are spoken; prices are left alone');
+const long = Array.from({ length: 30 }, (_, i) => `This is sentence number ${i} of a long answer.`).join(' ');
+const chunks = V.speechChunks(long);
+check(chunks.length > 3 && chunks.every((c) => c.length <= 180) && chunks.join(' ') === long, 'long answers are read in sentence-sized pieces (engines stop on long text), with nothing lost');
+check(V.speechChunks('a'.repeat(10) + ' ' + 'word '.repeat(80)).every((c) => c.length <= 180), 'even one very long sentence is cut at word boundaries');
+const voices = [{ name: 'A', lang: 'en-US' }, { name: 'B', lang: 'hi-IN', localService: false }, { name: 'C', lang: 'hi-IN', localService: true }, { name: 'D', lang: 'gu-IN' }];
+check(V.pickVoice(voices, 'hi-IN').name === 'C' && V.pickVoice(voices, 'hi').name === 'C' && V.pickVoice(voices, 'gu-IN').name === 'D' && V.pickVoice(voices, 'ta-IN') === null, 'the right voice for the language (one on the device first); none rather than a wrong language');
+check(V.pickVoice(voices, 'hi-IN', 'B').name === 'B' && V.pickVoice(voices, 'hi-IN', 'Nobody').name === 'C', 'a voice the student chose wins, if it is still there');
+check(/microphone/i.test(V.describeVoiceError('not-allowed')) && /type/i.test(V.describeVoiceError('unsupported')) && V.describeVoiceError('aborted') === '' && /again/i.test(V.describeVoiceError('no-speech')) && /internet/i.test(V.describeVoiceError('network')) && V.describeVoiceError('weird').length > 10, 'every microphone problem has a plain, helpful sentence');
+check(V.canRecognize() === false && V.canSpeak() === false && V.canRecord() === false, 'in a place with no microphone support these are simply "no" (nothing crashes)');
+
+section('13. The answer stream');
+const enc = new TextEncoder();
+const body = (parts) => new ReadableStream({ start(c) { for (const p of parts) c.enqueue(enc.encode(p)); c.close(); } });
+let seen = [];
+await ST.readNdjson(body(['{"t":"meta","conversationId":"c1"}\n{"t":"del', 'ta","text":"Hel"}\n', 'not json at all\n{"t":"delta","text":"lo"}\n{"x":1}\n{"t":"done","messageId":"m1","remaining":9}']), (e) => seen.push(e));
+check(seen.map((e) => e.t).join() === 'meta,delta,delta,done' && seen.filter((e) => e.t === 'delta').map((e) => e.text).join('') === 'Hello' && seen[3].remaining === 9, 'lines split across network pieces are joined, a damaged line and an odd object are skipped, and the last line without a newline counts');
+seen = [];
+await ST.readNdjson(body([]), (e) => seen.push(e));
+check(seen.length === 0, 'an empty stream is simply empty');
+
+section('14. The tutor\'s screens');
+const chat = read('src/components/Study/pages/Chat.tsx');
+const voiceP = read('src/components/Study/pages/Voice.tsx');
+check(['tutor', 'chat', 'photo', 'voice'].every((p) => registered.has(p)), 'the tutor, the chat, photo doubts and the voice tutor are all real screens');
+check(/streamChat\(\{ message, conversationId: convRef\.current/.test(chat) && /signal\)/.test(chat) && /abort\.current\?\.abort\(\)/.test(chat), 'a question is streamed and can be stopped');
+check((chat.match(/\bspeak\(/g) || []).length === 1 && /const toggleSpeak/.test(chat), 'in the chat the tutor only speaks when the student taps the speaker (one place calls it)');
+check(/listen\(speechLang\(lang\)/.test(chat) && (chat.match(/\blisten\(/g) || []).length === 1 && /const toggleMic/.test(chat), 'the microphone is only started from the microphone button');
+check(/The microphone is on|Listening… speak now/.test(chat) && /The microphone is on/.test(voiceP), 'while it listens the screen says so');
+check(/capture="environment"/.test(chat) && /accept="image\/\*"/.test(chat) && /MAX_PICTURES/.test(chat) && /removeStudyFiles/.test(chat), 'photos: camera or gallery, at most four, and a removed one is deleted from the private store');
+check(/retry: canRetry/.test(chat) && /Try again/.test(chat) && /same|clientRef: ref/.test(chat), 'a failed answer offers "Try again", which re-sends the same message (it is never asked twice)');
+check(/Teach me/.test(chat) && /mode: teach \? 'teach' : 'chat'/.test(chat), 'Teach-me mode is a switch in the chat');
+check(/questions left today/.test(chat) && /Your tutor can make mistakes/.test(chat), 'the chat shows how many questions are left and does not pretend the tutor is perfect');
+check(/auto && canSpeak\(\)/.test(voiceP) && /AUTO_KEY/.test(voiceP) && /Reading answers aloud|Answers are silent/.test(voiceP), 'the voice screen reads answers aloud (and can be silenced; the choice is remembered)');
+check(/describeVoiceError/.test(voiceP) && /No microphone|unsupported/.test(read('src/utils/studyVoice.ts')), 'microphone problems are explained');
+const aiSrc = read('src/services/studyAi.ts');
+check(/FN = `\$\{BASE\}\/functions\/v1\/study-ai`/.test(aiSrc) && !/GROQ|GEMINI|OPENROUTER|TAVILY|api[_-]?key\s*[:=]/i.test(aiSrc.replace(/VITE_SUPABASE_PUBLISHABLE_KEY/g, '').replace(/apikey: KEY/g, '')), 'the app only talks to the study-ai function; no AI key is anywhere in it');
+check(/signedUrls\(/.test(chat) && /createSignedUrls\(need, 3600\)/.test(aiSrc), 'pictures are shown through short-lived private links');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1,6 +1,7 @@
-import { supabase, MEDIA_BUCKET } from './supabase';
+import { supabase } from './supabase';
 import type { StudyMe, StudyDashboard, StudyTask, StudyExam, StudySession, StudyProfile, TaskStatus } from '../utils/studyTypes';
 import type { ChosenSubject } from '../utils/studyCatalog';
+import type { StudyConversation, StudyMessage } from '../utils/studyTypes';
 
 // NOOB STUDY: every call goes to a database function that works for the signed-in student alone (see supabase/migrations/20261014…).
 // A call never throws: it returns { ok, data } or { ok: false, error }, where the error is a plain sentence a student can read.
@@ -29,6 +30,12 @@ export function friendly(message: string): string {
 }
 
 export const newRef = (): string => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(16)}-0000-4000-8000-${Math.random().toString(16).slice(2, 14).padEnd(12, '0')}`);
+
+// the private store for pictures and documents ("study"): files go when the records that point at them go
+async function removeKeys(keys: unknown): Promise<void> {
+  const list = (Array.isArray(keys) ? keys : []).filter((k): k is string => typeof k === 'string' && k.length > 0);
+  if (list.length) { try { await supabase.storage.from('study').remove(list); } catch { /* the records are gone; a stray file is private and unguessable */ } }
+}
 
 export const studyApi = {
   me: () => call<StudyMe>('study_me'),
@@ -59,13 +66,26 @@ export const studyApi = {
   focusFinish: (id: string, focusSeconds: number, completed: boolean) =>
     call<{ id: string; status: 'completed' | 'interrupted'; focusSeconds: number; already: boolean }>('study_focus_finish', { p_id: id, p_focus_seconds: Math.round(focusSeconds), p_completed: completed }),
 
+  // ---- the tutor's chats
+  aiStatus: () => call<Record<string, { limit: number; used: number; remaining: number }>>('study_ai_status'),
+  convs: (subjectId: string | null = null, limit = 30, before: string | null = null) =>
+    call<{ conversations: StudyConversation[]; more: boolean }>('study_conv_list', { p_subject: subjectId, p_limit: limit, p_before: before }),
+  conv: (id: string, limit = 40, before: string | null = null) =>
+    call<{ conversation: StudyConversation; messages: StudyMessage[]; more: boolean }>('study_conv_get', { p_id: id, p_limit: limit, p_before: before }),
+  newConv: (subjectId: string | null, mode: 'chat' | 'teach' | 'photo' | 'voice' | 'document' = 'chat', title = '', topic = '') =>
+    call<StudyConversation>('study_conv_create', { p_subject: subjectId, p_mode: mode, p_title: title, p_topic: topic }),
+  renameConv: (id: string, title: string) => call<StudyConversation>('study_conv_rename', { p_id: id, p_title: title }),
+  convContext: (id: string, subjectId: string | null, topic: string) => call<StudyConversation>('study_conv_set_context', { p_id: id, p_subject: subjectId, p_topic: topic }),
+  deleteConv: async (id: string): Promise<Result<{ deleted: boolean; files: string[] }>> => {
+    const res = await call<{ deleted: boolean; files: string[] }>('study_conv_delete', { p_id: id });
+    if (res.ok) await removeKeys(res.data.files);
+    return res;
+  },
+
   // 'activity': the focus history and activity log. 'all': everything of NOOB STUDY for this person (the NOOB account is untouched).
-  deleteMyData: async (scope: 'activity' | 'all'): Promise<Result<{ removedFiles: string[] }>> => {
+  deleteMyData: async (scope: 'activity' | 'all' | 'conversations'): Promise<Result<{ removedFiles: string[] }>> => {
     const res = await call<{ removedFiles: string[] }>('study_delete_my_data', { p_scope: scope });
-    if (res.ok) {
-      const keys = (res.data.removedFiles || []).filter((k) => typeof k === 'string' && k.length > 0);
-      if (keys.length) { try { await supabase.storage.from(MEDIA_BUCKET).remove(keys); } catch { /* the records are gone; a stray file is harmless and unguessable */ } }
-    }
+    if (res.ok) await removeKeys(res.data.removedFiles);
     return res;
   }
 };

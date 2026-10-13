@@ -177,7 +177,7 @@ export interface SpeakerDeps {
   setTimer: (fn: () => void, ms: number) => unknown;
   clearTimer: (id: unknown) => void;
 }
-export interface SpeakOptions { onStart?: () => void; onEnd?: () => void; startDelayMs?: number; rate?: number; volume?: number; lang?: string }
+export interface SpeakOptions { onStart?: () => void; onEnd?: () => void; onVoice?: (v: { name: string; lang: string }) => void; startDelayMs?: number; rate?: number; volume?: number; lang?: string }
 
 // Says a whole answer, piece by piece, each in the best voice the phone has for its language. stop() ends it at once (and does not call onEnd: the one
 // who stopped it already knows). onEnd is called exactly once when the answer is finished, or when a voice fails or goes quiet, so the screen never
@@ -208,6 +208,7 @@ export function createSpeaker(deps: SpeakerDeps) {
       const p = pieces[i];
       const lang = languageOf(p.text, baseLang);
       const voice = pickBestVoice(voices, lang);
+      opts.onVoice?.({ name: voice?.name || 'the phone\'s own voice', lang: voice?.lang || lang });   // so the screen can show which voice is speaking
       let moved = false, began = false, retried = false;
       const next = () => { if (moved) return; moved = true; if (mine !== run) return; later(() => sayPiece(i + 1), p.pauseMs); };
       const build = () => {

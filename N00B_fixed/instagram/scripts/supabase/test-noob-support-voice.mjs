@@ -148,7 +148,8 @@ const makeWorld = ({ voices = [], throwOnSpeak = false } = {}) => {
   const w = makeWorld({ voices: [{ name: 'Microsoft Neerja Online (Natural)', lang: 'en-IN', localService: false }, { name: 'Veena', lang: 'en-IN', localService: true }, { name: 'Google हिन्दी', lang: 'hi-IN', localService: false }] });
   const sp = S.createSpeaker(w.deps);
   const log = [];
-  sp.speak('Hello there. आपका ऑर्डर तैयार है! Bye.', { onStart: () => log.push('start'), onEnd: () => log.push('end'), startDelayMs: 350 });
+  const heard = [];
+  sp.speak('Hello there. आपका ऑर्डर तैयार है! Bye.', { onStart: () => log.push('start'), onEnd: () => log.push('end'), onVoice: (v) => heard.push(v.name), startDelayMs: 350 });
   w.advance(100);
   check(w.spoken.length === 0, 'it waits the start delay (the phone needs a moment after the microphone is switched off)');
   w.advance(300);
@@ -165,6 +166,7 @@ const makeWorld = ({ voices = [], throwOnSpeak = false } = {}) => {
   check(w.spoken.length === 3 && w.spoken[2].text === 'Bye' && w.spoken[2].voice.name.includes('Neerja'), 'and back to English for the next');
   w.begin(w.spoken[2]); w.finish(w.spoken[2]); w.advance(10);
   check(log.join() === 'start,end', 'onEnd comes exactly once, at the very end');
+  check(heard.length === 3 && heard[0].includes('Neerja') && heard[1].includes('हिन्दी') && heard[2].includes('Neerja'), 'the screen is told which voice is about to speak each sentence', JSON.stringify(heard));
   check(w.spoken.every((u) => !/[.,;:!?]/.test(u.text)), 'not one piece sent to the voice has a punctuation mark in it');
 }
 {
@@ -259,6 +261,7 @@ section('6. The voice call uses it, and the microphone is off while the assistan
   check(/if \(voiceEnabled\) interruptSpeech\(\)/.test(modal) && /if \(!on\) interruptSpeech\(\)/.test(modal), 'switching the voice off stops it talking at once (and the call goes on listening)');
   check(/recognition\.lang = 'en-IN'/.test(modal), 'the assistant listens for the Indian English accent');
   check(/setAudioMode\('playback'\)/.test(speakText) && /setAudioMode\('auto'\)/.test(modal) && /audioSession/.test(modal), 'on an iPhone the page asks for "playback" sound while the assistant speaks (full volume, loudspeaker) and goes back to normal for listening');
+  check(/onVoice: \(v\) => setVoiceInfo/.test(speakText) && /Voice: \{voiceInfo \|\| 'not used yet'\}/.test(modal) && /App version/.test(modal), 'the call screen shows, in small print, which voice is speaking and which version of the app the phone is running');
   check(/recognitionRef\.current \? 700 : 0/.test(speakText), 'after closing the microphone it waits long enough for the phone to change its sound over');
   check(/I'm listening, so please tell me what you need help with/.test(modal) && !/regarding \$\{cleanQuery\}/.test(modal) && !/Our mini-games grant \+10,000,000/.test(modal), 'the first words, and the words said when something goes wrong, are clear and grammatical (they no longer read the question back or recite unrelated facts)');
   check(!/(?<=\()\?<[=!]/.test(fs.readFileSync('src/utils/supportSpeech.ts', 'utf8').replace(/\/\/[^\n]*/g, '')) && !/\(\?<[=!]/.test(fs.readFileSync('src/utils/supportSpeech.ts', 'utf8').replace(/\/\/[^\n]*/g, '')), 'the speech code uses no regex look-behind (older iPhones refuse to load a page that contains one)');

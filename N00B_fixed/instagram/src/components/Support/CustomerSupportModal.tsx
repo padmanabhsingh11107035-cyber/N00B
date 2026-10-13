@@ -34,6 +34,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { createSpeaker } from '../../utils/supportSpeech';
+
+declare const __BUILD_ID__: string;
 import { User } from '../../types';
 import {
   askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary, fetchUsers,
@@ -270,6 +272,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   voiceEnabledRef.current = voiceEnabled;
   isSpeakerOnRef.current = isSpeakerOn;
   const speakerRef = useRef<ReturnType<typeof createSpeaker> | null>(null);
+  // shown in small print on the call screen: which voice is speaking, and which version of the app this phone is running (so a stale app is easy to spot)
+  const [voiceInfo, setVoiceInfo] = useState('');
+  const appVersion = (() => { try { return new Date(Number(__BUILD_ID__)).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } })();
   // window.speechSynthesis.getVoices() famously returns an empty list until the browser has
   // finished loading its voice roster asynchronously — if speakText() calls it too early (which
   // it did, right when the call greeting fires), no voice ever gets chosen and the browser falls
@@ -394,6 +399,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     speakerRef.current.speak(text, {
       startDelayMs: delay,
       lang: 'en-IN',
+      onVoice: (v) => setVoiceInfo(`${v.name} (${v.lang})`),
       onEnd: () => {
         isSpeakingRef.current = false;
         setIsSpeaking(false);
@@ -1818,6 +1824,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                 </p>
               )}
             </div>
+            <p className="text-[10px] text-zinc-600 text-center" data-testid="voice-info">
+              Voice: {voiceInfo || 'not used yet'}{appVersion ? ` · App version ${appVersion}` : ''}
+            </p>
 
           </div>
 

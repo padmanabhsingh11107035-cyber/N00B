@@ -127,7 +127,7 @@ reset();
 claim = mail('verified_by_admin', { username: 'ann', at: '2026-10-12T10:30:00Z' });
 await ask();
 m = sent[0].body;
-check(/verified on NOOB/.test(m.subject) && m.html.includes('@ann') && m.html.includes('The NOOB team') && m.text.includes('verified your account @ann'), 'the verified-by-admin e-mail says who and by whom');
+check(/account is now verified/.test(m.subject) && m.html.includes('@ann') && m.html.includes('The NOOB team') && m.text.includes('verified your account @ann'), 'the verified-by-admin e-mail says who and by whom');
 check(!/points|price|paid|wallet/i.test(m.text), 'and carries no payment information (it was a gift)');
 reset();
 claim = mail('verified_by_admin', { username: 'ann', at: '2026-10-12T10:30:00Z', by: { username: 'noob' } }, { related: { id: '00000000-aaaa-4000-8000-000000000abc', username: 'noob', name: 'NOOB' } });
@@ -140,7 +140,7 @@ reset();
 claim = mail('draw_prize', { prize: 'pro', label: 'NOOB Pro Elite', subtitle: '30 days of Pro', tier: 'elite', days: 30, packName: 'Royal Spin', rarity: 'legendary', paid: true, cost: '1,000,000,000', spinNo: 7, walletAfter: '4,000,000,000', previousTier: 'plus', previousEndsAt: '2026-10-20T10:30:00Z', message: 'Your NOOB Pro plan is active until 11 Nov 2026. It does not renew by itself.', endsAt: '2026-11-11T10:30:00Z', at: '2026-10-12T10:30:00Z' });
 await ask();
 m = sent[0].body;
-check(/You won NOOB Pro Elite \(30 days of Pro\) in NOOB Draw/.test(m.subject) && m.html.includes('Royal Spin') && m.html.includes('11 Nov 2026') && m.text.includes('active until 11 Nov 2026'), 'a NOOB Pro prize: the plan, the days, the spin and the end date');
+check(/^Your NOOB Draw prize: NOOB Pro Elite \(30 days of Pro\)$/.test(m.subject) && !/\p{Extended_Pictographic}|✅/u.test(m.subject) && m.html.includes('Royal Spin') && m.html.includes('11 Nov 2026') && m.text.includes('active until 11 Nov 2026'), 'a NOOB Pro prize: the plan, the days, the spin and the end date');
 check(m.html.includes('it ends on that date unless you pay again') && m.text.includes('does not renew by itself') && !/total paid|plan price/i.test(m.text), 'it says the plan does not renew by itself, and is a prize, not a receipt');
 for (const needle of ['Paid spin', '1,000,000,000 points', '#7', '4,000,000,000 points', 'NOOB Pro Plus, until 20 Oct 2026', 'NOOB Pro Elite', 'Legendary', 'NOOB Draw']) {
   check(m.html.includes(needle) && m.text.includes(needle), `the source of the win is spelled out: "${needle}"`);
@@ -154,7 +154,7 @@ reset();
 claim = mail('draw_prize', { prize: 'verified', label: 'Verified Tick', subtitle: 'The blue tick, forever', packName: 'Galaxy Spin', message: 'The blue verified tick now shows next to your name everywhere in NOOB.', at: '2026-10-12T10:30:00Z' });
 await ask();
 m = sent[0].body;
-check(/Verified Tick in NOOB Draw/.test(m.subject) && m.html.includes('Galaxy Spin') && m.html.includes('For good') && !m.html.includes('Active until'), 'the verified tick: says it is for good, no end date');
+check(/NOOB Draw prize: the Verified Tick/.test(m.subject) && m.html.includes('Galaxy Spin') && m.html.includes('For good') && !m.html.includes('Active until'), 'the verified tick: says it is for good, no end date');
 check(done.length === 1 && done[0].p_ok === true, 'the database is told it was sent');
 reset();
 

@@ -65,7 +65,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html }),
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html, ...((Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() ? { reply_to: (Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() } : {}) }),
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
@@ -266,7 +266,7 @@ function renderEventEmail(kind: string, d: any, name: string, emailId: string, a
   if (kind === 'verified_by_admin') {
     const by = rel?.name && rel?.username ? `The NOOB team (${rel.name}, @${rel.username})` : rel?.username ? `The NOOB team (@${rel.username})` : 'The NOOB team';
     return composeEmail({
-      subject: `You're verified on NOOB ✅`,
+      subject: `Your NOOB account is now verified`,
       preheader: 'The NOOB team verified your account.',
       kicker: 'Verified', emoji: '✅', title: 'You are verified on NOOB', intro: `The NOOB team has verified your account @${d.username}.`,
       pill: { text: 'Verified', tone: 'blue' },
@@ -284,7 +284,7 @@ function renderEventEmail(kind: string, d: any, name: string, emailId: string, a
     const before = d.previousTier ? `NOOB Pro ${initcap(d.previousTier)}${d.previousEndsAt ? `, until ${fmtWhen(d.previousEndsAt)}` : ''}` : isPro ? 'No plan' : '';
     const intro = isPro ? `You won ${d.label || 'NOOB Pro'} in NOOB Draw. 🎉 ${String(d.message || '')}` : `You won the Verified Tick in NOOB Draw. ✅ ${String(d.message || '')}`;
     return composeEmail({
-      subject: isPro ? `You won ${d.label || 'NOOB Pro'}${d.subtitle ? ` (${d.subtitle})` : ''} in NOOB Draw 🎉` : 'You won the Verified Tick in NOOB Draw ✅',
+      subject: isPro ? `Your NOOB Draw prize: ${d.label || 'NOOB Pro'}${d.subtitle ? ` (${d.subtitle})` : ''}` : 'Your NOOB Draw prize: the Verified Tick',
       preheader: `${isPro ? d.label : 'The Verified Tick'} from ${d.packName || 'NOOB Draw'}${paidSpin ? ' (paid spin)' : ' (free spin)'}.`,
       kicker: 'NOOB Draw', emoji: isPro ? '🎉' : '✅', title: isPro ? `You won ${d.label || 'NOOB Pro'}` : 'You won the Verified Tick', intro,
       pill: { text: `${d.rarity ? `${initcap(d.rarity)} ` : ''}prize`.trim(), tone: 'gold' },

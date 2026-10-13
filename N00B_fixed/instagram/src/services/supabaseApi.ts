@@ -3299,7 +3299,7 @@ const mapTeam = (rows: any): TeamMember[] => (Array.isArray(rows) ? rows : [])
   .filter((m) => m && m.id)
   .map((m): TeamMember => ({
     id: String(m.id), name: String(m.name || ''), qualification: String(m.qualification || ''), description: String(m.description || ''),
-    photo: m.photo ? resolveMedia(String(m.photo)) : null, photoKey: m.photo ? String(m.photo) : null, position: Number(m.position) || 0,
+    photo: m.photo ? resolveMedia(String(m.photo)) : null, photoKey: m.photo ? String(m.photo) : null, position: Number(m.position) || 0, pinned: m.pinned === true,
     userId: m.userId ? String(m.userId) : null, username: m.username ? String(m.username) : null,
     avatar: m.avatar ? resolveMedia(String(m.avatar)) : null, isVerified: !!m.isVerified, isMe: !!m.isMe,
     following: !!m.following, requested: !!m.requested, blocked: !!m.blocked
@@ -3380,6 +3380,16 @@ export async function eraseTeamApplication(id: string): Promise<{ success: boole
     return { success: true, team: mapTeam(res?.team), state: mapTeamAdmin(res?.admin), warning: warning || undefined };
   } catch (err) {
     return { success: false, error: errorText(err, 'That application could not be deleted. Please try again.') };
+  }
+}
+
+// Pins a person to the top of the page (or unpins them). Only the main administrator can, and only the administrator is told who is pinned.
+export async function pinTeamMember(id: string, pinned: boolean): Promise<{ success: boolean; team?: TeamMember[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_team_pin', { p_id: id, p_pinned: pinned });
+    return { success: true, team: mapTeam(res?.team) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'The pin could not be changed. Please try again.') };
   }
 }
 

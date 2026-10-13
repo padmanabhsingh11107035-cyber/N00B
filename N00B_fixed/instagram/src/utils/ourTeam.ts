@@ -9,6 +9,7 @@ export interface TeamMember {
   photo: string | null;     // the picture's address, ready to show
   photoKey: string | null;  // the stored file ("team/…"), what is saved back when the member is edited
   position: number;
+  pinned: boolean;         // pinned to the top: only the main administrator is ever told (everyone else always gets false)
   // The NOOB account behind the card (everyone who joined through the form has one; the administrator can link anyone). null: none.
   userId: string | null;
   username: string | null;

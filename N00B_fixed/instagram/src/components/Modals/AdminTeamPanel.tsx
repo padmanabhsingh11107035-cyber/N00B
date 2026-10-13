@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, BadgeCheck, Camera, Check, Copy, Fingerprint, GraduationCap, Link2, Loader2, Pencil, Plus, RefreshCw, Share2, Trash2, UserRound, Users, X } from 'lucide-react';
-import { decideTeamApplication, deleteTeamMember, discardTeamPhoto, eraseTeamApplication, fetchTeamApplications, fetchTeamMembers, moveTeamMember, saveTeamMember, saveTeamSettings, uploadTeamPhoto } from '../../services/api';
+import { ArrowDown, ArrowUp, BadgeCheck, Camera, Check, Copy, Fingerprint, GraduationCap, Link2, Loader2, Pencil, Pin, Plus, RefreshCw, Share2, Trash2, UserRound, Users, X } from 'lucide-react';
+import { decideTeamApplication, deleteTeamMember, discardTeamPhoto, eraseTeamApplication, fetchTeamApplications, fetchTeamMembers, moveTeamMember, pinTeamMember, saveTeamMember, saveTeamSettings, uploadTeamPhoto } from '../../services/api';
 import type { TeamAdminState, TeamApplicationRow, TeamMember } from '../../utils/ourTeam';
-import { TEAM_JOIN_LINK, TEAM_LIMITS, initials, validateTeamForm } from '../../utils/ourTeam';
+import { TEAM_JOIN_LINK, TEAM_LIMITS, cardNumber, initials, validateTeamForm } from '../../utils/ourTeam';
 
 // Admin panel → "Our Team": adds, edits, reorders and removes the people shown on the "Our Team" page in the Home menu.
 // Each member needs a photo, a name, a qualification and a short description. People can also join themselves from a link (Applications):
@@ -23,11 +23,12 @@ const EMPTY: Draft = { id: null, name: '', qualification: '', description: '', p
 const field = 'w-full rounded-xl bg-zinc-900 border border-zinc-700 focus:border-amber-400 outline-none px-3 py-2.5 text-xs text-white placeholder:text-zinc-500';
 
 // The small picture in the list; a photo that cannot be loaded shows the initials instead of a broken-picture icon.
-const Thumb: React.FC<{ member: TeamMember }> = ({ member }) => {
+const Thumb: React.FC<{ member: TeamMember; number: string }> = ({ member, number }) => {
   const [broken, setBroken] = useState(false);
   return (
     <div className="relative w-12 h-14 shrink-0 rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center text-[13px] font-black text-amber-200">
       {member.photo && !broken ? <img src={member.photo} alt="" onError={() => setBroken(true)} className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : initials(member.name)}
+      <span className="absolute left-1 bottom-1 px-1.5 rounded-full bg-black/65 text-[9px] font-black tracking-wider text-white tabular-nums" title="The number on the team page">{number}</span>
     </div>
   );
 };
@@ -194,7 +195,7 @@ export const AdminTeamPanel: React.FC<Props> = ({ onPendingChange }) => {
           <button onClick={() => openForm()} className="px-3 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-black flex items-center gap-1.5 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Add member</button>
         )}
       </div>
-      <p className="text-[11px] text-zinc-400 leading-relaxed">These people appear on the "Our Team" page in the Home menu, in this order. Each one needs a photo, a name, a qualification and a short description.</p>
+      <p className="text-[11px] text-zinc-400 leading-relaxed">These people appear on the "Our Team" page in the Home menu, numbered in this order. Pin someone to put them first (only you can see pins). Each one needs a photo, a name, a qualification and a short description.</p>
 
       {flash && <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold px-3 py-2 flex items-center gap-2"><Check className="w-4 h-4" /> {flash}</div>}
       {error && <div className="rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold px-3 py-2">{error}</div>}
@@ -356,9 +357,12 @@ export const AdminTeamPanel: React.FC<Props> = ({ onPendingChange }) => {
         <ul className="space-y-2">
           {team.map((m, i) => (
             <li key={m.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 flex items-center gap-3">
-              <Thumb member={m} />
+              <Thumb member={m} number={cardNumber(i)} />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate">{m.name}</p>
+                <p className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                  <span className="truncate">{m.name}</span>
+                  {m.pinned && <Pin className="w-3 h-3 shrink-0 text-amber-300 fill-amber-300" aria-label="Pinned" />}
+                </p>
                 <p className="text-[11px] text-zinc-400 truncate flex items-center gap-1"><GraduationCap className="w-3 h-3 shrink-0" /> {m.qualification || 'No qualification'}</p>
                 {m.username && <p className="text-[10px] text-sky-300 font-bold truncate">@{m.username}</p>}
                 {confirmId === m.id && (
@@ -374,8 +378,14 @@ export const AdminTeamPanel: React.FC<Props> = ({ onPendingChange }) => {
               <div className="flex items-center gap-0.5 shrink-0">
                 {busyId === m.id ? <Loader2 className="w-4 h-4 text-zinc-400 animate-spin mx-2" /> : (
                   <>
-                    <button onClick={() => void act(m.id, () => moveTeamMember(m.id, 'up'))} disabled={i === 0} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-25 cursor-pointer" aria-label={`Move ${m.name} up`}><ArrowUp className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => void act(m.id, () => moveTeamMember(m.id, 'down'))} disabled={i === team.length - 1} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-25 cursor-pointer" aria-label={`Move ${m.name} down`}><ArrowDown className="w-3.5 h-3.5" /></button>
+                    <button
+                      onClick={() => void act(m.id, () => pinTeamMember(m.id, !m.pinned), m.pinned ? `${m.name} is unpinned.` : `${m.name} is pinned: shown first on the page. Only you can see the pin.`)}
+                      className={`p-1.5 rounded-lg hover:bg-zinc-800 cursor-pointer ${m.pinned ? 'text-amber-300' : 'text-zinc-400 hover:text-amber-300'}`}
+                      aria-label={m.pinned ? `Unpin ${m.name}` : `Pin ${m.name} to the top`}
+                      title={m.pinned ? 'Unpin' : 'Pin to the top (only you can see pins)'}
+                    ><Pin className={`w-3.5 h-3.5 ${m.pinned ? 'fill-amber-300' : ''}`} /></button>
+                    <button onClick={() => void act(m.id, () => moveTeamMember(m.id, 'up'))} disabled={i === 0 || team[i - 1].pinned !== m.pinned} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-25 cursor-pointer" aria-label={`Move ${m.name} up`}><ArrowUp className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => void act(m.id, () => moveTeamMember(m.id, 'down'))} disabled={i === team.length - 1 || team[i + 1].pinned !== m.pinned} className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-25 cursor-pointer" aria-label={`Move ${m.name} down`}><ArrowDown className="w-3.5 h-3.5" /></button>
                     <button onClick={() => openForm(m)} className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-300 hover:bg-zinc-800 cursor-pointer" aria-label={`Edit ${m.name}`}><Pencil className="w-3.5 h-3.5" /></button>
                     <button onClick={() => setConfirmId(confirmId === m.id ? null : m.id)} className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 cursor-pointer" aria-label={`Delete ${m.name} permanently`}><Trash2 className="w-3.5 h-3.5" /></button>
                   </>

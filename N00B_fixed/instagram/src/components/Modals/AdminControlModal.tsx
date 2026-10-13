@@ -145,6 +145,8 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'team_settings_changed': return `${who} changed the Our Team page settings${d.open === true ? ': applications OPEN' : d.open === false ? ': applications CLOSED' : ''}${d.autoPublish === true ? ': publish straight away ON' : d.autoPublish === false ? ': publish straight away OFF' : ''}.`;
     case 'team_member_added': return `${who} added ${d.name || 'someone'} to the Our Team page.`;
     case 'team_member_updated': return `${who} edited ${d.name || 'a member'} on the Our Team page.`;
+    case 'team_member_pinned': return `${who} pinned ${d.name || 'a member'} to the top of the Our Team page.`;
+    case 'team_member_unpinned': return `${who} unpinned ${d.name || 'a member'} on the Our Team page.`;
     case 'team_member_removed': return `${who} removed ${target || 'someone'} from the Our Team page and deleted what they filled in.`;
     case 'team_member_moved': return `${who} moved ${d.name || 'a member'} ${d.direction === 'up' ? 'up' : 'down'} on the Our Team page.`;
     case 'explore_pin': return `${who} pinned ${target || 'an account'} to the top of Explore.`;

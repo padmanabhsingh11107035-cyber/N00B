@@ -133,5 +133,20 @@ const eraseSql = sql3.slice(sql3.indexOf('create or replace function public.team
 check(/delete from public\.team_members/.test(eraseSql) && /delete from public\.team_page_applications/.test(eraseSql) && /- 'name'/.test(eraseSql), 'the database erases the card, the joining form and their name in the activity log');
 check(!/(delete from|update)\s+public\.(profiles|follows|notifications|posts|profile_private)/.test(eraseSql) && !/auth\.users/.test(eraseSql), 'and never touches the account (profile, followers, notifications, posts)');
 
+section('12. Pinning');
+const api4 = read('src/services/supabaseApi.ts');
+check(/rpc<any>\('admin_team_pin', \{ p_id: id, p_pinned: pinned \}\)/.test(api4) && /pinned: m\.pinned === true/.test(api4), 'the app calls the pin function, and treats anything but a clear "true" as not pinned');
+const panel4 = read('src/components/Modals/AdminTeamPanel.tsx');
+check(/pinTeamMember\(m\.id, !m\.pinned\)/.test(panel4) && /Pin \$\{m\.name\} to the top/.test(panel4) && /Unpin \$\{m\.name\}/.test(panel4), 'every row has a Pin / Unpin button');
+check(/\{m\.pinned && <Pin [^>]*aria-label="Pinned" \/>\}/.test(panel4), 'a pinned row carries a small pin next to the name');
+check(/disabled=\{i === 0 \|\| team\[i - 1\]\.pinned !== m\.pinned\}/.test(panel4) && /disabled=\{i === team\.length - 1 \|\| team\[i \+ 1\]\.pinned !== m\.pinned\}/.test(panel4), 'the up/down arrows are off at the edge of the pinned group and of the rest');
+check(/number=\{cardNumber\(i\)\}/.test(panel4) && /The number on the team page/.test(panel4), 'each row shows the number the person has on the page');
+const page4 = read('src/components/Team/OurTeamPage.tsx');
+check(/\{member\.pinned && \(/.test(page4) && /Only you can see this pin/.test(page4), 'the page shows a pin mark on a card only when the person is told it is pinned (the administrator)');
+check(!/pinned/.test(read('src/components/Team/TeamJoinPage.tsx')), 'nothing about pins reaches the joining form');
+const sql4 = read('supabase/migrations/20261013000003_team_pin.sql');
+check(/'pinned', t\.pinned and me\.is_main/.test(sql4) && /order by t\.pinned desc, t\.position/.test(sql4), 'the database orders pinned people first for everyone, and sends the flag only to the main administrator');
+check(/team_member_pinned/.test(read('src/components/Modals/AdminControlModal.tsx')) && /team_member_unpinned/.test(read('src/components/Modals/AdminControlModal.tsx')), 'pins and unpins read well in the activity log');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

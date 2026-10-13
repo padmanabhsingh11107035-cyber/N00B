@@ -230,6 +230,7 @@ export {
   deleteTeamMember,
   eraseTeamApplication,
   moveTeamMember,
+  pinTeamMember,
   fetchMyTeamApplication,
   submitTeamJoin,
   fetchTeamApplications,

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BadgeCheck, Check, ChevronLeft, GraduationCap, Heart, Loader2, RefreshCw, Sparkles, UserPlus, Users, X } from 'lucide-react';
+import { BadgeCheck, Check, ChevronLeft, GraduationCap, Heart, Loader2, Pin, RefreshCw, Sparkles, UserPlus, Users, X } from 'lucide-react';
 import type { User } from '../../types';
 import { fetchTeamMembers, toggleFollowUser } from '../../services/api';
 import { isMainAdmin } from '../../adminAccess';
@@ -51,6 +51,11 @@ const MemberCard: React.FC<{
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#111117] via-[#111117]/25 to-transparent" />
           <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 text-[10px] font-black tracking-[0.2em] text-white/90">{cardNumber(index)}</span>
+          {member.pinned && (
+            <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-amber-400/90 text-black text-[10px] font-black flex items-center gap-1" title="Only you can see this pin">
+              <Pin className="w-3 h-3 fill-black" /> Pinned
+            </span>
+          )}
           <div className="absolute inset-x-0 bottom-0 p-4 text-left">
             <h2 className="draw-sans text-[24px] leading-[1.1] text-white break-words" style={{ textShadow: '0 2px 18px rgba(0,0,0,0.6)' }}>{member.name}</h2>
             {member.qualification && (

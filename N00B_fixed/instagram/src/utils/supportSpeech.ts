@@ -17,6 +17,10 @@ export function prepareSpeech(input: string): string {
   t = t.replace(/```[\s\S]*?```/g, ' ');
   t = t.replace(/\[([^\]]+)\]\((?:[^)]*)\)/g, '$1');                                   // [text](link) -> text
   t = t.replace(/\bhttps?:\/\/\S+/gi, ' ').replace(/\bwww\.\S+/gi, ' ');                // links are never read out
+  // abbreviations are said as the words they stand for (and their dots must not end a sentence)
+  t = t.replace(/\be\.\s?g\./gi, 'for example').replace(/\bi\.\s?e\./gi, 'that is').replace(/\bvs\.?(?=\s)/gi, 'versus').replace(/\b(?:approx|approx\.)(?=\s)/gi, 'approximately')
+    .replace(/\bMr\./g, 'Mister').replace(/\bMrs\./g, 'Missus').replace(/\bMs\./g, 'Miss').replace(/\bDr\./g, 'Doctor').replace(/\b([ap])\.m\./gi, '$1 m')
+    .replace(/\betc\.(\s+(?=[A-Z\u0900-\u097F]))/g, 'and so on.$1').replace(/\betc\.?/gi, 'and so on');
   t = t.replace(/\(user id:[^)]*\)/gi, ' ').replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, ' ');   // raw ids
   t = t.replace(/[\p{Extended_Pictographic}️‍⃣]/gu, ' ');              // emoji
   t = t.replace(/[’‘`´]/g, "'").replace(/[“”«»„]/g, '"');
@@ -48,6 +52,7 @@ export function prepareSpeech(input: string): string {
   // whatever symbol is still left on its own would be read out by name ("at", "hash", "dash"): only letters, numbers and the marks handled below stay
   t = t.replace(/[#@₹$%^`~|+=\-]/g, ' ');
   t = t.split('').map((c, i, a) => (c === "'" && !(/\p{L}/u.test(a[i - 1] || '') && /\p{L}/u.test(a[i + 1] || '')) ? ' ' : c)).join('');   // an apostrophe only inside a word
+  t = t.replace(/[^\p{L}\p{M}\p{N}\s.,;:!?']/gu, ' ');                             // anything else (emoji of every kind, ticks, stars, arrows, signs) is not said
   t = t.replace(/\n+/g, '. ');
   return t.replace(/\s+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').replace(/([,.;:!?])\1+/g, '$1').replace(/^[\s,.;:!?]+/, '').trim();
 }
@@ -167,7 +172,7 @@ export function pickBestVoice<T extends VoiceLike>(voices: T[], lang: string): T
 
 // ---------------------------------------------------------------------------------------------------------------- the speaker
 export interface SpeakerDeps {
-  synth: { speak(u: any): void; cancel(): void; getVoices(): VoiceLike[]; speaking?: boolean; pending?: boolean };
+  synth: { speak(u: any): void; cancel(): void; getVoices(): VoiceLike[]; resume?(): void; speaking?: boolean; pending?: boolean };
   Utterance: new (text: string) => any;
   setTimer: (fn: () => void, ms: number) => unknown;
   clearTimer: (id: unknown) => void;
@@ -179,11 +184,12 @@ export interface SpeakOptions { onStart?: () => void; onEnd?: () => void; startD
 // waits for a voice that has gone silent.
 export function createSpeaker(deps: SpeakerDeps) {
   let run = 0;
+  const alive: any[] = [];   // the pieces being said are kept here: Chrome forgets to report the end of a piece whose object has been thrown away
   const timers = new Set<unknown>();
   const later = (fn: () => void, ms: number) => { const id = deps.setTimer(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
   const clearTimers = () => { timers.forEach((id) => deps.clearTimer(id)); timers.clear(); };
 
-  const stop = () => { run++; clearTimers(); try { deps.synth.cancel(); } catch { /* nothing was speaking */ } };
+  const stop = () => { run++; clearTimers(); alive.length = 0; try { deps.synth.cancel(); } catch { /* nothing was speaking */ } };
 
   const speak = (written: string, opts: SpeakOptions = {}): boolean => {
     stop();
@@ -201,23 +207,35 @@ export function createSpeaker(deps: SpeakerDeps) {
       if (i >= pieces.length) { finish(); return; }
       const p = pieces[i];
       const lang = languageOf(p.text, baseLang);
-      const u = new deps.Utterance(p.text);
-      u.lang = lang;
       const voice = pickBestVoice(voices, lang);
-      if (voice) { u.voice = voice; u.lang = voice.lang || lang; }
-      u.rate = /natural|neural|online/i.test(voice?.name || '') ? Math.min(1.05, rate) : Math.min(0.97, rate);
-      u.pitch = p.question ? 1.04 : 1;
-      u.volume = opts.volume ?? 1;
-      let moved = false, began = false;
+      let moved = false, began = false, retried = false;
       const next = () => { if (moved) return; moved = true; if (mine !== run) return; later(() => sayPiece(i + 1), p.pauseMs); };
-      u.onstart = () => { began = true; if (!started && mine === run) { started = true; opts.onStart?.(); } };
-      u.onend = next;
-      u.onerror = (e: any) => { if (e && (e.error === 'canceled' || e.error === 'interrupted')) return; next(); };
-      try { deps.synth.speak(u); } catch { finish(); return; }
+      const build = () => {
+        const u = new deps.Utterance(p.text);
+        u.lang = lang;
+        if (voice) { u.voice = voice; u.lang = voice.lang || lang; }
+        u.rate = /natural|neural|online/i.test(voice?.name || '') ? Math.min(1.05, rate) : Math.min(0.97, rate);
+        u.pitch = p.question ? 1.04 : 1;
+        u.volume = opts.volume ?? 1;
+        u.onstart = () => { began = true; if (!started && mine === run) { started = true; opts.onStart?.(); } };
+        u.onend = () => { if (!retried || began) next(); };
+        u.onerror = (e: any) => { if (e && (e.error === 'canceled' || e.error === 'interrupted')) return; next(); };
+        alive.push(u);
+        if (alive.length > 6) alive.shift();
+        return u;
+      };
+      try { deps.synth.resume?.(); deps.synth.speak(build()); } catch { finish(); return; }
       // some engines never report the end of a piece: look at the real state now and then, so the answer still moves on
       const watch = (waited: number) => {
         if (moved || mine !== run) return;
         const busy = !!(deps.synth.speaking || deps.synth.pending);
+        // asked, but nothing started and nothing is waiting: the phone let the request fall; ask once more (after waking its voice)
+        if (!began && !busy && !retried && waited >= 1750) {
+          retried = true;
+          try { deps.synth.cancel(); deps.synth.resume?.(); deps.synth.speak(build()); } catch { finish(); return; }
+          later(() => watch(waited + 250), 250);
+          return;
+        }
         if (!busy && (began || waited >= 2500)) { next(); return; }       // it was said (or never started, and is not waiting any more)
         if (!began && waited >= 12000) { next(); return; }                // a voice that has not started in 12 seconds is not going to
         if (waited >= 45000) { next(); return; }

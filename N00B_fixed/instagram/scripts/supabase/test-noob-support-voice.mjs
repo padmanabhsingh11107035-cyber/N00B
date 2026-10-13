@@ -40,6 +40,44 @@ section('1. The words: what a voice should say');
   check(S.prepareSpeech('Rate 3.5 stars at 9:30 on 10,000 days') === 'Rate 3.5 stars at 9:30 on 10000 days', 'a decimal and a time are kept as they are');
 }
 
+section('1b. Emoji and signs are never said');
+{
+  const e = S.prepareSpeech('😊 Hello ❤️ there 🔥👍🏽🇮🇳 ✅ done ✔ ok ✓ ★ → • ™ © ® 1️⃣ 👨‍👩‍👧 🙏 ☎ ⚠ ⭐');
+  check(/^[\p{L}\p{N}\s.,;:!?']*$/u.test(e) && e.startsWith('Hello there done ok'), 'emoji of every kind, ticks, stars, arrows and signs are all dropped: only the words are left', JSON.stringify(e));
+  let leaked = 0, tried = 0;
+  const ranges = [[0x1F300, 0x1FAFF], [0x2190, 0x21FF], [0x2300, 0x23FF], [0x2460, 0x24FF], [0x25A0, 0x27BF], [0x2900, 0x29FF], [0x2B00, 0x2BFF], [0x1F1E6, 0x1F1FF], [0x2000, 0x206F]];
+  for (const [a, b] of ranges) for (let cp = a; cp <= b; cp++) {
+    const ch = String.fromCodePoint(cp);
+    if (/[\p{L}\p{N}\p{M}\s]/u.test(ch)) continue;                   // letters, numbers, marks and spaces are meant to stay
+    if (cp === 0x2013 || cp === 0x2014 || cp === 0x2026) continue;   // the two dashes and the ellipsis become a short pause, on purpose
+    tried++;
+    if (S.prepareSpeech('a ' + ch + ' b') !== 'a b') leaked++;
+  }
+  check(tried > 3000 && leaked === 0, tried + ' different emoji, arrows, boxes and signs: none of them gets through to the voice', 'leaked=' + leaked);
+  check(S.prepareSpeech('Great job 🎉!') === 'Great job!' && S.prepareSpeech('Hi 😀😀😀') === 'Hi', 'a sentence keeps its own mark; a message of only emoji is empty');
+  check(S.prepareSpeech('आप कैसे हैं 😊 धन्यवाद') === 'आप कैसे हैं धन्यवाद', 'Hindi letters and vowel marks are kept whole');
+}
+
+section('1c. Abbreviations are said as words');
+{
+  const t = S.prepareSpeech('Try tools, e.g. a hammer, i.e. something heavy, etc. Dr. Rao meets you at 9 a.m. today vs. tomorrow. Mr. Rao and Mrs. Rao.');
+  check(t.includes('for example') && t.includes('that is') && t.includes('and so on') && t.includes('Doctor Rao') && t.includes('9 a m') && t.includes('versus') && t.includes('Mister Rao') && t.includes('Missus Rao'), 'e.g. i.e. etc. Dr. a.m. vs. Mr. Mrs. become the words they stand for', t);
+  check(S.splitForSpeech(S.prepareSpeech('Try a tool, e.g. a hammer. Then rest.')).length === 2, 'the dots of an abbreviation do not cut a sentence in two');
+}
+
+section('1d. The server cleans the call replies the same way');
+{
+  const src = fs.readFileSync('supabase/functions/dynamic-handler/index.ts', 'utf8').split(String.fromCharCode(13)).join('');
+  const i = src.indexOf('function speakSafe');
+  const code = src.slice(i, src.indexOf('\n}\n', i) + 3).replace('(s: string): string', '(s)');
+  const speakSafe = new Function(code + '\nreturn speakSafe;')();
+  const out = speakSafe('**Sure!** 😊🔥 Your order #42 costs ₹450 ✅ — see you 👋\n• item one\n• item two');
+  check(!/[\p{Extended_Pictographic}*#₹•—]/u.test(out) && out.includes('number 42') && out.includes('rupees') && !/\n/.test(out), 'the support function strips every emoji and sign from a spoken reply before it is sent', out);
+  check(/LANGUAGE QUALITY/.test(src) && /correct, natural grammar/.test(src) && /\$\{voiceRules\}\$\{languageQuality\}/.test(src), 'the assistant is told, in every reply, to write correct and natural grammar');
+  check(/accept: plausibleSupportReply, temperature: 0\.4/.test(src), 'and answers at a calmer setting, so the grammar and the facts stay steady');
+  check(/SPOKEN: say "rupees" instead of the symbol/.test(src) && /never use emoji, symbols, abbreviations, brackets or web addresses/.test(src), 'on a call it is also told to write numbers and names the way they are said');
+}
+
 section('2. Pieces: no punctuation is left to be read aloud');
 {
   const pcs = S.splitForSpeech(S.prepareSpeech('Hello there! Your order is ready. Would you like to pay now? Please confirm.'));
@@ -173,6 +211,20 @@ const makeWorld = ({ voices = [], throwOnSpeak = false } = {}) => {
   check(ended === 1, '...and then given up on (after 12 seconds), so the call never waits for a voice that has gone silent');
 }
 {
+  // a phone that lets the first request fall (nothing starts, nothing is waiting): it is asked once more, and only once
+  const w = makeWorld({ voices: [{ name: 'Veena', lang: 'en-IN', localService: true }] });
+  const orig = w.synth.speak.bind(w.synth);
+  let calls = 0;
+  w.synth.speak = (u) => { calls++; if (calls === 1) { w.spoken.push(u); return; } orig(u); };    // the first one is lost (pending stays false)
+  S.createSpeaker(w.deps).speak('Only one piece here.', {});
+  w.advance(1500);
+  check(w.spoken.length === 1, 'it does not ask again at once: a voice can be slow to start');
+  w.advance(500);
+  check(w.spoken.length === 2 && w.spoken[1].text === 'Only one piece here', 'if nothing has started after a moment, the phone is asked once more');
+  w.advance(1000);
+  check(w.spoken.length === 2, '...and only once');
+}
+{
   const w = makeWorld({ throwOnSpeak: true });
   const sp = S.createSpeaker(w.deps);
   let ended = 0;
@@ -206,6 +258,9 @@ section('6. The voice call uses it, and the microphone is off while the assistan
   check(/isCallProcessingRef\.current = false;\s*\n\s*setIsCallProcessing\(false\)/.test(ask), 'the "working on it" flag is always cleared, even when nothing re-draws the screen');
   check(/if \(voiceEnabled\) interruptSpeech\(\)/.test(modal) && /if \(!on\) interruptSpeech\(\)/.test(modal), 'switching the voice off stops it talking at once (and the call goes on listening)');
   check(/recognition\.lang = 'en-IN'/.test(modal), 'the assistant listens for the Indian English accent');
+  check(/setAudioMode\('playback'\)/.test(speakText) && /setAudioMode\('auto'\)/.test(modal) && /audioSession/.test(modal), 'on an iPhone the page asks for "playback" sound while the assistant speaks (full volume, loudspeaker) and goes back to normal for listening');
+  check(/recognitionRef\.current \? 700 : 0/.test(speakText), 'after closing the microphone it waits long enough for the phone to change its sound over');
+  check(/I'm listening, so please tell me what you need help with/.test(modal) && !/regarding \$\{cleanQuery\}/.test(modal) && !/Our mini-games grant \+10,000,000/.test(modal), 'the first words, and the words said when something goes wrong, are clear and grammatical (they no longer read the question back or recite unrelated facts)');
   check(!/(?<=\()\?<[=!]/.test(fs.readFileSync('src/utils/supportSpeech.ts', 'utf8').replace(/\/\/[^\n]*/g, '')) && !/\(\?<[=!]/.test(fs.readFileSync('src/utils/supportSpeech.ts', 'utf8').replace(/\/\/[^\n]*/g, '')), 'the speech code uses no regex look-behind (older iPhones refuse to load a page that contains one)');
 }
 

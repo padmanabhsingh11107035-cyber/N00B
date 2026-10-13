@@ -357,6 +357,11 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     recognitionRef.current = null;
     setIsListening(false);
   };
+  // iPhone Safari (16.4 and newer) lets a page say what the sound is for: "playback" makes the voice come out of the loudspeaker at full volume, "auto"
+  // goes back to normal for listening. Phones that do not have it simply ignore this.
+  const setAudioMode = (mode: 'playback' | 'auto') => {
+    try { const a = (navigator as any).audioSession; if (a) a.type = mode; } catch (e) {}
+  };
   const resumeListeningSoon = (ms = 450) => {
     setTimeout(() => {
       if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current && !isSpeakingRef.current) startVoiceListening();
@@ -380,8 +385,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     }
     // the very first thing said in a call (the greeting) is said at once, inside the tap that started the call; later answers wait a moment
     // after the microphone has been switched off, so the phone has time to change its sound over
-    const delay = recognitionRef.current ? 350 : 0;
+    const delay = recognitionRef.current ? 700 : 0;
     stopMicNow();
+    setAudioMode('playback');
     isSpeakingRef.current = true;           // no listening session may start while the answer is being said
     setIsSpeaking(true);
     if (msgId) setCurrentlySpeakingMsgId(msgId);
@@ -392,6 +398,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         isSpeakingRef.current = false;
         setIsSpeaking(false);
         setCurrentlySpeakingMsgId(null);
+        setAudioMode('auto');
         if (isCallActiveRef.current && !isMutedRef.current && !isCallProcessingRef.current) resumeListeningSoon(400);   // listen again
       }
     });
@@ -715,7 +722,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     setSpeechSupported(true);
     setMicStalled(false);
 
-    const greeting = `Hello @${currentUser.username}! You are connected to the NOOB AI Voice Support Specialist. I am listening to your microphone—what issue can I solve for your account today?`;
+    const greeting = `Hello @${currentUser.username}! This is the NOOB AI voice assistant. I'm listening, so please tell me what you need help with.`;
     setCallTranscript([
       {
         sender: 'ai',
@@ -791,7 +798,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       const history = callTranscript.map((t) => ({ sender: t.sender === 'ai' ? 'bot' : 'user', text: t.text }));
       const response = await askAiSupportAssistant(cleanQuery, history, 'call');
 
-      const aiReply = response?.reply || `For @${currentUser.username}: Our mini-games grant +10,000,000 points for wins and +5,000,000 points for ties, your media is encrypted and automatically routed by format, and your privacy is 100% protected. What else can I solve for you?`;
+      const aiReply = response?.reply || `Sorry, I couldn't find an answer to that just now. Could you please ask me again, in a few different words?`;
       
       const aiEntry = {
         sender: 'ai' as const,
@@ -809,7 +816,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       // (the assistant understood a request to end the call in another language)
       if (response?.action === 'END_SESSION') endCallByRequest(isSpeakerOnRef.current && voiceEnabledRef.current);
     } catch (err) {
-      const fallbackReply = `I understand your question regarding ${cleanQuery}. On NOOB, all features operate instantly in real-time. You have complete data control and 24/7 access to mini-games, music, and encrypted media routing.`;
+      const fallbackReply = `Sorry, I couldn't reach the support service just now. Please check your internet connection, and then ask me again.`;
       setCallTranscript((prev) => [
         ...prev,
         {

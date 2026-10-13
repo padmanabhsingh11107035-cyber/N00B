@@ -9,7 +9,7 @@ import {
 } from '../../../utils/studyCatalog';
 import { browserTimeZone, dueLabel, timeZoneList, zonedToUtc } from '../../../utils/studyTime';
 import { useStudy } from '../StudyContext';
-import { backStudy, closeStudy, replaceStudy } from '../studyStore';
+import { backStudy, leaveStudy, replaceStudy } from '../studyStore';
 import { hasRoute, type PageProps } from '../StudyApp';
 import { Btn, Chip, Field, ProgressBar, SubjectTag } from '../ui';
 import { SubjectPicker } from '../SubjectPicker';
@@ -151,7 +151,7 @@ const Onboarding: React.FC<PageProps> = ({ params }) => {
           <p className="st-tiny st-faint">Step {step + 1} of {ONBOARDING_STEPS.length}</p>
           <ProgressBar value={((step + 1) / ONBOARDING_STEPS.length) * 100} label="Set-up progress" />
         </div>
-        <button className="st-btn st-btn-sm st-btn-ghost" onClick={closeStudy}>Later</button>
+        <button className="st-btn st-btn-sm st-btn-ghost" onClick={leaveStudy}>Later</button>
       </div>
       <div className="st-scroll"><div className="st-wrap" style={{ paddingBottom: 120 }}>
         <div style={{ marginBottom: 16 }}>

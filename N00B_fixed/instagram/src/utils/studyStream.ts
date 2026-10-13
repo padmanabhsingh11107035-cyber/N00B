@@ -1,7 +1,8 @@
 // NOOB STUDY: the tutor's answer arrives as one small JSON object per line. This reads them as they come. A half line waits for the rest, and a
 // damaged line is skipped, never fatal. Pure, so it is tested without a browser.
+export interface ChatSource { n: number; title: string | null; page: number | null }
 export type ChatEvent =
-  | { t: 'meta'; conversationId: string; userMessageId?: string }
+  | { t: 'meta'; conversationId: string; userMessageId?: string; sources?: ChatSource[] }
   | { t: 'delta'; text: string }
   | { t: 'done'; messageId: string | null; remaining: number | null }
   | { t: 'error'; message: string };

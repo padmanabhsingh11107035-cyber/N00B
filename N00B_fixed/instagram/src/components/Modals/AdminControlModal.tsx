@@ -64,13 +64,14 @@ import {
   UtensilsCrossed,
   Lightbulb,
   BellRing,
-  BellOff
-} from 'lucide-react';
+  BellOff, GraduationCap, BarChart3 } from 'lucide-react';
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
 import { AdminSignInPanel } from './AdminSignInPanel';
 import { AdminTeamPanel } from './AdminTeamPanel';
+import { AdminStudyPanel } from './AdminStudyPanel';
+import { AdminAnalyticsPanel } from './AdminAnalyticsPanel';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
@@ -105,7 +106,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'settings';
+type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -149,6 +150,10 @@ function describeAudit(e: AdminAuditEntry): string {
     case 'team_member_unpinned': return `${who} unpinned ${d.name || 'a member'} on the Our Team page.`;
     case 'team_member_removed': return `${who} removed ${target || 'someone'} from the Our Team page and deleted what they filled in.`;
     case 'team_member_moved': return `${who} moved ${d.name || 'a member'} ${d.direction === 'up' ? 'up' : 'down'} on the Our Team page.`;
+    case 'study_settings_changed': return `${who} set NOOB Study to ${d.mode === 'on' ? 'ON' : d.mode === 'off' ? 'OFF' : 'COMING SOON'}${d.admissionsOpen === false ? ', admissions closed' : ''}.`;
+    case 'study_student_viewed': return `${who} opened the NOOB Study record of ${target || 'a student'}.`;
+    case 'study_student_blocked': return `${who} paused ${target || 'a student'} in NOOB Study.`;
+    case 'study_student_restored': return `${who} let ${target || 'a student'} back into NOOB Study.`;
     case 'explore_pin': return `${who} pinned ${target || 'an account'} to the top of Explore.`;
     case 'explore_unpin': return `${who} unpinned ${target || 'an account'} from Explore.`;
     default: return `${who}: ${e.action.replace(/_/g, ' ')}${target ? ` — ${target}` : ''}.`;
@@ -1384,6 +1389,32 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('analytics')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'analytics'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" /> Analytics
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('study')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'study'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4" /> NOOB Study
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('settings')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -2612,6 +2643,10 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </div>
           ) : activeTab === 'team' && main ? (
             <AdminTeamPanel onPendingChange={setTeamPendingCount} />
+          ) : activeTab === 'analytics' && main ? (
+            <AdminAnalyticsPanel />
+          ) : activeTab === 'study' && main ? (
+            <AdminStudyPanel />
           ) : activeTab === 'settings' && main ? (
             /* Platform-wide toggles */
             <div className="space-y-3">

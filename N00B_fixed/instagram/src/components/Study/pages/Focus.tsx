@@ -3,6 +3,9 @@ import { Coffee, Pause, Play, Square, Timer } from 'lucide-react';
 import { studyApi } from '../../../services/studyApi';
 import { BREAK_CHOICES, FOCUS_CHOICES, clampMinutes, focusedSec, isFinished, parseRun, pauseRun, progress, remainingSec, resumeRun, reviveRun, touchRun, type Run } from '../../../utils/studyFocus';
 import { clock, minutesLabel } from '../../../utils/studyTime';
+import { loadPrefs } from '../../../utils/studyPrefs';
+import { ringAlarm } from '../../../utils/studyAlarm';
+import { speechLang } from '../../../utils/studyCatalog';
 import { useStudy } from '../StudyContext';
 import { Btn, Chip, Field, Page } from '../ui';
 import type { PageProps } from '../StudyApp';
@@ -12,7 +15,7 @@ import type { PageProps } from '../StudyApp';
 type View = { mode: 'idle' } | { mode: 'run'; run: Run } | { mode: 'done'; kind: 'focus' | 'break'; minutes: number; completed: boolean };
 
 const Focus: React.FC<PageProps> = ({ params }) => {
-  const { user, subjects, toast } = useStudy();
+  const { user, subjects, toast, me } = useStudy();
   const key = `noob.study.focus.${user.id}`;
   const [view, setView] = useState<View>({ mode: 'idle' });
   const [minutes, setMinutes] = useState(25);
@@ -34,6 +37,8 @@ const Focus: React.FC<PageProps> = ({ params }) => {
     if (!res.ok) toast(res.error);
     const recorded = res.ok ? res.data.status === 'completed' : false;
     setView({ mode: 'done', kind: run.kind, minutes: Math.round(secs / 60), completed: completed && (res.ok ? recorded : false) });
+    // a session that ran its full time rings the student's chosen alarm (a session the student stopped themselves stays quiet)
+    if (completed) ringAlarm(loadPrefs(), run.kind === 'break' ? 'Break is over. Ready when you are.' : 'Time is up. Well done! Take a short break.', speechLang(me?.profile?.tutor?.language || me?.profile?.language));
     setConfirmStop(false);
     finishing.current = false;
   }, [toast]); // eslint-disable-line react-hooks/exhaustive-deps

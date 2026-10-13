@@ -60,7 +60,7 @@ check(/fetchTeamMembers/.test(page) && /Try again/.test(page) && /aria-busy/.tes
 check(/onError=\{\(\) => setBroken\(true\)\}/.test(page) && /initials\(member\.name\)/.test(page), 'a photo that fails to load falls back to the initials');
 check(/Escape/.test(page) && /aria-label="Close"/.test(page), 'it can be closed with the button and with Escape');
 const modal = read('src/components/Modals/AdminControlModal.tsx');
-check(/'team' \| 'settings'/.test(modal) && /setActiveTab\('team'\)/.test(modal) && /activeTab === 'team' && main \? \(\s*<AdminTeamPanel onPendingChange=\{setTeamPendingCount\} \/>/.test(modal), 'the admin panel has an "Our Team" tab, for the main administrator only');
+check(/'team' \| (?:'\w+' \| )*'settings'/.test(modal) && /setActiveTab\('team'\)/.test(modal) && /activeTab === 'team' && main \? \(\s*<AdminTeamPanel onPendingChange=\{setTeamPendingCount\} \/>/.test(modal), 'the admin panel has an "Our Team" tab, for the main administrator only');
 check(/team_member_added/.test(modal) && /team_member_removed/.test(modal), 'its changes read well in the activity log');
 const panel = read('src/components/Modals/AdminTeamPanel.tsx');
 check(/validateTeamForm/.test(panel) && /uploadTeamPhoto/.test(panel) && /type="file" accept="image\/\*"/.test(panel) && /discardTeamPhoto/.test(panel), 'the form needs all four things, uploads the photo, and cleans up photos it did not use');

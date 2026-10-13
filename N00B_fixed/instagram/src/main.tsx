@@ -73,7 +73,7 @@ registerServiceWorkerForInstallability();
 
 // The opening splash (index.html): the logo stays for 4 seconds from the moment the app is opened, then fades out and is removed. The loading
 // screen and the app are already underneath it by then.
-const SPLASH_SECONDS = 4;
+const SPLASH_SECONDS = Number((window as unknown as { __splashSeconds?: number }).__splashSeconds) || 4;   // 3 seconds on the coaching address (see index.html), 4 on NOOB
 const splash = document.getElementById('noob-splash');
 if (splash) {
   const wait = Math.max(0, SPLASH_SECONDS * 1000 - (typeof performance !== 'undefined' ? performance.now() : 0));

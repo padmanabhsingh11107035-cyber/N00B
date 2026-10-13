@@ -13,6 +13,7 @@ const expectFail = async (fn, pattern, label) => {
 const section = (t) => console.log(`\n${t}`);
 
 const db = await createTestDb();
+await db.exec("update public.study_settings set mode = 'on'");   // NOOB STUDY ships as "coming soon"; these tests are about everything that happens once it is open
 const mkUser = async (name) => {
   const id = (await db.query(`select gen_random_uuid() as id`)).rows[0].id;
   await db.query(`insert into auth.users (id, email, encrypted_password) values ($1, $2, 'x')`, [id, `${name}@users.nooob.xyz`]);

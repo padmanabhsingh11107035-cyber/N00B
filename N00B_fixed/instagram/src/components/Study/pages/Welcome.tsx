@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookOpenCheck, CalendarHeart, MessagesSquare, Sparkles, X } from 'lucide-react';
 import { useStudy } from '../StudyContext';
-import { closeStudy, goStudy, replaceStudy } from '../studyStore';
+import { leaveStudy, goStudy, replaceStudy } from '../studyStore';
 import { Btn, Orb } from '../ui';
 import type { PageProps } from '../StudyApp';
 
@@ -14,7 +14,7 @@ const Welcome: React.FC<PageProps> = () => {
     <div className="st-scroll">
       <div className="st-wrap" style={{ paddingTop: 'max(22px, env(safe-area-inset-top))' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="st-icon-btn" onClick={closeStudy} aria-label="Back to NOOB"><X size={18} /></button>
+          <button className="st-icon-btn" onClick={leaveStudy} aria-label="Back to NOOB"><X size={18} /></button>
         </div>
         <div className="st-in" style={{ textAlign: 'center', marginTop: 6 }}>
           <Orb size={92} float />

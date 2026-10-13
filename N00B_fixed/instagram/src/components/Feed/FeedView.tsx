@@ -32,7 +32,8 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
-import { openStudy, STUDY_OPEN_TO_ALL } from '../Study/studyStore';
+import { openStudy } from '../Study/studyStore';
+import { useStudyStatus } from '../Study/studyStatus';
 import { preloadNoobStudy } from '../Study/StudyHost';
 import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
@@ -168,6 +169,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
   const [showNoobMenu, setShowNoobMenu] = useState(false);
+  const studyStatus = useStudyStatus();
   // The menu page that was open when the app was closed / refreshed opens again (see utils/pageResume.ts).
   const [restoredPage] = useState(() => takeRestorePage(currentUser.id));
   const [showSuggestionBox, setShowSuggestionBox] = useState(restoredPage === 'suggestions');
@@ -782,7 +784,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 </div>
               </button>
               {/* NOOB STUDY: the student's personal learning space (for everyone once it is switched on; until then for the main administrator) */}
-              {(STUDY_OPEN_TO_ALL || isMainAdmin(currentUser)) && (
+              {(isMainAdmin(currentUser) || studyStatus?.mode === 'on' || studyStatus?.mode === 'coming_soon') && (
                 <button
                   onClick={() => { setShowNoobMenu(false); openStudy('home'); }}
                   onPointerDown={preloadNoobStudy}
@@ -793,7 +795,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                     <GraduationCap className="w-[18px] h-[18px] text-black" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Study <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Study <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">{studyStatus?.mode === 'on' ? 'NEW' : isMainAdmin(currentUser) ? 'ADMIN ONLY' : 'COMING SOON'}</span></span>
                     <span className="text-[10px] text-zinc-300 block truncate">Your AI tutor, plan and study space</span>
                   </div>
                 </button>

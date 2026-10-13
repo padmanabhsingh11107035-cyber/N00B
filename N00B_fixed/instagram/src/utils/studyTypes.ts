@@ -39,3 +39,19 @@ export interface StudyDashboard {
 
 export interface StudyConversation { id: string; title: string; subjectId: string | null; mode: 'chat' | 'teach' | 'photo' | 'voice' | 'document'; topic: string; materialId: string | null; createdAt: string; lastMessageAt: string; preview: string }
 export interface StudyMessage { id: string; role: 'user' | 'assistant'; content: string; attachments: Array<{ key: string; kind: 'image' }>; meta: Record<string, unknown>; createdAt: string }
+
+export type MaterialKind = 'notes' | 'pdf' | 'text' | 'image' | 'pyq' | 'research';
+export interface StudyMaterial { id: string; title: string; kind: MaterialKind; subjectId: string | null; sourceName: string; pages: number | null; charCount: number; chunkCount: number; status: 'processing' | 'ready' | 'failed'; note: string; createdAt: string }
+export interface MaterialHit { materialId: string; title: string; page: number | null; idx: number; rank: number; snippet: string }
+export interface MaterialChunk { idx: number; page: number | null; text: string }
+
+// ---- practice
+export type QuestionType = 'mcq' | 'tf' | 'short' | 'numerical' | 'fill' | 'case';
+export interface QuizQuestion { type: QuestionType; question: string; options?: string[]; answer: number | string | boolean; explanation: string; unit?: string; steps?: string[]; marks?: number }
+export interface StudyQuiz { id: string; title: string; topic: string; subjectId: string | null; materialId: string | null; difficulty: 'easy' | 'medium' | 'hard' | 'mixed'; source: 'ai' | 'mistakes' | 'manual'; count: number; createdAt: string; attempts: number; best: number | null; lastAt: string | null; questions?: QuizQuestion[] }
+export interface QuizResultItem { i: number; correct: boolean | null; score: number; max: number; open: boolean; answered: boolean }
+export interface QuizAttemptResult { id: string; score: number; max: number; percent: number; results: QuizResultItem[]; newMistakes?: number; duplicate?: boolean }
+export interface StudyMistake { id: string; subjectId: string | null; question: string; correctAnswer: string; studentAnswer: string; explanation: string; type: QuestionType; wrongCount: number; resolved: boolean; lastWrongAt: string }
+export interface StudyDeck { id: string; title: string; subjectId: string | null; materialId: string | null; createdAt: string; total: number; due: number; fresh: number }
+export interface StudyCard { id: string; deckId: string; deckTitle: string | null; front: string; back: string; reps: number; lapses: number; intervalDays: number; dueAt: string; fresh: boolean; ease?: number }
+export interface StudyTopic { id: string; subjectId: string; title: string; status: 'not_started' | 'learning' | 'confident'; note: string; position: number }

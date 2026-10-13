@@ -137,7 +137,7 @@ export async function record(maxMs = 45_000): Promise<RecorderHandle> {
 // ---- reading aloud
 let speaking = false;
 export const isSpeaking = (): boolean => speaking;
-export function speak(text: string, lang: string, opts: { preferredVoice?: string | null; rate?: number; onEnd?: () => void } = {}): void {
+export function speak(text: string, lang: string, opts: { preferredVoice?: string | null; rate?: number; pitch?: number; onEnd?: () => void } = {}): void {
   if (!canSpeak()) { opts.onEnd?.(); return; }
   stopSpeaking();
   const chunks = speechChunks(cleanForSpeech(text));
@@ -147,7 +147,7 @@ export function speak(text: string, lang: string, opts: { preferredVoice?: strin
   speaking = true;
   chunks.forEach((c, i) => {
     const u = new SpeechSynthesisUtterance(c);
-    u.lang = voice?.lang || lang; if (voice) u.voice = voice; u.rate = opts.rate || 0.95; u.pitch = 1;
+    u.lang = voice?.lang || lang; if (voice) u.voice = voice; u.rate = opts.rate || 0.95; u.pitch = opts.pitch || 1;
     u.onend = () => { if (i === chunks.length - 1) { speaking = false; opts.onEnd?.(); } };
     u.onerror = () => { speaking = false; opts.onEnd?.(); };
     synth.speak(u);

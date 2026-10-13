@@ -3,6 +3,7 @@ import { Mic, MicOff, MessageSquareText, RotateCw, Send, Square, Volume2, Volume
 import { aiHealth, newRef, streamChat, transcribe, type AiHealth } from '../../../services/studyAi';
 import { languageLabel, speechLang } from '../../../utils/studyCatalog';
 import { canRecognize, canRecord, canSpeak, describeVoiceError, listen, record, speak, stopSpeaking, type Listener, type RecorderHandle } from '../../../utils/studyVoice';
+import { usePrefs } from '../../../utils/studyPrefs';
 import { useStudy } from '../StudyContext';
 import { goStudy } from '../studyStore';
 import { Markdown } from '../Markdown';
@@ -17,6 +18,7 @@ const AUTO_KEY = 'noob.study.readAloud';
 
 const Voice: React.FC<PageProps> = ({ params }) => {
   const { me, subjects, toast } = useStudy();
+  const prefs = usePrefs();
   const tutorName = me?.profile?.tutor?.name?.trim() || 'your tutor';
   const lang = me?.profile?.tutor?.language || me?.profile?.language || 'en';
   const [phase, setPhase] = useState<Phase>('idle');
@@ -76,7 +78,7 @@ const Voice: React.FC<PageProps> = ({ params }) => {
     abort.current = null;
     if (!res.ok) { if (res.code !== 'aborted') setError(res.error); setPhase('idle'); return; }
     if (!full.trim()) { setPhase('idle'); if (!error) setError('The tutor did not answer. Please try again.'); return; }
-    if (auto && canSpeak()) { setPhase('speaking'); speak(full, speechLang(lang), { preferredVoice: me?.profile?.tutor?.voice, onEnd: () => setPhase('answered') }); }
+    if (auto && canSpeak()) { setPhase('speaking'); speak(full, speechLang(lang), { preferredVoice: prefs.aiVoice.name || me?.profile?.tutor?.voice, rate: prefs.aiVoice.rate, pitch: prefs.aiVoice.pitch, onEnd: () => setPhase('answered') }); }
     else setPhase('answered');
   };
   const interrupt = () => { stopSpeaking(); abort.current?.abort(); setPhase(answer ? 'answered' : 'idle'); };
@@ -126,7 +128,7 @@ const Voice: React.FC<PageProps> = ({ params }) => {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
           {canSpeak() && <Btn small kind={auto ? 'plain' : 'ghost'} onClick={toggleAuto} aria-pressed={auto}>{auto ? <Volume2 size={15} /> : <VolumeX size={15} />} {auto ? 'Reading answers aloud' : 'Answers are silent'}</Btn>}
           {phase === 'speaking' && <Btn small onClick={interrupt}><Square size={14} /> Stop</Btn>}
-          {answer && canSpeak() && phase === 'answered' && <Btn small onClick={() => { setPhase('speaking'); speak(answer, speechLang(lang), { onEnd: () => setPhase('answered') }); }}><Volume2 size={15} /> Hear it again</Btn>}
+          {answer && canSpeak() && phase === 'answered' && <Btn small onClick={() => { setPhase('speaking'); speak(answer, speechLang(lang), { preferredVoice: prefs.aiVoice.name || me?.profile?.tutor?.voice, rate: prefs.aiVoice.rate, pitch: prefs.aiVoice.pitch, onEnd: () => setPhase('answered') }); }}><Volume2 size={15} /> Hear it again</Btn>}
           {conv.current && <Btn small onClick={() => goStudy('chat', { conversation: conv.current })}><MessageSquareText size={15} /> Open the full chat</Btn>}
         </div>
         <p className="st-tiny st-faint" style={{ maxWidth: 320 }}>The microphone listens only while you tap it. NOOB does not keep your voice, only the words, in your chat. (Your phone or browser may use its own speech service to turn sound into words.)</p>

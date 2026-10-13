@@ -1,14 +1,17 @@
--- NOOB STUDY, part 2: the AI tutor's conversations, the fair-use limits, and the private storage for photos and documents.
+-- NOOB STUDY, part 2: the AI tutor's conversations and the fair-use limits.
 --
 --   * A student's conversations and messages are reached ONLY through the functions below, and only their own (by login). The edge function
 --     "study-ai" writes the tutor's answers with the study_svc_* functions, which only the server (service role) can call, and which always
 --     check that the conversation belongs to the student the login belongs to.
---   * Pictures and documents live in a PRIVATE bucket "study", in a folder named after the student's account: nobody else can open them.
+--   * Pictures are NEVER stored: a photo or a few frames of a video go from the student's phone straight to the AI and are forgotten. A chat only remembers
+--     that a picture was sent (so the screen can say "a picture was sent"), never the picture itself.
+--   * Chats are kept small: at most 150 chats per student (the oldest are dropped), and the long text of an answer is compressed by the database itself.
 --   * Daily limits keep the free AI fair and the costs sane: they are numbers in a table (study_ai_limits) the administrator can change.
 
 -- ---------------------------------------------------------------- conversations and messages
 create table if not exists public.study_conversations (
   id               uuid primary key default gen_random_uuid(),
+  seq              bigint generated always as identity,
   user_id          uuid not null references public.profiles(id) on delete cascade,
   subject_id       uuid references public.study_subjects(id) on delete set null,
   title            text not null default '' check (char_length(title) <= 120),
@@ -27,7 +30,7 @@ create table if not exists public.study_messages (
   conversation_id  uuid not null references public.study_conversations(id) on delete cascade,
   user_id          uuid not null references public.profiles(id) on delete cascade,
   role             text not null check (role in ('user', 'assistant')),
-  content          text not null check (char_length(content) <= 12000),
+  content          text not null check (char_length(content) <= 150000),
   attachments      jsonb not null default '[]'::jsonb,
   meta             jsonb not null default '{}'::jsonb,
   client_ref       uuid,
@@ -188,6 +191,8 @@ begin
   if p_mode not in ('chat', 'teach', 'photo', 'voice', 'document') then raise exception 'That kind of chat is not known.'; end if;
   insert into public.study_conversations (user_id, subject_id, mode, title, topic)
   values (p_user, public.study_int_own_subject(p_user, p_subject), p_mode, left(btrim(coalesce(p_title, '')), 120), left(btrim(coalesce(p_topic, '')), 100)) returning * into row;
+  -- chats are kept small: the 150 newest stay, older ones are dropped
+  delete from public.study_conversations where user_id = p_user and id in (select id from public.study_conversations where user_id = p_user order by last_message_at desc, seq desc offset 150);
   return public.study_int_conv_json(row);
 end;
 $$;
@@ -225,21 +230,17 @@ end;
 $$;
 
 -- Saves the student's message (so it is never lost if the AI is busy). Sending the same message twice (same ref) saves it once and says so.
+-- A picture sent with it is NOT kept: only the fact that there was one (a count, at most 4).
 create or replace function public.study_svc_msg_user(p_user uuid, p_conv uuid, p_content text, p_attachments jsonb, p_ref uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare c public.study_conversations; row public.study_messages; ex public.study_messages; att jsonb := '[]'::jsonb; a jsonb; k text; reply public.study_messages; txt text := btrim(coalesce(p_content, ''));
+declare c public.study_conversations; row public.study_messages; ex public.study_messages; att jsonb := '[]'::jsonb; n integer := 0; reply public.study_messages; txt text := btrim(coalesce(p_content, ''));
 begin
   c := public.study_int_owned_conv(p_user, p_conv);
   if char_length(txt) > 4000 then raise exception 'Please keep a message under 4000 characters.'; end if;
-  if jsonb_typeof(coalesce(p_attachments, '[]'::jsonb)) = 'array' then
-    for a in select * from jsonb_array_elements(coalesce(p_attachments, '[]'::jsonb)) loop
-      k := a->>'key';
-      if k is null or k not like (p_user::text || '/%') or k like '%..%' or char_length(k) > 240 then raise exception 'That picture is not yours.'; end if;
-      att := att || jsonb_build_array(jsonb_build_object('key', k, 'kind', 'image'));
-    end loop;
-  end if;
-  if jsonb_array_length(att) > 4 then raise exception 'You can send up to 4 pictures at once.'; end if;
-  if txt = '' and jsonb_array_length(att) = 0 then raise exception 'Please write your question or send a picture.'; end if;
+  if jsonb_typeof(coalesce(p_attachments, '[]'::jsonb)) = 'array' then n := jsonb_array_length(coalesce(p_attachments, '[]'::jsonb)); end if;
+  if n > 4 then raise exception 'You can send up to 4 pictures at once.'; end if;
+  while jsonb_array_length(att) < n loop att := att || jsonb_build_array(jsonb_build_object('kind', 'image')); end loop;
+  if txt = '' and n = 0 then raise exception 'Please write your question or send a picture.'; end if;
 
   insert into public.study_messages (conversation_id, user_id, role, content, attachments, client_ref)
   values (p_conv, p_user, 'user', coalesce(nullif(txt, ''), 'Picture'), att, p_ref)
@@ -262,26 +263,17 @@ declare row public.study_messages;
 begin
   perform public.study_int_owned_conv(p_user, p_conv);
   insert into public.study_messages (conversation_id, user_id, role, content, meta)
-  values (p_conv, p_user, 'assistant', left(btrim(coalesce(p_content, '')), 12000), public.study_int_pick(coalesce(p_meta, '{}'::jsonb), array['provider', 'model', 'mode', 'sources', 'citations'])) returning * into row;
+  values (p_conv, p_user, 'assistant', left(btrim(coalesce(p_content, '')), 150000), public.study_int_pick(coalesce(p_meta, '{}'::jsonb), array['provider', 'model', 'mode', 'sources', 'citations'])) returning * into row;
   update public.study_conversations set last_message_at = now(), updated_at = now() where id = p_conv;
   return jsonb_build_object('id', row.id);
 end;
 $$;
 
--- ---------------------------------------------------------------- private storage for pictures and documents
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('study', 'study', false, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain', 'text/markdown'])
-on conflict (id) do update set public = false, file_size_limit = 10485760, allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain', 'text/markdown'];
-
+-- ---------------------------------------------------------------- no storage for pictures
+-- (There is deliberately no storage here: pictures never touch NOOB's servers' storage. They are sent to the AI and forgotten.)
 drop policy if exists study_files_insert on storage.objects;
 drop policy if exists study_files_select on storage.objects;
 drop policy if exists study_files_delete on storage.objects;
-create policy study_files_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'study' and (storage.foldername(name))[1] = (select auth.uid())::text);
-create policy study_files_select on storage.objects for select to authenticated
-  using (bucket_id = 'study' and (storage.foldername(name))[1] = (select auth.uid())::text);
-create policy study_files_delete on storage.objects for delete to authenticated
-  using (bucket_id = 'study' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- ---------------------------------------------------------------- deleting one's own data now covers the chats too
 create or replace function public.study_delete_my_data(p_scope text) returns jsonb

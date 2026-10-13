@@ -1,0 +1,327 @@
+// Tests migration 20261014000005 (NOOB STUDY, part 5): saved quizzes and honest marking, the list of mistakes, flashcards that come back at the right
+// time (SM-2), and the student's own topic list. On a REAL Postgres (PGlite) with every migration applied.
+//
+// Usage: node scripts/supabase/test-noob-study-practice.mjs
+import { createTestDb, asUser, asAnon } from './pg-test-env.mjs';
+
+let passed = 0, failed = 0;
+const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
+const expectFail = async (fn, pattern, label) => {
+  try { await fn(); check(false, label, '(expected an error, but it succeeded)'); }
+  catch (e) { check(pattern.test(e.message), label, `(got: ${e.message})`); }
+};
+const section = (t) => console.log(`\n${t}`);
+
+const db = await createTestDb();
+await db.exec("update public.study_settings set mode = 'on'");   // NOOB STUDY ships as "coming soon"; these tests are about everything that happens once it is open
+const mkUser = async (name) => {
+  const id = (await db.query(`select gen_random_uuid() as id`)).rows[0].id;
+  await db.query(`insert into auth.users (id, email, encrypted_password) values ($1, $2, 'x')`, [id, `${name}@users.nooob.xyz`]);
+  const has = (await db.query(`select 1 from public.profiles where id = $1`, [id])).rows.length;
+  if (!has) await db.query(`insert into public.profiles (id, username, display_name) values ($1, $2, $2)`, [id, name]);
+  return id;
+};
+const rpc = (uid, fn, ...args) => asUser(db, uid, async () => (await db.query(`select public.${fn}(${args.map((_, i) => `$${i + 1}`).join(', ')}) as r`, args)).rows[0].r);
+const q = async (sql, params = []) => (await db.query(sql, params)).rows;
+const J = (o) => JSON.stringify(o);
+const ref = () => crypto.randomUUID();
+
+const ann = await mkUser('ann'), bob = await mkUser('bob');
+await rpc(ann, 'study_save_profile', J({ displayName: 'Ann', level: 'class_11' }), 1);
+const subj = (await rpc(ann, 'study_set_subjects', J(['Physics', 'Biology']))).subjects;
+const phys = subj[0].id, bio = subj[1].id;
+const bobSubj = (await rpc(bob, 'study_set_subjects', J(['History']))).subjects[0].id;
+
+const MCQ = { type: 'mcq', question: 'Which law says F = ma?', options: ['First', 'Second', 'Third', 'Fourth'], answer: 1, explanation: 'Newton\'s second law relates force, mass and acceleration.' };
+const TF = { type: 'tf', question: 'A heavier object always falls faster in a vacuum.', answer: false, explanation: 'In a vacuum all objects fall at the same rate.' };
+const NUM = { type: 'numerical', question: 'A 2 kg mass accelerates at 3 m/s^2. What is the force in newtons?', answer: 6, unit: 'N', steps: ['F = ma', 'F = 2 x 3'], explanation: 'F = ma = 6 N.' };
+const FILL = { type: 'fill', question: 'The SI unit of force is the ____.', answer: 'newton', explanation: 'Named after Isaac Newton.' };
+const SHORT = { type: 'short', question: 'State Newton\'s third law.', answer: 'For every action there is an equal and opposite reaction.', marks: 4, explanation: 'Forces come in pairs.' };
+const CASE = { type: 'case', question: 'Explain why a rocket moves upward.', answer: 'It pushes gas down, so the gas pushes it up.', explanation: 'Action and reaction.' };
+const ALL = [MCQ, TF, NUM, FILL, SHORT, CASE];
+const save = (uid, qs, extra = {}) => rpc(uid, 'study_quiz_save', J({ clientRef: ref(), title: 'Forces', topic: 'Newton', subjectId: phys, questions: qs, ...extra }));
+
+section('1. Who can call what');
+let anon = 0;
+for (const call of [`study_quizzes_list()`, `study_decks_list()`, `study_mistakes_list()`, `study_topics_list(gen_random_uuid())`, `study_cards_due()`]) { try { await asAnon(db, async () => db.query(`select public.${call}`)); } catch (e) { if (/permission denied/.test(e.message)) anon++; } }
+check(anon === 5, 'someone not signed in cannot use practice');
+let direct = 0;
+for (const t of ['study_quizzes', 'study_quiz_attempts', 'study_mistakes', 'study_decks', 'study_cards', 'study_topics']) { try { direct += (await asUser(db, ann, async () => db.query(`select * from public.${t}`))).rows.length; } catch { /* denied is fine */ } }
+check(direct === 0, 'the practice tables cannot be read directly');
+let internal = 0;
+for (const call of [`study_int_clean_questions('[]'::jsonb)`, `study_int_norm('x')`, `study_int_ensure_profile('${ann}')`]) { try { await asUser(db, ann, async () => db.query(`select public.${call}`)); } catch (e) { if (/permission denied/.test(e.message)) internal++; } }
+check(internal === 3, 'the helper functions are not available to students');
+
+section('2. Only sound questions are kept');
+const saved = await save(ann, ALL);
+check(saved.count === 6 && saved.questions.length === 6 && saved.title === 'Forces' && saved.subjectId === phys && saved.difficulty === 'mixed' && saved.source === 'ai', 'a quiz of every kind is saved', J({ c: saved.count }));
+check(saved.questions[2].answer === 6 && saved.questions[2].unit === 'N' && saved.questions[2].steps.length === 2 && saved.questions[4].marks === 4 && saved.questions[3].marks === 1, 'numbers, units, steps and marks are kept');
+const dirty = await save(ann, [
+  MCQ, { ...MCQ, question: 'three options', options: ['a', 'b', 'c'] }, { ...MCQ, question: 'dup options', options: ['a', 'A', 'b', 'c'] }, { ...MCQ, question: 'answer 4', answer: 4 },
+  { ...MCQ, question: 'no explanation', explanation: '' }, { ...TF, question: 'tf string', answer: 'true' }, { ...NUM, question: 'nan', answer: 'abc' }, { ...SHORT, question: 'blank answer', answer: '  ' },
+  { type: 'essay', question: 'unknown type', answer: 'x', explanation: 'x' }, 'not an object', null, { ...NUM, question: 'string number ok', answer: '12.5' }, { ...SHORT, question: 'marks too big', marks: 99 }
+], { title: '' });
+check(dirty.count === 3, 'broken or unsound questions are dropped', String(dirty.count));
+check(dirty.questions.map((x) => x.question).join('|') === 'Which law says F = ma?|string number ok|marks too big', 'the sound ones stay, in order');
+check(dirty.questions[1].answer === 12.5 && dirty.questions[2].marks === 10, 'a number written as text is read as a number; marks are held to 10');
+check(dirty.title === 'Newton', 'with no title the topic is used');
+const longQ = await save(ann, [{ ...MCQ, question: 'q'.repeat(2000), explanation: 'e'.repeat(3000), options: ['a'.repeat(500), 'b', 'c', 'd'] }]);
+check(longQ.questions[0].question.length === 700 && longQ.questions[0].explanation.length === 900 && longQ.questions[0].options[0].length === 200, 'very long texts are shortened to safe lengths');
+await expectFail(() => save(ann, []), /no usable questions/, 'a quiz with no questions is refused');
+await expectFail(() => save(ann, [{ ...MCQ, answer: 9 }, 'x']), /no usable questions/, 'a quiz whose questions are all unsound is refused');
+await expectFail(() => save(ann, 'nope'), /no usable questions/, 'something that is not a list is refused');
+const fifty = await save(ann, Array.from({ length: 50 }, (_, i) => ({ ...TF, question: 'Question ' + i })));
+check(fifty.count === 40, 'at most 40 questions in a quiz');
+
+section('3. Saving, finding and removing a quiz');
+const cref = ref();
+const s1 = await rpc(ann, 'study_quiz_save', J({ clientRef: cref, title: 'Once', questions: [MCQ] })), s2 = await rpc(ann, 'study_quiz_save', J({ clientRef: cref, title: 'Once', questions: [MCQ] }));
+check(s1.id === s2.id, 'saving the same quiz twice (a double tap) makes one');
+await expectFail(() => save(ann, [MCQ], { subjectId: bobSubj }), /not yours/, 'a subject that is not theirs is refused');
+const bobMat = (await rpc(bob, 'study_material_create', 'Rome', null, 'notes', '', null, ref())).id;
+check((await save(ann, [MCQ], { materialId: bobMat })).materialId === null, 'another student\'s document is never linked');
+const ownMat = (await rpc(ann, 'study_material_create', 'My notes', phys, 'notes', '', null, ref())).id;
+check((await save(ann, [MCQ], { materialId: ownMat })).materialId === ownMat, 'their own document can be linked');
+check((await save(ann, [MCQ], { difficulty: 'impossible', source: 'hacker' })).difficulty === 'mixed', 'an unknown difficulty or source becomes the default');
+const list = await rpc(ann, 'study_quizzes_list');
+check(list.quizzes.length >= 5 && list.quizzes.every((z) => !('questions' in z) && z.count >= 1), 'the list shows quizzes without their questions');
+check((await rpc(ann, 'study_quizzes_list', bio)).quizzes.length === 0 && (await rpc(ann, 'study_quizzes_list', phys)).quizzes.length === list.quizzes.filter((z) => z.subjectId === phys).length && list.quizzes.some((z) => z.subjectId === null), 'it can be filtered by subject');
+check((await rpc(ann, 'study_quizzes_list', null, 2)).quizzes.length === 2, 'and limited');
+check((await rpc(bob, 'study_quizzes_list')).quizzes.length === 0, 'another student sees none of them');
+const got = await rpc(ann, 'study_quiz_get', saved.id);
+check(got.questions.length === 6 && got.attempts === 0 && got.best === null, 'a quiz is read with its questions');
+await expectFail(() => rpc(bob, 'study_quiz_get', saved.id), /no longer exists/, 'nobody else can read it');
+await expectFail(() => rpc(bob, 'study_quiz_attempt_save', saved.id, J([]), J({}), 0, ref()), /no longer exists/, 'nobody else can answer it');
+check((await rpc(bob, 'study_quiz_delete', saved.id)).deleted === false, 'nobody else can delete it');
+await db.query(`delete from public.study_quizzes where user_id = $1 and id <> $2`, [ann, saved.id]);
+await db.query(`insert into public.study_quizzes (user_id, title, questions) select $1, 'x' || g, $2::jsonb from generate_series(1, 99) g`, [ann, J([MCQ])]);
+await expectFail(() => save(ann, [MCQ]), /100 saved quizzes/, 'at most 100 saved quizzes');
+await db.query(`delete from public.study_quizzes where user_id = $1 and id <> $2`, [ann, saved.id]);
+
+section('4. Marking');
+const quiz = saved;
+const ev0 = (await q(`select count(*)::int as n from public.study_events where user_id = $1 and kind = 'practice'`, [ann]))[0].n;
+const att = await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([1, false, '6', 'Newton', 'For every action there is an equal reaction', '']), J({ 4: 0.5, 5: 1 }), 185, ref());
+check(att.results.length === 6, 'one result for each question');
+check(att.results[0].correct === true && att.results[1].correct === true && att.results[2].correct === true && att.results[3].correct === true, 'right answers to the multiple choice, true/false, number and fill-in are marked right');
+check(att.results[4].open === true && att.results[4].score === 2 && att.results[4].max === 4 && att.results[4].correct === true, 'a written answer the student marked "half" gets half of its 4 marks');
+check(att.results[5].score === 1 && att.results[5].correct === true, 'a written answer the student marked "full" gets its mark, even if left blank');
+check(att.score === 1 + 1 + 1 + 1 + 2 + 1 && att.max === 1 + 1 + 1 + 1 + 4 + 1 && att.percent === Math.round((7 / 9) * 100), 'the total and the percentage add up', J({ s: att.score, m: att.max, p: att.percent }));
+const wrong = await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([0, true, '7', 'newtons', '', null]), J({}), 60, ref());
+check(wrong.results.map((r) => r.correct).join() === 'false,false,false,false,,' && wrong.score === 0 && wrong.max === 9, 'wrong answers are marked wrong, and a written answer nobody marked is not given marks', J(wrong.results.map((r) => r.correct)));
+check(wrong.newMistakes === 4, 'four mistakes were noted (a question left for the student to mark is not one)', String(wrong.newMistakes));
+
+const num = async (given) => (await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([null, null, given, null, null, null]), J({}), 0, ref())).results[2].correct;
+check((await num('6')) === true && (await num(6)) === true && (await num('6.0')) === true && (await num('6 N')) === true && (await num('6 newtons')) === true, 'a number is accepted with a unit after it, or as a plain number');
+check((await num('6.05')) === true && (await num('5.95')) === true && (await num('6.1')) === false && (await num('7')) === false, 'a number within 1 percent is right; further off is wrong');
+check((await num('abc')) === false && (await num('')) === false && (await num(null)) === false && (await num('-6')) === false, 'a word, nothing, or the wrong sign is wrong');
+const big = await save(ann, [{ ...NUM, question: 'big', answer: 1200, unit: '' }, { ...NUM, question: 'small', answer: 0.5, unit: '' }, { ...NUM, question: 'neg', answer: -3, unit: '' }]);
+const bigRes = await rpc(ann, 'study_quiz_attempt_save', big.id, J(['1,200', '0.5', '-3']), J({}), 0, ref());
+check(bigRes.results.every((r) => r.correct === true), 'thousands separators are understood, as are small and negative numbers');
+const fill = async (given, mark) => (await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([null, null, null, given, null, null]), J(mark === undefined ? {} : { 3: mark }), 0, ref())).results[3];
+check((await fill('Newton')).correct === true && (await fill('  newton. ')).correct === true && (await fill('NEWTON!')).correct === true, 'a fill-in is right whatever the capital letters, spaces or full stop');
+check((await fill('newtn')).correct === false, 'a misspelling is wrong by itself');
+const fr = await fill('newtn', 1);
+check(fr.correct === true && fr.open === true && fr.score === 1, '…but the student can say they actually had it right (their own honest mark)');
+check((await fill('newtn', 0.25)).correct === false, 'a low self-mark stays wrong');
+check((await fill('', 1)).correct === true, 'a blank can be marked by the student too (their choice)');
+const hindiQ = await save(ann, [{ ...FILL, question: 'हिंदी', answer: 'न्यूटन' }, { ...FILL, question: 'other', answer: 'ज्ञान' }]);
+const hindiRes = await rpc(ann, 'study_quiz_attempt_save', hindiQ.id, J(['न्यूटन', 'न्यूटन']), J({}), 0, ref());
+check(hindiRes.results[0].correct === true && hindiRes.results[1].correct === false, 'answers in other scripts are compared properly (a different Hindi word is not "the same")');
+const marks = async (m) => (await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([null, null, null, null, 'x', null]), J({ 4: m }), 0, ref())).results[4];
+check((await marks(1)).score === 4 && (await marks(0.5)).score === 2 && (await marks(0)).score === 0 && (await marks(0.25)).score === 1 && (await marks(0.7)).score === 3, 'written answers: full, half, none, and quarters round to half marks of the question\'s marks');
+check((await marks(5)).score === 4 && (await marks(-1)).score === 0, 'a mark above full or below none is held to the limits');
+check((await marks(0)).correct === false && (await marks(1)).correct === true, 'a written answer counts as right at half marks or more');
+await expectFail(() => rpc(ann, 'study_quiz_attempt_save', quiz.id, J([1, 1, 1, 1, 1, 1, 1]), J({}), 0, ref()), /do not belong to this quiz/, 'more answers than questions is refused');
+await expectFail(() => rpc(ann, 'study_quiz_attempt_save', quiz.id, J({ a: 1 }), J({}), 0, ref()), /do not belong to this quiz/, 'answers that are not a list are refused');
+const oneRef = ref();
+const a1 = await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([1, false, '6', 'newton', null, null]), J({}), 30, oneRef), a2 = await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([0, true, '1', 'x', null, null]), J({}), 30, oneRef);
+check(a1.id === a2.id && a2.duplicate === true && a2.score === a1.score, 'sending the same attempt twice (a double tap) counts once, and the first answer stands');
+const t = (await q(`select duration_sec from public.study_quiz_attempts where id = $1`, [a1.id]))[0];
+check(t.duration_sec === 30, 'the time taken is kept');
+const huge = await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([]), J({}), 999999, ref());
+check((await q(`select duration_sec from public.study_quiz_attempts where id = $1`, [huge.id]))[0].duration_sec === 86400, 'an impossible time is held to a day');
+const hist = await rpc(ann, 'study_quiz_attempts_list', quiz.id, 3);
+check(hist.attempts.length === 3 && hist.attempts[0].percent !== undefined && hist.attempts.every((a, i, arr) => i === 0 || a.createdAt <= arr[i - 1].createdAt), 'past attempts are listed, newest first, and limited');
+check((await rpc(bob, 'study_quiz_attempts_list', quiz.id)).attempts.length === 0, 'another student sees none of them');
+const after = await rpc(ann, 'study_quiz_get', quiz.id);
+check(after.attempts >= 10 && after.best === 78 && after.lastAt, 'the quiz shows how often it was done and the best percentage', J({ a: after.attempts, b: after.best }));
+check((await q(`select count(*)::int as n from public.study_events where user_id = $1 and kind = 'practice'`, [ann]))[0].n > ev0, 'a finished quiz is written into the student\'s history');
+await rpc(ann, 'study_save_profile', J({ privacy: { trackActivity: false } }));
+const evBefore = (await q(`select count(*)::int as n from public.study_events where user_id = $1`, [ann]))[0].n;
+await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([1]), J({}), 60, ref());
+check((await q(`select count(*)::int as n from public.study_events where user_id = $1`, [ann]))[0].n === evBefore, 'with "remember what I study" switched off, nothing is written to the history');
+await rpc(ann, 'study_save_profile', J({ privacy: { trackActivity: true } }));
+
+section('5. Mistakes');
+await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([0, true, '7', 'x']), J({}), 5, ref());
+const open1 = await rpc(ann, 'study_mistakes_list');
+check(open1.open > 0 && open1.mistakes.length > 0, 'the wrong answers are on the list');
+const mc = open1.mistakes.find((m) => m.question === MCQ.question);
+check(mc && mc.correctAnswer === 'Second' && mc.type === 'mcq' && mc.explanation.includes('second law') && mc.wrongCount >= 1 && mc.resolved === false, 'a mistake keeps the question, the right answer written out, and the explanation');
+const tfm = open1.mistakes.find((m) => m.question === TF.question);
+check(tfm.correctAnswer === 'False', 'a true/false right answer is written as "True" or "False"');
+const nm = open1.mistakes.find((m) => /force in newtons/.test(m.question));
+check(nm.correctAnswer === '6 N', 'a numerical right answer is written with its unit');
+check(!open1.mistakes.some((m) => /Newton's third law/.test(m.question) && m.studentAnswer === ''), 'a written question left for the student to mark is not counted as a mistake');
+const before = mc.wrongCount;
+await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([2]), J({}), 10, ref());
+check((await rpc(ann, 'study_mistakes_list')).mistakes.find((m) => m.question === MCQ.question).wrongCount === before + 1, 'getting it wrong again adds one to its count (and never makes a second line)');
+await rpc(ann, 'study_quiz_attempt_save', quiz.id, J([1]), J({}), 10, ref());
+check((await rpc(ann, 'study_mistakes_list')).mistakes.every((m) => m.question !== MCQ.question) && (await rpc(ann, 'study_mistakes_list', null, false)).mistakes.find((m) => m.question === MCQ.question).resolved === true, 'answering it right clears it from the list (it stays in the full history)');
+const res = await rpc(ann, 'study_mistake_resolve', tfm.id, true);
+check(res.resolved === true && (await rpc(ann, 'study_mistakes_list')).mistakes.every((m) => m.id !== tfm.id), 'a mistake can be marked as learnt');
+check((await rpc(ann, 'study_mistake_resolve', tfm.id, false)).resolved === false, '…and put back');
+await expectFail(() => rpc(bob, 'study_mistake_resolve', tfm.id, true), /no longer exists/, 'nobody else can change it');
+check((await rpc(bob, 'study_mistakes_list')).mistakes.length === 0 && (await rpc(bob, 'study_mistake_delete', tfm.id)).deleted === false, 'another student sees none and can delete none');
+check((await rpc(ann, 'study_mistakes_list', bio)).mistakes.length === 0 && (await rpc(ann, 'study_mistakes_list', phys)).mistakes.length > 0, 'the list can be filtered by subject');
+check((await rpc(ann, 'study_mistakes_list', null, true, 2)).mistakes.length === 2, 'and limited');
+const fm = await rpc(ann, 'study_quiz_from_mistakes', phys, 3);
+check(fm.source === 'mistakes' && fm.count === 3 && fm.questions.length === 3 && fm.title === 'My mistakes', 'a new quiz can be made from the open mistakes');
+check(fm.questions.every((x) => x.question && x.explanation && x.type), 'its questions are the original, complete ones (so they can be answered again)');
+const redo = await rpc(ann, 'study_quiz_attempt_save', fm.id, J([null, null, null]), J({}), 5, ref());
+check(redo.score === 0, 'and answered like any quiz');
+check((await rpc(ann, 'study_mistake_delete', tfm.id)).deleted === true && (await rpc(ann, 'study_mistakes_list', null, false)).mistakes.every((m) => m.id !== tfm.id), 'a mistake can be removed');
+await expectFail(() => rpc(bob, 'study_quiz_from_mistakes', null, 5), /no mistakes to practise/, 'with nothing to practise it says so kindly');
+await expectFail(() => rpc(ann, 'study_quiz_from_mistakes', bobSubj, 5), /not yours/, 'another student\'s subject is refused');
+await db.query(`update public.study_mistakes set resolved = true where user_id = $1`, [ann]);
+await expectFail(() => rpc(ann, 'study_quiz_from_mistakes', null, 5), /no mistakes to practise/, 'when all are learnt there is nothing to practise');
+check((await rpc(ann, 'study_quiz_delete', quiz.id)).deleted === true && (await q(`select count(*)::int as n from public.study_quiz_attempts where quiz_id = $1`, [quiz.id]))[0].n === 0, 'removing a quiz removes its attempts');
+check((await q(`select count(*)::int as n from public.study_mistakes where user_id = $1`, [ann]))[0].n > 0, 'but the mistakes it found stay for the student to learn from');
+
+section('6. Flashcard decks');
+const d1ref = ref();
+const deck = await rpc(ann, 'study_deck_save', J({ clientRef: d1ref, title: 'Forces', subjectId: phys }));
+check(deck.title === 'Forces' && deck.total === 0 && deck.due === 0 && deck.subjectId === phys, 'a deck starts empty');
+check((await rpc(ann, 'study_deck_save', J({ clientRef: d1ref, title: 'Forces' }))).id === deck.id, 'saving the same deck twice makes one');
+await expectFail(() => rpc(ann, 'study_deck_save', J({ title: '  ' })), /give the deck a name/, 'a deck needs a name');
+await expectFail(() => rpc(ann, 'study_deck_save', J({ title: 'x', subjectId: bobSubj })), /not yours/, 'a subject that is not theirs is refused');
+check((await rpc(ann, 'study_deck_save', J({ title: 'Linked', materialId: bobMat }))).materialId === null, 'another student\'s document is never linked');
+const renamed = await rpc(ann, 'study_deck_save', J({ id: deck.id, title: 'Newton\'s laws', subjectId: bio }));
+check(renamed.title === 'Newton\'s laws' && renamed.subjectId === bio, 'a deck can be renamed and moved');
+await rpc(ann, 'study_deck_save', J({ id: deck.id, title: 'Newton\'s laws', subjectId: phys }));
+await expectFail(() => rpc(bob, 'study_deck_save', J({ id: deck.id, title: 'mine' })), /no longer exists/, 'nobody else can change it');
+const add1 = await rpc(ann, 'study_cards_add', deck.id, J([{ front: 'Force', back: 'A push or a pull' }, { front: 'force', back: 'dup' }, { front: '', back: 'x' }, { front: 'Mass', back: 'Amount of matter' }, { front: 'x'.repeat(500), back: 'y'.repeat(900) }]));
+check(add1.added === 3 && add1.skipped === 2 && add1.deck.total === 3, 'cards are added; a copy of a front (any capitals) and blank ones are skipped');
+check((await rpc(ann, 'study_cards_add', deck.id, J([{ front: 'FORCE', back: 'again' }]))).added === 0, 'adding it again later is skipped too');
+const cards = (await rpc(ann, 'study_cards_list', deck.id)).cards;
+const cForce = cards.find((c) => c.front === 'Force'), cMass = cards.find((c) => c.front === 'Mass'), cLong = cards.find((c) => c.front.length === 300);
+check(cards.length === 3 && cards.every((c) => c.fresh === true && c.reps === 0) && cLong && cLong.back.length === 600 && cForce && cMass, 'new cards are "new", and very long ones are shortened');
+check(cards[0].front === 'Force' && cards[1].front === 'Mass', 'cards are listed in the order they were added');
+check(add1.deck.due === 3 && add1.deck.fresh === 3, 'new cards are due straight away');
+await expectFail(() => rpc(ann, 'study_cards_add', deck.id, J(Array.from({ length: 61 }, (_, i) => ({ front: 'f' + i, back: 'b' })))), /up to 60 cards/, 'more than 60 at once is refused');
+await expectFail(() => rpc(ann, 'study_cards_add', deck.id, J({ a: 1 })), /no cards to add/, 'something that is not a list is refused');
+await expectFail(() => rpc(bob, 'study_cards_add', deck.id, J([{ front: 'a', back: 'b' }])), /no longer exists/, 'nobody else can add to it');
+await expectFail(() => rpc(bob, 'study_cards_list', deck.id), /no longer exists/, 'nobody else can read it');
+const edited = await rpc(ann, 'study_card_save', J({ id: cForce.id, front: 'Force (F)', back: 'A push or a pull, in newtons' }));
+check(edited.front === 'Force (F)', 'a card can be changed');
+await expectFail(() => rpc(ann, 'study_card_save', J({ id: cForce.id, front: 'mass', back: 'x' })), /already has a card with that front/, 'a change that would copy another card is refused');
+await expectFail(() => rpc(ann, 'study_card_save', J({ id: cForce.id, front: '', back: 'x' })), /front and a back/, 'a card needs both sides');
+await expectFail(() => rpc(bob, 'study_card_save', J({ id: cForce.id, front: 'a', back: 'b' })), /no longer exists/, 'nobody else can change it');
+check((await rpc(bob, 'study_card_delete', cForce.id)).deleted === false, 'nobody else can delete it');
+check((await rpc(bob, 'study_decks_list')).decks.length === 0 && (await rpc(bob, 'study_cards_due')).cards.length === 0, 'another student sees no decks or cards');
+const dl = await rpc(ann, 'study_decks_list');
+check(dl.decks.find((d) => d.id === deck.id).total === 3 && dl.dueTotal === 3, 'the list shows how many cards are due');
+check((await rpc(ann, 'study_decks_list', bio)).decks.length === 0, 'and can be filtered by subject');
+await db.query(`insert into public.study_cards (deck_id, user_id, front, back) select $1, $2, 'bulk ' || g, 'b' from generate_series(1, 4997) g`, [deck.id, ann]);
+await expectFail(() => rpc(ann, 'study_cards_add', deck.id, J([{ front: 'one more', back: 'x' }, { front: 'and another', back: 'y' }])), /5,000 cards/, 'at most 5,000 cards');
+await db.query(`delete from public.study_cards where front like 'bulk %'`);
+await db.query(`insert into public.study_decks (user_id, title) select $1, 'd' || g from generate_series(1, 99) g`, [ann]);
+await expectFail(() => rpc(ann, 'study_deck_save', J({ title: 'one too many' })), /100 decks/, 'at most 100 decks');
+await db.query(`delete from public.study_decks where user_id = $1 and title ~ '^d[0-9]+$'`, [ann]);
+
+section('7. Cards come back at the right time (SM-2)');
+const c0 = cMass;
+const r1 = await rpc(ann, 'study_card_review', c0.id, 3);
+const dayMs = 864e5;
+const inDays = (iso) => (Date.parse(iso) - Date.now()) / dayMs;
+check(r1.reps === 1 && r1.intervalDays === 1 && Math.abs(inDays(r1.dueAt) - 1) < 0.01 && r1.fresh === false && r1.ease === 2.5, '"Good" the first time: back in 1 day, ease unchanged');
+const r2 = await rpc(ann, 'study_card_review', c0.id, 3);
+check(r2.reps === 2 && r2.intervalDays === 6 && Math.abs(inDays(r2.dueAt) - 6) < 0.01, '"Good" again: back in 6 days');
+const r3 = await rpc(ann, 'study_card_review', c0.id, 3);
+check(r3.reps === 3 && r3.intervalDays === 15 && r3.ease === 2.5, '"Good" a third time: 6 days x 2.5 = 15 days');
+const r4 = await rpc(ann, 'study_card_review', c0.id, 4);
+check(r4.reps === 4 && r4.ease === 2.6 && r4.intervalDays === 39, '"Easy": ease goes up to 2.6 and the wait grows to 15 x 2.6 = 39 days', J({ e: r4.ease, i: r4.intervalDays }));
+const r5 = await rpc(ann, 'study_card_review', c0.id, 2);
+check(r5.reps === 5 && Math.abs(r5.ease - 2.46) < 0.001 && r5.intervalDays === Math.round(39 * 2.46), '"Hard": ease goes down a little (by 0.14) and the wait still grows', J({ e: r5.ease, i: r5.intervalDays }));
+const r6 = await rpc(ann, 'study_card_review', c0.id, 1);
+check(r6.reps === 0 && r6.intervalDays === 0 && r6.lapses === 1 && Math.abs(r6.ease - 2.26) < 0.001 && Math.abs(inDays(r6.dueAt) * 1440 - 10) < 1, '"Again": the steps start over, it comes back in 10 minutes, and its ease drops', J(r6));
+const r7 = await rpc(ann, 'study_card_review', c0.id, 3);
+check(r7.reps === 1 && r7.intervalDays === 1, 'after "Again" it starts again at 1 day');
+for (let i = 0; i < 12; i++) await rpc(ann, 'study_card_review', c0.id, 1);
+check((await q(`select ease::float as e, lapses from public.study_cards where id = $1`, [c0.id]))[0].e === 1.3, 'ease never falls below 1.3 however often it is forgotten');
+for (let i = 0; i < 40; i++) await rpc(ann, 'study_card_review', c0.id, 4);
+check((await q(`select interval_days from public.study_cards where id = $1`, [c0.id]))[0].interval_days <= 3650, 'a wait is never longer than ten years');
+await expectFail(() => rpc(ann, 'study_card_review', c0.id, 0), /how it went/, 'an unknown rating is refused');
+await expectFail(() => rpc(ann, 'study_card_review', c0.id, 5), /how it went/, 'a rating above "easy" is refused');
+await expectFail(() => rpc(bob, 'study_card_review', c0.id, 3), /no longer exists/, 'nobody else can review it');
+const due = await rpc(ann, 'study_cards_due', deck.id, 10);
+check(due.cards.length === 2 && due.dueTotal === 2 && due.cards.every((c) => c.id !== c0.id), 'cards that are not due yet are not shown (two cards are still new)');
+check(due.cards[0].deckTitle === 'Newton\'s laws', 'a due card says which deck it is from');
+const deck2 = await rpc(ann, 'study_deck_save', J({ title: 'Cells', subjectId: bio }));
+await rpc(ann, 'study_cards_add', deck2.id, J([{ front: 'Cell', back: 'The basic unit of life' }]));
+const allDue = await rpc(ann, 'study_cards_due');
+check(allDue.dueTotal === 3 && allDue.cards.length === 3, 'all decks together: every due card');
+check((await rpc(ann, 'study_cards_due', null, 1)).cards.length === 1 && (await rpc(ann, 'study_cards_due', null, 1)).dueTotal === 3, 'the number shown can be limited, and the total is still told');
+await db.query(`update public.study_cards set due_at = now() - interval '3 days' where id = $1`, [cLong.id]);
+check((await rpc(ann, 'study_cards_due', null, 5)).cards[0].id === cLong.id, 'the card waiting longest comes first');
+await rpc(ann, 'study_review_done', deck.id, 7, 150);
+const rev = (await q(`select minutes, meta from public.study_events where user_id = $1 and kind = 'review' order by id desc limit 1`, [ann]))[0];
+check(rev.minutes === 3 && rev.meta.cards === 7, 'a finished round of cards is written once into the history');
+await rpc(ann, 'study_review_done', null, 99999, -5);
+check((await q(`select meta from public.study_events where user_id = $1 and kind = 'review' order by id desc limit 1`, [ann]))[0].meta.cards === 1000, 'impossible counts are held to sensible limits');
+const delDeck = await rpc(ann, 'study_deck_delete', deck2.id);
+check(delDeck.deleted === true && (await q(`select count(*)::int as n from public.study_cards where deck_id = $1`, [deck2.id]))[0].n === 0, 'removing a deck removes its cards');
+check((await rpc(bob, 'study_deck_delete', deck.id)).deleted === false, 'nobody else can remove a deck');
+check((await rpc(ann, 'study_card_delete', cLong.id)).deleted === true && (await rpc(ann, 'study_cards_list', deck.id)).cards.length === 2, 'a card can be removed');
+
+section('8. Topics');
+const tp = await rpc(ann, 'study_topic_save', J({ subjectId: phys, title: 'Laws of motion' }));
+check(tp.title === 'Laws of motion' && tp.status === 'not_started' && tp.position === 0 && tp.subjectId === phys, 'a topic starts as "not started", at the top');
+const tp2 = await rpc(ann, 'study_topic_save', J({ subjectId: phys, title: 'Gravitation', status: 'learning', note: 'Chapter 8' }));
+check(tp2.position === 1 && tp2.status === 'learning' && tp2.note === 'Chapter 8', 'the next one goes below it');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ subjectId: phys, title: 'laws of MOTION' })), /already have that topic/, 'the same topic twice (any capitals) is refused');
+check((await rpc(ann, 'study_topic_save', J({ subjectId: bio, title: 'Laws of motion' }))).subjectId === bio, 'the same words in another subject are fine');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ subjectId: phys, title: '  ' })), /write the topic/, 'a topic needs words');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ subjectId: phys, title: 'x', status: 'expert' })), /status is not known/, 'an unknown status is refused');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ title: 'x' })), /choose a subject/, 'a subject is needed');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ subjectId: bobSubj, title: 'x' })), /not yours/, 'another student\'s subject is refused');
+const moved = await rpc(ann, 'study_topic_save', J({ id: tp.id, status: 'confident' }));
+check(moved.status === 'confident' && moved.title === 'Laws of motion', 'changing only the status keeps the rest');
+check((await rpc(ann, 'study_topic_save', J({ id: tp.id, title: 'Newton\'s laws' }))).title === 'Newton\'s laws', 'a topic can be renamed');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ id: tp.id, title: 'gravitation' })), /already have that topic/, 'a rename that would copy another is refused');
+await expectFail(() => rpc(ann, 'study_topic_save', J({ id: tp.id, title: '' })), /write the topic/, 'a topic cannot be emptied');
+await expectFail(() => rpc(bob, 'study_topic_save', J({ id: tp.id, status: 'learning' })), /no longer exists/, 'nobody else can change it');
+const tl = await rpc(ann, 'study_topics_list', phys);
+check(tl.topics.map((x) => x.title).join('|') === 'Newton\'s laws|Gravitation', 'topics are listed in order, per subject');
+await expectFail(() => rpc(ann, 'study_topics_list', bobSubj), /not yours/, 'another student\'s subject is refused');
+await expectFail(() => rpc(ann, 'study_topics_list', null), /choose a subject/, 'a subject is needed');
+const many = await rpc(ann, 'study_topics_add_many', phys, J(['Work and energy', 'gravitation', '', 'Power', '  ', 'Work and energy']));
+check(many.added === 2 && many.skipped === 4, 'a pasted list adds the new topics and skips blanks and copies', J(many));
+check((await rpc(ann, 'study_topics_list', phys)).topics.map((x) => x.title).slice(-2).join('|') === 'Work and energy|Power', 'they go at the end, in order');
+await expectFail(() => rpc(ann, 'study_topics_add_many', phys, J(Array.from({ length: 101 }, (_, i) => 'T' + i))), /up to 100 topics/, 'more than 100 at once is refused');
+await db.query(`insert into public.study_topics (user_id, subject_id, title) select $1, $2, 'bulk ' || g from generate_series(1, 150) g`, [ann, phys]);
+await expectFail(() => rpc(ann, 'study_topic_save', J({ subjectId: phys, title: 'too many' })), /150 topics/, 'at most 150 topics a subject');
+await expectFail(() => rpc(ann, 'study_topics_add_many', phys, J(['yet another'])), /150 topics/, 'also when adding a list');
+await db.query(`delete from public.study_topics where title like 'bulk %'`);
+check((await rpc(bob, 'study_topic_delete', tp.id)).deleted === false && (await rpc(ann, 'study_topic_delete', tp.id)).deleted === true, 'only the student can remove a topic');
+check((await rpc(ann, 'study_topics_list', bio)).topics.length === 1 && (await rpc(ann, 'study_topics_list', phys)).topics.every((x) => x.id !== tp.id), 'removing one topic changes nothing else');
+
+section('9. Erasing');
+await rpc(ann, 'study_task_save', J({ clientRef: ref(), title: 'Keep me' }));
+await rpc(ann, 'study_delete_my_data', 'practice');
+const left = async (t) => Number((await q(`select count(*) as n from public.${t} where user_id = $1`, [ann]))[0].n);
+check((await left('study_quizzes')) === 0 && (await left('study_quiz_attempts')) === 0 && (await left('study_mistakes')) === 0 && (await left('study_decks')) === 0 && (await left('study_cards')) === 0, 'erasing practice removes quizzes, marks, mistakes, decks and cards');
+check((await left('study_topics')) > 0 && (await left('study_materials')) > 0 && (await left('study_tasks')) > 0, 'but not the topics, the library or the tasks');
+await rpc(bob, 'study_topic_save', J({ subjectId: bobSubj, title: 'Rome' }));
+await rpc(bob, 'study_deck_save', J({ title: 'Dates' }));
+await rpc(bob, 'study_delete_my_data', 'all');
+const bobLeft = Number((await q(`select (select count(*) from public.study_topics where user_id = $1) + (select count(*) from public.study_decks where user_id = $1) as n`, [bob]))[0].n);
+check(bobLeft === 0, 'erasing everything removes topics and decks too');
+check((await left('study_topics')) > 0, 'and nothing of anyone else');
+await expectFail(() => rpc(ann, 'study_delete_my_data', 'bananas'), /choice is not known/, 'an unknown erase choice is refused');
+const orphan = await q(`select (select count(*) from public.study_cards c where not exists (select 1 from public.study_decks d where d.id = c.deck_id)) + (select count(*) from public.study_quiz_attempts a where not exists (select 1 from public.study_quizzes z where z.id = a.quiz_id)) as n`);
+check(Number(orphan[0].n) === 0, 'nothing is ever left behind without its parent');
+
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

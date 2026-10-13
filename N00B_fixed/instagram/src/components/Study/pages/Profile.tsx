@@ -1,15 +1,15 @@
 import React from 'react';
-import { ChevronRight, PencilLine, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { BadgeCheck, ChevronRight, Palette, PencilLine, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { languageLabel, levelLabel } from '../../../utils/studyCatalog';
 import { minutesLabel } from '../../../utils/studyTime';
 import { useStudy } from '../StudyContext';
 import { goStudy } from '../studyStore';
 import { Btn, Card, Empty, Orb, Page, SubjectTag } from '../ui';
-import type { PageProps } from '../StudyApp';
+import { hasRoute, type PageProps } from '../StudyApp';
 
 // What NOOB STUDY knows about the student, in plain words, with a way to change every part of it.
 const Profile: React.FC<PageProps> = () => {
-  const { me, user } = useStudy();
+  const { me, user, gate } = useStudy();
   const p = me?.profile;
   if (!p) return <Page title="Profile"><Empty title="Your profile is empty" text="Set up your study space and it will show up here." action={<Btn small kind="primary" onClick={() => goStudy('onboarding')}>Set up</Btn>} /></Page>;
   const edit = (step: number) => goStudy('onboarding', { step });
@@ -52,6 +52,12 @@ const Profile: React.FC<PageProps> = () => {
         <Row title="Your tutor" step={5}>
           <Line k="Name" v={p.tutor.name || 'Not named yet'} /><Line k="Language" v={languageLabel(p.tutor.language || p.language)} /><Line k="Style" v={p.tutor.style} /><Line k="Answers" v={p.tutor.length} />
         </Row>
+        {gate?.admission && (
+          <button className="st-row-btn" onClick={() => goStudy('admission')}><BadgeCheck size={20} style={{ color: 'var(--st-accent)' }} /><span style={{ flex: 1 }}><span className="st-title st-h3" style={{ display: 'block' }}>My admission</span><span className="st-tiny st-muted">Number {gate.admission.admissionNo}. Change your details</span></span><ChevronRight size={18} /></button>
+        )}
+        {hasRoute('appearance') && (
+          <button className="st-row-btn" onClick={() => goStudy('appearance')}><Palette size={20} style={{ color: 'var(--st-accent)' }} /><span style={{ flex: 1 }}><span className="st-title st-h3" style={{ display: 'block' }}>Looks and sounds</span><span className="st-tiny st-muted">Colours, chat theme, voices, alarm</span></span><ChevronRight size={18} /></button>
+        )}
         <button className="st-row-btn" onClick={() => goStudy('settings')}><SlidersHorizontal size={20} style={{ color: 'var(--st-accent)' }} /><span style={{ flex: 1 }}><span className="st-title st-h3" style={{ display: 'block' }}>Settings</span><span className="st-tiny st-muted">Tutor, reminders, time zone</span></span><ChevronRight size={18} /></button>
         <button className="st-row-btn" onClick={() => goStudy('privacy')}><ShieldCheck size={20} style={{ color: 'var(--st-accent)' }} /><span style={{ flex: 1 }}><span className="st-title st-h3" style={{ display: 'block' }}>Privacy and your data</span><span className="st-tiny st-muted">What is saved, and how to delete it</span></span><ChevronRight size={18} /></button>
       </div>

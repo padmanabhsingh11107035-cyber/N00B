@@ -36,6 +36,25 @@
       </style>
       <img src="/noob-logo-circle.png" alt="" width="116" height="116" />
     </div>
+    <!-- On the coaching address (coaching.nooob.xyz, or any address opened with ?coaching=1) the page is NOOB STUDY: its own logo on the black opening screen
+         (3 seconds), its own name and icon. Everywhere else nothing changes. -->
+    <script>
+      (function () {
+        try {
+          if (!/^coaching\./i.test(location.hostname) && !/[?&]coaching=1/.test(location.search)) return;
+          window.__splashSeconds = 3;
+          var img = document.querySelector('#noob-splash img');
+          if (img) { img.src = '/noob-study-logo.svg'; img.setAttribute('width', '260'); img.setAttribute('height', '260'); img.style.cssText = 'width:min(62vw,260px);height:auto;aspect-ratio:1/1;border-radius:0;object-fit:contain'; }
+          document.title = 'NOOB STUDY';
+          var set = function (sel, attr, val) { var el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+          set('link[rel="manifest"]', 'href', '/manifest-study.json');
+          set('link[rel="icon"]', 'href', '/noob-study-logo-192.png');
+          set('link[rel="apple-touch-icon"]', 'href', '/noob-study-logo-512.png');
+          set('meta[name="theme-color"]', 'content', '#000000');
+          set('meta[name="apple-mobile-web-app-title"]', 'content', 'NOOB STUDY');
+        } catch (e) { /* the normal page still works */ }
+      })();
+    </script>
     <div id="root"></div>
     <noscript>
       <style>#noob-splash { display: none !important; }</style>

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '../../types';
-import { studyApi } from '../../services/studyApi';
+import { studyApi, type StudyGate } from '../../services/studyApi';
 import type { StudyMe, StudySubject } from '../../utils/studyTypes';
 import { browserTimeZone } from '../../utils/studyTime';
 import { subjectColor, type SubjectColor } from './ui';
@@ -10,6 +10,7 @@ import { subjectColor, type SubjectColor } from './ui';
 interface StudyCtx {
   user: User;
   me: StudyMe | null;
+  gate: StudyGate | null;
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
@@ -33,6 +34,7 @@ export const useStudy = (): StudyCtx => {
 
 export const StudyProvider: React.FC<{ user: User; children: React.ReactNode }> = ({ user, children }) => {
   const [me, setMeState] = useState<StudyMe | null>(null);
+  const [gate, setGate] = useState<StudyGate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toastText, setToastText] = useState<string | null>(null);
@@ -42,6 +44,11 @@ export const StudyProvider: React.FC<{ user: User; children: React.ReactNode }> 
   const skipSetup = useCallback(() => { setSkipped(true); try { localStorage.setItem(skipKey, '1'); } catch { /* private mode: it lasts until the app is closed */ } }, [skipKey]);
 
   const reload = useCallback(async () => {
+    // first: is it open for this student? (a closed NOOB STUDY must say "coming soon", not fail)
+    const g = await studyApi.gate();
+    if (!g.ok) { setError(g.error); setLoading(false); return; }
+    setGate(g.data);
+    if (g.data.mode !== 'on' && !g.data.isAdmin) { setError(null); setLoading(false); return; }
     const res = await studyApi.me();
     if (res.ok) { setMeState(res.data); setError(null); } else { setError(res.error); }
     setLoading(false);
@@ -59,14 +66,14 @@ export const StudyProvider: React.FC<{ user: User; children: React.ReactNode }> 
     const subjects = me?.subjects || [];
     const byId = new Map<string, StudySubject>(subjects.map((s): [string, StudySubject] => [s.id, s]));
     return {
-      user, me, loading, error, reload, setMe: setMeState,
+      user, me, gate, loading, error, reload, setMe: setMeState,
       tz: me?.profile?.timezone || browserTimeZone(),
       subjects,
       subjectName: (id) => (id && byId.get(id)?.name) || '',
       colorOf: (id) => subjectColor((id && byId.get(id)?.name) || ''),
       toast, skipped, skipSetup
     };
-  }, [user, me, loading, error, reload, toast, skipped, skipSetup]);
+  }, [user, me, gate, loading, error, reload, toast, skipped, skipSetup]);
 
   return (
     <Ctx.Provider value={value}>

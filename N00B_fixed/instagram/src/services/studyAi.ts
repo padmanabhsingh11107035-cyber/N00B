@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
-import { compressImage } from '../utils/mediaCompressor';
 import { friendly, newRef, type Result } from './studyApi';
 import { readNdjson, type ChatEvent } from '../utils/studyStream';
+import type { QuizQuestion } from '../utils/studyTypes';
 
 // NOOB STUDY's AI: talks to the "study-ai" function. The keys of the AI services live only there; this file never sees one. Every call needs a
 // signed-in student. Errors come back as plain sentences (and a short code, so a screen can react: "limit", "busy", "not_configured"…).
@@ -9,7 +9,6 @@ import { readNdjson, type ChatEvent } from '../utils/studyStream';
 const BASE = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
 const KEY = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '');
 const FN = `${BASE}/functions/v1/study-ai`;
-export const STUDY_BUCKET = 'study';
 
 export type AiResult<T> = Result<T> & { code?: string };
 export interface AiHealth { configured: boolean; text: boolean; vision: boolean; speechToText: boolean; search: boolean; providers: string[]; remaining: Record<string, { limit: number; used: number; remaining: number }> }
@@ -45,9 +44,9 @@ export async function aiCall<T>(body: Record<string, unknown>, signal?: AbortSig
 export const aiHealth = () => aiCall<AiHealth>({ action: 'health' });
 
 // ---- the tutor's answer, arriving piece by piece
-export type { ChatEvent } from '../utils/studyStream';
+export type { ChatEvent, ChatSource } from '../utils/studyStream';
 
-export interface ChatParams { message: string; conversationId?: string | null; subjectId?: string | null; mode?: 'chat' | 'teach'; images?: string[]; materialId?: string | null; topic?: string; clientRef: string; language?: string }
+export interface ChatParams { message: string; conversationId?: string | null; subjectId?: string | null; mode?: 'chat' | 'teach'; images?: string[]; /* small pictures (data), sent with the question and never stored */ materialId?: string | null; topic?: string; clientRef: string; language?: string }
 
 export async function streamChat(params: ChatParams, onEvent: (e: ChatEvent) => void, signal?: AbortSignal): Promise<{ ok: boolean; error?: string; code?: string }> {
   try {
@@ -56,7 +55,7 @@ export async function streamChat(params: ChatParams, onEvent: (e: ChatEvent) => 
     const type = res.headers.get('content-type') || '';
     if (type.includes('application/json')) {                       // a message sent twice: the saved answer comes back whole
       const d: any = await res.json();
-      onEvent({ t: 'meta', conversationId: d.conversationId, userMessageId: d.userMessageId });
+      onEvent({ t: 'meta', conversationId: d.conversationId, userMessageId: d.userMessageId, sources: d.sources });
       if (d.reply) onEvent({ t: 'delta', text: String(d.reply) });
       onEvent({ t: 'done', messageId: d.messageId ?? null, remaining: d.remaining ?? null });
       return { ok: true };
@@ -71,45 +70,93 @@ export async function streamChat(params: ChatParams, onEvent: (e: ChatEvent) => 
 }
 
 export const transcribe = (base64: string, mime: string, language?: string) => aiCall<{ text: string }>({ action: 'transcribe', audio: base64, mime, language });
-export const extractText = (keys: string[]) => aiCall<{ text: string }>({ action: 'extract', images: keys });
+export const extractText = (pictures: string[]) => aiCall<{ text: string }>({ action: 'extract', images: pictures });
 
-// ---- pictures: shrunk on the phone, stored in the student's own private folder
-const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+// ---- pictures: made small on the phone and sent WITH the question, straight to the AI. They are never uploaded to a store and never saved: the
+// chat only remembers that a picture was sent. A video is never sent either: a few still frames from it are.
 export const MAX_PICTURES = 4;
-export async function uploadStudyImage(userId: string, file: File): Promise<Result<{ key: string; url: string }>> {
-  if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) return { ok: false, error: 'Please choose a picture (a photo or a screenshot).' };
-  if (file.size > 25 * 1024 * 1024) return { ok: false, error: 'That picture is very large. Please choose a smaller one.' };
-  let out = file;
-  try { out = await compressImage(file, 1600, 1600, 0.82); } catch { /* the original is sent */ }
-  const type = out.type in EXT ? out.type : 'image/jpeg';
-  if (out.size > 6 * 1024 * 1024) return { ok: false, error: 'That picture is still too large. Please take it again a little further away.' };
-  const key = `${userId}/chat/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${EXT[type]}`;
-  const { error } = await supabase.storage.from(STUDY_BUCKET).upload(key, out, { contentType: type, cacheControl: '3600', upsert: false });
-  if (error) return { ok: false, error: /exceeded|size/i.test(error.message) ? 'That picture is too large.' : 'The picture could not be uploaded. Please try again.' };
-  return { ok: true, data: { key, url: URL.createObjectURL(out) } };
-}
-export async function removeStudyFiles(keys: string[]): Promise<void> {
-  const own = keys.filter((k) => typeof k === 'string' && k.length > 0);
-  if (own.length) { try { await supabase.storage.from(STUDY_BUCKET).remove(own); } catch { /* a stray file is private and unguessable */ } }
+export interface StudyPicture { key: string; url: string; data: string }   // key: a name for the screen; url: what to show; data: the small picture the AI gets
+const MAX_DATA_CHARS = 1_500_000;
+const picKey = () => 'p' + Math.random().toString(36).slice(2, 10);
+const blobToDataUrl = (b: Blob): Promise<string> => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+export const dataToPicture = (data: string): StudyPicture => ({ key: picKey(), url: data, data });
+
+async function shrink(source: CanvasImageSource, w: number, h: number): Promise<string | null> {
+  for (const [edge, q] of [[1280, 0.72], [1024, 0.62], [800, 0.55]] as const) {
+    const scale = Math.min(1, edge / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w * scale)); c.height = Math.max(1, Math.round(h * scale));
+    const ctx = c.getContext('2d');
+    if (!ctx) return null;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(source, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', q);
+    if (url.length <= MAX_DATA_CHARS) return url;
+  }
+  return null;
 }
 
-const signed = new Map<string, { url: string; until: number }>();
-// Pictures are private: they are shown through short-lived signed addresses, made only for the student who owns them.
-export async function signedUrls(keys: string[]): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
-  const need: string[] = [];
-  for (const k of keys) { const c = signed.get(k); if (c && c.until > Date.now() + 60_000) out[k] = c.url; else need.push(k); }
-  if (need.length) {
-    try {
-      const { data } = await supabase.storage.from(STUDY_BUCKET).createSignedUrls(need, 3600);
-      for (const d of data || []) if (d.path && d.signedUrl) { signed.set(d.path, { url: d.signedUrl, until: Date.now() + 3500_000 }); out[d.path] = d.signedUrl; }
-    } catch { /* the pictures simply do not show */ }
+export async function preparePicture(file: File): Promise<Result<StudyPicture>> {
+  if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) return { ok: false, error: 'Please choose a picture (a photo or a screenshot).' };
+  if (file.size > 40 * 1024 * 1024) return { ok: false, error: 'That picture is very large. Please choose a smaller one.' };
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('bad')); img.src = url; });
+    const data = await shrink(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+    if (!data) return { ok: false, error: 'That picture is too detailed to send. Please take it again a little further away.' };
+    return { ok: true, data: { key: picKey(), url: data, data } };
+  } catch {
+    // some phones hand over a format the page cannot draw: send the file as it is if it is already small and a normal picture type
+    if (/^image\/(jpeg|png|webp)$/.test(file.type) && file.size < 1_000_000) { const data = await blobToDataUrl(file); return { ok: true, data: { key: picKey(), url: data, data } }; }
+    return { ok: false, error: 'That picture could not be read. Please try another one (a JPEG or PNG works best).' };
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// a few still frames from a video (the video itself never leaves the phone)
+export async function prepareVideoFrames(file: File, frames = 3): Promise<Result<StudyPicture[]>> {
+  if (file.size > 400 * 1024 * 1024) return { ok: false, error: 'That video is very large. Please choose a shorter one.' };
+  const url = URL.createObjectURL(file);
+  try {
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+    await new Promise<void>((res, rej) => { v.onloadeddata = () => res(); v.onerror = () => rej(new Error('bad')); setTimeout(() => rej(new Error('slow')), 15000); });
+    const d = v.duration;
+    if (!Number.isFinite(d) || d <= 0) return { ok: false, error: 'That video could not be read. Please try another one.' };
+    const out: StudyPicture[] = [];
+    const n = Math.max(1, Math.min(frames, MAX_PICTURES));
+    for (let i = 0; i < n; i++) {
+      v.currentTime = Math.min(d - 0.05, Math.max(0, (d * (i + 1)) / (n + 1)));
+      await new Promise<void>((res, rej) => { v.onseeked = () => res(); v.onerror = () => rej(new Error('bad')); setTimeout(() => rej(new Error('slow')), 8000); });
+      const data = await shrink(v, v.videoWidth, v.videoHeight);
+      if (data) out.push({ key: picKey(), url: data, data });
+    }
+    if (!out.length) return { ok: false, error: 'No picture could be taken from that video. Please try another one.' };
+    return { ok: true, data: out };
+  } catch {
+    return { ok: false, error: 'That video could not be read on this phone. Please take a photo instead.' };
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// photos and videos together: at most `room` pictures come out, and a plain sentence says what went wrong with any that did not
+export async function prepareFiles(files: File[], room: number, onEach?: () => void): Promise<{ pics: StudyPicture[]; errors: string[]; framed: boolean }> {
+  const pics: StudyPicture[] = []; const errors: string[] = []; let framed = false;
+  for (const f of files) {
+    if (pics.length >= room) break;
+    if (f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(f.name)) {
+      const r = await prepareVideoFrames(f, Math.min(3, room - pics.length));
+      if (r.ok) { pics.push(...r.data); framed = true; } else errors.push(r.error);
+    } else {
+      const r = await preparePicture(f);
+      if (r.ok) pics.push(r.data); else errors.push(r.error);
+    }
+    onEach?.();
   }
-  return out;
+  return { pics, errors, framed };
 }
 
 // ---- practice material (used from the Practice screens)
-export interface QuizQuestion { type: 'mcq' | 'tf' | 'short' | 'numerical' | 'fill' | 'case'; question: string; options?: string[]; answer: number | string | boolean; explanation: string; unit?: string; steps?: string[]; marks?: number }
+export type { QuizQuestion } from '../utils/studyTypes';
 export const generateQuiz = (p: { subject?: string; topic?: string; count?: number; difficulty?: string; format?: string; materialId?: string | null; language?: string }) =>
   aiCall<{ questions: QuizQuestion[]; generated: true; dropped: number }>({ action: 'generate', kind: 'quiz', ...p });
 export const generateCards = (p: { subject?: string; topic?: string; count?: number; materialId?: string | null; language?: string }) =>
@@ -122,4 +169,13 @@ export interface ResearchSource { n: number; title: string; url: string; officia
 export const research = (p: { query: string; board?: string; level?: string }) =>
   aiCall<{ answer: string; sources: ResearchSource[]; configured: boolean; note?: string; partial?: boolean }>({ action: 'research', ...p });
 
+// patterns in the student's own past papers (only those papers are read; each topic says which papers it was seen in)
+export interface PaperTopic { topic: string; papers: number[]; count: number; example: string | null; verified: boolean }
+export const analyzePapers = (p: { materialIds: string[]; language?: string }) =>
+  aiCall<{ topics: PaperTopic[]; papers: Array<{ n: number; title: string }>; generated: true; note: string }>({ action: 'analyze', ...p });
+
 export { newRef };
+
+// the weekly test: ask the function to make this week's test for a subject (the same test all week)
+export const startTest = (subjectId: string, language?: string) =>
+  aiCall<{ testId: string; status: 'ready' | 'done' | 'expired'; existing: boolean }>({ action: 'test', subjectId, language });

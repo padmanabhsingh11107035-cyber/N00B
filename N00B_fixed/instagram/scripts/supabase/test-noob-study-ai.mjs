@@ -1,5 +1,5 @@
 // Tests migration 20261014000002 (NOOB STUDY, part 2): the tutor's conversations and messages, what the server may know for one question, the
-// daily fair-use limits, sending a message twice, the private storage for pictures, and that only the server can use the server-side functions.
+// daily fair-use limits, sending a message twice, that a picture is never kept, and that only the server can use the server-side functions.
 // On a REAL Postgres (PGlite) with every migration applied.
 //
 // Usage: node scripts/supabase/test-noob-study-ai.mjs
@@ -15,6 +15,7 @@ const expectFail = async (fn, pattern, label) => {
 const section = (t) => console.log(`\n${t}`);
 
 const db = await createTestDb();
+await db.exec("update public.study_settings set mode = 'on'");   // NOOB STUDY ships as "coming soon"; these tests are about everything that happens once it is open
 const mkUser = async (name, patch = {}) => {
   const id = (await db.query(`select gen_random_uuid() as id`)).rows[0].id;
   await db.query(`insert into auth.users (id, email, encrypted_password) values ($1, $2, 'x')`, [id, `${name}@users.nooob.xyz`]);
@@ -142,9 +143,13 @@ await expectFail(() => svc('study_svc_msg_user', bob, conv, 'hi', '[]', ref()), 
 await expectFail(() => svc('study_svc_msg_assistant', bob, conv, 'hi', '{}'), /not found/, 'nor answer into it');
 await expectFail(() => svc('study_svc_msg_user', ann, conv, 'x'.repeat(4001), '[]', ref()), /4000/, 'a message over 4000 characters is refused');
 await expectFail(() => svc('study_svc_msg_user', ann, conv, '   ', '[]', ref()), /write your question/, 'an empty message is refused');
-check((await svc('study_svc_msg_user', ann, conv, '', J([{ key: `${ann}/chat/a.jpg` }]), ref())).duplicate === false, 'a picture alone is a valid message');
-await expectFail(() => svc('study_svc_msg_user', ann, conv, 'hi', J([{ key: `${bob}/chat/a.jpg` }]), ref()), /not yours/, 'a picture from someone else\'s folder is refused');
-await expectFail(() => svc('study_svc_msg_user', ann, conv, 'hi', J([{ key: `${ann}/../${bob}/a.jpg` }]), ref()), /not yours/, 'a path trick is refused');
+const picRef = ref();
+check((await svc('study_svc_msg_user', ann, conv, '', J([{ key: `${ann}/chat/a.jpg`, data: 'data:image/png;base64,AAAA' }]), picRef)).duplicate === false, 'a picture alone is a valid message');
+const kept = (await q(`select content, attachments from public.study_messages where conversation_id = $1 and client_ref = $2`, [conv, picRef]))[0];
+check(J(kept.attachments) === '[{"kind":"image"}]' && kept.content === 'Picture', 'only the fact that a picture was sent is kept: no file name, no folder, no picture data');
+check(!/chat\/a\.jpg|base64|AAAA/.test(J(await q(`select * from public.study_messages where conversation_id = $1`, [conv]))), 'nothing about the picture is anywhere in the saved messages');
+check((await svc('study_svc_msg_user', ann, conv, 'two', J([{}, 'x']), ref())).duplicate === false, 'a message can come with several pictures (a count is all that is kept)');
+await expectFail(() => svc('study_svc_msg_user', ann, conv, '', J([]), ref()), /write your question/, 'no text and no picture is refused');
 await expectFail(() => svc('study_svc_msg_user', ann, conv, 'hi', J(Array.from({ length: 5 }, (_, i) => ({ key: `${ann}/chat/${i}.jpg` }))), ref()), /up to 4/, 'at most four pictures per message');
 
 section('6. Opening, paging and deleting a chat');
@@ -153,34 +158,36 @@ check(got.messages.length === 5 && got.more === true && got.messages[4].content 
 const older = await rpc(ann, 'study_conv_get', c1.id, 5, got.messages[0].createdAt);
 check(older.messages.length === 5 && older.messages.every((m) => m.createdAt < got.messages[0].createdAt), 'and the page before it can be fetched');
 const withPic = (await svc('study_svc_conv_create', ann, null, 'photo', 'Photo', '')).id;
-await svc('study_svc_msg_user', ann, withPic, 'solve', J([{ key: `${ann}/chat/a.jpg` }, { key: `${ann}/chat/b.png` }]), ref());
+await svc('study_svc_msg_user', ann, withPic, 'solve', J([{}, {}]), ref());
 const del = await rpc(ann, 'study_conv_delete', withPic);
-check(del.deleted === true && del.files.length === 2 && del.files.includes(`${ann}/chat/a.jpg`), 'deleting a chat lists its pictures, for the app to delete');
+check(del.deleted === true && del.files.length === 0, 'deleting a chat has no pictures to remove (none were ever stored)');
 check((await q(`select count(*)::int n from public.study_messages where conversation_id = $1`, [withPic]))[0].n === 0, 'and its messages are gone');
 check((await rpc(ann, 'study_conv_delete', withPic)).deleted === false, 'deleting it again is harmless');
 
-section('7. The private store for pictures');
-check((await q(`select public from storage.buckets where id = 'study'`))[0].public === false, 'the "study" store is private');
-await asUser(db, ann, async () => db.query(`insert into storage.objects (bucket_id, name) values ('study', $1)`, [`${ann}/chat/mine.jpg`]));
-check(true, 'a student can add a file in their own folder');
-await expectFail(() => asUser(db, ann, async () => db.query(`insert into storage.objects (bucket_id, name) values ('study', $1)`, [`${bob}/chat/sneaky.jpg`])), /row-level security/, 'not in someone else\'s folder');
-await expectFail(() => asUser(db, ann, async () => db.query(`insert into storage.objects (bucket_id, name) values ('study', 'loose.jpg')`)), /row-level security/, 'nor loose at the top');
-await db.query(`insert into storage.objects (bucket_id, name) values ('study', $1)`, [`${bob}/chat/bobs.jpg`]);
-const seen = (await asUser(db, ann, async () => db.query(`select name from storage.objects where bucket_id = 'study'`))).rows.map((r) => r.name);
-check(seen.length === 1 && seen[0] === `${ann}/chat/mine.jpg`, 'a student sees only their own files');
-await asUser(db, ann, async () => db.query(`delete from storage.objects where bucket_id = 'study' and name = $1`, [`${bob}/chat/bobs.jpg`]));
-check((await q(`select 1 from storage.objects where name = $1`, [`${bob}/chat/bobs.jpg`])).length === 1, 'and cannot delete anybody else\'s');
-await asUser(db, ann, async () => db.query(`delete from storage.objects where bucket_id = 'study' and name = $1`, [`${ann}/chat/mine.jpg`]));
-check((await q(`select 1 from storage.objects where name = $1`, [`${ann}/chat/mine.jpg`])).length === 0, 'but can delete their own');
+section('7. Pictures are not stored anywhere');
+check((await q(`select count(*)::int as n from storage.buckets where id = 'study'`))[0].n === 0, 'there is no "study" store for pictures at all');
+check((await q(`select count(*)::int as n from pg_policies where schemaname = 'storage' and policyname like 'study\\_files\\_%'`))[0].n === 0, 'and no rule that would let one be put there');
+
+section('7b. Chats are kept small');
+const small = await mkUser('small');
+for (let i = 0; i < 153; i++) await svc('study_svc_conv_create', small, null, 'chat', '', 'Chat ' + i);
+check((await q(`select count(*)::int as n from public.study_conversations where user_id = $1`, [small]))[0].n === 150, 'a student keeps their 150 newest chats; older ones are dropped');
+check((await q(`select count(*)::int as n from public.study_conversations where user_id = $1 and title in ('Chat 0', 'Chat 1', 'Chat 2')`, [small]))[0].n === 0 && (await q(`select count(*)::int as n from public.study_conversations where user_id = $1 and title = 'Chat 152'`, [small]))[0].n === 1, 'the dropped ones are the oldest');
+const longConv = (await svc('study_svc_conv_create', small, null, 'chat', 'Long', '')).id;
+const longText = 'line of code;\n'.repeat(8000);
+await svc('study_svc_msg_assistant', small, longConv, longText, '{}');
+check((await q(`select char_length(content) as n from public.study_messages where conversation_id = $1`, [longConv]))[0].n === 112000, 'a very long answer (a code listing of 8,000 lines) is kept whole');
+await svc('study_svc_msg_assistant', small, longConv, 'x'.repeat(200000), '{}');
+check((await q(`select max(char_length(content)) as n from public.study_messages where conversation_id = $1`, [longConv]))[0].n === 150000, 'and one over 150,000 letters is cut there');
 
 section('8. Deleting one\'s own study data covers the chats');
 const dd = await mkUser('dd');
 const ds = await rpc(dd, 'study_set_subjects', J(['Maths']));
 const dc = (await svc('study_svc_conv_create', dd, null, 'chat', 'Mine', '')).id;
-await svc('study_svc_msg_user', dd, dc, 'hello', J([{ key: `${dd}/chat/p.jpg` }]), ref());
+await svc('study_svc_msg_user', dd, dc, 'hello', J([{}]), ref());
 await svc('study_svc_take', dd, 'chat');
 let wipe = await rpc(dd, 'study_delete_my_data', 'conversations');
-check(wipe.removedFiles.includes(`${dd}/chat/p.jpg`) && (await q(`select count(*)::int n from public.study_conversations where user_id = $1`, [dd]))[0].n === 0, 'deleting only the chats removes the chats and lists their pictures');
+check(wipe.removedFiles.length === 0 && (await q(`select count(*)::int n from public.study_conversations where user_id = $1`, [dd]))[0].n === 0, 'deleting only the chats removes the chats and there are no pictures to remove');
 check((await rpc(dd, 'study_me')).subjects.length === 1, 'and leaves the rest');
 await svc('study_svc_conv_create', dd, null, 'chat', 'Again', '');
 wipe = await rpc(dd, 'study_delete_my_data', 'all');

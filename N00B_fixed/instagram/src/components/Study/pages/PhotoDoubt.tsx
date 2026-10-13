@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Camera, ImagePlus, Lightbulb, X } from 'lucide-react';
-import { MAX_PICTURES, removeStudyFiles, uploadStudyImage } from '../../../services/studyAi';
+import { MAX_PICTURES, prepareFiles } from '../../../services/studyAi';
 import { aiHealth, type AiHealth } from '../../../services/studyAi';
 import { useStudy } from '../StudyContext';
 import { goStudy, replaceStudy } from '../studyStore';
@@ -30,16 +30,16 @@ const PhotoDoubt: React.FC<PageProps> = ({ params }) => {
     if (room <= 0) { toast(`You can send up to ${MAX_PICTURES} pictures at once.`); return; }
     const list = Array.from(files).slice(0, room);
     setUploading((n) => n + list.length);
-    for (const f of list) {
-      const r = await uploadStudyImage(user.id, f);
-      setUploading((n) => n - 1);
-      if (r.ok) setPics((p) => [...p, r.data]); else toast(r.error);
-    }
+    const r = await prepareFiles(list, room, () => setUploading((n) => Math.max(0, n - 1)));
+    setUploading(0);
+    if (r.pics.length) setPics((p) => [...p, ...r.pics].slice(0, MAX_PICTURES));
+    if (r.framed) toast('A few pictures from your video were taken. The video itself is not sent.');
+    if (r.errors[0]) toast(r.errors[0]);
   };
   const ask = () => {
     if (!pics.length || uploading) return;
     const seed = (note.trim() || 'Please help me with this.') + (mode === 'hint' ? '\n\n(Please give me only a hint to get started, not the full solution. I will ask if I need more.)' : '');
-    replaceStudy('chat', { images: pics.map((p) => p.key).join('|'), seed, subject: subject || undefined, mode: 'photo' });
+    replaceStudy('chat', { images: pics.map((p) => p.data).join('|'), seed, subject: subject || undefined, mode: 'photo' });
   };
   const off = !!health && !health.vision;
 
@@ -47,7 +47,7 @@ const PhotoDoubt: React.FC<PageProps> = ({ params }) => {
     <Page title="Photo doubts" subtitle="Send a picture, get it explained">
       <div style={{ display: 'grid', gap: 16 }}>
         {off && <div className="st-notice st-notice-warn">Photo questions are not switched on yet. You can type the question to your tutor instead.</div>}
-        <input ref={file} type="file" accept="image/*" multiple hidden onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
+        <input ref={file} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
         <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
         <div className="st-grid2">
           <button className="st-card-tint" disabled={off} onClick={() => cam.current?.click()} style={{ textAlign: 'center', cursor: 'pointer', color: 'inherit', display: 'grid', gap: 8, justifyItems: 'center', padding: '22px 10px', opacity: off ? 0.5 : 1 }}><Camera size={30} style={{ color: 'var(--st-accent)' }} /><span className="st-title st-h3">Take a photo</span></button>
@@ -58,7 +58,7 @@ const PhotoDoubt: React.FC<PageProps> = ({ params }) => {
             {pics.map((p) => (
               <div key={p.key} style={{ position: 'relative' }}>
                 <img src={p.url} alt="A picture to send" style={{ width: 92, height: 92, objectFit: 'cover', borderRadius: 16 }} />
-                <button className="st-icon-btn" style={{ position: 'absolute', top: -7, right: -7, width: 26, height: 26, borderRadius: 99 }} aria-label="Remove this picture" onClick={() => { setPics((x) => x.filter((y) => y.key !== p.key)); void removeStudyFiles([p.key]); }}><X size={13} /></button>
+                <button className="st-icon-btn" style={{ position: 'absolute', top: -7, right: -7, width: 26, height: 26, borderRadius: 99 }} aria-label="Remove this picture" onClick={() => setPics((x) => x.filter((y) => y.key !== p.key))}><X size={13} /></button>
               </div>
             ))}
             {Array.from({ length: uploading }, (_, i) => <div key={i} className="st-skel" style={{ width: 92, height: 92 }} />)}

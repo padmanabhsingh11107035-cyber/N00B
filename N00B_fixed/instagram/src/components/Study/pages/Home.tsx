@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BookPlus, Camera, CalendarPlus, FileUp, Layers, ListPlus, MessageCircleQuestion, Plus, Settings2, Sparkles, Timer, UserRound, X, Target } from 'lucide-react';
+import { BarChart3, NotebookPen, PenTool, Trophy, BookPlus, Camera, CalendarPlus, FileUp, Layers, ListPlus, MessageCircleQuestion, Plus, Settings2, Sparkles, Timer, UserRound, X, Target } from 'lucide-react';
 import { studyApi } from '../../../services/studyApi';
 import type { StudyDashboard, StudySession, StudyTask } from '../../../utils/studyTypes';
 import { addDaysYmd, dueLabel, greetingFor, hourIn, lastDays, longDate, minutesLabel, shortWeekday, ymdIn } from '../../../utils/studyTime';
 import { levelLabel } from '../../../utils/studyCatalog';
 import { useStudy } from '../StudyContext';
-import { closeStudy, goStudy } from '../studyStore';
+import { leaveStudy, goStudy } from '../studyStore';
 import { hasRoute, type PageProps } from '../StudyApp';
 import { ExamRow, SessionRow, TaskRow, TaskSheet } from '../parts';
 import { Btn, Card, Empty, ErrorBox, Loading, Orb, SubjectTag, colorVars, subjectColor } from '../ui';
@@ -67,6 +67,10 @@ const Home: React.FC<PageProps> = () => {
     { label: 'Focus session', icon: <Timer size={20} />, page: 'focus' },
     { label: 'Flashcards', icon: <Layers size={20} />, page: 'decks' },
     { label: 'Practice', icon: <Target size={20} />, page: 'practice' },
+    { label: 'Weekly test', icon: <Trophy size={20} />, page: 'tests' },
+    { label: 'My progress', icon: <BarChart3 size={20} />, page: 'progress' },
+    { label: 'Notepad', icon: <NotebookPen size={20} />, page: 'notes' },
+    { label: 'Sketch board', icon: <PenTool size={20} />, page: 'sketch' },
     { label: 'Study room', icon: <UserRound size={20} />, page: 'rooms' }
   ].filter((a) => hasRoute(a.page));
 
@@ -81,7 +85,7 @@ const Home: React.FC<PageProps> = () => {
           <p className="st-title st-h3">NOOB STUDY</p>
         </div>
         {hasRoute('profile') && <button className="st-icon-btn" onClick={() => goStudy('profile')} aria-label="Profile and settings"><Settings2 size={18} /></button>}
-        <button className="st-icon-btn" onClick={closeStudy} aria-label="Back to NOOB" title="Back to NOOB"><X size={18} /></button>
+        <button className="st-icon-btn" onClick={leaveStudy} aria-label="Back to NOOB" title="Back to NOOB"><X size={18} /></button>
       </div>
       <div className="st-scroll"><div className="st-wrap st-wrap-wide" style={{ display: 'grid', gap: 16, paddingBottom: 30 }}>
         <div className="st-in">

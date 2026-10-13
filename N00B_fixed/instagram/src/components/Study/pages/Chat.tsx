@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, Copy, GraduationCap, ImagePlus, Loader2, Mic, MicOff, MoreVertical, Pencil, RotateCw, Send, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { studyApi } from '../../../services/studyApi';
-import { aiHealth, MAX_PICTURES, newRef, removeStudyFiles, signedUrls, streamChat, transcribe, uploadStudyImage, type AiHealth } from '../../../services/studyAi';
+import { aiHealth, dataToPicture, MAX_PICTURES, newRef, prepareFiles, streamChat, transcribe, type AiHealth, type StudyPicture } from '../../../services/studyAi';
 import type { StudyConversation, StudyMessage } from '../../../utils/studyTypes';
+import type { ChatSource } from '../../../utils/studyStream';
 import { speechLang } from '../../../utils/studyCatalog';
 import { canRecognize, canRecord, canSpeak, describeVoiceError, isSpeaking, listen, record, speak, stopSpeaking, type Listener, type RecorderHandle } from '../../../utils/studyVoice';
+import { usePrefs } from '../../../utils/studyPrefs';
 import { useStudy } from '../StudyContext';
 import { backStudy, goStudy } from '../studyStore';
 import { Markdown } from '../Markdown';
@@ -14,8 +16,8 @@ import type { PageProps } from '../StudyApp';
 // The conversation with the tutor. The answer streams in as it is written; a question that could not be answered stays in the chat with a
 // "Try again" (sending it again never asks twice); pictures are shown from the student's private store; the microphone is only ever on while it is
 // visibly on, and the tutor only speaks when the student taps.
-interface Pic { key: string; url: string }
-interface UiMsg { id: string; role: 'user' | 'assistant'; content: string; pics: Pic[]; at?: string; status?: 'streaming' | 'error' | 'stopped'; error?: string; retry?: () => void }
+type Pic = StudyPicture;
+interface UiMsg { id: string; role: 'user' | 'assistant'; content: string; pics: Pic[]; sent?: number; at?: string; status?: 'streaming' | 'error' | 'stopped'; error?: string; retry?: () => void; sources?: ChatSource[] }
 
 export const STARTERS: Array<{ label: string; text: string }> = [
   { label: 'Explain this chapter in simple words', text: 'Explain this chapter in simple words: ' },
@@ -36,11 +38,14 @@ const FOLLOW_UPS = [
 
 const Chat: React.FC<PageProps> = ({ params }) => {
   const { me, user, subjects, subjectName, toast } = useStudy();
+  const prefs = usePrefs();
   const tutorName = me?.profile?.tutor?.name?.trim() || 'your tutor';
   const lang = me?.profile?.tutor?.language || me?.profile?.language || 'en';
   const [conv, setConv] = useState<StudyConversation | null>(null);
   const convRef = useRef<string | null>(typeof params.conversation === 'string' ? params.conversation : null);
   const [subjectId, setSubjectId] = useState<string | null>(typeof params.subject === 'string' ? params.subject : null);
+  // a document of the student's own that the tutor answers from (chosen on the library screen), with the pages it used shown under each answer
+  const [material, setMaterial] = useState<{ id: string; title: string } | null>(typeof params.material === 'string' && params.material ? { id: params.material, title: typeof params.materialTitle === 'string' ? params.materialTitle : 'your notes' } : null);
   const [messages, setMessages] = useState<UiMsg[]>([]);
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(!!convRef.current);
@@ -57,7 +62,6 @@ const Chat: React.FC<PageProps> = ({ params }) => {
   const [listening, setListening] = useState<'device' | 'record' | null>(null);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
-  const [urls, setUrls] = useState<Record<string, string>>({});
   const abort = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -68,12 +72,7 @@ const Chat: React.FC<PageProps> = ({ params }) => {
   const recorder = useRef<RecorderHandle | null>(null);
   const seeded = useRef(false);
 
-  const toUi = (m: StudyMessage): UiMsg => ({ id: m.id, role: m.role, content: m.content, at: m.createdAt, pics: (m.attachments || []).map((a) => ({ key: a.key, url: '' })) });
-  const resolvePics = useCallback(async (list: StudyMessage[]) => {
-    const keys = list.flatMap((m) => (m.attachments || []).map((a) => a.key));
-    if (keys.length) { const got = await signedUrls(keys); setUrls((u) => ({ ...u, ...got })); }
-  }, []);
-
+  const toUi = (m: StudyMessage): UiMsg => ({ id: m.id, role: m.role, content: m.content, at: m.createdAt, pics: [], sent: (m.attachments || []).length, sources: Array.isArray((m.meta as any)?.sources) ? ((m.meta as any).sources as ChatSource[]) : undefined });
   // open an existing chat, and ask what the tutor can do (so a missing key is said plainly instead of failing quietly)
   useEffect(() => {
     void aiHealth().then((r) => { if (r.ok) setHealth(r.data); });
@@ -86,7 +85,6 @@ const Chat: React.FC<PageProps> = ({ params }) => {
         setConv(r.data.conversation); setSubjectId(r.data.conversation.subjectId); setMore(r.data.more);
         if (r.data.conversation.mode === 'teach') setTeach(true);
         setMessages(r.data.messages.map(toUi));
-        void resolvePics(r.data.messages);
       })();
     }
     return () => { abort.current?.abort(); stopSpeaking(); listener.current?.stop(); recorder.current?.cancel(); };
@@ -107,7 +105,6 @@ const Chat: React.FC<PageProps> = ({ params }) => {
     stick.current = false;
     setMessages((m) => [...r.data.messages.map(toUi), ...m]);
     setMore(r.data.more);
-    void resolvePics(r.data.messages);
     requestAnimationFrame(() => { if (el) el.scrollTop = el.scrollHeight - before; });
   };
 
@@ -116,8 +113,8 @@ const Chat: React.FC<PageProps> = ({ params }) => {
     setBusy(true); stick.current = true;
     const ctl = new AbortController(); abort.current = ctl;
     let got = false;
-    const res = await streamChat({ message, conversationId: convRef.current, subjectId, mode: teach ? 'teach' : 'chat', images: images.map((p) => p.key), clientRef: ref }, (e) => {
-      if (e.t === 'meta') { convRef.current = e.conversationId; setConv((c) => c || { id: e.conversationId, title: '', subjectId, mode: teach ? 'teach' : 'chat', topic: '', materialId: null, createdAt: new Date().toISOString(), lastMessageAt: new Date().toISOString(), preview: '' }); }
+    const res = await streamChat({ message, conversationId: convRef.current, subjectId, mode: teach ? 'teach' : 'chat', images: images.map((p) => p.data), materialId: material?.id || null, clientRef: ref }, (e) => {
+      if (e.t === 'meta') { if (e.sources) setMessages((m) => m.map((x) => (x.id === botId ? { ...x, sources: e.sources } : x))); convRef.current = e.conversationId; setConv((c) => c || { id: e.conversationId, title: '', subjectId, mode: teach ? 'teach' : 'chat', topic: '', materialId: null, createdAt: new Date().toISOString(), lastMessageAt: new Date().toISOString(), preview: '' }); }
       else if (e.t === 'delta') { got = true; setMessages((m) => m.map((x) => (x.id === botId ? { ...x, content: x.content + e.text } : x))); }
       else if (e.t === 'done') { setMessages((m) => m.map((x) => (x.id === botId ? { ...x, status: undefined } : x))); if (e.remaining != null) setRemaining(e.remaining); }
       else if (e.t === 'error') { setMessages((m) => m.map((x) => (x.id === botId ? { ...x, status: 'error', error: e.message } : x))); }
@@ -132,7 +129,7 @@ const Chat: React.FC<PageProps> = ({ params }) => {
     }
     // a finished first answer gives the chat its name
     if (convRef.current) void studyApi.conv(convRef.current, 1).then((r) => { if (r.ok) setConv(r.data.conversation); });
-  }, [subjectId, teach]);
+  }, [subjectId, teach, material]);
 
   const send = useCallback((override?: string) => {
     const message = (override ?? text).trim();
@@ -155,7 +152,7 @@ const Chat: React.FC<PageProps> = ({ params }) => {
     if (!seed && !keys.length) return;
     seeded.current = true;
     const fire = () => setTimeout(() => document.getElementById('st-send')?.click(), 80);
-    if (keys.length) { void signedUrls(keys).then((u) => { setUrls((x) => ({ ...x, ...u })); setPics(keys.map((k) => ({ key: k, url: u[k] || '' }))); setText(seed); fire(); }); }
+    if (keys.length) { setPics(keys.map(dataToPicture)); setText(seed); fire(); }
     else if (params.send === false) setText(seed);
     else { setText(seed); fire(); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -167,13 +164,13 @@ const Chat: React.FC<PageProps> = ({ params }) => {
     if (room <= 0) { toast(`You can send up to ${MAX_PICTURES} pictures at once.`); return; }
     const list = Array.from(files).slice(0, room);
     setUploading((n) => n + list.length);
-    for (const f of list) {
-      const r = await uploadStudyImage(user.id, f);
-      setUploading((n) => n - 1);
-      if (r.ok) setPics((p) => [...p, r.data]); else toast(r.error);
-    }
+    const r = await prepareFiles(list, room, () => setUploading((n) => Math.max(0, n - 1)));
+    setUploading(0);
+    if (r.pics.length) setPics((p) => [...p, ...r.pics].slice(0, MAX_PICTURES));
+    if (r.framed) toast('A few pictures from your video were taken. The video itself is not sent.');
+    if (r.errors[0]) toast(r.errors[0]);
   };
-  const dropPic = (k: string) => { setPics((p) => p.filter((x) => x.key !== k)); void removeStudyFiles([k]); };
+  const dropPic = (k: string) => setPics((p) => p.filter((x) => x.key !== k));
 
   // ---- the microphone
   const stopListening = () => { listener.current?.stop(); listener.current = null; recorder.current?.cancel(); recorder.current = null; setListening(null); };
@@ -203,7 +200,7 @@ const Chat: React.FC<PageProps> = ({ params }) => {
   const toggleSpeak = (m: UiMsg) => {
     if (speakingId === m.id && isSpeaking()) { stopSpeaking(); setSpeakingId(null); return; }
     setSpeakingId(m.id);
-    speak(m.content, speechLang(lang), { preferredVoice: me?.profile?.tutor?.voice, onEnd: () => setSpeakingId((s) => (s === m.id ? null : s)) });
+    speak(m.content, speechLang(lang), { preferredVoice: prefs.aiVoice.name || me?.profile?.tutor?.voice, rate: prefs.aiVoice.rate, pitch: prefs.aiVoice.pitch, onEnd: () => setSpeakingId((s) => (s === m.id ? null : s)) });
   };
   const copy = async (m: UiMsg) => { try { await navigator.clipboard.writeText(m.content); toast('Copied.'); } catch { toast('Could not copy. Select the text instead.'); } };
 
@@ -238,8 +235,14 @@ const Chat: React.FC<PageProps> = ({ params }) => {
         )}
       />
 
-      <div ref={scroller} className="st-scroll" onScroll={(e) => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
+      <div ref={scroller} className="st-scroll st-chat-wall" onScroll={(e) => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
         <div className="st-wrap" style={{ display: 'grid', gap: 14, alignContent: 'start', gridTemplateColumns: 'minmax(0, 1fr)', paddingBottom: 12 }}>
+          {material && (
+            <div className="st-notice" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <span className="st-small" style={{ overflowWrap: 'anywhere' }}>Answering from your notes: <b>{material.title}</b></span>
+              <button className="st-icon-btn" onClick={() => setMaterial(null)} aria-label="Stop using these notes" style={{ width: 32, height: 32, flex: 'none' }}><X size={14} /></button>
+            </div>
+          )}
           {notReady && (
             <div className="st-notice st-notice-warn">
               {isAdmin
@@ -264,16 +267,20 @@ const Chat: React.FC<PageProps> = ({ params }) => {
               <div key={m.id} className="st-in" style={{ display: 'flex', gap: 8, justifyContent: mine ? 'flex-end' : 'flex-start' }}>
                 {!mine && <Orb size={28} />}
                 <div style={{ maxWidth: mine ? '86%' : '100%', minWidth: 0, flex: mine ? undefined : 1 }}>
-                  <div className={mine ? '' : 'st-card-flat'} style={mine ? { background: 'var(--st-accent-soft)', border: '1px solid var(--st-border)', borderRadius: '20px 20px 6px 20px', padding: '10px 14px' } : { borderRadius: '6px 20px 20px 20px' }}>
+                  <div className={mine ? 'st-chat-mine' : 'st-card-flat'} style={mine ? { borderRadius: '20px 20px 6px 20px', padding: '10px 14px' } : { borderRadius: '6px 20px 20px 20px' }}>
                     {m.pics.length > 0 && (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: m.content ? 8 : 0 }}>
-                        {m.pics.map((p) => { const src = p.url || urls[p.key]; return src ? <img key={p.key} src={src} alt="A picture you sent" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 12 }} /> : <div key={p.key} className="st-skel" style={{ width: 96, height: 96 }} />; })}
+                        {m.pics.map((p) => <img key={p.key} src={p.url} alt="A picture you sent" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 12 }} />)}
                       </div>
                     )}
+                    {m.pics.length === 0 && (m.sent || 0) > 0 && <p className="st-tiny st-faint" style={{ marginBottom: m.content ? 6 : 0 }}><Camera size={11} style={{ display: 'inline', verticalAlign: '-1px' }} /> {m.sent === 1 ? 'A picture was sent' : m.sent + ' pictures were sent'} (pictures are never saved)</p>}
                     {mine ? <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.5 }}>{m.content}</p>
                       : m.content ? <Markdown text={m.content} />
                       : m.status === 'streaming' ? <span className="st-muted st-small" aria-live="polite"><Loader2 size={14} className="animate-spin" style={{ display: 'inline', verticalAlign: '-2px' }} /> {tutorName === 'your tutor' ? 'Thinking' : `${tutorName} is thinking`}…</span> : null}
                     {m.status === 'streaming' && m.content && <span className="st-tiny st-faint" aria-hidden="true"> ▍</span>}
+                    {!mine && m.sources && m.sources.length > 0 && !m.status && (
+                      <p className="st-tiny st-faint" style={{ marginTop: 10, overflowWrap: 'anywhere' }}>From your notes: {m.sources.map((s) => '[' + s.n + '] ' + (s.title || 'your notes') + (s.page ? ', page ' + s.page : '')).join(' · ')}</p>
+                    )}
                     {m.status === 'stopped' && <p className="st-tiny st-faint" style={{ marginTop: 6 }}>Stopped. What was written so far stays here.</p>}
                     {m.status === 'error' && (
                       <div className="st-notice st-notice-warn" role="alert" style={{ marginTop: m.content ? 8 : 0 }}>
@@ -316,7 +323,7 @@ const Chat: React.FC<PageProps> = ({ params }) => {
           {remaining !== null && remaining <= 20 && <span className="st-tiny st-faint">{remaining} questions left today</span>}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }} />
+          <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }} />
           <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void addFiles(e.target.files); e.target.value = ''; }} />
           <button className="st-icon-btn" onClick={() => camRef.current?.click()} aria-label="Take a photo of a question" disabled={!!health && !health.vision} title={health && !health.vision ? 'Photo questions are not switched on yet' : 'Take a photo'}><Camera size={18} /></button>
           <button className="st-icon-btn" onClick={() => fileRef.current?.click()} aria-label="Choose a picture" disabled={!!health && !health.vision}><ImagePlus size={18} /></button>

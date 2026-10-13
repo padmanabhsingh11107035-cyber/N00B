@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { parseMarkdown, type Block, type Inline } from '../../utils/studyMarkdown';
+import { parseInline, parseMarkdown, type Block, type Inline } from '../../utils/studyMarkdown';
 
 // Draws the tutor's answer. It is built from the parsed structure (never from HTML): text stays text, links are only web addresses, and maths is
 // handed to KaTeX as text to draw (KaTeX is fetched the first time a formula appears). Code is shown as code, never run.
@@ -77,3 +77,10 @@ export const Markdown: React.FC<{ text: string }> = React.memo(({ text }) => {
   return <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>{blocks.map((b, i) => <BlockView key={i} b={b} />)}</div>;
 });
 Markdown.displayName = 'Markdown';
+
+// one line of text with maths and bold/italic in it (for a short option or a label), without any block spacing around it
+export const InlineText: React.FC<{ text: string }> = React.memo(({ text }) => {
+  const nodes = useMemo(() => parseInline(text), [text]);
+  return <Inl nodes={nodes} />;
+});
+InlineText.displayName = 'InlineText';

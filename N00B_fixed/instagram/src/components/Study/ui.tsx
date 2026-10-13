@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Loader2, X } from 'lucide-react';
-import { backStudy, closeStudy } from './studyStore';
+import { backStudy, leaveStudy } from './studyStore';
 
 // NOOB STUDY's building blocks. Looks come from the st-* classes in index.css (calm colours, soft corners); nothing here knows about the data.
 
@@ -33,7 +33,7 @@ export const Head: React.FC<{ title: string; subtitle?: string; right?: React.Re
       {subtitle && <p className="st-tiny st-faint" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</p>}
     </div>
     {right}
-    <button className="st-icon-btn" onClick={closeStudy} aria-label="Back to NOOB" title="Back to NOOB"><X size={18} /></button>
+    <button className="st-icon-btn" onClick={leaveStudy} aria-label="Back to NOOB" title="Back to NOOB"><X size={18} /></button>
   </div>
 );
 
@@ -122,6 +122,7 @@ export const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; lab
 );
 
 // the friendly tutor "orb" (an animated glow, not a face: nothing to be uncomfortable about)
+// The AI tutor's face: the NOOB STUDY logo, drawn from the vector so it is sharp at any size
 export const Orb: React.FC<{ size?: number; float?: boolean }> = ({ size = 48, float }) => (
-  <span className={`st-tutor-orb ${float ? 'st-float' : ''}`} style={{ width: size, height: size, display: 'inline-block', flex: 'none' }} aria-hidden="true" />
+  <img src="/noob-study-logo.svg" alt="" width={size} height={size} className={`st-logo ${float ? 'st-float' : ''}`} style={{ width: size, height: size, flex: 'none' }} aria-hidden="true" draggable={false} />
 );

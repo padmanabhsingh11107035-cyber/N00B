@@ -586,7 +586,7 @@ html[data-i18n-loading] body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-body.light .st-root {
+body.light .st-root:not([data-st-theme]), .st-root[data-st-theme='light'] {
   --st-bg: #fbf6f0; --st-bg2: #f3eadf;
   --st-surface: #ffffff; --st-surface2: #f6eee5; --st-border: rgba(70, 45, 20, 0.11);
   --st-text: #2b2420; --st-muted: #6a625a; --st-faint: #9a9188;
@@ -601,13 +601,22 @@ body.light .st-root {
     radial-gradient(55% 38% at 100% 8%, rgba(185, 168, 242, 0.14), transparent 70%),
     radial-gradient(60% 40% at 50% 112%, rgba(127, 209, 172, 0.1), transparent 70%);
 }
-body.light .st-root::before {
+body.light .st-root:not([data-st-theme])::before, .st-root[data-st-theme='light']::before {
   background:
     radial-gradient(60% 40% at 8% -6%, rgba(227, 139, 105, 0.22), transparent 70%),
     radial-gradient(55% 38% at 100% 8%, rgba(185, 168, 242, 0.2), transparent 70%),
     radial-gradient(60% 40% at 50% 112%, rgba(127, 209, 172, 0.18), transparent 70%);
 }
 .st-root > * { position: relative; z-index: 1; }
+/* the chat with the tutor: the student's chosen theme (accent colour of their own messages and a soft wall behind the conversation) */
+.st-root { --st-chat-accent: var(--st-accent); --st-chat-wall: transparent; }
+.st-root[data-st-chat='ocean'] { --st-chat-accent: #4aa3df; --st-chat-wall: linear-gradient(180deg, rgba(74, 163, 223, .14), rgba(74, 163, 223, .02)); }
+.st-root[data-st-chat='forest'] { --st-chat-accent: #5fbf8f; --st-chat-wall: linear-gradient(180deg, rgba(95, 191, 143, .14), rgba(95, 191, 143, .02)); }
+.st-root[data-st-chat='sunset'] { --st-chat-accent: #e8674f; --st-chat-wall: linear-gradient(180deg, rgba(242, 196, 109, .16), rgba(232, 103, 79, .05)); }
+.st-root[data-st-chat='midnight'] { --st-chat-accent: #8b7cf6; --st-chat-wall: linear-gradient(180deg, rgba(139, 124, 246, .18), rgba(15, 17, 40, .35)); }
+.st-root[data-st-chat='paper'] { --st-chat-accent: #b08a4c; --st-chat-wall: linear-gradient(180deg, rgba(176, 138, 76, .12), rgba(176, 138, 76, .03)); }
+.st-chat-wall { background: var(--st-chat-wall); }
+.st-chat-mine { background: color-mix(in srgb, var(--st-chat-accent) 20%, transparent); border: 1px solid color-mix(in srgb, var(--st-chat-accent) 38%, transparent); }
 .st-root *, .st-root *::before, .st-root *::after { box-sizing: border-box; }
 .st-root button { font-family: inherit; }
 .st-root h1, .st-root h2, .st-root h3, .st-root p { margin: 0; }
@@ -685,6 +694,8 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
 @media (prefers-reduced-motion: reduce) { .st-in, .st-float, .st-breathe, .st-skel, .st-sheet, .st-sheet-back, .st-toast { animation: none; } .st-progress > i { transition: none; } }
 
 .st-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.st-split { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .st-split { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .st-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 @media (min-width: 760px) { .st-grid2-lg { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 /* a stack of cards must never grow wider than the screen: grid columns are allowed to shrink */
@@ -695,3 +706,12 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
 .st-hscroll > * { flex: none; white-space: nowrap; }
 .st-hscroll::-webkit-scrollbar { display: none; }
 .st-tutor-orb { border-radius: 50%; background: radial-gradient(circle at 32% 28%, #fff7ef 0%, var(--st-accent2) 28%, var(--st-accent) 62%, #8a4a8f 100%); box-shadow: 0 12px 30px -10px var(--st-accent); }
+
+/* ---- NOOB STUDY: the opening logo screen, and the logo as the tutor's face */
+.st-splash { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; animation: st-splash-fade .5s ease both; }
+.st-splash img { width: min(62vw, 260px); height: auto; aspect-ratio: 1 / 1; animation: st-splash-in .8s cubic-bezier(.2,.8,.2,1) both, st-splash-glow 2.2s ease-in-out .8s infinite; }
+@keyframes st-splash-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes st-splash-in { from { opacity: 0; transform: scale(.84); } to { opacity: 1; transform: scale(1); } }
+@keyframes st-splash-glow { 0%, 100% { filter: drop-shadow(0 0 14px rgba(115, 46, 254, .25)); } 50% { filter: drop-shadow(0 0 34px rgba(115, 46, 254, .55)); } }
+.st-logo { border-radius: 50%; display: inline-block; background: #000; box-shadow: 0 6px 22px -8px rgba(115, 46, 254, .55); object-fit: contain; }
+@media (prefers-reduced-motion: reduce) { .st-splash img { animation: none; } .st-splash { animation: none; } }

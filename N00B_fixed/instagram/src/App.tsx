@@ -90,6 +90,7 @@ import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { StudyHost } from './components/Study/StudyHost';
+import { isCoachingHost, openStudy } from './components/Study/studyStore';
 import { openTeamJoin, rememberTeamJoin, hasRememberedTeamJoin, forgetTeamJoin } from './components/Team/teamJoinStore';
 import { teamJoinRequested } from './utils/ourTeam';
 import { installLinkInterceptor } from './utils/inAppBrowser';
@@ -152,6 +153,12 @@ const LazyFallback: React.FC = () => (
 );
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
+
+// On the coaching address NOOB STUDY is opened as soon as the person is signed in
+const CoachingEntry: React.FC<{ currentUser: User }> = ({ currentUser }) => {
+  useEffect(() => { openStudy('home'); }, []);
+  return <StudyHost currentUser={currentUser} />;
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('feed');
@@ -1216,6 +1223,16 @@ export default function App() {
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
         <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} />
+      </>
+    );
+  }
+
+  // coaching.nooob.xyz: the whole page is NOOB STUDY (the logo, then the admission form for a new student, or the study space for a member)
+  if (isCoachingHost()) {
+    return (
+      <>
+        {isUpdateAvailable && <UpdateAvailableBanner />}
+        <CoachingEntry currentUser={currentUser} />
       </>
     );
   }

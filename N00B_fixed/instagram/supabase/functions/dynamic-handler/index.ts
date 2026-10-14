@@ -95,7 +95,7 @@ function emailShell(title: string, bodyHtml: string): string {
 // a NOOB Draw spin: which one, free or paid, what it cost), and the account it belongs to (name, User ID, account ID, address).
 // Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, verified_by_admin, draw_prize (NOOB Draw: only the verified tick and
 // NOOB Pro plans), pro_expiring, pro_ended, pro_gift_receipt.
-const SITE_URL = (Deno.env.get('SITE_URL') || 'https://nooob.xyz').trim().replace(/\/+$/, '');
+const SITE_URL = (Deno.env.get('SITE_URL') || 'https://noobsocials.com').trim().replace(/\/+$/, '');
 const BRAND = '#D97757';
 const FONT = "system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 const fmtWhen = (v: unknown): string => {

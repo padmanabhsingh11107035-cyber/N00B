@@ -1,7 +1,10 @@
 {
+  "id": "/",
   "name": "NOOB - Fun & Connecting People",
   "short_name": "NOOB",
   "description": "NOOB is a social media interaction app designed for fun, sharing moments, and connecting people with genuine interactions, real profiles, and community discovery.",
+  "lang": "en",
+  "categories": ["social"],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,14 +12,28 @@
   "theme_color": "#d97757",
   "icons": [
     {
-      "src": "/noob-logo-circle.png",
+      "src": "/noob-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/noob-logo-circle.png",
+      "src": "/noob-icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/noob-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/noob-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -1072,7 +1072,7 @@ ONLINE_SECONDS = 70
 
 
 # Websites allowed to show NOOB AI inside them (the NOOB social app); no other site can embed it.
-EMBED_ALLOWED = "'self' https://nooob.xyz https://www.nooob.xyz"
+EMBED_ALLOWED = "'self' https://nooob.xyz https://www.nooob.xyz https://noobsocials.com https://www.noobsocials.com"
 
 
 @app.after_request

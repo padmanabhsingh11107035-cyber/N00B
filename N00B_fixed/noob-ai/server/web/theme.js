@@ -40,7 +40,7 @@
   }
   // Inside the NOOB app (an iframe): follow the app's own light / dark choice instead of only the phone's setting. Only NOOB's own
   // addresses are listened to, and the choice is not saved here (the Colour theme card on this site still works when opened on its own).
-  var NOOB_ORIGINS = ["https://nooob.xyz", "https://www.nooob.xyz", "http://localhost:3000", "http://localhost:5173"];
+  var NOOB_ORIGINS = ["https://nooob.xyz", "https://www.nooob.xyz", "https://noobsocials.com", "https://www.noobsocials.com", "http://localhost:3000", "http://localhost:5173"];
   window.addEventListener("message", function (e) {
     if (NOOB_ORIGINS.indexOf(e.origin) < 0 || !e.data || e.data.type !== "noob-theme") return;
     followed = e.data.theme === "light" ? "light" : "dark";

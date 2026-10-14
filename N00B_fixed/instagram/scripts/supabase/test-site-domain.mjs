@@ -65,5 +65,23 @@ function parseProfileQrBothDomains() {
 }
 check(!/\(\?<[=!]/.test(read('src/utils/siteUrl.ts')), 'no regex look-behind');
 
+section('5. www. opens the address without www');
+{
+  const code = read('public/theme-init.js');
+  const run = (loc) => {
+    let went = null;
+    const window = { location: { ...loc, replace: (u) => { went = u; } }, matchMedia: () => ({ matches: true }) };
+    const document = { documentElement: { setAttribute() {} }, querySelector: () => null };
+    new Function('window', 'document', 'localStorage', code)(window, document, { getItem: () => null });
+    return went;
+  };
+  const at = (hostname, rest = {}) => ({ protocol: 'https:', hostname, port: '', pathname: '/', search: '', hash: '', ...rest });
+  check(run(at('www.noobsocials.com')) === 'https://noobsocials.com/', 'www.noobsocials.com goes to noobsocials.com');
+  check(run(at('WWW.NOOBSOCIALS.COM', { pathname: '/p/1', search: '?post=7', hash: '#c' })) === 'https://noobsocials.com/p/1?post=7#c', 'the path, the query and the #part are kept');
+  check(run(at('www.nooob.xyz', { search: '?profile=ann' })) === 'https://nooob.xyz/?profile=ann', 'www.nooob.xyz goes to nooob.xyz');
+  check(run(at('noobsocials.com')) === null && run(at('nooob.xyz')) === null && run(at('ai.nooob.xyz')) === null && run(at('localhost', { port: '5173' })) === null, 'the plain addresses, sub-addresses and a test address stay where they are');
+  check(run(at('www.evil.example')) === null && run(at('www.noobsocials.com.evil.io')) === null, 'another website\'s www is left alone');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

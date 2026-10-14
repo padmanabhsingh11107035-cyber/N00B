@@ -21,7 +21,7 @@ const spark = (x: number, y: number, s: number) => <path transform={`translate($
 
 const BIG: Big[] = [
   // a speech bubble saying hello
-  { x: '12%', y: '4%', w: 200, r: -7, c: 'text-cyan-300/80', d: 0.2, vb: '0 0 200 150', art: <>
+  { x: '14%', y: '3.5%', w: 200, r: -7, c: 'text-cyan-300/80', d: 0.2, vb: '0 0 200 150', art: <>
     <path d="M22 22q0-12 14-12h128q16 0 16 14v60q0 14-16 14h-62l-34 30 4-30H38q-16 0-16-14z" />
     <text x="100" y="66" textAnchor="middle" className="font-script" fontSize="42" fill="currentColor" stroke="none">hello!</text>
     <path d="M52 78q48 8 96 0" strokeDasharray="2 7" />
@@ -41,7 +41,7 @@ const BIG: Big[] = [
     <path d="M150 220v14M143 227h14" />
   </> },
   // a star with a smile
-  { x: '4%', y: '23%', w: 140, r: -10, c: 'text-amber-300/85', d: 1.4, vb: '0 0 24 26', art: <>
+  { x: '16%', y: '24%', w: 104, r: -10, c: 'text-amber-300/85', d: 1.4, vb: '0 0 24 26', art: <>
     <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.3 7.2 16.9l.9-5.4L4.2 7.7l5.4-.8z" strokeWidth="1" transform="translate(0 2) scale(1)" />
     <circle cx="10" cy="10.4" r=".55" fill="currentColor" stroke="none" transform="translate(0 2)" /><circle cx="14" cy="10.4" r=".55" fill="currentColor" stroke="none" transform="translate(0 2)" />
     <path d="M10 12.3q2 1.7 4 0" strokeWidth=".9" transform="translate(0 2)" />
@@ -65,14 +65,14 @@ const BIG: Big[] = [
     <path d="M180 68l-16-1M180 68l-5-15" />
   </> },
   // headphones with music
-  { x: '3%', y: '43%', w: 150, r: 6, c: 'text-cyan-300/80', d: 0.7, vb: '0 0 160 140', art: <>
+  { x: '2.5%', y: '49%', w: 140, r: 6, c: 'text-cyan-300/80', d: 0.7, vb: '0 0 160 140', art: <>
     <path d="M30 90V70a50 50 0 0 1 100 0v20" />
     <rect x="18" y="86" width="26" height="42" rx="10" /><rect x="116" y="86" width="26" height="42" rx="10" />
     <path d="M62 30V8l30-6v22M62 30a6 6 0 1 1-6-6M92 24a6 6 0 1 1-6-6" strokeWidth="2" transform="translate(30 4) scale(.8)" />
     <path d="M52 112q14-10 28 0t28 0" strokeDasharray="2 6" />
   </> },
   // a camera with a photo coming out
-  { x: '85%', y: '30%', w: 140, r: -9, c: 'text-orange-300/85', d: 1.6, vb: '0 0 150 150', art: <>
+  { x: '78%', y: '36%', w: 140, r: -9, c: 'text-orange-300/85', d: 1.6, vb: '0 0 150 150', art: <>
     <rect x="12" y="46" width="108" height="76" rx="12" />
     <circle cx="66" cy="84" r="24" /><circle cx="66" cy="84" r="12" /><circle cx="56" cy="74" r="3" fill="currentColor" stroke="none" />
     <path d="M32 46l6-12h32l6 12" /><rect x="92" y="56" width="16" height="8" rx="3" />
@@ -81,7 +81,7 @@ const BIG: Big[] = [
     {spark(124, 20, 1)}
   </> },
   // a crown with confetti
-  { x: '80%', y: '2%', w: 130, r: 10, c: 'text-amber-300/85', d: 0.3, vb: '0 0 140 120', art: <>
+  { x: '76.5%', y: '2%', w: 130, r: 10, c: 'text-amber-300/85', d: 0.3, vb: '0 0 140 120', art: <>
     <path d="M18 90L10 40l32 24 28-44 28 44 32-24-8 50z" />
     <path d="M18 102h104" />
     <circle cx="70" cy="76" r="5" /><circle cx="38" cy="82" r="3.5" /><circle cx="102" cy="82" r="3.5" />
@@ -89,7 +89,7 @@ const BIG: Big[] = [
     <path d="M60 112c10 6 20 6 30 0" strokeDasharray="2 6" />
   </> },
   // a paper plane doing a loop
-  { x: '5%', y: '2%', w: 160, r: -6, c: 'text-pink-300/80', d: 1.8, vb: '0 0 180 110', art: <>
+  { x: '0.5%', y: '0%', w: 120, r: -6, c: 'text-pink-300/80', d: 1.8, vb: '0 0 180 110', art: <>
     <path d="M6 96C34 98 58 78 50 52S14 30 34 22s52 6 76 40" strokeDasharray="2 8" />
     <path d="M168 14L106 62M168 14l-26 82-14-34-34-14z" />
     <path d="M128 62l6 22" />

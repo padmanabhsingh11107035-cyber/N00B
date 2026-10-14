@@ -28,7 +28,7 @@ check(pictures >= 9, pictures + ' big pictures: hello bubble, rocket, smiling st
 for (const word of ['hello!', 'come on in!']) check(big.includes(word), `"${word}" is written in the page's own hand-writing`);
 check(/className="font-script"/.test(big), 'the words use the same loopy font as the rest of the page');
 const sizes = [...big.matchAll(/w: (\d+), r:/g)].map((m) => Number(m[1]));
-check(sizes.length === pictures && sizes.every((w) => w >= 120 && w <= 220), 'every picture is big (120 to 220 px wide) but never huge', sizes.join());
+check(sizes.length === pictures && sizes.every((w) => w >= 100 && w <= 220), 'every picture is big (100 to 220 px wide) but never huge', sizes.join());
 const spots = [...big.matchAll(/x: '(\d+)%', y: '(\d+)%'/g)].map((m) => [Number(m[1]), Number(m[2])]);
 check(spots.every(([x, y]) => x >= 2 && x <= 90 && y >= 0 && y <= 60), 'all of them are in the upper part of the page, around the logo and the sides of the card');
 check(spots.every(([x]) => !(x > 40 && x < 60)), 'none is placed over the logo and the sign-in card in the middle');
@@ -36,6 +36,26 @@ check(spots.every(([x]) => !(x > 40 && x < 60)), 'none is placed over the logo a
 section('4. On the page');
 check(/<LoginDoodles \/>\s*\n\s*<LoginBigDoodles \/>/.test(auth) && /import \{ LoginBigDoodles \}/.test(auth), 'the sign-in page shows the big pictures right after the small doodles');
 check(!/\(\?<[=!]/.test(small + big), 'no regex look-behind (older iPhones refuse to load a page that has one)');
+
+section('5. The third layer: more things to look at, nothing on top of the page\'s own callouts');
+const more = read('src/components/Auth/LoginMoreDoodles.tsx');
+check(/aria-hidden="true"/.test(more) && /pointer-events-none select-none/.test(more) && /hidden xl:block/.test(more), 'it is decoration only and appears only from 1280px wide, like the big pictures');
+const artKinds = [...more.matchAll(/^  (\w+): <>/gm)].map((m) => m[1]);
+const spotKinds = [...more.matchAll(/\{ a: '(\w+)', x: '/g)].map((m) => m[1]);
+check(artKinds.length >= 21 && new Set(artKinds).size === artKinds.length, artKinds.length + ' different drawings (food, things to wear and play with, little characters, study things, sky and weather)');
+check(spotKinds.length >= 30 && spotKinds.every((k) => artKinds.includes(k)), spotKinds.length + ' places, and every one uses a drawing that exists');
+const words = [...more.matchAll(/\{ t: '([^']+)', x: '/g)].map((m) => m[1]);
+check(words.length >= 8 && words.includes('level up!') && words.includes('daily quiz') && words.includes('no cap ♡'), words.length + ' hand-written words about what NOOB is for');
+check(/<LoginBigDoodles \/>\s*\n\s*<LoginMoreDoodles \/>/.test(auth) && /import \{ LoginMoreDoodles \}/.test(auth), 'the sign-in page shows it after the big pictures');
+// the page's own callouts (polaroid, phone, "Good Vibes Only", the three badges, "Real People", "Post / Reels"), as the part of the page they take, in percent
+const CALLOUTS = [[5, 6, 10.5, 14], [5, 14, 13.5, 18.5], [3, 30, 9, 47], [85, 6, 94, 19], [89.5, 34, 94, 47], [4, 77, 12, 83], [87, 74, 95, 80]];
+const boxes = [];
+for (const m of more.matchAll(/\{ a: '\w+', x: '([\d.]+)%', y: '([\d.]+)%', w: (\d+)/g)) boxes.push([Number(m[1]), Number(m[2]), Number(m[1]) + (Number(m[3]) / 1913) * 100, Number(m[2]) + (Number(m[3]) / 1290) * 100, 'more']);
+for (const m of big.matchAll(/\{ x: '([\d.]+)%', y: '([\d.]+)%', w: (\d+), r: [-\d]+, c: '[^']+', d: [\d.]+, vb: '0 0 (\d+) (\d+)'/g)) boxes.push([Number(m[1]), Number(m[2]), Number(m[1]) + (Number(m[3]) / 1913) * 100, Number(m[2]) + ((Number(m[3]) * Number(m[5])) / Number(m[4]) / 1290) * 100, 'big']);
+const hit = boxes.filter(([x0, y0, x1, y1]) => CALLOUTS.some(([a, b, c, d]) => x0 < c && x1 > a && y0 < d && y1 > b));
+check(boxes.length >= 35 && hit.length === 0, 'none of the ' + boxes.length + ' pictures sits on top of the page\'s own callouts', JSON.stringify(hit));
+const inside = boxes.filter(([x0, y0, x1, y1]) => x0 < 0 || y0 < 0 || x1 > 100 || y1 > 100);
+check(inside.length === 0, 'and all of them are inside the page', JSON.stringify(inside));
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

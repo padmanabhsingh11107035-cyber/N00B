@@ -71,7 +71,7 @@ export function validateTeamForm(f: TeamForm): string | null {
 }
 
 // ---- the link people open to join the team page (shared by the administrator)
-export const TEAM_JOIN_LINK = 'https://nooob.xyz/?team=join';
+export const TEAM_JOIN_LINK = 'https://noobsocials.com/?team=join';
 export const teamJoinRequested = (search: string): boolean => {
   try { return new URLSearchParams(search).get('team') === 'join'; } catch { return false; }
 };

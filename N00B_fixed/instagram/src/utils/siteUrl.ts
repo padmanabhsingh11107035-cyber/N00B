@@ -1,7 +1,7 @@
 // NOOB's own web addresses, in ONE place. The website answers on more than one address while it moves to its new name (the Google Play app, the privacy and
 // terms pages, shared links and emails all name the main one), so nothing should spell "nooob.xyz" by hand any more:
 //   * SITE_DOMAINS   every address that is NOOB itself (a link to any of them is "our own site"),
-//   * MAIN_SITE      the one that is shown and shared; set when the app is BUILT (VITE_SITE_URL), and until that is set it stays the old address,
+//   * MAIN_SITE      the one that is shown and shared (the new .com); can be set when the app is BUILT (VITE_SITE_URL), only to one of our own addresses,
 //   * siteOrigin()   on the website: the address the person is on (if it is ours); in the Android app, which runs from files on the phone: MAIN_SITE.
 // No browser-only code runs when this file is loaded, so it can be tested on its own.
 
@@ -15,7 +15,7 @@ const clean = (u: string): string => u.replace(/\/+$/, '');
 export const MAIN_SITE: string = (() => {
   const v = clean(fromEnv());
   try { const host = new URL(v).hostname.replace(/^www\./, ''); if (SITE_DOMAINS.some((d) => host === d)) return 'https://' + host; } catch { /* not set, or not an address */ }
-  return 'https://nooob.xyz';
+  return 'https://noobsocials.com';
 })();
 
 /** Is this host NOOB itself (the site, www, or a subdomain such as ai. or coaching.)? */

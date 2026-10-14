@@ -1,5 +1,5 @@
 // NOOB's web addresses (src/utils/siteUrl.ts): the website moves to a new .com for the Google Play release, and both addresses keep working meanwhile.
-// Checks: both addresses (and www / ai. / coaching. under them) are "our own site", the main address comes from the build and can only be one of ours, the Android app
+// Checks: both addresses (and www / ai. / coaching. under them) are "our own site", the main address is the new .com (it can be set by the build, only to one of ours), the Android app
 // (files on the phone) loads pictures and videos from the website's full address, and nothing spells the old address by hand where it matters.
 // Usage: node scripts/supabase/test-site-domain.mjs
 import fs from 'node:fs';
@@ -19,9 +19,9 @@ for (const h of ['noobsocials.com', 'www.noobsocials.com', 'ai.noobsocials.com',
 for (const h of ['example.com', 'noobsocials.com.evil.io', 'evilnoobsocials.com', 'nooob.xyz.attacker.net', 'noob.xyz', '', null, undefined]) check(!S.isOwnHost(h), `${String(h)} is not ours`);
 
 section('2. The main address comes from the build, and can only be one of ours');
-check(S.MAIN_SITE === 'https://nooob.xyz', 'until the build says otherwise, the main address stays the old one (nothing changes by itself)');
+check(S.MAIN_SITE === 'https://noobsocials.com', 'the main address (shared links, the Android app, emails) is the new .com unless the build says otherwise');
 globalThis.__env = {};
-for (const [value, want] of [['https://noobsocials.com', 'https://noobsocials.com'], ['https://noobsocials.com/', 'https://noobsocials.com'], ['https://www.noobsocials.com', 'https://noobsocials.com'], ['https://evil.example', 'https://nooob.xyz'], ['not a url', 'https://nooob.xyz'], ['', 'https://nooob.xyz']]) {
+for (const [value, want] of [['https://noobsocials.com', 'https://noobsocials.com'], ['https://noobsocials.com/', 'https://noobsocials.com'], ['https://www.noobsocials.com', 'https://noobsocials.com'], ['https://nooob.xyz', 'https://nooob.xyz'], ['https://evil.example', 'https://noobsocials.com'], ['not a url', 'https://noobsocials.com'], ['', 'https://noobsocials.com']]) {
   // import.meta.env is replaced by the build; here the file is read with the value written in
   const src = read('src/utils/siteUrl.ts').replace("(import.meta as any).env?.VITE_SITE_URL", JSON.stringify(value));
   const tmp = path.join(fs.mkdtempSync(path.join(process.env.TEMP || '.', 'noob-site-')), 'siteUrl.ts');
@@ -40,13 +40,13 @@ section('3. Links that are shown or shared');
   };
   check((await make('noobsocials.com')).siteOrigin() === 'https://noobsocials.com', 'on the new .com, links say the new .com');
   check((await make('nooob.xyz')).siteOrigin() === 'https://nooob.xyz', 'on the old address, links stay on the old address (nobody is moved without choosing)');
-  check((await make('ai.nooob.xyz')).siteOrigin() === 'https://nooob.xyz', 'on a sub-address (ai., coaching.) a link points at the main site, not at the sub-address');
-  check((await make('localhost')).siteOrigin() === 'https://nooob.xyz', 'on a test address, links point at the real site');
+  check((await make('ai.nooob.xyz')).siteOrigin() === 'https://noobsocials.com', 'on a sub-address (ai., coaching.) a link points at the main site, not at the sub-address');
+  check((await make('localhost')).siteOrigin() === 'https://noobsocials.com', 'on a test address, links point at the real site');
   const n = await make('localhost', true);
-  check(n.isNativeApp() && n.siteOrigin() === 'https://nooob.xyz' && n.mediaOrigin() === 'https://nooob.xyz', 'inside the Android app, links and pictures use the website\'s full address');
+  check(n.isNativeApp() && n.siteOrigin() === 'https://noobsocials.com' && n.mediaOrigin() === 'https://noobsocials.com', 'inside the Android app, links and pictures use the website\'s full address');
   check((await make('noobsocials.com')).mediaOrigin() === '', 'on the website, pictures use the same address (no prefix)');
   delete globalThis.window;
-  check(S.siteOrigin() === 'https://nooob.xyz' && S.mediaOrigin() === '', 'with no browser at all (tests), the main address is used');
+  check(S.siteOrigin() === 'https://noobsocials.com' && S.mediaOrigin() === '', 'with no browser at all (tests), the main address is used');
 }
 
 section('4. Where it is used');
@@ -57,7 +57,7 @@ check(/SITE_DOMAINS\.some/.test(ib) && !/'nooob\.xyz'/.test(ib), 'a link to eith
 const push = read('src/utils/pushSupport.ts');
 check(!/Open nooob\.xyz|address https:\/\/nooob\.xyz/.test(push), 'the notification help names the main address, not a fixed one');
 check(/siteOrigin\(\)/.test(read('src/components/Study/studyStore.ts')) && /siteOrigin\(\)/.test(read('src/components/Modals/AdminSignInPanel.tsx')), 'closing NOOB STUDY and the admin sign-in guide use the current address');
-check(/VITE_SITE_URL: \$\{\{ vars\.SITE_URL \|\| 'https:\/\/nooob\.xyz' \}\}/.test(fs.readFileSync(path.resolve('../../.github/workflows/android-build.yml'), 'utf8')), 'the Android build takes the main address from the repo variable SITE_URL');
+check(/VITE_SITE_URL: \$\{\{ vars\.SITE_URL \|\| 'https:\/\/noobsocials\.com' \}\}/.test(fs.readFileSync(path.resolve('../../.github/workflows/android-build.yml'), 'utf8')), 'the Android build takes the main address from the repo variable SITE_URL');
 check(parseProfileQrBothDomains(), 'a profile QR code from either address is read');
 function parseProfileQrBothDomains() {
   const src = read('src/utils/profileQr.ts');

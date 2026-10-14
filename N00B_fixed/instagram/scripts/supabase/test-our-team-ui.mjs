@@ -69,7 +69,7 @@ check(/uploadMediaFile\(file, 'team'\)/.test(api) && /'songs' \| 'team'/.test(ap
 check(/rpc<any>\('admin_team_save'/.test(api) && /rpc<any>\('team_list'\)/.test(api) && /rpc<any>\('admin_team_delete'/.test(api) && /rpc<any>\('admin_team_move'/.test(api), 'the four database functions are called by their real names');
 
 section('7. The joining link');
-check(TEAM_JOIN_LINK === 'https://nooob.xyz/?team=join', 'the link to share is https://nooob.xyz/?team=join');
+check(TEAM_JOIN_LINK === 'https://noobsocials.com/?team=join', 'the link to share is https://noobsocials.com/?team=join');
 check(teamJoinRequested('?team=join') && teamJoinRequested('?x=1&team=join') && !teamJoinRequested('') && !teamJoinRequested('?team=other') && !teamJoinRequested('?join=team'), 'only ?team=join opens the form (the older ?join=team still opens the private staff form)');
 
 section('8. "Follow on NOOB"');

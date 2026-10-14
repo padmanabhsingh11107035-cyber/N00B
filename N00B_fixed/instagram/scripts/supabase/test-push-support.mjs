@@ -52,14 +52,14 @@ check(isIos({ userAgent: UA.iphoneSafari }) && isIos({ userAgent: UA.ipadDesktop
 section('3. In-app browsers: tell them to open the real browser');
 for (const [name, ua] of [['Instagram (Android)', UA.instagramAndroid], ['Facebook (iPhone)', UA.facebookIos], ['an Android WebView', UA.androidWebview], ['WhatsApp', UA.whatsapp]]) {
   const rr = checkPushSupport({ userAgent: ua, ...NONE_PUSH, hasServiceWorker: false, standalone: false });
-  check(rr.supported === false && rr.kind === 'in-app-browser' && /Open nooob\.xyz in Chrome/.test(rr.message), `${name}: told to open nooob.xyz in Chrome/Safari`);
+  check(rr.supported === false && rr.kind === 'in-app-browser' && /Open noobsocials\.com in Chrome/.test(rr.message), `${name}: told to open noobsocials.com in Chrome/Safari`);
 }
 r = checkPushSupport({ userAgent: UA.facebookIos, ...NONE_PUSH, standalone: false });
 check(r.kind === 'in-app-browser' && /Add to Home Screen/.test(r.message), 'an in-app browser on iPhone is first told to leave it, and then about the Home Screen (not the other way round)');
 
 section('4. Everything else');
 r = checkPushSupport({ userAgent: UA.androidChrome, ...ALL, isNativeApp: true });
-check(r.supported === false && r.kind === 'native-app' && /nooob\.xyz/.test(r.message), 'the NOOB app build is told honestly that notifications are not set up there, and where to get them');
+check(r.supported === false && r.kind === 'native-app' && /noobsocials\.com/.test(r.message), 'the NOOB app build is told honestly that notifications are not set up there, and where to get them');
 r = checkPushSupport({ userAgent: UA.androidChrome, ...ALL, secure: false });
 check(r.supported === false && r.kind === 'insecure', 'an insecure page is told to use https');
 r = checkPushSupport({ userAgent: UA.desktopChrome, hasNotification: false, hasServiceWorker: false, hasPushManager: false, secure: true });

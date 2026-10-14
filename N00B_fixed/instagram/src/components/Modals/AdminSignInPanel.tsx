@@ -65,7 +65,7 @@ const GUIDES: Guide[] = [
       {
         title: 'Domain ownership (needed for the verified brand)',
         links: [
-          { label: 'Google Search Console', hint: 'Shows that nooob.xyz is verified as yours', href: 'https://search.google.com/search-console' },
+          { label: 'Google Search Console', hint: 'Shows that your website address is verified as yours', href: 'https://search.google.com/search-console' },
           { label: 'Cloudflare dashboard', hint: 'Where the domain\'s DNS records live', href: 'https://dash.cloudflare.com/' }
         ]
       }

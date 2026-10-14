@@ -64,8 +64,8 @@ jobs:
           # reason to talk to (or reveal) it directly.
           VITE_API_BASE: ${{ vars.BACKEND_API_BASE || 'https://nooob.xyz/api' }}
           # The website's main address: where the Android app loads pictures and videos from (/media/...) and what its links say. Set the repo variable
-          # SITE_URL (Settings -> Secrets and variables -> Actions -> Variables) to the new .com once it is live; until then the old address is used.
-          VITE_SITE_URL: ${{ vars.SITE_URL || 'https://nooob.xyz' }}
+          # SITE_URL (Settings -> Secrets and variables -> Actions -> Variables) only to use a different one; the default is the new .com.
+          VITE_SITE_URL: ${{ vars.SITE_URL || 'https://noobsocials.com' }}
 
       - name: Add Android platform
         run: npx cap add android

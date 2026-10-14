@@ -1,0 +1,42 @@
+Subject: NOOB has a new home: noobsocials.com
+
+Hi {{{FIRST_NAME|there}}},
+
+NOOB has moved to its own permanent address:
+
+    https://noobsocials.com
+
+Your account, posts, followers, points and chats are all safe. Nothing was deleted and nothing was lost. You only need to open the new address, log in, and install NOOB again from there.
+
+WHAT TO DO (about 2 minutes)
+
+1. Open the new address.
+   Go to https://noobsocials.com in Chrome (Android and PC) or in Safari (iPhone).
+
+2. Log in with the same account.
+   Use the same user ID, email or phone and the same password, or the same Google or Facebook button you always use.
+
+3. Install the new app.
+   - Android (Chrome): tap the Install button at the top of the page, or the menu (3 dots) > Install app.
+   - iPhone / iPad (Safari only): tap the Share button (the square with an arrow) > Add to Home Screen > Add.
+   - Windows / Mac (Chrome or Edge): click the Install button on the page, or the install icon at the right end of the address bar.
+
+4. Delete the old app.
+   Only after you have logged in on the new one and your profile and chats look right, remove the old NOOB icon (the one you had before today):
+   - Android: press and hold the old NOOB icon > Uninstall.
+   - iPhone: press and hold the old NOOB icon > Remove App > Delete App.
+   - PC: open the old NOOB app window, click the menu (3 dots) > Uninstall NOOB.
+
+PLEASE DO NOT DELETE THE OLD APP FIRST.
+Log in on the new address first and check that your chats open. If some older private chats look locked on the new app, keep the old app and write to us from the app's Support section, and we will help you move them across.
+The old address (nooob.xyz) keeps working for now, so there is no need to hurry.
+
+Thank you for being part of NOOB.
+
+Regards,
+Padmanabh
+Founder of NOOB
+
+--
+You are getting this email because you have a NOOB account.
+Unsubscribe: {{{RESEND_UNSUBSCRIBE_URL}}}

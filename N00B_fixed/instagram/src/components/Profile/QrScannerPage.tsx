@@ -13,7 +13,7 @@ interface QrScannerPageProps {
   onOpenProfile: (user: User) => void;
 }
 
-// Profile > ⋮ > QR Scanner: just a camera that reads another person's NOOB profile QR code and opens that profile. Nothing else is on
+// Profile > ⋮ > Profile finder using QR: just a camera that reads another person's NOOB profile QR code and opens that profile. Nothing else is on
 // this page. Every frame is decoded on the phone (jsQR), nothing is uploaded.
 export const QrScannerPage: React.FC<QrScannerPageProps> = ({ allUsers, currentUser, onClose, onOpenProfile }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -142,7 +142,8 @@ export const QrScannerPage: React.FC<QrScannerPageProps> = ({ allUsers, currentU
           <button onClick={onClose} className="p-2.5 rounded-full bg-zinc-900/80 backdrop-blur border border-zinc-800 text-zinc-50 cursor-pointer" aria-label="Back">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          {!error && (
+          <h1 className="flex-1 text-center text-sm font-black text-zinc-50 px-2 truncate">Profile finder using QR</h1>
+          {!error ? (
             <button
               onClick={() => setFacingMode((m) => (m === 'environment' ? 'user' : 'environment'))}
               className="p-2.5 rounded-full bg-zinc-900/80 backdrop-blur border border-zinc-800 text-zinc-50 cursor-pointer"
@@ -150,12 +151,12 @@ export const QrScannerPage: React.FC<QrScannerPageProps> = ({ allUsers, currentU
             >
               <SwitchCamera className="w-5 h-5" />
             </button>
-          )}
+          ) : <span className="w-10" aria-hidden="true" />}
         </div>
 
         <div className="absolute bottom-0 inset-x-0 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center gap-3 px-6 text-center">
           {notice && <p role="status" className="px-4 py-2 rounded-full bg-zinc-900/90 border border-zinc-700 text-xs font-bold text-zinc-50">{notice}</p>}
-          {!error && <p className="text-xs font-semibold text-zinc-300">Point the camera at a NOOB profile QR code</p>}
+          {!error && <p className="text-xs font-semibold text-zinc-300">Point the camera at a NOOB profile QR code to find that profile</p>}
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./lightAccents.css"; /* light mode: deeper versions of the pale accent colours (generated: scripts/gen-light-accents.mjs) */
 
 /* ============================================================================================================
    NOOB theme — the same look as NOOB AI (ai.nooob.xyz): warm charcoal in dark mode, warm paper in light mode, one
@@ -10,6 +11,7 @@
    card colour in both themes, "zinc-400" is muted text in both.
    ============================================================================================================ */
 @theme {
+  --breakpoint-3xl: 112.5rem; /* 1800px: very wide monitors (the desktop layout gets a wider feed and people list) */
   --color-noob: #d97757;          /* the accent (was neon green) */
   --color-noob-strong: #c6613f;
 }
@@ -64,6 +66,33 @@
   --color-zinc-950: #232321;
 }
 
+/* Reels, stories, calls, live video and the camera are dark in BOTH modes (class "media-dark"): pictures and video sit on black, so in light mode these
+   screens keep the dark palette, black behind and white text on top, exactly as in dark mode. (Nothing changes in dark mode.)
+   In @layer base on purpose: an !important rule inside a layer beats one outside every layer, and the light-mode rules these override are in @layer base. */
+@layer base {
+:root[data-theme="light"] .media-dark {
+  color-scheme: dark;
+  --page: #000000;
+  --color-zinc-50: #f5f3ec;
+  --color-zinc-100: #ebe8de;
+  --color-zinc-200: #dcd9ce;
+  --color-zinc-300: #c4c2b8;
+  --color-zinc-400: #a3a198;
+  --color-zinc-500: #8a887f;
+  --color-zinc-600: #6f6d66;
+  --color-zinc-700: #55544d;
+  --color-zinc-800: #3d3c39;
+  --color-zinc-900: #30302e;
+  --color-zinc-950: #232321;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+:root[data-theme="light"] .media-dark .text-white { color: #ffffff !important; }
+:root[data-theme="light"] .media-dark .bg-black { background-color: #000000 !important; }
+:root[data-theme="light"] .media-dark .border-white\/5,
+:root[data-theme="light"] .media-dark .border-white\/10 { border-color: rgba(255, 255, 255, 0.12) !important; }
+}
+
 /* The other grey scales used around the app follow the same warm palette. */
 :root {
   --color-slate-50: var(--color-zinc-50);
@@ -110,6 +139,19 @@
   --color-stone-800: var(--color-zinc-800);
   --color-stone-900: var(--color-zinc-900);
   --color-stone-950: var(--color-zinc-950);
+}
+
+/* inside an always-dark surface the other grey scales are re-derived from its own (dark) zinc scale */
+:root[data-theme="light"] .force-dark,
+:root[data-theme="light"] .media-dark {
+  --color-slate-50: var(--color-zinc-50); --color-slate-100: var(--color-zinc-100); --color-slate-200: var(--color-zinc-200); --color-slate-300: var(--color-zinc-300); --color-slate-400: var(--color-zinc-400);
+  --color-slate-500: var(--color-zinc-500); --color-slate-600: var(--color-zinc-600); --color-slate-700: var(--color-zinc-700); --color-slate-800: var(--color-zinc-800); --color-slate-900: var(--color-zinc-900); --color-slate-950: var(--color-zinc-950);
+  --color-gray-50: var(--color-zinc-50); --color-gray-100: var(--color-zinc-100); --color-gray-200: var(--color-zinc-200); --color-gray-300: var(--color-zinc-300); --color-gray-400: var(--color-zinc-400);
+  --color-gray-500: var(--color-zinc-500); --color-gray-600: var(--color-zinc-600); --color-gray-700: var(--color-zinc-700); --color-gray-800: var(--color-zinc-800); --color-gray-900: var(--color-zinc-900); --color-gray-950: var(--color-zinc-950);
+  --color-neutral-50: var(--color-zinc-50); --color-neutral-100: var(--color-zinc-100); --color-neutral-200: var(--color-zinc-200); --color-neutral-300: var(--color-zinc-300); --color-neutral-400: var(--color-zinc-400);
+  --color-neutral-500: var(--color-zinc-500); --color-neutral-600: var(--color-zinc-600); --color-neutral-700: var(--color-zinc-700); --color-neutral-800: var(--color-zinc-800); --color-neutral-900: var(--color-zinc-900); --color-neutral-950: var(--color-zinc-950);
+  --color-stone-50: var(--color-zinc-50); --color-stone-100: var(--color-zinc-100); --color-stone-200: var(--color-zinc-200); --color-stone-300: var(--color-zinc-300); --color-stone-400: var(--color-zinc-400);
+  --color-stone-500: var(--color-zinc-500); --color-stone-600: var(--color-zinc-600); --color-stone-700: var(--color-zinc-700); --color-stone-800: var(--color-zinc-800); --color-stone-900: var(--color-zinc-900); --color-stone-950: var(--color-zinc-950);
 }
 
 .bg-page { background-color: var(--page); }

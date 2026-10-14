@@ -382,7 +382,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   return (
     <div
       id="story-viewer-modal"
-      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center backdrop-blur-md select-none"
+      className="fixed inset-0 z-50 bg-black/95 media-dark flex items-center justify-center backdrop-blur-md select-none"
     >
       {/* Close button */}
       <button

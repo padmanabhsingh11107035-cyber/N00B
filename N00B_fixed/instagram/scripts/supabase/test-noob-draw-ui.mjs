@@ -67,7 +67,7 @@ const prof = fs.readFileSync('src/components/Profile/ProfileView.tsx', 'utf8');
 const app = fs.readFileSync('src/App.tsx', 'utf8');
 const css = fs.readFileSync('src/index.css', 'utf8');
 check(feed.indexOf('openNoobDraw()') > 0 && feed.indexOf('openNoobDraw()') < feed.indexOf('setShowDailyNoob(true); }}'), 'the Home page menu (three lines) has NOOB Draw as its FIRST item, above Daily NOOB');
-check(/isOwnProfile && \(\s*<button[\s\S]{0,260}openNoobDraw\(\)/.test(prof) && prof.indexOf('openNoobDraw()') < prof.indexOf('<AppearanceSetting />'), 'the Profile three-dots menu has NOOB Draw at the top (own profile)');
+check(!/openNoobDraw/.test(prof) && !/preloadNoobDraw/.test(prof), 'the Profile three-dots menu no longer has NOOB Draw (it is on the Home page menu, and a notification tells people when their spin is back)');
 check(/<NoobDrawHost currentUser=\{currentUser\} onUserUpdated=\{\(u\) => setCurrentUser\(u\)\} \/>/.test(app), 'the page is mounted once in the app and updates the account (balance, Pro, tick) after a spin');
 const api = fs.readFileSync('src/services/api.ts', 'utf8');
 check(/fetchNoobDraw,/.test(api) && /spinNoobDraw,/.test(api), 'the two server calls are exported');

@@ -814,12 +814,35 @@ def questions_left(user_id):
 
 
 # ------------------------------ step 3: answer -> speech ------------------------------
+# Emoji, pictures-as-letters, arrows and other signs: a voice would read them by NAME ("face with tears of joy") or skip them unevenly, so they are never sent to it.
+EMOJI_AND_SIGNS = re.compile(
+    "[\U0001F000-\U0001FAFF\U0001F1E6-\U0001F1FF\u2600-\u27BF\u2B00-\u2BFF\u2190-\u21FF\u2300-\u23FF\u2460-\u24FF\u25A0-\u25FF\u2900-\u297F"
+    "\u200d\ufe0f\ufe0e\u20e3\u00a9\u00ae\u2122]+")
+# capital-letter words that ARE said letter by letter
+SPELLED_WORDS = {"AI", "OTP", "FAQ", "PIN", "UPI", "ID", "SMS", "URL", "PDF", "USB", "APK", "GIF", "QR", "VPN", "OS", "UI", "FB", "IG", "UK", "USA", "UAE", "EU", "TV", "PC", "HD",
+                 "CEO", "KYC", "EMI", "ATM", "GST", "API", "NFC", "DM"}
+
+
+def _caps_word(match):
+    """NOOB is a word; real abbreviations are spelled out; any other short word in capitals (NO, YES, NOT, ALL) is just that word, never its letters."""
+    word = match.group(0)
+    if word == "NOOB":
+        return "Noob"
+    if word in SPELLED_WORDS or not re.search(r"[AEIOUY]", word):
+        return " ".join(word)
+    return word.capitalize()
+
+
 def clean_for_speech(text):
     text = re.sub(r"https?://\S+", "", text)                        # drop links
     text = ANY_FACE_TAG.sub("", text)                                 # drop face tags ([face:happy]) so they are never read out
     text = re.sub(r"\[[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?\]", "", text)    # drop stray language tags
+    text = EMOJI_AND_SIGNS.sub(" ", text)                             # drop emoji and signs: they would be read out by name
     text = re.sub(r"[*#_`>|~\[\]]", "", text)                        # drop markdown symbols
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\bok\b", "okay", text, flags=re.IGNORECASE)      # "ok" is a word, not "O K"
+    text = re.sub(r"\b[A-Z]{2,}\b", _caps_word, text)                # short words in capitals stay words
+    text = re.sub(r"\s+", " ", text).strip()
+    return re.sub(r"\s+([,.!?;:])", r"\1", text)                      # no gap left where an emoji was
 
 
 def text_to_speech(text, lang):

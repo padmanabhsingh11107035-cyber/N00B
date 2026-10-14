@@ -139,6 +139,8 @@ import {
   toggleMessageReaction,
   editMessage,
   deleteMessage,
+  fetchMessageUpdates,
+  hideMessageForMe,
   sendTypingStatus,
   fetchTypingUsers,
   translateMessage,
@@ -687,15 +689,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
         // whole last-300 again. (undefined cursor = this chat hasn't been loaded yet this session;
         // falls back to a full fetch, same as before.)
         const cursor = latestMessageAtRef.current;
-        const delta = await fetchMessages(currentActiveId, cursor);
+        const update = await fetchMessageUpdates(currentActiveId, cursor);
+        const delta = update.messages;
+        const hiddenIds = update.hiddenIds;
         // Same guard as loadMessages: if the person switched to a different
         // chat while this poll's request was in flight, its response is for
         // a conversation that isn't even open anymore — applying it would
         // overwrite whatever chat is actually on screen right now.
-        if (activeChatIdRef.current !== currentActiveId || delta.length === 0) return;
+        if (activeChatIdRef.current !== currentActiveId || (delta.length === 0 && hiddenIds.length === 0)) return;
         setMessages((prev) => {
           const byId = new Map<string, Message>(prev.map((m) => [m.id, m]));
           for (const m of delta) byId.set(m.id, m);
+          for (const id of hiddenIds) byId.delete(id);   // deleted for me on another device
           return Array.from(byId.values()).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         });
       }
@@ -1304,6 +1309,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
+  // "Delete for me": gone from this person's chat only (like WhatsApp); everyone else, and the sender, still has the message.
+  const handleDeleteForMe = async (msgId: string) => {
+    if (!activeChat) return;
+    const ok = await hideMessageForMe(msgId);
+    if (!ok) { showNotice('Could not delete that message. Please try again.'); return; }
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    try {
+      const key = `${CACHE_KEY_MSGS}_${activeChat.id}`;
+      const saved = JSON.parse(localStorage.getItem(key) || 'null');
+      if (Array.isArray(saved)) safeLocalStorageSet(key, safeJsonStringify(saved.filter((m: any) => m && m.id !== msgId)));
+    } catch { /* the saved copy is rebuilt on the next load */ }
+  };
+
   // Mobile swipe-to-reply: swiping a bubble left past SWIPE_REPLY_THRESHOLD
   // opens the WhatsApp-style reply composer for that message. Horizontal-only
   // drags never fight the vertical message-list scroll, since the list has
@@ -1500,11 +1518,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
     );
   });
 
+  // Followers and people you follow are NOT listed down the chat list with a "Chat" button any more. They show up only while you search, so "Search or start a new chat" still starts one.
   const filteredFriendsWithoutChat =
-    activeFilterTab === 'groups'
+    activeFilterTab === 'groups' || !queryClean
       ? []
       : friendsWithoutConversation.filter((f) => {
-          if (!queryClean) return true;
           return (
             f.username.toLowerCase().includes(queryClean) ||
             (f.displayName && f.displayName.toLowerCase().includes(queryClean))
@@ -1715,8 +1733,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setMobileView('chat');
                   }}
                   className={`p-3.5 flex items-center gap-3 cursor-pointer transition-colors group relative ${
+                    // marked only on a wide screen, where the open chat sits next to the list; the mark is a shadow inside the row (a coloured border here also coloured the line between rows)
                     isSelected
-                      ? 'bg-zinc-900/95 border-l-3 border-noob'
+                      ? 'md:bg-zinc-900/95 md:shadow-[inset_3px_0_0_0_var(--color-noob)] hover:bg-zinc-900/50 md:hover:bg-zinc-900/95'
                       : 'hover:bg-zinc-900/50'
                   }`}
                 >
@@ -1817,8 +1836,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {filteredFriendsWithoutChat.length > 0 && (
               <div className="p-3 bg-zinc-950/90 border-t border-zinc-900 space-y-2">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
-                  <UserCheck className="w-3.5 h-3.5 text-noob" /> Connected Friends (
-                  {filteredFriendsWithoutChat.length})
+                  <UserCheck className="w-3.5 h-3.5 text-noob" /> Start a new chat ({filteredFriendsWithoutChat.length})
                 </span>
                 <div className="space-y-1">
                   {filteredFriendsWithoutChat.map((friend) => (
@@ -1837,9 +1855,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-bold text-white truncate">
                               {friend.displayName || friend.username}
-                            </span>
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-noob font-bold uppercase border border-noob/30 shrink-0">
-                              chat
                             </span>
                             {friend.isVerified && <VerifiedBadge size="xs" />}
                           </div>
@@ -2687,6 +2702,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <Edit2 className="w-3.5 h-3.5" /> Edit
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => { handleDeleteForMe(activeMessageMenu.message.id); setActiveMessageMenu(null); }}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-red-500/10 text-xs font-bold text-rose-300 cursor-pointer text-left"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete for me
+                </button>
                 {(activeMessageMenu.message.senderId === currentUser.id ||
                   activeMessageMenu.message.senderId === 'u_me' ||
                   can(currentUser, 'moderate_chats') ||
@@ -2696,7 +2718,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     onClick={() => { handleDeleteMsg(activeMessageMenu.message.id); setActiveMessageMenu(null); }}
                     className="flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-red-500/10 text-xs font-bold text-rose-400 cursor-pointer text-left"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                    <Trash2 className="w-3.5 h-3.5" /> Delete for everyone
                   </button>
                 )}
               </div>

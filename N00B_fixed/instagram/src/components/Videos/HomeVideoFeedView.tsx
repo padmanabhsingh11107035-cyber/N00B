@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin } from 'lucide-react';
+import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon } from 'lucide-react';
 import { User, LongVideo, LongVideoPlaylist } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -37,6 +37,7 @@ import { sendLike } from '../../utils/likeSync';
 import { setVisibleInterval } from '../../utils/visibleInterval';
 import { LazyVideo } from '../Common/LazyVideo';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
+import { buildIndex, searchIndex, didYouMean, suggest, popularity, recentSearches, rememberSearch, forgetSearch, clearSearches } from '../../utils/searchEngine';
 
 const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 
@@ -67,7 +68,16 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-type FilterChip = 'all' | 'live' | 'newest' | 'liked';
+type FilterChip = 'all' | 'live' | 'trending' | 'following' | 'newest' | 'liked' | 'saved' | 'mine';
+
+// topics offered in the left menu: tapping one searches for it (the search finds related words too, so "Music" also finds songs)
+const TOPICS: [string, string][] = [['🎵', 'Music'], ['😂', 'Comedy'], ['🎮', 'Gaming'], ['📚', 'Learning'], ['🍳', 'Food'], ['✈️', 'Travel'], ['🏏', 'Sports'], ['📱', 'Tech'], ['🎬', 'Movies'], ['💪', 'Fitness'], ['💡', 'Motivation'], ['💃', 'Dance']];
+const FILTER_LABEL: Record<FilterChip, string> = { all: 'All', live: 'Live', trending: 'Trending', following: 'Following', newest: 'Newest', liked: 'Most liked', saved: 'Saved', mine: 'Your videos' };
+const EMPTY_TEXT: Record<FilterChip, string> = {
+  all: 'No videos yet — be the first to upload one.', live: 'Nobody is live right now.', trending: 'Nothing is trending yet.',
+  following: 'Videos from the people you follow will show up here.', newest: 'No videos yet.', liked: 'No videos yet.',
+  saved: 'Videos you save will show up here.', mine: 'You have not uploaded a video yet. Tap Create to upload one.'
+};
 
 // The "Feed" tab (named to match YouTube's own naming for this kind of page) — a YouTube-style feed
 // of long-form uploads plus whoever is live right now, rendered as one list of equally-sized cards
@@ -92,6 +102,8 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [filter, setFilter] = useState<FilterChip>('all');
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);          // the list of suggestions under the box
+  const [recents, setRecents] = useState<string[]>(() => recentSearches());
 
   // The "⋮" options sheet — actionVideo is which video it's for (from a list card tap or the open
   // player, shared by both surfaces instead of two separate menu implementations) and stays set
@@ -152,22 +164,69 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialOpenVideoId, loading]);
 
+  // The search works like YouTube's: every word on its own, in the title, the uploader's name and the description, typing mistakes and word endings
+  // forgiven, related words found (music ~ songs), best matches first (see utils/searchEngine.ts).
+  const videoIndex = useMemo(() => buildIndex<LongVideo>(videos.map((v) => ({
+    item: v,
+    boost: popularity({ views: v.viewsCount, likes: v.likesCount, comments: v.commentsCount, createdAt: v.createdAt }),
+    fields: [{ text: v.title, weight: 5 }, { text: v.username, weight: 3 }, { text: v.description, weight: 1.5 }]
+  }))), [videos]);
+  const liveIndex = useMemo(() => buildIndex<LiveStreamSummary>(liveStreams.map((s) => ({
+    item: s, boost: 0.5,
+    fields: [{ text: s.title || '', weight: 5 }, { text: s.host.username, weight: 3 }, { text: s.host.displayName || '', weight: 3 }]
+  }))), [liveStreams]);
+  const query = searchQuery.trim();
+  // if what was typed holds a misspelt word, the corrected search (shown as "Showing results for ...")
+  const corrected = useMemo(() => (query ? didYouMean(query, videoIndex.vocab) : null), [query, videoIndex]);
+  const followingSet = useMemo(() => new Set(currentUser.followingIds || []), [currentUser.followingIds]);
+  const trendingScore = (v: LongVideo) => v.viewsCount + 3 * v.likesCount + 5 * v.commentsCount;
+
   const displayedVideos = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     let list = videos;
+    if (filter === 'live') return [];
+    if (filter === 'mine') list = list.filter((v) => v.userId === currentUser.id);
+    else if (filter === 'saved') list = list.filter((v) => v.isSaved);
+    else if (filter === 'following') list = list.filter((v) => followingSet.has(v.userId));
+    else if (filter === 'trending') {
+      const recent = list.filter((v) => Date.now() - +new Date(v.createdAt) < 14 * 86_400_000);
+      list = [...(recent.length >= 3 ? recent : list)].sort((a, b) => trendingScore(b) - trendingScore(a));
+    }
+    if (query) {
+      // best match first; "Newest" / "Most liked" re-order the matches the way they say
+      const allowed = new Set(list.map((v) => v.id));
+      const run = (q: string) => searchIndex<LongVideo>(q, videoIndex).map((h) => h.item).filter((v) => allowed.has(v.id));
+      let found = run(corrected || query);
+      if (found.length === 0 && corrected) found = run(query);
+      if (filter === 'newest') found = [...found].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      else if (filter === 'liked') found = [...found].sort((a, b) => b.likesCount - a.likesCount);
+      return found;
+    }
     if (filter === 'newest') list = [...list].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
     else if (filter === 'liked') list = [...list].sort((a, b) => b.likesCount - a.likesCount);
-    else if (filter === 'live') list = [];
-    if (q) list = list.filter((v) => v.title.toLowerCase().includes(q) || v.username.toLowerCase().includes(q));
     return list;
-  }, [videos, filter, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videos, filter, query, corrected, videoIndex, followingSet, currentUser.id]);
 
   const displayedLiveStreams = useMemo(() => {
-    if (filter === 'newest' || filter === 'liked') return [];
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return liveStreams;
-    return liveStreams.filter((s) => s.host.username.toLowerCase().includes(q) || (s.title || '').toLowerCase().includes(q));
-  }, [liveStreams, filter, searchQuery]);
+    if (filter !== 'all' && filter !== 'live') return [];
+    if (!query) return liveStreams;
+    const found = searchIndex(corrected || query, liveIndex).map((h) => h.item);
+    return found.length || !corrected ? found : searchIndex(query, liveIndex).map((h) => h.item);
+  }, [liveStreams, filter, query, corrected, liveIndex]);
+
+  // what to offer under the search box: matching titles and names while typing, the last searches when the box is empty
+  const suggestions = useMemo(() => {
+    if (!query) return [];
+    const names = [...videos.map((v) => v.title), ...videos.map((v) => v.username), ...liveStreams.map((s) => s.title || ''), ...liveStreams.map((s) => s.host.username)];
+    return suggest(query, names, 6);
+  }, [query, videos, liveStreams]);
+  const runSearch = (text: string) => {
+    setSearchQuery(text);
+    setShowSearch(true);
+    setSearchOpen(false);
+    setRecents(rememberSearch(text));
+  };
+  const pickFilter = (f: FilterChip) => { setFilter(f); setShowFeedMenu(false); };
 
   const copyVideoLink = async (videoId: string) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?video=${encodeURIComponent(videoId)}`;
@@ -356,18 +415,48 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       <header className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3.5 py-2.5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between gap-2">
           {showSearch ? (
-            <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5">
+            <div className="flex-1 relative">
+            <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5">
               <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <input
                 autoFocus
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search videos"
+                onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                onFocus={() => setSearchOpen(true)}
+                onKeyDown={(e) => { if (e.key === 'Enter') runSearch(searchQuery); else if (e.key === 'Escape') setSearchOpen(false); }}
+                enterKeyHint="search"
+                autoComplete="off"
+                placeholder="Search videos, people, topics"
                 className="flex-1 min-w-0 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
+                data-testid="feed-search-input"
               />
-              <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="text-zinc-400 hover:text-white cursor-pointer shrink-0">
+              <button onClick={() => { if (searchQuery) { setSearchQuery(''); setSearchOpen(true); } else { setShowSearch(false); setSearchOpen(false); } }} className="text-zinc-400 hover:text-white cursor-pointer shrink-0" aria-label={searchQuery ? 'Clear search' : 'Close search'}>
                 <X className="w-3.5 h-3.5" />
               </button>
+            </div>
+            {searchOpen && (suggestions.length > 0 || (!query && recents.length > 0)) && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden" data-testid="feed-search-suggestions">
+                {!query && (
+                  <div className="flex items-center justify-between px-3.5 pt-2.5 pb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Recent searches</span>
+                    <button onClick={() => { clearSearches(); setRecents([]); }} className="text-[10px] font-bold text-zinc-400 hover:text-white cursor-pointer">Clear</button>
+                  </div>
+                )}
+                {(query ? suggestions : recents).map((text) => (
+                  <div key={text} className="flex items-center hover:bg-zinc-900">
+                    <button onClick={() => runSearch(text)} className="flex-1 min-w-0 flex items-center gap-2.5 px-3.5 py-2.5 text-left cursor-pointer">
+                      {query ? <Search className="w-3.5 h-3.5 text-zinc-500 shrink-0" /> : <HistoryIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />}
+                      <span className="text-xs text-white truncate">{text}</span>
+                    </button>
+                    {!query && (
+                      <button onClick={() => setRecents(forgetSearch(text))} className="px-3 py-2.5 text-zinc-600 hover:text-white cursor-pointer" aria-label={`Remove ${text} from recent searches`}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
           ) : (
             <>
@@ -398,12 +487,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         </div>
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {([
-            ['all', 'All'],
-            ['live', 'Live'],
-            ['newest', 'Newest'],
-            ['liked', 'Most liked']
-          ] as [FilterChip, string][]).map(([key, label]) => (
+          {(['all', 'live', 'trending', 'following', 'newest', 'liked', 'saved', 'mine'] as FilterChip[]).map((key) => [key, FILTER_LABEL[key]] as [FilterChip, string]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
@@ -417,14 +501,21 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         </div>
       </header>
 
-      <div className="w-full max-w-2xl px-3 py-3">
+      <div className="w-full max-w-2xl px-3 py-3" onClick={() => setSearchOpen(false)}>
+        {query && !loading && (
+          <p className="text-[11px] text-zinc-400 mb-2.5 px-0.5" data-testid="feed-search-note">
+            {corrected && displayedVideos.length + displayedLiveStreams.length > 0
+              ? <>Showing results for <button onClick={() => runSearch(corrected)} className="text-white font-bold underline underline-offset-2 cursor-pointer">{corrected}</button> <span className="text-zinc-500">(you typed “{query}”)</span></>
+              : <>{displayedVideos.length + displayedLiveStreams.length} result{displayedVideos.length + displayedLiveStreams.length === 1 ? '' : 's'} for “{query}”, best match first</>}
+          </p>
+        )}
         {loading ? (
           <div className="py-16 flex items-center justify-center text-zinc-500 text-xs">Loading videos…</div>
         ) : displayedVideos.length === 0 && displayedLiveStreams.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-2 text-center text-zinc-500">
             <Radio className="w-8 h-8 text-zinc-700" />
             <p className="text-xs">
-              {searchQuery ? 'No videos match your search.' : filter === 'live' ? 'Nobody is live right now.' : 'No videos yet — be the first to upload one.'}
+              {query ? `No videos found for “${query}”. Try fewer words, or a topic like music, comedy or gaming.` : EMPTY_TEXT[filter]}
             </p>
           </div>
         ) : (
@@ -436,7 +527,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       </div>
 
       {openVideo && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col">
           <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-zinc-800/80 shrink-0">
             <button onClick={() => setOpenVideo(null)} className="p-1.5 text-white cursor-pointer"><X className="w-5 h-5" /></button>
             <button onClick={() => { setActionVideo(openVideo); setShowOptionsMenu(true); }} className="p-1.5 text-white cursor-pointer" title="More">
@@ -669,51 +760,99 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
         <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start" onClick={() => setShowFeedMenu(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
+            className="w-80 max-w-[88vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl animate-in slide-in-from-left duration-200 flex flex-col"
+            data-testid="feed-menu"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
               <h2 className="text-sm font-black italic tracking-tighter text-white">Feed</h2>
-              <button onClick={() => setShowFeedMenu(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer">
+              <button onClick={() => setShowFeedMenu(false)} className="p-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white cursor-pointer" aria-label="Close menu">
                 <X className="w-4.5 h-4.5" />
               </button>
             </div>
-            <div className="space-y-1">
+
+            <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
+              {/* the person's own things */}
+              <section className="space-y-0.5">
+                <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Your library</p>
+                {([
+                  [<Clock key="i" className="w-4.5 h-4.5 text-zinc-300" />, 'bg-zinc-900 border-zinc-800', 'History', "Videos you've watched", () => { setShowFeedMenu(false); setShowHistory(true); }, null],
+                  [<ListVideo key="i" className="w-4.5 h-4.5 text-zinc-300" />, 'bg-zinc-900 border-zinc-800', 'Playlist', 'Saved videos & your playlists', () => { setShowFeedMenu(false); setShowPlaylists(true); }, null],
+                  [<Heart key="i" className="w-4.5 h-4.5 text-red-400" />, 'bg-red-500/15 border-red-500/30', 'Liked Videos', "Videos you've liked", () => { setShowFeedMenu(false); setShowLikedVideos(true); }, null],
+                  [<Bookmark key="i" className="w-4.5 h-4.5 text-amber-300" />, 'bg-amber-500/10 border-amber-500/30', 'Saved videos', 'Watch these later', () => pickFilter('saved'), videos.filter((v) => v.isSaved).length],
+                  [<VideoIcon key="i" className="w-4.5 h-4.5 text-sky-300" />, 'bg-sky-500/10 border-sky-500/30', 'Your videos', 'Everything you uploaded', () => pickFilter('mine'), videos.filter((v) => v.userId === currentUser.id).length]
+                ] as [React.ReactNode, string, string, string, () => void, number | null][]).map(([icon, tint, title, sub, onClick, count]) => (
+                  <button key={title} onClick={onClick} className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer">
+                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${tint}`}>{icon}</div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-bold text-white block">{title}</span>
+                      <span className="text-[10px] text-zinc-400 block truncate">{sub}</span>
+                    </div>
+                    {count !== null && count > 0 && <span className="text-[10px] font-bold text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-full px-2 py-0.5 shrink-0">{count}</span>}
+                  </button>
+                ))}
+              </section>
+
+              {/* ways to find something to watch */}
+              <section className="space-y-0.5">
+                <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Discover</p>
+                {([
+                  [<Flame key="i" className="w-4.5 h-4.5 text-orange-400" />, 'bg-orange-500/10 border-orange-500/30', 'Trending now', 'Most watched and liked lately', () => pickFilter('trending'), null],
+                  [<UserCheck key="i" className="w-4.5 h-4.5 text-emerald-300" />, 'bg-emerald-500/10 border-emerald-500/30', 'From people you follow', 'Their newest uploads', () => pickFilter('following'), videos.filter((v) => followingSet.has(v.userId)).length],
+                  [<Radio key="i" className="w-4.5 h-4.5 text-red-400" />, 'bg-red-500/10 border-red-500/30', 'Live now', liveStreams.length ? `${liveStreams.length} live right now` : 'Nobody is live right now', () => pickFilter('live'), liveStreams.length],
+                  [<TrendingUp key="i" className="w-4.5 h-4.5 text-violet-300" />, 'bg-violet-500/10 border-violet-500/30', 'Newest uploads', 'Fresh from the community', () => pickFilter('newest'), null],
+                  [<ThumbsUp key="i" className="w-4.5 h-4.5 text-pink-300" />, 'bg-pink-500/10 border-pink-500/30', 'Most liked', 'The crowd favourites', () => pickFilter('liked'), null]
+                ] as [React.ReactNode, string, string, string, () => void, number | null][]).map(([icon, tint, title, sub, onClick, count]) => (
+                  <button key={title} onClick={onClick} className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer">
+                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${tint}`}>{icon}</div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-bold text-white block">{title}</span>
+                      <span className="text-[10px] text-zinc-400 block truncate">{sub}</span>
+                    </div>
+                    {count !== null && count > 0 && <span className="text-[10px] font-bold text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-full px-2 py-0.5 shrink-0">{count}</span>}
+                  </button>
+                ))}
+              </section>
+
+              {/* topics: one tap searches (and the search also finds related words) */}
+              <section>
+                <p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Explore topics</p>
+                <div className="flex flex-wrap gap-1.5 px-1" data-testid="feed-topics">
+                  {TOPICS.map(([emoji, name]) => (
+                    <button
+                      key={name}
+                      onClick={() => { setShowFeedMenu(false); setFilter('all'); runSearch(name); }}
+                      className="px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-200 hover:bg-zinc-800 hover:text-white cursor-pointer"
+                    >
+                      <span className="mr-1">{emoji}</span>{name}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {recents.length > 0 && (
+                <section>
+                  <div className="flex items-center justify-between px-2 pb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Recent searches</p>
+                    <button onClick={() => { clearSearches(); setRecents([]); }} className="text-[10px] font-bold text-zinc-400 hover:text-white cursor-pointer">Clear</button>
+                  </div>
+                  {recents.slice(0, 5).map((text) => (
+                    <button key={text} onClick={() => { setShowFeedMenu(false); setFilter('all'); runSearch(text); }} className="w-full px-2.5 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left cursor-pointer">
+                      <HistoryIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      <span className="text-xs text-zinc-200 truncate">{text}</span>
+                    </button>
+                  ))}
+                </section>
+              )}
+            </div>
+
+            <div className="px-3 py-3 border-t border-zinc-800 shrink-0">
               <button
-                onClick={() => { setShowFeedMenu(false); setShowHistory(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
+                onClick={() => { setShowFeedMenu(false); onOpenUpload(); }}
+                className="w-full flex items-center justify-center gap-2 bg-noob text-black rounded-xl py-2.5 text-xs font-black cursor-pointer hover:bg-noob/90 transition-colors"
               >
-                <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
-                  <Clock className="w-4.5 h-4.5 text-zinc-300" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">History</span>
-                  <span className="text-[10px] text-zinc-400">Videos you've watched</span>
-                </div>
+                <Plus className="w-4 h-4 stroke-[2.5]" /> Upload a video
               </button>
-              <button
-                onClick={() => { setShowFeedMenu(false); setShowPlaylists(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
-                  <ListVideo className="w-4.5 h-4.5 text-zinc-300" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Playlist</span>
-                  <span className="text-[10px] text-zinc-400">Saved videos & your playlists</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowFeedMenu(false); setShowLikedVideos(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                  <Heart className="w-4.5 h-4.5 text-red-400" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Liked Videos</span>
-                  <span className="text-[10px] text-zinc-400">Videos you've liked</span>
-                </div>
-              </button>
+              <p className="text-center text-[10px] text-zinc-500 mt-2">{videos.length.toLocaleString()} video{videos.length === 1 ? '' : 's'} on NOOB</p>
             </div>
           </div>
         </div>

@@ -164,7 +164,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col">
       <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-zinc-800/80 shrink-0">
         <button onClick={onClose} className="p-1.5 text-white cursor-pointer" title="Close">
           <X className="w-5 h-5" />

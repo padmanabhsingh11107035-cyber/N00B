@@ -1140,7 +1140,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
 
       {/* Whiteboard overlay */}
       {whiteboardOpen && (
-        <div className="absolute inset-0 z-10 bg-black flex flex-col">
+        <div className="absolute inset-0 z-10 bg-black media-dark flex flex-col">
           <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
             <span className="text-white text-xs font-bold">Whiteboard</span>
             <div className="flex items-center gap-2">

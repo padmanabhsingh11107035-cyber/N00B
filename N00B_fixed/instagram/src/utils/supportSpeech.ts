@@ -8,7 +8,7 @@
 
 // ---------------------------------------------------------------------------------------------------------------- 1. the words
 // capital-letter words that ARE said letter by letter, written with spaces so every voice does it the same way
-const SPELLED = ['AI', 'OTP', 'FAQ', 'PIN', 'UPI', 'ID', 'SMS', 'URL', 'PDF', 'USB', 'APK', 'GIF', 'QR', 'VPN', 'OS', 'UI', 'FB', 'IG'];
+const SPELLED = ['AI', 'OTP', 'FAQ', 'PIN', 'UPI', 'ID', 'SMS', 'URL', 'PDF', 'USB', 'APK', 'GIF', 'QR', 'VPN', 'OS', 'UI', 'FB', 'IG', 'UK', 'USA', 'UAE', 'EU', 'TV', 'PC', 'HD', 'CEO', 'KYC', 'EMI', 'ATM', 'GST', 'API', 'NFC', 'DM'];
 const spell = (w: string): string => w.split('').join(' ');
 const NUM = '(\\d+(?:,\\d{3})*(?:\\.\\d+)?)';
 
@@ -40,8 +40,10 @@ export function prepareSpeech(input: string): string {
   // numbers: 10,000,000 is one number (a comma inside it must not become a pause)
   for (let i = 0; i < 4; i++) t = t.replace(/(\d),(?=\d{3}(?!\d))/g, '$1');
   // words written in capitals: "NOOB" is said as a word; real abbreviations are spelled out; longer capitals are just emphasis
-  t = t.replace(/\bOK\b/g, 'okay');
-  t = t.replace(/\b[A-Z]{2,}\b/g, (w) => (w === 'NOOB' ? 'Noob' : SPELLED.includes(w) ? spell(w) : w.length >= 4 ? w.charAt(0) + w.slice(1).toLowerCase() : spell(w)));
+  t = t.replace(/\bok\b/gi, 'okay');
+  // A short word in capitals (NO, YES, NOT, ALL, NEW) is just that word said loudly, never its letters. Only the abbreviations listed above, and
+  // capitals with no vowel at all (CCTV, SMS), are spelled out.
+  t = t.replace(/\b[A-Z]{2,}\b/g, (w) => (w === 'NOOB' ? 'Noob' : SPELLED.includes(w) ? spell(w) : /[AEIOUY]/.test(w) ? w.charAt(0) + w.slice(1).toLowerCase() : spell(w)));
   // dashes and brackets
   t = t.replace(/\s[-–—]+\s/g, ', ').replace(/[–—]/g, ', ');
   t = t.replace(/(\p{L})-(?=\p{L})/gu, '$1 ');                                         // end-to-end -> end to end
@@ -177,7 +179,12 @@ export interface SpeakerDeps {
   setTimer: (fn: () => void, ms: number) => unknown;
   clearTimer: (id: unknown) => void;
 }
-export interface SpeakOptions { onStart?: () => void; onEnd?: () => void; onVoice?: (v: { name: string; lang: string }) => void; startDelayMs?: number; rate?: number; volume?: number; lang?: string }
+export interface SpeakOptions {
+  onStart?: () => void; onEnd?: () => void; onVoice?: (v: { name: string; lang: string }) => void; startDelayMs?: number; rate?: number; volume?: number; lang?: string;
+  voiceName?: string | null;   // a voice the person chose: used for every piece it can speak (the same language); the best voice for the others
+  pitch?: number;              // the person's own pitch
+  exactRate?: boolean;         // use `rate` as it is (the person chose it) instead of keeping it at a calm pace
+}
 
 // Says a whole answer, piece by piece, each in the best voice the phone has for its language. stop() ends it at once (and does not call onEnd: the one
 // who stopped it already knows). onEnd is called exactly once when the answer is finished, or when a voice fails or goes quiet, so the screen never
@@ -207,7 +214,8 @@ export function createSpeaker(deps: SpeakerDeps) {
       if (i >= pieces.length) { finish(); return; }
       const p = pieces[i];
       const lang = languageOf(p.text, baseLang);
-      const voice = pickBestVoice(voices, lang);
+      const chosen = opts.voiceName ? voices.find((v) => v.name === opts.voiceName && baseOf(norm(v.lang)) === baseOf(norm(lang))) : undefined;
+      const voice = chosen || pickBestVoice(voices, lang);
       opts.onVoice?.({ name: voice?.name || 'the phone\'s own voice', lang: voice?.lang || lang });   // so the screen can show which voice is speaking
       let moved = false, began = false, retried = false;
       const next = () => { if (moved) return; moved = true; if (mine !== run) return; later(() => sayPiece(i + 1), p.pauseMs); };
@@ -215,8 +223,8 @@ export function createSpeaker(deps: SpeakerDeps) {
         const u = new deps.Utterance(p.text);
         u.lang = lang;
         if (voice) { u.voice = voice; u.lang = voice.lang || lang; }
-        u.rate = /natural|neural|online/i.test(voice?.name || '') ? Math.min(1.05, rate) : Math.min(0.97, rate);
-        u.pitch = p.question ? 1.04 : 1;
+        u.rate = opts.exactRate ? rate : /natural|neural|online/i.test(voice?.name || '') ? Math.min(1.05, rate) : Math.min(0.97, rate);
+        u.pitch = opts.pitch ?? (p.question ? 1.04 : 1);
         u.volume = opts.volume ?? 1;
         u.onstart = () => { began = true; if (!started && mine === run) { started = true; opts.onStart?.(); } };
         u.onend = () => { if (!retried || began) next(); };

@@ -131,6 +131,7 @@ export interface User {
 }
 
 export type NotificationType =
+  | 'noob_draw_ready'
   | 'admin_broadcast'
   | 'admin_direct'
   | 'new_follower'

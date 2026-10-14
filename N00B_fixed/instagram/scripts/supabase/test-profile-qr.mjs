@@ -1,4 +1,4 @@
-// Tests what the QR Scanner page accepts: a NOOB profile QR code (a link with ?profile=name) or a bare @name; anything else is refused.
+// Tests what the Profile finder using QR page accepts: a NOOB profile QR code (a link with ?profile=name) or a bare @name; anything else is refused.
 // Pure logic (src/utils/profileQr.ts): no database or browser needed.
 //
 // Usage: node scripts/supabase/test-profile-qr.mjs

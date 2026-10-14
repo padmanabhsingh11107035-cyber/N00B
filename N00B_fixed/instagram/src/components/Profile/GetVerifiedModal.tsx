@@ -17,10 +17,11 @@ import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { redeemCouponCode, verifyAccount } from '../../services/api';
 import confetti from 'canvas-confetti';
+import { VERIFY_PRICE, shortPoints } from '../../utils/verifyPrice';
 
 const POINTS_PRICE: Record<'points_perm' | 'points_month', number> = {
-  points_perm: 10_000_000_000_000,
-  points_month: 5_000_000_000
+  points_perm: VERIFY_PRICE.permanent,
+  points_month: VERIFY_PRICE.monthly
 };
 
 interface GetVerifiedModalProps {
@@ -260,7 +261,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                       </span>
                     </div>
 
-                    {/* Method 2: 100M NOOB Points */}
+                    {/* Method 2: permanent, paid once in NOOB Points */}
                     <div
                       onClick={() => setSelectedOption('points_perm')}
                       className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
@@ -274,7 +275,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                           <Crown className="w-4 h-4 text-amber-400" />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-white block">100M NOOB Points (Permanent)</span>
+                          <span className="text-xs font-bold text-white block">{shortPoints(POINTS_PRICE.points_perm)} NOOB Points (Permanent)</span>
                           <span className="text-[10px] text-zinc-400 block">Lifetime permanent verified checkmark</span>
                         </div>
                       </div>
@@ -283,7 +284,7 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                       </span>
                     </div>
 
-                    {/* Method 3: 50k NOOB Points / Month */}
+                    {/* Method 3: every month, in NOOB Points */}
                     <div
                       onClick={() => setSelectedOption('points_month')}
                       className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
@@ -297,12 +298,12 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                           <Coins className="w-4 h-4 text-emerald-400" />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-white block">50,000 NOOB Points / Month</span>
+                          <span className="text-xs font-bold text-white block">{shortPoints(POINTS_PRICE.points_month)} NOOB Points / Month</span>
                           <span className="text-[10px] text-zinc-400 block">Monthly badge subscription</span>
                         </div>
                       </div>
                       <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
-                        50k / mo
+                        {shortPoints(POINTS_PRICE.points_month)} / mo
                       </span>
                     </div>
                   </div>
@@ -348,8 +349,8 @@ export const GetVerifiedModal: React.FC<GetVerifiedModalProps> = ({
                     {selectedOption === 'coupon'
                       ? 'Hidden VIP Coupon Activation'
                       : selectedOption === 'points_perm'
-                      ? '100M Permanent Points Plan'
-                      : '50,000 Monthly Points Plan'}
+                      ? `${shortPoints(POINTS_PRICE.points_perm)} Permanent Points Plan`
+                      : `${shortPoints(POINTS_PRICE.points_month)} Monthly Points Plan`}
                   </span>
                   <span className="text-[10px] text-zinc-400 block">Verified Badge for @{currentUser.username}</span>
                 </div>

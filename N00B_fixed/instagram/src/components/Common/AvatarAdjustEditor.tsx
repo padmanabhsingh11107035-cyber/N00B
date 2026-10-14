@@ -140,7 +140,7 @@ export const AvatarAdjustEditor: React.FC<AvatarAdjustEditorProps> = ({ file, me
   };
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black/95 flex flex-col items-center justify-center gap-5 p-4">
+    <div className="fixed inset-0 z-[90] bg-black/95 media-dark flex flex-col items-center justify-center gap-5 p-4">
       <p className="text-white text-sm font-bold">Move and Scale</p>
 
       <div

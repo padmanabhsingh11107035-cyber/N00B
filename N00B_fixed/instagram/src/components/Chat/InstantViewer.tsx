@@ -49,7 +49,7 @@ export const InstantViewer: React.FC<InstantViewerProps> = ({ queue, onDone }) =
   };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black flex flex-col">
+    <div className="fixed inset-0 z-[80] bg-black media-dark flex flex-col">
       <div className="flex items-center gap-2 p-4 shrink-0">
         <div className="flex-1 flex gap-1">
           {queue.map((_, i) => (

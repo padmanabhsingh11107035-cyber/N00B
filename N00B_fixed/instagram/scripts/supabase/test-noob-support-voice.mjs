@@ -267,5 +267,39 @@ section('6. The voice call uses it, and the microphone is off while the assistan
   check(!/(?<=\()\?<[=!]/.test(fs.readFileSync('src/utils/supportSpeech.ts', 'utf8').replace(/\/\/[^\n]*/g, '')) && !/\(\?<[=!]/.test(fs.readFileSync('src/utils/supportSpeech.ts', 'utf8').replace(/\/\/[^\n]*/g, '')), 'the speech code uses no regex look-behind (older iPhones refuse to load a page that contains one)');
 }
 
+section('7. Short words are words, emoji are never said (support call AND the NOOB STUDY tutor)');
+{
+  const p = (s) => S.prepareSpeech(s);
+  check(p('Do NOT share it. The answer is YES or NO.') === 'Do Not share it. The answer is Yes or No.', 'short words in capitals (NOT, YES, NO) are said as words, not as letters', p('Do NOT share it. The answer is YES or NO.'));
+  check(p('It is ALL NEW and you CAN try').includes('All New') && p('It is ALL NEW and you CAN try').includes('Can'), 'ALL, NEW, CAN stay words');
+  check(p('Enter your OTP and PIN, then the UPI ID').includes('O T P') && p('Enter your OTP and PIN').includes('P I N') && p('your UPI ID').includes('U P I I D'), 'real abbreviations (OTP, PIN, UPI, ID) are still spelled');
+  check(p('Watch it on TV in the UK').includes('T V') && p('Watch it on TV in the UK').includes('U K') && p('the CEO, KYC and EMI').includes('C E O'), 'more known abbreviations (TV, UK, CEO, KYC, EMI) are spelled');
+  check(p('See the CCTV and the SMS').includes('C C T V') && p('See the SMS').includes('S M S'), 'capitals with no vowel at all (CCTV, SMS) are spelled');
+  check(p('ok, OK, Ok').split('okay').length === 4, 'ok in any case is "okay", never "O K"', p('ok, OK, Ok'));
+  check(p('NOOB is great') === 'Noob is great', 'NOOB is still a word');
+  for (const e of ['Hello 😀', 'Great job 🎉🎉', '👍 done', 'Nice ❤️ work', 'Thanks 🙏🏽', 'Flag 🇮🇳 here', 'Family 👨‍👩‍👧 time', '✅ Done ⭐ ➡️ next', 'Keycap 1️⃣ two']) {
+    const t = S.splitForSpeech(p(e)).map((x) => x.text).join(' ');
+    check(!/[^\p{L}\p{N}\s]/u.test(t), `no emoji or sign is left in "${e}"`, JSON.stringify(t));
+  }
+  // the tutor's own voice goes through the same engine
+  const studyVoice = fs.readFileSync('src/utils/studyVoice.ts', 'utf8').split(String.fromCharCode(13)).join('');
+  check(/import \{ createSpeaker \} from '\.\/supportSpeech\.ts'/.test(studyVoice) && /speaker\.speak\(clean/.test(studyVoice) && !/new SpeechSynthesisUtterance\(c\)/.test(studyVoice), 'the NOOB STUDY tutor speaks through the same speaker (emoji never said, short words stay words)');
+  check(!/\(\?<[=!]/.test(studyVoice), 'and its file has no regex look-behind either (older iPhones refuse to load a page with one)');
+  const V = await import(pathToFileURL(path.resolve('src/utils/studyVoice.ts')).href);
+  const out = S.splitForSpeech(S.prepareSpeech(V.cleanForSpeech('## Tip 😀\n- **NO** need to worry 🎉\n- Use $x^2$ and YES it works ✅'))).map((x) => x.text).join(' ');
+  check(!/[^\p{L}\p{N}\s]/u.test(out) && out.includes('No need') && out.includes('x squared') && out.includes('Yes'), 'a tutor answer with headings, bold, maths and emoji is said as plain words', out);
+  // a voice the student chose is used; others fall back to the best one
+  const w = makeWorld({ voices: [{ name: 'Microsoft Neerja Online (Natural)', lang: 'en-IN', localService: false }, { name: 'Daniel', lang: 'en-GB', localService: true }, { name: 'Google हिन्दी', lang: 'hi-IN', localService: false }] });
+  S.createSpeaker(w.deps).speak('Hello there friend', { voiceName: 'Daniel', rate: 1.4, pitch: 0.8, exactRate: true });
+  const u = w.spoken[0];
+  check(u.voice && u.voice.name === 'Daniel' && u.rate === 1.4 && u.pitch === 0.8, "the student's chosen voice, speed and pitch are used exactly", JSON.stringify([u.voice && u.voice.name, u.rate, u.pitch]));
+  const w2 = makeWorld({ voices: [{ name: 'Microsoft Neerja Online (Natural)', lang: 'en-IN', localService: false }, { name: 'Daniel', lang: 'en-GB', localService: true }, { name: 'Google हिन्दी', lang: 'hi-IN', localService: false }] });
+  S.createSpeaker(w2.deps).speak('नमस्ते दोस्त', { voiceName: 'Daniel', exactRate: true, rate: 1 });
+  check(/हिन्दी/.test(w2.spoken[0].voice.name), 'a chosen English voice is not forced onto Hindi words: the best Hindi voice speaks them');
+  const w3 = makeWorld({ voices: [{ name: 'Microsoft Neerja Online (Natural)', lang: 'en-IN', localService: false }] });
+  S.createSpeaker(w3.deps).speak('Hello there friend', { rate: 1.4 });
+  check(w3.spoken[0].rate <= 1.05, 'without the student choosing a speed, the calm pace is kept (the support call is unchanged)');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

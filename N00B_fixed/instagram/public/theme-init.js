@@ -4,7 +4,7 @@
 (function () {
   try {
     var saved = localStorage.getItem('noob_theme');
-    var pref = saved === 'dark' || saved === 'light' || saved === 'system' ? saved : 'system';
+    var pref = saved === 'dark' || saved === 'light' || saved === 'system' ? saved : 'dark';
     var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     var root = document.documentElement;
     root.setAttribute('data-theme', dark ? 'dark' : 'light');

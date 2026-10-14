@@ -2,6 +2,8 @@
 // fix the words), or a short recording sent for transcription when the server has that switched on. Reading aloud uses the device's own voices.
 // Nothing is recorded unless the student taps the microphone, and nothing is kept: the sound is turned into words and thrown away.
 
+import { createSpeaker } from './supportSpeech.ts';
+
 export interface VoiceInfo { name: string; lang: string; default?: boolean; localService?: boolean }
 
 export function recognitionCtor(): any | null {
@@ -45,7 +47,8 @@ const GREEK: Record<string, string> = { alpha: 'alpha', beta: 'beta', gamma: 'ga
 export function cleanForSpeech(md: string): string {
   let t = String(md || '');
   t = t.replace(/```[\s\S]*?```/g, ' (a code example is shown on screen) ');
-  t = t.replace(/\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|(?<![\p{L}\p{N}])\$([^$\n]{1,200}?)\$(?!\d)/gu, (_m, a, b, c, d) => ' ' + speakMath(a ?? b ?? c ?? d ?? '') + ' ');
+  t = t.replace(/\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)/g, (_m, a, b, c) => ' ' + speakMath(a ?? b ?? c ?? '') + ' ');
+  t = t.replace(/(^|[^\p{L}\p{N}])\$([^$\n]{1,200}?)\$(?!\d)/gu, (_m, pre, d) => pre + ' ' + speakMath(d) + ' ');
   t = t.replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/^\s{0,3}#{1,6}\s+/gm, '').replace(/^\s*>\s?/gm, '')
     .replace(/^\s*([-*+]|\d+[.)])\s+/gm, '').replace(/[*_~]{1,3}/g, '').replace(/\|/g, ' ').replace(/^-{3,}$/gm, '').replace(/\s*\n\s*/g, '. ').replace(/\s{2,}/g, ' ');
   return t.replace(/\.\s*\./g, '.').trim().slice(0, 4000);
@@ -58,13 +61,13 @@ function speakMath(m: string): string {
     .replace(/\\times|\\cdot/g, ' times ').replace(/\\div/g, ' divided by ').replace(/\\pm/g, ' plus or minus ').replace(/\\approx/g, ' is about ').replace(/\\neq/g, ' is not equal to ')
     .replace(/\\leq?/g, ' is less than or equal to ').replace(/\\geq?/g, ' is greater than or equal to ').replace(/\\rightarrow|\\to/g, ' gives ').replace(/\\infty/g, ' infinity ')
     .replace(/\\(?:text|mathrm|mathbf|operatorname)\s*\{([^{}]*)\}/g, ' $1 ').replace(/\\([A-Za-z]+)/g, (_x, n) => ' ' + (GREEK[n] || n) + ' ')
-    .replace(/=/g, ' equals ').replace(/\+/g, ' plus ').replace(/(?<=\w)\s*-\s*(?=\w)/g, ' minus ').replace(/\//g, ' divided by ').replace(/[{}]/g, ' ');
+    .replace(/=/g, ' equals ').replace(/\+/g, ' plus ').replace(/(\w)\s*-\s*(?=\w)/g, '$1 minus ').replace(/\//g, ' divided by ').replace(/[{}]/g, ' ');
   return t.replace(/\s{2,}/g, ' ').trim();
 }
 
 // speech engines stop mid-way on long text: it is read in sentence-sized pieces
 export function speechChunks(text: string, max = 180): string[] {
-  const sentences = String(text || '').split(/(?<=[.!?।॥])\s+/).map((s) => s.trim()).filter(Boolean);
+  const sentences = (String(text || '').match(/[^.!?।॥]+[.!?।॥]*\s*/g) || []).map((s) => s.trim()).filter(Boolean);
   const out: string[] = [];
   let cur = '';
   for (const s of sentences) {
@@ -135,25 +138,37 @@ export async function record(maxMs = 45_000): Promise<RecorderHandle> {
 }
 
 // ---- reading aloud
+// The same speaking engine as the support call (utils/supportSpeech.ts): no emoji, no symbols and no punctuation are ever read out, short words are
+// words (not letters), and the pieces are said one after another in the most human voice the phone has for their language. A voice the student
+// chose in Appearance is used for everything it can speak.
 let speaking = false;
+let speaker: ReturnType<typeof createSpeaker> | null = null;
 export const isSpeaking = (): boolean => speaking;
 export function speak(text: string, lang: string, opts: { preferredVoice?: string | null; rate?: number; pitch?: number; onEnd?: () => void } = {}): void {
   if (!canSpeak()) { opts.onEnd?.(); return; }
   stopSpeaking();
-  const chunks = speechChunks(cleanForSpeech(text));
-  if (!chunks.length) { opts.onEnd?.(); return; }
-  const synth = window.speechSynthesis;
-  const voice = pickVoice(synth.getVoices() as unknown as VoiceInfo[], lang, opts.preferredVoice) as unknown as SpeechSynthesisVoice | null;
+  const clean = cleanForSpeech(text);
+  if (!clean) { opts.onEnd?.(); return; }
+  if (!speaker) {
+    speaker = createSpeaker({
+      synth: window.speechSynthesis as any,
+      Utterance: (window as any).SpeechSynthesisUtterance,
+      setTimer: (fn, ms) => window.setTimeout(fn, ms),
+      clearTimer: (id) => window.clearTimeout(id as number)
+    });
+  }
   speaking = true;
-  chunks.forEach((c, i) => {
-    const u = new SpeechSynthesisUtterance(c);
-    u.lang = voice?.lang || lang; if (voice) u.voice = voice; u.rate = opts.rate || 0.95; u.pitch = opts.pitch || 1;
-    u.onend = () => { if (i === chunks.length - 1) { speaking = false; opts.onEnd?.(); } };
-    u.onerror = () => { speaking = false; opts.onEnd?.(); };
-    synth.speak(u);
+  const started = speaker.speak(clean, {
+    lang,
+    voiceName: opts.preferredVoice || null,
+    rate: opts.rate || 0.95,
+    pitch: opts.pitch || 1,
+    exactRate: true,
+    onEnd: () => { speaking = false; opts.onEnd?.(); }
   });
+  if (!started) speaking = false;
 }
 export function stopSpeaking(): void {
   speaking = false;
-  try { if (canSpeak()) window.speechSynthesis.cancel(); } catch { /* nothing was speaking */ }
+  try { speaker?.stop(); if (canSpeak()) window.speechSynthesis.cancel(); } catch { /* nothing was speaking */ }
 }

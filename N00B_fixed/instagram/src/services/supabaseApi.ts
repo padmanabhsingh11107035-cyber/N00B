@@ -13,7 +13,7 @@ import { recordDiag } from './authDiag';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
-import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET } from './supabase';
+import { supabase, tabSessions, resolveMedia, toStoredMedia, MEDIA_BUCKET, createIsolatedClient } from './supabase';
 import type { DrawState, DrawSpinResult } from '../utils/noobDraw';
 import type { TeamMember, MyTeamApplication, TeamAdminState, TeamApplicationRow, ApplicationStatus } from '../utils/ourTeam';
 import { isTeamPhotoKey } from '../utils/ourTeam';
@@ -547,6 +547,60 @@ export async function loginUser(payload: {
     return { success: true, user: startChatKeys(mapUser(user), payload.password) as User };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not log in. Please check your connection and try again.') };
+  }
+}
+
+// ----------------------------------------------------------------------------- "Switch account": the person's other accounts
+export interface LinkedAccount { id: string; username: string; displayName: string; avatar: string; isVerified: boolean }
+
+// The other accounts that share this account's email address or mobile number (public details only; signing in to one still needs its password).
+export async function fetchLinkedAccounts(): Promise<LinkedAccount[]> {
+  try {
+    if (!(await currentSession())) return [];
+    const rows = await rpc<any[]>('my_linked_accounts');
+    return (Array.isArray(rows) ? rows : [])
+      .filter((r) => r && typeof r.id === 'string' && typeof r.username === 'string')
+      .map((r) => ({ id: r.id, username: r.username, displayName: r.displayName || r.username, avatar: resolveMedia(r.avatar || ''), isVerified: !!r.isVerified }));
+  } catch {
+    return [];
+  }
+}
+
+// Signs in to another of the person's accounts, once. The login is saved on this device next to the others (src/services/tabSessions.ts), so the password
+// is asked this one time and never again: the password itself is not kept, the saved login is renewed by the app until the person removes the account
+// from the list or logs out of it. This tab keeps using its own account until the caller switches (tabSessions.switchTo) and reloads.
+export async function signInLinkedAccount(username: string, password: string): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (!username || !password) return { success: false, error: 'Please enter the password of this account.' };
+  try {
+    const email = await rpc<string>('resolve_login_email', { identifier: username });
+    const temp = createIsolatedClient();
+    const { data, error } = await temp.auth.signInWithPassword({ email, password });
+    if (error || !data?.session) {
+      if (error && /rate|too many/i.test(error.message)) return { success: false, error: 'Too many attempts. Please wait a moment and try again.' };
+      if (error && /banned/i.test(error.message)) return { success: false, error: 'This account has been suspended by NOOB Administrator.' };
+      return { success: false, error: 'Incorrect password. Please check and try again.' };
+    }
+    const session = data.session;
+    const mine = await temp.rpc('get_my_user');
+    if ((mine.data as any)?.isSuspended) return { success: false, error: 'This account has been suspended by NOOB Administrator.' };
+    // chat keys: with the password, a device that has never seen this account picks up the account's existing chat key (exactly what a normal login does)
+    const keys = createE2ee({
+      rpc: async (fn, args) => {
+        const { data: d, error: e } = await temp.rpc(fn, args);
+        if (e) throw new ApiError(e.message, e.code, e.details);
+        return d;
+      },
+      userId: async () => session.user.id,
+      storeFor: (id) => browserKeyStore(id),
+      seen: seenStore,
+      lock: webLocks?.request ? <T,>(name: string, fn: () => Promise<T>) => webLocks.request(name, fn) as Promise<T> : undefined,
+      deviceLabel
+    });
+    await Promise.race([keys.ensure(session.user.id, password).catch(() => undefined), new Promise((r) => setTimeout(r, 8000))]);
+    tabSessions.write(JSON.stringify(session));
+    return { success: true, id: session.user.id };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not sign in. Please check your connection and try again.') };
   }
 }
 
@@ -2432,11 +2486,27 @@ export async function deleteChat(chatId: string): Promise<boolean> {
 // messages that are new, or have changed (edited, reacted to, etc.) since then — instead of
 // re-downloading the whole recent history on every poll/realtime tick. Omit it for a fresh/full load.
 export async function fetchMessages(chatId: string, after?: string): Promise<Message[]> {
+  return (await fetchMessageUpdates(chatId, after)).messages;
+}
+
+// Same, and also says which messages this person has deleted for themselves since (on another device), so this screen can drop them too.
+export async function fetchMessageUpdates(chatId: string, after?: string): Promise<{ messages: Message[]; hiddenIds: string[] }> {
   try {
-    const res = await rpc<{ messages: any[] }>('chat_messages', { p_chat: chatId, p_after: after || null });
-    return await unlockMessages(chatId, (res.messages || []).map((m) => mapMessage(m, true)));
+    const res = await rpc<{ messages: any[]; hiddenIds?: string[] }>('chat_messages', { p_chat: chatId, p_after: after || null });
+    const messages = await unlockMessages(chatId, (res.messages || []).map((m) => mapMessage(m, true)));
+    return { messages, hiddenIds: Array.isArray(res.hiddenIds) ? res.hiddenIds : [] };
   } catch {
-    return [];
+    return { messages: [], hiddenIds: [] };
+  }
+}
+
+// "Delete for me": the message disappears from THIS person's chat only. Everyone else (and the sender) still has it.
+export async function hideMessageForMe(messageId: string): Promise<boolean> {
+  try {
+    const res = await rpc<{ success: boolean }>('hide_message_for_me', { p_message: messageId });
+    return !!res?.success;
+  } catch {
+    return false;
   }
 }
 
@@ -2689,9 +2759,16 @@ export function subscribeToChatChanges(onChange: () => void, onMessageDeleted?: 
     // Refresh once the connection is (re)established: anything that arrived while it was still opening
     // (or while it was down) would otherwise wait for the slow fallback refresh.
     .subscribe((status) => { if (status === 'SUBSCRIBED') fire(); });
+  // A message this person deleted for themselves on another device. Its OWN channel: if that table is not there yet (the database change has not been run), only this
+  // one stays quiet, and the main channel above is not affected.
+  const hidesChannel = supabase
+    .channel(`chat-hides-${crypto.randomUUID()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'message_hides' }, fire)
+    .subscribe();
   return () => {
     if (timer) clearTimeout(timer);
     supabase.removeChannel(channel);
+    supabase.removeChannel(hidesChannel);
   };
 }
 

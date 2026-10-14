@@ -45,10 +45,10 @@ pl = (await mails(ann, 'pro_upgraded'))[1].payload;
 check(pl.planName === 'Pro' && pl.perks.length === 3 + 2 + 2 && pl.billing === 'yearly' && pl.autoRenew === false, 'a higher plan lists everything from the plans below it too', JSON.stringify(pl.perks));
 
 section('2. The verification badge sends a receipt');
-const vic = await mkUser('vic', { points: 6_000_000_000, email: 'vic@example.com' });
+const vic = await mkUser('vic', { points: 60_000_000, email: 'vic@example.com' });
 await rpc(vic, 'verify_account', 'pw123456', 'points_monthly');
 ev = await mails(vic, 'verified_badge');
-check(ev.length === 1 && ev[0].payload.pricePaid === '5,000,000,000' && ev[0].payload.permanent === false && ev[0].payload.walletAfter === '1,000,000,000', 'monthly badge: price, balance and "not permanent"', JSON.stringify(ev[0]?.payload));
+check(ev.length === 1 && ev[0].payload.pricePaid === '50,000,000' && ev[0].payload.permanent === false && ev[0].payload.walletAfter === '10,000,000', 'monthly badge (50 million): price, balance and "not permanent"', JSON.stringify(ev[0]?.payload));
 await expectFail(() => rpc(vic, 'verify_account', 'pw123456', 'points_monthly'), /already verified/, 'a second purchase is still refused');
 
 // ============================================================================================================ 3. renewals

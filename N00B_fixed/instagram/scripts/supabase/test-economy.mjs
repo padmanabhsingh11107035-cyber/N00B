@@ -201,19 +201,19 @@ await expectFail(() => rpc(a, 'run_pro_renewals'), /permission denied/, 'a brows
 
 // =====================================================================================
 section('5. The verification badge');
-await resetPeople(); await setPts(a, 10_000_000_000_000); await setPts(b, 6_000_000_000);
+await resetPeople(); await setPts(a, 1_000_000_000); await setPts(b, 100_000_000);
 await expectFail(() => rpc(a, 'verify_account', 'wrong-pw', 'points_monthly'), /Invalid password/, 'the wrong password is refused');
 await expectFail(() => rpc(a, 'verify_account', '', 'points_monthly'), /Password is required/, 'no password is refused');
 await expectFail(() => rpc(a, 'verify_account', 'secret-pw', 'card'), /Invalid verification method/, 'paying by card is not an option');
-await expectFail(() => rpc(b, 'verify_account', 'secret-pw', 'points_permanent'), /Insufficient NOOB Points\. You have 6,000,000,000, but 10,000,000,000,000 points are required for permanent verification/, 'not enough points for the permanent badge');
-check((await pts(b)) === 6_000_000_000, 'nothing was charged for the refusals');
+await expectFail(() => rpc(b, 'verify_account', 'secret-pw', 'points_permanent'), /Insufficient NOOB Points\. You have 100,000,000, but 500,000,000 points are required for permanent verification/, 'not enough points for the permanent badge (it costs 500 million)');
+check((await pts(b)) === 100_000_000, 'nothing was charged for the refusals');
 const vb = await rpc(b, 'verify_account', 'secret-pw', 'points_monthly');
-check(vb.success && vb.user.isVerified === true && vb.user.verificationTier === 'premium' && vb.user.noobPoints === 1_000_000_000 && vb.message.includes('now officially verified'), 'the monthly badge costs 5 billion and verifies the account');
+check(vb.success && vb.user.isVerified === true && vb.user.verificationTier === 'premium' && vb.user.noobPoints === 50_000_000 && vb.message.includes('now officially verified'), 'the monthly badge costs 50 million and verifies the account');
 check((await txs(b)).at(-1).reason === 'Monthly verification badge', 'the wallet history says so');
 await expectFail(() => rpc(b, 'verify_account', 'secret-pw', 'points_monthly'), /already verified/, 'you can not pay twice for the badge');
 const dc = await rpc(admin, 'create_coupon', { title: 'Badge deal', discountPercent: 50 });
 const va = await rpc(a, 'verify_account', 'secret-pw', 'points_permanent', null, dc.coupon.code);
-check(va.user.isVerified && va.user.noobPoints === 10_000_000_000_000 - 5_000_000_000_000 && (await txs(a)).at(-1).reason === 'Permanent verification badge (50% off: ' + dc.coupon.code + ')', 'a discount coupon halves the permanent price');
+check(va.user.isVerified && va.user.noobPoints === 1_000_000_000 - 250_000_000 && (await txs(a)).at(-1).reason === 'Permanent verification badge (50% off: ' + dc.coupon.code + ')', 'a discount coupon halves the permanent price (500 million becomes 250 million)');
 await db.query(`update profiles set is_verified = false, verification_tier = null where id in ('${a}', '${b}')`);
 await expectFail(() => call(a, `update profiles set is_verified = true where id = $1`, [a]), /protected profile fields/, 'the badge can not be switched on through the table');
 // verification coupons
@@ -224,7 +224,7 @@ await expectFail(() => rpc(b, 'redeem_coupon_code', vc.coupon.code), /invalid, e
 await expectFail(() => rpc(b, 'verify_account', 'secret-pw', 'coupon', vc.coupon.code), /Invalid or expired verification coupon/, 'someone else can not use it');
 await expectFail(() => rpc(a, 'verify_account', 'secret-pw', 'coupon', 'WRONGCODE'), /Invalid or expired verification coupon/, 'a wrong code is refused');
 const vca = await rpc(a, 'verify_account', 'secret-pw', 'coupon', ' freebadgeverify ');
-check(vca.user.isVerified && vca.user.noobPoints === 5_000_000_000_000, 'the right person verifies for free, without spending points');
+check(vca.user.isVerified && vca.user.noobPoints === 750_000_000, 'the right person verifies for free, without spending points');
 check((await db.query('select active from coupons where id = $1', [vc.coupon.id])).rows[0].active === false, 'and the coupon is used up');
 await db.query(`update profiles set is_verified = false where id = $1`, [a]);
 await expectFail(() => rpc(a, 'verify_account', 'secret-pw', 'coupon', 'FREEBADGEVERIFY'), /Invalid or expired verification coupon/, 'it can not be used a second time');

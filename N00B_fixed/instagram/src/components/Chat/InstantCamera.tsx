@@ -111,7 +111,7 @@ export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClo
 
   if (sentId) {
     return (
-      <div className="fixed inset-0 z-[80] bg-black flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="fixed inset-0 z-[80] bg-black media-dark flex flex-col items-center justify-center gap-4 p-6 text-center">
         {photoUrl && <img src={photoUrl} alt="" className="w-40 h-40 rounded-3xl object-cover border border-zinc-700" />}
         <p className="text-white text-sm font-bold">Instant sent!</p>
         <p className="text-zinc-400 text-xs max-w-xs">
@@ -134,7 +134,7 @@ export const InstantCamera: React.FC<InstantCameraProps> = ({ currentUser, onClo
   }
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black flex flex-col">
+    <div className="fixed inset-0 z-[80] bg-black media-dark flex flex-col">
       <div className="flex items-center justify-between p-4 shrink-0">
         <button onClick={onClose} className="p-2 rounded-full bg-black/50 text-white cursor-pointer">
           <X className="w-5 h-5" />

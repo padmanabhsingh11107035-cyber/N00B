@@ -8,7 +8,8 @@ const KEY = 'noob_theme';
 // The strip above the app (the installed app's title bar, the phone's status bar) is the accent colour in both themes.
 const CHROME_COLOR = '#d97757';
 
-let memoryPreference: ThemePreference = 'system'; // used only if the browser blocks storage
+// Every device starts in Dark, whatever the device's own light/dark setting is. Light and System are there only if the person chooses them.
+let memoryPreference: ThemePreference = 'dark'; // used only if the browser blocks storage
 
 export function getThemePreference(): ThemePreference {
   try {
@@ -17,7 +18,7 @@ export function getThemePreference(): ThemePreference {
   } catch {
     return memoryPreference;
   }
-  return 'system';
+  return 'dark';
 }
 
 const systemPrefersDark = () =>

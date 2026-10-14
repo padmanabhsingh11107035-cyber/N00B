@@ -28,7 +28,7 @@ export const ALARM_SOUNDS: Array<{ id: AlarmSound; label: string }> = [
 
 const KEY = 'noob.study.prefs.v1';
 const voice = (rate = 0.95): VoicePref => ({ name: null, rate, pitch: 1 });
-export const DEFAULT_PREFS: StudyPrefs = { theme: 'system', chat: 'calm', aiVoice: voice(), studyVoice: voice(0.9), alarm: { sound: 'bell', volume: 0.7, speak: true, voice: voice(1) } };
+export const DEFAULT_PREFS: StudyPrefs = { theme: 'dark', chat: 'calm', aiVoice: voice(), studyVoice: voice(0.9), alarm: { sound: 'bell', volume: 0.7, speak: true, voice: voice(1) } };
 
 const num = (v: unknown, lo: number, hi: number, d: number): number => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 const cleanVoice = (v: any, d: VoicePref): VoicePref => ({ name: typeof v?.name === 'string' && v.name.length < 200 ? v.name : null, rate: num(v?.rate, 0.5, 1.6, d.rate), pitch: num(v?.pitch, 0.6, 1.6, d.pitch) });

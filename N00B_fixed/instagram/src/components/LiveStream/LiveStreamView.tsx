@@ -263,7 +263,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   if (phase === 'setup' && isIosStandalonePwa()) {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-4 text-center">
+      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center px-6 gap-4 text-center">
         <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
         <Camera className="w-10 h-10 text-white/40" />
         <h2 className="text-white text-base font-semibold">Open NOOB in Safari to go live</h2>
@@ -277,7 +277,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   if (phase === 'setup') {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 gap-5">
+      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center px-6 gap-5">
         <button onClick={onClose} className="absolute top-4 right-4 text-white/80"><X className="w-6 h-6" /></button>
         <Radio className="w-10 h-10 text-red-500" />
         <h2 className="text-white text-lg font-semibold">Go Live</h2>
@@ -319,7 +319,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   if (phase === 'connecting') {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center gap-3">
+      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center gap-3">
         <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
         <p className="text-white/70 text-sm">Connecting…</p>
       </div>
@@ -328,7 +328,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   if (phase === 'ended') {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-white text-base">{error || 'This stream has ended.'}</p>
         <button onClick={onClose} className="mt-2 bg-white/10 text-white rounded-full px-6 py-2 text-sm">Close</button>
       </div>
@@ -336,7 +336,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black media-dark flex items-center justify-center">
       <div className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black overflow-hidden">
         <div ref={videoRef} className="absolute inset-0 w-full h-full bg-neutral-950" />
 

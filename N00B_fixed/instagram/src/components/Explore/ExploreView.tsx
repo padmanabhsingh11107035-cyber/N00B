@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Search,
   Users,
@@ -35,6 +35,7 @@ import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
 import { POST_FILTERS } from '../../data/mockData';
 import { JoinUsModal } from './JoinUsModal';
 import { LazyVideo } from '../Common/LazyVideo';
+import { buildIndex, searchIndex, popularity } from '../../utils/searchEngine';
 
 // Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
 // exactly the kind of nagging that makes people distrust a permission prompt.
@@ -249,32 +250,40 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     }
   };
 
-  // Filter posts
-  const filteredPosts = shuffledPosts.filter((p) => {
-    const matchesSearch =
-      !searchQuery ||
-      (p.caption && p.caption.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.username && p.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.hashtags && p.hashtags.some((h) => h.toLowerCase().includes(searchQuery.toLowerCase())));
+  // Search works like a search engine, not like "the caption must contain exactly this": every word on its own, typing mistakes and word endings
+  // forgiven, related words found (music ~ songs), best match first (see utils/searchEngine.ts).
+  const searchWords = searchQuery.trim();
+  const postRanked = useMemo(() => {
+    if (!searchWords) return null;
+    const index = buildIndex<Post>(shuffledPosts.map((p) => ({
+      item: p,
+      boost: popularity({ views: 0, likes: p.likesCount, comments: p.commentsCount, createdAt: p.createdAt }),
+      fields: [{ text: p.caption || '', weight: 5 }, { text: (p.hashtags || []).join(' '), weight: 4 }, { text: p.username || '', weight: 3 }, { text: p.category || '', weight: 2 }]
+    })));
+    return searchIndex<Post>(searchWords, index).map((h) => h.item);
+  }, [shuffledPosts, searchWords]);
+  const reelRanked = useMemo(() => {
+    if (!searchWords) return null;
+    const index = buildIndex<Reel>(shuffledReels.map((r) => ({
+      item: r,
+      boost: popularity({ views: r.viewsCount, likes: r.likesCount, comments: r.commentsCount, createdAt: r.createdAt }),
+      fields: [{ text: r.caption || '', weight: 5 }, { text: r.audioTrackTitle || r.audioTrack?.title || '', weight: 4 }, { text: r.username || '', weight: 3 }]
+    })));
+    return searchIndex<Reel>(searchWords, index).map((h) => h.item);
+  }, [shuffledReels, searchWords]);
 
+  // Filter posts
+  const filteredPosts = (postRanked ?? shuffledPosts).filter((p) => {
     const matchesCategory =
       selectedCategory === 'All' ||
       p.category?.toLowerCase() === selectedCategory.toLowerCase() ||
       (p.hashtags && p.hashtags.some((h) => h.toLowerCase().includes(selectedCategory.toLowerCase())));
 
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   });
 
   // Filter reels
-  const filteredReels = shuffledReels.filter((r) => {
-    if (!searchQuery) return true;
-    return (
-      (r.caption && r.caption.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (r.username && r.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (r.audioTrackTitle && r.audioTrackTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (r.audioTrack?.title && r.audioTrack.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  });
+  const filteredReels = reelRanked ?? shuffledReels;
 
   // Active items count for pagination depending on tab
   const totalItemsCount =

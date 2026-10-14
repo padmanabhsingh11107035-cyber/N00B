@@ -183,7 +183,7 @@ export const ChatCallModal: React.FC<ChatCallModalProps> = ({ chatId, chatName, 
   }, [ringing, joined, error]);
 
   return (
-    <div className="fixed inset-0 z-[130] bg-black/95 backdrop-blur-md flex flex-col" role="dialog" aria-modal="true" aria-label={`Call in ${chatName}`}>
+    <div className="fixed inset-0 z-[130] bg-black/95 media-dark backdrop-blur-md flex flex-col" role="dialog" aria-modal="true" aria-label={`Call in ${chatName}`}>
       <header className="p-4 flex items-center justify-between border-b border-zinc-900 shrink-0">
         <div>
           <h3 className="text-sm font-black text-white">{chatName}</h3>

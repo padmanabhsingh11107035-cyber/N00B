@@ -21,7 +21,9 @@ import {
   EyeOff,
   CornerDownRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { Reel, User } from '../../types';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
@@ -53,6 +55,7 @@ import { SharePostSheet } from '../Common/SharePostSheet';
 import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
+import { getReelPlayer, releaseReelPlayer, getSoundPreference, setSoundPreference, playReel, unmuteInTap, onRealTap } from '../../utils/reelAudio';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 
 interface ToggleFollowResult {
@@ -93,7 +96,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   onNavigateToProfile
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  // Sound: on unless the person switched it off. `soundBlocked` = the browser refused sound (no real tap yet), so the reel plays silently and
+  // "Tap for sound" shows until the next real tap (see src/utils/reelAudio.ts for why).
+  const [soundWanted, setSoundWanted] = useState(() => getSoundPreference());
+  const [soundBlocked, setSoundBlocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isVideoBuffering, setIsVideoBuffering] = useState(true);
   const [videoFailed, setVideoFailed] = useState(false);
@@ -120,7 +126,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [commentAttachment, setCommentAttachment] = useState<CommentAttachment | null>(null);
   const [liveOverlay, setLiveOverlay] = useState<{ stream: LiveStreamSummary } | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   // Tapping a creator's name/avatar needs their full profile, which the reel itself only carries a
@@ -201,69 +207,109 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoFailed]);
 
-  // Actually drive the <video> element from isPlaying — previously this
-  // state only existed for the pause icon overlay and never touched
-  // playback, so tapping to pause did nothing.
+  // Every reel plays through ONE video element that lives for the whole session (see src/utils/reelAudio.ts): the phone gives the permission to
+  // make sound to that element, so once it has it, every reel can have sound without asking again.
+  const playerHostRef = useRef<HTMLDivElement>(null);
+  const hasReels = !!currentReel;
+  const soundBlockedRef = useRef(false);
+  const soundWantedRef = useRef(soundWanted);
+  soundWantedRef.current = soundWanted;
+  const tapUnmutedAtRef = useRef(0);
+  const setBlocked = (blocked: boolean) => {
+    soundBlockedRef.current = blocked;
+    setSoundBlocked(blocked);
+  };
+
+  // put the shared element on the page, and listen to it
+  useEffect(() => {
+    const host = playerHostRef.current;
+    if (!host) return;
+    const video = getReelPlayer();
+    host.appendChild(video);
+    videoRef.current = video;
+    const onWaiting = () => setIsVideoBuffering(true);
+    const onReady = () => setIsVideoBuffering(false);
+    const onError = (e: Event) => {
+      // A missing/corrupt file on our end, not a slow network — the buffering spinner would otherwise spin forever on a
+      // frozen black frame, which reads as "the app is broken" rather than "this one video can't be played."
+      if (!video.getAttribute('src')) return; // the element was just emptied between two reels
+      console.warn('Video failed to load source:', e);
+      setIsVideoBuffering(false);
+      setVideoFailed(true);
+    };
+    video.addEventListener('waiting', onWaiting);
+    video.addEventListener('playing', onReady);
+    video.addEventListener('canplay', onReady);
+    video.addEventListener('error', onError);
+    return () => {
+      video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('playing', onReady);
+      video.removeEventListener('canplay', onReady);
+      video.removeEventListener('error', onError);
+      videoRef.current = null;
+      releaseReelPlayer();
+    };
+  }, [hasReels]);
+
+  // a new reel: load it into the element
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !currentReel) return;
+    video.removeAttribute('src');
+    video.load();
+    if (currentReel.thumbnailUrl) video.poster = currentReel.thumbnailUrl;
+    else video.removeAttribute('poster');
+    video.src = currentReel.videoUrl;
+  }, [currentReel?.id]);
+
+  // play / pause: always asks for sound first, and plays silently when the browser refuses (so a reel never sits on a frozen frame)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (isPlaying) {
-      video.play().catch(() => {
-        // Browsers block autoplay WITH SOUND until the page has had a real
-        // user gesture — the very first reel someone sees can hit this
-        // before they've tapped anything, and used to just sit there
-        // frozen on a black frame forever (isPlaying said "true" but the
-        // element never actually started). Retry muted, which every
-        // browser allows unconditionally, so the reel always visibly
-        // plays. The listener below re-checks on every later tap/swipe
-        // (not just once), since each NEW reel is its own fresh <video>
-        // element and can independently hit this same block.
-        if (!video.muted) {
-          video.muted = true;
-          setIsMuted(true);
-          video.play().catch(() => {});
-        }
-      });
-    } else {
+    if (!isPlaying) {
       video.pause();
+      return;
     }
+    let live = true;
+    playReel(video, soundWantedRef.current).then((result) => {
+      if (!live) return;
+      if (result === 'sound') setBlocked(false);
+      else if (result === 'silent' && soundWantedRef.current) setBlocked(true);
+    });
+    return () => {
+      live = false;
+    };
   }, [isPlaying, currentReel?.id]);
 
-  // A real user gesture is required to unmute — but that permission doesn't
-  // reliably carry over to the NEXT reel's brand new <video> element (this
-  // used to only ever retry once per whole session, via a ref that got
-  // "used up" after the first reel — every reel after that, that also hit
-  // the autoplay-blocked path above, had nothing left to rescue it, which
-  // is exactly "every time it's muted"). This now gets one rescue attempt
-  // PER reel instead of once ever, triggered by the next gesture — a plain
-  // repeated play() on an element the browser already considers "playing"
-  // is often a no-op even when still silent, so this does an explicit
-  // pause-then-play, which is what actually re-evaluates the autoplay/mute
-  // policy (confirmed: manually pausing and resuming was the one thing
-  // that reliably brought sound back). Gated to fire at most once per
-  // reel (not every tap) so a reel whose sound is already fine never gets
-  // an unnecessary, visible pause/resume blip.
-  const rescuedReelIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const unlockAudio = () => {
-      const video = videoRef.current;
-      if (!video || !isPlaying || !currentReel) return;
-      if (!video.muted || rescuedReelIdRef.current === currentReel.id) return;
-      rescuedReelIdRef.current = currentReel.id;
-      video.muted = false;
-      setIsMuted(false);
-      video.pause();
-      video.play().catch(() => {
-        video.muted = true;
-        setIsMuted(true);
-      });
-    };
-    const events: (keyof DocumentEventMap)[] = ['pointerdown', 'touchstart', 'keydown'];
-    events.forEach((evt) => document.addEventListener(evt, unlockAudio));
-    return () => {
-      events.forEach((evt) => document.removeEventListener(evt, unlockAudio));
-    };
-  }, [isPlaying, currentReel]);
+  // While sound is refused, the next REAL tap (touchend / click / key, not touchstart or pointerdown) switches it on, right inside that tap.
+  useEffect(
+    () =>
+      onRealTap(() => {
+        const video = videoRef.current;
+        if (!video || !soundBlockedRef.current || !soundWantedRef.current) return;
+        tapUnmutedAtRef.current = Date.now();
+        unmuteInTap(video).then((on) => {
+          if (on) setBlocked(false);
+        });
+      }),
+    []
+  );
+
+  const toggleSound = () => {
+    if (soundWantedRef.current && Date.now() - tapUnmutedAtRef.current < 700) return; // this very tap already switched the sound on
+    const video = videoRef.current;
+    const next = !soundWanted;
+    setSoundWanted(next);
+    soundWantedRef.current = next;
+    setSoundPreference(next);
+    if (!video) return;
+    if (!next) {
+      video.muted = true;
+      setBlocked(false);
+      return;
+    }
+    unmuteInTap(video).then((on) => setBlocked(!on));
+  };
 
   // Load real comments for the currently-open reel instead of showing
   // static placeholder text.
@@ -321,6 +367,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const DOUBLE_TAP_MS = 280;
   const handleTap = () => {
     const now = Date.now();
+    if (now - tapUnmutedAtRef.current < 700) return; // this tap only switched the sound on
     if (pendingTapRef.current && now - lastTapAtRef.current < DOUBLE_TAP_MS) {
       clearTimeout(pendingTapRef.current);
       pendingTapRef.current = null;
@@ -554,7 +601,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   if (!currentReel || localReels.length === 0) {
     return (
-      <div className="fixed inset-0 z-30 bg-black flex flex-col items-center justify-center text-center px-4 pb-20">
+      <div className="fixed inset-0 z-30 bg-black media-dark flex flex-col items-center justify-center text-center px-4 pb-20">
         {onGoBack && (
           <button
             onClick={onGoBack}
@@ -582,7 +629,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         `calc(100vh-80px)` on a normally-flowing element only avoids the
         floating bottom nav if that element starts at y=0, which it doesn't
         here, so it still overlapped the nav until this switched to `fixed`. */}
-    <div className="fixed inset-0 z-30 bg-black flex items-center justify-center pb-20">
+    <div className="fixed inset-0 z-30 bg-black media-dark flex items-center justify-center pb-20">
       <div
         id="reels-page-container"
         className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
@@ -598,27 +645,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
       >
-        <video
-          key={currentReel.id}
-          ref={videoRef}
-          src={currentReel.videoUrl}
-          poster={currentReel.thumbnailUrl}
-          loop
-          playsInline
-          preload="auto"
-          muted={isMuted}
-          onError={(e) => {
-            // A missing/corrupt file on our end, not a slow network — the buffering spinner would otherwise spin forever on a
-            // frozen black frame, which reads as "the app is broken" rather than "this one video can't be played."
-            console.warn('Video failed to load source:', e);
-            setIsVideoBuffering(false);
-            setVideoFailed(true);
-          }}
-          onWaiting={() => setIsVideoBuffering(true)}
-          onPlaying={() => setIsVideoBuffering(false)}
-          onCanPlay={() => setIsVideoBuffering(false)}
-          className="w-full h-full object-cover"
-        />
+        <div ref={playerHostRef} className="absolute inset-0 w-full h-full" />
 
         {/* Buffering spinner — without this, a slow-loading video just looks
             frozen on a black frame, which reads as broken rather than loading. */}
@@ -708,6 +735,20 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             )}
           </div>
 
+          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSound();
+            }}
+            className="p-1.5 bg-black/60 rounded-full text-white/90 hover:text-white backdrop-blur-md cursor-pointer"
+            title={soundWanted && !soundBlocked ? 'Sound on' : 'Sound off'}
+            aria-label={soundWanted && !soundBlocked ? 'Turn sound off' : 'Turn sound on'}
+            data-testid="reel-sound-button"
+          >
+            {soundWanted && !soundBlocked ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
           {(isReelOwner || isMasterAdmin) && (
             <div className="relative">
               <button
@@ -785,7 +826,16 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               )}
             </div>
           )}
+          </div>
         </div>
+
+        {soundBlocked && soundWanted && (
+          <div className="absolute top-14 inset-x-0 z-30 flex justify-center pointer-events-none" data-testid="reel-tap-for-sound">
+            <span className="px-3 py-1.5 rounded-full bg-black/65 text-white text-xs font-bold backdrop-blur-md flex items-center gap-1.5">
+              <VolumeX className="w-3.5 h-3.5" /> Tap for sound
+            </span>
+          </div>
+        )}
 
         {/* Left Creator Overlay */}
         <div

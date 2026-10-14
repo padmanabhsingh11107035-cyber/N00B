@@ -403,6 +403,12 @@ export function translateNow(text: string): string {
   return res.text ?? text;
 }
 
+// Is this text one of the app's own texts (menus, buttons, messages)? The text translator for what people write leaves those to this engine.
+export function isAppText(text: string): boolean {
+  if (!index) return false;
+  try { return translateText(text, index, translations).id !== null; } catch { return false; }
+}
+
 export function languageName(code: string = lang): string {
   return findLanguage(code)?.name ?? 'English';
 }

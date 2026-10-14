@@ -3,7 +3,8 @@
 // can already change and nobody else can read: no database change is needed for it.
 import { supabase } from '../services/supabase';
 import { DEFAULT_LANGUAGE, findLanguage } from './languages.ts';
-import { getLanguage, setBackgroundFill, setLanguage } from './engine.ts';
+import { getLanguage, setBackgroundFill, setLanguage, subscribe } from './engine.ts';
+import { stopAutoTranslate, syncAutoTranslate } from './contentTranslator.ts';
 
 async function saveToAccount(code: string): Promise<void> {
   try {
@@ -44,6 +45,15 @@ export async function applyAccountLanguage(): Promise<void> {
 }
 
 // While someone is logged in, the translator keeps preparing the rest of the app in the background; when they log out it stops.
+let signedInNow = false;
+let followingLanguage = false;
 export function setSignedIn(signedIn: boolean): void {
+  signedInNow = signedIn;
   setBackgroundFill(signedIn);
+  // the Translator (what people wrote, shown in the person's language) runs only for someone who is logged in, and only if they switched it on
+  if (signedIn) syncAutoTranslate(getLanguage()); else stopAutoTranslate();
+  if (!followingLanguage) {
+    followingLanguage = true;
+    subscribe(() => { if (signedInNow) syncAutoTranslate(getLanguage()); });   // the language was changed: it follows (nothing happens when it is the same)
+  }
 }

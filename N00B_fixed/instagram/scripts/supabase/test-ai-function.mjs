@@ -207,7 +207,7 @@ check(/pin your exact location/.test(kb) && /drag the green pin/.test(kb) && /Tr
 const pages = ['FEED', 'EXPLORE', 'REELS', 'MUSIC HUB', 'CREATE', 'STORIES & HIGHLIGHTS', 'DIRECT CHAT', 'MINI-GAMES', 'PROFILE', 'ACCOUNT & SETTINGS', 'LANGUAGES', 'WALLET', 'NOOB PRO', 'VERIFIED BADGE', 'SHOP NOOB', 'CUSTOMER SUPPORT'];
 check(pages.every((x) => kb.includes(x)), 'it has a section for every page: ' + pages.filter((x) => !kb.includes(x)).join(', '));
 check(kb.includes('Bottom bar') || kb.includes('bottom bar'), 'it knows where the navigation is');
-check(/Starter 5,000,000,000/.test(kb) && /Ultimate 15,000,000,000/.test(kb) && /10,000,000,000,000/.test(kb), 'it knows the NOOB Pro prices and the verified-badge prices');
+check(/Starter 5,000,000,000/.test(kb) && /Ultimate 15,000,000,000/.test(kb) && /permanent badge 500,000,000 points/.test(kb) && /monthly badge 50,000,000 points/.test(kb) && !/10,000,000,000,000/.test(kb), 'it knows the NOOB Pro prices and the verified-badge prices (500 million for good, 50 million a month)');
 check(/Never tell a user to dial a phone number/.test(kb) && /Win = \+10,000,000 NOOB points/.test(kb), 'the older rules are still there (no phone hotline, the points values)');
 check(/If a fact is not listed above, say you are not sure/.test(kb), 'it is told not to invent facts it does not have');
 

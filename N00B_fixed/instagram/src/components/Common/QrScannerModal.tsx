@@ -72,7 +72,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onClose, onScann
   }, [facingMode]);
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black flex flex-col">
+    <div className="fixed inset-0 z-[90] bg-black media-dark flex flex-col">
       <div className="flex items-center justify-between p-4 shrink-0">
         <button onClick={onClose} className="p-2 rounded-full bg-black/50 text-white cursor-pointer" aria-label="Close">
           <X className="w-5 h-5" />

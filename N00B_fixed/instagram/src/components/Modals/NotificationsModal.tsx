@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { ShoppingBag, Phone, Lightbulb } from 'lucide-react';
 import { AppNotification, NotificationType, User } from '../../types';
+import { openNoobDraw } from '../Draw/drawStore';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { isNotificationSoundOn, setNotificationSoundOn } from '../../utils/notificationSound';
 
@@ -141,6 +142,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
   const renderIcon = (type: NotificationType) => {
     switch (type) {
+      case 'noob_draw_ready':
+        return <Gift className="w-3.5 h-3.5 text-pink-400" />;
       case 'admin_broadcast':
       case 'admin_direct':
         return <Shield className="w-3.5 h-3.5 text-noob" />;
@@ -340,7 +343,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     <div
                       key={notif.id}
                       onClick={() => {
-                        if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {
+                        if (notif.type === 'noob_draw_ready') {
+                          onClose();
+                          openNoobDraw();
+                        } else if ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) {
                           onOpenChat?.(notif.chatId);
                         } else if (notif.type === 'live_lounge_invite' && notif.message) {
                           onOpenLiveLoungeInvite?.(notif.message);
@@ -352,7 +358,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                         }
                       }}
                       className={`p-3 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                        ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername
+                        notif.type === 'noob_draw_ready' || ((notif.type === 'new_message' || notif.type === 'call_started') && notif.chatId) || (notif.type === 'live_lounge_invite' && notif.message) || (notif.type === 'live_lounge_meeting' && notif.message) || notif.senderUsername || notif.actorUsername
                           ? 'cursor-pointer'
                           : ''
                       } ${

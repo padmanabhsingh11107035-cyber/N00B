@@ -51,6 +51,14 @@ const tabStorage = {
   removeItem: (k: string) => { if (k === TAB_STORAGE_KEY) tabSessions.remove(); else tabKV.removeItem(k); }
 };
 
+// A throw-away login client: it keeps nothing in storage and never renews anything, so it can sign in to another of the person's accounts ("Switch account")
+// without touching the account this tab is using. The caller saves the login it gets (tabSessions.write) and the real client renews it from then on.
+export function createIsolatedClient() {
+  return createClient(url || 'http://localhost:54321', key || 'missing-key', {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `sb-noob-link-${Math.random().toString(36).slice(2)}` }
+  });
+}
+
 export const supabase = createClient(url || 'http://localhost:54321', key || 'missing-key', {
   // A rate-limited (or error-page) login renewal must not sign anyone out (see authFetch.ts); what happened is written to the
   // login recorder (authDiag.ts) so a sign-out can say why.

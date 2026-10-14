@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, KeyRound, Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
+import { siteOrigin } from '../../utils/siteUrl';
 
 // "Sign-in" page of the admin panel: one tab per "Continue with …" provider, each with every link needed to change it later
 // (the provider's own console, Supabase, copy-paste values, and what to do when something stops working).
@@ -37,10 +38,10 @@ const supabaseGroup = (provider: string): LinkGroup => ({
 });
 
 const publicPages: ValueItem[] = [
-  { label: 'Home page', value: 'https://nooob.xyz' },
-  { label: 'Privacy policy URL', value: 'https://nooob.xyz/privacy.html' },
-  { label: 'Terms of service URL', value: 'https://nooob.xyz/terms.html' },
-  { label: 'Data deletion instructions URL', value: 'https://nooob.xyz/data-deletion.html' }
+  { label: 'Home page', value: siteOrigin() },
+  { label: 'Privacy policy URL', value: `${siteOrigin()}/privacy.html` },
+  { label: 'Terms of service URL', value: `${siteOrigin()}/terms.html` },
+  { label: 'Data deletion instructions URL', value: `${siteOrigin()}/data-deletion.html` }
 ];
 
 const GUIDES: Guide[] = [
@@ -97,7 +98,7 @@ const GUIDES: Guide[] = [
     values: [
       { label: 'Facebook App ID (the Client ID in Supabase)', value: FACEBOOK_APP_ID },
       { label: 'Valid OAuth Redirect URI (Login settings)', value: CALLBACK_URL },
-      { label: 'App domain (Basic settings)', value: 'nooob.xyz' },
+      { label: 'App domain (Basic settings)', value: siteOrigin().replace(/^https?:\/\//, '') },
       ...publicPages
     ],
     fixes: [

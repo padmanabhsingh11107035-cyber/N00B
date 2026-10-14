@@ -36,5 +36,10 @@ let seen = 'unset';
 openInApp('https://example.com/a'); closeInApp();
 check(true, 'open and close do not crash');
 
+section('5. The new .com is NOOB too');
+check(shouldOpenInApp({ href: 'https://noobsocials.com/?profile=ann' }, 'nooob.xyz') === false && shouldOpenInApp({ href: 'https://www.noobsocials.com/' }, 'nooob.xyz') === false && shouldOpenInApp({ href: 'https://nooob.xyz/?post=1' }, 'noobsocials.com') === false, 'a link to either NOOB address opens the normal way, from either address');
+check(isFrameBlocked('https://noobsocials.com/x') && isFrameBlocked('https://www.noobsocials.com') && !isFrameBlocked('https://example.com'), 'and neither address is ever shown inside the in-app browser');
+check(shouldOpenInApp({ href: 'https://noobsocials.com.evil.io/' }, 'noobsocials.com') === true && shouldOpenInApp({ href: 'https://evilnoobsocials.com/' }, 'noobsocials.com') === true, 'look-alike addresses are other sites');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

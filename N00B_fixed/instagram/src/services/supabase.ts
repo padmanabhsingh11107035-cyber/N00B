@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { makePatientFetch } from './authFetch';
 import { recordDiag } from './authDiag';
 import { createTabSessions, type KV } from './tabSessions';
+import { mediaOrigin } from '../utils/siteUrl';
 
 // Public values — safe to ship to every browser (the publishable key only ever grants what the
 // database's row-level-security rules allow a logged-in or logged-out visitor to do).
@@ -102,8 +103,10 @@ export const MEDIA_BUCKET = 'media';
 // Worker is responding, not falling through to the app).
 export function resolveMedia(value?: string | null): string {
   if (!value) return '';
+  // inside the Android app the website's own /media/ route needs the full address (see utils/siteUrl.ts); on the website mediaOrigin() is empty
+  if (value.startsWith('/media/')) return mediaOrigin() + value;
   if (/^(https?:|data:|blob:|\/)/i.test(value)) return value;
-  return `/media/${value.split('/').map(encodeURIComponent).join('/')}`;
+  return `${mediaOrigin()}/media/${value.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 // The reverse: what to SAVE when a screen hands back a display address. Storing the short key (not the

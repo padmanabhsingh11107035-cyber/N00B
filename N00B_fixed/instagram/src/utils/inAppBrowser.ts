@@ -2,6 +2,7 @@
 // another browser tab. This file decides which clicks count, remembers which page is open, and knows the sites that refuse to be shown inside
 // another site (they get a clear "Open in browser" card instead of an empty frame).
 import { useSyncExternalStore } from 'react';
+import { SITE_DOMAINS } from './siteUrl.ts';
 
 // Sites that tell browsers "do not show me inside another site" (X-Frame-Options / frame-ancestors). A page cannot see that refusal, so the
 // well-known ones are listed here; anything else is tried, and every page keeps an "Open in browser" button.
@@ -19,13 +20,13 @@ export const hostOf = (url: string): string => {
 
 // NOOB's own website (with or without www). It forbids being shown inside any other page (X-Frame-Options, see public/_headers), so a link to it
 // must never be put in the in-app browser: it would be an empty white page. It is also never "another website" for this app.
-const NOOB_SITE = 'nooob.xyz';
+const isNoobSite = (host: string): boolean => SITE_DOMAINS.some((d) => host === d);   // every address of the website (see utils/siteUrl.ts)
 const bare = (host: string): string => host.toLowerCase().replace(/^www\./, '');
 
 // Is this a site that is known to refuse being shown inside another page?
 export function isFrameBlocked(url: string): boolean {
   const host = hostOf(url);
-  return !!host && (host === NOOB_SITE || NO_FRAME_HOSTS.some((h) => host === h || host.endsWith('.' + h)));
+  return !!host && (isNoobSite(host) || NO_FRAME_HOSTS.some((h) => host === h || host.endsWith('.' + h)));
 }
 
 export interface LinkClickLike {
@@ -47,7 +48,7 @@ export function shouldOpenInApp(link: LinkClickLike, ownHost: string): boolean {
     const url = new URL(link.href);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;     // mailto:, tel:, upi:, javascript: ... are never touched
     const host = bare(url.host);
-    return host !== bare(ownHost) && host !== NOOB_SITE;     // NOOB itself (also its www address) opens the normal way
+    return host !== bare(ownHost) && !isNoobSite(host);     // NOOB itself (also its www address) opens the normal way
   } catch {
     return false;
   }

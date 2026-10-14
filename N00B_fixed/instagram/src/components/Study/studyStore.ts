@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { siteOrigin } from '../../utils/siteUrl.ts';
 
 // NOOB STUDY's own small navigation: which screen is open, and the screens behind it (so Back goes where the student came from).
 // Opened from the Home menu; drawn once, by StudyHost (App.tsx). The student can always leave to the main NOOB app.
@@ -26,7 +27,7 @@ export const openStudy = (page = 'home', params: StudyParams = {}): void => set(
 export const closeStudy = (): void => set({ open: false, stack: [] });
 // "Back to NOOB": the NOOB app when studying inside it, the NOOB website when studying on the coaching address
 export const leaveStudy = (): void => {
-  if (isCoachingHost()) { try { window.location.href = 'https://nooob.xyz'; } catch { /* the student can still use the browser's own back button */ } return; }
+  if (isCoachingHost()) { try { window.location.href = siteOrigin(); } catch { /* the student can still use the browser's own back button */ } return; }
   closeStudy();
 };
 // Move to another screen. A top-level screen (a tab) replaces the stack; any other screen is put on top of it.

@@ -82,7 +82,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
           setPushState('on');
           onUserUpdated?.({ ...currentUser, pushSubscription: result.subscription });
         } else if (result.status === 'denied') {
-          setNotifMessage('Notifications are blocked for this site. Tap the lock icon next to the address, allow Notifications for nooob.xyz, then try again.');
+          setNotifMessage('Notifications are blocked for this site. Tap the lock icon next to the address, allow Notifications for ' + window.location.hostname + ', then try again.');
         } else if (result.status === 'unsupported') {
           setNotifMessage(result.message || 'This browser cannot show notifications.');
         } else if (result.status === 'error') {

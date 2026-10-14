@@ -9,6 +9,10 @@
 //   * The native app build: needs its own push setup, which is not part of the website's notifications.
 // Pure function over a description of the environment, so it can be tested with real user-agent strings.
 
+import { MAIN_SITE } from './siteUrl.ts';
+
+const SITE_HOST = MAIN_SITE.replace(/^https?:\/\//, '');   // the website's main address, as people type it
+
 export interface PushEnv {
   userAgent: string;
   platform?: string;
@@ -34,12 +38,12 @@ export function checkPushSupport(env: PushEnv): PushSupport {
     return {
       supported: false,
       kind: 'native-app',
-      message: 'Notifications are not set up for the NOOB app yet. Open nooob.xyz in Chrome (Android) or Safari (iPhone) to get notifications.'
+      message: 'Notifications are not set up for the NOOB app yet. Open ' + SITE_HOST + ' in Chrome (Android) or Safari (iPhone) to get notifications.'
     };
   }
   if (env.hasNotification && env.hasServiceWorker && env.hasPushManager) {
     if (env.secure === false) {
-      return { supported: false, kind: 'insecure', message: 'Notifications only work on the secure address https://nooob.xyz.' };
+      return { supported: false, kind: 'insecure', message: 'Notifications only work on the secure address ' + MAIN_SITE + '.' };
     }
     return { supported: true };
   }
@@ -49,7 +53,7 @@ export function checkPushSupport(env: PushEnv): PushSupport {
       supported: false,
       kind: 'in-app-browser',
       message:
-        'This in-app browser cannot show notifications. Open nooob.xyz in Chrome (or in Safari on iPhone) and turn them on there.' +
+        'This in-app browser cannot show notifications. Open ' + SITE_HOST + ' in Chrome (or in Safari on iPhone) and turn them on there.' +
         (isIos(env) ? ' On iPhone, then tap Share, Add to Home Screen, and open NOOB from that icon.' : '')
     };
   }

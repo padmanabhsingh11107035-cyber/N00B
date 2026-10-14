@@ -16,16 +16,19 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
   const [removingId, setRemovingId] = useState<string | null>(null); // tap once to arm, tap again to confirm
   const currentId = tabSessions.currentAccount();
   const [linked, setLinked] = useState<LinkedAccount[]>([]);
+  const [linkedState, setLinkedState] = useState<'loading' | 'ok' | 'missing' | 'error'>('loading');
   const [opening, setOpening] = useState<string | null>(null);   // the linked account whose password is being asked
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     let live = true;
-    fetchLinkedAccounts().then((rows) => { if (live) setLinked(rows); });
+    setLinkedState('loading');
+    fetchLinkedAccounts().then((res) => { if (live) { setLinked(res.accounts); setLinkedState(res.state); } });
     return () => { live = false; };
-  }, []);
+  }, [retry]);
   // the other accounts that are not on this device yet
   const notYet = linked.filter((l) => !accounts.some((a) => a.id === l.id));
 
@@ -137,7 +140,20 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
           })}
           {accounts.length === 0 && <p className="text-center text-xs text-zinc-500 py-6">No saved accounts on this browser.</p>}
 
-          {notYet.length > 0 && (
+          {linkedState !== 'ok' || notYet.length === 0 ? (
+            <div className="pt-3" data-testid="linked-accounts-status">
+              <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-500">Your other accounts</p>
+              <p className="px-1 pt-1 text-[11px] text-zinc-500" role="status">
+                {linkedState === 'loading' && 'Looking for your other accounts…'}
+                {linkedState === 'ok' && (linked.length > 0 ? 'All your other accounts are already on this device.' : 'No other account uses the same email address or mobile number as this one.')}
+                {linkedState === 'missing' && 'Finding your other accounts is not switched on yet.'}
+                {linkedState === 'error' && 'Could not look up your other accounts right now.'}
+              </p>
+              {(linkedState === 'error' || linkedState === 'missing') && (
+                <button type="button" onClick={() => setRetry((n) => n + 1)} className="mt-1.5 px-1 text-[11px] font-bold text-cyan-300 hover:text-cyan-200 cursor-pointer">Try again</button>
+              )}
+            </div>
+          ) : (
             <div className="pt-3 space-y-1.5" data-testid="linked-accounts">
               <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-zinc-500">Your other accounts</p>
               <p className="px-1 pb-1 text-[11px] text-zinc-500">These use the same email address or mobile number. You enter the password only the first time; after that this device remembers the account.</p>

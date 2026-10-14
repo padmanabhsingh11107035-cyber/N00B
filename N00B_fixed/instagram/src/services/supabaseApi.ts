@@ -554,15 +554,20 @@ export async function loginUser(payload: {
 export interface LinkedAccount { id: string; username: string; displayName: string; avatar: string; isVerified: boolean }
 
 // The other accounts that share this account's email address or mobile number (public details only; signing in to one still needs its password).
-export async function fetchLinkedAccounts(): Promise<LinkedAccount[]> {
+// `state` says what happened, so the screen can tell the person instead of showing nothing: 'ok' (the list, maybe empty), 'missing' (the database function is not
+// installed yet) or 'error' (it could not be asked right now).
+export async function fetchLinkedAccounts(): Promise<{ accounts: LinkedAccount[]; state: 'ok' | 'missing' | 'error' }> {
   try {
-    if (!(await currentSession())) return [];
+    if (!(await currentSession())) return { accounts: [], state: 'error' };
     const rows = await rpc<any[]>('my_linked_accounts');
-    return (Array.isArray(rows) ? rows : [])
+    const accounts = (Array.isArray(rows) ? rows : [])
       .filter((r) => r && typeof r.id === 'string' && typeof r.username === 'string')
       .map((r) => ({ id: r.id, username: r.username, displayName: r.displayName || r.username, avatar: resolveMedia(r.avatar || ''), isVerified: !!r.isVerified }));
-  } catch {
-    return [];
+    return { accounts, state: 'ok' };
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code;
+    const text = err instanceof Error ? err.message : '';
+    return { accounts: [], state: code === 'PGRST202' || code === '42883' || /could not find the function|does not exist/i.test(text) ? 'missing' : 'error' };
   }
 }
 

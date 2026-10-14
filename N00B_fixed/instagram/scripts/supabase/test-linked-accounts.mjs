@@ -91,5 +91,30 @@ check(/keys\.ensure\(session\.user\.id, password\)/.test(fn), 'chat keys are pic
 const tabs = fs.readFileSync('src/services/tabSessions.ts', 'utf8');
 check(/if \(!mine \|\| !hasSlot\(mine\) \|\| mine === id\) bind\(id\);/.test(tabs), 'saving the new login does not move this tab away from its account');
 
+section('5. Similar-looking emails are the same mailbox');
+check((await db.query(`select public.link_email_key('A.B+shop@Gmail.com') a, public.link_email_key('ab@googlemail.com') b, public.link_email_key('  Raj.K+x@Yahoo.com ') c, public.link_email_key('nobody') d, public.link_email_key(null) e`)).rows
+  .every((r) => r.a === 'ab@gmail.com' && r.b === 'ab@gmail.com' && r.c === 'raj.k@yahoo.com' && r.d === '' && r.e === ''), 'a.b+shop@Gmail.com and ab@googlemail.com are one mailbox; dots still count outside Gmail; a missing email is nothing');
+{
+  const g1 = await mkUser('g_main', { email: 'raj.kumar@gmail.com', mobile: '7000000001' });
+  const g2 = await mkUser('g_dots', { email: 'rajkumar@gmail.com', mobile: '7000000002' });
+  const g3 = await mkUser('g_plus', { email: 'Raj.Kumar+shop@gmail.com', mobile: '7000000003' });
+  const g4 = await mkUser('y_dots', { email: 'raj.kumar@yahoo.com', mobile: '7000000004' });
+  const y1 = await mkUser('y_main', { email: 'sam.lee@yahoo.com', mobile: '7000000005' });
+  const y2 = await mkUser('y_nodots', { email: 'samlee@yahoo.com', mobile: '7000000006' });
+  const l = await rpc(g1, 'my_linked_accounts');
+  check(names(l) === 'g_dots,g_plus', 'Gmail with other dots, or with a +tag, is linked (and a different provider is not)', names(l));
+  check((await rpc(y1, 'my_linked_accounts')).length === 0, 'outside Gmail the dots are part of the name, so those are different mailboxes');
+  void g4; void y2;
+}
+
+section('6. The screen says what is going on');
+{
+  const swm = fs.readFileSync('src/components/Modals/SwitchAccountModal.tsx', 'utf8').split(String.fromCharCode(13)).join('');
+  check(/Looking for your other accounts…/.test(swm) && /No other account uses the same email address or mobile number as this one\./.test(swm), 'while looking, and when there is none, it says so (it used to show nothing)');
+  check(/Finding your other accounts is not switched on yet\./.test(swm) && /Could not look up your other accounts right now\./.test(swm) && /setRetry\(\(n\) => n \+ 1\)/.test(swm), 'when the database part is missing or the call fails, it says so and offers "Try again"');
+  const api2 = fs.readFileSync('src/services/supabaseApi.ts', 'utf8').split(String.fromCharCode(13)).join('');
+  check(/state: 'ok' \| 'missing' \| 'error'/.test(api2) && /PGRST202/.test(api2), 'a missing function (PGRST202) is told apart from a network error');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

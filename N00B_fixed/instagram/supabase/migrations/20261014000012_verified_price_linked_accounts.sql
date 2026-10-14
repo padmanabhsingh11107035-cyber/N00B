@@ -74,13 +74,25 @@ language sql stable as $$
   select jsonb_build_object('permanent', public.verify_badge_price('points_permanent'), 'monthly', public.verify_badge_price('points_monthly'));
 $$;
 
--- Other accounts of the same person: the same email address OR the same mobile number (the last 10 digits, so +91 and spaces do not matter).
+-- An email address reduced to what really identifies the mailbox, so similar spellings match: capital letters, and a +tag after the name, do not matter, and for Gmail
+-- the dots in the name do not either (a.b+shop@gmail.com is ab@gmail.com).
+create or replace function public.link_email_key(p text) returns text
+language sql immutable as $$
+  select case
+    when position('@' in coalesce(p, '')) = 0 then ''
+    when lower(split_part(btrim(p), '@', 2)) in ('gmail.com', 'googlemail.com')
+      then replace(split_part(lower(split_part(btrim(p), '@', 1)), '+', 1), '.', '') || '@gmail.com'
+    else split_part(lower(split_part(btrim(p), '@', 1)), '+', 1) || '@' || lower(split_part(btrim(p), '@', 2))
+  end;
+$$;
+
+-- Other accounts of the same person: the same (or a similar-looking) email address OR the same mobile number (the last 10 digits, so +91 and spaces do not matter).
 -- Only what is already public is returned (id, name, picture, tick). Suspended accounts are left out. Signing in to one still needs its password.
 create or replace function public.my_linked_accounts() returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare me uuid := public.acting_user(); em text; ph text;
 begin
-  select lower(btrim(coalesce(pp.email, ''))),
+  select public.link_email_key(pp.email),
          case when length(regexp_replace(coalesce(pp.mobile_number, ''), '\D', '', 'g')) >= 7
               then right(regexp_replace(coalesce(pp.mobile_number, ''), '\D', '', 'g'), 10) else '' end
     into em, ph
@@ -90,13 +102,15 @@ begin
     select jsonb_agg(jsonb_build_object('id', p.id, 'username', p.username, 'displayName', p.display_name, 'avatar', p.avatar, 'isVerified', p.is_verified) order by p.username)
     from public.profiles p join public.profile_private pp on pp.user_id = p.id
     where p.id <> me and not p.is_suspended and not p.is_ai
-      and ((em <> '' and lower(btrim(coalesce(pp.email, ''))) = em)
+      and ((em <> '' and public.link_email_key(pp.email) = em)
         or (ph <> '' and length(regexp_replace(coalesce(pp.mobile_number, ''), '\D', '', 'g')) >= 7
             and right(regexp_replace(coalesce(pp.mobile_number, ''), '\D', '', 'g'), 10) = ph))
   ), '[]'::jsonb);
 end;
 $$;
 
+revoke all on function public.link_email_key(text) from public, anon;
+grant execute on function public.link_email_key(text) to authenticated;
 revoke all on function public.verify_badge_price(text) from public, anon;
 grant execute on function public.verify_badge_price(text) to authenticated;
 revoke all on function public.verify_badge_prices() from public, anon;

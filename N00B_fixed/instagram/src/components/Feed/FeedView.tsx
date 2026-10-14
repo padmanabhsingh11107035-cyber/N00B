@@ -42,6 +42,8 @@ import type { StoryTrayModel } from '../../utils/storyTray';
 import { PinnedFeedSection } from './PinnedFeedSection';
 import { usePinnedFeedItems, refreshPinnedFeed } from '../../services/pinnedFeed';
 import { PostCard } from './PostCard';
+import { holdSongs } from '../../utils/songSound';
+import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { CommentsSheet } from './CommentsSheet';
 import { FeedVideoWatchView } from './FeedVideoWatchView';
 import { SparkXApplicationModal } from './SparkXApplicationModal';
@@ -162,6 +164,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [watchVideoPost, setWatchVideoPost] = useState<Post | null>(null);
+  // the songs on posts stay quiet while the full video page or the Music player makes its own sound
+  const { isPlaying: musicPlaying } = useMusicPlayer();
+  useEffect(() => (watchVideoPost || musicPlaying ? holdSongs() : undefined), [watchVideoPost, musicPlaying]);
   const [hiddenAdIds, setHiddenAdIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);

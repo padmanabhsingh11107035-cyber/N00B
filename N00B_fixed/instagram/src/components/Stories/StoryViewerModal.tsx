@@ -13,6 +13,7 @@ import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
+import { holdSongs } from '../../utils/songSound';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -206,6 +207,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // mute toggle and press-to-pause gesture (same isMuted/isPaused this file already drives the
   // video element with).
   const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => holdSongs(), []);   // the songs of posts / reels behind the story stay quiet while it is open
   useEffect(() => {
     const url = story?.stickers?.find((s) => s.type === 'music')?.data?.audioUrl;
     if (!url) return;

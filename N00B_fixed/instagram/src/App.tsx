@@ -74,6 +74,7 @@ import { IncomingCallModal } from './components/Chat/IncomingCallModal';
 import { useIncomingCalls } from './components/Chat/useIncomingCalls';
 import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
+import { armSongPlayer } from './utils/songSound';
 import { takeRestorePage } from './utils/pageResume';
 import { buildStoryTray, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -255,7 +256,7 @@ export default function App() {
     const fresh = list.some((n) => !n.isRead && !known.has(String(n.id)));
     if (fresh && notificationSettingsRef.current.masterEnabled && document.visibilityState === 'visible') playNotificationSound('notification');
   };
-  useEffect(() => { armNotificationSound(); }, []);
+  useEffect(() => { armNotificationSound(); armSongPlayer(); }, []);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsState>({
     masterEnabled: true,
     followRequests: true,

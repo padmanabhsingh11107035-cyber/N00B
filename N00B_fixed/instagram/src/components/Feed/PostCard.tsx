@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
@@ -20,7 +20,8 @@ import {
   EyeOff,
   Trash2,
   Link2,
-  Pause,
+  VolumeX,
+  Music,
   Maximize2
 } from 'lucide-react';
 import { Post, User } from '../../types';
@@ -37,6 +38,7 @@ import { AvatarMedia } from '../Common/AvatarMedia';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { POST_FILTERS } from '../../data/mockData';
+import { reportSongVisibility, forgetSong, holdSongs, toggleFeedSound, subscribeFeedSong, getFeedSongView } from '../../utils/songSound';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -123,23 +125,17 @@ export const PostCard: React.FC<PostCardProps> = ({
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
   const [showTagPill, setShowTagPill] = useState(false);
-  const [isAudioTrackPlaying, setIsAudioTrackPlaying] = useState(false);
-  const audioTrackPlayerRef = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => () => { audioTrackPlayerRef.current?.pause(); }, []);
-  const toggleAudioTrackPreview = () => {
-    if (!post.audioTrack?.audioUrl) return;
-    if (isAudioTrackPlaying) {
-      audioTrackPlayerRef.current?.pause();
-      setIsAudioTrackPlaying(false);
-      return;
-    }
-    const audio = audioTrackPlayerRef.current || new Audio();
-    audio.src = post.audioTrack.audioUrl;
-    audio.onended = () => setIsAudioTrackPlaying(false);
-    audio.play().catch(() => setIsAudioTrackPlaying(false));
-    audioTrackPlayerRef.current = audio;
-    setIsAudioTrackPlaying(true);
-  };
+  // The song attached to this post plays by itself, with sound, while the post is on screen (see src/utils/songSound.ts), like Instagram.
+  // The speaker button (and the song tag under the picture) turns song sound off and on.
+  const songUrl = post.audioTrack?.audioUrl || '';
+  const feedSong = useSyncExternalStore(subscribeFeedSong, getFeedSongView, getFeedSongView);
+  const songActive = !!songUrl && feedSong.activeId === post.id;
+  const songHeard = songActive && feedSong.soundOn && !feedSong.blocked;
+  const songNeedsTap = songActive && feedSong.soundOn && feedSong.blocked;
+  const speakerOn = feedSong.soundOn && !songNeedsTap;
+  // somebody turned the volume of the post's own video up: the song steps aside
+  const [videoUnmuted, setVideoUnmuted] = useState(false);
+  useEffect(() => (videoUnmuted && songUrl ? holdSongs() : undefined), [videoUnmuted, songUrl]);
 
   // The whole picture, never a hard crop — like Instagram's feed: the box takes the shape of whatever was uploaded, only nudged
   // toward its 4:5 (portrait) / 1.91:1 (landscape) limits when a picture is more extreme than that. 4:5 while the real shape isn't
@@ -219,6 +215,25 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => observer.disconnect();
   }, [post.id]);
   useScreenshotAlert('post', post.id, isInView && !isOwner);
+
+  // Tell the song player how much of this post fills the screen: the post that fills it most plays its song, and none plays when none does.
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!songUrl || !el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const e = entries[entries.length - 1];
+        const room = Math.min(e.boundingClientRect.height, e.rootBounds?.height || window.innerHeight) || 1;
+        reportSongVisibility(post.id, songUrl, e.intersectionRect.height / room);
+      },
+      { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] }
+    );
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      forgetSong(post.id);
+    };
+  }, [post.id, songUrl]);
 
   // Only the current slide's <img> is ever mounted, so switching slides used
   // to mean a fresh network fetch on every arrow click, with the old image
@@ -539,6 +554,9 @@ export const PostCard: React.FC<PostCardProps> = ({
               playsInline
               preload="metadata"
               autoPlay={isInView}
+              onPlay={(e) => setVideoUnmuted(!e.currentTarget.muted)}
+              onPause={() => setVideoUnmuted(false)}
+              onVolumeChange={(e) => setVideoUnmuted(!e.currentTarget.muted && !e.currentTarget.paused)}
               onLoadedMetadata={(e) => {
                 const video = e.currentTarget;
                 if (video.videoWidth && video.videoHeight) setSlideAspect(video.videoWidth / video.videoHeight);
@@ -558,6 +576,26 @@ export const PostCard: React.FC<PostCardProps> = ({
                 if (img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
               }}
             />
+          )}
+
+          {/* The attached song: a speaker button on the picture (like Instagram) and, if the phone wants a tap first, a "Tap for sound" hint. */}
+          {songUrl && (
+            <button
+              type="button"
+              data-testid="post-sound-button"
+              onClick={(e) => { e.stopPropagation(); toggleFeedSound(); }}
+              onDoubleClick={(e) => e.stopPropagation()}
+              title={speakerOn ? 'Sound on' : 'Sound off'}
+              aria-label={speakerOn ? 'Turn sound off' : 'Turn sound on'}
+              className="absolute bottom-3 left-3 z-20 p-2 rounded-full bg-black/70 hover:bg-black text-white backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
+            >
+              {speakerOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+          )}
+          {songNeedsTap && (
+            <div data-testid="post-tap-for-sound" className="absolute bottom-3 left-14 z-20 pointer-events-none px-2.5 py-1 rounded-full bg-black/70 text-white text-[10px] font-bold backdrop-blur-md border border-white/10">
+              Tap for sound
+            </div>
           )}
 
           {/* Opens the full YouTube-style watch page (like/dislike/comments/share/save/playlist/
@@ -962,10 +1000,11 @@ export const PostCard: React.FC<PostCardProps> = ({
         {post.audioTrack && (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); toggleAudioTrackPreview(); }}
+            data-testid="post-song-tag"
+            onClick={(e) => { e.stopPropagation(); if (songUrl) toggleFeedSound(); }}
             className="flex items-center gap-1.5 text-[10px] text-zinc-400 mt-2 bg-zinc-900/80 hover:bg-zinc-800 rounded-full px-2.5 py-1 w-fit border border-white/5 cursor-pointer transition-colors"
           >
-            {isAudioTrackPlaying ? <Pause className="w-3 h-3 text-noob" /> : <Volume2 className="w-3 h-3 text-noob animate-pulse" />}
+            {!songUrl ? <Music className="w-3 h-3 text-noob" /> : speakerOn ? <Volume2 className={`w-3 h-3 text-noob ${songHeard ? 'animate-pulse' : ''}`} /> : <VolumeX className="w-3 h-3 text-noob" />}
             <span className="truncate max-w-[220px]">
               {post.audioTrack.title}{post.audioTrack.artist ? ` · ${post.audioTrack.artist}` : ''}
             </span>

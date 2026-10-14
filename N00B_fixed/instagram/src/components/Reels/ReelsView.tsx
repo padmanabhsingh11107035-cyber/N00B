@@ -56,6 +56,7 @@ import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { getReelPlayer, releaseReelPlayer, getSoundPreference, setSoundPreference, playReel, unmuteInTap, onRealTap } from '../../utils/reelAudio';
+import { getSongPlayer, loadSong, pauseSong, stopSong } from '../../utils/songSound';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 
 interface ToggleFollowResult {
@@ -215,6 +216,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const soundWantedRef = useRef(soundWanted);
   soundWantedRef.current = soundWanted;
   const tapUnmutedAtRef = useRef(0);
+  // The song attached to this reel (a NOOB Songs pick or a recording) is its sound: the picture plays silently and the song plays in its place, from the
+  // start, starting over each time the video loops (see src/utils/songSound.ts). A reel with no song just plays its own sound.
+  const songUrl = currentReel?.audioTrack?.audioUrl || '';
+  const songUrlRef = useRef('');
+  songUrlRef.current = songUrl;
   const setBlocked = (blocked: boolean) => {
     soundBlockedRef.current = blocked;
     setSoundBlocked(blocked);
@@ -241,7 +247,16 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     video.addEventListener('playing', onReady);
     video.addEventListener('canplay', onReady);
     video.addEventListener('error', onError);
+    let lastTime = 0;
+    const onTime = () => {
+      const t = video.currentTime;
+      if (songUrlRef.current && t + 0.4 < lastTime) loadSong(songUrlRef.current, true);   // the video started over: so does its song
+      lastTime = t;
+    };
+    video.addEventListener('timeupdate', onTime);
     return () => {
+      video.removeEventListener('timeupdate', onTime);
+      stopSong();
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('playing', onReady);
       video.removeEventListener('canplay', onReady);
@@ -266,16 +281,36 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    const withSong = !!songUrl;
     if (!isPlaying) {
       video.pause();
+      if (withSong) pauseSong();
       return;
     }
     let live = true;
-    playReel(video, soundWantedRef.current).then((result) => {
-      if (!live) return;
-      if (result === 'sound') setBlocked(false);
-      else if (result === 'silent' && soundWantedRef.current) setBlocked(true);
-    });
+    const startVideoSound = () =>
+      playReel(video, soundWantedRef.current).then((result) => {
+        if (!live) return;
+        if (result === 'sound') setBlocked(false);
+        else if (result === 'silent' && soundWantedRef.current) setBlocked(true);
+      });
+    if (withSong) {
+      // the picture plays silently; the song is the sound (or asks for a tap, like a video does)
+      const song = loadSong(songUrl);
+      void playReel(video, false);
+      playReel(song, soundWantedRef.current).then((result) => {
+        if (!live) return;
+        if (result === 'sound') setBlocked(false);
+        else if (result === 'silent' && soundWantedRef.current) setBlocked(true);
+        else if (result === 'failed') {
+          stopSong();   // the song file cannot be played: fall back to the video's own sound
+          void startVideoSound();
+        }
+      });
+    } else {
+      stopSong();
+      void startVideoSound();
+    }
     return () => {
       live = false;
     };
@@ -285,10 +320,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   useEffect(
     () =>
       onRealTap(() => {
-        const video = videoRef.current;
-        if (!video || !soundBlockedRef.current || !soundWantedRef.current) return;
+        const target = songUrlRef.current ? getSongPlayer() : videoRef.current;
+        if (!target || !soundBlockedRef.current || !soundWantedRef.current) return;
         tapUnmutedAtRef.current = Date.now();
-        unmuteInTap(video).then((on) => {
+        unmuteInTap(target).then((on) => {
           if (on) setBlocked(false);
         });
       }),
@@ -303,12 +338,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     soundWantedRef.current = next;
     setSoundPreference(next);
     if (!video) return;
+    const target = songUrlRef.current ? getSongPlayer() : video;   // a reel with a song: the song is what the speaker button controls
     if (!next) {
-      video.muted = true;
+      target.muted = true;
       setBlocked(false);
       return;
     }
-    unmuteInTap(video).then((on) => setBlocked(!on));
+    unmuteInTap(target).then((on) => setBlocked(!on));
   };
 
   // Load real comments for the currently-open reel instead of showing

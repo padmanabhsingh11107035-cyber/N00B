@@ -10,6 +10,7 @@ import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
+import { mediaOrigin } from '../utils/siteUrl';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
@@ -75,9 +76,25 @@ function mapUser<U extends Partial<User> | null | undefined>(u: U): U {
   return out;
 }
 
+// The song attached to a post / reel: its address works inside the Android app too, and the cover shows.
+function mapAudioTrack(a: any): any {
+  if (!a || typeof a !== 'object') return a;
+  return { ...a, audioUrl: a.audioUrl ? resolveMedia(a.audioUrl) : a.audioUrl, coverUrl: a.coverUrl ? resolveMedia(a.coverUrl) : a.coverUrl };
+}
+// ...and when saved, the address is kept without the website's name in it ("/media/..."), so a change of address never breaks old posts.
+const withoutSiteName = (u?: string): string | undefined => {
+  const origin = mediaOrigin();
+  return u && origin && u.startsWith(origin + '/media/') ? u.slice(origin.length) : u;
+};
+function storedAudioTrack(a: any): any {
+  if (!a || typeof a !== 'object') return a ?? null;
+  return { ...a, audioUrl: withoutSiteName(a.audioUrl), coverUrl: withoutSiteName(a.coverUrl) };
+}
+
 function mapPost(p: any): Post {
   return {
     ...p,
+    audioTrack: mapAudioTrack(p.audioTrack),
     userAvatar: resolveMedia(p.userAvatar),
     authorLiveAvatarVideoUrl: p.authorLiveAvatarVideoUrl ? resolveMedia(p.authorLiveAvatarVideoUrl) : p.authorLiveAvatarVideoUrl,
     slides: (p.slides || []).map((s: any) => ({ ...s, mediaUrl: resolveMedia(s.mediaUrl) }))
@@ -1097,7 +1114,7 @@ export async function createPost(postData: Partial<Post>): Promise<Post> {
       p_caption: postData.caption || '',
       p_category: postData.category || 'tech',
       p_hashtags: postData.hashtags || [],
-      p_audio: postData.audioTrack ?? null,
+      p_audio: storedAudioTrack(postData.audioTrack),
       p_web_link: postData.webLink || null
     });
     return mapPost(post);
@@ -1686,9 +1703,7 @@ function mapReel(r: any): Reel {
     authorLiveAvatarVideoUrl: r.authorLiveAvatarVideoUrl ? resolveMedia(r.authorLiveAvatarVideoUrl) : r.authorLiveAvatarVideoUrl,
     videoUrl: resolveMedia(r.videoUrl),
     thumbnailUrl: resolveMedia(r.thumbnailUrl),
-    audioTrack: r.audioTrack
-      ? { ...r.audioTrack, coverUrl: r.audioTrack.coverUrl ? resolveMedia(r.audioTrack.coverUrl) : r.audioTrack.coverUrl }
-      : r.audioTrack
+    audioTrack: mapAudioTrack(r.audioTrack)
   };
 }
 
@@ -2107,7 +2122,7 @@ export async function createReel(reelData: Partial<Reel>): Promise<Reel> {
       p_video_url: toStoredMedia(reelData.videoUrl),
       p_thumbnail_url: toStoredMedia(reelData.thumbnailUrl),
       p_caption: reelData.caption || '',
-      p_audio: reelData.audioTrack ?? null,
+      p_audio: storedAudioTrack(reelData.audioTrack),
       p_hashtags: reelData.hashtags || [],
       p_category: reelData.category || 'others'
     });

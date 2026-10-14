@@ -39,9 +39,9 @@ const supabaseGroup = (provider: string): LinkGroup => ({
 
 const publicPages: ValueItem[] = [
   { label: 'Home page', value: siteOrigin() },
-  { label: 'Privacy policy URL', value: `${siteOrigin()}/privacy.html` },
-  { label: 'Terms of service URL', value: `${siteOrigin()}/terms.html` },
-  { label: 'Data deletion instructions URL', value: `${siteOrigin()}/data-deletion.html` }
+  { label: 'Privacy policy URL', value: `${siteOrigin()}/privacy` },
+  { label: 'Terms of service URL', value: `${siteOrigin()}/terms` },
+  { label: 'Data deletion instructions URL', value: `${siteOrigin()}/data-deletion` }
 ];
 
 const GUIDES: Guide[] = [

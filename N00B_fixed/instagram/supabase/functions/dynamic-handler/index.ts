@@ -58,15 +58,37 @@ const publicKey = () => envKey('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS')
 // Resend.com key). `false` (never thrown) whenever it can't be sent, so a caller can decide for
 // itself whether that failure should stop anything else — an email going out is never load-bearing.
 const escapeHtml = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// ---- The address every email points at. Always the new one (noobsocials.com): the SITE_URL secret can still hold the old address (nooob.xyz), which must never
+// reach an email. Another valid https address (a test site) is kept. Every email also ends with the same small "NOOB · noobsocials.com" line (added in sendEmail).
+const NEW_SITE = 'https://noobsocials.com';
+function siteForEmails(raw: string): string {
+  const v = String(raw || '').trim().replace(/\/+$/, '');
+  try {
+    const u = new URL(v);
+    if (u.protocol === 'https:' && u.hostname.toLowerCase().replace(/^www\./, '') !== 'nooob.xyz') return u.origin;
+  } catch { /* not an address: use the new one */ }
+  return NEW_SITE;
+}
+const SITE_URL = siteForEmails(Deno.env.get('SITE_URL') || '');
+function withSiteFooter(html: string, text: string): { html: string; text: string } {
+  const host = SITE_URL.replace(/^https?:\/\//, '');
+  const footer = `<div data-noob-footer style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;max-width:560px;margin:14px auto 0;padding:0 12px 18px;text-align:center;font-size:12px;line-height:1.6;color:#8a8794">NOOB &middot; <a href="${SITE_URL}" style="color:#D97757;font-weight:700;text-decoration:none">${host}</a></div>`;
+  return {
+    html: html.includes('data-noob-footer') ? html : html + footer,
+    text: text.includes(`NOOB · ${SITE_URL}`) ? text : `${text}\n\nNOOB · ${SITE_URL}`
+  };
+}
+
 let lastEmailDebug = '';
 async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
   const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
   if (!key || !to) { lastEmailDebug = !key ? 'no RESEND_API_KEY configured' : 'no recipient address'; return false; }
+  const out = withSiteFooter(html, text);
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html, ...((Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() ? { reply_to: (Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() } : {}) }),
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text: out.text, html: out.html, ...((Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() ? { reply_to: (Deno.env.get('RECOVERY_EMAIL_REPLY_TO') || '').trim() } : {}) }),
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
@@ -95,7 +117,6 @@ function emailShell(title: string, bodyHtml: string): string {
 // a NOOB Draw spin: which one, free or paid, what it cost), and the account it belongs to (name, User ID, account ID, address).
 // Kinds: pro_upgraded (also renewals and friend-paid plans), verified_badge, verified_by_admin, draw_prize (NOOB Draw: only the verified tick and
 // NOOB Pro plans), pro_expiring, pro_ended, pro_gift_receipt.
-const SITE_URL = (Deno.env.get('SITE_URL') || 'https://noobsocials.com').trim().replace(/\/+$/, '');
 const BRAND = '#D97757';
 const FONT = "system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 const fmtWhen = (v: unknown): string => {

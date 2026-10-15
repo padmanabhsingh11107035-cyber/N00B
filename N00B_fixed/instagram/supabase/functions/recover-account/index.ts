@@ -116,14 +116,36 @@ function maskEmail(email: string): string {
 
 // Shared by every email this function sends. `false` (never thrown) whenever it can't be sent — a missing secret, Resend refusing it,
 // or the network being down — so a caller can decide for itself whether that failure should stop anything else.
+// ---- The address every email points at. Always the new one (noobsocials.com): the SITE_URL secret can still hold the old address (nooob.xyz), which must never
+// reach an email. Another valid https address (a test site) is kept. Every email also ends with the same small "NOOB · noobsocials.com" line (added in sendEmail).
+const NEW_SITE = 'https://noobsocials.com';
+function siteForEmails(raw: string): string {
+  const v = String(raw || '').trim().replace(/\/+$/, '');
+  try {
+    const u = new URL(v);
+    if (u.protocol === 'https:' && u.hostname.toLowerCase().replace(/^www\./, '') !== 'nooob.xyz') return u.origin;
+  } catch { /* not an address: use the new one */ }
+  return NEW_SITE;
+}
+const SITE_URL = siteForEmails(Deno.env.get('SITE_URL') || '');
+function withSiteFooter(html: string, text: string): { html: string; text: string } {
+  const host = SITE_URL.replace(/^https?:\/\//, '');
+  const footer = `<div data-noob-footer style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;max-width:560px;margin:14px auto 0;padding:0 12px 18px;text-align:center;font-size:12px;line-height:1.6;color:#8a8794">NOOB &middot; <a href="${SITE_URL}" style="color:#D97757;font-weight:700;text-decoration:none">${host}</a></div>`;
+  return {
+    html: html.includes('data-noob-footer') ? html : html + footer,
+    text: text.includes(`NOOB · ${SITE_URL}`) ? text : `${text}\n\nNOOB · ${SITE_URL}`
+  };
+}
+
 async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
   const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
   if (!key) return false;
+  const out = withSiteFooter(html, text);
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text, html }),
+      body: JSON.stringify({ from: (Deno.env.get('RECOVERY_EMAIL_FROM') || 'NOOB <no-reply@nooob.xyz>').trim(), to: [to], subject, text: out.text, html: out.html }),
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) console.warn(`Resend: ${res.status} ${await res.text().catch(() => '')}`.slice(0, 300));
@@ -164,10 +186,11 @@ const sendWelcomeEmail = (email: string, name: string, username: string) =>
   sendEmail(
     email,
     'Welcome to NOOB! 🎉',
-    `Hey ${name}!\n\nWelcome to NOOB — your account @${username} is ready. Share posts and reels, chat with end-to-end encryption, join mini-games, and more.\n\nGlad you're here.\n— The NOOB team`,
+    `Hey ${name}!\n\nWelcome to NOOB — your account @${username} is ready. Share posts and reels, chat with end-to-end encryption, join mini-games, and more.\n\nOpen NOOB: ${SITE_URL}\n\nGlad you're here.\n— The NOOB team`,
     `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
       <p style="font-size:20px;font-weight:800;margin:0 0 12px">Welcome to NOOB, ${escapeHtml(name)}! 🎉</p>
       <p style="font-size:14px;line-height:1.6">Your account <strong>@${escapeHtml(username)}</strong> is ready to go. Share posts and reels, chat with end-to-end encryption, play mini-games, and connect with the community.</p>
+      <p style="margin:18px 0"><a href="${SITE_URL}" style="display:inline-block;background:#D97757;color:#1a0f0a;font-weight:800;font-size:14px;text-decoration:none;padding:12px 26px;border-radius:12px">Open NOOB</a></p>
       <p style="font-size:14px;line-height:1.6">Glad you're here.<br/>— The NOOB team</p>
     </div>`
   );

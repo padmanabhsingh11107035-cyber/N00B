@@ -165,7 +165,9 @@ await ask();
 m = sent[0].body;
 check(/ends in 3 days/.test(m.subject), 'the subject says how long is left', m.subject);
 check(m.html.includes('1,000,000,000 points') && m.html.includes('4,000,000,000 points') && m.text.includes('Add 4,000,000,000 more points'), 'it shows the live balance and what is missing');
-check(m.html.includes('href="https://nooob.xyz/?pro=starter&amp;billing=monthly"') && m.html.includes('Pay with NOOB Points'), 'the button goes to the payment page of that exact plan');
+check(m.html.includes('href="https://noobsocials.com/?pro=starter&amp;billing=monthly"') && m.html.includes('Pay with NOOB Points'), 'the button goes to the payment page of that exact plan, on noobsocials.com (the SITE_URL secret here still says nooob.xyz)');
+check(!m.html.includes('nooob.xyz') && !m.text.includes('nooob.xyz'), 'the old address never appears in an email, even though the SITE_URL secret still holds it');
+check(m.html.includes('data-noob-footer') && m.html.includes('>noobsocials.com</a>') && m.text.endsWith('NOOB · https://noobsocials.com'), 'every email ends with the NOOB · noobsocials.com line (html and plain text)');
 reset();
 claim = mail('pro_expiring', { planName: 'Plus', tier: 'plus', billing: 'yearly', endsAt: '2026-10-12T10:30:00Z', daysLeft: 1, autoRenew: false, price: '99,000,000,000', balance: '0', shortfall: '99,000,000,000' });
 await ask();
@@ -201,8 +203,8 @@ reset();
 claim = mail('verified_badge', { label: 'x', pricePaid: '1', walletAfter: '0', at: '2026-10-11T10:30:00Z' });
 await ask();
 m = sent[0].body;
-check(m.html.startsWith('<div style="display:none') && m.html.includes('role="presentation"') && m.html.includes('linear-gradient') && /<a href="https:\/\/nooob\.xyz"/.test(m.html), 'the HTML is built for e-mail programs: tables, inline styles, a hidden preview line, a button');
-check(!/\n\n\n/.test(m.text) && m.text.endsWith('— The NOOB team'), 'and the plain-text version is tidy');
+check(m.html.startsWith('<div style="display:none') && m.html.includes('role="presentation"') && m.html.includes('linear-gradient') && /<a href="https:\/\/noobsocials\.com"/.test(m.html), 'the HTML is built for e-mail programs: tables, inline styles, a hidden preview line, a button (to noobsocials.com)');
+check(!/\n\n\n/.test(m.text) && m.text.endsWith('— The NOOB team\n\nNOOB · https://noobsocials.com'), 'and the plain-text version is tidy, ending with the signature and the site line');
 
 section('6. Safety');
 reset();
@@ -219,6 +221,13 @@ reset();
 claim = mail('something_new', {});
 r = await ask();
 check(r.status === 400 && done.length === 1 && done[0].p_ok === false && sent.length === 0, 'an unknown kind is reported, not sent');
+
+// The login-code, sign-up-code, welcome and account-deleted emails come from the other function (recover-account): same rules, same footer, a button in the welcome email.
+const rec = fs.readFileSync(path.join('supabase', 'functions', 'recover-account', 'index.ts'), 'utf8');
+check(/const SITE_URL = siteForEmails\(Deno\.env\.get\('SITE_URL'\) \|\| ''\);/.test(rec) && /u\.hostname\.toLowerCase\(\)\.replace\(\/\^www\\\.\/, ''\) !== 'nooob\.xyz'/.test(rec), 'recover-account also never uses the old address, whatever the SITE_URL secret says');
+check(/const out = withSiteFooter\(html, text\);/.test(rec) && /text: out\.text, html: out\.html/.test(rec), 'and every one of its emails goes out with the NOOB · noobsocials.com line');
+check(/Open NOOB: \$\{SITE_URL\}/.test(rec) && /<a href="\$\{SITE_URL\}"[^>]*>Open NOOB<\/a>/.test(rec), 'the welcome email has an Open NOOB button that opens noobsocials.com');
+check(!/https:\/\/nooob\.xyz/.test(rec.replace(/no-reply@nooob\.xyz|users\.nooob\.xyz/g, '')) , 'no email address in it points at the old site');
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${passed} passed, ${failed} failed`);

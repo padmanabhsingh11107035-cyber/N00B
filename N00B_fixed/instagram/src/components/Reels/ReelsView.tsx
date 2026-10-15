@@ -58,6 +58,7 @@ import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { getReelPlayer, releaseReelPlayer, getSoundPreference, setSoundPreference, playReel, unmuteInTap, onRealTap } from '../../utils/reelAudio';
 import { getSongPlayer, loadSong, pauseSong, stopSong } from '../../utils/songSound';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
+import { usePageHidden } from '../../utils/pageLayers';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -102,6 +103,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [soundWanted, setSoundWanted] = useState(() => getSoundPreference());
   const [soundBlocked, setSoundBlocked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  // A profile opened over the reels (the author's name was tapped): the reel waits where it is, silent, and carries on when "Go to previous page" brings the reels back.
+  const pageHidden = usePageHidden();
+  const pageHiddenRef = useRef(pageHidden);
+  pageHiddenRef.current = pageHidden;
+  const playing = isPlaying && !pageHidden;
   const [isVideoBuffering, setIsVideoBuffering] = useState(true);
   const [videoFailed, setVideoFailed] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
@@ -282,7 +288,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     const video = videoRef.current;
     if (!video) return;
     const withSong = !!songUrl;
-    if (!isPlaying) {
+    if (!playing) {
       video.pause();
       if (withSong) pauseSong();
       return;
@@ -314,14 +320,14 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     return () => {
       live = false;
     };
-  }, [isPlaying, currentReel?.id]);
+  }, [playing, currentReel?.id]);
 
   // While sound is refused, the next REAL tap (touchend / click / key, not touchstart or pointerdown) switches it on, right inside that tap.
   useEffect(
     () =>
       onRealTap(() => {
         const target = songUrlRef.current ? getSongPlayer() : videoRef.current;
-        if (!target || !soundBlockedRef.current || !soundWantedRef.current) return;
+        if (!target || !soundBlockedRef.current || !soundWantedRef.current || pageHiddenRef.current) return;   // not while a profile is open over the reels
         tapUnmutedAtRef.current = Date.now();
         unmuteInTap(target).then((on) => {
           if (on) setBlocked(false);

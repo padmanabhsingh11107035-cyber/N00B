@@ -64,8 +64,8 @@ check((post.match(new RegExp(UL.replace(/[[\]/.]/g, '\\$&'), 'g')) || []).length
 check(/const known = allUsers\.find\(\(u\) => u\.id === userId\);\s*if \(known\) \{\s*onNavigateToProfile\(known\);/.test(post), 'tapping a name opens the profile AT ONCE with what the app already knows');
 check(/fetchUserById\(userId\)\.then\(\(fresh\) => \{ if \(fresh\) onNavigateToProfile\(fresh, true\); \}\)/.test(post), 'and the newest details are fetched quietly and swapped in');
 const app2 = read('src/App.tsx');
-check(/const handleNavigateToUserProfile = \(user: User, isUpdate = false\) => \{\s*[\s\S]{0,200}if \(isUpdate\) \{\s*setViewingProfileUser\(\(prev\) => \(prev && prev\.id === user\.id \? user : prev\)\);\s*return;/.test(app2), 'the quiet update changes only that profile (not the page, not the scroll)');
-check(/<React\.Suspense fallback=\{<ProfileSkeleton user=\{viewingProfileUser \|\| currentUser\} \/>\}><ProfileView/.test(app2) && /const ProfileSkeleton: React\.FC/.test(app2), 'while the profile page arrives, the person is shown (picture, name, @handle), never an empty black screen');
+check(/const handleNavigateToUserProfile = \(user: User, isUpdate = false\) => \{\s*[\s\S]{0,200}if \(isUpdate\) \{\s*pageLayers\.update\(user\);\s*return;/.test(app2), 'the quiet update changes only that profile (not the page, not the scroll)');
+check(/<React\.Suspense fallback=\{<ProfileSkeleton user=\{viewing \|\| currentUser\} \/>\}><ProfileView/.test(app2) && /const ProfileSkeleton: React\.FC/.test(app2), 'while the profile page arrives, the person is shown (picture, name, @handle), never an empty black screen');
 const lazy = read('src/utils/lazyTab.tsx');
 check(/Date\.now\(\) - last < 60_000/.test(lazy) && /navigator\.onLine === false/.test(lazy) && /reloadForNewVersion\(\); throw e;/.test(lazy), 'a page file that no longer exists (an old copy of the app) gets the new version once - never a loop, never while offline');
 

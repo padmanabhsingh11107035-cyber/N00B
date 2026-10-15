@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Home,
   Compass,
@@ -97,6 +97,7 @@ import { teamJoinRequested } from './utils/ourTeam';
 import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
+import { usePageLayers, PageLayerSlot } from './utils/pageLayers';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
@@ -183,7 +184,13 @@ const CoachingEntry: React.FC<{ currentUser: User }> = ({ currentUser }) => {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<NavTab>('feed');
+  const [activeTab, setActiveTabState] = useState<NavTab>('feed');
+  // "Go to previous page": a profile opens as a LAYER on top of the page that is showing (Home, Explore, Reels, Chat, another profile...) instead of replacing it, so the page
+  // underneath stays exactly as it was (same posts in the same order, same scroll) and the "Go to previous page" button, or the phone's back button, brings it back (utils/pageLayers.tsx).
+  const pageLayers = usePageLayers<User>(activeTab);
+  const clearPageLayers = pageLayers.clear;
+  // Any jump to a page (a bottom-bar tab, "open this post", "message this person"...) closes the profile layers first.
+  const setActiveTab = useCallback((tab: NavTab) => { clearPageLayers({ restore: false }); setActiveTabState(tab); }, [clearPageLayers]);
   // Tracks the tab the user was on immediately before the current one, so
   // the Reels page's back arrow can return them to wherever they actually
   // came from (feed, explore, profile, etc.) instead of a hardcoded tab.
@@ -255,6 +262,8 @@ export default function App() {
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
+  // the same list object until the posts really change, so drawing the app again (e.g. when a profile opens) never makes Home or Explore start over
+  const visiblePosts = useMemo(() => posts.filter((p) => !p.isArchived), [posts]);
   const postsRef = useRef<Post[]>([]);
   postsRef.current = posts;
   const [stories, setStories] = useState<Story[]>([]);
@@ -353,7 +362,6 @@ export default function App() {
   const [selectedReelId, setSelectedReelId] = useState<string | undefined>(undefined);
   const [selectedVideoId, setSelectedVideoId] = useState<string | undefined>(undefined);
   const [selectedPostId, setSelectedPostId] = useState<string | undefined>(undefined);
-  const [viewingProfileUser, setViewingProfileUser] = useState<User | null>(null);
   const [pendingChatUser, setPendingChatUser] = useState<User | null>(null);
   const [pendingChatId, setPendingChatId] = useState<string | null>(null);
   const [pendingCallChatId, setPendingCallChatId] = useState<string | null>(null);
@@ -462,8 +470,8 @@ export default function App() {
       (u) => u.username.toLowerCase() === sharedProfileUsername.toLowerCase()
     );
     if (target) {
-      setViewingProfileUser(target.id === currentUser.id ? null : target);
-      setActiveTab('profile');
+      if (target.id === currentUser.id) setActiveTab('profile');
+      else pageLayers.push(target);
     }
     setSharedProfileUsername(null);
 
@@ -812,17 +820,17 @@ export default function App() {
   const handleNavigateToUserProfile = (user: User, isUpdate = false) => {
     // isUpdate: the same profile, with newer details, arriving after it was already opened (nothing else changes: not the page, not the scroll)
     if (isUpdate) {
-      setViewingProfileUser((prev) => (prev && prev.id === user.id ? user : prev));
+      pageLayers.update(user);
       return;
     }
     preloadProfile().catch(() => undefined);
     if (user.id === currentUser?.id || user.username?.toLowerCase() === currentUser?.username?.toLowerCase()) {
-      setViewingProfileUser(null);
+      // my own profile is the Profile tab
+      setActiveTab('profile');
     } else {
-      setViewingProfileUser(user);
+      // someone else's profile opens on top of the page that is showing; the page stays where it is, and "Go to previous page" comes back to it
+      pageLayers.push(user);
     }
-    setActiveTab('profile');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // --- SMART POST OR REEL ACTIONS ---
@@ -1050,18 +1058,12 @@ export default function App() {
           followingCount: nextFollowing.length
         });
       }
-      if (viewingProfileUser && viewingProfileUser.id === userId) {
-        setViewingProfileUser((prev) =>
-          prev
-            ? {
-                ...prev,
-                isFollowing: res.isFollowing,
-                isFollowRequested: !!res.isFollowRequested,
-                followersCount: res.followersCount
-              }
-            : null
-        );
-      }
+      pageLayers.patch(userId, (u) => ({
+        ...u,
+        isFollowing: res.isFollowing,
+        isFollowRequested: !!res.isFollowRequested,
+        followersCount: res.followersCount
+      }));
       return res;
     } catch (err) {
       console.error(err);
@@ -1083,9 +1085,6 @@ export default function App() {
       );
       if (currentUser) {
         setCurrentUser({ ...currentUser, followersCount: res.followersCount ?? Math.max(0, (currentUser.followersCount || 0) - 1) });
-      }
-      if (viewingProfileUser && viewingProfileUser.id === currentUser?.id) {
-        setViewingProfileUser((prev) => (prev ? { ...prev, followersCount: res.followersCount ?? prev.followersCount } : null));
       }
       return res;
     } catch (err) {
@@ -1186,10 +1185,10 @@ export default function App() {
   const handleSelectNavTab = (tab: NavTab) => {
     if (tab === 'post') {
       setShowPostCreationModal(true);
+    } else if (pageLayers.layers.length > 0 && tab === activeTab) {
+      // the tab you are already on: back to that page, exactly where you left it (the profile opened over it closes)
+      pageLayers.clear({ restore: true });
     } else {
-      if (tab === 'profile') {
-        setViewingProfileUser(null);
-      }
       setActiveTab(tab);
     }
   };
@@ -1350,6 +1349,37 @@ export default function App() {
   }
 
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
+  // the page that is really showing: a profile layer counts as the Profile page for the layout
+  const pageTab: NavTab = pageLayers.layers.length > 0 ? 'profile' : activeTab;
+
+  // The profile page: my own (the Profile tab) or someone else's (a layer on top of the page that was showing, with "Go to previous page")
+  const renderProfileView = (viewing: User | null) => (
+    <React.Suspense fallback={<ProfileSkeleton user={viewing || currentUser} />}><ProfileView
+      currentUser={currentUser}
+      viewingUser={viewing}
+      allUsers={registeredUsers}
+      posts={posts}
+      reels={reels}
+      onSelectPost={(post) => {
+        handleNavigateToPost(post.id);
+      }}
+      onUpdateBio={handleUpdateBio}
+      onOpenProfessionalDashboard={() => setShowProfessionalDashboardModal(true)}
+      onLogout={handleLogout}
+      onDeleteMyAccount={handleDeleteMyAccount}
+      onUserUpdated={(u) => setCurrentUser(u)}
+      onToggleFollowUser={handleToggleFollowUser}
+      onRemoveFollower={handleRemoveFollower}
+      onGoBack={pageLayers.back}
+      onNavigateToChatWithUser={(targetUser) => {
+        setPendingChatUser(targetUser);
+        setActiveTab('chat');
+      }}
+      onNavigateToUserProfile={handleNavigateToUserProfile}
+      onOpenLongVideo={handleNavigateToVideo}
+      onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
+    /></React.Suspense>
+  );
 
   return (
     <div className="min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 xl:justify-start xl:pl-0 overflow-x-hidden">
@@ -1580,19 +1610,21 @@ export default function App() {
       {/* 2. Center View / Main App Screen Container */}
       <main
         className={`relative w-full max-w-[480px] ${
-          activeTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
+          pageTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
         } xl:ml-auto bg-page doodle-wallpaper lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] ${
           // The chat tab reserves its own bottom-nav clearance internally (its container's height
           // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
           // same space, pushing the whole page taller than one viewport and creating a second,
           // unwanted page-level scroll on top of the chat list's own internal scroll.
-          activeTab === 'chat' ? '' : 'pb-24'
+          pageTab === 'chat' ? '' : 'pb-24'
         } overflow-hidden shrink-0`}
       >
+        {/* the page that is showing; it stays alive (hidden) while a profile is open on top of it */}
+        <PageLayerSlot layerId={0} hidden={pageLayers.layers.length > 0} register={pageLayers.register}>
         {activeTab === 'feed' && (
           <FeedView
             currentUser={currentUser}
-            posts={posts.filter((p) => !p.isArchived)}
+            posts={visiblePosts}
             stories={stories}
             storyTray={storyTray}
             reels={reels}
@@ -1629,7 +1661,7 @@ export default function App() {
         {activeTab === 'explore' && (
           <React.Suspense fallback={<LazyFallback />}><ExploreView
             currentUser={currentUser}
-            posts={posts.filter((p) => !p.isArchived)}
+            posts={visiblePosts}
             reels={reels}
             onSelectPost={(post) => {
               handleNavigateToPost(post.id);
@@ -1743,33 +1775,15 @@ export default function App() {
           <React.Suspense fallback={<LazyFallback />}><MusicHubView currentUser={currentUser} /></React.Suspense>
         )}
 
-        {activeTab === 'profile' && (
-          <React.Suspense fallback={<ProfileSkeleton user={viewingProfileUser || currentUser} />}><ProfileView
-            currentUser={currentUser}
-            viewingUser={viewingProfileUser}
-            allUsers={registeredUsers}
-            posts={posts}
-            reels={reels}
-            onSelectPost={(post) => {
-              handleNavigateToPost(post.id);
-            }}
-            onUpdateBio={handleUpdateBio}
-            onOpenProfessionalDashboard={() => setShowProfessionalDashboardModal(true)}
-            onLogout={handleLogout}
-            onDeleteMyAccount={handleDeleteMyAccount}
-            onUserUpdated={(u) => setCurrentUser(u)}
-            onToggleFollowUser={handleToggleFollowUser}
-            onRemoveFollower={handleRemoveFollower}
-            onBackToMyProfile={() => setViewingProfileUser(null)}
-            onNavigateToChatWithUser={(targetUser) => {
-              setPendingChatUser(targetUser);
-              setActiveTab('chat');
-            }}
-            onNavigateToUserProfile={handleNavigateToUserProfile}
-            onOpenLongVideo={handleNavigateToVideo}
-            onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
-          /></React.Suspense>
-        )}
+        {activeTab === 'profile' && renderProfileView(null)}
+        </PageLayerSlot>
+
+        {/* profiles opened from the page above: each is its own page, the one on top shows, the ones under it wait exactly as they were */}
+        {pageLayers.layers.map((layer, i) => (
+          <PageLayerSlot key={layer.id} layerId={layer.id} hidden={i !== pageLayers.layers.length - 1} register={pageLayers.register}>
+            {renderProfileView(layer.data)}
+          </PageLayerSlot>
+        ))}
       </main>
 
       {/* 3. Right Desktop Sidebar (Registered People & Community) */}
@@ -1865,7 +1879,7 @@ export default function App() {
         onPressTab={(tab) => { const hit = TAB_PRELOADS.find(([t]) => t === tab); if (hit) void hit[1]().catch(() => {}); }}
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
-        hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile}
+        hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers.layers.length === 0}
         hideMusic={musicHidden}
       />
 

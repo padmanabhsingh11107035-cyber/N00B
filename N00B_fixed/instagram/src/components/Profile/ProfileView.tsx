@@ -160,7 +160,8 @@ interface ProfileViewProps {
   onReportUser?: (userId: string, reason: string, details?: string) => void;
   onDeletePost?: (postId: string) => void;
   onDeleteReel?: (reelId: string) => void;
-  onBackToMyProfile?: () => void;
+  // "Go to previous page": back to the page this profile was opened from, exactly as it was left
+  onGoBack?: () => void;
   onNavigateToChatWithUser?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
   // Opens one of the long videos (Home > Videos) listed in the profile's Feed tab
@@ -189,7 +190,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onReportUser,
   onDeletePost,
   onDeleteReel,
-  onBackToMyProfile,
+  onGoBack,
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
   onOpenLongVideo,
@@ -595,11 +596,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {!isOwnProfile && (
         <div className="mb-4 flex items-center justify-between bg-zinc-900/90 border border-zinc-800 rounded-2xl px-4 py-3 shadow-lg">
           <button
-            onClick={onBackToMyProfile}
+            onClick={onGoBack}
+            aria-label="Go to previous page"
             className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer group"
           >
             <ArrowLeft className="w-4 h-4 text-noob group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to My Profile</span>
+            <span>Go to previous page</span>
           </button>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-400 font-medium">@{targetUser.username}</span>

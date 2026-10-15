@@ -978,24 +978,58 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       <LoginBigDoodles />
       <LoginMoreDoodles />
 
-      {/* Install to Home Screen: available before logging in or signing up, on any device */}
-      <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
-        <button
-          type="button"
-          onClick={handleInstallClick}
-          disabled={installBusy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 hover:border-noob/50 text-xs font-bold text-zinc-200 hover:text-white cursor-pointer transition-colors disabled:opacity-60"
-          aria-label="Install NOOB"
-        >
-          {installBusy ? <Loader2 className="w-3.5 h-3.5 text-noob animate-spin" /> : <Download className="w-3.5 h-3.5 text-noob" />}
-          <span>Install</span>
-        </button>
-        {installHint && (
-          <div className="max-w-[220px] text-right text-[10px] text-zinc-300 bg-zinc-900/95 border border-white/10 rounded-xl px-2.5 py-1.5 leading-snug shadow-lg">
-            {installHint}
+      {/* Install to Home Screen: available before logging in or signing up, on any device. Not installed yet = the first thing the eye
+          finds (a glowing button with a pulsing ring, a sweeping shine, a bobbing arrow and a hand-drawn "get the app!" note, all still when the
+          device asks for reduced motion); already installed = the small quiet pill. */}
+      {appInstalled ? (
+        <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
+          <button
+            type="button"
+            onClick={handleInstallClick}
+            disabled={installBusy}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 hover:border-noob/50 text-xs font-bold text-zinc-200 hover:text-white cursor-pointer transition-colors disabled:opacity-60"
+            aria-label="Install NOOB"
+          >
+            {installBusy ? <Loader2 className="w-3.5 h-3.5 text-noob animate-spin" /> : <Download className="w-3.5 h-3.5 text-noob" />}
+            <span>Install</span>
+          </button>
+          {installHint && (
+            <div className="max-w-[220px] text-right text-[10px] text-zinc-300 bg-zinc-900/95 border border-white/10 rounded-xl px-2.5 py-1.5 leading-snug shadow-lg">
+              {installHint}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="w-full max-w-lg flex flex-col items-center z-10 pt-5 pb-2 gap-2">
+          <div className="noob-install-wrap relative">
+            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-amber-300 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">get the app!</span>
+            <svg viewBox="0 0 40 30" className="noob-install-arrow absolute -top-5 -left-3 w-7 h-6 text-amber-300 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 5 C 14 3 24 10 31 24" /><path d="M24 20 L31 25 L35 16" />
+            </svg>
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              disabled={installBusy}
+              className="noob-install-cta relative z-[1] inline-flex items-center gap-3 pl-2.5 pr-5 py-2 rounded-full cursor-pointer disabled:opacity-70"
+              aria-label="Install the NOOB app"
+            >
+              <span className="noob-install-icon w-9 h-9 rounded-full bg-black/85 flex items-center justify-center shrink-0">
+                {installBusy ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Download className="w-4 h-4 text-white" />}
+              </span>
+              <span className="flex flex-col text-left leading-tight">
+                <span className="text-[15px] font-extrabold tracking-tight">Install NOOB app</span>
+                <span className="text-[10.5px] font-semibold opacity-80">Free · opens like a real app · 2 taps</span>
+              </span>
+              <span className="noob-install-shine" aria-hidden="true" />
+            </button>
           </div>
-        )}
-      </div>
+          {installHint && (
+            <div className="max-w-[280px] text-center text-[11px] text-zinc-200 bg-zinc-900/95 border border-white/10 rounded-xl px-3 py-2 leading-snug shadow-lg">
+              {installHint}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Top Header: the real NOOB logo, centered */}
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">

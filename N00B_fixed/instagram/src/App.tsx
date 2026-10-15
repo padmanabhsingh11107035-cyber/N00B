@@ -100,6 +100,8 @@ import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot } from './utils/pageLayers';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { useAnyFullPage } from './utils/fullPage';
+import { setInAppLinkHandler } from './utils/inAppLinks';
+import { isOwnHost } from './utils/siteUrl';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
@@ -856,6 +858,22 @@ export default function App() {
     if (top && top.kind === 'fun') pageLayers.update({ id: 'fun', kind: 'fun', loc });   // already on a Fun page: move within it
     else pageLayers.push({ id: 'fun', kind: 'fun', loc });
   };
+
+  // A link that leads to one of NOOB's own Fun pages (the button on a Story: /ask/<name>, /polls/<id>...) opens inside the app, with the way back, instead of in the phone's browser.
+  useEffect(() => {
+    setInAppLinkHandler((url) => {
+      try {
+        const u = new URL(url, window.location.origin);
+        if (!isOwnHost(u.hostname)) return false;
+        const loc = parseFunPath(u.pathname);
+        if (!loc) return false;
+        setActiveStoryViewerIndex(null);   // the Story is left behind; "Back" returns to the page that was under it
+        openFun(loc);
+        return true;
+      } catch { return false; }
+    });
+    return () => setInAppLinkHandler(null);
+  });
 
   // A Fun page opened from its own address: once someone is logged in it opens on top of Home.
   useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { openInApp } from '../../utils/inAppLinks';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music } from 'lucide-react';
 import { Story, User } from '../../types';
@@ -770,7 +771,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
                   <div className="w-full flex items-center justify-center">
                     <button
-                      onClick={(e) => { e.stopPropagation(); window.open(sticker.data?.url, '_blank', 'noopener,noreferrer'); }}
+                      onClick={(e) => { e.stopPropagation(); if (!openInApp(sticker.data?.url)) window.open(sticker.data?.url, '_blank', 'noopener,noreferrer'); }}
                       className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
                       style={{ fontSize: `${(sticker.width || 46) * 0.09}cqw` }}
                     >

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, ClipboardList, Loader2, MapPin, Package, Phone, RefreshCw, Store as StoreIcon, Truck, X } from 'lucide-react';
+import { Check, ClipboardList, Loader2, MapPin, Package, Phone, Store as StoreIcon, Truck, X } from 'lucide-react';
 import { StoreOrder, StoreOrderStatus } from '../../types';
 import { cancelMyStoreOrder, fetchAdminStoreOrders, fetchMyStoreOrders, setStoreOrderStatus } from '../../services/api';
 import type { Storefront } from '../../services/api';
@@ -302,9 +302,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ canManage, onOrdersChang
         ) : (
           <h2 className="flex-1 text-sm font-black text-white">My orders</h2>
         )}
-        <button onClick={load} disabled={loading} className="p-2 rounded-full hover:bg-white/10 cursor-pointer disabled:opacity-50" aria-label="Refresh orders" title="Refresh">
-          <RefreshCw className={`w-4 h-4 text-zinc-300 ${loading ? 'animate-spin' : ''}`} />
-        </button>
       </div>
 
       {canManage && tab === 'shop' && (

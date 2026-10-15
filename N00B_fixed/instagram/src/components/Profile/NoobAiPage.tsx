@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, RefreshCw } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { noobAiIsOnline, noobAiSignInUrl, NOOB_AI_URL } from '../../utils/noobAi';
 import { fetchPublicPlatformSettings, requestNoobAiWake } from '../../services/api';
 import { NoobAiLogo } from './NoobAiLogo';
@@ -136,9 +136,6 @@ export const NoobAiPage: React.FC<NoobAiPageProps> = ({ onClose, isMainAdmin = f
             {status === 'online' ? 'Your AI friend · online' : status === 'offline' ? 'Sleeping' : status === 'maintenance' ? 'Under maintenance' : 'Waking up…'}
           </p>
         </div>
-        <button onClick={reload} className="p-2 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer" aria-label="Reload" title="Reload">
-          <RefreshCw className="w-5 h-5" />
-        </button>
       </div>
 
       {/* Body */}

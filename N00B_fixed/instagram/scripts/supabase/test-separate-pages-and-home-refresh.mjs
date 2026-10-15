@@ -50,5 +50,16 @@ check(/title: 'Ask me anything, anonymously', body: 'Send me a question\. I will
 check(/link: \{ url: link, label: 'Vote now' \}/.test(pollsPage), 'a poll shared as a Story has a "Vote now" button');
 check(/const maxTitleLines = spec\.body \? 5 : spec\.options\?\.length \? \(spec\.options\.length > 4 \? 3 : 4\) : 7;/.test(share), 'the text is kept clear of the button');
 
+section('4. The rest of the pages: no refresh button, and links to our own pages open inside the app');
+const ai = read('src/components/Profile/NoobAiPage.tsx');
+const orders = read('src/components/Store/OrdersView.tsx');
+const viewer = read('src/components/Stories/StoryViewerModal.tsx');
+const links = read('src/utils/inAppLinks.ts');
+check(!/aria-label="Reload"|RefreshCw/.test(ai), 'NOOB AI has no Reload button');
+check(!/aria-label="Refresh orders"|RefreshCw/.test(orders), 'the shop\'s orders page has no Refresh button');
+check(/export function openInApp\(url: unknown\): boolean/.test(links) && /export function setInAppLinkHandler/.test(links), 'one place decides whether a link opens inside the app');
+check(/if \(!openInApp\(sticker\.data\?\.url\)\) window\.open\(sticker\.data\?\.url, '_blank', 'noopener,noreferrer'\);/.test(viewer), 'a Story\'s link button opens NOOB\'s own pages inside the app, and anything else in a new tab');
+check(/setInAppLinkHandler\(\(url\) => \{[\s\S]{0,420}isOwnHost\(u\.hostname\)[\s\S]{0,160}parseFunPath\(u\.pathname\)[\s\S]{0,200}setActiveStoryViewerIndex\(null\);[\s\S]{0,160}openFun\(loc\);\s*return true;/.test(app), 'the app opens a link to one of its own Fun pages as a page (with the way back) and leaves the Story');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

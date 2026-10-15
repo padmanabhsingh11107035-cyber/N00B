@@ -36,6 +36,7 @@ import { POST_FILTERS } from '../../data/mockData';
 import { JoinUsModal } from './JoinUsModal';
 import { LazyVideo } from '../Common/LazyVideo';
 import { buildIndex, searchIndex, popularity } from '../../utils/searchEngine';
+import { startsInsideOverlay } from '../../utils/pullToRefresh';
 
 // Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
 // exactly the kind of nagging that makes people distrust a permission prompt.
@@ -319,6 +320,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
   // Touch handlers for Pull-to-Refresh
   const handleTouchStart = (e: React.TouchEvent) => {
+    // a finger that lands on a menu / sheet / pop-up drawn over the page is scrolling that, never pulling the page
+    if (startsInsideOverlay(e.target, e.currentTarget)) return;
     if (window.scrollY <= 5) {
       touchStartY.current = e.touches[0].clientY;
       setIsPulling(true);

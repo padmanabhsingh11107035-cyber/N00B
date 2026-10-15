@@ -55,6 +55,7 @@ import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
 import { isMainAdmin } from '../../adminAccess';
 import { requestPostBonusOffer, fetchSettings } from '../../services/api';
+import { startsInsideOverlay } from '../../utils/pullToRefresh';
 
 // The shop and the food stall (with the map and QR code libraries they use) are only fetched when somebody opens them.
 const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
@@ -417,6 +418,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
   // Touch handlers for Pull-to-Refresh
   const handleTouchStart = (e: React.TouchEvent) => {
+    // a finger that lands on a menu / sheet / pop-up drawn over the page is scrolling that, never pulling the page
+    if (startsInsideOverlay(e.target, e.currentTarget)) return;
     if (window.scrollY <= 5) {
       touchStartY.current = e.touches[0].clientY;
       setIsPulling(true);
@@ -760,7 +763,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
 
       {/* NOOB's extra-features menu — the hamburger next to the wordmark */}
       {showNoobMenu && (
-        <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start" onClick={() => setShowNoobMenu(false)}>
+        <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start overscroll-contain" onClick={() => setShowNoobMenu(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"

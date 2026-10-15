@@ -5674,3 +5674,53 @@ export async function createTotQuestion(input: { optionA: string; optionB: strin
 export async function removeTotQuestion(questionId: string): Promise<void> {
   await rpc('tot_admin_remove', { p_question: questionId });
 }
+
+// ---- Ask Me Anything (migration 20261016000002) ----
+// Everything goes through functions in the database. Nothing that comes back ever holds who asked: not for the owner, not in a published answer, not for an administrator.
+export interface AskProfile { userId: string; username: string; displayName: string; avatar: string; isVerified: boolean; enabled: boolean }
+export interface AskQuestion { id: string; body: string; createdAt: string; answer: string | null; answeredAt: string | null; answerPublic: boolean; reported: boolean }
+export interface AskInboxPage { questions: AskQuestion[]; hasMore: boolean; counts: { new: number; answered: number } }
+export interface AskPublicAnswer { id: string; question: string; answer: string; answeredAt: string }
+export interface AskReport { id: string; body: string; createdAt: string; reportedAt: string; reason: string | null; toUsername: string }
+export const ASK_MAX_LENGTH = 500;
+export const ASK_ANSWER_MAX_LENGTH = 1000;
+
+export async function fetchAskProfile(username: string): Promise<AskProfile | null> {
+  const p = await rpc<AskProfile | null>('ask_profile_public', { p_username: username });
+  return p ? { ...p, avatar: resolveMedia(p.avatar) } : null;
+}
+
+/** Sends a question. `clientKey` makes a double tap or a retry of the SAME question send once. Throws the database's own sentence (limits, blocked, switched off...). */
+export async function sendAskQuestion(username: string, body: string, clientKey: string): Promise<void> {
+  await rpc('ask_send', { p_username: username, p_body: body, p_client_key: clientKey });
+}
+
+export async function fetchAskInbox(opts: { filter?: 'new' | 'answered' | 'all'; limit?: number; before?: { createdAt: string; id: string } } = {}): Promise<AskInboxPage> {
+  const res = await rpc<AskInboxPage>('ask_inbox', { p_filter: opts.filter ?? 'new', p_limit: opts.limit ?? 20, p_before: opts.before?.createdAt ?? null, p_before_id: opts.before?.id ?? null });
+  return { questions: Array.isArray(res?.questions) ? res.questions : [], hasMore: !!res?.hasMore, counts: { new: res?.counts?.new ?? 0, answered: res?.counts?.answered ?? 0 } };
+}
+export async function answerAskQuestion(questionId: string, answer: string, isPublic: boolean): Promise<AskQuestion> {
+  return rpc<AskQuestion>('ask_answer', { p_question: questionId, p_answer: answer, p_public: isPublic });
+}
+export async function setAskAnswerPublic(questionId: string, isPublic: boolean): Promise<AskQuestion> {
+  return rpc<AskQuestion>('ask_set_public', { p_question: questionId, p_public: isPublic });
+}
+export async function deleteAskQuestion(questionId: string): Promise<void> { await rpc('ask_delete', { p_question: questionId }); }
+export async function reportAskQuestion(questionId: string, reason: string): Promise<void> { await rpc('ask_report', { p_question: questionId, p_reason: reason }); }
+/** Deletes the question and stops its sender from asking this person again. The sender is never named. */
+export async function blockAskSender(questionId: string): Promise<void> { await rpc('ask_block_sender', { p_question: questionId }); }
+export async function fetchAskSettings(): Promise<{ enabled: boolean; username: string }> { return rpc<{ enabled: boolean; username: string }>('ask_my_settings'); }
+export async function setAskEnabled(enabled: boolean): Promise<boolean> { return (await rpc<{ enabled: boolean }>('ask_set_enabled', { p_enabled: enabled })).enabled; }
+
+export async function fetchAskPublicAnswers(username: string, opts: { limit?: number; before?: { answeredAt: string; id: string } } = {}): Promise<{ answers: AskPublicAnswer[]; hasMore: boolean }> {
+  const res = await rpc<{ answers: AskPublicAnswer[]; hasMore: boolean }>('ask_public_answers', { p_username: username, p_limit: opts.limit ?? 10, p_before: opts.before?.answeredAt ?? null, p_before_id: opts.before?.id ?? null });
+  return { answers: Array.isArray(res?.answers) ? res.answers : [], hasMore: !!res?.hasMore };
+}
+
+// People who handle reports (the database refuses everyone else).
+export async function fetchAskReports(): Promise<AskReport[]> {
+  const res = await rpc<{ reports: AskReport[] }>('ask_admin_reports', { p_limit: 30 });
+  return Array.isArray(res?.reports) ? res.reports : [];
+}
+export async function dismissAskReport(questionId: string): Promise<void> { await rpc('ask_admin_dismiss', { p_question: questionId }); }
+export async function removeAskQuestionAdmin(questionId: string, banSender: boolean): Promise<void> { await rpc('ask_admin_remove', { p_question: questionId, p_ban_sender: banSender }); }

@@ -1423,6 +1423,7 @@ export default function App() {
       onToggleFollowUser={handleToggleFollowUser}
       onRemoveFollower={handleRemoveFollower}
       onGoBack={pageLayers.back}
+      onOpenFunPage={openFun}
       onNavigateToChatWithUser={(targetUser) => {
         setPendingChatUser(targetUser);
         setActiveTab('chat');

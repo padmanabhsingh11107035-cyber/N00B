@@ -1,3 +1,5 @@
+import { MAIN_SITE } from './siteUrl.ts';
+
 // The four "Fun" pages in the three-line menu - This or That, Ask Me Anything, Mood Status, Public Polls - and their addresses. Each has its own address so it can be opened and
 // shared directly (the Ask page of one person, or one poll, is the thing people send to friends):
 //   /this-or-that      /ask   (my questions)      /ask/<username>   (ask that person)      /mood      /polls      /polls/<id>
@@ -45,8 +47,7 @@ export function parseFunPath(pathname: string): FunLocation | null {
   return null;
 }
 
-/** The full link people share: the same site they are on. */
-export function funShareUrl(loc: FunLocation, origin?: string): string {
-  const o = origin ?? (typeof window !== 'undefined' ? window.location.origin : 'https://noobsocials.com');
-  return `${o}${funPath(loc)}`;
+/** The full link people share: always NOOB's main address (every address of the site answers, but the one that is shown and shared is the same for everyone). */
+export function funShareUrl(loc: FunLocation, origin: string = MAIN_SITE): string {
+  return `${origin}${funPath(loc)}`;
 }

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ProfileAskCard } from './ProfileFunCards';
+import type { FunLocation } from '../../utils/funRoutes';
 import { isStaff } from '../../adminAccess';
 import {
   Grid,
@@ -162,6 +164,8 @@ interface ProfileViewProps {
   onDeleteReel?: (reelId: string) => void;
   // "Go to previous page": back to the page this profile was opened from, exactly as it was left
   onGoBack?: () => void;
+  // The Fun pages (Ask Me Anything, ...): the small cards on a profile open them.
+  onOpenFunPage?: (loc: FunLocation) => void;
   onNavigateToChatWithUser?: (user: User) => void;
   onNavigateToUserProfile?: (user: User) => void;
   // Opens one of the long videos (Home > Videos) listed in the profile's Feed tab
@@ -191,6 +195,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeletePost,
   onDeleteReel,
   onGoBack,
+  onOpenFunPage,
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
   onOpenLongVideo,
@@ -1667,6 +1672,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           ))}
         </div>
       )}
+
+      {/* The Fun pages' cards: Ask Me Anything (and, on someone's profile, the answers they published) */}
+      {!isTargetBlocked && <ProfileAskCard profileUser={targetUser} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />}
 
       {/* 6. Profile Content Navigation Tabs */}
       <div className="flex items-center justify-around border-b border-zinc-800 text-xs font-bold pt-2 mb-4">

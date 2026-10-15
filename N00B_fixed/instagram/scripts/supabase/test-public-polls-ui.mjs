@@ -50,7 +50,7 @@ check(/fetchFunCanManage\(\)/.test(page) && /fetchPollReports\(\)/.test(page) &&
 section('5. The lists');
 check(/'active'/.test(page) && /'ended'/.test(page) && /'mine'/.test(page) && /Active<\/button>/.test(page) && /Ended<\/button>/.test(page) && /My polls<\/button>/.test(page), 'Active, Ended and My polls');
 check(/fetchPolls\(\{ tab, limit: PAGE_SIZE, before: \{ time: last\.endsAt, seq: last\.seq \} \}\)/.test(page) && /Load more/.test(page), 'a page at a time');
-check(/REFRESH_MS = 12_000/.test(page) && /prev\.map\(\(p\) => page\.polls\.find\(\(f\) => f\.id === p\.id\) \?\? p\)/.test(page), 'results refresh every 12 seconds without moving anything on the page');
+check(!/REFRESH_MS/.test(page) && !/setInterval\(\(\) => \{ if \(document\.visibilityState/.test(page), 'nothing reloads the poll pages by themselves: a vote brings the numbers back at once, and the page is fresh when opened (only Home refreshes)');
 check(/<SkeletonCards/.test(page) && /<ErrorState/.test(page) && /<EmptyState/.test(page), 'loading placeholders, an error with "Try again", and empty states');
 check(/target\) \{\s*return \(/.test(page) && /fetchPoll\(target\)/.test(page) && /This poll is not available/.test(page) && /All polls/.test(page), 'a poll opened from its link (/polls/<id>) shows that one poll, or says it is not available');
 

@@ -272,7 +272,7 @@ const QuestionItem: React.FC<{
   }, 'Could not send the report.');
 
   const story = () => run(async () => {
-    await shareCardAsStory({ eyebrow: 'Ask me anything', title: q.body, body: q.answer ?? undefined, footer: link });
+    await shareCardAsStory({ eyebrow: 'Ask me anything', title: q.body, body: q.answer ?? undefined, link: { url: link, label: 'Ask me anything' } });
     say('Added to your Story.', 'ok');
   }, 'Could not add it to your Story.');
 
@@ -370,13 +370,7 @@ const Dashboard: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
   }, [filter]);
 
   useEffect(() => { if (currentUser) void load('initial'); }, [currentUser?.id, load]);
-  // new questions arrive while the page is open: look again every minute while it is in front
-  useEffect(() => {
-    if (!currentUser) return;
-    const t = window.setInterval(() => { if (document.visibilityState === 'visible') void load('quiet'); }, 60_000);
-    return () => window.clearInterval(t);
-  }, [currentUser?.id, load]);
-
+  // (only the Home page refreshes (pull down there): no other page has a refresh button, a pull-down refresh or a timer that reloads it: a new question is in the notification, and shows here when the page is opened.)
   useEffect(() => {
     if (!currentUser) return;
     let alive = true;
@@ -444,7 +438,7 @@ const Dashboard: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
         </div>
         <button
           type="button"
-          onClick={async () => { try { await shareCardAsStory({ eyebrow: 'Ask me anything', title: 'Ask me anything, anonymously', body: 'Send me a question. I will never know who asked.', footer: link }); say('Added to your Story.', 'ok'); } catch (e) { say(friendly(e, 'Could not add it to your Story.'), 'err'); } }}
+          onClick={async () => { try { await shareCardAsStory({ eyebrow: 'Ask me anything', title: 'Ask me anything, anonymously', body: 'Send me a question. I will never know who asked.', link: { url: link, label: 'Ask me anything' } }); say('Added to your Story.', 'ok'); } catch (e) { say(friendly(e, 'Could not add it to your Story.'), 'err'); } }}
           className="mt-2.5 w-full h-10 rounded-full border border-zinc-700 hover:border-zinc-50 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
         ><ImageIcon className="w-3.5 h-3.5" aria-hidden="true" /> Put my link in a Story</button>
         <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 px-3.5 py-3">

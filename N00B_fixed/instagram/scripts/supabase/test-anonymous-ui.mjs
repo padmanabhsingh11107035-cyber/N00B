@@ -49,7 +49,7 @@ check(/Published anonymously\./.test(page), 'a success notice');
 check(/animate-pulse/.test(page) && /role="status" aria-label="Loading messages"/.test(page), 'skeleton cards while loading');
 check(/Load more/.test(page) && /hasMore/.test(page), 'a Load more button until the last page');
 check(/role="dialog" aria-modal="true" aria-label="Report this message"/.test(page) && /aria-label="Report this message"/.test(page), 'a report button and dialog on every message');
-check(/aria-label="Close Anonymous Messages"/.test(page) && /aria-label="Refresh messages"/.test(page), 'close and refresh buttons with names');
+check(/aria-label="Close Anonymous Messages"/.test(page) && !/aria-label="Refresh messages"/.test(page) && !/setInterval/.test(page), 'a named close button, and no refresh button or timer (only Home refreshes)');
 check(/const isAdmin = !!currentUser && isMainAdmin\(currentUser\)/.test(page) && /\{isAdmin && /.test(page), 'removal controls are drawn for the main administrator only');
 check(/postingRef/.test(page) && /keyRef/.test(page), 'a double tap cannot publish twice');
 check(/\.no-doodle \{ outline: none !important; background-image: none !important; \}/.test(css), 'message cards opt out of the pop-up doodle edge so the text stays clean');

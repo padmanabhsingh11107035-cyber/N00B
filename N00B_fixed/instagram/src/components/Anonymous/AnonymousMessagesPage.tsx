@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { VenetianMask, X, Flag, RefreshCw, Send, Trash2, ShieldCheck, Loader2, Check, AlertCircle, Ban } from 'lucide-react';
+import { VenetianMask, X, Flag, Send, Trash2, ShieldCheck, Loader2, Check, AlertCircle, Ban } from 'lucide-react';
 import type { User } from '../../types';
 import { isMainAdmin } from '../../adminAccess';
 import {
@@ -33,7 +33,6 @@ interface Props {
 
 const REASONS = ['Spam or advertising', 'Harassment or hate', 'Self-harm or danger', 'Something else'];
 const PAGE_SIZE = 20;
-const REFRESH_MS = 60_000;
 
 const newKey = (): string => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`);
 const codePoints = (s: string): number => Array.from(s).length;
@@ -55,13 +54,11 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorText, setErrorText] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [onlyReported, setOnlyReported] = useState(false);
   const [toast, setToast] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const loadId = useRef(0);
   const busyMore = useRef(false);
-  const busyRefresh = useRef(false);
   const toastTimer = useRef<number | undefined>(undefined);
 
   const say = useCallback((text: string, kind: 'ok' | 'err' = 'ok') => {
@@ -76,11 +73,11 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
     [isAdmin, onlyReported]
   );
 
-  // The first page. "initial" shows the loading skeleton; "refresh" / "quiet" keep what is on screen and only bring in what is new (and drop what was removed).
-  const loadFirst = useCallback(async (mode: 'initial' | 'refresh' | 'quiet') => {
+  // The first page. "initial" shows the loading skeleton; "quiet" keeps what is on screen and only brings in what is new (and drops what was removed). Nothing reloads this page
+  // by itself or on request: only the Home page refreshes (pull down there): no other page has a refresh button, a pull-down refresh or a timer that reloads it.
+  const loadFirst = useCallback(async (mode: 'initial' | 'quiet') => {
     const my = ++loadId.current;
     if (mode === 'initial') { setStatus('loading'); setItems([]); setHasMore(false); }
-    if (mode === 'refresh') setRefreshing(true);
     try {
       const res = await fetchPage();
       if (my !== loadId.current) return;
@@ -98,11 +95,8 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
     } catch (e) {
       if (my !== loadId.current) return;
       if (mode === 'initial') { setErrorText(friendly(e, 'Could not load the messages. Please check your connection and try again.')); setStatus('error'); }
-      else if (mode === 'refresh') say(friendly(e, 'Could not refresh right now.'), 'err');
-    } finally {
-      if (my === loadId.current) setRefreshing(false);
     }
-  }, [fetchPage, say]);
+  }, [fetchPage]);
 
   const loadMore = useCallback(async () => {
     if (busyMore.current || !hasMore || items.length === 0) return;
@@ -126,22 +120,8 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
   // first load, and again when the administrator flips "reported only"
   useEffect(() => { void loadFirst('initial'); }, [loadFirst]);
 
-  // the feed keeps itself fresh: every minute while the page is in front and nothing is being typed
   const [composerOpen, setComposerOpen] = useState(false);
   const [reporting, setReporting] = useState<Item | null>(null);
-  const idle = !composerOpen && !reporting;
-  useEffect(() => {
-    if (!idle) return;
-    const t = window.setInterval(() => { if (document.visibilityState === 'visible' && !busyRefresh.current) void loadFirst('quiet'); }, REFRESH_MS);
-    return () => window.clearInterval(t);
-  }, [idle, loadFirst]);
-
-  const refreshNow = async () => {
-    if (busyRefresh.current) return;
-    busyRefresh.current = true;
-    await loadFirst('refresh');
-    busyRefresh.current = false;
-  };
 
   // ---- the composer -------------------------------------------------------------------------------------------------------------------------------------
   const [text, setText] = useState('');
@@ -255,9 +235,6 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
             <h1 className="text-base leading-tight truncate">Anonymous Messages</h1>
             <p className="text-[11px] text-zinc-400 truncate">Your words, without your name.</p>
           </div>
-          <button type="button" onClick={refreshNow} disabled={refreshing} aria-label="Refresh messages" className="w-8 h-8 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer disabled:opacity-60">
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
           <button type="button" onClick={onClose} aria-label="Close Anonymous Messages" className="w-8 h-8 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer">
             <X className="w-4 h-4" />
           </button>

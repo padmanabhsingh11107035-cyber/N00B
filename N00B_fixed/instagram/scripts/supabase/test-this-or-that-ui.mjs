@@ -26,7 +26,7 @@ check(/const split = \(a: number, total: number\): \[number, number\] =>[\s\S]{0
 check(/plural\(count, 'vote', 'votes'\)/.test(page) && /in total/.test(page), 'the number of votes for each side and the total are shown');
 check(/transition-\[height\] duration-700 ease-out/.test(page) && /setTimeout\(\(\) => setRevealed\(true\), 40\)/.test(page), 'the result bars grow smoothly after voting');
 check(/aria-live="polite"/.test(page) && /aria-label=\{voted \? `\$\{label\}: \$\{pct\}%/.test(page), 'the result is announced to screen readers');
-check(/REFRESH_MS = 30_000/.test(page) && /if \(!today\?\.myVote\) return;/.test(page), 'after voting, the numbers refresh every half minute while the page is in front');
+check(!/setInterval\(\(\) => \{ if \(document\.visibilityState/.test(page) && !/RefreshCw|aria-label="Refresh"/.test(page), 'nothing reloads this page by itself or on request (no timer, no refresh button): only Home refreshes');
 
 section('3. Earlier questions');
 check(/fetchTotPrevious\(\{ limit: PAGE_SIZE, before: \{ day: last\.day, seq: last\.seq \} \}\)/.test(page) && /Load more/.test(page), 'earlier questions load a page at a time');

@@ -36,7 +36,6 @@ import { POST_FILTERS } from '../../data/mockData';
 import { JoinUsModal } from './JoinUsModal';
 import { LazyVideo } from '../Common/LazyVideo';
 import { buildIndex, searchIndex, popularity } from '../../utils/searchEngine';
-import { startsInsideOverlay } from '../../utils/pullToRefresh';
 
 // Once someone taps "Not now", don't ask again on this device — re-showing it every visit would be
 // exactly the kind of nagging that makes people distrust a permission prompt.
@@ -174,11 +173,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Pull to refresh & shuffle
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
-  const touchStartY = useRef<number | null>(null);
+  // Explore keeps the order it was opened with (only the Home page refreshes (pull down there): no other page has a refresh button, a pull-down refresh or a timer that reloads it).
   const [shuffledPosts, setShuffledPosts] = useState<Post[]>(posts);
   const [shuffledReels, setShuffledReels] = useState<Reel[]>(reels);
 
@@ -216,18 +211,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     loadUsers(searchQuery, true);
     setVisibleCount(ITEMS_PER_PAGE);
   }, [searchQuery]);
-
-  const handleShuffleAndRefresh = async () => {
-    setIsRefreshing(true);
-    setShuffledPosts([...posts].sort(() => Math.random() - 0.5));
-    setShuffledReels([...reels].sort(() => Math.random() - 0.5));
-    await loadUsers(searchQuery, true);
-    setVisibleCount(ITEMS_PER_PAGE);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      setPullDistance(0);
-    }, 600);
-  };
 
   // Handle follow / follow-request toggle — the actual API call lives in
   // onToggleFollowUser (App.tsx), which also syncs app-wide user state;
@@ -318,36 +301,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     return () => observer.disconnect();
   }, [hasMore, isLoadingMore, totalItemsCount, visibleCount, activeTab]);
 
-  // Touch handlers for Pull-to-Refresh
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // a finger that lands on a menu / sheet / pop-up drawn over the page is scrolling that, never pulling the page
-    if (startsInsideOverlay(e.target, e.currentTarget)) return;
-    if (window.scrollY <= 5) {
-      touchStartY.current = e.touches[0].clientY;
-      setIsPulling(true);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY.current === null || window.scrollY > 10) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - touchStartY.current;
-    if (diff > 0) {
-      const elastic = Math.min(diff * 0.45, 90);
-      setPullDistance(elastic);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (pullDistance > 55) {
-      handleShuffleAndRefresh();
-    } else {
-      setPullDistance(0);
-    }
-    touchStartY.current = null;
-    setIsPulling(false);
-  };
-
   const paginatedUsers = usersList.slice(0, visibleCount);
   const paginatedPosts = filteredPosts.slice(0, visibleCount);
   const paginatedReels = filteredReels.slice(0, visibleCount);
@@ -355,9 +308,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   return (
     <div
       id="explore-view-container"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
       className="w-full max-w-4xl mx-auto px-3 sm:px-4 pt-3 pb-24 space-y-4 select-none relative"
     >
       {/* "Find friends from your contacts" — ask once, then show any matches right here at the top */}
@@ -440,34 +390,6 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
           )}
         </div>
       )}
-
-      {/* Pull To Refresh / Shuffle Indicator */}
-      <div
-        className="w-full flex flex-col items-center justify-center overflow-hidden transition-all duration-200"
-        style={{
-          height: isRefreshing ? '50px' : `${pullDistance}px`,
-          opacity: pullDistance > 10 || isRefreshing ? 1 : 0
-        }}
-      >
-        <div className="flex items-center gap-2 px-3.5 py-1 rounded-full bg-zinc-900 border border-noob/40 text-white text-xs font-bold shadow-lg shadow-noob/10">
-          {isRefreshing ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 text-noob animate-spin" />
-              <span className="text-noob">Shuffling &amp; Refreshing Explore...</span>
-            </>
-          ) : pullDistance > 55 ? (
-            <>
-              <Shuffle className="w-3.5 h-3.5 text-noob animate-spin" />
-              <span className="text-noob">Release to Shuffle Everything</span>
-            </>
-          ) : (
-            <>
-              <ArrowDown className="w-3.5 h-3.5 text-zinc-400 animate-bounce" />
-              <span className="text-zinc-400">Pull down to Shuffle &amp; Refresh</span>
-            </>
-          )}
-        </div>
-      </div>
 
       {/* 1. Explore Search Bar & Shuffle Trigger */}
       <div className="flex items-center gap-2 w-full">

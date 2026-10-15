@@ -37,13 +37,13 @@ check(/New \(\{counts\.new\}\)/.test(page) && /Answered \(\{counts\.answered\}\)
 check(/Anonymous · \{whenLabel\(q\.createdAt\)\}/.test(page), 'each question is labelled "Anonymous" with its time');
 check(/answerAskQuestion\(q\.id, draft, publish\)/.test(page) && /Publish this answer on my profile \(without who asked\)/.test(page), 'answering, with a choice to publish it on my profile (not published unless I tick it)');
 check(/useState\(q\.answerPublic\)/.test(page) && /setAskAnswerPublic\(q\.id, !q\.answerPublic\)/.test(page), 'a published answer can be taken off, and a private one published, at any time');
-check(/shareCardAsStory\(\{ eyebrow: 'Ask me anything', title: q\.body, body: q\.answer \?\? undefined, footer: link \}\)/.test(page) && /Share as Story/.test(page), 'an answer can be shared as a Story');
+check(/shareCardAsStory\(\{ eyebrow: 'Ask me anything', title: q\.body, body: q\.answer \?\? undefined, link: \{ url: link, label: 'Ask me anything' \} \}\)/.test(page) && /Share as Story/.test(page), 'an answer can be shared as a Story, with a real "Ask me anything" button on it');
 check(/Put my link in a Story/.test(page), 'and so can my question link');
 check(/deleteAskQuestion\(q\.id\)/.test(page) && /reportAskQuestion\(q\.id, reason\)/.test(page) && /blockAskSender\(q\.id\)/.test(page), 'a question can be deleted, reported, or its sender blocked');
 check(/armed === 'delete'/.test(page) && /armed === 'block'/.test(page) && /Tap again to block/.test(page), 'deleting and blocking need a second tap');
 check(/REPORT_REASONS/.test(page) && /Harassment or hate/.test(page), 'a report asks for a reason');
 check(/fetchFunCanManage\(\)/.test(page) && /canManage && reports\.length > 0/.test(page) && /You see the question and the reason, never who sent it\./.test(page), 'administrators and helpers see reported questions (not who sent them) and can keep, remove, or remove and stop the sender');
-check(/60_000/.test(page) && /document\.visibilityState === 'visible'/.test(page), 'new questions are looked for every minute while the page is in front');
+check(!/setInterval/.test(page), 'nothing reloads this page by itself (a new question is in the notification, and is here when the page is opened): only Home refreshes');
 
 section('4. States and safety');
 check(/<SkeletonCards/.test(page) && /<ErrorState/.test(page) && /<EmptyState/.test(page) && /No new questions/.test(page), 'loading placeholders, an error with "Try again", and an empty state');
@@ -62,7 +62,7 @@ check(/\{!isTargetBlocked && <ProfileAskCard profileUser=\{targetUser\} isOwnPro
 
 section('6. The picture for a Story');
 check(/canvas\.width = W;\s*canvas\.height = H;/.test(share) && /const W = 1080;\s*const H = 1920;/.test(share), 'a Story-sized picture (1080 x 1920)');
-check(/uploadMediaFile\(file, folder\)/.test(share) && /createStory\(\{ mediaUrl: key, mediaType: 'image', stickers: \[\], isCloseFriendsOnly: false \}\)/.test(share), 'it goes through the app\'s own upload and Story publishing');
+check(/uploadMediaFile\(file, folder\)/.test(share) && /createStory\(\{ mediaUrl: key, mediaType: 'image', stickers: spec\.link \? \[storyLinkSticker\(spec\.link\)\] : \[\], isCloseFriendsOnly: false \}\)/.test(share), 'it goes through the app\'s own upload and Story publishing, with the link as the Story\'s own tappable button');
 check(/createPost\(\{[\s\S]{0,120}caption,/.test(share), 'the same picture can be a Post');
 check(/typeof ctx\.roundRect === 'function'/.test(share), 'older phones without rounded rectangles still get a picture');
 

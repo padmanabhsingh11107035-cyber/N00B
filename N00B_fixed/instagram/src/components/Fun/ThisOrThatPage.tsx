@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Share2, Plus, Trash2, RefreshCw, Zap, CalendarClock, ChevronDown, X } from 'lucide-react';
+import { Check, Share2, Plus, Trash2, Zap, CalendarClock, ChevronDown, X } from 'lucide-react';
 import {
   fetchTotToday,
   fetchTotPrevious,
@@ -19,7 +19,6 @@ import type { FunPageProps } from './types';
 // voted on. The people who manage questions (the main administrator, or a helper with the "moderate content" permission) add and remove them here.
 
 const PAGE_SIZE = 8;
-const REFRESH_MS = 30_000;
 
 /** today's date in India, YYYY-MM-DD (the day the questions follow) */
 const indiaToday = (): string => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -141,7 +140,6 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorText, setErrorText] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [pending, setPending] = useState<{ id: string; choice: 'a' | 'b' } | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [armed, setArmed] = useState<string | null>(null);
@@ -155,10 +153,10 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
   const loggedIn = !!currentUser;
   useEffect(() => () => window.clearTimeout(armTimer.current), []);
 
-  const load = useCallback(async (mode: 'initial' | 'refresh' | 'quiet') => {
+  // (only the Home page refreshes (pull down there): no other page has a refresh button, a pull-down refresh or a timer that reloads it.)
+  const load = useCallback(async (mode: 'initial' | 'quiet') => {
     const id = ++loadId.current;
     if (mode === 'initial') setStatus('loading');
-    if (mode === 'refresh') setRefreshing(true);
     try {
       const [t, p] = await Promise.all([fetchTotToday(), fetchTotPrevious({ limit: PAGE_SIZE })]);
       if (id !== loadId.current) return;
@@ -169,20 +167,10 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
     } catch (e) {
       if (id !== loadId.current) return;
       if (mode === 'initial') { setErrorText(friendly(e, 'Could not load the questions. Please check your connection and try again.')); setStatus('error'); }
-      else if (mode === 'refresh') say(friendly(e, 'Could not refresh right now.'), 'err');
-    } finally {
-      if (id === loadId.current) setRefreshing(false);
     }
-  }, [say]);
+  }, []);
 
   useEffect(() => { void load('initial'); }, [load]);
-
-  // the numbers move while people vote: bring them in every half minute while this page is in front (only once you have voted, since before that there is nothing to update)
-  useEffect(() => {
-    if (!today?.myVote) return;
-    const t = window.setInterval(() => { if (document.visibilityState === 'visible') void load('quiet'); }, REFRESH_MS);
-    return () => window.clearInterval(t);
-  }, [today?.myVote, load]);
 
   // managers: who they are, and the questions that are still to come
   const loadUpcoming = useCallback(async () => {
@@ -288,12 +276,9 @@ const ThisOrThatPage: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
 
   return (
     <div className="space-y-5">
-      {/* the intro: what this is, plus refresh and share */}
+      {/* the intro: what this is, plus share */}
       <div className="flex items-center gap-2">
         <p className="flex-1 text-xs text-zinc-400 leading-relaxed">One question a day. Pick a side, then see how everyone voted. You can vote once on each question.</p>
-        <button type="button" onClick={() => void load('refresh')} disabled={refreshing} aria-label="Refresh" className="shrink-0 w-9 h-9 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer disabled:opacity-60">
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
-        </button>
         <button type="button" onClick={() => void share()} aria-label="Share This or That" className="shrink-0 w-9 h-9 rounded-full border border-zinc-700 hover:border-zinc-50 flex items-center justify-center cursor-pointer">
           <Share2 className="w-4 h-4" aria-hidden="true" />
         </button>

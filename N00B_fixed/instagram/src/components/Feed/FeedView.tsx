@@ -34,6 +34,10 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { VenetianMask } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
+import { useFullPage } from '../../utils/fullPage';
+import { captureScroll, restoreScroll, type ScrollSnapshot } from '../../utils/pageLayers';
+import { useNoobDrawOpen } from '../Draw/drawStore';
+import { useStudyNav } from '../Study/studyStore';
 import { Zap, MessageCircleQuestion, Smile, BarChart3 } from 'lucide-react';
 import { FUN_FEATURES, type FunFeature, type FunLocation } from '../../utils/funRoutes';
 import { openStudy } from '../Study/studyStore';
@@ -273,6 +277,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const touchStartY = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // The pages of the three-line menu are separate pages. While one is open the Home page behind it is HIDDEN (not just covered): nothing of it can show through when the keyboard
+  // pushes the screen up or a finger drags past the end of the page, its videos and songs stop, and the app knows this is not the place to refresh. When the page is closed Home
+  // comes back exactly as it was: same posts, same place (the scroll is noted when the menu is opened, which is always before any of its pages).
+  const drawOpen = useNoobDrawOpen();
+  const studyOpen = useStudyNav().open;
+  const menuPageOpen = !!(showAnonymous || showOurTeam || openPage || drawOpen || studyOpen);
+  useFullPage(menuPageOpen);
+  const homeSnapshot = useRef<ScrollSnapshot | null>(null);
+  useEffect(() => { if (showNoobMenu) homeSnapshot.current = captureScroll(containerRef.current, 'feed'); }, [showNoobMenu]);
+  const menuPageWasOpen = useRef(false);
+  useLayoutEffect(() => {
+    if (menuPageWasOpen.current && !menuPageOpen && homeSnapshot.current) { restoreScroll(homeSnapshot.current); homeSnapshot.current = null; }
+    menuPageWasOpen.current = menuPageOpen;
+  }, [menuPageOpen]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     onRefreshFeed();
@@ -482,6 +501,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
       onTouchEnd={handleTouchEnd}
       className="doodle-wallpaper-feed w-full flex flex-col items-center pb-24 relative select-none"
     >
+      {/* the Home page itself: hidden while a page of the three-line menu is open (see above) */}
+      <div data-home-content style={{ display: menuPageOpen ? 'none' : 'contents' }}>
       {/* Pull To Refresh Visual Indicator */}
       <div
         className="w-full flex flex-col items-center justify-center overflow-hidden transition-all duration-200"
@@ -1015,6 +1036,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </div>
         </div>
       )}
+      </div>
       {showAnonymous && (
         <ErrorBoundary showErrorDetails>
           <React.Suspense fallback={<LazyFallback />}>

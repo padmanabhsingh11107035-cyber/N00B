@@ -37,9 +37,8 @@ check(startsInsideOverlay(outside, page, pos) === false, 'an element that is not
 section('2. Both pages use it');
 const feed = read('src/components/Feed/FeedView.tsx');
 const explore = read('src/components/Explore/ExploreView.tsx');
-for (const [name, src] of [['Home', feed], ['Explore', explore]]) {
-  check(/if \(startsInsideOverlay\(e\.target, e\.currentTarget\)\) return;\s*\n\s*if \(window\.scrollY <= 5\)/.test(src), `${name}: a touch that lands on an overlay never starts a pull`);
-}
+check(/if \(startsInsideOverlay\(e\.target, e\.currentTarget\)\) return;\s*\n\s*if \(window\.scrollY <= 5\)/.test(feed), 'Home: a touch that lands on an overlay never starts a pull');
+check(!/startsInsideOverlay|handleTouchStart|pullDistance|Pull down to/.test(explore), 'Explore has no pull-down refresh any more: only the Home page refreshes');
 check(/z-\[95\] bg-black\/70 backdrop-blur-sm flex items-start overscroll-contain/.test(feed) && /overflow-y-auto overscroll-contain/.test(feed), 'the three-lines menu and its list do not pass their scrolling on to the page behind');
 
 console.log(`\n${passed} passed, ${failed} failed`);

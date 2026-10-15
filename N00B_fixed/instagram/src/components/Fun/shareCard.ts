@@ -12,9 +12,17 @@ export interface ShareCardSpec {
   body?: string;
   /** poll options, drawn as rows */
   options?: string[];
-  /** the link or line at the bottom */
-  footer: string;
+  /** a line at the bottom of the picture (not needed when there is a link: the link is the button) */
+  footer?: string;
+  /**
+   * A REAL link: on a Story it is a tappable button on top of the picture (the Story's own "link" sticker, which opens the address); on a Post it is the post's link. The picture itself
+   * only keeps room for it - the address is never just drawn as text that nobody can tap.
+   */
+  link?: { url: string; label: string };
 }
+
+/** Where the button of a Story sits (percent of the picture, centred) and how wide it is. */
+export const STORY_LINK_STICKER = { x: 50, y: 88, width: 66 } as const;
 
 const W = 1080;
 const H = 1920;
@@ -88,10 +96,12 @@ export function renderShareCard(spec: ShareCardSpec): Promise<File> {
 
     // the big text, as large as will fit
     const textW = W - 260;
+    // everything has to end above the button / the foot of the picture, so the room is shared out by what there is to show
+    const maxTitleLines = spec.body ? 5 : spec.options?.length ? (spec.options.length > 4 ? 3 : 4) : 7;
     let size = 84;
     let titleLines = wrapLines(measureAt(800, size), spec.title, textW);
-    while (titleLines.length > 7 && size > 48) { size -= 6; titleLines = wrapLines(measureAt(800, size), spec.title, textW); }
-    titleLines = clip(titleLines, 8);
+    while (titleLines.length > maxTitleLines && size > 44) { size -= 6; titleLines = wrapLines(measureAt(800, size), spec.title, textW); }
+    titleLines = clip(titleLines, maxTitleLines);
     const lineH = Math.round(size * 1.22);
     let y = 520;
     ctx.fillStyle = '#ffffff';
@@ -104,7 +114,7 @@ export function renderShareCard(spec: ShareCardSpec): Promise<File> {
       ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(W / 2 - 90, y - 30); ctx.lineTo(W / 2 + 90, y - 30); ctx.stroke();
       y += 40;
-      const bodyLines = clip(wrapLines(measureAt(600, 56), spec.body, textW), 9);
+      const bodyLines = clip(wrapLines(measureAt(600, 56), spec.body, textW), 6);
       ctx.fillStyle = '#e5e5e5';
       ctx.font = `600 56px ${FONT}`;
       for (const l of bodyLines) { ctx.fillText(l, W / 2, y); y += 74; }
@@ -112,7 +122,7 @@ export function renderShareCard(spec: ShareCardSpec): Promise<File> {
 
     if (spec.options?.length) {
       y += 50;
-      for (const opt of spec.options.slice(0, 6)) {
+      for (const opt of spec.options.slice(0, spec.options.length > 4 ? 5 : 6)) {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 5;
         ctx.beginPath(); rr(ctx, 150, y, W - 300, 108, 54); ctx.stroke();
@@ -124,9 +134,11 @@ export function renderShareCard(spec: ShareCardSpec): Promise<File> {
       }
     }
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `700 42px ${FONT}`;
-    ctx.fillText(clip(wrapLines(measureAt(700, 42), spec.footer, W - 260), 2).join(' '), W / 2, H - 190);
+    if (spec.footer && !spec.link) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 42px ${FONT}`;
+      ctx.fillText(clip(wrapLines(measureAt(700, 42), spec.footer, W - 260), 2).join(' '), W / 2, H - 190);
+    }
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.font = `600 32px ${FONT}`;
     ctx.fillText('noobsocials.com', W / 2, H - 135);
@@ -146,10 +158,15 @@ async function uploadCard(spec: ShareCardSpec, folder: 'stories' | 'posts'): Pro
   return key;
 }
 
-/** Posts the card as a Story (visible for the usual day). */
+/** The Story's own link sticker for a card's link: a button people can tap. (Nothing but our own addresses is ever put in one.) */
+export function storyLinkSticker(link: { url: string; label: string }) {
+  return { type: 'link' as const, data: { url: link.url, label: link.label }, x: STORY_LINK_STICKER.x, y: STORY_LINK_STICKER.y, width: STORY_LINK_STICKER.width, rotation: 0 };
+}
+
+/** Posts the card as a Story (visible for the usual day). A card with a link gets a real tappable button on it. */
 export async function shareCardAsStory(spec: ShareCardSpec): Promise<void> {
   const key = await uploadCard(spec, 'stories');
-  await createStory({ mediaUrl: key, mediaType: 'image', stickers: [], isCloseFriendsOnly: false });
+  await createStory({ mediaUrl: key, mediaType: 'image', stickers: spec.link ? [storyLinkSticker(spec.link)] : [], isCloseFriendsOnly: false });
 }
 
 /** Posts the card as a normal post on the profile. */
@@ -159,6 +176,7 @@ export async function shareCardAsPost(spec: ShareCardSpec, caption: string): Pro
     caption,
     category: 'others',
     hashtags: [],
+    webLink: spec.link?.url,
     slides: [{ id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `s${Date.now()}`, mediaUrl: key, objectKey: key, mediaType: 'image' }]
   });
 }

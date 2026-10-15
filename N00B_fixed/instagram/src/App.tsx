@@ -99,6 +99,7 @@ import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot } from './utils/pageLayers';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
+import { useAnyFullPage } from './utils/fullPage';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
@@ -198,6 +199,11 @@ export default function App() {
   const clearPageLayers = pageLayers.clear;
   // Any jump to a page (a bottom-bar tab, "open this post", "message this person"...) closes the profile layers first.
   const setActiveTab = useCallback((tab: NavTab) => { clearPageLayers({ restore: false }); setActiveTabState(tab); }, [clearPageLayers]);
+  // Only the Home page can be refreshed (pull down there). Everywhere else - every other tab, a profile, any page of the three-line menu - pulling down does nothing: the app has no
+  // pull-down refresh there, and the browser's own one (Android Chrome) is switched off too (see index.css, html[data-refresh="off"]). Anyone who wants a refresh goes Home.
+  const fullPageOpen = useAnyFullPage();
+  const refreshableHere = activeTab === 'feed' && pageLayers.layers.length === 0 && !fullPageOpen;
+  useEffect(() => { document.documentElement.setAttribute('data-refresh', refreshableHere ? 'on' : 'off'); }, [refreshableHere]);
   // Tracks the tab the user was on immediately before the current one, so
   // the Reels page's back arrow can return them to wherever they actually
   // came from (feed, explore, profile, etc.) instead of a hardcoded tab.

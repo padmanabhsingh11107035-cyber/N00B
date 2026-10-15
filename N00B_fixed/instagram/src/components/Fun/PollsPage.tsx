@@ -30,7 +30,6 @@ import type { FunPageProps } from './types';
 // by its creator or an administrator. The numbers are always the database's - this page never adds a vote itself. Who voted for what is not in anything this page receives.
 
 const PAGE_SIZE = 8;
-const REFRESH_MS = 12_000;
 const REPORT_REASONS = ['Offensive or hateful', 'Spam or advertising', 'Misleading or harmful', 'Something else'];
 const DURATIONS = [
   { label: '1 hour', minutes: 60 },
@@ -144,7 +143,7 @@ const PollCard: React.FC<{
     }
   };
   const copy = async () => { try { await navigator.clipboard.writeText(link); say('Link copied.', 'ok'); } catch { say('Could not copy the link.', 'err'); } };
-  const spec = { eyebrow: 'Public poll', title: poll.question, options: poll.options.map((o) => o.label), footer: `Vote: ${link}` };
+  const spec = { eyebrow: 'Public poll', title: poll.question, options: poll.options.map((o) => o.label), link: { url: link, label: 'Vote now' } };
   const toStory = async () => { if (!loggedIn) { onLogin?.(); return; } setBusy(true); try { await shareCardAsStory(spec); say('Added to your Story.', 'ok'); } catch (e) { say(friendly(e, 'Could not add it to your Story.'), 'err'); } finally { setBusy(false); } };
   const toPost = async () => { if (!loggedIn) { onLogin?.(); return; } setBusy(true); try { await shareCardAsPost(spec, `${poll.question}\n\nVote: ${link}`); say('Posted on your profile.', 'ok'); } catch (e) { say(friendly(e, 'Could not post it.'), 'err'); } finally { setBusy(false); } };
 
@@ -330,11 +329,6 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
     try { setSingle(await fetchPoll(target)); } catch (e) { setSingle((s) => (s === undefined ? null : s)); }
   }, [target]);
   useEffect(() => { setSingle(undefined); if (target) void loadSingle(); }, [target, loadSingle]);
-  useEffect(() => {
-    if (!target) return;
-    const t = window.setInterval(() => { if (document.visibilityState === 'visible') void loadSingle(); }, REFRESH_MS);
-    return () => window.clearInterval(t);
-  }, [target, loadSingle]);
 
   // ---- the lists
   const load = useCallback(async (mode: 'initial' | 'quiet') => {
@@ -358,11 +352,7 @@ const PollsPage: React.FC<FunPageProps> = ({ currentUser, target, onLogin, onOpe
     }
   }, [tab, target]);
   useEffect(() => { void load('initial'); }, [load]);
-  useEffect(() => {
-    if (target) return;
-    const t = window.setInterval(() => { if (document.visibilityState === 'visible') void load('quiet'); }, REFRESH_MS);
-    return () => window.clearInterval(t);
-  }, [target, load]);
+  // (only the Home page refreshes (pull down there): no other page has a refresh button, a pull-down refresh or a timer that reloads it: a poll's numbers come back with your vote, and are fresh whenever the page is opened.)
 
   const changed = (p: Poll) => { setItems((list) => list.map((x) => (x.id === p.id ? p : x))); setSingle((s) => (s && s.id === p.id ? p : s)); };
   const removed = (id: string) => { setItems((list) => list.filter((x) => x.id !== id)); setSingle((s) => (s && s.id === id ? null : s)); setReports((r) => r.filter((x) => x.poll.id !== id)); };

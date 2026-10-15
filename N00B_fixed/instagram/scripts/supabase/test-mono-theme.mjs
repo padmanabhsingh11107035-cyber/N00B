@@ -51,6 +51,13 @@ check(/\.nav-marker \{\s*background: #ffffff;/.test(css) && /:root:not\(\[data-t
 const post = read('src/components/Feed/PostCard.tsx');
 check(/className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-xl transition-all"/.test(post), 'a post is a solid black card with a bright edge');
 
+section('5b. The sign-in page has the same small doodles as Home, more of them');
+check((css.match(/--doodle-login: url\(/g) || []).length === 3 && /\.doodle-wallpaper-login \{\s*background-color: var\(--page\);\s*background-image: var\(--doodle-login\);\s*background-size: 120px 120px;/.test(css), 'a 120-px tile of the same doodles (Home uses 160 px): about 1.8 times as many, at the same size');
+const feedTile = decodeURIComponent((/--doodle-feed: url\("data:image\/svg\+xml,([^"]*)"\)/.exec(css) || [])[1] || '');
+const loginTile = decodeURIComponent((/--doodle-login: url\("data:image\/svg\+xml,([^"]*)"\)/.exec(css) || [])[1] || '');
+check((feedTile.match(/<path /g) || []).length === (loginTile.match(/<path /g) || []).length && (feedTile.match(/<path /g) || []).length >= 16 && /stroke-width='1\.4'/.test(loginTile), 'the same sixteen doodles, drawn at the same size and line weight');
+check(/className="doodle-wallpaper-login min-h-screen w-full text-white flex flex-col justify-between/.test(read('src/components/Auth/AuthView.tsx')), 'and the sign-in page uses it');
+
 section('6. Names on a post can be seen to be tappable, and open a profile at once');
 const UL = 'underline decoration-1 underline-offset-[3px] decoration-zinc-50/70';
 check((post.match(new RegExp(UL.replace(/[[\]/.]/g, '\\$&'), 'g')) || []).length >= 4, 'the name, the @handle, a co-author and a commenter\'s name are always underlined');

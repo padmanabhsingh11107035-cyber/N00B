@@ -930,7 +930,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   }
 
   return (
-    <div className="min-h-screen w-full bg-page text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
+    <div className="doodle-wallpaper-login min-h-screen w-full text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
       {/* Premium Gen Z Background glow accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />

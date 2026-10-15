@@ -456,7 +456,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="w-full flex flex-col items-center pb-24 relative select-none"
+      className="doodle-wallpaper-feed w-full flex flex-col items-center pb-24 relative select-none"
     >
       {/* Pull To Refresh Visual Indicator */}
       <div

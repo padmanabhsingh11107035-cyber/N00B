@@ -37,6 +37,8 @@ check(/\[class~="fixed"\] \[class~="rounded-3xl"\]\[class\*="bg-zinc-9"\]/.test(
 check(/button\.bg-noob, a\.bg-noob, \[role="button"\]\.bg-noob,\s*button\[class\*="from-noob"\], a\[class\*="from-noob"\] \{\s*border-radius: 9999px;/.test(css), 'accent buttons are full pills');
 check(/\[class~="border-zinc-800"\]:not\(:hover\):not\(:focus-within\)/.test(css) && /border-color: var\(--outline\);/.test(css), 'card outlines are the visible grey');
 check(/h1, h2 \{\s*font-family: inherit;/.test(css), 'titles use the same bold sans (no serif)');
+check((css.match(/--doodle-feed: url\(/g) || []).length === 3 && /\.doodle-wallpaper-feed \{\s*background-color: var\(--page\);\s*background-image: var\(--doodle-feed\);\s*background-size: 160px 160px;/.test(css), 'Home has its own denser wallpaper of small doodles (dark, light and dark-in-light)');
+check(/className="doodle-wallpaper-feed w-full flex flex-col items-center pb-24/.test(read('src/components/Feed/FeedView.tsx')), 'and the Home page uses it');
 const lightSrc = read('src/lightAccents.css');
 check(!/#c6613f/.test(lightSrc) && /text-cyan-300[^}]*#111111/.test(lightSrc), 'in light mode the accent and the decorative hues come out black');
 const buttons = read('src/components/Auth/AuthView.tsx');

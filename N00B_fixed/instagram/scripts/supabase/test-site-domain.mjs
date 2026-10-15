@@ -89,6 +89,7 @@ section('6. The Install button on the old address installs the new app');
   check(at('nooob.xyz') === true && at('www.nooob.xyz') === true, 'on nooob.xyz the button sends people to the main address');
   check(at('noobsocials.com') === false && at('www.noobsocials.com') === false, 'on noobsocials.com it installs right there');
   check(at('localhost') === false && at('192.168.1.5') === false && at('example.com') === false, 'a test address or another website is never sent anywhere');
+  check(at('ai.nooob.xyz') === false && at('coaching.nooob.xyz') === false && at('ai.noobsocials.com') === false, 'NOOB AI and NOOB STUDY (ai. / coaching.) are other apps: never sent anywhere');
   check(at('nooob.xyz', { Capacitor: { isNativePlatform: () => true } }) === false, 'inside the Android app it is never sent anywhere');
   delete globalThis.window;
   check(S.isOnOtherNoobAddress() === false, 'with no browser at all (tests) it stays put');

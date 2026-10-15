@@ -15,3 +15,14 @@
   Permissions-Policy: camera=(self), microphone=(self "https://ai.nooob.xyz"), autoplay=(self "https://ai.nooob.xyz"), geolocation=(self), display-capture=(self), payment=(), usb=(), serial=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
+
+# The files that decide whether the app is up to date are never kept by a browser or a CDN: the page itself, the tiny file naming the current build (the app re-reads
+# it to know a newer version exists, see src/utils/appVersion.ts) and the service worker. Everything else has a fingerprint in its name and can be kept forever.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/version.json
+  Cache-Control: no-store
+/sw.js
+  Cache-Control: no-cache

@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import { MovedNotice } from './components/Common/MovedNotice.tsx';
 import './index.css';
 import { initTheme } from './utils/theme.ts';
 import { initLanguage } from './i18n/engine.ts';
@@ -88,6 +89,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <MusicPlayerProvider>
         <App />
+        <MovedNotice />
       </MusicPlayerProvider>
     </ErrorBoundary>
   </StrictMode>,

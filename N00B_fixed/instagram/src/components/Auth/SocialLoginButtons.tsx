@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { fetchEnabledSocialProviders, cachedSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
 import { ButtonDoodles } from './ButtonDoodles';
@@ -67,7 +68,7 @@ const SpotifyIcon: React.FC<IconProps> = ({ className = 'w-4 h-4' }) => (
 
 // light = the button is a light colour (the doodles then use dark strokes); stitch = colour of the dashed "stitching" just inside the edge.
 // pattern = a faint texture drawn over the colour (confetti, ripples, pixels); shine = seconds before the light sweeps across again.
-const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; className: string; light?: boolean; stitch: string; pattern?: string; patternSize?: string; shine?: number }> = {
+const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; className: string; light?: boolean; stitch: string; pattern?: string; patternSize?: string; shine?: number; solid?: string }> = {
   // Google: sunny yellow, with confetti in Google's four colours
   google: {
     name: 'Google', Icon: GoogleIcon, light: true, shine: 0,
@@ -75,7 +76,14 @@ const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; cl
     stitch: 'rgba(180,110,0,.4)',
     pattern: 'radial-gradient(circle at 16% 72%, rgba(234,67,53,.22) 0 3px, transparent 3.6px), radial-gradient(circle at 38% 22%, rgba(66,133,244,.22) 0 2.6px, transparent 3.2px), radial-gradient(circle at 64% 80%, rgba(52,168,83,.24) 0 3px, transparent 3.6px), radial-gradient(circle at 86% 28%, rgba(234,67,53,.2) 0 2.6px, transparent 3.2px), radial-gradient(circle at 52% 14%, rgba(66,133,244,.18) 0 2px, transparent 2.6px)'
   },
-  apple: { name: 'Apple', Icon: AppleIcon, className: 'bg-white text-black ring-1 ring-black/10', light: true, stitch: 'rgba(0,0,0,.18)' },
+  // Apple: black and white, with white doodles (it only opens the "coming soon" card for now)
+  apple: {
+    name: 'Apple', Icon: AppleIcon, solid: '#000000', shine: 2.2,
+    className: 'force-white-text ring-1 ring-white/60 shadow-[0_3px_0_rgba(255,255,255,.16),0_9px_18px_-8px_rgba(255,255,255,.22)]',
+    stitch: 'rgba(255,255,255,.4)',
+    pattern: 'radial-gradient(rgba(255,255,255,.2) 1px, transparent 1.6px), radial-gradient(circle at 100% 0%, rgba(255,255,255,.14), transparent 50%)',
+    patternSize: '10px 10px, auto'
+  },
   // Facebook: deep ocean blue fading to bright cyan, with ripples
   facebook: {
     name: 'Facebook', Icon: FacebookIcon, shine: 1.6,
@@ -107,12 +115,13 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
   // right from the first moment: what this device read last time, or Google + Facebook + Discord (never Google alone while the settings load)
   const [providers, setProviders] = useState<EnabledSocialProvider[]>(() => cachedSocialProviders());
   const [busy, setBusy] = useState<SocialProvider | null>(null);
-  // "Continue with Apple" is not working yet: the button is there for everyone, and a tap only says so for a few seconds
+  // "Continue with Apple" is not working yet: the button is there for everyone, and a tap opens a small square "coming soon" card
   const [appleSoon, setAppleSoon] = useState(false);
   useEffect(() => {
     if (!appleSoon) return;
-    const t = window.setTimeout(() => setAppleSoon(false), 3200);
-    return () => window.clearTimeout(t);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAppleSoon(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [appleSoon]);
 
   useEffect(() => {
@@ -135,11 +144,11 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
   };
 
   const google = providers.find((p) => p.id === 'google');
-  // Apple has its own always-visible "coming soon" button below Google, so it is left out of the list here
+  // Apple has its own always-visible "coming soon" button right below Google (see the return below), so it is left out of the list here
   const others = providers.filter((p) => p.id !== 'google' && p.id !== 'apple');
 
   // Every provider is a full-width "Continue with …" button, one under the other (Google first).
-  const button = (p: EnabledSocialProvider) => {
+  const button = (p: EnabledSocialProvider, onTap?: () => void) => {
     const m = META[p.id];
     const label = `Continue with ${m.name}`;
     return (
@@ -147,8 +156,9 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
         key={p.id}
         type="button"
         disabled={busy !== null}
-        onClick={() => void start(p)}
+        onClick={() => (onTap ? onTap() : void start(p))}
         aria-label={label}
+        style={m.solid ? { backgroundColor: m.solid, color: '#ffffff' } : undefined}
         className={`${m.className} dd-btn group relative overflow-hidden w-full py-2.5 font-bold text-sm rounded-2xl cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-60 disabled:hover:translate-y-0 flex items-center justify-center gap-2.5`}
       >
         {m.pattern && <span aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: m.pattern, backgroundSize: m.patternSize }} />}
@@ -164,30 +174,49 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
     );
   };
 
-  const appleButton = (
-    <div key="apple-soon">
-      <button
-        type="button"
-        onClick={() => setAppleSoon(true)}
-        aria-label="Continue with Apple"
+  // The square "coming soon" card. It is drawn on the page itself (not inside the form) so nothing around it can clip or move it.
+  const appleCard = appleSoon && typeof document !== 'undefined' ? createPortal(
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-[noob-fade_.2s_ease-out]"
+      onClick={() => setAppleSoon(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Continue with Apple is coming soon"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="noob-pop force-white-text relative w-[min(84vw,300px)] aspect-square rounded-[28px] ring-1 ring-white/60 shadow-[0_0_0_6px_rgba(255,255,255,.06),0_24px_60px_-10px_rgba(0,0,0,.9)] flex flex-col items-center justify-center text-center px-7 gap-2.5 overflow-hidden"
         style={{ backgroundColor: '#000000', color: '#ffffff' }}
-        className="force-white-text w-full py-2.5 rounded-2xl ring-1 ring-white/60 font-bold text-sm cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:ring-white active:translate-y-0 active:scale-[.99] flex items-center justify-center gap-2.5"
       >
-        <AppleIcon className="w-[18px] h-[18px]" />
-        <span>Continue with Apple</span>
-      </button>
-      {appleSoon && (
-        <div role="status" className="mt-1.5 text-center text-xs font-bold text-white animate-[noob-fade_.2s_ease-out]">
-          Continue with Apple is coming soon
-        </div>
-      )}
-    </div>
-  );
+        <span aria-hidden="true" className="pointer-events-none absolute inset-[6px] rounded-[22px] border border-dashed border-white/35" />
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute left-4 top-4 w-5 h-5 text-white dd-twinkle" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute right-4 top-5 w-4 h-4 text-white/80 dd-float" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        <svg aria-hidden="true" viewBox="0 0 48 12" className="pointer-events-none absolute left-5 bottom-5 w-12 h-3 text-white/80" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 8q5-8 10 0t10 0 10 0 10 0" /></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute right-5 bottom-5 w-5 h-5 text-white/85 dd-twinkle" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z" /></svg>
+        <span className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+          <AppleIcon className="w-8 h-8" />
+        </span>
+        <h3 className="relative z-10 text-2xl font-extrabold tracking-tight">Coming soon</h3>
+        <p className="relative z-10 text-[13px] leading-snug text-white/75">Continue with Apple is not ready yet. For now, use Google, Facebook, Discord or your User ID.</p>
+        <button
+          type="button"
+          autoFocus
+          onClick={() => setAppleSoon(false)}
+          className="relative z-10 mt-1 px-7 py-2 rounded-full text-sm font-extrabold cursor-pointer transition-transform hover:scale-105 active:scale-95"
+          style={{ backgroundColor: '#ffffff', color: '#000000' }}
+        >
+          Okay
+        </button>
+      </div>
+    </div>,
+    document.body
+  ) : null;
 
   return (
     <div className="space-y-2">
       {google && button(google)}
-      {appleButton}
+      {button({ id: 'apple', supabaseId: 'apple' }, () => setAppleSoon(true))}
+      {appleCard}
       {others.map((p) => button(p))}
     </div>
   );

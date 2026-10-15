@@ -13,13 +13,15 @@ const doodles = read('src/components/Auth/ButtonDoodles.tsx');
 
 section('1. Continue with Apple');
 check((auth.match(/<SocialLoginButtons /g) || []).length === 2, 'the social buttons are on both the log-in and the sign-up form');
-check(/<span>Continue with Apple<\/span>/.test(social) && /backgroundColor: '#000000'/.test(social) && /color: '#ffffff'/.test(social), 'black with white text that says "Continue with Apple"');
-check(/rounded-2xl ring-1 ring-white\/60/.test(social) && /dd-btn group relative overflow-hidden w-full py-2\.5 font-bold text-sm rounded-2xl/.test(social), 'it has the same shape (rounded corners, height, width) as the Google / Facebook / Discord buttons');
-check(/onClick=\{\(\) => setAppleSoon\(true\)\}/.test(social) && /Continue with Apple is coming soon/.test(social), 'tapping it only shows "coming soon"');
-check(!/signInWithProvider\([^)]*apple/i.test(social) && /p\.id !== 'apple'/.test(social), 'it never starts a real sign-in, and a real Apple provider (if one is ever switched on) is not shown twice');
-const iGoogle = social.indexOf('{google && button(google)}'), iApple = social.indexOf('{appleButton}'), iOthers = social.indexOf('{others.map');
+check(/apple: \{\s*name: 'Apple'[^}]*solid: '#000000'/.test(social) && /force-white-text ring-1 ring-white\/60/.test(social), 'it is black with a white edge and white text');
+check(/dd-btn group relative overflow-hidden w-full py-2\.5 font-bold text-sm rounded-2xl/.test(social) && /button\(\{ id: 'apple', supabaseId: 'apple' \}/.test(social), 'it is built by the same code as Google / Facebook / Discord, so it has exactly their shape, size and finish');
+check(/apple: \{ left: appleLeft, right: appleRight, leftMore: appleLeftMore, rightMore: appleRightMore, tone: 'text-white' \}/.test(doodles) && !/AW = \{[^}]*#(?!fff)/i.test(doodles), 'it has its own doodles, all white');
+check(/\(\) => setAppleSoon\(true\)/.test(social) && !/signInWithProvider\([^)]*apple/i.test(social) && /p\.id !== 'apple'/.test(social), 'tapping it never starts a real sign-in (and a real Apple provider, if one is ever switched on, is not shown twice)');
+const iGoogle = social.indexOf('{google && button(google)}'), iApple = social.indexOf("button({ id: 'apple'"), iOthers = social.indexOf('{others.map');
 check(iGoogle > 0 && iApple > iGoogle && iOthers > iApple, 'it sits directly below Google, above Facebook and Discord');
-check(/clearTimeout\(t\)/.test(social) && /setAppleSoon\(false\)/.test(social), 'the message goes away by itself');
+check(/aspect-square/.test(social) && /createPortal\(/.test(social) && /<h3[^>]*>Coming soon<\/h3>/.test(social), 'tapping it opens a square "Coming soon" card drawn over the page');
+check(/e\.key === 'Escape'/.test(social) && /onClick=\{\(\) => setAppleSoon\(false\)\}/.test(social) && /e\.stopPropagation\(\)/.test(social), 'the card closes with Okay, a tap outside it, or Esc — and not when you tap on the card itself');
+check(!/mt-1\.5 text-center text-xs font-bold text-white/.test(social), 'the old one-line message under the button is gone');
 
 section('2. The Install button looks like the login buttons');
 check(/<ButtonDoodles provider="install" \/>/.test(auth) && /install: \{ left: instLeft/.test(doodles), 'it has its own hand-drawn doodles');

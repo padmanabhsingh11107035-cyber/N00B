@@ -205,6 +205,47 @@ const instRightMore = (
   </>
 );
 
+// ---- Apple: white line doodles on the black button (stars, sparkles, hearts, waves, a spiral and a few small leaves)
+const leaf = (cx: number, cy: number, s: number) => `M${cx} ${cy + s}C${cx - s * 1.1} ${cy + s * 0.2} ${cx - s * 0.7} ${cy - s} ${cx + s * 0.3} ${cy - s * 1.2}C${cx + s * 1.1} ${cy - s * 0.2} ${cx + s * 0.8} ${cy + s * 0.8} ${cx} ${cy + s}Z`;
+const AW = { a: '#ffffff', b: 'rgba(255,255,255,.78)', c: 'rgba(255,255,255,.55)' };
+const appleLeft = (
+  <>
+    <P d={wave(4, 36, 6, 4.5, 4)} stroke={AW.a} w={2} />
+    <P d={star(15, 12, 6.5)} stroke={AW.a} cls="dd-twinkle" />
+    <P d={plus(36, 9, 3)} stroke={AW.b} w={1.9} cls="dd-float" delay={0.4} />
+    <P d={spiral(32, 25, 5)} stroke={AW.b} cls="dd-float" delay={0.9} />
+    <P d={leaf(44, 33, 3.4)} stroke={AW.c} fill="rgba(255,255,255,.12)" />
+    <Dot x={6} y={21} c={AW.a} r={1.6} />
+    <Dot x={46} y={20} c={AW.c} r={1.3} />
+  </>
+);
+const appleRight = (
+  <>
+    <P d={sparkle(41, 12, 6.5)} stroke={AW.a} cls="dd-twinkle" delay={0.6} />
+    <P d={wave(30, 36, 6, 4.5, 4)} stroke={AW.a} w={2} />
+    <P d={heart(14, 14, 3.6)} stroke={AW.b} fill="rgba(255,255,255,.12)" />
+    <P d={plus(19, 29, 2.8)} stroke={AW.b} w={1.9} cls="dd-float" delay={0.2} />
+    <P d={leaf(8, 31, 3.2)} stroke={AW.c} fill="rgba(255,255,255,.12)" cls="dd-float" delay={0.7} />
+    <Dot x={50} y={26} c={AW.a} r={1.6} />
+  </>
+);
+const appleLeftMore = (
+  <>
+    <P d={sparkle(70, 14, 5)} stroke={AW.a} cls="dd-twinkle" delay={1.1} />
+    <P d={plus(66, 29, 2.6)} stroke={AW.b} w={1.9} />
+    <P d={star(83, 29, 4.5)} stroke={AW.a} cls="dd-float" delay={0.7} />
+    <Dot x={90} y={11} c={AW.c} r={1.5} />
+  </>
+);
+const appleRightMore = (
+  <>
+    <P d={star(14, 30, 5)} stroke={AW.a} cls="dd-twinkle" delay={0.3} />
+    <P d={sparkle(29, 12, 4.5)} stroke={AW.b} cls="dd-twinkle" delay={1.2} />
+    <P d={spiral(24, 35, 4)} stroke={AW.b} cls="dd-float" delay={0.5} />
+    <Dot x={7} y={12} c={AW.c} r={1.5} />
+  </>
+);
+
 // ---- anything else: a few quiet doodles in the button's own text colour
 const plainLeft = (
   <>
@@ -227,6 +268,7 @@ const SETS: Record<string, { left: React.ReactNode; right: React.ReactNode; left
   google: { left: googleLeft, right: googleRight, leftMore: googleLeftMore, rightMore: googleRightMore, tone: 'text-black' },
   facebook: { left: fbLeft, right: fbRight, leftMore: fbLeftMore, rightMore: fbRightMore, tone: 'text-white' },
   discord: { left: dcLeft, right: dcRight, leftMore: dcLeftMore, rightMore: dcRightMore, tone: 'text-white' },
+  apple: { left: appleLeft, right: appleRight, leftMore: appleLeftMore, rightMore: appleRightMore, tone: 'text-white' },
   install: { left: instLeft, right: instRight, leftMore: instLeftMore, rightMore: instRightMore, tone: 'text-white' }
 };
 

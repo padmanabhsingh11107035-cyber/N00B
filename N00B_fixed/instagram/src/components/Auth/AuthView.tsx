@@ -58,6 +58,7 @@ import { findLanguage } from '../../i18n/languages.ts';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
 import { canInstallNow, isInstalled, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
 import confetti from 'canvas-confetti';
+import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
 
 interface AuthViewProps {
   onAuthSuccess: (user: User) => void;
@@ -551,6 +552,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
     if (!mobileNumber.trim()) {
       setErrorMessage('Please enter your mobile number.');
+      return;
+    }
+    const phoneError = phoneProblem(mobileNumber, countryCode);
+    if (phoneError) {
+      setErrorMessage(phoneError);
       return;
     }
 
@@ -1294,7 +1300,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     </label>
                     <select
                       value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
+                      onChange={(e) => {
+                        setCountryCode(e.target.value);
+                        // a number typed for the old country is cut to what the new country allows
+                        setMobileNumber((n) => cleanPhoneInput(n, phoneRuleFor(e.target.value)));
+                      }}
                       className="w-full bg-zinc-900 text-xs text-white px-3 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 outline-none transition-all cursor-pointer font-medium"
                     >
                       {COUNTRY_OPTIONS.map((c, i) => (
@@ -1311,12 +1321,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     </label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel-national"
                       required
                       value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
-                      placeholder="e.g. 9876543210"
+                      onChange={(e) => setMobileNumber(cleanPhoneInput(e.target.value, phoneRuleFor(countryCode)))}
+                      maxLength={phoneRuleFor(countryCode).max + 10}
+                      placeholder={`${phoneRuleFor(countryCode).min} digits`}
                       className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                     />
+                    <p className={`text-[11px] mt-1 ${mobileNumber && phoneProblem(mobileNumber, countryCode) ? 'text-amber-400' : 'text-zinc-500'}`}>
+                      {phoneLengthText(phoneRuleFor(countryCode))}, numbers only (no +{phoneRuleFor(countryCode).dial} and no leading 0){mobileNumber ? ` — ${mobileNumber.length} typed` : ''}
+                    </p>
                   </div>
                 </div>
               </div>

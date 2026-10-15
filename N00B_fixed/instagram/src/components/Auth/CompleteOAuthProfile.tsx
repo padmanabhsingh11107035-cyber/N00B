@@ -12,6 +12,7 @@ import {
   type OAuthSignupPayload
 } from '../../services/api';
 import { COUNTRY_OPTIONS, GENDER_OPTIONS } from './AuthView';
+import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
 import { BirthdayWheelPicker } from './BirthdayWheelPicker';
 import { AvatarAdjustEditor, AvatarAdjustResult } from '../Common/AvatarAdjustEditor';
 import { useLanguage } from '../../i18n/useLanguage.ts';
@@ -158,6 +159,8 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
     if (usernameStatus === 'taken') { setErrorMessage('That User ID is already taken. Please choose another.'); return; }
     if (!bio.trim()) { setErrorMessage('Please enter your bio. Bio is compulsory for all NOOB accounts.'); return; }
     if (!mobileNumber.trim()) { setErrorMessage('Please enter your mobile number.'); return; }
+    const phoneError = phoneProblem(mobileNumber, countryCode);
+    if (phoneError) { setErrorMessage(phoneError); return; }
     if (!dateOfBirth) { setErrorMessage('Please enter your date of birth.'); return; }
     if (!(avatarObjectKey || avatarUrl)) { setErrorMessage('Please upload a profile photo. It is required to create a NOOB account.'); return; }
     if (!agreedToTerms) { setErrorMessage("Please check the box to agree to NOOB's general terms and privacy policy."); return; }
@@ -357,7 +360,10 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
               <div className="flex gap-2">
                 <select
                   value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
+                  onChange={(e) => {
+                    setCountryCode(e.target.value);
+                    setMobileNumber((n) => cleanPhoneInput(n, phoneRuleFor(e.target.value)));
+                  }}
                   className="bg-black/40 text-white px-2 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm max-w-[120px]"
                 >
                   {COUNTRY_OPTIONS.map((c) => <option key={c.fullLabel} value={c.fullLabel}>{c.flag} {c.code}</option>)}
@@ -368,10 +374,16 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
                     type="tel"
                     required
                     value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 15))}
-                    placeholder="Mobile number"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    onChange={(e) => setMobileNumber(cleanPhoneInput(e.target.value, phoneRuleFor(countryCode)))}
+                    maxLength={phoneRuleFor(countryCode).max + 10}
+                    placeholder={`${phoneRuleFor(countryCode).min} digits`}
                     className="w-full bg-black/40 text-white px-3.5 py-2.5 rounded-2xl border border-white/10 focus:border-noob outline-none text-sm"
                   />
+                  <p className={`text-[11px] mt-1 ${mobileNumber && phoneProblem(mobileNumber, countryCode) ? 'text-amber-400' : 'text-zinc-500'}`}>
+                    {phoneLengthText(phoneRuleFor(countryCode))}, numbers only{mobileNumber ? ` — ${mobileNumber.length} typed` : ''}
+                  </p>
                 </div>
               </div>
 

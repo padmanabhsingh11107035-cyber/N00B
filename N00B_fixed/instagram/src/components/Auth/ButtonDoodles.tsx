@@ -164,6 +164,47 @@ const dcRightMore = (
   </>
 );
 
+// ---- Install: a phone with a download arrow, stars and hearts (white, mint, butter yellow and pink on the green button)
+const phone = (x: number, y: number) => `M${x} ${y}h9a2.5 2.5 0 0 1 2.5 2.5v14a2.5 2.5 0 0 1-2.5 2.5h-9a2.5 2.5 0 0 1-2.5-2.5v-14a2.5 2.5 0 0 1 2.5-2.5Z`;
+const downArrow = (cx: number, cy: number, s: number) => `M${cx} ${cy - s}v${s * 1.7}M${cx - s * 0.7} ${cy + s * 0.1}l${s * 0.7} ${s * 0.8}l${s * 0.7} ${-s * 0.8}`;
+const IC = { w: '#ffffff', yellow: '#fde68a', pink: '#fbcfe8', mint: '#a7f3d0' };
+const instLeft = (
+  <>
+    <P d={phone(10, 7)} stroke={IC.w} fill="rgba(255,255,255,.16)" w={1.6} cls="dd-float" />
+    <P d={downArrow(14.5, 15, 3.4)} stroke={IC.yellow} w={1.8} cls="dd-float" delay={0.3} />
+    <P d={star(34, 11, 5)} stroke={IC.yellow} cls="dd-twinkle" delay={0.5} />
+    <P d={wave(4, 38, 6, 4, 4)} stroke={IC.w} w={1.9} />
+    <P d={plus(40, 31, 2.6)} stroke={IC.mint} w={1.8} />
+    <Dot x={5} y={22} c={IC.pink} r={1.5} />
+  </>
+);
+const instRight = (
+  <>
+    <P d={sparkle(13, 12, 6)} stroke={IC.w} cls="dd-twinkle" delay={0.2} />
+    <P d={heart(33, 14, 3.6)} stroke={IC.pink} fill="rgba(251,207,232,.25)" cls="dd-float" delay={0.6} />
+    <P d={wave(26, 38, 6, 4, 4)} stroke={IC.w} w={1.9} />
+    <P d={spiral(10, 29, 4.5)} stroke={IC.mint} cls="dd-float" />
+    <P d={plus(42, 30, 2.6)} stroke={IC.yellow} w={1.8} />
+    <Dot x={50} y={22} c={IC.w} r={1.5} />
+  </>
+);
+const instLeftMore = (
+  <>
+    <P d={sparkle(70, 14, 5)} stroke={IC.w} cls="dd-twinkle" delay={1} />
+    <P d={plus(66, 29, 2.6)} stroke={IC.mint} w={1.8} />
+    <P d={star(83, 29, 4.5)} stroke={IC.yellow} cls="dd-float" delay={0.7} />
+    <Dot x={90} y={11} c={IC.pink} r={1.5} />
+  </>
+);
+const instRightMore = (
+  <>
+    <P d={star(14, 30, 5)} stroke={IC.yellow} cls="dd-twinkle" delay={0.3} />
+    <P d={sparkle(29, 12, 4.5)} stroke={IC.mint} cls="dd-twinkle" delay={1.2} />
+    <P d={downArrow(24, 33, 3)} stroke={IC.w} w={1.7} cls="dd-float" delay={0.5} />
+    <Dot x={7} y={12} c={IC.w} r={1.5} />
+  </>
+);
+
 // ---- anything else: a few quiet doodles in the button's own text colour
 const plainLeft = (
   <>
@@ -185,7 +226,8 @@ const plainRight = (
 const SETS: Record<string, { left: React.ReactNode; right: React.ReactNode; leftMore?: React.ReactNode; rightMore?: React.ReactNode; tone: string }> = {
   google: { left: googleLeft, right: googleRight, leftMore: googleLeftMore, rightMore: googleRightMore, tone: 'text-black' },
   facebook: { left: fbLeft, right: fbRight, leftMore: fbLeftMore, rightMore: fbRightMore, tone: 'text-white' },
-  discord: { left: dcLeft, right: dcRight, leftMore: dcLeftMore, rightMore: dcRightMore, tone: 'text-white' }
+  discord: { left: dcLeft, right: dcRight, leftMore: dcLeftMore, rightMore: dcRightMore, tone: 'text-white' },
+  install: { left: instLeft, right: instRight, leftMore: instLeftMore, rightMore: instRightMore, tone: 'text-white' }
 };
 
 export const ButtonDoodles: React.FC<{ provider: string; light?: boolean }> = ({ provider, light }) => {

@@ -106,6 +106,13 @@ interface Props {
 export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
   const [providers, setProviders] = useState<EnabledSocialProvider[]>([{ id: 'google', supabaseId: 'google' }]);
   const [busy, setBusy] = useState<SocialProvider | null>(null);
+  // "Sign in with Apple" is not working yet: the button is there for everyone, and a tap only says so for a few seconds
+  const [appleSoon, setAppleSoon] = useState(false);
+  useEffect(() => {
+    if (!appleSoon) return;
+    const t = window.setTimeout(() => setAppleSoon(false), 3200);
+    return () => window.clearTimeout(t);
+  }, [appleSoon]);
 
   useEffect(() => {
     let alive = true;
@@ -125,7 +132,8 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
   };
 
   const google = providers.find((p) => p.id === 'google');
-  const others = providers.filter((p) => p.id !== 'google');
+  // Apple has its own always-visible "coming soon" button below Google, so it is left out of the list here
+  const others = providers.filter((p) => p.id !== 'google' && p.id !== 'apple');
 
   // Every provider is a full-width "Continue with …" button, one under the other (Google first).
   const button = (p: EnabledSocialProvider) => {
@@ -153,9 +161,29 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
     );
   };
 
+  const appleButton = (
+    <div key="apple-soon">
+      <button
+        type="button"
+        onClick={() => setAppleSoon(true)}
+        aria-label="Sign in with Apple"
+        className="force-white-text w-full py-2.5 rounded-full bg-black text-white ring-1 ring-white/25 font-medium text-[15px] cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:bg-zinc-900 active:translate-y-0 active:scale-[.99] flex items-center justify-center gap-2"
+      >
+        <AppleIcon className="w-[18px] h-[18px]" />
+        <span>Sign in with Apple</span>
+      </button>
+      {appleSoon && (
+        <div role="status" className="mt-1.5 text-center text-xs font-bold text-amber-300 animate-[noob-fade_.2s_ease-out]">
+          ✨ Sign in with Apple is coming soon
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-2">
       {google && button(google)}
+      {appleButton}
       {others.map((p) => button(p))}
     </div>
   );

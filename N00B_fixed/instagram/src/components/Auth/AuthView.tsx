@@ -39,6 +39,7 @@ import { User, AccountType } from '../../types';
 import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession } from '../../services/api';
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
 import { SocialLoginButtons } from './SocialLoginButtons';
+import { ButtonDoodles } from './ButtonDoodles';
 import { tabSessions } from '../../services/supabase';
 import { getDeviceId, getDeviceLabel } from '../../utils/deviceId';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -1030,36 +1031,35 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       ) : (
         <div className="w-full max-w-lg flex flex-col items-center z-10 pt-5 pb-2 gap-2">
           <div className={`noob-install-wrap relative ${installAttn ? 'noob-install-attn' : ''}`}>
-            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-amber-300 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'new home!' : 'get the app!'}</span>
-            <svg viewBox="0 0 40 30" className="noob-install-arrow absolute -top-5 -left-3 w-7 h-6 text-amber-300 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-emerald-300 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'new home!' : 'get the app!'}</span>
+            <svg viewBox="0 0 40 30" className="noob-install-arrow absolute -top-5 -left-3 w-7 h-6 text-emerald-300 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 5 C 14 3 24 10 31 24" /><path d="M24 20 L31 25 L35 16" />
             </svg>
-            {/* twinkling sparkles around the button */}
-            <svg viewBox="0 0 24 24" className="noob-install-spark absolute -top-3 right-10 w-3.5 h-3.5 text-cyan-300 pointer-events-none" style={{ animationDelay: '0s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-            <svg viewBox="0 0 24 24" className="noob-install-spark absolute top-1/2 -right-5 w-4 h-4 text-pink-300 pointer-events-none" style={{ animationDelay: '.7s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-            <svg viewBox="0 0 24 24" className="noob-install-spark absolute -bottom-3 left-12 w-3 h-3 text-violet-300 pointer-events-none" style={{ animationDelay: '1.4s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-            <svg viewBox="0 0 24 24" className="noob-install-spark absolute top-1/2 -left-6 w-3 h-3 text-amber-200 pointer-events-none" style={{ animationDelay: '2.1s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-            <span className="noob-install-sticker absolute -top-3 -right-4 z-[2] rounded-md bg-pink-500 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-white rotate-[9deg] shadow-md pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'NEW' : 'FREE'}</span>
-            {/* a rainbow edge that keeps running around the button */}
-            <span className="noob-install-border relative z-[1] block rounded-full p-[2.5px]">
-              <button
-                ref={installBtnRef}
-                type="button"
-                onClick={handleInstallClick}
-                disabled={installBusy}
-                className="noob-install-cta relative inline-flex items-center gap-3 pl-2.5 pr-5 py-2 rounded-full cursor-pointer disabled:opacity-70"
-                aria-label={installElsewhere ? 'Install the new NOOB app from noobsocials.com' : 'Install the NOOB app'}
-              >
-                <span className="noob-install-icon w-9 h-9 rounded-full bg-black/85 ring-2 ring-white/40 flex items-center justify-center shrink-0">
+            <span className="noob-install-sticker absolute -top-3 -right-3 z-20 rounded-md bg-pink-500 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-white rotate-[9deg] shadow-md pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'NEW' : 'FREE'}</span>
+            {/* built like the Google / Facebook / Discord buttons: colour, texture, gloss, shine, hand-drawn doodles and dashed stitching; green so it stands apart from them */}
+            <button
+              ref={installBtnRef}
+              type="button"
+              onClick={handleInstallClick}
+              disabled={installBusy}
+              aria-label={installElsewhere ? 'Install the new NOOB app from noobsocials.com' : 'Install the NOOB app'}
+              className="dd-btn group force-white-text relative z-[1] overflow-hidden w-[min(92vw,360px)] py-2.5 rounded-2xl cursor-pointer bg-gradient-to-r from-[#047857] via-[#10b981] to-[#34d399] text-white shadow-[0_3px_0_rgba(4,70,50,.75),0_9px_18px_-8px_rgba(16,185,129,.85)] transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-70 disabled:hover:translate-y-0"
+            >
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 5px, transparent 5px 13px), radial-gradient(circle at 100% 0%, rgba(190,255,220,.5), transparent 52%), radial-gradient(circle at 0% 100%, rgba(2,60,40,.5), transparent 50%)' }} />
+              <span aria-hidden="true" className="dd-gloss pointer-events-none absolute inset-x-0 top-0 h-1/2" />
+              <span aria-hidden="true" className="dd-shine pointer-events-none absolute inset-y-0 -left-1/4 w-1/2" style={{ animationDelay: '0.8s' }} />
+              <ButtonDoodles provider="install" />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-dashed" style={{ borderColor: 'rgba(255,255,255,.42)' }} />
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <span className="noob-install-icon w-9 h-9 rounded-full bg-black/80 ring-2 ring-white/40 flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6">
                   {installBusy ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Download className="w-4 h-4 text-white" />}
                 </span>
                 <span className="flex flex-col text-left leading-tight">
                   <span className="text-[15px] font-extrabold tracking-tight">{installElsewhere ? 'Install the new NOOB app' : 'Install NOOB app'}</span>
-                  <span className="text-[10.5px] font-semibold opacity-80">{installElsewhere ? 'Now at noobsocials.com · free · 2 taps' : 'Free · opens like a real app · 2 taps'}</span>
+                  <span className="text-[10.5px] font-semibold opacity-90">{installElsewhere ? 'Now at noobsocials.com · free · 2 taps' : 'Free · opens like a real app · 2 taps'}</span>
                 </span>
-                <span className="noob-install-shine" aria-hidden="true" />
-              </button>
-            </span>
+              </span>
+            </button>
           </div>
           {installHint && (
             <div className="max-w-[280px] text-center text-[11px] text-zinc-200 bg-zinc-900/95 border border-white/10 rounded-xl px-3 py-2 leading-snug shadow-lg">

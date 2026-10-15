@@ -58,7 +58,7 @@ import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
-import { canInstallNow, isInstalled, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
+import { canInstallNow, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
 import confetti from 'canvas-confetti';
 import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
 import { isOnOtherNoobAddress, installAddress } from '../../utils/siteUrl';
@@ -318,6 +318,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     []
   );
   const onIos = useMemo(() => isIos(currentPushEnv()), []);
+  const onSamsung = useMemo(() => isSamsungInternet(), []);
   // On the old address (nooob.xyz) the button installs the NEW app: an app can only be installed from the address it is opened on, so it opens the main
   // address with ?install=1 — there the same button glows harder and says what to tap.
   const installElsewhere = useMemo(() => isOnOtherNoobAddress(), []);
@@ -349,6 +350,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
     if (appInstalled) {
       setInstallHint('NOOB is already installed on this device.');
+      return;
+    }
+    if (onSamsung) {
+      // Samsung Internet's own installer is blocked by Google Play Protect: install from Chrome instead
+      setInstallHint(SAMSUNG_INSTALL_HINT);
+      window.location.href = chromeInstallUrl(window.location.href);
       return;
     }
     if (installAvailable) {
@@ -1057,7 +1064,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 </span>
                 <span className="flex flex-col text-left leading-tight">
                   <span className="text-[15px] font-extrabold tracking-tight">{installElsewhere ? 'Install the new NOOB app' : 'Install NOOB app'}</span>
-                  <span className="text-[10.5px] font-semibold opacity-90">{installElsewhere ? 'Now at noobsocials.com · free · 2 taps' : 'Free · opens like a real app · 2 taps'}</span>
+                  <span className="text-[10.5px] font-semibold opacity-90">{installElsewhere ? 'Now at noobsocials.com · free · 2 taps' : onSamsung ? 'Opens Chrome to install · free · 2 taps' : 'Free · opens like a real app · 2 taps'}</span>
                 </span>
               </span>
             </button>

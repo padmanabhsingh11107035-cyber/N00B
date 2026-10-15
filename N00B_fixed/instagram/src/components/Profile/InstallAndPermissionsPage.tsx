@@ -9,7 +9,7 @@ import {
   type PushDeviceState
 } from '../Common/PushNotificationPrompt';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
-import { canInstallNow, isInstalled, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
+import { canInstallNow, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
 
 interface InstallAndPermissionsPageProps {
   currentUser: User;
@@ -38,6 +38,12 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
     setInstallBusy(true);
     setInstallMessage(null);
     try {
+      if (isSamsungInternet()) {
+        // Samsung Internet's own installer is blocked by Google Play Protect: install from Chrome instead
+        setInstallMessage(SAMSUNG_INSTALL_HINT);
+        window.location.href = chromeInstallUrl(window.location.href);
+        return;
+      }
       const outcome = await promptInstall();
       if (outcome === 'accepted') setInstallMessage('Added to your Home Screen.');
       else if (outcome === 'dismissed') setInstallMessage('Install cancelled — tap again anytime.');

@@ -37,6 +37,24 @@ export function isStandalone(): boolean {
   return !!nav.standalone || (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches);
 }
 
+// Samsung Internet (Android) installs a web app with its own installer, which builds it for an old version of Android: Google Play Protect then blocks it with
+// "Unsafe app blocked - this app was built for an older version of Android". Chrome's installer is always current, so on Samsung Internet the Install button opens the
+// same page in Chrome (an Android "intent" link; if Chrome is not on the phone, the page simply stays where it is) and the person installs it from there.
+export function isSamsungInternet(ua: string = typeof navigator !== 'undefined' ? navigator.userAgent : ''): boolean {
+  return /SamsungBrowser/i.test(ua) && /Android/i.test(ua);
+}
+export function chromeInstallUrl(href: string): string {
+  try {
+    const u = new URL(href);
+    u.searchParams.set('install', '1');   // the page then points at its own Install button
+    const here = u.toString();
+    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=${u.protocol.replace(':', '')};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(here)};end`;
+  } catch {
+    return href;
+  }
+}
+export const SAMSUNG_INSTALL_HINT = 'Samsung Internet’s installer is blocked by Google Play Protect. Opening Chrome, which installs NOOB safely. If Chrome does not open, install Chrome from the Play Store and open noobsocials.com there.';
+
 export const canInstallNow = (): boolean => !!deferredPrompt;
 export const isInstalled = (): boolean => installed || isStandalone();
 

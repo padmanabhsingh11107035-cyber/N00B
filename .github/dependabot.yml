@@ -1,0 +1,21 @@
+# Keeps NOOB's building blocks current by itself: Dependabot opens a pull request whenever a library (web app, Android app) or a build tool has a newer version,
+# and security fixes are named as such. Merging them is how the app stays up to date with the latest security patches.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/N00B_fixed/instagram"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "gradle"
+    directory: "/N00B_fixed/instagram/android"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

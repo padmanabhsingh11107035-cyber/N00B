@@ -9,6 +9,33 @@ import { useEffect, useState } from 'react';
 
 declare const __BUILD_ID__: string;
 
+// A new version is applied by itself, once, when the app is opened again after being away (a home-screen PWA resumed from the background is the usual way someone ends
+// up on an old version for days), as long as that cannot cost them anything: nothing is being typed, nothing is playing (a call, a live, a reel), and this exact new
+// version has not been tried already in this tab (so a delay on the server can never make the page reload over and over). In every other case the banner stays and
+// the person taps it when it suits them.
+export interface UpdateContext {
+  visible: boolean;
+  /** How long the app was in the background before coming back (0 when it was not). */
+  awayMs: number;
+  editingText: boolean;
+  mediaPlaying: boolean;
+  alreadyTriedThisVersion: boolean;
+}
+export const AUTO_UPDATE_AFTER_AWAY_MS = 10_000;
+export function shouldAutoApplyUpdate(c: UpdateContext): boolean {
+  return c.visible && c.awayMs >= AUTO_UPDATE_AFTER_AWAY_MS && !c.editingText && !c.mediaPlaying && !c.alreadyTriedThisVersion;
+}
+
+const TRIED_KEY = 'noob.updateReloadedFor';
+const triedVersion = (): string => { try { return sessionStorage.getItem(TRIED_KEY) || ''; } catch { return ''; } };
+const markTried = (id: string): void => { try { sessionStorage.setItem(TRIED_KEY, id); } catch { /* private mode: the banner is still there */ } };
+const isEditing = (): boolean => {
+  const el = document.activeElement as HTMLElement | null;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+};
+const isMediaPlaying = (): boolean =>
+  Array.from(document.querySelectorAll('video, audio')).some((m) => { const el = m as HTMLMediaElement; return !el.paused && !el.ended && el.readyState > 2; });
+
 async function fetchLatestBuildId(): Promise<string | null> {
   try {
     const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
@@ -25,23 +52,41 @@ export function useUpdateAvailable(): boolean {
 
   useEffect(() => {
     let alive = true;
-    const check = async () => {
+    let hiddenAt = document.visibilityState === 'hidden' ? Date.now() : 0;
+    const check = async (awayMs = 0) => {
       const latest = await fetchLatestBuildId();
-      if (alive && latest && latest !== __BUILD_ID__) setUpdateAvailable(true);
+      if (!alive || !latest || latest === __BUILD_ID__) return;
+      setUpdateAvailable(true);
+      if (shouldAutoApplyUpdate({
+        visible: document.visibilityState === 'visible',
+        awayMs,
+        editingText: isEditing(),
+        mediaPlaying: isMediaPlaying(),
+        alreadyTriedThisVersion: triedVersion() === latest
+      })) {
+        markTried(latest);
+        window.location.reload();
+      }
     };
 
     check();
     // visibilitychange/focus specifically catch a suspended PWA being reopened — that resume
     // event is exactly the moment a stale instance most needs to find out it's stale.
-    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') { hiddenAt = Date.now(); return; }
+      const away = hiddenAt ? Date.now() - hiddenAt : 0;
+      hiddenAt = 0;
+      void check(away);
+    };
+    const onFocus = () => { if (document.visibilityState === 'visible') void check(); };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onVisible);
-    const interval = setInterval(check, 5 * 60 * 1000);
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(() => { void check(); }, 5 * 60 * 1000);
 
     return () => {
       alive = false;
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onVisible);
+      window.removeEventListener('focus', onFocus);
       clearInterval(interval);
     };
   }, []);

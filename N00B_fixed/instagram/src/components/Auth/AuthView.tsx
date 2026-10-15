@@ -40,6 +40,7 @@ import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernam
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
 import { SocialLoginButtons } from './SocialLoginButtons';
 import { ButtonDoodles } from './ButtonDoodles';
+import { NoobStackLoader } from '../Common/NoobStackLoader';
 import { tabSessions } from '../../services/supabase';
 import { getDeviceId, getDeviceLabel } from '../../utils/deviceId';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -872,9 +873,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
   if (oauthChecking) {
     return (
-      <div className="min-h-screen w-full bg-page text-white flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-7 h-7 animate-spin text-noob" />
-        <p className="text-xs text-zinc-400">Signing you in…</p>
+      <div className="doodle-wallpaper-feed min-h-screen w-full text-white flex flex-col items-center justify-center">
+        <NoobStackLoader subtitle="Signing you in…" />
       </div>
     );
   }

@@ -99,6 +99,7 @@ import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
+import { NoobStackLoader } from './components/Common/NoobStackLoader';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
 import { getDeviceId, getDeviceLabel } from './utils/deviceId';
@@ -1209,12 +1210,8 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
-        <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white">
-          <div className="w-8 h-8 rounded-full border-2 border-noob border-t-transparent animate-spin mb-4" />
-          <span className="text-sm font-extrabold tracking-tight text-white">
-            NOOB
-          </span>
-          <span className="text-[10px] text-zinc-500 mt-1">Fun & Connecting People...</span>
+        <div className="doodle-wallpaper-feed w-full h-screen flex flex-col items-center justify-center text-white">
+          <NoobStackLoader />
         </div>
       </>
     );

@@ -60,7 +60,7 @@ check(/className="doodle-wallpaper-login min-h-screen w-full text-white flex fle
 
 section('6. Names on a post can be seen to be tappable, and open a profile at once');
 const UL = 'underline decoration-1 underline-offset-[3px] decoration-zinc-50/70';
-check((post.match(new RegExp(UL.replace(/[[\]/.]/g, '\\$&'), 'g')) || []).length >= 4, 'the name, the @handle, a co-author and a commenter\'s name are always underlined');
+check((post.match(new RegExp(UL.replace(/[[\]/.]/g, '\\$&'), 'g')) || []).length >= 3, 'the name, a co-author and the username under the picture are always underlined (the @handle is shown once, under the picture)');
 check(/const known = allUsers\.find\(\(u\) => u\.id === userId\);\s*if \(known\) \{\s*onNavigateToProfile\(known\);/.test(post), 'tapping a name opens the profile AT ONCE with what the app already knows');
 check(/fetchUserById\(userId\)\.then\(\(fresh\) => \{ if \(fresh\) onNavigateToProfile\(fresh, true\); \}\)/.test(post), 'and the newest details are fetched quietly and swapped in');
 const app2 = read('src/App.tsx');

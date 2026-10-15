@@ -985,3 +985,6 @@ button[class*="from-noob"], a[class*="from-noob"] {
   background-image: var(--doodle-login);
   background-size: 120px 120px;
 }
+
+/* A card that must stay clean under its text (e.g. the messages in Anonymous Messages) opts out of the pop-up doodle edge. */
+.no-doodle { outline: none !important; background-image: none !important; }

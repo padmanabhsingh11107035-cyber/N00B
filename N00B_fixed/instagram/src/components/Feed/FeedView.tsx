@@ -32,6 +32,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
+import { VenetianMask } from 'lucide-react';
 import { openStudy } from '../Study/studyStore';
 import { useStudyStatus } from '../Study/studyStatus';
 import { preloadNoobStudy } from '../Study/StudyHost';
@@ -61,6 +62,8 @@ import { startsInsideOverlay } from '../../utils/pullToRefresh';
 const StorePage = React.lazy(() => import('../Store/StorePage').then((m) => ({ default: m.StorePage })));
 const FoodStallView = React.lazy(() => import('../Store/FoodStallView').then((m) => ({ default: m.FoodStallView })));
 const OurTeamPage = React.lazy(() => import('../Team/OurTeamPage'));
+const loadAnonymousPage = () => import('../Anonymous/AnonymousMessagesPage');
+const AnonymousMessagesPage = React.lazy(() => loadAnonymousPage().then((m) => ({ default: m.AnonymousMessagesPage })));
 const preloadOurTeam = () => { void import('../Team/OurTeamPage'); };
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
@@ -181,6 +184,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showSuggestionBox, setShowSuggestionBox] = useState(restoredPage === 'suggestions');
   const [showDailyNoob, setShowDailyNoob] = useState(restoredPage === 'daily');
   const [showOurTeam, setShowOurTeam] = useState(false);
+  // Anonymous Messages has its own address (/anonymous) so it can be opened and shared directly; the menu entry opens it, closing goes back to the home address.
+  const [showAnonymous, setShowAnonymous] = useState(() => typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/anonymous');
+  const openAnonymous = () => {
+    try { window.history.replaceState(null, '', '/anonymous' + window.location.search); } catch { /* the page still opens */ }
+    setShowAnonymous(true);
+  };
+  const closeAnonymous = () => {
+    try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* nothing to undo */ }
+    setShowAnonymous(false);
+  };
   const [showNoobRooms, setShowNoobRooms] = useState(restoredPage === 'rooms');
   const [showGuessTheSong, setShowGuessTheSong] = useState(restoredPage === 'song');
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(restoredPage === 'lounge');
@@ -823,6 +836,21 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-300 block truncate">Meet the people behind NOOB</span>
                 </div>
               </button>
+              {/* Anonymous Messages: a public feed of messages with no author shown */}
+              <button
+                onClick={() => { setShowNoobMenu(false); openAnonymous(); }}
+                onPointerDown={() => { void loadAnonymousPage(); }}
+                className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
+                aria-label="Anonymous Messages"
+              >
+                <div className="w-9 h-9 rounded-xl bg-zinc-50 text-zinc-950 flex items-center justify-center shrink-0">
+                  <VenetianMask className="w-[18px] h-[18px]" aria-hidden="true" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-black text-white block">Anonymous Messages</span>
+                  <span className="text-[10px] text-zinc-300 block truncate">Your words, without your name</span>
+                </div>
+              </button>
               <button
                 onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
@@ -946,6 +974,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {showAnonymous && (
+        <ErrorBoundary showErrorDetails>
+          <React.Suspense fallback={<LazyFallback />}>
+            <AnonymousMessagesPage currentUser={currentUser} onClose={closeAnonymous} />
+          </React.Suspense>
+        </ErrorBoundary>
       )}
       {showOurTeam && (
         <React.Suspense fallback={<LazyFallback />}>

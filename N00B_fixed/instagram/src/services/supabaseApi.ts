@@ -5579,3 +5579,48 @@ export function connectLiveLoungeScreenShare(
     disconnect: () => { supabase.removeChannel(channel); }
   };
 }
+
+// ---- Anonymous Messages (migration 20261015000002) ----
+// Everything goes through functions in the database; the tables themselves can not be read from the app. The public feed answer holds {id, body, createdAt} and nothing
+// else: no author, no username, no picture, no e-mail - the database never sends them, so there is nothing for the page, its state or its network traffic to leak.
+export interface AnonMessage { id: string; body: string; createdAt: string }
+export interface AnonAdminMessage extends AnonMessage { hidden: boolean; reportCount: number; reasons: string[] }
+export interface AnonPage<T> { messages: T[]; hasMore: boolean }
+export const ANON_MAX_LENGTH = 1000;
+
+export async function fetchAnonMessages(opts: { limit?: number; before?: { createdAt: string; id: string } } = {}): Promise<AnonPage<AnonMessage>> {
+  const res = await rpc<AnonPage<AnonMessage>>('anon_messages_feed', {
+    p_limit: opts.limit ?? 20,
+    p_before: opts.before?.createdAt ?? null,
+    p_before_id: opts.before?.id ?? null
+  });
+  return { messages: Array.isArray(res?.messages) ? res.messages : [], hasMore: !!res?.hasMore };
+}
+
+/** Publishes a message. `clientKey` makes a double tap or a retry of the SAME composer post only once. Throws the server's own sentence (limits, blocked, ...). */
+export async function postAnonMessage(body: string, clientKey: string): Promise<AnonMessage> {
+  const res = await rpc<AnonMessage & { duplicate?: boolean }>('anon_message_post', { p_body: body, p_client_key: clientKey });
+  return { id: res.id, body: res.body, createdAt: res.createdAt };
+}
+
+export async function reportAnonMessage(messageId: string, reason: string): Promise<{ hidden: boolean }> {
+  const res = await rpc<{ ok: boolean; hidden: boolean }>('anon_message_report', { p_message: messageId, p_reason: reason });
+  return { hidden: !!res?.hidden };
+}
+
+// The main administrator only (the database refuses everyone else): the list with report counts, removing (optionally blocking the author without learning who it is), clearing reports.
+export async function fetchAnonMessagesAdmin(opts: { limit?: number; onlyReported?: boolean; before?: { createdAt: string; id: string } } = {}): Promise<AnonPage<AnonAdminMessage>> {
+  const res = await rpc<AnonPage<AnonAdminMessage>>('anon_messages_admin_feed', {
+    p_limit: opts.limit ?? 30,
+    p_before: opts.before?.createdAt ?? null,
+    p_before_id: opts.before?.id ?? null,
+    p_only_reported: !!opts.onlyReported
+  });
+  return { messages: Array.isArray(res?.messages) ? res.messages : [], hasMore: !!res?.hasMore };
+}
+export async function adminRemoveAnonMessage(messageId: string, blockAuthor: boolean): Promise<void> {
+  await rpc('admin_anon_message_remove', { p_message: messageId, p_block_author: blockAuthor });
+}
+export async function adminDismissAnonMessageReports(messageId: string): Promise<void> {
+  await rpc('admin_anon_message_dismiss', { p_message: messageId });
+}

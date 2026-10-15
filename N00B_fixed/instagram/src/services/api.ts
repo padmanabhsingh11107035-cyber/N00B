@@ -395,10 +395,20 @@ export {
   joinSongGuessPresence,
   adminAddSongGuessTrack,
   adminListSongGuessTracks,
-  adminDeleteSongGuessTrack
+  adminDeleteSongGuessTrack,
+  ANON_MAX_LENGTH,
+  fetchAnonMessages,
+  postAnonMessage,
+  reportAnonMessage,
+  fetchAnonMessagesAdmin,
+  adminRemoveAnonMessage,
+  adminDismissAnonMessageReports
 } from './supabaseApi';
 
 export type {
+  AnonMessage,
+  AnonAdminMessage,
+  AnonPage,
   LiveAvatarPreset,
   ScreenshotContentType,
   GameRoomPlayer,

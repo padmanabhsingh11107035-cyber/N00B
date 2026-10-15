@@ -121,6 +121,7 @@ const { View: ReelsView, preload: preloadReels } = lazyTab(() => import('./compo
 const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./components/Games/GamesView').then((m) => m.GamesView));
 const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
+const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
 const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
 const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
@@ -317,6 +318,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   // The loading screen plays its WHOLE burger animation once, when the app is opened (even if the data arrives sooner); after that, any loading screen inside the app is the quick version.
   const [openingDone, setOpeningDone] = useState(false);
+  // /anonymous: the Anonymous Messages feed can be read by anyone, before logging in (it asks them to log in only to share or report).
+  const [anonPublic, setAnonPublic] = useState(() => window.location.pathname.replace(/\/+$/, '') === '/anonymous');
   // A single failed/rejected call in the initial Promise.all (a network
   // blip, a transient 5xx, the brief boot gap right after a deploy) used to
   // silently drop straight through to the logged-out screen with only a
@@ -1271,6 +1274,19 @@ export default function App() {
 
   // If no user is logged in, present the main Login / Sign Up Page
   if (!currentUser) {
+    if (anonPublic) {
+      const leaveAnonymous = () => { try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* nothing to undo */ } setAnonPublic(false); };
+      return (
+        <>
+          {isUpdateAvailable && <UpdateAvailableBanner />}
+          <ErrorBoundary showErrorDetails>
+            <React.Suspense fallback={<LazyFallback />}>
+              <AnonymousMessagesPage currentUser={null} onClose={leaveAnonymous} onLogin={leaveAnonymous} />
+            </React.Suspense>
+          </ErrorBoundary>
+        </>
+      );
+    }
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}

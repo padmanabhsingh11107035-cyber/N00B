@@ -13,6 +13,8 @@ interface FloatingNavBarProps {
   hideOnMobile?: boolean;
   // Called as soon as a finger / pointer goes down on a tab (before the tap completes), so its page can start downloading early.
   onPressTab?: (tab: NavTab) => void;
+  // The administrator hid the Music page: its icon leaves and the other seven share the bar (wider columns, slightly bigger icons).
+  hideMusic?: boolean;
 }
 
 interface NavButtonProps {
@@ -25,7 +27,7 @@ interface NavButtonProps {
 }
 
 // The order of the buttons below (left to right), used to slide the marker under the open one.
-const TAB_ORDER: NavTab[] = ['feed', 'explore', 'reels', 'music', 'videos', 'games', 'chat', 'profile'];
+const TAB_ORDER: NavTab[] = ['feed', 'explore', 'reels', 'music', 'videos', 'games', 'chat', 'profile'];   // without 'music' when the page is hidden
 
 // Every nav item shares the same liquid-glass pill: idle items get a faint
 // glass surface that brightens on hover/press. The lit marker behind the open item is ONE shape that slides from icon to icon
@@ -42,7 +44,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active, onClick
     >
       {children}
       <span
-        className={`text-[9px] tracking-tight leading-none ${
+        className={`nav-lbl text-[9px] tracking-tight leading-none ${
           active ? 'text-noob font-bold' : 'text-gray-300'
         }`}
       >
@@ -58,17 +60,22 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   userAvatar,
   unreadChatCount = 0,
   hideOnMobile = false,
-  onPressTab
+  onPressTab,
+  hideMusic = false
 }) => {
+  const order = hideMusic ? TAB_ORDER.filter((t) => t !== 'music') : TAB_ORDER;
+  const count = order.length;
   return (
     <nav
       id="floating-bottom-nav"
+      data-count={count}
       className={`fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[96%] max-w-[480px] pointer-events-auto xl:hidden ${
         hideOnMobile ? 'max-md:hidden' : ''
       }`}
     >
       <div
-        className="liquid-glass relative rounded-full h-16 grid grid-cols-8 items-center justify-items-center px-1"
+        className="liquid-glass relative rounded-full h-16 grid items-center justify-items-center px-1"
+        style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
         onPointerDown={(e) => {
           const id = (e.target as HTMLElement).closest('button')?.id || '';
           if (id.startsWith('nav-item-')) onPressTab?.(id.slice('nav-item-'.length) as NavTab);
@@ -77,7 +84,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         <span
           aria-hidden="true"
           className="nav-marker"
-          style={{ ['--nav-i' as any]: Math.max(0, TAB_ORDER.indexOf(activeTab)), opacity: TAB_ORDER.includes(activeTab) ? 1 : 0 }}
+          style={{ ['--nav-i' as any]: Math.max(0, order.indexOf(activeTab)), opacity: order.includes(activeTab) ? 1 : 0 }}
         />
         {/* 1. Feed (posts/stories) — labeled "Home", the app's main landing tab */}
         <NavButton
@@ -88,7 +95,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           onClick={() => onSelectTab('feed')}
         >
           <Home
-            className={`w-4 h-4 sm:w-5 sm:h-5 ${
+            className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
               activeTab === 'feed' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
@@ -103,7 +110,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           onClick={() => onSelectTab('explore')}
         >
           <Compass
-            className={`w-4 h-4 sm:w-5 sm:h-5 ${
+            className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
               activeTab === 'explore' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
@@ -118,26 +125,28 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           onClick={() => onSelectTab('reels')}
         >
           <Film
-            className={`w-4 h-4 sm:w-5 sm:h-5 ${
+            className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
               activeTab === 'reels' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
         </NavButton>
 
-        {/* 4. Music Hub */}
-        <NavButton
-          id="nav-item-music"
-          label="Music"
-          title="Music Hub"
-          active={activeTab === 'music'}
-          onClick={() => onSelectTab('music')}
-        >
-          <Music
-            className={`w-4 h-4 sm:w-5 sm:h-5 ${
-              activeTab === 'music' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
-            }`}
-          />
-        </NavButton>
+        {/* 4. Music Hub (left out while the administrator has the Music page hidden) */}
+        {!hideMusic && (
+          <NavButton
+            id="nav-item-music"
+            label="Music"
+            title="Music Hub"
+            active={activeTab === 'music'}
+            onClick={() => onSelectTab('music')}
+          >
+            <Music
+              className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
+                activeTab === 'music' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
+              }`}
+            />
+          </NavButton>
+        )}
 
         {/* 5. Feed — the YouTube-style long video feed (live streams + uploaded videos only, no
             reels). Create moved up to the top header; this slot used to be the Create button. */}
@@ -149,7 +158,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           onClick={() => onSelectTab('videos')}
         >
           <Youtube
-            className={`w-4 h-4 sm:w-5 sm:h-5 ${
+            className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
               activeTab === 'videos' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
@@ -164,7 +173,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           onClick={() => onSelectTab('games')}
         >
           <Gamepad2
-            className={`w-4 h-4 sm:w-5 sm:h-5 ${
+            className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
               activeTab === 'games' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
             }`}
           />
@@ -180,7 +189,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         >
           <div className="relative">
             <MessageSquare
-              className={`w-4 h-4 sm:w-5 sm:h-5 ${
+              className={`nav-ico w-4 h-4 sm:w-5 sm:h-5 ${
                 activeTab === 'chat' ? 'stroke-noob stroke-[2.5]' : 'stroke-gray-300'
               }`}
             />
@@ -201,7 +210,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           onClick={() => onSelectTab('profile')}
         >
           <div
-            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden p-[1px] ${
+            className={`nav-ava w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden p-[1px] ${
               activeTab === 'profile' ? 'ring-2 ring-noob' : 'bg-gradient-to-tr from-noob to-[#00E5FF]'
             }`}
           >

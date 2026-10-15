@@ -302,6 +302,7 @@ export {
   sendSparkxMeetingInvite,
   fetchPublicPlatformSettings,
   adminSetPlatformSettings,
+  adminSetMusicPageHidden,
   fetchAdminExplorePins,
   requestNoobAiWake,
   adminSetExplorePin,

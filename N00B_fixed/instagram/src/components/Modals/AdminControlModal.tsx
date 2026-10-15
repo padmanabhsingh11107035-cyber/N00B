@@ -33,6 +33,7 @@ import {
   Camera,
   Settings,
   ToggleLeft,
+  Music,
   ToggleRight,
   ShoppingBag,
   Share2,
@@ -79,7 +80,7 @@ import {
   fetchNoobAiFeedback, replyNoobAiFeedback, closeNoobAiFeedback, fetchAdminAppSuggestions,
   fetchAdminStaff, setAdminPermissions, fetchAdminAudit,
   fetchAdminTeamApplications, adminReviewTeamApplication, fetchAdminSparkXApplications, adminReviewSparkXApplication, notifySparkxReview, sendSparkxMeetingInvite, fetchAdminContentFeed, deletePost, deleteReel, deleteStory, deleteLongVideo,
-  fetchPublicPlatformSettings, adminSetPlatformSettings, fetchSettings, updateSettings,
+  fetchPublicPlatformSettings, adminSetPlatformSettings, adminSetMusicPageHidden, fetchSettings, updateSettings,
   fetchAdminExplorePins, adminSetExplorePin,
   adminGenerateLiveLoungeCoupons, adminFetchLiveLoungeCoupons,
   subscribeToOnlinePresence,
@@ -316,6 +317,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [liveLoungeMaintenance, setLiveLoungeMaintenance] = useState(false);
   const [liveLoungeMaintenanceMessage, setLiveLoungeMaintenanceMessage] = useState('');
   const [noobRoomsEnabled, setNoobRoomsEnabled] = useState(true);
+  const [musicPageHidden, setMusicPageHidden] = useState(false);
   const [noobRoomsDisabledMessage, setNoobRoomsDisabledMessage] = useState('');
   // Explore pins (main admin): userId -> when it was pinned. Pinned accounts come first in Explore, newest on top.
   const [explorePins, setExplorePins] = useState<Record<string, string>>({});
@@ -471,6 +473,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     setLiveLoungeMaintenance(!!s.liveLoungeMaintenance);
     setLiveLoungeMaintenanceMessage(s.liveLoungeMaintenanceMessage || '');
     setNoobRoomsEnabled(s.noobRoomsEnabled !== false);
+    setMusicPageHidden(s.musicPageHidden === true);
     setNoobRoomsDisabledMessage(s.noobRoomsDisabledMessage || '');
     setStoreOrdersEnabled(shop.storeEnabled);
     if (daily) setDailyNoobCurrentPrompt(daily.prompt);
@@ -709,6 +712,16 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     const res = await adminSetPlatformSettings({ noobRoomsEnabled: !noobRoomsEnabled });
     if (res.success && res.settings) setNoobRoomsEnabled(res.settings.noobRoomsEnabled !== false);
     else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
+    setSavingSettings(false);
+  };
+
+  const handleToggleMusicPageHidden = async () => {
+    setSavingSettings(true);
+    const res = await adminSetMusicPageHidden(!musicPageHidden);
+    if (res.success && res.settings) {
+      setMusicPageHidden(res.settings.musicPageHidden === true);
+      setStatusMessage({ text: res.settings.musicPageHidden === true ? 'The Music page is hidden for everyone.' : 'The Music page is back for everyone.', type: 'success' });
+    } else setStatusMessage({ text: res.error || 'Could not save.', type: 'error' });
     setSavingSettings(false);
   };
 
@@ -2842,6 +2855,24 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                           Save
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold text-white flex items-center gap-2">
+                          <Music className="w-4 h-4 text-noob" /> Hide the Music page
+                        </span>
+                        <span className="text-[11px] text-zinc-400">
+                          {musicPageHidden
+                            ? 'Hidden: the Music tab is gone from the bottom bar (and the side menu on computers) for everyone, and the other icons spread out to fill the space. Nothing is deleted. Switch it off to bring the page back. It reaches people within a couple of minutes.'
+                            : 'Showing: everyone has the Music tab. Switch this on to hide the page for everyone; the other icons in the bottom bar then grow to fill the space.'}
+                        </span>
+                      </div>
+                      <button onClick={handleToggleMusicPageHidden} disabled={savingSettings} className="shrink-0 cursor-pointer disabled:opacity-50" aria-label="Hide the Music page">
+                        {musicPageHidden ? <ToggleRight className="w-9 h-9 text-noob" /> : <ToggleLeft className="w-9 h-9 text-zinc-600" />}
+                      </button>
                     </div>
                   </div>
 

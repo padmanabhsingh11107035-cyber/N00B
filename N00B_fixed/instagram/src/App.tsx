@@ -216,9 +216,21 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     let alive = true;
-    fetchPublicPlatformSettings().then((s) => { if (alive) setPlatformSettings(s); });
-    return () => { alive = false; };
-  }, [currentUser?.id]);
+    let last = Date.now();
+    const load = () => { last = Date.now(); fetchPublicPlatformSettings().then((s) => { if (alive) setPlatformSettings(s); }); };
+    load();
+    // An administrator's change (the Music page hidden or shown, a lock...) reaches everyone without logging in again: whenever the app comes back to the front, at most
+    // every two minutes. (It is a tiny answer, a few hundred bytes.)
+    const onBack = () => { if (document.visibilityState === 'visible' && Date.now() - last > 120_000) load(); };
+    document.addEventListener('visibilitychange', onBack);
+    window.addEventListener('focus', onBack);
+    return () => { alive = false; document.removeEventListener('visibilitychange', onBack); window.removeEventListener('focus', onBack); };
+  }, [currentUser?.id, viewAsUser]);
+  // The Music page can be hidden by the administrator (Admin Control Panel -> Platform): it leaves the bottom bar and the side menu, and anyone who was on it goes Home.
+  const musicHidden = platformSettings?.musicPageHidden === true;
+  useEffect(() => {
+    if (musicHidden && activeTab === 'music') setActiveTab('feed');
+  }, [musicHidden, activeTab]);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -1427,17 +1439,19 @@ export default function App() {
               <span>Mini-Games</span>
             </button>
 
-            <button
-              onClick={() => handleSelectNavTab('music')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'music'
-                  ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(217,119,87,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <Music className={`w-4 h-4 ${activeTab === 'music' ? 'stroke-noob' : 'stroke-current'}`} />
-              <span>Music Hub</span>
-            </button>
+            {!musicHidden && (
+              <button
+                onClick={() => handleSelectNavTab('music')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'music'
+                    ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(217,119,87,0.15)] font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+                }`}
+              >
+                <Music className={`w-4 h-4 ${activeTab === 'music' ? 'stroke-noob' : 'stroke-current'}`} />
+                <span>Music Hub</span>
+              </button>
+            )}
 
             {/* Desktop/tablet-only shortcuts (this whole sidebar is hidden below the xl breakpoint) —
                 same destinations the Profile ⋮ menu already opens, just reachable directly here too. */}
@@ -1685,7 +1699,7 @@ export default function App() {
           /></React.Suspense>
         )}
 
-        {activeTab === 'music' && (
+        {activeTab === 'music' && !musicHidden && (
           <React.Suspense fallback={<LazyFallback />}><MusicHubView currentUser={currentUser} /></React.Suspense>
         )}
 
@@ -1812,6 +1826,7 @@ export default function App() {
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
         hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile}
+        hideMusic={musicHidden}
       />
 
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}

@@ -4375,6 +4375,8 @@ export interface PlatformSettings {
   // migration 20261007000002
   noobRoomsEnabled?: boolean;
   noobRoomsDisabledMessage?: string;
+  // The Music page is hidden from everyone (bottom bar, side menu) by the administrator — migration 20261015000001
+  musicPageHidden?: boolean;
 }
 
 export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
@@ -4383,7 +4385,7 @@ export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
   } catch {
     return {
       signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false, sparkxOpen: true, joinTeamOpen: true,
-      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: '', noobRoomsEnabled: true, noobRoomsDisabledMessage: ''
+      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: '', noobRoomsEnabled: true, noobRoomsDisabledMessage: '', musicPageHidden: false
     };
   }
 }
@@ -4416,6 +4418,16 @@ export async function adminSetPlatformSettings(payload: {
     return { success: true, settings };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not save platform settings.') };
+  }
+}
+
+// Hide / show the Music page for everyone (the main administrator only) — migration 20261015000001.
+export async function adminSetMusicPageHidden(hidden: boolean): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
+  try {
+    const settings = await rpc<PlatformSettings>('admin_set_music_page_hidden', { p_hidden: hidden });
+    return { success: true, settings };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not change the Music page. If this keeps happening, the latest SQL (20261015000001_music_page_toggle) has not been run yet.') };
   }
 }
 

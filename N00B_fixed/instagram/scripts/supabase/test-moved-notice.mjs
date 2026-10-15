@@ -24,14 +24,16 @@ check(applies(false, 'localhost', '') === false && applies(false, 'localhost', '
 
 section('2. What it says and does');
 check(/>NOOB<\/p>/.test(notice) && /We have a new home/.test(notice) && /We have changed our domain/.test(notice) && /all your data has been shifted there exactly as it was/.test(notice), 'NOOB at the top, a new-home heading, the domain-change message and the data message');
-check(/href=\{MAIN_SITE\}/.test(notice) && /\{host\}/.test(notice), 'it shows the new address as a link');
+check(/href=\{sameThere\}/.test(notice) && /\{host\}/.test(notice), 'it shows the new address as a link');
 check(/window\.location\.assign\(installAddress\(\)\)/.test(notice) && /Install NOOB from/.test(notice), 'the Install button opens the new address ready to install');
 check(/backgroundColor: '#000000'/.test(notice) && /rounded-\[30px\]/.test(notice) && /border-dashed/.test(notice) && (notice.match(/<Doodle /g) || []).length >= 8, 'a curved, fully black card with white doodles and a dashed stitch');
 check(!/Not now/.test(notice) && !/<button type="button" onClick=\{close\}/.test(notice) && !/setOpen/.test(notice), 'there is no close button: nobody can dismiss it');
 const bypassSrc = /export function bypassRequested[\s\S]*?\n}\n/.exec(notice)[0].replace(/: boolean/g, '').replace(/: string/g, '');
 const bypass = new Function(bypassSrc.replace('export function bypassRequested', 'return function bypassRequested'))();
 check(bypass('?old=1', false) === true && bypass('', true) === true && bypass('', false) === false && bypass('?old=2', false) === false && bypass('?x=1', false) === false, 'only the support link ?old=1 (kept for that visit) gets past it, nothing else does');
-check(/<MovedNotice \/>/.test(read('src/main.tsx')), 'it is mounted over the whole app');
+const main = read('src/main.tsx');
+check(/const oldAddress = movedNoticeBlocksApp\(\);/.test(main) && /oldAddress \? \(\s*<MovedNotice \/>\s*\) : \(\s*<MusicPlayerProvider>\s*<App \/>/.test(main), 'on the old address only the card is shown: the app is not started there, so no update ever changes or runs on it');
+check(/const sameThere = MAIN_SITE \+ window\.location\.pathname/.test(notice) && /href=\{sameThere\}/.test(notice), 'an old shared link opens the same page on the new address');
 
 section('3. Updates always reach people');
 const headers = read('public/_headers');

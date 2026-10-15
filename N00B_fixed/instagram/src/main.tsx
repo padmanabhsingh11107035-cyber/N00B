@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
-import { MovedNotice } from './components/Common/MovedNotice.tsx';
+import { MovedNotice, movedNoticeBlocksApp } from './components/Common/MovedNotice.tsx';
 import './index.css';
 import { initTheme } from './utils/theme.ts';
 import { initLanguage } from './i18n/engine.ts';
@@ -84,13 +84,20 @@ if (splash) {
   }, wait);
 }
 
+// The old address (nooob.xyz) only shows the "NOOB has a new home" card: the app itself runs on the new address only, so every update goes there and nothing
+// on the old one can change or be used by mistake. (NOOB's own support can still open the app there with ?old=1 — see MovedNotice.tsx.)
+const oldAddress = movedNoticeBlocksApp();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <MusicPlayerProvider>
-        <App />
+      {oldAddress ? (
         <MovedNotice />
-      </MusicPlayerProvider>
+      ) : (
+        <MusicPlayerProvider>
+          <App />
+        </MusicPlayerProvider>
+      )}
     </ErrorBoundary>
   </StrictMode>,
 );

@@ -4,7 +4,7 @@ import { isOnOtherNoobAddress, installAddress, MAIN_SITE } from '../../utils/sit
 
 // Shown on the OLD address (nooob.xyz) only: a curved, fully black card with white hand-drawn doodles that says NOOB has a new home, gives the new address and a button
 // that goes and installs it there (an app can only be installed from the address it is opened on). It has no close button: everyone who opens the old address is sent
-// to the new one. The one way past it is for NOOB's own support: opening  nooob.xyz/?old=1  (kept for the rest of that tab's visit) lets someone reach the old app,
+// to the new one, and the old address does not run the app at all any more (main.tsx shows only this card there) — every update goes to the new address only. The one way past it is for NOOB's own support: opening  nooob.xyz/?old=1  (kept for the rest of that tab's visit) lets someone reach the old app,
 // e.g. to help a person whose older private chats are still unlocked only there. Never shown on the new address, on ai. / coaching., or inside the Android app. On a
 // developer's own computer it can be looked at with  http://localhost:5173/?show=moved .
 const BYPASS_KEY = 'noob.movedNoticeBypass';
@@ -30,11 +30,16 @@ const Doodle: React.FC<{ className: string; children: React.ReactNode; vb?: stri
   <svg aria-hidden="true" viewBox={vb} className={`pointer-events-none absolute text-white ${className}`} fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{children}</svg>
 );
 
+/** True on the old address (unless support opened it with ?old=1): there main.tsx shows only the card and does not start the app. */
+export function movedNoticeBlocksApp(): boolean {
+  try { return movedNoticeApplies(isOnOtherNoobAddress(), window.location.hostname, window.location.search) && !bypassNow(); } catch { return false; }
+}
+
 export const MovedNotice: React.FC = () => {
-  let applies = false;
-  try { applies = movedNoticeApplies(isOnOtherNoobAddress(), window.location.hostname, window.location.search) && !bypassNow(); } catch { applies = false; }
-  if (!applies) return null;
+  if (!movedNoticeBlocksApp()) return null;
   const host = MAIN_SITE.replace(/^https?:\/\//, '');
+  // an old shared link (a post, a profile, a reel) lands on the same page of the new address
+  const sameThere = MAIN_SITE + window.location.pathname + window.location.search.replace(/([?&])show=moved&?/, '$1').replace(/[?&]$/, '') + window.location.hash;
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-[noob-fade_.2s_ease-out]" role="dialog" aria-modal="true" aria-label={`NOOB has moved to ${host}`}>
       <div
@@ -58,7 +63,7 @@ export const MovedNotice: React.FC = () => {
         <h2 className="relative z-10 mt-5 text-[22px] font-extrabold tracking-tight" style={{ fontFamily: 'inherit' }}>We have a new home</h2>
         <p className="relative z-10 mt-2 text-[13.5px] leading-snug text-white/80">We have changed our domain. NOOB now lives at</p>
         <a
-          href={MAIN_SITE}
+          href={sameThere}
           className="relative z-10 mt-2.5 inline-block rounded-full px-5 py-1.5 text-base font-extrabold tracking-tight underline underline-offset-4 decoration-white/60 ring-1 ring-white/50 hover:ring-white"
           style={{ color: '#ffffff' }}
         >

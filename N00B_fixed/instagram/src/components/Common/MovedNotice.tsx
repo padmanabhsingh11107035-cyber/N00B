@@ -1,31 +1,40 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Download } from 'lucide-react';
 import { isOnOtherNoobAddress, installAddress, MAIN_SITE } from '../../utils/siteUrl';
 
 // Shown on the OLD address (nooob.xyz) only: a curved, fully black card with white hand-drawn doodles that says NOOB has a new home, gives the new address and a button
-// that goes and installs it there (an app can only be installed from the address it is opened on). "Not now" hides it until the app is opened again — the old address
-// keeps working, so nobody is locked out. Never shown on the new address, on ai. / coaching., or inside the Android app. On a developer's own computer it can be
-// looked at with  http://localhost:5173/?show=moved .
-const DISMISS_KEY = 'noob.movedNoticeDismissed';
+// that goes and installs it there (an app can only be installed from the address it is opened on). It has no close button: everyone who opens the old address is sent
+// to the new one. The one way past it is for NOOB's own support: opening  nooob.xyz/?old=1  (kept for the rest of that tab's visit) lets someone reach the old app,
+// e.g. to help a person whose older private chats are still unlocked only there. Never shown on the new address, on ai. / coaching., or inside the Android app. On a
+// developer's own computer it can be looked at with  http://localhost:5173/?show=moved .
+const BYPASS_KEY = 'noob.movedNoticeBypass';
 
 export function movedNoticeApplies(onOldAddress: boolean, hostname: string, search: string): boolean {
   if (onOldAddress) return true;
   return (hostname === 'localhost' || hostname === '127.0.0.1') && new URLSearchParams(search).get('show') === 'moved';
 }
 
-const dismissedNow = (): boolean => { try { return sessionStorage.getItem(DISMISS_KEY) === '1'; } catch { return false; } };
+export function bypassRequested(search: string, kept: boolean): boolean {
+  return kept || new URLSearchParams(search).get('old') === '1';
+}
+const bypassNow = (): boolean => {
+  try {
+    const kept = sessionStorage.getItem(BYPASS_KEY) === '1';
+    const asked = bypassRequested(window.location.search, kept);
+    if (asked && !kept) sessionStorage.setItem(BYPASS_KEY, '1');
+    return asked;
+  } catch { return false; }
+};
 
 const Doodle: React.FC<{ className: string; children: React.ReactNode; vb?: string; w?: number }> = ({ className, children, vb = '0 0 24 24', w = 1.6 }) => (
   <svg aria-hidden="true" viewBox={vb} className={`pointer-events-none absolute text-white ${className}`} fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{children}</svg>
 );
 
 export const MovedNotice: React.FC = () => {
-  const [open, setOpen] = useState(() => {
-    try { return movedNoticeApplies(isOnOtherNoobAddress(), window.location.hostname, window.location.search) && !dismissedNow(); } catch { return false; }
-  });
-  if (!open) return null;
+  let applies = false;
+  try { applies = movedNoticeApplies(isOnOtherNoobAddress(), window.location.hostname, window.location.search) && !bypassNow(); } catch { applies = false; }
+  if (!applies) return null;
   const host = MAIN_SITE.replace(/^https?:\/\//, '');
-  const close = () => { try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch { /* it will simply show again */ } setOpen(false); };
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-[noob-fade_.2s_ease-out]" role="dialog" aria-modal="true" aria-label={`NOOB has moved to ${host}`}>
       <div
@@ -66,10 +75,7 @@ export const MovedNotice: React.FC = () => {
           <Download className="w-4 h-4" />
           <span>Install NOOB from {host}</span>
         </button>
-        <p className="relative z-10 mt-3 text-[11px] leading-snug text-white/55">Keep this old app until you have logged in on the new one and checked that your chats open.</p>
-        <button type="button" onClick={close} className="relative z-10 mt-3 text-xs font-bold text-white/70 hover:text-white underline underline-offset-4 cursor-pointer">
-          Not now
-        </button>
+        <p className="relative z-10 mt-4 mb-6 text-[11px] leading-snug text-white/55">Keep this old app until you have logged in on the new one and checked that your chats open.</p>
       </div>
     </div>
   );

@@ -27,7 +27,10 @@ check(/>NOOB<\/p>/.test(notice) && /We have a new home/.test(notice) && /We have
 check(/href=\{MAIN_SITE\}/.test(notice) && /\{host\}/.test(notice), 'it shows the new address as a link');
 check(/window\.location\.assign\(installAddress\(\)\)/.test(notice) && /Install NOOB from/.test(notice), 'the Install button opens the new address ready to install');
 check(/backgroundColor: '#000000'/.test(notice) && /rounded-\[30px\]/.test(notice) && /border-dashed/.test(notice) && (notice.match(/<Doodle /g) || []).length >= 8, 'a curved, fully black card with white doodles and a dashed stitch');
-check(/Not now/.test(notice) && /sessionStorage\.setItem\(DISMISS_KEY/.test(notice), '"Not now" hides it until the app is opened again');
+check(!/Not now/.test(notice) && !/<button type="button" onClick=\{close\}/.test(notice) && !/setOpen/.test(notice), 'there is no close button: nobody can dismiss it');
+const bypassSrc = /export function bypassRequested[\s\S]*?\n}\n/.exec(notice)[0].replace(/: boolean/g, '').replace(/: string/g, '');
+const bypass = new Function(bypassSrc.replace('export function bypassRequested', 'return function bypassRequested'))();
+check(bypass('?old=1', false) === true && bypass('', true) === true && bypass('', false) === false && bypass('?old=2', false) === false && bypass('?x=1', false) === false, 'only the support link ?old=1 (kept for that visit) gets past it, nothing else does');
 check(/<MovedNotice \/>/.test(read('src/main.tsx')), 'it is mounted over the whole app');
 
 section('3. Updates always reach people');

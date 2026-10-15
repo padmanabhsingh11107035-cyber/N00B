@@ -420,6 +420,12 @@ export {
   fetchAskReports,
   dismissAskReport,
   removeAskQuestionAdmin,
+  setMyMood,
+  clearMyMood,
+  fetchMyMood,
+  fetchUserMood,
+  fetchFriendMoods,
+  fetchCommunityMoods,
   fetchAnonMessages,
   postAnonMessage,
   reportAnonMessage,
@@ -429,6 +435,9 @@ export {
 } from './supabaseApi';
 
 export type {
+  MoodStatus,
+  MoodPerson,
+  MoodPage,
   AskProfile,
   AskQuestion,
   AskInboxPage,

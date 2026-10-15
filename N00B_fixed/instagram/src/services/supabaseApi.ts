@@ -5724,3 +5724,31 @@ export async function fetchAskReports(): Promise<AskReport[]> {
 }
 export async function dismissAskReport(questionId: string): Promise<void> { await rpc('ask_admin_dismiss', { p_question: questionId }); }
 export async function removeAskQuestionAdmin(questionId: string, banSender: boolean): Promise<void> { await rpc('ask_admin_remove', { p_question: questionId, p_ban_sender: banSender }); }
+
+// ---- Mood Status (migration 20261016000003) ----
+// Whether a mood is shown to someone is decided by the database (who may see it, whether it has expired); what comes back is only what that person may see.
+export interface MoodStatus { mood: string; note: string; updatedAt: string; visibility?: 'everyone' | 'followers' | 'only_me'; expiresAt?: string | null }
+export interface MoodPerson { userId: string; username: string; displayName: string; avatar: string; isVerified: boolean; mood: string; note: string; updatedAt: string }
+export interface MoodPage { moods: MoodPerson[]; hasMore: boolean }
+
+const mapMoodPage = (res: MoodPage | null): MoodPage => ({
+  moods: Array.isArray(res?.moods) ? res!.moods.map((m) => ({ ...m, avatar: resolveMedia(m.avatar) })) : [],
+  hasMore: !!res?.hasMore
+});
+
+/** Sets my mood. Nothing is shared with anyone until this is called. `expireHours` null keeps it until changed. */
+export async function setMyMood(input: { mood: string; note: string; visibility: 'everyone' | 'followers' | 'only_me'; expireHours: number | null }): Promise<MoodStatus> {
+  return rpc<MoodStatus>('mood_set', { p_mood: input.mood, p_note: input.note, p_visibility: input.visibility, p_expire_hours: input.expireHours });
+}
+export async function clearMyMood(): Promise<void> { await rpc('mood_clear'); }
+export async function fetchMyMood(): Promise<MoodStatus | null> { return (await rpc<MoodStatus | null>('mood_my')) ?? null; }
+/** Someone's mood, if this person is allowed to see it (null otherwise - "no mood" and "not allowed" look the same). */
+export async function fetchUserMood(userId: string): Promise<MoodStatus | null> {
+  try { return (await rpc<MoodStatus | null>('mood_get', { p_user: userId })) ?? null; } catch { return null; }
+}
+export async function fetchFriendMoods(opts: { limit?: number; before?: { updatedAt: string; userId: string } } = {}): Promise<MoodPage> {
+  return mapMoodPage(await rpc<MoodPage>('mood_friends', { p_limit: opts.limit ?? 20, p_before: opts.before?.updatedAt ?? null, p_before_user: opts.before?.userId ?? null }));
+}
+export async function fetchCommunityMoods(opts: { limit?: number; before?: { updatedAt: string; userId: string }; mood?: string } = {}): Promise<MoodPage> {
+  return mapMoodPage(await rpc<MoodPage>('mood_community', { p_limit: opts.limit ?? 20, p_before: opts.before?.updatedAt ?? null, p_before_user: opts.before?.userId ?? null, p_mood: opts.mood ?? null }));
+}

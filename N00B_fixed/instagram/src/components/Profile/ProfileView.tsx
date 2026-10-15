@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ProfileAskCard } from './ProfileFunCards';
+import { ProfileAskCard, ProfileMoodChip } from './ProfileFunCards';
 import type { FunLocation } from '../../utils/funRoutes';
 import { isStaff } from '../../adminAccess';
 import {
@@ -1279,6 +1279,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               )}
             </div>
           )}
+
+          {/* Mood Status: how this person feels, only when they chose to share it with the person looking (and it has not expired) */}
+          {!isTargetBlocked && <ProfileMoodChip userId={targetUser.id} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />}
 
           {/* 4. Symmetrical Stats Numbers Box */}
           <div className="grid grid-cols-3 divide-x divide-zinc-800 bg-zinc-900/90 border border-zinc-800/80 rounded-2xl py-3.5 px-1 sm:px-6 w-full max-w-md shadow-inner">

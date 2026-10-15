@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { MessageCircleQuestion, ChevronRight, Copy } from 'lucide-react';
 import type { User } from '../../types';
-import { fetchAskProfile, fetchAskPublicAnswers, fetchAskInbox, type AskPublicAnswer } from '../../services/api';
+import { fetchAskProfile, fetchAskPublicAnswers, fetchAskInbox, fetchMyMood, fetchUserMood, type AskPublicAnswer, type MoodStatus } from '../../services/api';
+import { moodInfo } from '../../utils/moods';
 import { funShareUrl, type FunLocation } from '../../utils/funRoutes';
 
 // The two small cards the Fun pages put on a profile:
@@ -93,5 +94,49 @@ export const ProfileAskCard: React.FC<Props> = ({ profileUser, isOwnProfile, onO
         </div>
       )}
     </section>
+  );
+};
+
+// The mood on a profile, under the name: only when the database says this person may see it (the owner's own setting: everyone, followers or only them, and not expired).
+// On my own profile, when I have none, a quiet "Set your mood" pill opens the Mood page.
+export const ProfileMoodChip: React.FC<{ userId: string; isOwnProfile: boolean; onOpenFunPage?: (loc: FunLocation) => void }> = ({ userId, isOwnProfile, onOpenFunPage }) => {
+  const [mood, setMood] = useState<MoodStatus | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setReady(false);
+    setMood(null);
+    const run = isOwnProfile ? fetchMyMood() : fetchUserMood(userId);
+    void run.then((m) => { if (alive) { setMood(m); setReady(true); } }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [userId, isOwnProfile]);
+
+  if (!ready) return null;
+  if (!mood) {
+    if (!isOwnProfile || !onOpenFunPage) return null;
+    return (
+      <div className="flex justify-center -mt-1">
+        <button type="button" onClick={() => onOpenFunPage({ feature: 'mood' })} className="text-[11px] px-3 py-1 rounded-full border border-dashed border-zinc-600 text-zinc-400 hover:text-white hover:border-zinc-50 font-bold cursor-pointer transition-colors">+ Set your mood</button>
+      </div>
+    );
+  }
+  const info = moodInfo(mood.mood);
+  const body = (
+    <>
+      <span className="text-base leading-none" aria-hidden="true">{info.emoji}</span>
+      <span className="font-black">{info.label}</span>
+      {mood.note && <span className="text-zinc-300 font-medium truncate max-w-[14rem]">· {mood.note}</span>}
+    </>
+  );
+  const cls = 'inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full border border-zinc-600 bg-zinc-900/80 max-w-full';
+  return (
+    <div className="flex justify-center -mt-1">
+      {isOwnProfile && onOpenFunPage ? (
+        <button type="button" onClick={() => onOpenFunPage({ feature: 'mood' })} aria-label={`Your mood: ${info.label}. Change it`} className={`${cls} hover:border-zinc-50 cursor-pointer transition-colors`}>{body}</button>
+      ) : (
+        <span role="status" aria-label={`Mood: ${info.label}${mood.note ? `, ${mood.note}` : ''}`} className={cls}>{body}</span>
+      )}
+    </div>
   );
 };

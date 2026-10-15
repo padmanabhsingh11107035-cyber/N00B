@@ -397,6 +397,13 @@ export {
   adminListSongGuessTracks,
   adminDeleteSongGuessTrack,
   ANON_MAX_LENGTH,
+  fetchFunCanManage,
+  fetchTotToday,
+  fetchTotPrevious,
+  voteTotQuestion,
+  fetchTotAdmin,
+  createTotQuestion,
+  removeTotQuestion,
   fetchAnonMessages,
   postAnonMessage,
   reportAnonMessage,
@@ -406,6 +413,9 @@ export {
 } from './supabaseApi';
 
 export type {
+  TotResults,
+  TotQuestion,
+  TotPage,
   AnonMessage,
   AnonAdminMessage,
   AnonPage,

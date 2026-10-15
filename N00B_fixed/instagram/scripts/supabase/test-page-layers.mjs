@@ -39,11 +39,11 @@ check(/if \(!m\.isConnected \|\| !\(m\.loop \|\| m\.autoplay\)\) return;/.test(l
 check(/export const usePageHidden/.test(layers) && /const playing = isPlaying && !pageHidden;/.test(reels) && /\}, \[playing, currentReel\?\.id\]\);/.test(reels) && /pageHiddenRef\.current\) return;/.test(reels), 'the Reels (one shared player and song) are told they are hidden: silent underneath, playing again on return, and a tap on the profile cannot unmute them');
 
 section('5. In the app');
-check(/const \[activeTab, setActiveTabState\] = useState<NavTab>\('feed'\);/.test(app) && /const pageLayers = usePageLayers<User>\(activeTab\);/.test(app), 'the layers follow the page that is showing');
+check(/const \[activeTab, setActiveTabState\] = useState<NavTab>\('feed'\);/.test(app) && /const pageLayers = usePageLayers<AppLayer>\(activeTab\);/.test(app), 'the layers follow the page that is showing');
 check(/const setActiveTab = useCallback\(\(tab: NavTab\) => \{ clearPageLayers\(\{ restore: false \}\); setActiveTabState\(tab\); \}, \[clearPageLayers\]\);/.test(app), 'every jump to a page ("open this post", "message this person"...) closes the layers first');
 check(!/viewingProfileUser|setViewingProfileUser/.test(app), 'the old "viewing profile" state (which replaced the page) is gone');
-check(/setActiveTab\('profile'\);\s*\} else \{[^}]*pageLayers\.push\(user\);/.test(app), 'someone else\'s profile is pushed as a layer; my own is the Profile tab');
-check(/pageLayers\.update\(user\);\s*return;/.test(app) && /pageLayers\.patch\(userId, \(u\) => \(\{/.test(app), 'newer details and follow changes reach the open profile');
+check(/setActiveTab\('profile'\);\s*\} else \{[^}]*pageLayers\.push\(\{ id: 'p:' \+ user\.id, kind: 'profile', user \}\);/.test(app), 'someone else\'s profile is pushed as a layer; my own is the Profile tab');
+check(/pageLayers\.update\(\{ id: 'p:' \+ user\.id, kind: 'profile', user \}\);\s*return;/.test(app) && /pageLayers\.patch\('p:' \+ userId, \(l\) =>/.test(app), 'newer details and follow changes reach the open profile');
 check(/else if \(pageLayers\.layers\.length > 0 && tab === activeTab\) \{[^}]*pageLayers\.clear\(\{ restore: true \}\);/.test(app), 'tapping the tab you are already on returns to your page at your place');
 check(/<PageLayerSlot layerId=\{0\} hidden=\{pageLayers\.layers\.length > 0\} register=\{pageLayers\.register\}>/.test(app) && /\{pageLayers\.layers\.map\(\(layer, i\) => \(\s*<PageLayerSlot key=\{layer\.id\} layerId=\{layer\.id\} hidden=\{i !== pageLayers\.layers\.length - 1\}/.test(app), 'the page and each profile layer are drawn in their own slot; only the top one shows');
 check(/const pageTab: NavTab = pageLayers\.layers\.length > 0 \? 'profile' : activeTab;/.test(app) && /hideOnMobile=\{activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers\.layers\.length === 0\}/.test(app), 'the layout follows what is showing, and the bottom bar stays while a profile is open over an open chat');

@@ -5624,3 +5624,53 @@ export async function adminRemoveAnonMessage(messageId: string, blockAuthor: boo
 export async function adminDismissAnonMessageReports(messageId: string): Promise<void> {
   await rpc('admin_anon_message_dismiss', { p_message: messageId });
 }
+
+// ---- Fun: whether this person may add and remove questions / polls (the main admin, or a helper with "moderate content") ----
+export async function fetchFunCanManage(): Promise<boolean> {
+  try { return (await rpc<boolean>('fun_can_manage')) === true; } catch { return false; }
+}
+
+// ---- This or That (migration 20261016000001) ----
+// Everything goes through functions in the database. The numbers (`results`) come only to someone who has voted on that question (or to a manager);
+// before that `results` is null, and a second vote is refused by the database, whatever this page does.
+export interface TotResults { a: number; b: number; total: number }
+export interface TotQuestion {
+  id: string;
+  seq: number;
+  optionA: string;
+  optionB: string;
+  emojiA: string;
+  emojiB: string;
+  /** the day it belongs to (YYYY-MM-DD, India) */
+  day: string;
+  isToday: boolean;
+  myVote: 'a' | 'b' | null;
+  results: TotResults | null;
+}
+export interface TotPage { questions: TotQuestion[]; hasMore: boolean }
+
+export async function fetchTotToday(): Promise<TotQuestion | null> {
+  return (await rpc<TotQuestion | null>('tot_today')) ?? null;
+}
+
+export async function fetchTotPrevious(opts: { limit?: number; before?: { day: string; seq: number } } = {}): Promise<TotPage> {
+  const res = await rpc<TotPage>('tot_previous', { p_limit: opts.limit ?? 10, p_before_day: opts.before?.day ?? null, p_before_seq: opts.before?.seq ?? null });
+  return { questions: Array.isArray(res?.questions) ? res.questions : [], hasMore: !!res?.hasMore };
+}
+
+/** One vote per person per question - a second one is refused by the database ("You have already voted on this question."). Returns the question with the numbers. */
+export async function voteTotQuestion(questionId: string, choice: 'a' | 'b'): Promise<TotQuestion> {
+  return rpc<TotQuestion>('tot_vote', { p_question: questionId, p_choice: choice });
+}
+
+// Managers only (the database refuses everyone else): every question including the ones for later days, adding, removing.
+export async function fetchTotAdmin(opts: { limit?: number; before?: { day: string; seq: number } } = {}): Promise<TotPage> {
+  const res = await rpc<TotPage>('tot_admin_list', { p_limit: opts.limit ?? 20, p_before_day: opts.before?.day ?? null, p_before_seq: opts.before?.seq ?? null });
+  return { questions: Array.isArray(res?.questions) ? res.questions : [], hasMore: !!res?.hasMore };
+}
+export async function createTotQuestion(input: { optionA: string; optionB: string; emojiA?: string; emojiB?: string; publishOn?: string }): Promise<TotQuestion> {
+  return rpc<TotQuestion>('tot_admin_create', { p_a: input.optionA, p_b: input.optionB, p_emoji_a: input.emojiA ?? '', p_emoji_b: input.emojiB ?? '', p_publish_on: input.publishOn || null });
+}
+export async function removeTotQuestion(questionId: string): Promise<void> {
+  await rpc('tot_admin_remove', { p_question: questionId });
+}

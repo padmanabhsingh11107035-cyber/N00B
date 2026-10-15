@@ -24,7 +24,7 @@ check(/<OurTeamPage/.test(feed) && /showOurTeam/.test(feed), 'the existing menu 
 
 section('2. Reading it before logging in');
 check(/const \[anonPublic, setAnonPublic\] = useState\(\(\) => window\.location\.pathname\.replace\(\/\\\/\+\$\/, ''\) === '\/anonymous'\)/.test(app), 'the app notices the /anonymous address');
-check(/if \(!currentUser\) \{\s*if \(anonPublic\) \{[\s\S]*?<AnonymousMessagesPage currentUser=\{null\} onClose=\{leaveAnonymous\} onLogin=\{leaveAnonymous\} \/>/.test(app), 'a visitor who is not logged in can read it, and is sent to the login screen to share');
+check(/if \(!currentUser\) \{[\s\S]*?if \(anonPublic\) \{[\s\S]*?<AnonymousMessagesPage currentUser=\{null\} onClose=\{leaveAnonymous\} onLogin=\{leaveAnonymous\} \/>/.test(app), 'a visitor who is not logged in can read it, and is sent to the login screen to share');
 check(/<AuthView onAuthSuccess/.test(app), 'the normal login screen is still there for everyone else');
 
 section('3. Nothing about an author reaches the page');

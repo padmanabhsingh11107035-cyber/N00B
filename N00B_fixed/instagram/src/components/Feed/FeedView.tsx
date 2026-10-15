@@ -34,6 +34,8 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { VenetianMask } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
+import { Zap, MessageCircleQuestion, Smile, BarChart3 } from 'lucide-react';
+import { FUN_FEATURES, type FunFeature, type FunLocation } from '../../utils/funRoutes';
 import { openStudy } from '../Study/studyStore';
 import { useStudyStatus } from '../Study/studyStatus';
 import { preloadNoobStudy } from '../Study/StudyHost';
@@ -66,6 +68,9 @@ const OurTeamPage = React.lazy(() => import('../Team/OurTeamPage'));
 const loadAnonymousPage = () => import('../Anonymous/AnonymousMessagesPage');
 const AnonymousMessagesPage = React.lazy(() => loadAnonymousPage().then((m) => ({ default: m.AnonymousMessagesPage })));
 const preloadOurTeam = () => { void import('../Team/OurTeamPage'); };
+const preloadFunHub = () => { void import('../Fun/FunHub'); };
+// The four Fun pages in the menu, with the icon each one wears there.
+const FUN_MENU_ICONS: Record<FunFeature, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>> = { 'this-or-that': Zap, ask: MessageCircleQuestion, mood: Smile, polls: BarChart3 };
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
 const GuessTheSongView = React.lazy(() => import('../NoobRooms/GuessTheSongView').then((m) => ({ default: m.GuessTheSongView })));
@@ -114,6 +119,8 @@ interface FeedViewProps {
   initialPostId?: string;
   onInitialPostIdHandled?: () => void;
   onNavigateToProfile?: (user: User) => void;
+  // The Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls): they open on top of this page.
+  onOpenFunPage?: (loc: FunLocation) => void;
   onToggleFollowUser?: (userId: string) => Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean } | void>;
   // Admin Control Panel → Platform switches (both open unless switched off)
   sparkxOpen?: boolean;
@@ -157,6 +164,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToReel,
   onNavigateToVideo,
   onNavigateToProfile,
+  onOpenFunPage,
   onToggleFollowUser,
   sparkxOpen = true,
   joinTeamOpen = true,
@@ -855,6 +863,32 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-300 block truncate">Your words, without your name</span>
                 </div>
               </button>
+              {/* The Fun pages: This or That, Ask Me Anything, Mood Status, Public Polls */}
+              {onOpenFunPage && (
+                <div className="pt-2 pb-1" role="group" aria-label="Fun and community">
+                  <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">Fun &amp; community</p>
+                  {FUN_FEATURES.map((f) => {
+                    const Icon = FUN_MENU_ICONS[f.id];
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => { setShowNoobMenu(false); onOpenFunPage({ feature: f.id }); }}
+                        onPointerDown={preloadFunHub}
+                        className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all group"
+                        aria-label={f.label}
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                          <Icon className="w-[18px] h-[18px]" aria-hidden={true} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-black text-white block">{f.label}</span>
+                          <span className="text-[10px] text-zinc-300 block truncate">{f.blurb}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <button
                 onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
                 className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"

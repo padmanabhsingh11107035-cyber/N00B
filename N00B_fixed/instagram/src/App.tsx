@@ -98,6 +98,7 @@ import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot } from './utils/pageLayers';
+import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
@@ -122,6 +123,7 @@ const { View: ReelsView, preload: preloadReels } = lazyTab(() => import('./compo
 const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./components/Games/GamesView').then((m) => m.GamesView));
 const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
+const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
 const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
 const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
@@ -183,11 +185,16 @@ const CoachingEntry: React.FC<{ currentUser: User }> = ({ currentUser }) => {
   return <StudyHost currentUser={currentUser} />;
 };
 
+// What can be opened on top of the page that is showing: someone's profile, or the Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls).
+type AppLayer =
+  | { id: string; kind: 'profile'; user: User }
+  | { id: 'fun'; kind: 'fun'; loc: FunLocation };
+
 export default function App() {
   const [activeTab, setActiveTabState] = useState<NavTab>('feed');
   // "Go to previous page": a profile opens as a LAYER on top of the page that is showing (Home, Explore, Reels, Chat, another profile...) instead of replacing it, so the page
   // underneath stays exactly as it was (same posts in the same order, same scroll) and the "Go to previous page" button, or the phone's back button, brings it back (utils/pageLayers.tsx).
-  const pageLayers = usePageLayers<User>(activeTab);
+  const pageLayers = usePageLayers<AppLayer>(activeTab);
   const clearPageLayers = pageLayers.clear;
   // Any jump to a page (a bottom-bar tab, "open this post", "message this person"...) closes the profile layers first.
   const setActiveTab = useCallback((tab: NavTab) => { clearPageLayers({ restore: false }); setActiveTabState(tab); }, [clearPageLayers]);
@@ -329,6 +336,10 @@ export default function App() {
   const [openingDone, setOpeningDone] = useState(false);
   // /anonymous: the Anonymous Messages feed can be read by anyone, before logging in (it asks them to log in only to share or report).
   const [anonPublic, setAnonPublic] = useState(() => window.location.pathname.replace(/\/+$/, '') === '/anonymous');
+  // A Fun page opened from its own address (/polls/<id>, /ask/<username>, /mood ...): shown to a visitor who is not logged in (they can look; the page asks them to log in for the
+  // rest) and opened on top of Home once someone is logged in. `bootFun` is that address until it has been opened.
+  const [bootFun, setBootFun] = useState<FunLocation | null>(() => parseFunPath(window.location.pathname));
+  const [publicFunOpen, setPublicFunOpen] = useState(true);
   // A single failed/rejected call in the initial Promise.all (a network
   // blip, a transient 5xx, the brief boot gap right after a deploy) used to
   // silently drop straight through to the logged-out screen with only a
@@ -471,7 +482,7 @@ export default function App() {
     );
     if (target) {
       if (target.id === currentUser.id) setActiveTab('profile');
-      else pageLayers.push(target);
+      else pageLayers.push({ id: 'p:' + target.id, kind: 'profile', user: target });
     }
     setSharedProfileUsername(null);
 
@@ -820,7 +831,7 @@ export default function App() {
   const handleNavigateToUserProfile = (user: User, isUpdate = false) => {
     // isUpdate: the same profile, with newer details, arriving after it was already opened (nothing else changes: not the page, not the scroll)
     if (isUpdate) {
-      pageLayers.update(user);
+      pageLayers.update({ id: 'p:' + user.id, kind: 'profile', user });
       return;
     }
     preloadProfile().catch(() => undefined);
@@ -829,9 +840,39 @@ export default function App() {
       setActiveTab('profile');
     } else {
       // someone else's profile opens on top of the page that is showing; the page stays where it is, and "Go to previous page" comes back to it
-      pageLayers.push(user);
+      pageLayers.push({ id: 'p:' + user.id, kind: 'profile', user });
     }
   };
+
+  // The Fun pages of the three-line menu open on top of the page that is showing, like a profile: closing them (or the phone's back button) returns to that page exactly as it was.
+  const openFun = (loc: FunLocation) => {
+    const top = pageLayers.layers[pageLayers.layers.length - 1]?.data;
+    if (top && top.kind === 'fun') pageLayers.update({ id: 'fun', kind: 'fun', loc });   // already on a Fun page: move within it
+    else pageLayers.push({ id: 'fun', kind: 'fun', loc });
+  };
+
+  // A Fun page opened from its own address: once someone is logged in it opens on top of Home.
+  useEffect(() => {
+    if (!currentUser || !bootFun) return;
+    pageLayers.push({ id: 'fun', kind: 'fun', loc: bootFun });
+    setBootFun(null);
+  }, [currentUser?.id, bootFun]);
+
+  // The address follows the Fun page that is showing (so it can be copied and shared), and goes back to the home address when it closes.
+  const topLayerData = pageLayers.layers[pageLayers.layers.length - 1]?.data;
+  useEffect(() => {
+    if (!currentUser || bootFun) return;   // the address of a page that is still waiting to be opened is left alone
+    try {
+      const here = window.location.pathname;
+      if (topLayerData && topLayerData.kind === 'fun') {
+        const want = funPath(topLayerData.loc);
+        if (here !== want) window.history.replaceState(window.history.state, '', want + window.location.search);
+      } else if (parseFunPath(here)) {
+        window.history.replaceState(window.history.state, '', '/' + window.location.search);
+      }
+    } catch { /* the page works without it */ }
+  }, [topLayerData, currentUser?.id, bootFun]);
+
 
   // --- SMART POST OR REEL ACTIONS ---
   // Deliberately doesn't catch its own errors — PostCreationModal awaits
@@ -1058,12 +1099,9 @@ export default function App() {
           followingCount: nextFollowing.length
         });
       }
-      pageLayers.patch(userId, (u) => ({
-        ...u,
-        isFollowing: res.isFollowing,
-        isFollowRequested: !!res.isFollowRequested,
-        followersCount: res.followersCount
-      }));
+      pageLayers.patch('p:' + userId, (l) => (l.kind === 'profile'
+        ? { ...l, user: { ...l.user, isFollowing: res.isFollowing, isFollowRequested: !!res.isFollowRequested, followersCount: res.followersCount } }
+        : l));
       return res;
     } catch (err) {
       console.error(err);
@@ -1273,6 +1311,20 @@ export default function App() {
 
   // If no user is logged in, present the main Login / Sign Up Page
   if (!currentUser) {
+    if (bootFun && publicFunOpen) {
+      // asking someone a question or looking at a poll from a shared link: look first, log in when it is time to send or vote
+      const leaveFunPublic = () => setPublicFunOpen(false);   // (the address is kept: it opens as soon as someone has logged in)
+      return (
+        <>
+          {isUpdateAvailable && <UpdateAvailableBanner />}
+          <ErrorBoundary showErrorDetails>
+            <React.Suspense fallback={<LazyFallback />}>
+              <FunHub currentUser={null} location={bootFun} onNavigate={setBootFun} onBack={leaveFunPublic} onHome={leaveFunPublic} onLogin={leaveFunPublic} />
+            </React.Suspense>
+          </ErrorBoundary>
+        </>
+      );
+    }
     if (anonPublic) {
       const leaveAnonymous = () => { try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* nothing to undo */ } setAnonPublic(false); };
       return (
@@ -1648,6 +1700,7 @@ export default function App() {
             onNavigateToReel={handleNavigateToReel}
             onNavigateToVideo={handleNavigateToVideo}
             onNavigateToProfile={handleNavigateToUserProfile}
+            onOpenFunPage={openFun}
             onToggleFollowUser={handleToggleFollowUser}
             allUsers={registeredUsers}
             onUserUpdated={(u) => setCurrentUser(u)}
@@ -1781,7 +1834,20 @@ export default function App() {
         {/* profiles opened from the page above: each is its own page, the one on top shows, the ones under it wait exactly as they were */}
         {pageLayers.layers.map((layer, i) => (
           <PageLayerSlot key={layer.id} layerId={layer.id} hidden={i !== pageLayers.layers.length - 1} register={pageLayers.register}>
-            {renderProfileView(layer.data)}
+            {layer.data.kind === 'profile' ? renderProfileView(layer.data.user) : (
+              <ErrorBoundary showErrorDetails>
+                <React.Suspense fallback={<LazyFallback />}>
+                  <FunHub
+                    currentUser={currentUser}
+                    location={layer.data.loc}
+                    onNavigate={openFun}
+                    onBack={pageLayers.back}
+                    onHome={() => setActiveTab('feed')}
+                    onOpenProfile={handleNavigateToUserProfile}
+                  />
+                </React.Suspense>
+              </ErrorBoundary>
+            )}
           </PageLayerSlot>
         ))}
       </main>

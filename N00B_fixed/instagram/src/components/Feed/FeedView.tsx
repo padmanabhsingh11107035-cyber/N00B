@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
 import { VenetianMask } from 'lucide-react';
+import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
 import { openStudy } from '../Study/studyStore';
 import { useStudyStatus } from '../Study/studyStatus';
 import { preloadNoobStudy } from '../Study/StudyHost';
@@ -178,6 +179,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
   const [showNoobMenu, setShowNoobMenu] = useState(false);
+  // the "Scroll for more" doodle at the bottom of the three-line menu, while the list is cut off
+  const menuScroll = useScrollMore(showNoobMenu);
   const studyStatus = useStudyStatus();
   // The menu page that was open when the app was closed / refreshed opens again (see utils/pageResume.ts).
   const [restoredPage] = useState(() => takeRestorePage(currentUser.id));
@@ -788,7 +791,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
               </button>
             </div>
             {/* every page button of the menu: it scrolls when they do not all fit (short phones, many pages) */}
-            <div className="space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="relative flex-1 min-h-0">
+            <div ref={menuScroll.ref} className="space-y-1 h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
               <button
                 onClick={() => { setShowNoobMenu(false); openNoobDraw(); }}
@@ -843,7 +847,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
                 aria-label="Anonymous Messages"
               >
-                <div className="w-9 h-9 rounded-xl bg-zinc-50 text-zinc-950 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0">
                   <VenetianMask className="w-[18px] h-[18px]" aria-hidden="true" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -971,6 +975,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <span className="text-[10px] text-zinc-400">Share ideas, improvements or problems</span>
                 </div>
               </button>
+            </div>
+            {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
             </div>
           </div>
         </div>

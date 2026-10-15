@@ -250,7 +250,7 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
       {/* header */}
       <div className="sticky top-0 z-10 bg-zinc-900 border-b border-zinc-800">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-zinc-50 text-zinc-950 flex items-center justify-center shrink-0">{mask('w-[18px] h-[18px]')}</div>
+          <div className="w-9 h-9 rounded-full bg-noob text-black flex items-center justify-center shrink-0">{mask('w-[18px] h-[18px]')}</div>
           <div className="min-w-0 flex-1">
             <h1 className="text-base leading-tight truncate">Anonymous Messages</h1>
             <p className="text-[11px] text-zinc-400 truncate">Your words, without your name.</p>
@@ -279,8 +279,8 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
         {isAdmin && (
           <div className="mb-4 flex items-center gap-2" role="group" aria-label="Moderation filter">
             <ShieldCheck className="w-4 h-4 text-zinc-300" aria-hidden="true" />
-            <button type="button" onClick={() => setOnlyReported(false)} aria-pressed={!onlyReported} className={`px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer ${!onlyReported ? 'bg-zinc-50 text-zinc-950 border-zinc-50' : 'border-zinc-700 text-zinc-300'}`}>All messages</button>
-            <button type="button" onClick={() => setOnlyReported(true)} aria-pressed={onlyReported} className={`px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer ${onlyReported ? 'bg-zinc-50 text-zinc-950 border-zinc-50' : 'border-zinc-700 text-zinc-300'}`}>Reported only</button>
+            <button type="button" onClick={() => setOnlyReported(false)} aria-pressed={!onlyReported} className={`px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer ${!onlyReported ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300'}`}>All messages</button>
+            <button type="button" onClick={() => setOnlyReported(true)} aria-pressed={onlyReported} className={`px-3 py-1.5 rounded-full text-xs font-bold border cursor-pointer ${onlyReported ? 'bg-noob text-black border-zinc-50' : 'border-zinc-700 text-zinc-300'}`}>Reported only</button>
           </div>
         )}
 
@@ -345,7 +345,7 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
                         {(m.reportCount || 0) > 0 && (
                           <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'keep')} className="px-3 py-1.5 rounded-full border border-zinc-600 text-xs font-bold cursor-pointer disabled:opacity-50">Keep (clear reports)</button>
                         )}
-                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'remove')} className="px-3 py-1.5 rounded-full bg-zinc-50 text-zinc-950 text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
+                        <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'remove')} className="px-3 py-1.5 rounded-full bg-noob text-black text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
                           <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />{armed === `${m.id}:remove` ? 'Tap again to remove' : 'Remove'}
                         </button>
                         <button type="button" disabled={adminBusy === m.id} onClick={() => void adminAct(m, 'block')} className="px-3 py-1.5 rounded-full border border-red-400 text-red-300 text-xs font-bold cursor-pointer disabled:opacity-50">
@@ -376,7 +376,7 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
         <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75" onClick={() => { if (!posting) setComposerOpen(false); }} role="dialog" aria-modal="true" aria-label="Share anonymously">
           <div className="w-full sm:max-w-lg max-h-[94vh] overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-zinc-50 text-zinc-950 flex items-center justify-center shrink-0">{mask('w-5 h-5')}</div>
+              <div className="w-10 h-10 rounded-full bg-noob text-black flex items-center justify-center shrink-0">{mask('w-5 h-5')}</div>
               <h2 className="text-lg flex-1">Share Anonymously</h2>
               <button type="button" onClick={() => { if (!posting) setComposerOpen(false); }} aria-label="Close" className="w-9 h-9 rounded-full hover:bg-zinc-800 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button>
             </div>
@@ -439,7 +439,7 @@ export const AnonymousMessagesPage: React.FC<Props> = ({ currentUser, onClose, o
 
       {/* a short message at the bottom: success or error */}
       {toast && (
-        <div role="status" aria-live="polite" className={`fixed left-1/2 -translate-x-1/2 bottom-8 z-[120] max-w-[92vw] px-4 py-2.5 rounded-full text-xs font-bold shadow-xl border ${toast.kind === 'ok' ? 'bg-zinc-50 text-zinc-950 border-zinc-50' : 'bg-zinc-900 text-red-300 border-red-400'}`}>
+        <div role="status" aria-live="polite" className={`fixed left-1/2 -translate-x-1/2 bottom-8 z-[120] max-w-[92vw] px-4 py-2.5 rounded-full text-xs font-bold shadow-xl border ${toast.kind === 'ok' ? 'bg-noob text-black border-zinc-50' : 'bg-zinc-900 text-red-300 border-red-400'}`}>
           {toast.text}
         </div>
       )}

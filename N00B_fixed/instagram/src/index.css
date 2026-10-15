@@ -988,3 +988,8 @@ button[class*="from-noob"], a[class*="from-noob"] {
 
 /* A card that must stay clean under its text (e.g. the messages in Anonymous Messages) opts out of the pop-up doodle edge. */
 .no-doodle { outline: none !important; background-image: none !important; }
+
+/* The "Scroll for more" doodle at the bottom of the three-line menu: its arrow bobs downwards (still, for people who ask for less motion). */
+@keyframes scroll-more-bob { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(3px); } }
+.scroll-more-arrow { animation: scroll-more-bob 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .scroll-more-arrow { animation: none; } }

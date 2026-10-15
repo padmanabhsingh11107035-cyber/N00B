@@ -106,7 +106,7 @@ interface Props {
 export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
   const [providers, setProviders] = useState<EnabledSocialProvider[]>([{ id: 'google', supabaseId: 'google' }]);
   const [busy, setBusy] = useState<SocialProvider | null>(null);
-  // "Sign in with Apple" is not working yet: the button is there for everyone, and a tap only says so for a few seconds
+  // "Continue with Apple" is not working yet: the button is there for everyone, and a tap only says so for a few seconds
   const [appleSoon, setAppleSoon] = useState(false);
   useEffect(() => {
     if (!appleSoon) return;
@@ -166,15 +166,16 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
       <button
         type="button"
         onClick={() => setAppleSoon(true)}
-        aria-label="Sign in with Apple"
-        className="force-white-text w-full py-2.5 rounded-full bg-black text-white ring-1 ring-white/25 font-medium text-[15px] cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:bg-zinc-900 active:translate-y-0 active:scale-[.99] flex items-center justify-center gap-2"
+        aria-label="Continue with Apple"
+        style={{ backgroundColor: '#000000', color: '#ffffff' }}
+        className="force-white-text w-full py-2.5 rounded-full ring-1 ring-white/60 font-bold text-sm cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:ring-white active:translate-y-0 active:scale-[.99] flex items-center justify-center gap-2.5"
       >
         <AppleIcon className="w-[18px] h-[18px]" />
-        <span>Sign in with Apple</span>
+        <span>Continue with Apple</span>
       </button>
       {appleSoon && (
-        <div role="status" className="mt-1.5 text-center text-xs font-bold text-amber-300 animate-[noob-fade_.2s_ease-out]">
-          ✨ Sign in with Apple is coming soon
+        <div role="status" className="mt-1.5 text-center text-xs font-bold text-white animate-[noob-fade_.2s_ease-out]">
+          Continue with Apple is coming soon
         </div>
       )}
     </div>

@@ -792,7 +792,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </div>
             {/* every page button of the menu: it scrolls when they do not all fit (short phones, many pages) */}
             <div className="relative flex-1 min-h-0">
-            <div ref={menuScroll.ref} className="space-y-1 h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div ref={menuScroll.ref} className="space-y-1 h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] no-scrollbar">
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
               <button
                 onClick={() => { setShowNoobMenu(false); openNoobDraw(); }}

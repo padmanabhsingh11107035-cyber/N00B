@@ -399,6 +399,8 @@ export const PostCard: React.FC<PostCardProps> = ({
             )}
           </div>
 
+          {/* The author's name and @handle are shown ONCE, in front of the caption under the picture - not here as well. A post with a co-author keeps its joint author line (it has no other place); otherwise this line only carries the place and the category, if there are any. */}
+          {primaryTaggedUser ? (
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
@@ -438,6 +440,18 @@ export const PostCard: React.FC<PostCardProps> = ({
               )}
             </div>
           </div>
+          ) : (post.location || post.category) ? (
+            <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+              {post.location && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-noob" />
+                  <span className="truncate max-w-[170px]">{post.location}</span>
+                </div>
+              )}
+              {post.location && post.category && <span>•</span>}
+              {post.category && <span className="capitalize text-zinc-300 font-semibold">{post.category}</span>}
+            </div>
+          ) : null}
         </div>
 
         {/* Options Menu Toggle */}
@@ -954,8 +968,10 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Captions with Formatted Line Breaks */}
         <div className="mt-1.5 text-xs text-zinc-200">
-          <span onClick={() => goToProfile(post.userId)} className="font-bold text-white mr-1.5 cursor-pointer underline decoration-1 underline-offset-[3px] decoration-zinc-50/70">
-            {post.username}
+          <span onClick={() => goToProfile(post.userId)} className="mr-1.5 cursor-pointer">
+            <span className="font-bold text-white underline decoration-1 underline-offset-[3px] decoration-zinc-50/70">{post.username}</span>
+            {/* the verified tick goes with the name, which now lives here (a co-authored post still has it in the header) */}
+            {post.isVerified && !primaryTaggedUser && <VerifiedBadge size="xs" className="ml-1 -mt-0.5" />}
           </span>
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>
             {post.caption || ''}

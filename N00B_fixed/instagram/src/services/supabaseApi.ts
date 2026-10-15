@@ -5752,3 +5752,65 @@ export async function fetchFriendMoods(opts: { limit?: number; before?: { update
 export async function fetchCommunityMoods(opts: { limit?: number; before?: { updatedAt: string; userId: string }; mood?: string } = {}): Promise<MoodPage> {
   return mapMoodPage(await rpc<MoodPage>('mood_community', { p_limit: opts.limit ?? 20, p_before: opts.before?.updatedAt ?? null, p_before_user: opts.before?.userId ?? null, p_mood: opts.mood ?? null }));
 }
+
+// ---- Public Polls (migration 20261016000004) ----
+// Everything goes through functions in the database. The numbers (`votes`, `totalVotes`) come only when the poll's rule allows it (`resultsShown`); a second vote is refused by the
+// database. Who voted for what is never in any answer - only the totals.
+export interface PollOption { id: string; position: number; label: string; votes: number | null }
+export interface PollCreator { userId: string; username: string; displayName: string; avatar: string; isVerified: boolean }
+export type PollStatus = 'active' | 'completed' | 'expired' | 'hidden' | 'removed';
+export type PollResultsRule = 'always' | 'after_vote' | 'after_end';
+export interface Poll {
+  id: string;
+  seq: number;
+  question: string;
+  options: PollOption[];
+  creator: PollCreator;
+  createdAt: string;
+  endsAt: string;
+  ended: boolean;
+  status: PollStatus;
+  resultsVisibility: PollResultsRule;
+  resultsShown: boolean;
+  totalVotes: number | null;
+  /** the id of the option I voted for */
+  myVote: string | null;
+  isMine: boolean;
+}
+export interface PollsPage { polls: Poll[]; hasMore: boolean }
+export interface PollReport { poll: Poll; reportCount: number; reasons: string[] }
+export const POLL_QUESTION_MAX = 200;
+export const POLL_OPTION_MAX = 80;
+export const POLL_MAX_OPTIONS = 8;
+
+const mapPoll = (p: Poll): Poll => ({ ...p, creator: { ...p.creator, avatar: resolveMedia(p.creator.avatar) } });
+
+export async function fetchPoll(pollId: string): Promise<Poll | null> {
+  const p = await rpc<Poll | null>('poll_get', { p_poll: pollId });
+  return p ? mapPoll(p) : null;
+}
+
+export async function fetchPolls(opts: { tab?: 'active' | 'ended' | 'mine'; limit?: number; before?: { time: string; seq: number } } = {}): Promise<PollsPage> {
+  const res = await rpc<PollsPage>('poll_list', { p_tab: opts.tab ?? 'active', p_limit: opts.limit ?? 10, p_before_time: opts.before?.time ?? null, p_before_seq: opts.before?.seq ?? null });
+  return { polls: Array.isArray(res?.polls) ? res.polls.map(mapPoll) : [], hasMore: !!res?.hasMore };
+}
+
+export async function createPoll(input: { question: string; options: string[]; durationMinutes: number; results: PollResultsRule }): Promise<Poll> {
+  return mapPoll(await rpc<Poll>('poll_create', { p_question: input.question, p_options: input.options, p_duration_minutes: input.durationMinutes, p_results: input.results }));
+}
+
+/** One vote per person per poll - a second one is refused by the database ("You have already voted in this poll."). Returns the poll as it now stands for me. */
+export async function votePoll(pollId: string, optionId: string): Promise<Poll> {
+  return mapPoll(await rpc<Poll>('poll_vote', { p_poll: pollId, p_option: optionId }));
+}
+export async function removePoll(pollId: string): Promise<void> { await rpc('poll_remove', { p_poll: pollId }); }
+export async function reportPoll(pollId: string, reason: string): Promise<{ hidden: boolean }> {
+  const res = await rpc<{ ok: boolean; hidden: boolean }>('poll_report', { p_poll: pollId, p_reason: reason });
+  return { hidden: !!res?.hidden };
+}
+// People who handle reports (the database refuses everyone else).
+export async function fetchPollReports(): Promise<PollReport[]> {
+  const res = await rpc<{ reports: PollReport[] }>('poll_admin_reports', { p_limit: 30 });
+  return Array.isArray(res?.reports) ? res.reports.map((r) => ({ ...r, poll: mapPoll(r.poll) })) : [];
+}
+export async function dismissPollReports(pollId: string): Promise<void> { await rpc('poll_admin_dismiss', { p_poll: pollId }); }

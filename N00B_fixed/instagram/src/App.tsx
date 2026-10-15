@@ -1312,7 +1312,7 @@ export default function App() {
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 xl:justify-start xl:pl-0 overflow-x-hidden">
+    <div className="min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 xl:justify-start xl:pl-0 overflow-x-hidden">
       {isUpdateAvailable && <UpdateAvailableBanner />}
       {incomingCall && (
         <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
@@ -1385,7 +1385,7 @@ export default function App() {
 
             <button
               onClick={() => handleSelectNavTab('post')}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-noob hover:bg-noob/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(217,119,87,0.25)]"
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-noob hover:bg-noob/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.25)]"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Create</span>
@@ -1431,7 +1431,7 @@ export default function App() {
               onClick={() => handleSelectNavTab('games')}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'games'
-                  ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(217,119,87,0.15)] font-bold'
+                  ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-bold'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
               }`}
             >
@@ -1444,7 +1444,7 @@ export default function App() {
                 onClick={() => handleSelectNavTab('music')}
                 className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'music'
-                    ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(217,119,87,0.15)] font-bold'
+                    ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-bold'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
                 }`}
               >
@@ -1541,7 +1541,7 @@ export default function App() {
       <main
         className={`relative w-full max-w-[480px] ${
           activeTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
-        } xl:ml-auto bg-black lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] ${
+        } xl:ml-auto bg-page doodle-wallpaper lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] ${
           // The chat tab reserves its own bottom-nav clearance internally (its container's height
           // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
           // same space, pushing the whole page taller than one viewport and creating a second,

@@ -453,7 +453,7 @@ export const MeetingForm: React.FC<MeetingFormProps> = ({ currentUser, allUsers,
 
       <div className="shrink-0 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur p-3">
         <div className="max-w-lg mx-auto">
-          <button onClick={submit} disabled={busy} className="w-full py-3 rounded-2xl bg-purple-500 hover:bg-purple-400 text-white text-sm font-extrabold disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
+          <button onClick={submit} disabled={busy} className="w-full py-3 rounded-2xl bg-purple-500 hover:bg-zinc-500 text-white text-sm font-extrabold disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
             {busy ? 'Saving…' : editing ? 'Save changes' : instant ? 'Start meeting' : 'Schedule meeting'}
           </button>

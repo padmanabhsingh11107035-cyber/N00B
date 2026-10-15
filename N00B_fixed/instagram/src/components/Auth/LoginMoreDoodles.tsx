@@ -100,7 +100,7 @@ const ART: Record<Art, React.ReactNode> = {
 };
 
 interface Spot { a: Art; x: string; y: string; w: number; r: number; c: string; d: number }
-const A = 'text-amber-300/80', P = 'text-pink-300/80', C = 'text-cyan-300/80', V = 'text-violet-300/80', G = 'text-emerald-300/80', O = 'text-orange-300/85';
+const A = 'text-zinc-50/80', P = 'text-zinc-50/80', C = 'text-zinc-50/80', V = 'text-zinc-50/80', G = 'text-zinc-50/80', O = 'text-zinc-50/85';
 
 const SPOTS: Spot[] = [
   // left side
@@ -139,16 +139,16 @@ const SPOTS: Spot[] = [
 ];
 
 const WORDS: Array<{ t: string; x: string; y: string; r: number; c: string; s: string }> = [
-  { t: 'level up!', x: '4%', y: '68%', r: -6, c: 'text-emerald-300/75', s: 'text-2xl' },
-  { t: 'gg!', x: '31%', y: '62%', r: 8, c: 'text-cyan-300/75', s: 'text-2xl' },
-  { t: 'memes', x: '3%', y: '86%', r: -8, c: 'text-pink-300/75', s: 'text-xl' },
-  { t: 'streak!', x: '24%', y: '88%', r: 5, c: 'text-amber-300/75', s: 'text-2xl' },
-  { t: 'music', x: '15%', y: '59%', r: -4, c: 'text-violet-300/75', s: 'text-lg' },
-  { t: 'reels', x: '68%', y: '34%', r: -7, c: 'text-pink-300/75', s: 'text-xl' },
-  { t: 'daily quiz', x: '74%', y: '84%', r: 5, c: 'text-cyan-300/75', s: 'text-xl' },
-  { t: 'play!', x: '79.5%', y: '75%', r: -8, c: 'text-emerald-300/75', s: 'text-2xl' },
-  { t: 'no cap ♡', x: '90.5%', y: '57%', r: 6, c: 'text-amber-300/75', s: 'text-lg' },
-  { t: 'chill', x: '67.5%', y: '72.5%', r: -5, c: 'text-violet-300/75', s: 'text-xl' }
+  { t: 'level up!', x: '4%', y: '68%', r: -6, c: 'text-zinc-50/75', s: 'text-2xl' },
+  { t: 'gg!', x: '31%', y: '62%', r: 8, c: 'text-zinc-50/75', s: 'text-2xl' },
+  { t: 'memes', x: '3%', y: '86%', r: -8, c: 'text-zinc-50/75', s: 'text-xl' },
+  { t: 'streak!', x: '24%', y: '88%', r: 5, c: 'text-zinc-50/75', s: 'text-2xl' },
+  { t: 'music', x: '15%', y: '59%', r: -4, c: 'text-zinc-50/75', s: 'text-lg' },
+  { t: 'reels', x: '68%', y: '34%', r: -7, c: 'text-zinc-50/75', s: 'text-xl' },
+  { t: 'daily quiz', x: '74%', y: '84%', r: 5, c: 'text-zinc-50/75', s: 'text-xl' },
+  { t: 'play!', x: '79.5%', y: '75%', r: -8, c: 'text-zinc-50/75', s: 'text-2xl' },
+  { t: 'no cap ♡', x: '90.5%', y: '57%', r: 6, c: 'text-zinc-50/75', s: 'text-lg' },
+  { t: 'chill', x: '67.5%', y: '72.5%', r: -5, c: 'text-zinc-50/75', s: 'text-xl' }
 ];
 
 export const LoginMoreDoodles: React.FC = () => (

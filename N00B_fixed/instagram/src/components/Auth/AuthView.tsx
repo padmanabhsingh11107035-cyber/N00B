@@ -340,7 +340,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const handleInstallClick = async () => {
     try {
       const r = installBtnRef.current?.getBoundingClientRect();
-      if (r) confetti({ particleCount: 45, spread: 65, startVelocity: 28, scalar: 0.8, colors: ['#d97757', '#f6c177', '#22d3ee', '#a78bfa', '#f472b6'], origin: { x: (r.left + r.width / 2) / window.innerWidth, y: (r.top + r.height / 2) / window.innerHeight } });
+      if (r) confetti({ particleCount: 45, spread: 65, startVelocity: 28, scalar: 0.8, colors: ['#ffffff', '#f6c177', '#22d3ee', '#a78bfa', '#f472b6'], origin: { x: (r.left + r.width / 2) / window.innerWidth, y: (r.top + r.height / 2) / window.innerHeight } });
     } catch { /* confetti is only decoration */ }
     if (installElsewhere) {
       window.location.assign(installAddress());
@@ -923,14 +923,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   }
 
   return (
-    <div className="min-h-screen w-full bg-page text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen w-full bg-page text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
       {/* Premium Gen Z Background glow accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute top-1/2 left-5 w-[300px] h-[300px] bg-noob/10 rounded-full blur-[120px] pointer-events-none" />
       {/* Corner gradient "blob" accents for depth, with a small crown resting on the left one */}
       <div className="absolute bottom-0 left-0 w-[220px] h-[180px] sm:w-[380px] sm:h-[320px] bg-gradient-to-tr from-noob/25 via-cyan-500/10 to-transparent rounded-tr-[100%] blur-3xl pointer-events-none" />
-      <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[26%] left-[6%] w-6 h-6 text-amber-400/70 -rotate-12 pointer-events-none select-none z-[1]" fill="currentColor" aria-hidden="true"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
+      <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[26%] left-[6%] w-6 h-6 text-zinc-50/70 -rotate-12 pointer-events-none select-none z-[1]" fill="currentColor" aria-hidden="true"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5L3 8z" /></svg>
       <div className="hidden sm:block absolute top-0 right-0 w-[320px] h-[260px] bg-gradient-to-bl from-violet-500/15 to-transparent rounded-bl-[100%] blur-3xl pointer-events-none" />
 
       {/* Small picture-frame + heart accent, bottom-right corner */}
@@ -954,7 +954,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         {/* Left, mid: phone mockup with a "story" preview */}
         <div className="hidden sm:block absolute top-[30%] left-[3%] w-28 -rotate-3">
           <div className="rounded-[22px] border-2 border-white/15 bg-zinc-900/40 p-1.5 shadow-2xl">
-            <div className="rounded-2xl overflow-hidden aspect-[9/16] bg-gradient-to-b from-orange-400/70 via-pink-500/50 to-indigo-700/70 relative">
+            <div className="rounded-2xl overflow-hidden aspect-[9/16] bg-gradient-to-b from-zinc-300/60 via-zinc-500/40 to-zinc-800/70 relative">
               <div className="absolute top-1.5 left-1.5 w-4 h-4 rounded-full bg-white/20 border border-white/40" />
               <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-white/70">
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
@@ -973,34 +973,34 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
         {/* Right, mid: stacked colorful icon badges */}
         <div className="absolute top-[26%] sm:top-[32%] right-[3%] sm:right-[7%] flex flex-col gap-1.5 sm:gap-2.5">
-          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center rotate-6 shadow-lg shadow-pink-500/20">
-            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
+          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-300 flex items-center justify-center rotate-6 shadow-lg shadow-white/10">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-950" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
           </div>
-          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center -rotate-3 shadow-lg shadow-cyan-500/20 ml-2 sm:ml-3">
-            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
+          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-300 flex items-center justify-center -rotate-3 shadow-lg shadow-cyan-500/20 ml-2 sm:ml-3">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-950" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.5 8.5 0 0 1-4-.9L3 20l1.9-5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 17 0z" /></svg>
           </div>
-          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center rotate-6 shadow-lg shadow-violet-500/20">
-            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" /><path d="M18 8h4M20 6v4" /></svg>
+          <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-300 flex items-center justify-center rotate-6 shadow-lg shadow-violet-500/20">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-950" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" /><path d="M18 8h4M20 6v4" /></svg>
           </div>
         </div>
 
         {/* Left, lower: "Real People, Real Connections" */}
         <div className="absolute bottom-[16%] sm:bottom-[20%] left-[2%] sm:left-[4%] -rotate-3">
-          <span className="font-script text-sm sm:text-xl text-emerald-300/80 leading-tight block whitespace-nowrap">Real People<br />Real Connections</span>
+          <span className="font-script text-sm sm:text-xl text-zinc-50/80 leading-tight block whitespace-nowrap">Real People<br />Real Connections</span>
         </div>
 
         {/* Right, lower: feature list */}
         <div className="absolute bottom-[18%] sm:bottom-[22%] right-[2%] sm:right-[5%] rotate-2 text-left">
-          <span className="font-script text-sm sm:text-xl text-pink-300/80 leading-tight block whitespace-nowrap">Post • Reels<br />Chat • Follow</span>
-          <svg viewBox="0 0 100 10" className="w-16 h-2.5 sm:w-24 sm:h-3 text-pink-300/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
+          <span className="font-script text-sm sm:text-xl text-zinc-50/80 leading-tight block whitespace-nowrap">Post • Reels<br />Chat • Follow</span>
+          <svg viewBox="0 0 100 10" className="w-16 h-2.5 sm:w-24 sm:h-3 text-zinc-50/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
         </div>
 
         {/* Small scattered sparkles, hearts & a paper-plane for texture */}
-        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[15%] sm:left-[18%] w-3 h-3 sm:w-4 sm:h-4 text-amber-300/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[20%] left-[15%] sm:left-[18%] w-3 h-3 sm:w-4 sm:h-4 text-zinc-50/50 rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
         <svg viewBox="0 0 24 24" className="hidden sm:block absolute top-[6%] left-[38%] w-5 h-5 text-white/30 rotate-[20deg]" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
         <svg viewBox="0 0 24 24" className="absolute bottom-[16%] left-[20%] sm:left-[24%] w-3 h-3 sm:w-4 sm:h-4 text-violet-300/40 -rotate-12" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="absolute top-[45%] sm:top-[48%] right-[10%] sm:right-[14%] w-3 h-3 sm:w-4 sm:h-4 text-emerald-300/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-        <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[8%] right-[22%] w-5 h-5 text-amber-300/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="absolute top-[45%] sm:top-[48%] right-[10%] sm:right-[14%] w-3 h-3 sm:w-4 sm:h-4 text-zinc-50/40 rotate-6" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+        <svg viewBox="0 0 24 24" className="hidden sm:block absolute bottom-[8%] right-[22%] w-5 h-5 text-zinc-50/50 -rotate-6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" /></svg>
       </div>
 
       <LoginDoodles />
@@ -1031,28 +1031,29 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       ) : (
         <div className="w-full max-w-lg flex flex-col items-center z-10 pt-5 pb-2 gap-2">
           <div className={`noob-install-wrap relative ${installAttn ? 'noob-install-attn' : ''}`}>
-            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-emerald-300 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'new home!' : 'get the app!'}</span>
-            <svg viewBox="0 0 40 30" className="noob-install-arrow absolute -top-5 -left-3 w-7 h-6 text-emerald-300 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-zinc-50 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'new home!' : 'get the app!'}</span>
+            <svg viewBox="0 0 40 30" className="noob-install-arrow absolute -top-5 -left-3 w-7 h-6 text-zinc-50 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 5 C 14 3 24 10 31 24" /><path d="M24 20 L31 25 L35 16" />
             </svg>
-            <span className="noob-install-sticker absolute -top-3 -right-3 z-20 rounded-md bg-pink-500 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-white rotate-[9deg] shadow-md pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'NEW' : 'FREE'}</span>
+            <span className="noob-install-sticker absolute -top-3 -right-3 z-20 rounded-md bg-zinc-50 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-zinc-950 rotate-[9deg] shadow-md pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'NEW' : 'FREE'}</span>
             {/* built like the Google / Facebook / Discord buttons: colour, texture, gloss, shine, hand-drawn doodles and dashed stitching; green so it stands apart from them */}
             <button
               ref={installBtnRef}
               type="button"
               onClick={handleInstallClick}
               disabled={installBusy}
+              style={{ background: 'linear-gradient(100deg, var(--color-noob) 0%, var(--color-noob-strong) 100%)', color: 'var(--on-accent)' }}
               aria-label={installElsewhere ? 'Install the new NOOB app from noobsocials.com' : 'Install the NOOB app'}
-              className="dd-btn group force-white-text relative z-[1] overflow-hidden w-[min(92vw,360px)] py-2.5 rounded-2xl cursor-pointer bg-gradient-to-r from-[#047857] via-[#10b981] to-[#34d399] text-white shadow-[0_3px_0_rgba(4,70,50,.75),0_9px_18px_-8px_rgba(16,185,129,.85)] transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-70 disabled:hover:translate-y-0"
+              className="dd-btn group relative z-[1] overflow-hidden w-[min(92vw,360px)] py-2.5 rounded-full cursor-pointer shadow-[0_3px_0_rgba(var(--doodle-rgb),.28),0_9px_18px_-8px_rgba(var(--doodle-rgb),.35)] transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              <span aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 5px, transparent 5px 13px), radial-gradient(circle at 100% 0%, rgba(190,255,220,.5), transparent 52%), radial-gradient(circle at 0% 100%, rgba(2,60,40,.5), transparent 50%)' }} />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(128,128,128,.14) 0 5px, transparent 5px 13px)' }} />
               <span aria-hidden="true" className="dd-gloss pointer-events-none absolute inset-x-0 top-0 h-1/2" />
               <span aria-hidden="true" className="dd-shine pointer-events-none absolute inset-y-0 -left-1/4 w-1/2" style={{ animationDelay: '0.8s' }} />
               <ButtonDoodles provider="install" />
-              <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-dashed" style={{ borderColor: 'rgba(255,255,255,.42)' }} />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-[3px] rounded-[13px] border border-dashed" style={{ borderColor: 'color-mix(in srgb, var(--on-accent) 45%, transparent)' }} />
               <span className="relative z-10 flex items-center justify-center gap-3">
-                <span className="noob-install-icon w-9 h-9 rounded-full bg-black/80 ring-2 ring-white/40 flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6">
-                  {installBusy ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Download className="w-4 h-4 text-white" />}
+                <span className="noob-install-icon w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6" style={{ backgroundColor: 'var(--on-accent)', color: 'var(--color-noob)' }}>
+                  {installBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 </span>
                 <span className="flex flex-col text-left leading-tight">
                   <span className="text-[15px] font-extrabold tracking-tight">{installElsewhere ? 'Install the new NOOB app' : 'Install NOOB app'}</span>
@@ -1072,16 +1073,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       {/* Top Header: the real NOOB logo, centered */}
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
         <div className="relative transition-transform hover:scale-[1.03]">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[30px] sm:rounded-[34px] overflow-hidden bg-black ring-1 ring-white/15 shadow-[0_0_40px_rgba(217,119,87,0.35)]">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[30px] sm:rounded-[34px] overflow-hidden bg-black ring-1 ring-white/15 shadow-[0_0_40px_rgba(255,255,255,0.35)]">
             <img src="/noob-logo-circle.png" alt="NOOB" className="w-full h-full object-cover scale-[1.12]" draggable={false} />
           </div>
           {/* A few sparkles and dashes around the logo */}
-          <svg viewBox="0 0 24 24" className="absolute -top-2 -right-3 w-5 h-5 text-amber-300 rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+          <svg viewBox="0 0 24 24" className="absolute -top-2 -right-3 w-5 h-5 text-zinc-50 rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
           <svg viewBox="0 0 24 24" className="absolute -bottom-2 -left-3 w-4 h-4 text-cyan-300 -rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-          <span className="absolute -top-2 left-2 w-2.5 h-0.5 rounded-full bg-amber-300 -rotate-45" />
-          <span className="absolute top-3 -left-3.5 w-2 h-0.5 rounded-full bg-cyan-300 rotate-12" />
-          <span className="absolute -bottom-1 -right-3 w-2.5 h-0.5 rounded-full bg-pink-400 rotate-45" />
-          <svg viewBox="0 0 24 24" className="absolute -bottom-3 right-3 w-4 h-4 text-teal-300/80 rotate-[15deg]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+          <span className="absolute -top-2 left-2 w-2.5 h-0.5 rounded-full bg-zinc-50 -rotate-45" />
+          <span className="absolute top-3 -left-3.5 w-2 h-0.5 rounded-full bg-zinc-50 rotate-12" />
+          <span className="absolute -bottom-1 -right-3 w-2.5 h-0.5 rounded-full bg-zinc-50 rotate-45" />
+          <svg viewBox="0 0 24 24" className="absolute -bottom-3 right-3 w-4 h-4 text-zinc-50/80 rotate-[15deg]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>
         </div>
 
         {/* Tagline */}
@@ -1108,7 +1109,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           {/* Top Option: Only Log In indicator at top for login page */}
           {mode === 'login' ? (
             <div className="flex items-center justify-center p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5">
-              <div className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-noob to-noob-strong text-white shadow-md shadow-indigo-500/25 flex items-center justify-center gap-1.5 select-none">
+              <div className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-noob to-noob-strong text-black shadow-md shadow-indigo-500/25 flex items-center justify-center gap-1.5 select-none">
                 <Lock className="w-3.5 h-3.5" />
                 <span>Log In to Your Account</span>
               </div>
@@ -1662,7 +1663,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-extrabold text-sm shadow-xl shadow-indigo-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:from-zinc-200 hover:to-zinc-300 text-black font-extrabold text-sm shadow-xl shadow-indigo-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1748,7 +1749,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:from-violet-500 hover:via-indigo-500 hover:to-cyan-300 text-white font-black text-sm shadow-[0_0_25px_rgba(99,102,241,0.35)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:from-zinc-200 hover:to-zinc-300 text-black font-black text-sm shadow-[0_0_25px_rgba(255,255,255,0.35)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1873,7 +1874,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                     setOtpError(null);
                   }}
                   className={`flex-1 py-2 rounded-xl text-[11px] font-bold cursor-pointer transition-colors ${
-                    forgotMode === m ? 'bg-gradient-to-r from-noob to-noob-strong text-black' : 'bg-black/40 text-zinc-400 hover:text-white border border-white/10'
+                    forgotMode === m ? 'bg-gradient-to-r from-noob to-noob-strong text-black' : 'bg-black/40 text-zinc-400 hover:text-black border border-white/10'
                   }`}
                 >
                   {m === 'questions' ? 'Answer security questions' : 'Email me a code'}

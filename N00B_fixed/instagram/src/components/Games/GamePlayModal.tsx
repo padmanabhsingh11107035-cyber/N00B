@@ -1229,7 +1229,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <div className="relative w-36 h-36 flex items-center justify-center">
                     <div className="absolute inset-0 rounded-full border border-noob/20 animate-ping" />
                     <div className="absolute inset-3 rounded-full border border-noob/40 animate-pulse" />
-                    <div className="w-20 h-20 rounded-full bg-noob/10 border-2 border-noob shadow-[0_0_25px_rgba(217,119,87,0.3)] flex flex-col items-center justify-center z-10">
+                    <div className="w-20 h-20 rounded-full bg-noob/10 border-2 border-noob shadow-[0_0_25px_rgba(255,255,255,0.3)] flex flex-col items-center justify-center z-10">
                       <Radio className="w-6 h-6 text-noob animate-spin-slow" />
                       <span className="text-xs font-mono font-bold text-noob mt-0.5">{matchmakingTimeLeft}s</span>
                     </div>

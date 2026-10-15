@@ -517,7 +517,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                       </div>
 
                       {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-noob shrink-0 mt-2 shadow-[0_0_8px_rgba(217,119,87,0.8)]" />
+                        <span className="w-2 h-2 rounded-full bg-noob shrink-0 mt-2 shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
                       )}
                     </div>
                       ))}

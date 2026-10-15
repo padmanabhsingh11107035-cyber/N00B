@@ -148,7 +148,7 @@ export const JoinUsModal: React.FC<JoinUsModalProps> = ({ onClose, closed = fals
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-violet-500 hover:bg-violet-400 disabled:opacity-60 text-white text-xs font-bold rounded-2xl cursor-pointer transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 bg-violet-500 hover:bg-zinc-500 disabled:opacity-60 text-white text-xs font-bold rounded-2xl cursor-pointer transition-colors flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {submitting ? 'Submitting…' : 'Submit Application'}

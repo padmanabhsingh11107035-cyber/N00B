@@ -1199,9 +1199,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div
               className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full p-[3.5px] shadow-2xl transition-transform group-hover:scale-105 ${
                 isBusiness
-                  ? 'bg-gradient-to-tr from-noob to-noob-strong shadow-[0_0_20px_rgba(217,119,87,0.3)]'
+                  ? 'bg-gradient-to-tr from-noob to-noob-strong shadow-[0_0_20px_rgba(255,255,255,0.3)]'
                   : isPrivate
-                  ? 'bg-gradient-to-tr from-purple-500 to-pink-500 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+                  ? 'bg-gradient-to-tr from-purple-500 to-pink-500 shadow-[0_0_20px_rgba(255,255,255,0.3)]'
                   : 'bg-gradient-to-tr from-[#ff4e6a] via-[#ff758c] to-[#ff9966] shadow-[0_0_20px_rgba(255,78,106,0.3)]'
               }`}
             >

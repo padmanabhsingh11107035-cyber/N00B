@@ -262,8 +262,8 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                             <AreaChart data={insights?.reachHistory || []}>
                               <defs>
                                 <linearGradient id="reachGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#d97757" stopOpacity={0.4} />
-                                  <stop offset="95%" stopColor="#d97757" stopOpacity={0.0} />
+                                  <stop offset="5%" stopColor="#ffffff" stopOpacity={0.4} />
+                                  <stop offset="95%" stopColor="#ffffff" stopOpacity={0.0} />
                                 </linearGradient>
                               </defs>
                               <XAxis dataKey="date" stroke="#666" fontSize={11} tickLine={false} />
@@ -280,7 +280,7 @@ export const ProfessionalDashboardModal: React.FC<ProfessionalDashboardModalProp
                               <Area
                                 type="monotone"
                                 dataKey="value"
-                                stroke="#d97757"
+                                stroke="#ffffff"
                                 strokeWidth={2.5}
                                 fillOpacity={1}
                                 fill="url(#reachGradient)"

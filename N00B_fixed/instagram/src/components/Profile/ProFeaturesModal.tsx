@@ -373,7 +373,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   disabled={isCurrentTier}
                   className={`w-full py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
                     tier.highlight
-                      ? 'bg-violet-500 text-white hover:bg-violet-400'
+                      ? 'bg-violet-500 text-white hover:bg-zinc-500'
                       : 'bg-white text-black hover:bg-zinc-200'
                   }`}
                 >

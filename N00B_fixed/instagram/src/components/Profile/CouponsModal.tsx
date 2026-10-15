@@ -202,7 +202,7 @@ const CouponCard: React.FC<{
         {!coupon.usedByMe && (
           <button
             onClick={onCopy}
-            className="shrink-0 px-3.5 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="shrink-0 px-3.5 py-2 rounded-xl bg-blue-500 hover:bg-zinc-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? 'Copied' : 'Copy'}

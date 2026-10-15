@@ -66,7 +66,7 @@ export const RARITY_ORDER: DrawRarity[] = ['common', 'uncommon', 'rare', 'epic',
 export const RARITY: Record<DrawRarity, { label: string; color: string; soft: string; rank: number }> = {
   common:    { label: 'Common',    color: '#a3acbd', soft: 'rgba(163,172,189,0.16)', rank: 0 },
   uncommon:  { label: 'Uncommon',  color: '#4ade80', soft: 'rgba(74,222,128,0.16)',  rank: 1 },
-  rare:      { label: 'Rare',      color: '#38bdf8', soft: 'rgba(56,189,248,0.18)',  rank: 2 },
+  rare:      { label: 'Rare',      color: '#38bdf8', soft: 'rgba(255,255,255,0.18)',  rank: 2 },
   epic:      { label: 'Epic',      color: '#a78bfa', soft: 'rgba(167,139,250,0.2)',  rank: 3 },
   legendary: { label: 'Legendary', color: '#fbbf24', soft: 'rgba(251,191,36,0.22)',  rank: 4 },
   mythic:    { label: 'Mythic',    color: '#fb7185', soft: 'rgba(251,113,133,0.24)', rank: 5 }

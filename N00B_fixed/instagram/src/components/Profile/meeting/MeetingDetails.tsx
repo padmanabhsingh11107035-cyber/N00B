@@ -188,9 +188,9 @@ export const MeetingDetails: React.FC<MeetingDetailsProps> = ({ meetingId, curre
         {!cancelled && (
           <div className="grid grid-cols-2 gap-2.5">
             {m.isHost ? (
-              <button onClick={() => onStart(m)} className="col-span-2 py-3 rounded-2xl bg-purple-500 hover:bg-purple-400 text-white text-sm font-extrabold cursor-pointer flex items-center justify-center gap-2"><Play className="w-4 h-4 fill-current" /> {live ? 'Rejoin the meeting' : 'Start meeting'}</button>
+              <button onClick={() => onStart(m)} className="col-span-2 py-3 rounded-2xl bg-purple-500 hover:bg-zinc-500 text-white text-sm font-extrabold cursor-pointer flex items-center justify-center gap-2"><Play className="w-4 h-4 fill-current" /> {live ? 'Rejoin the meeting' : 'Start meeting'}</button>
             ) : (
-              <button onClick={() => onJoin(m)} className="col-span-2 py-3 rounded-2xl bg-purple-500 hover:bg-purple-400 text-white text-sm font-extrabold cursor-pointer flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with Meeting ID</button>
+              <button onClick={() => onJoin(m)} className="col-span-2 py-3 rounded-2xl bg-purple-500 hover:bg-zinc-500 text-white text-sm font-extrabold cursor-pointer flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with Meeting ID</button>
             )}
             <button onClick={() => copy('invite', invite)} className="py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-xs font-bold text-white cursor-pointer flex items-center justify-center gap-1.5"><Copy className="w-3.5 h-3.5" /> Copy invitation</button>
             <button onClick={() => setCalOpen((v) => !v)} className="py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-xs font-bold text-white cursor-pointer flex items-center justify-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Add to calendar</button>

@@ -99,9 +99,9 @@ export const MeetingList: React.FC<MeetingListProps> = ({ currentUser, allUsers,
                     </button>
                     <div className="flex gap-2">
                       {m.isHost ? (
-                        <button onClick={() => onStart(m)} className="flex-1 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-white text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"><Play className="w-3.5 h-3.5 fill-current" /> {m.liveRoomId ? 'Rejoin' : 'Start'}</button>
+                        <button onClick={() => onStart(m)} className="flex-1 py-2 rounded-xl bg-purple-500 hover:bg-zinc-500 text-white text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"><Play className="w-3.5 h-3.5 fill-current" /> {m.liveRoomId ? 'Rejoin' : 'Start'}</button>
                       ) : (
-                        <button onClick={() => onJoin(m)} className="flex-1 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-white text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"><Users className="w-3.5 h-3.5" /> Join</button>
+                        <button onClick={() => onJoin(m)} className="flex-1 py-2 rounded-xl bg-purple-500 hover:bg-zinc-500 text-white text-xs font-extrabold cursor-pointer flex items-center justify-center gap-1.5"><Users className="w-3.5 h-3.5" /> Join</button>
                       )}
                       <button onClick={() => onOpen(m)} className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white cursor-pointer">Details</button>
                     </div>

@@ -721,7 +721,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-2"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-noob to-noob-strong hover:opacity-95 text-black font-extrabold text-xs shadow-lg shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-2"
             >
               {isSaving ? (
                 <>

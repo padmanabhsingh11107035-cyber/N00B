@@ -36,8 +36,10 @@ const shadeHex = (hue, shade) => P[hue][SHADES.indexOf(shade)];
 // hues whose deep shade must be deeper still, to read on white
 const WARM = new Set(['amber', 'yellow', 'lime', 'orange']);
 // the colour a pale shade becomes in light mode
-export const deepOf = (hue, shade) => shadeHex(hue, WARM.has(hue) && shade <= 300 ? 800 : 700);
-const NOOB_STRONG = '#c6613f';
+// the decorative hues are black-and-white in this look (see src/index.css), so in light mode they become near-black
+const MONO = new Set(['teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia']);
+export const deepOf = (hue, shade) => (MONO.has(hue) ? '#111111' : shadeHex(hue, WARM.has(hue) && shade <= 300 ? 800 : 700));
+const NOOB_STRONG = '#0a0a0a';   // black-and-white look: the accent is black in light mode
 
 const SUPPORTED = { '': '', hover: ':hover', focus: ':focus', active: ':active', disabled: ':disabled', 'group-hover': 'GROUP', placeholder: '::placeholder' };
 const esc = (s) => s.replace(/[:/.[\]]/g, (c) => '\\' + c);

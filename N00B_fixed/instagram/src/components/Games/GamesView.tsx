@@ -151,7 +151,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-4 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
         <div className="flex items-center justify-between gap-3.5">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-noob flex items-center justify-center shadow-[0_0_20px_rgba(217,119,87,0.3)] shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-noob flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0">
               <Gamepad2 className="w-6 h-6 text-black stroke-[2.5]" />
             </div>
             <h1 className="text-xl font-black text-white tracking-tight lowercase truncate">
@@ -242,7 +242,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
             onClick={() => setActiveTab('games')}
             className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'games'
-                ? 'bg-noob text-black shadow-[0_0_15px_rgba(217,119,87,0.3)]'
+                ? 'bg-noob text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -295,7 +295,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   onClick={() => setSelectedCategory(cat.key)}
                   className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategory === cat.key
-                      ? 'bg-noob text-black shadow-[0_0_15px_rgba(217,119,87,0.25)]'
+                      ? 'bg-noob text-black shadow-[0_0_15px_rgba(255,255,255,0.25)]'
                       : 'bg-zinc-900/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800'
                   }`}
                 >

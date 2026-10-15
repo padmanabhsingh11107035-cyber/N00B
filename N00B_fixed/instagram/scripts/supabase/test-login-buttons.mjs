@@ -26,7 +26,7 @@ check(!/mt-1\.5 text-center text-xs font-bold text-white/.test(social), 'the old
 section('2. The Install button looks like the login buttons');
 check(/<ButtonDoodles provider="install" \/>/.test(auth) && /install: \{ left: instLeft/.test(doodles), 'it has its own hand-drawn doodles');
 check(/dd-btn/.test(auth) && /dd-gloss/.test(auth) && /dd-shine/.test(auth) && /border-dashed/.test(auth), 'it has the same gloss, shine and dashed stitching');
-check(/from-\[#047857\]/.test(auth) && !/from-\[#d97757\]/.test(auth.slice(auth.indexOf('noob-install-wrap'), auth.indexOf('noob-install-wrap') + 3500)), 'it is green, not the orange of the Log In button');
+check(/background: 'linear-gradient\(100deg, var\(--color-noob\) 0%, var\(--color-noob-strong\) 100%\)'/.test(auth) && !/from-\[#047857\]/.test(auth), 'it is the white accent button (black in Light mode), not green or orange');
 
 section('3. The buttons never fall back to Google alone');
 const api = read('src/services/supabaseApi.ts');

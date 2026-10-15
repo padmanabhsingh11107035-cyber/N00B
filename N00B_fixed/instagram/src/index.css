@@ -12,58 +12,66 @@
    ============================================================================================================ */
 @theme {
   --breakpoint-3xl: 112.5rem; /* 1800px: very wide monitors (the desktop layout gets a wider feed and people list) */
-  --color-noob: #d97757;          /* the accent (was neon green) */
-  --color-noob-strong: #c6613f;
+  --color-noob: #ffffff;          /* the accent: white (black in light mode) — the black-and-white doodle look */
+  --color-noob-strong: #d4d4d4;
+  --radius-2xl: 0.75rem;          /* cards: 12px */
+  --radius-3xl: 1.25rem;          /* pop-ups and sheets */
 }
 
 :root,
 .force-dark {
   color-scheme: dark;
-  --page: #262624;
-  --color-zinc-50: #f5f3ec;
-  --color-zinc-100: #ebe8de;
-  --color-zinc-200: #dcd9ce;
-  --color-zinc-300: #c4c2b8;
-  --color-zinc-400: #a3a198;
-  --color-zinc-500: #8a887f;
-  --color-zinc-600: #6f6d66;
-  --color-zinc-700: #55544d;
-  --color-zinc-800: #3d3c39;
-  --color-zinc-900: #30302e;
-  --color-zinc-950: #232321;
+  --color-noob: #ffffff;
+  --color-noob-strong: #d4d4d4;
+  --page: #0a0a0a;
+  --color-zinc-50: #ffffff;
+  --color-zinc-100: #f2f2f2;
+  --color-zinc-200: #e0e0e0;
+  --color-zinc-300: #cbcbcb;
+  --color-zinc-400: #b8b8b8;
+  --color-zinc-500: #8e8e8e;
+  --color-zinc-600: #6a6a6a;
+  --color-zinc-700: #4a4a4a;
+  --color-zinc-800: #2a2a2a;
+  --color-zinc-900: #161616;
+  --color-zinc-950: #0a0a0a;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --page: #faf9f5;
-  --color-zinc-50: #1f1e1d;
-  --color-zinc-100: #2a2927;
-  --color-zinc-200: #3b3a37;
-  --color-zinc-300: #55544d;
-  --color-zinc-400: #6f6d66;
-  --color-zinc-500: #8f8d84;
-  --color-zinc-600: #c2bfb4;
-  --color-zinc-700: #dcd9ce;
-  --color-zinc-800: #ebe8de;
-  --color-zinc-900: #ffffff;
-  --color-zinc-950: #faf9f5;
+  --color-noob: #0a0a0a;
+  --color-noob-strong: #2b2b2b;
+  --page: #ffffff;
+  --color-zinc-50: #0a0a0a;
+  --color-zinc-100: #1a1a1a;
+  --color-zinc-200: #2e2e2e;
+  --color-zinc-300: #4a4a4a;
+  --color-zinc-400: #6b6b6b;
+  --color-zinc-500: #8c8c8c;
+  --color-zinc-600: #b5b5b5;
+  --color-zinc-700: #cfcfcf;
+  --color-zinc-800: #e4e4e4;
+  --color-zinc-900: #f4f4f4;
+  --color-zinc-950: #ffffff;
 }
 
 /* Media, calls and other surfaces marked force-dark stay dark in light mode too. */
 :root[data-theme="light"] .force-dark {
   color-scheme: dark;
-  --page: #262624;
-  --color-zinc-50: #f5f3ec;
-  --color-zinc-100: #ebe8de;
-  --color-zinc-200: #dcd9ce;
-  --color-zinc-300: #c4c2b8;
-  --color-zinc-400: #a3a198;
-  --color-zinc-500: #8a887f;
-  --color-zinc-600: #6f6d66;
-  --color-zinc-700: #55544d;
-  --color-zinc-800: #3d3c39;
-  --color-zinc-900: #30302e;
-  --color-zinc-950: #232321;
+  --color-noob: #ffffff;
+  --color-noob-strong: #d4d4d4;
+  --page: #0a0a0a;
+  --color-zinc-50: #ffffff;
+  --color-zinc-100: #f2f2f2;
+  --color-zinc-200: #e0e0e0;
+  --color-zinc-300: #cbcbcb;
+  --color-zinc-400: #b8b8b8;
+  --color-zinc-500: #8e8e8e;
+  --color-zinc-600: #6a6a6a;
+  --color-zinc-700: #4a4a4a;
+  --color-zinc-800: #2a2a2a;
+  --color-zinc-900: #161616;
+  --color-zinc-950: #0a0a0a;
 }
 
 /* Reels, stories, calls, live video and the camera are dark in BOTH modes (class "media-dark"): pictures and video sit on black, so in light mode these
@@ -72,18 +80,20 @@
 @layer base {
 :root[data-theme="light"] .media-dark {
   color-scheme: dark;
+  --color-noob: #ffffff;
+  --color-noob-strong: #d4d4d4;
   --page: #000000;
-  --color-zinc-50: #f5f3ec;
-  --color-zinc-100: #ebe8de;
-  --color-zinc-200: #dcd9ce;
-  --color-zinc-300: #c4c2b8;
-  --color-zinc-400: #a3a198;
-  --color-zinc-500: #8a887f;
-  --color-zinc-600: #6f6d66;
-  --color-zinc-700: #55544d;
-  --color-zinc-800: #3d3c39;
-  --color-zinc-900: #30302e;
-  --color-zinc-950: #232321;
+  --color-zinc-50: #ffffff;
+  --color-zinc-100: #f2f2f2;
+  --color-zinc-200: #e0e0e0;
+  --color-zinc-300: #cbcbcb;
+  --color-zinc-400: #b8b8b8;
+  --color-zinc-500: #8e8e8e;
+  --color-zinc-600: #6a6a6a;
+  --color-zinc-700: #4a4a4a;
+  --color-zinc-800: #2a2a2a;
+  --color-zinc-900: #161616;
+  --color-zinc-950: #0a0a0a;
   background-color: #000000 !important;
   color: #ffffff !important;
 }
@@ -159,7 +169,8 @@
 /* The strip above the app on a phone. An iPhone's installed app ignores theme-color: the strip behind the clock is simply the
    page's own (canvas) background. So the canvas is the accent colour, and the app body is drawn over everything inside the screen
    (it always fills the whole screen, so none of the red shows there). Android and desktop use theme-color instead (index.html). */
-html { background-color: #d97757; }
+html { background-color: #0a0a0a; }
+:root[data-theme="light"] { background-color: #ffffff; }
 body { min-height: 100vh; min-height: 100dvh; }
 
 /* The verified badge: a white badge with a black tick in dark mode, a black badge with a white tick in light mode.
@@ -184,26 +195,27 @@ body { min-height: 100vh; min-height: 100dvh; }
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--page);
-    color: #f5f3ec;
+    color: #ffffff;
     overflow-x: hidden;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
 
-  /* Page and dialog titles in a serif, like NOOB AI. */
+  /* Page and dialog titles: bold sans. */
   h1, h2 {
-    font-family: 'Tiempos Text', 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
-    font-weight: 500;
+    font-family: inherit;   /* the black-and-white doodle look uses the one bold sans everywhere, no serif titles */
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   /* ---- light mode: what the variables above can not do on their own ---- */
   body.light {
     background-color: var(--page) !important;
-    color: #1f1e1d !important;
+    color: #0a0a0a !important;
   }
 
   /* white text becomes dark text, and the near-black "input" fill becomes white */
   body.light .text-white {
-    color: #1f1e1d !important;
+    color: #0a0a0a !important;
   }
 
   body.light .bg-black {
@@ -211,22 +223,22 @@ body { min-height: 100vh; min-height: 100dvh; }
   }
 
   body.light [class*="to-black"] {
-    --tw-gradient-to: #ebe8de !important;
+    --tw-gradient-to: #e4e4e4 !important;
   }
 
   body.light [class*="from-black"] {
-    --tw-gradient-from: #faf9f5 !important;
+    --tw-gradient-from: #ffffff !important;
   }
 
   body.light .border-white\/5,
   body.light .border-white\/10 {
-    border-color: #e6e3d8 !important;
+    border-color: #cfcfcf !important;
   }
 
   /* Elements marked as forced dark (e.g. Call modal, video player, dark overlays) */
   .force-dark,
   body.light .force-dark {
-    background-color: #1f1e1d !important;
+    background-color: #0a0a0a !important;
     color: #ffffff !important;
   }
 
@@ -258,25 +270,25 @@ body { min-height: 100vh; min-height: 100dvh; }
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(217, 119, 87, 0.5);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* Sophisticated Dark Glows */
 .neon-glow {
-  box-shadow: 0 0 20px rgba(217, 119, 87, 0.15), 0 0 40px rgba(217, 119, 87, 0.08);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15), 0 0 40px rgba(255, 255, 255, 0.08);
 }
 
 .neon-glow-sm {
-  box-shadow: 0 0 10px rgba(217, 119, 87, 0.25);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
 .neon-glow-btn {
-  box-shadow: 0 0 15px rgba(217, 119, 87, 0.4);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
 
 .neon-border {
-  border-color: rgba(217, 119, 87, 0.3);
-  box-shadow: inset 0 0 12px rgba(217, 119, 87, 0.15), 0 0 12px rgba(217, 119, 87, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.15), 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
 .font-script {
@@ -292,10 +304,10 @@ body { min-height: 100vh; min-height: 100dvh; }
 
 .noob-wordmark {
   font-family: 'Pacifico', cursive, sans-serif;
-  background: linear-gradient(135deg, #FF4E6A 0%, #FF758C 50%, #FF8E53 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #ececec 55%, #cfcfcf 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 8px rgba(255, 78, 106, 0.35));
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.25));
 }
 
 /* Hide scrollbars for stories & pills horizontal containers */
@@ -416,16 +428,16 @@ body.is-android .liquid-glass {
 }
 
 .liquid-glass-btn-active {
-  background: linear-gradient(180deg, rgba(217, 119, 87, 0.32) 0%, rgba(217, 119, 87, 0.08) 100%);
-  border-color: rgba(217, 119, 87, 0.35);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border-color: rgba(255, 255, 255, 0.35);
   box-shadow:
-    0 2px 10px rgba(217, 119, 87, 0.3),
+    0 2px 10px rgba(255, 255, 255, 0.3),
     0 1px 0 0 rgba(255, 255, 255, 0.4) inset,
     0 -2px 6px 0 rgba(0, 0, 0, 0.2) inset;
 }
 
 .liquid-glass-btn-active:hover {
-  background: linear-gradient(180deg, rgba(217, 119, 87, 0.38) 0%, rgba(217, 119, 87, 0.1) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.1) 100%);
 }
 
 /* Dice-roll tumble — a quick rock-and-scale wiggle while the face value
@@ -538,9 +550,9 @@ html[data-i18n-loading] body {
   margin-top: -23px;
   border-radius: 9999px;
   left: calc(4px + (100% - 8px) / var(--nav-n, 8) * (var(--nav-i, 0) + 0.5) - var(--nav-mw, 54px) / 2);
-  background: linear-gradient(180deg, rgba(217, 119, 87, 0.32) 0%, rgba(217, 119, 87, 0.08) 100%);
-  border: 1px solid rgba(217, 119, 87, 0.35);
-  box-shadow: 0 2px 10px rgba(217, 119, 87, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.4) inset, 0 -2px 6px 0 rgba(0, 0, 0, 0.2) inset;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.3), 0 1px 0 0 rgba(255, 255, 255, 0.4) inset, 0 -2px 6px 0 rgba(0, 0, 0, 0.2) inset;
   transition: left 0.42s cubic-bezier(0.34, 1.35, 0.64, 1), opacity 0.2s ease;
   z-index: 1;
   pointer-events: none;
@@ -761,7 +773,7 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
 /* The Install button on the login screen (AuthView): built like the Google / Facebook / Discord buttons (see SocialLoginButtons + ButtonDoodles) in green. These are the
    extras around it: a ring that pulses outward, an arrow that bobs toward it, a note that sways and a harder pulse when someone was just sent here to install. They
    move only when the device has not asked for reduced motion. */
-.noob-install-wrap::before { content: ''; position: absolute; inset: 0; border-radius: 16px; background: rgba(16, 185, 129, .55); z-index: 0; opacity: 0; }
+.noob-install-wrap::before { content: ''; position: absolute; inset: 0; border-radius: 16px; background: rgba(255, 255, 255, .45); z-index: 0; opacity: 0; }
 @keyframes noob-install-ping { 0% { transform: scale(1); opacity: .5; } 70%, 100% { transform: scale(1.12, 1.7); opacity: 0; } }
 @keyframes noob-install-bob { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(3px, 4px); } }
 @keyframes noob-install-sway { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(-1deg) translateY(-2px); } }
@@ -773,7 +785,7 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
   .noob-install-note { animation: noob-install-sway 2.6s ease-in-out infinite; }
   .noob-install-icon { animation: noob-install-hop 1.3s ease-in-out infinite; }
   .noob-install-attn { animation: noob-install-attn .9s ease-in-out infinite; }
-  .noob-install-attn::before { animation-duration: 1.1s; background: rgba(110, 231, 183, .7); }
+  .noob-install-attn::before { animation-duration: 1.1s; background: rgba(255, 255, 255, .7); }
 }
 
 /* The square "coming soon" card (Continue with Apple, SocialLoginButtons): pops in. Still for people who asked for less motion. */
@@ -790,4 +802,109 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
   #floating-bottom-nav[data-count="7"] .nav-ico { width: 1.6rem; height: 1.6rem; }
   #floating-bottom-nav[data-count="7"] .nav-ava { width: 1.85rem; height: 1.85rem; }
   #floating-bottom-nav[data-count="7"] .nav-lbl { font-size: 11px; }
+}
+
+
+/* =====================================================================================================================================================
+   THE BLACK-AND-WHITE DOODLE LOOK
+   One palette: near-black page (#0a0a0a), #161616 cards, #4a4a4a outlines, white text and a WHITE accent (black on white in Light mode), buttons that are
+   full pills, and hand-drawn white doodles: a faint doodle wallpaper behind every page, and on every pop-up / sheet a dashed stitched edge with a small
+   doodle in each corner. The colours live in the variables at the top of this file (the zinc scale and --color-noob); this block holds what they can not do.
+   ===================================================================================================================================================== */
+:root {
+  --on-accent: #0a0a0a;                 /* text on a white (accent) button */
+  --outline: #4a4a4a;                   /* card outlines */
+  --doodle-rgb: 255, 255, 255;          /* doodle and stitch colour */
+  --doodle-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='white' stroke-opacity='.075' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M34 31Q34 40 43 40Q34 40 34 49Q34 40 25 40Q34 40 34 31Z'/%3E%3Cpath d='M152 34h16M160 26v16'/%3E%3Cpath d='M212 95l2.6 5.8 6.4.7-4.8 4.3 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2-4.8-4.3 6.4-.7z'/%3E%3Cpath d='M18 132q6-10 12 0t12 0t12 0'/%3E%3Cpath d='M120 112c0-3 4-3 4 0s-6 5-8 0 2-10 10-8 10 12 4 16-18 2-20-6 2-16 14-16'/%3E%3Cpath d='M62 214c-12-8-16-14-12-20 3-4 9-3 12 2 3-5 9-6 12-2 4 6 0 12-12 20z'/%3E%3Cpath d='M196 160a14 14 0 1 0 10 22a11 11 0 0 1-10-22z'/%3E%3Cpath d='M118 196l-6 10 6 10M136 196l6 10-6 10'/%3E%3Cpath d='M88 60q8 10 16 0'/%3E%3Ccircle cx='200' cy='210' r='2'/%3E%3Ccircle cx='96' cy='40' r='1.6'/%3E%3Ccircle cx='24' cy='190' r='1.8'/%3E%3Ccircle cx='232' cy='40' r='1.6'/%3E%3C/svg%3E");
+  --doodle-corners: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v16M4 12h16'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 14' fill='none' stroke='white' stroke-opacity='.55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8q5-8 10 0t10 0 10 0 10 0'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z'/%3E%3C/svg%3E");
+}
+:root[data-theme="light"] {
+  --on-accent: #ffffff;
+  --outline: #cfcfcf;
+  --doodle-rgb: 0, 0, 0;
+  --doodle-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='black' stroke-opacity='.065' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M34 31Q34 40 43 40Q34 40 34 49Q34 40 25 40Q34 40 34 31Z'/%3E%3Cpath d='M152 34h16M160 26v16'/%3E%3Cpath d='M212 95l2.6 5.8 6.4.7-4.8 4.3 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2-4.8-4.3 6.4-.7z'/%3E%3Cpath d='M18 132q6-10 12 0t12 0t12 0'/%3E%3Cpath d='M120 112c0-3 4-3 4 0s-6 5-8 0 2-10 10-8 10 12 4 16-18 2-20-6 2-16 14-16'/%3E%3Cpath d='M62 214c-12-8-16-14-12-20 3-4 9-3 12 2 3-5 9-6 12-2 4 6 0 12-12 20z'/%3E%3Cpath d='M196 160a14 14 0 1 0 10 22a11 11 0 0 1-10-22z'/%3E%3Cpath d='M118 196l-6 10 6 10M136 196l6 10-6 10'/%3E%3Cpath d='M88 60q8 10 16 0'/%3E%3Ccircle cx='200' cy='210' r='2'/%3E%3Ccircle cx='96' cy='40' r='1.6'/%3E%3Ccircle cx='24' cy='190' r='1.8'/%3E%3Ccircle cx='232' cy='40' r='1.6'/%3E%3C/svg%3E");
+  --doodle-corners: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-opacity='.55' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-opacity='.55' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v16M4 12h16'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 14' fill='none' stroke='black' stroke-opacity='.55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8q5-8 10 0t10 0 10 0 10 0'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-opacity='.55' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z'/%3E%3C/svg%3E");
+}
+/* surfaces that stay dark in light mode keep the dark-mode doodles */
+:root[data-theme="light"] .force-dark,
+:root[data-theme="light"] .media-dark {
+  --on-accent: #0a0a0a;
+  --outline: #4a4a4a;
+  --doodle-rgb: 255, 255, 255;
+  --doodle-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='white' stroke-opacity='.075' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M34 31Q34 40 43 40Q34 40 34 49Q34 40 25 40Q34 40 34 31Z'/%3E%3Cpath d='M152 34h16M160 26v16'/%3E%3Cpath d='M212 95l2.6 5.8 6.4.7-4.8 4.3 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2-4.8-4.3 6.4-.7z'/%3E%3Cpath d='M18 132q6-10 12 0t12 0t12 0'/%3E%3Cpath d='M120 112c0-3 4-3 4 0s-6 5-8 0 2-10 10-8 10 12 4 16-18 2-20-6 2-16 14-16'/%3E%3Cpath d='M62 214c-12-8-16-14-12-20 3-4 9-3 12 2 3-5 9-6 12-2 4 6 0 12-12 20z'/%3E%3Cpath d='M196 160a14 14 0 1 0 10 22a11 11 0 0 1-10-22z'/%3E%3Cpath d='M118 196l-6 10 6 10M136 196l6 10-6 10'/%3E%3Cpath d='M88 60q8 10 16 0'/%3E%3Ccircle cx='200' cy='210' r='2'/%3E%3Ccircle cx='96' cy='40' r='1.6'/%3E%3Ccircle cx='24' cy='190' r='1.8'/%3E%3Ccircle cx='232' cy='40' r='1.6'/%3E%3C/svg%3E");
+  --doodle-corners: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v16M4 12h16'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 14' fill='none' stroke='white' stroke-opacity='.55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8q5-8 10 0t10 0 10 0 10 0'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z'/%3E%3C/svg%3E");
+}
+
+/* the doodle wallpaper: behind the whole app, between the cards */
+body, .doodle-wallpaper {
+  background-image: var(--doodle-wall);
+  background-size: 240px 240px;
+}
+
+/* card outlines are the one visible grey (#4a4a4a) — not a faint white line */
+.border-white\/5:not(:hover):not(:focus-within),
+.border-white\/10:not(:hover):not(:focus-within),
+[class~="border-zinc-800"]:not(:hover):not(:focus-within),
+[class~="border-zinc-700"]:not(:hover):not(:focus-within) {
+  border-color: var(--outline);
+}
+
+/* buttons are full pills (solid white buttons and the white gradient ones) */
+button.bg-noob, a.bg-noob, [role="button"].bg-noob,
+button[class*="from-noob"], a[class*="from-noob"] {
+  border-radius: 9999px;
+}
+/* in Light mode the accent is black, so the text on it has to be white */
+:root[data-theme="light"] .bg-noob:not(.force-dark *):not(.media-dark *),
+:root[data-theme="light"] [class*="from-noob"]:not(.force-dark *):not(.media-dark *) {
+  color: #ffffff;
+}
+
+/* doodle panels: pop-ups and sheets (a panel inside a fixed overlay) and anything marked .doodle-panel get a dashed stitched edge and a doodle in each corner */
+[class~="fixed"] [class~="rounded-3xl"][class*="bg-zinc-9"]:not([class*="bg-gradient"]),
+[class~="fixed"] [class~="rounded-t-3xl"][class*="bg-zinc-9"]:not([class*="bg-gradient"]),
+[class~="fixed"] [class*="sm:rounded-3xl"][class*="bg-zinc-9"]:not([class*="bg-gradient"]),
+.doodle-panel {
+  outline: 1px dashed rgba(var(--doodle-rgb), .30);
+  outline-offset: -7px;
+  background-image: var(--doodle-corners);
+  background-repeat: no-repeat;
+  background-position: 14px 14px, calc(100% - 14px) 14px, 14px calc(100% - 14px), calc(100% - 14px) calc(100% - 14px);
+  background-size: 18px 18px, 14px 14px, 44px 14px, 18px 18px;
+}
+
+
+/* The decorative colours (cyan, sky, blue, indigo, violet, purple, fuchsia, teal) are black-and-white in this look: every class that uses them (text-cyan-400, bg-violet-500/10,
+   from-indigo-600 ...) reads the matching step of the grey scale instead. Red, pink, orange, amber, yellow, green and emerald keep their colour: they mean something
+   (errors, likes, warnings, coins, success). Light mode flips the table the same way the zinc scale flips; dark surfaces inside light mode keep the dark table. */
+:root {
+  --color-cyan-50: var(--color-zinc-50); --color-cyan-100: var(--color-zinc-50); --color-cyan-200: var(--color-zinc-100); --color-cyan-300: var(--color-zinc-100); --color-cyan-400: var(--color-zinc-50); --color-cyan-500: var(--color-zinc-600); --color-cyan-600: var(--color-zinc-700); --color-cyan-700: var(--color-zinc-800); --color-cyan-800: var(--color-zinc-800); --color-cyan-900: var(--color-zinc-900); --color-cyan-950: var(--color-zinc-950);
+  --color-sky-50: var(--color-zinc-50); --color-sky-100: var(--color-zinc-50); --color-sky-200: var(--color-zinc-100); --color-sky-300: var(--color-zinc-100); --color-sky-400: var(--color-zinc-50); --color-sky-500: var(--color-zinc-600); --color-sky-600: var(--color-zinc-700); --color-sky-700: var(--color-zinc-800); --color-sky-800: var(--color-zinc-800); --color-sky-900: var(--color-zinc-900); --color-sky-950: var(--color-zinc-950);
+  --color-blue-50: var(--color-zinc-50); --color-blue-100: var(--color-zinc-50); --color-blue-200: var(--color-zinc-100); --color-blue-300: var(--color-zinc-100); --color-blue-400: var(--color-zinc-50); --color-blue-500: var(--color-zinc-600); --color-blue-600: var(--color-zinc-700); --color-blue-700: var(--color-zinc-800); --color-blue-800: var(--color-zinc-800); --color-blue-900: var(--color-zinc-900); --color-blue-950: var(--color-zinc-950);
+  --color-indigo-50: var(--color-zinc-50); --color-indigo-100: var(--color-zinc-50); --color-indigo-200: var(--color-zinc-100); --color-indigo-300: var(--color-zinc-100); --color-indigo-400: var(--color-zinc-50); --color-indigo-500: var(--color-zinc-600); --color-indigo-600: var(--color-zinc-700); --color-indigo-700: var(--color-zinc-800); --color-indigo-800: var(--color-zinc-800); --color-indigo-900: var(--color-zinc-900); --color-indigo-950: var(--color-zinc-950);
+  --color-violet-50: var(--color-zinc-50); --color-violet-100: var(--color-zinc-50); --color-violet-200: var(--color-zinc-100); --color-violet-300: var(--color-zinc-100); --color-violet-400: var(--color-zinc-50); --color-violet-500: var(--color-zinc-600); --color-violet-600: var(--color-zinc-700); --color-violet-700: var(--color-zinc-800); --color-violet-800: var(--color-zinc-800); --color-violet-900: var(--color-zinc-900); --color-violet-950: var(--color-zinc-950);
+  --color-purple-50: var(--color-zinc-50); --color-purple-100: var(--color-zinc-50); --color-purple-200: var(--color-zinc-100); --color-purple-300: var(--color-zinc-100); --color-purple-400: var(--color-zinc-50); --color-purple-500: var(--color-zinc-600); --color-purple-600: var(--color-zinc-700); --color-purple-700: var(--color-zinc-800); --color-purple-800: var(--color-zinc-800); --color-purple-900: var(--color-zinc-900); --color-purple-950: var(--color-zinc-950);
+  --color-fuchsia-50: var(--color-zinc-50); --color-fuchsia-100: var(--color-zinc-50); --color-fuchsia-200: var(--color-zinc-100); --color-fuchsia-300: var(--color-zinc-100); --color-fuchsia-400: var(--color-zinc-50); --color-fuchsia-500: var(--color-zinc-600); --color-fuchsia-600: var(--color-zinc-700); --color-fuchsia-700: var(--color-zinc-800); --color-fuchsia-800: var(--color-zinc-800); --color-fuchsia-900: var(--color-zinc-900); --color-fuchsia-950: var(--color-zinc-950);
+  --color-teal-50: var(--color-zinc-50); --color-teal-100: var(--color-zinc-50); --color-teal-200: var(--color-zinc-100); --color-teal-300: var(--color-zinc-100); --color-teal-400: var(--color-zinc-50); --color-teal-500: var(--color-zinc-600); --color-teal-600: var(--color-zinc-700); --color-teal-700: var(--color-zinc-800); --color-teal-800: var(--color-zinc-800); --color-teal-900: var(--color-zinc-900); --color-teal-950: var(--color-zinc-950);
+}
+:root[data-theme="light"] {
+  --color-cyan-50: var(--color-zinc-900); --color-cyan-100: var(--color-zinc-900); --color-cyan-200: var(--color-zinc-800); --color-cyan-300: var(--color-zinc-700); --color-cyan-400: var(--color-zinc-50); --color-cyan-500: var(--color-zinc-300); --color-cyan-600: var(--color-zinc-200); --color-cyan-700: var(--color-zinc-100); --color-cyan-800: var(--color-zinc-100); --color-cyan-900: var(--color-zinc-50); --color-cyan-950: var(--color-zinc-50);
+  --color-sky-50: var(--color-zinc-900); --color-sky-100: var(--color-zinc-900); --color-sky-200: var(--color-zinc-800); --color-sky-300: var(--color-zinc-700); --color-sky-400: var(--color-zinc-50); --color-sky-500: var(--color-zinc-300); --color-sky-600: var(--color-zinc-200); --color-sky-700: var(--color-zinc-100); --color-sky-800: var(--color-zinc-100); --color-sky-900: var(--color-zinc-50); --color-sky-950: var(--color-zinc-50);
+  --color-blue-50: var(--color-zinc-900); --color-blue-100: var(--color-zinc-900); --color-blue-200: var(--color-zinc-800); --color-blue-300: var(--color-zinc-700); --color-blue-400: var(--color-zinc-50); --color-blue-500: var(--color-zinc-300); --color-blue-600: var(--color-zinc-200); --color-blue-700: var(--color-zinc-100); --color-blue-800: var(--color-zinc-100); --color-blue-900: var(--color-zinc-50); --color-blue-950: var(--color-zinc-50);
+  --color-indigo-50: var(--color-zinc-900); --color-indigo-100: var(--color-zinc-900); --color-indigo-200: var(--color-zinc-800); --color-indigo-300: var(--color-zinc-700); --color-indigo-400: var(--color-zinc-50); --color-indigo-500: var(--color-zinc-300); --color-indigo-600: var(--color-zinc-200); --color-indigo-700: var(--color-zinc-100); --color-indigo-800: var(--color-zinc-100); --color-indigo-900: var(--color-zinc-50); --color-indigo-950: var(--color-zinc-50);
+  --color-violet-50: var(--color-zinc-900); --color-violet-100: var(--color-zinc-900); --color-violet-200: var(--color-zinc-800); --color-violet-300: var(--color-zinc-700); --color-violet-400: var(--color-zinc-50); --color-violet-500: var(--color-zinc-300); --color-violet-600: var(--color-zinc-200); --color-violet-700: var(--color-zinc-100); --color-violet-800: var(--color-zinc-100); --color-violet-900: var(--color-zinc-50); --color-violet-950: var(--color-zinc-50);
+  --color-purple-50: var(--color-zinc-900); --color-purple-100: var(--color-zinc-900); --color-purple-200: var(--color-zinc-800); --color-purple-300: var(--color-zinc-700); --color-purple-400: var(--color-zinc-50); --color-purple-500: var(--color-zinc-300); --color-purple-600: var(--color-zinc-200); --color-purple-700: var(--color-zinc-100); --color-purple-800: var(--color-zinc-100); --color-purple-900: var(--color-zinc-50); --color-purple-950: var(--color-zinc-50);
+  --color-fuchsia-50: var(--color-zinc-900); --color-fuchsia-100: var(--color-zinc-900); --color-fuchsia-200: var(--color-zinc-800); --color-fuchsia-300: var(--color-zinc-700); --color-fuchsia-400: var(--color-zinc-50); --color-fuchsia-500: var(--color-zinc-300); --color-fuchsia-600: var(--color-zinc-200); --color-fuchsia-700: var(--color-zinc-100); --color-fuchsia-800: var(--color-zinc-100); --color-fuchsia-900: var(--color-zinc-50); --color-fuchsia-950: var(--color-zinc-50);
+  --color-teal-50: var(--color-zinc-900); --color-teal-100: var(--color-zinc-900); --color-teal-200: var(--color-zinc-800); --color-teal-300: var(--color-zinc-700); --color-teal-400: var(--color-zinc-50); --color-teal-500: var(--color-zinc-300); --color-teal-600: var(--color-zinc-200); --color-teal-700: var(--color-zinc-100); --color-teal-800: var(--color-zinc-100); --color-teal-900: var(--color-zinc-50); --color-teal-950: var(--color-zinc-50);
+}
+:root[data-theme="light"] .force-dark,
+:root[data-theme="light"] .media-dark {
+  --color-cyan-50: var(--color-zinc-50); --color-cyan-100: var(--color-zinc-50); --color-cyan-200: var(--color-zinc-100); --color-cyan-300: var(--color-zinc-100); --color-cyan-400: var(--color-zinc-50); --color-cyan-500: var(--color-zinc-600); --color-cyan-600: var(--color-zinc-700); --color-cyan-700: var(--color-zinc-800); --color-cyan-800: var(--color-zinc-800); --color-cyan-900: var(--color-zinc-900); --color-cyan-950: var(--color-zinc-950);
+  --color-sky-50: var(--color-zinc-50); --color-sky-100: var(--color-zinc-50); --color-sky-200: var(--color-zinc-100); --color-sky-300: var(--color-zinc-100); --color-sky-400: var(--color-zinc-50); --color-sky-500: var(--color-zinc-600); --color-sky-600: var(--color-zinc-700); --color-sky-700: var(--color-zinc-800); --color-sky-800: var(--color-zinc-800); --color-sky-900: var(--color-zinc-900); --color-sky-950: var(--color-zinc-950);
+  --color-blue-50: var(--color-zinc-50); --color-blue-100: var(--color-zinc-50); --color-blue-200: var(--color-zinc-100); --color-blue-300: var(--color-zinc-100); --color-blue-400: var(--color-zinc-50); --color-blue-500: var(--color-zinc-600); --color-blue-600: var(--color-zinc-700); --color-blue-700: var(--color-zinc-800); --color-blue-800: var(--color-zinc-800); --color-blue-900: var(--color-zinc-900); --color-blue-950: var(--color-zinc-950);
+  --color-indigo-50: var(--color-zinc-50); --color-indigo-100: var(--color-zinc-50); --color-indigo-200: var(--color-zinc-100); --color-indigo-300: var(--color-zinc-100); --color-indigo-400: var(--color-zinc-50); --color-indigo-500: var(--color-zinc-600); --color-indigo-600: var(--color-zinc-700); --color-indigo-700: var(--color-zinc-800); --color-indigo-800: var(--color-zinc-800); --color-indigo-900: var(--color-zinc-900); --color-indigo-950: var(--color-zinc-950);
+  --color-violet-50: var(--color-zinc-50); --color-violet-100: var(--color-zinc-50); --color-violet-200: var(--color-zinc-100); --color-violet-300: var(--color-zinc-100); --color-violet-400: var(--color-zinc-50); --color-violet-500: var(--color-zinc-600); --color-violet-600: var(--color-zinc-700); --color-violet-700: var(--color-zinc-800); --color-violet-800: var(--color-zinc-800); --color-violet-900: var(--color-zinc-900); --color-violet-950: var(--color-zinc-950);
+  --color-purple-50: var(--color-zinc-50); --color-purple-100: var(--color-zinc-50); --color-purple-200: var(--color-zinc-100); --color-purple-300: var(--color-zinc-100); --color-purple-400: var(--color-zinc-50); --color-purple-500: var(--color-zinc-600); --color-purple-600: var(--color-zinc-700); --color-purple-700: var(--color-zinc-800); --color-purple-800: var(--color-zinc-800); --color-purple-900: var(--color-zinc-900); --color-purple-950: var(--color-zinc-950);
+  --color-fuchsia-50: var(--color-zinc-50); --color-fuchsia-100: var(--color-zinc-50); --color-fuchsia-200: var(--color-zinc-100); --color-fuchsia-300: var(--color-zinc-100); --color-fuchsia-400: var(--color-zinc-50); --color-fuchsia-500: var(--color-zinc-600); --color-fuchsia-600: var(--color-zinc-700); --color-fuchsia-700: var(--color-zinc-800); --color-fuchsia-800: var(--color-zinc-800); --color-fuchsia-900: var(--color-zinc-900); --color-fuchsia-950: var(--color-zinc-950);
+  --color-teal-50: var(--color-zinc-50); --color-teal-100: var(--color-zinc-50); --color-teal-200: var(--color-zinc-100); --color-teal-300: var(--color-zinc-100); --color-teal-400: var(--color-zinc-50); --color-teal-500: var(--color-zinc-600); --color-teal-600: var(--color-zinc-700); --color-teal-700: var(--color-zinc-800); --color-teal-800: var(--color-zinc-800); --color-teal-900: var(--color-zinc-900); --color-teal-950: var(--color-zinc-950);
 }

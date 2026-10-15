@@ -228,8 +228,11 @@ function renderMessageWithLinks(text: string): React.ReactNode[] {
   });
 }
 
+// Chat colours saved before the black-and-white look (the old orange) are shown as white now.
+const oldAccent = (c?: string | null): string | undefined => (c && c.toLowerCase() === '#d97757' ? '#ffffff' : c || undefined);
+
 const THEME_COLORS = [
-  { name: 'Clay', hex: '#d97757' },
+  { name: 'White', hex: '#ffffff' },
   { name: 'Neon Emerald', hex: '#00FF66' },
   { name: 'Cyber Cyan', hex: '#00E5FF' },
   { name: 'Electric Purple', hex: '#D946EF' },
@@ -285,7 +288,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [globalChatTheme, setGlobalChatTheme] = useState<string>(() => {
-    return localStorage.getItem('noob_chat_theme') || '#d97757';
+    return oldAccent(localStorage.getItem('noob_chat_theme')) || '#ffffff';
   });
   const [showLeftMenu, setShowLeftMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1684,7 +1687,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   onClick={() => setActiveFilterTab(tab.id)}
                   className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 cursor-pointer ${
                     isActive
-                      ? 'bg-noob/20 text-noob border border-noob/40 font-bold shadow-[0_0_10px_rgba(217,119,87,0.15)]'
+                      ? 'bg-noob/20 text-noob border border-noob/40 font-bold shadow-[0_0_10px_rgba(255,255,255,0.15)]'
                       : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 border border-zinc-800/80'
                   }`}
                 >
@@ -2038,7 +2041,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 onClick={() => setShowChatActionsMenu(!showChatActionsMenu)}
                 className={`p-2 rounded-xl transition-all cursor-pointer ${
                   showChatActionsMenu
-                    ? 'bg-noob text-black shadow-[0_0_12px_rgba(217,119,87,0.3)]'
+                    ? 'bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.3)]'
                     : 'hover:bg-zinc-800 text-zinc-300 hover:text-white bg-zinc-900/80 border border-zinc-800'
                 }`}
                 title="Chat actions and options"
@@ -2269,9 +2272,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     style={
                       !isSticker && isMine
                         ? {
-                            backgroundColor: `${activeChat?.themeColor || globalChatTheme || '#d97757'}26`,
-                            borderColor: activeChat?.themeColor || globalChatTheme || '#d97757',
-                            boxShadow: `0 2px 14px ${(activeChat?.themeColor || globalChatTheme || '#d97757')}30`
+                            backgroundColor: `${oldAccent(activeChat?.themeColor) || globalChatTheme || '#ffffff'}26`,
+                            borderColor: oldAccent(activeChat?.themeColor) || globalChatTheme || '#ffffff',
+                            boxShadow: `0 2px 14px ${(oldAccent(activeChat?.themeColor) || globalChatTheme || '#ffffff')}30`
                           }
                         : undefined
                     }
@@ -3037,7 +3040,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
                   showEmojiPicker
-                    ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
+                    ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(255,255,255,0.3)]'
                     : 'bg-zinc-800 hover:bg-zinc-700 text-amber-400 border-zinc-700'
                 }`}
                 title="Emojis, GIFs & Stickers"
@@ -3052,7 +3055,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   disabled={isUploadingAttachment}
                   className={`p-2.5 rounded-2xl border transition-all cursor-pointer disabled:opacity-50 ${
                     showAttachMenu
-                      ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
+                      ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(255,255,255,0.3)]'
                       : 'bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border-zinc-700'
                   }`}
                   title="Attach a photo or video"
@@ -3258,7 +3261,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <label className="text-xs text-zinc-400 block mb-2 font-medium">Chat Bubble Theme</label>
               <div className="grid grid-cols-2 gap-2.5">
                 {THEME_COLORS.map((t) => {
-                  const currentTheme = activeChat?.themeColor || globalChatTheme;
+                  const currentTheme = oldAccent(activeChat?.themeColor) || globalChatTheme;
                   const isSelected = currentTheme === t.hex;
                   return (
                     <button
@@ -3295,9 +3298,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <span
                 className="px-2.5 py-1 rounded-xl font-bold text-white text-[10px] border shadow-sm"
                 style={{
-                  backgroundColor: `${activeChat?.themeColor || globalChatTheme}30`,
-                  borderColor: activeChat?.themeColor || globalChatTheme,
-                  boxShadow: `0 0 10px ${activeChat?.themeColor || globalChatTheme}33`
+                  backgroundColor: `${oldAccent(activeChat?.themeColor) || globalChatTheme}30`,
+                  borderColor: oldAccent(activeChat?.themeColor) || globalChatTheme,
+                  boxShadow: `0 0 10px ${oldAccent(activeChat?.themeColor) || globalChatTheme}33`
                 }}
               >
                 Sample Message Bubble

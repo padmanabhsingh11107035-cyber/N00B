@@ -60,7 +60,7 @@ interface Doodle {
   phone?: boolean;    // false = not shown on small screens
 }
 
-const A = 'text-amber-300/75', P = 'text-pink-300/70', C = 'text-cyan-300/70', V = 'text-violet-300/70', G = 'text-emerald-300/70', O = 'text-orange-300/75', W = 'text-white/35';
+const A = 'text-zinc-50/75', P = 'text-zinc-50/70', C = 'text-zinc-50/70', V = 'text-zinc-50/70', G = 'text-zinc-50/70', O = 'text-zinc-50/75', W = 'text-white/35';
 
 const SIZE_BOOST = 1.4;     // all sizes below are scaled up by this
 
@@ -151,14 +151,14 @@ const SIDE_DOODLES: Doodle[] = [
 
 // hand-written words in the same loopy writing as the rest of the page
 const SIDE_WORDS: Array<{ t: string; x: string; y: string; r: number; c: string; size: string }> = [
-  { t: 'hey!', x: '17%', y: '36%', r: -8, c: 'text-cyan-300/75', size: 'text-2xl' },
-  { t: 'yay!', x: '29%', y: '32%', r: 6, c: 'text-amber-300/75', size: 'text-xl' },
-  { t: 'bff ♡', x: '22%', y: '70%', r: -6, c: 'text-pink-300/75', size: 'text-2xl' },
-  { t: 'new friends', x: '13%', y: '53%', r: 7, c: 'text-emerald-300/70', size: 'text-lg' },
-  { t: "let's go!", x: '70%', y: '45%', r: 6, c: 'text-violet-300/75', size: 'text-2xl' },
-  { t: 'lol', x: '82%', y: '63%', r: -10, c: 'text-amber-300/75', size: 'text-xl' },
-  { t: 'stay cool', x: '74%', y: '56%', r: -5, c: 'text-cyan-300/70', size: 'text-lg' },
-  { t: 'share it ♡', x: '77%', y: '80%', r: 5, c: 'text-pink-300/75', size: 'text-xl' }
+  { t: 'hey!', x: '17%', y: '36%', r: -8, c: 'text-zinc-50/75', size: 'text-2xl' },
+  { t: 'yay!', x: '29%', y: '32%', r: 6, c: 'text-zinc-50/75', size: 'text-xl' },
+  { t: 'bff ♡', x: '22%', y: '70%', r: -6, c: 'text-zinc-50/75', size: 'text-2xl' },
+  { t: 'new friends', x: '13%', y: '53%', r: 7, c: 'text-zinc-50/70', size: 'text-lg' },
+  { t: "let's go!", x: '70%', y: '45%', r: 6, c: 'text-zinc-50/75', size: 'text-2xl' },
+  { t: 'lol', x: '82%', y: '63%', r: -10, c: 'text-zinc-50/75', size: 'text-xl' },
+  { t: 'stay cool', x: '74%', y: '56%', r: -5, c: 'text-zinc-50/70', size: 'text-lg' },
+  { t: 'share it ♡', x: '77%', y: '80%', r: 5, c: 'text-zinc-50/75', size: 'text-xl' }
 ];
 
 // loose dotted trails that join the doodles together, like lines drawn between them (100 x 100 over the whole page; they stretch with it)

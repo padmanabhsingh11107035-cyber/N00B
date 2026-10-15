@@ -6,7 +6,7 @@ export interface PackLook { name: string; stops: [string, string, string]; accen
 
 const LOOKS: Record<string, PackLook> = {
   rookie:  { name: 'Rookie',  stops: ['#5eead4', '#059669', '#052e2b'], accent: '#34d399', glow: 'rgba(52,211,153,0.55)' },
-  neon:    { name: 'Neon',    stops: ['#67e8f9', '#4f46e5', '#1e1b4b'], accent: '#22d3ee', glow: 'rgba(34,211,238,0.55)' },
+  neon:    { name: 'Neon',    stops: ['#67e8f9', '#4f46e5', '#1e1b4b'], accent: '#22d3ee', glow: 'rgba(255,255,255,0.55)' },
   royal:   { name: 'Royal',   stops: ['#d8b4fe', '#7c3aed', '#2e1065'], accent: '#a78bfa', glow: 'rgba(167,139,250,0.6)' },
   inferno: { name: 'Inferno', stops: ['#fdba74', '#ea580c', '#7f1d1d'], accent: '#fb923c', glow: 'rgba(251,146,60,0.6)' },
   galaxy:  { name: 'Galaxy',  stops: ['#fde68a', '#ec4899', '#3b0764'], accent: '#f0abfc', glow: 'rgba(240,171,252,0.6)' }

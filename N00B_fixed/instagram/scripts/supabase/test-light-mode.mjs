@@ -45,7 +45,7 @@ section('2. Every pale colour gets a readable one');
   check(worstWhite >= 4.4, `full-strength accent text is at least 4.4:1 on white (worst ${worstWhite.toFixed(2)})`, worstName);
   check(worstTint >= 3.7, `and at least 3.7:1 on its own pale chip (worst ${worstTint.toFixed(2)})`);
 }
-check(G.deepOf('emerald', 300) === '#047857' && G.deepOf('amber', 200) === '#92400e' && G.deepOf('amber', 400) === '#b45309' && G.deepOf('purple', 100) === '#7e22ce', 'mint becomes deep green, pale amber a deep brown-gold, lilac a deep purple');
+check(G.deepOf('emerald', 300) === '#047857' && G.deepOf('amber', 200) === '#92400e' && G.deepOf('amber', 400) === '#b45309' && G.deepOf('purple', 100) === '#111111' && G.deepOf('cyan', 300) === '#111111', 'mint becomes deep green, pale amber a deep brown-gold, and the decorative hues (lilac, cyan...) near-black: the black-and-white look');
 check(/\.text-emerald-300:not\(\.force-dark \*\):not\(\.media-dark \*\) \{ color: #047857 !important; \}/.test(css), 'for example text-emerald-300 is deep green in light mode');
 check(/\.hover\\:text-/.test(css) && /group-hover\\:text-/.test(css), 'hover colours get the same treatment');
 check(/:not\(\.force-dark \*\):not\(\.media-dark \*\)/.test(css) && !/\.text-emerald-300 \{/.test(css), 'and never inside the screens that are dark in both modes');

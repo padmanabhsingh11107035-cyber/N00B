@@ -568,7 +568,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onClick={onOpenNotifications}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
               unreadNotificationCount > 0
-                ? 'bg-noob/20 border border-noob text-noob shadow-[0_0_10px_rgba(217,119,87,0.3)]'
+                ? 'bg-noob/20 border border-noob text-noob shadow-[0_0_10px_rgba(255,255,255,0.3)]'
                 : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white'
             }`}
             title="Activity & Notifications Bar"
@@ -692,7 +692,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onClick={() => setActiveCategory(cat)}
             className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeCategory === cat
-                ? 'bg-noob text-black shadow-[0_0_12px_rgba(217,119,87,0.35)] font-bold'
+                ? 'bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.35)] font-bold'
                 : 'bg-zinc-900/80 text-zinc-400 hover:text-white border border-white/5'
             }`}
           >
@@ -766,7 +766,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start overscroll-contain" onClick={() => setShowNoobMenu(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
+            className="doodle-panel w-72 max-w-[85vw] h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
           >
             <div className="shrink-0 flex items-center justify-between mb-4">
               <h2 className="text-sm font-black italic tracking-tighter text-white">NOOB</h2>

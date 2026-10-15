@@ -131,7 +131,7 @@ export const QrScannerPage: React.FC<QrScannerPageProps> = ({ allUsers, currentU
                 <span className="absolute -top-0.5 -right-0.5 w-9 h-9 border-t-[3px] border-r-[3px] border-noob rounded-tr-[28px]" />
                 <span className="absolute -bottom-0.5 -left-0.5 w-9 h-9 border-b-[3px] border-l-[3px] border-noob rounded-bl-[28px]" />
                 <span className="absolute -bottom-0.5 -right-0.5 w-9 h-9 border-b-[3px] border-r-[3px] border-noob rounded-br-[28px]" />
-                <span className="noob-scan-line absolute left-3 right-3 h-0.5 rounded-full bg-gradient-to-r from-transparent via-noob to-transparent shadow-[0_0_14px_2px_rgba(217,119,87,0.7)]" style={{ animation: 'noob-scan-line 2.2s ease-in-out infinite' }} />
+                <span className="noob-scan-line absolute left-3 right-3 h-0.5 rounded-full bg-gradient-to-r from-transparent via-noob to-transparent shadow-[0_0_14px_2px_rgba(255,255,255,0.7)]" style={{ animation: 'noob-scan-line 2.2s ease-in-out infinite' }} />
               </div>
             </div>
           </>

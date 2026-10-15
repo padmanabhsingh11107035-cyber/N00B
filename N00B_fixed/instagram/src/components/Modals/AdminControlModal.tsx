@@ -1086,13 +1086,13 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         className={
           fullPage
             ? 'w-full h-full bg-zinc-950 flex flex-col'
-            : 'w-full max-w-2xl bg-zinc-950 border border-noob/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(217,119,87,0.15)] flex flex-col max-h-[90vh]'
+            : 'w-full max-w-2xl bg-zinc-950 border border-noob/40 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.15)] flex flex-col max-h-[90vh]'
         }
       >
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(217,119,87,0.4)] bg-black p-0.5">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(255,255,255,0.4)] bg-black p-0.5">
               <img src="/noob-logo-circle.png" alt="NOOB Logo" className="w-full h-full object-cover" />
             </div>
             <div>
@@ -2011,7 +2011,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     onClick={() => setNotifTargetType('all')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       notifTargetType === 'all'
-                        ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
+                        ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(255,255,255,0.3)]'
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
                     }`}
                   >
@@ -2023,7 +2023,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     onClick={() => setNotifTargetType('specific')}
                     className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       notifTargetType === 'specific'
-                        ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(217,119,87,0.3)]'
+                        ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(255,255,255,0.3)]'
                         : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
                     }`}
                   >
@@ -2073,7 +2073,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               <button
                 type="submit"
                 disabled={isSendingNotif}
-                className="w-full py-3 bg-noob hover:bg-noob/90 text-black font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(217,119,87,0.3)] transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3 bg-noob hover:bg-noob/90 text-black font-black text-xs rounded-2xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSendingNotif ? (
                   <>

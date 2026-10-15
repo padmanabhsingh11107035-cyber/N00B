@@ -202,7 +202,7 @@ export const TicTacToeGame: React.FC<TicTacToeGameProps> = ({
               className={`rounded-xl flex items-center justify-center font-black text-3xl transition-all cursor-pointer ${
                 cell === 'X'
                   ? isWinningCell
-                    ? 'bg-noob text-black shadow-[0_0_15px_#d97757]'
+                    ? 'bg-noob text-black shadow-[0_0_15px_#ffffff]'
                     : 'bg-zinc-900 text-noob border border-noob/30'
                   : cell === 'O'
                   ? isWinningCell

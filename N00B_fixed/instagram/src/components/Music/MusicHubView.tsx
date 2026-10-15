@@ -288,8 +288,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       <div className="flex items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
         <div className="flex items-center gap-3.5 min-w-0">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.35)] shrink-0"
-            style={{ background: 'conic-gradient(from 180deg, #d97757, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #d97757)' }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.35)] shrink-0"
+            style={{ background: 'conic-gradient(from 180deg, #ffffff, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #ffffff)' }}
           >
             <Disc3 className="w-6 h-6 text-white stroke-[2.5] animate-spin-slow" />
           </div>
@@ -358,7 +358,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             onChange={(e) => seekTo(Number(e.target.value))}
             className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-noob"
             style={{
-              background: `linear-gradient(to right, #d97757 ${audioProgress}%, #3f3f46 ${audioProgress}%)`
+              background: `linear-gradient(to right, #ffffff ${audioProgress}%, #3f3f46 ${audioProgress}%)`
             }}
             aria-label="Seek track position"
           />
@@ -418,7 +418,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
               onClick={() => togglePlay(track)}
               className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group ${
                 isSelected
-                  ? 'bg-purple-950/30 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                  ? 'bg-purple-950/30 border-purple-500/50 shadow-[0_0_15px_rgba(255,255,255,0.15)]'
                   : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900'
               }`}
             >

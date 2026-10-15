@@ -193,7 +193,7 @@ export const StatusNoteViewerModal: React.FC<StatusNoteViewerModalProps> = ({
         {/* Big Note Speech Bubble (turns into bigger view!) */}
         <div className="flex flex-col items-center py-2 space-y-4">
           <div className="relative w-full max-w-sm">
-            <div className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border-2 border-noob rounded-3xl p-6 shadow-[0_0_30px_rgba(217,119,87,0.2)] text-center relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border-2 border-noob rounded-3xl p-6 shadow-[0_0_30px_rgba(255,255,255,0.2)] text-center relative overflow-hidden group">
               <Sparkles className="w-4 h-4 text-noob absolute top-3 left-3 opacity-60" />
               <p translate="no" className="text-base sm:text-lg font-bold text-white leading-relaxed break-words px-2">
                 "{note.text}"

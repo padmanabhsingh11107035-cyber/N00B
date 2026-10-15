@@ -167,10 +167,10 @@ const dcRightMore = (
 // ---- Install: a phone with a download arrow, stars and hearts (white, mint, butter yellow and pink on the green button)
 const phone = (x: number, y: number) => `M${x} ${y}h9a2.5 2.5 0 0 1 2.5 2.5v14a2.5 2.5 0 0 1-2.5 2.5h-9a2.5 2.5 0 0 1-2.5-2.5v-14a2.5 2.5 0 0 1 2.5-2.5Z`;
 const downArrow = (cx: number, cy: number, s: number) => `M${cx} ${cy - s}v${s * 1.7}M${cx - s * 0.7} ${cy + s * 0.1}l${s * 0.7} ${s * 0.8}l${s * 0.7} ${-s * 0.8}`;
-const IC = { w: '#ffffff', yellow: '#fde68a', pink: '#fbcfe8', mint: '#a7f3d0' };
+const IC = { w: 'currentColor', yellow: 'currentColor', pink: 'currentColor', mint: 'currentColor' };   // the button's own colour: dark on the white button, light on the black one
 const instLeft = (
   <>
-    <P d={phone(10, 7)} stroke={IC.w} fill="rgba(255,255,255,.16)" w={1.6} cls="dd-float" />
+    <P d={phone(10, 7)} stroke={IC.w} w={1.6} cls="dd-float" />
     <P d={downArrow(14.5, 15, 3.4)} stroke={IC.yellow} w={1.8} cls="dd-float" delay={0.3} />
     <P d={star(34, 11, 5)} stroke={IC.yellow} cls="dd-twinkle" delay={0.5} />
     <P d={wave(4, 38, 6, 4, 4)} stroke={IC.w} w={1.9} />
@@ -181,7 +181,7 @@ const instLeft = (
 const instRight = (
   <>
     <P d={sparkle(13, 12, 6)} stroke={IC.w} cls="dd-twinkle" delay={0.2} />
-    <P d={heart(33, 14, 3.6)} stroke={IC.pink} fill="rgba(251,207,232,.25)" cls="dd-float" delay={0.6} />
+    <P d={heart(33, 14, 3.6)} stroke={IC.pink} cls="dd-float" delay={0.6} />
     <P d={wave(26, 38, 6, 4, 4)} stroke={IC.w} w={1.9} />
     <P d={spiral(10, 29, 4.5)} stroke={IC.mint} cls="dd-float" />
     <P d={plus(42, 30, 2.6)} stroke={IC.yellow} w={1.8} />
@@ -269,7 +269,7 @@ const SETS: Record<string, { left: React.ReactNode; right: React.ReactNode; left
   facebook: { left: fbLeft, right: fbRight, leftMore: fbLeftMore, rightMore: fbRightMore, tone: 'text-white' },
   discord: { left: dcLeft, right: dcRight, leftMore: dcLeftMore, rightMore: dcRightMore, tone: 'text-white' },
   apple: { left: appleLeft, right: appleRight, leftMore: appleLeftMore, rightMore: appleRightMore, tone: 'text-white' },
-  install: { left: instLeft, right: instRight, leftMore: instLeftMore, rightMore: instRightMore, tone: 'text-white' }
+  install: { left: instLeft, right: instRight, leftMore: instLeftMore, rightMore: instRightMore, tone: '' }
 };
 
 export const ButtonDoodles: React.FC<{ provider: string; light?: boolean }> = ({ provider, light }) => {

@@ -25,7 +25,7 @@ export const PrizeVisual: React.FC<{ prize: Looks; size?: number }> = ({ prize, 
   }
   if (prize.kind === 'verified') {
     return (
-      <div style={{ ...box, boxShadow: `0 0 ${size / 2}px rgba(56,189,248,0.55)` }} className="rounded-full bg-gradient-to-br from-sky-300 to-blue-600 flex items-center justify-center border-2 border-white/70">
+      <div style={{ ...box, boxShadow: `0 0 ${size / 2}px rgba(255,255,255,0.55)` }} className="rounded-full bg-gradient-to-br from-sky-300 to-blue-600 flex items-center justify-center border-2 border-white/70">
         <BadgeCheck className="text-white" style={{ width: size * 0.62, height: size * 0.62 }} strokeWidth={2.4} />
       </div>
     );

@@ -27,7 +27,7 @@ const RING_BG: Record<TrayRing, string> = {
   seen: 'bg-zinc-600',
   none: 'bg-transparent'
 };
-const RING_BG_CLOSE_FRIENDS = 'bg-gradient-to-tr from-noob via-noob-strong to-noob shadow-[0_0_10px_rgba(217,119,87,0.3)]';
+const RING_BG_CLOSE_FRIENDS = 'bg-gradient-to-tr from-noob via-noob-strong to-noob shadow-[0_0_10px_rgba(255,255,255,0.3)]';
 
 const RingedAvatar: React.FC<{ ring: TrayRing; closeFriends?: boolean; src?: string; alt: string }> = ({ ring, closeFriends, src, alt }) => (
   <div className={`w-16 h-16 rounded-full p-[2px] transition-transform duration-200 group-hover:scale-105 ${ring === 'unseen' && closeFriends ? RING_BG_CLOSE_FRIENDS : RING_BG[ring]}`}>
@@ -210,7 +210,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                     {item.username}
                   </span>
                   {item.closeFriends && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-noob flex-shrink-0 shadow-[0_0_6px_rgba(217,119,87,0.8)]" title="Close Friends" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-noob flex-shrink-0 shadow-[0_0_6px_rgba(255,255,255,0.8)]" title="Close Friends" />
                   )}
                 </div>
               </div>

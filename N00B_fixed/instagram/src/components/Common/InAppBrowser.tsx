@@ -62,7 +62,7 @@ export const InAppBrowserHost: React.FC = () => {
               <h2 className="text-lg font-black tracking-tight">{host}</h2>
               <p className="text-sm text-zinc-400 mt-2 max-w-xs leading-relaxed">This website does not allow itself to be shown inside another app, so it opens in your browser.</p>
             </div>
-            <button onClick={openOutside} className="px-7 py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-white font-bold text-sm active:scale-95 transition-transform cursor-pointer">Open in browser</button>
+            <button onClick={openOutside} className="px-7 py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black font-bold text-sm active:scale-95 transition-transform cursor-pointer">Open in browser</button>
             <button onClick={async () => showNotice((await copyText(url)) ? 'Link copied' : 'Could not copy')} className="text-xs font-semibold text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 cursor-pointer"><Link2 className="w-3.5 h-3.5" /> Copy link</button>
           </div>
         ) : (

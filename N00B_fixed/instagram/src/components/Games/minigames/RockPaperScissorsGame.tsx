@@ -176,7 +176,7 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
       <div className="w-full bg-zinc-950 border border-zinc-800/80 rounded-2xl p-6 mb-4 flex items-center justify-around shadow-inner min-h-[140px]">
         {/* Player Chosen */}
         <div className="flex flex-col items-center gap-1.5">
-          <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-noob/40 flex items-center justify-center text-3xl shadow-[0_0_10px_rgba(217,119,87,0.2)]">
+          <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-noob/40 flex items-center justify-center text-3xl shadow-[0_0_10px_rgba(255,255,255,0.2)]">
             {playerChoice && !isRevealing ? playerChoice.emoji : playerChoice ? '❔' : '❔'}
           </div>
           <span className="text-[11px] font-bold text-zinc-300">{vsBot ? 'You' : 'Player 1'}</span>

@@ -42,7 +42,7 @@ export const TEAM_ACCENTS: TeamAccent[] = [
   { from: '#a78bfa', to: '#38bdf8', glow: 'rgba(167,139,250,0.45)' },
   { from: '#34d399', to: '#22d3ee', glow: 'rgba(52,211,153,0.42)' },
   { from: '#fb7185', to: '#f59e0b', glow: 'rgba(251,113,133,0.42)' },
-  { from: '#60a5fa', to: '#c084fc', glow: 'rgba(96,165,250,0.45)' },
+  { from: '#60a5fa', to: '#c084fc', glow: 'rgba(255,255,255,0.45)' },
   { from: '#f0abfc', to: '#fde68a', glow: 'rgba(240,171,252,0.42)' }
 ];
 export const accentFor = (index: number): TeamAccent => TEAM_ACCENTS[((index % TEAM_ACCENTS.length) + TEAM_ACCENTS.length) % TEAM_ACCENTS.length];

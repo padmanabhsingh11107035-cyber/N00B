@@ -61,7 +61,7 @@ export const ReactionTapGame: React.FC<ReactionTapGameProps> = ({ onGameOver }) 
             : state === 'waiting'
             ? 'bg-red-950/80 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
             : state === 'ready'
-            ? 'bg-noob border-white text-black shadow-[0_0_30px_#d97757]'
+            ? 'bg-noob border-white text-black shadow-[0_0_30px_#ffffff]'
             : state === 'too_early'
             ? 'bg-amber-950 border-amber-500'
             : 'bg-emerald-950 border-emerald-400'

@@ -133,7 +133,7 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all ${
                         user.isFollowing
                           ? 'bg-zinc-800 text-zinc-300 border border-white/10'
-                          : 'bg-noob text-black shadow-[0_0_12px_rgba(217,119,87,0.25)]'
+                          : 'bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.25)]'
                       }`}
                     >
                       {user.isFollowing ? (

@@ -113,7 +113,7 @@ export const SuggestionBoxModal: React.FC<Props> = ({ userId, onClose }) => {
             <button
               type="submit"
               disabled={sending || message.trim().length < 5}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black font-black text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {sending ? 'Sending…' : 'Send to NOOB'}

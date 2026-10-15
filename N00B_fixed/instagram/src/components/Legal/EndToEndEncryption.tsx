@@ -148,7 +148,7 @@ export const EndToEndEncryption: React.FC<EndToEndEncryptionProps> = ({ onClose 
         <div className="pt-4 border-t border-white/10 flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-blue-500 text-white font-bold text-xs hover:bg-blue-400 transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-6 py-2.5 rounded-xl bg-blue-500 text-white font-bold text-xs hover:bg-zinc-500 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Understood &amp; Close</span>

@@ -185,7 +185,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     setPlacedOrderNo(res.order.orderNo);
     persistCart({});
     setShowCheckout(false);
-    confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#d97757', '#22d3ee', '#ffffff'], zIndex: 9999 });
+    confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#ffffff', '#22d3ee', '#ffffff'], zIndex: 9999 });
   };
 
   // The hero's scroll-driven animation listens for the WINDOW's own 'scroll' event and measures

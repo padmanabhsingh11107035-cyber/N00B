@@ -202,7 +202,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative w-full aspect-square max-w-[340px] sm:max-w-[400px] bg-zinc-950 border-2 border-noob/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(217,119,87,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
+        className="relative w-full aspect-square max-w-[340px] sm:max-w-[400px] bg-zinc-950 border-2 border-noob/40 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(255,255,255,0.15)] grid grid-cols-16 grid-rows-16 touch-none"
       >
         {/* Render Grid Cells */}
         {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, idx) => {
@@ -217,7 +217,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
               key={idx}
               className={`w-full h-full ${
                 isHead
-                  ? 'bg-noob rounded-sm shadow-[0_0_8px_#d97757]'
+                  ? 'bg-noob rounded-sm shadow-[0_0_8px_#ffffff]'
                   : isBody
                   ? 'bg-emerald-500/80 rounded-xs'
                   : isFood
@@ -235,7 +235,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
             <p className="text-xs text-zinc-400 mb-4">{resumable ? `Welcome back! You had ${score} of ${targetScore} orbs.` : `Collect ${targetScore} glowing power orbs to win!`}</p>
             <button
               onClick={resumable ? resumeGame : startGame}
-              className="px-5 py-2.5 bg-noob hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-[0_0_15px_rgba(217,119,87,0.4)] flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105"
+              className="px-5 py-2.5 bg-noob hover:bg-emerald-400 text-black font-black text-xs rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.4)] flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105"
             >
               <Play className="w-4 h-4 fill-black" /> {resumable ? 'Resume Game' : 'Start Game'}
             </button>

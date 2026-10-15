@@ -5,8 +5,8 @@
 export type ThemePreference = 'dark' | 'light' | 'system';
 
 const KEY = 'noob_theme';
-// The strip above the app (the installed app's title bar, the phone's status bar) is the accent colour in both themes.
-const CHROME_COLOR = '#d97757';
+// The strip above the app (the installed app's title bar, the phone's status bar) is the page colour: near-black in Dark, white in Light.
+const chromeColor = (resolved: 'dark' | 'light') => (resolved === 'dark' ? '#0a0a0a' : '#ffffff');
 
 // Every device starts in Dark, whatever the device's own light/dark setting is. Light and System are there only if the person chooses them.
 let memoryPreference: ThemePreference = 'dark'; // used only if the browser blocks storage
@@ -46,7 +46,7 @@ export function applyTheme(): void {
     meta.setAttribute('name', 'theme-color');
     document.head.appendChild(meta);
   }
-  meta.setAttribute('content', CHROME_COLOR);
+  meta.setAttribute('content', chromeColor(resolved));
   listeners.forEach((fn) => fn(preference, resolved));
 }
 

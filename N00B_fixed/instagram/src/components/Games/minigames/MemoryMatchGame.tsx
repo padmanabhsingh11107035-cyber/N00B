@@ -109,7 +109,7 @@ export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onGameOver, re
             disabled={card.isFlipped || card.isMatched || isLocked}
             className={`h-16 rounded-2xl flex items-center justify-center text-2xl transition-all duration-300 transform cursor-pointer ${
               card.isFlipped || card.isMatched
-                ? 'bg-zinc-900 border border-noob/50 shadow-[0_0_10px_rgba(217,119,87,0.2)] rotate-0 scale-100'
+                ? 'bg-zinc-900 border border-noob/50 shadow-[0_0_10px_rgba(255,255,255,0.2)] rotate-0 scale-100'
                 : 'bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/50 hover:scale-105'
             }`}
           >

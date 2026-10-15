@@ -13,6 +13,7 @@ export {
   checkPendingOAuthSignup,
   checkOAuthSignIn,
   fetchEnabledSocialProviders,
+  cachedSocialProviders,
   signInWithProvider,
   signInToExistingOAuthAccount,
   completeOAuthSignup,

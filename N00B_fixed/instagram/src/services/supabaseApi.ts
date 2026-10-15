@@ -361,21 +361,40 @@ export interface EnabledSocialProvider {
   supabaseId: string; // the name the sign-in service knows it by
 }
 
+// The three that are switched on today. They are shown at once (before the settings have even been read) and whenever the settings can not be read, so a slow
+// or failing network (a weak hotspot, a blocked request) never leaves people with Google alone.
+export const DEFAULT_SOCIAL_PROVIDERS: EnabledSocialProvider[] = [
+  { id: 'google', supabaseId: 'google' },
+  { id: 'facebook', supabaseId: 'facebook' },
+  { id: 'discord', supabaseId: 'discord' }
+];
+const SOCIAL_CACHE_KEY = 'noob_social_providers';
+const KNOWN_SOCIAL: SocialProvider[] = ['google', 'apple', 'facebook', 'microsoft', 'x', 'discord', 'github', 'linkedin', 'twitch', 'spotify'];
+/** What was read from the settings last time on this device (so the buttons are right from the first moment), or the three above. */
+export function cachedSocialProviders(): EnabledSocialProvider[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(SOCIAL_CACHE_KEY) || 'null');
+    if (Array.isArray(v) && v.length && v.every((p) => p && KNOWN_SOCIAL.includes(p.id) && typeof p.supabaseId === 'string')) return v as EnabledSocialProvider[];
+  } catch { /* no saved list: use the default */ }
+  return DEFAULT_SOCIAL_PROVIDERS;
+}
+
 // Which "Continue with …" providers are switched on in the sign-in settings (a public setting). A provider whose setup is not
-// finished is simply not offered. If the settings can not be read, Google (the one that is known to be on) is offered.
+// finished is simply not offered. If the settings can not be read, the last list read on this device (or the three that are on) is used, and the
+// next call tries again — a failure is never remembered for the rest of the visit.
 let socialProvidersPromise: Promise<EnabledSocialProvider[]> | null = null;
 export function fetchEnabledSocialProviders(): Promise<EnabledSocialProvider[]> {
   if (!socialProvidersPromise) {
     socialProvidersPromise = (async () => {
-      const fallback: EnabledSocialProvider[] = [{ id: 'google', supabaseId: 'google' }];
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(`${(import.meta.env.VITE_SUPABASE_URL as string) || ''}/auth/v1/settings`, {
           headers: { apikey: (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '' },
           signal: controller.signal
         });
         clearTimeout(timer);
+        if (!res.ok) throw new Error(`settings ${res.status}`);
         const external = (await res.json())?.external || {};
         const out: EnabledSocialProvider[] = [];
         if (external.google) out.push({ id: 'google', supabaseId: 'google' });
@@ -389,9 +408,12 @@ export function fetchEnabledSocialProviders(): Promise<EnabledSocialProvider[]> 
         if (external.linkedin_oidc) out.push({ id: 'linkedin', supabaseId: 'linkedin_oidc' });
         if (external.twitch) out.push({ id: 'twitch', supabaseId: 'twitch' });
         if (external.spotify) out.push({ id: 'spotify', supabaseId: 'spotify' });
-        return out.length ? out : fallback;
+        if (!out.length) throw new Error('no provider listed');
+        try { localStorage.setItem(SOCIAL_CACHE_KEY, JSON.stringify(out)); } catch { /* private mode: just not saved */ }
+        return out;
       } catch {
-        return fallback;
+        socialProvidersPromise = null; // try again next time
+        return cachedSocialProviders();
       }
     })();
   }

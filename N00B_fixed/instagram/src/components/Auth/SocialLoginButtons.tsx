@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { fetchEnabledSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
+import { fetchEnabledSocialProviders, cachedSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
 import { ButtonDoodles } from './ButtonDoodles';
 
 // "Continue with …" buttons. Only the providers that are switched on in the sign-in settings are shown, so a button appears
@@ -104,7 +104,8 @@ interface Props {
 }
 
 export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
-  const [providers, setProviders] = useState<EnabledSocialProvider[]>([{ id: 'google', supabaseId: 'google' }]);
+  // right from the first moment: what this device read last time, or Google + Facebook + Discord (never Google alone while the settings load)
+  const [providers, setProviders] = useState<EnabledSocialProvider[]>(() => cachedSocialProviders());
   const [busy, setBusy] = useState<SocialProvider | null>(null);
   // "Continue with Apple" is not working yet: the button is there for everyone, and a tap only says so for a few seconds
   const [appleSoon, setAppleSoon] = useState(false);
@@ -116,8 +117,10 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
 
   useEffect(() => {
     let alive = true;
-    void fetchEnabledSocialProviders().then((list) => { if (alive) setProviders(list); });
-    return () => { alive = false; };
+    const load = () => { void fetchEnabledSocialProviders().then((list) => { if (alive) setProviders(list); }); };
+    load();
+    const again = window.setTimeout(load, 6000); // one more try, in case the first read failed on a weak connection
+    return () => { alive = false; window.clearTimeout(again); };
   }, []);
 
   const start = async (p: EnabledSocialProvider) => {
@@ -168,7 +171,7 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
         onClick={() => setAppleSoon(true)}
         aria-label="Continue with Apple"
         style={{ backgroundColor: '#000000', color: '#ffffff' }}
-        className="force-white-text w-full py-2.5 rounded-full ring-1 ring-white/60 font-bold text-sm cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:ring-white active:translate-y-0 active:scale-[.99] flex items-center justify-center gap-2.5"
+        className="force-white-text w-full py-2.5 rounded-2xl ring-1 ring-white/60 font-bold text-sm cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:ring-white active:translate-y-0 active:scale-[.99] flex items-center justify-center gap-2.5"
       >
         <AppleIcon className="w-[18px] h-[18px]" />
         <span>Continue with Apple</span>

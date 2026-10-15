@@ -13,7 +13,8 @@ const doodles = read('src/components/Auth/ButtonDoodles.tsx');
 
 section('1. Continue with Apple');
 check((auth.match(/<SocialLoginButtons /g) || []).length === 2, 'the social buttons are on both the log-in and the sign-up form');
-check(/<span>Continue with Apple<\/span>/.test(social) && /backgroundColor: '#000000'/.test(social) && /color: '#ffffff'/.test(social) && /rounded-full/.test(social), 'a black pill with white text that says "Continue with Apple"');
+check(/<span>Continue with Apple<\/span>/.test(social) && /backgroundColor: '#000000'/.test(social) && /color: '#ffffff'/.test(social), 'black with white text that says "Continue with Apple"');
+check(/rounded-2xl ring-1 ring-white\/60/.test(social) && /dd-btn group relative overflow-hidden w-full py-2\.5 font-bold text-sm rounded-2xl/.test(social), 'it has the same shape (rounded corners, height, width) as the Google / Facebook / Discord buttons');
 check(/onClick=\{\(\) => setAppleSoon\(true\)\}/.test(social) && /Continue with Apple is coming soon/.test(social), 'tapping it only shows "coming soon"');
 check(!/signInWithProvider\([^)]*apple/i.test(social) && /p\.id !== 'apple'/.test(social), 'it never starts a real sign-in, and a real Apple provider (if one is ever switched on) is not shown twice');
 const iGoogle = social.indexOf('{google && button(google)}'), iApple = social.indexOf('{appleButton}'), iOthers = social.indexOf('{others.map');
@@ -24,6 +25,14 @@ section('2. The Install button looks like the login buttons');
 check(/<ButtonDoodles provider="install" \/>/.test(auth) && /install: \{ left: instLeft/.test(doodles), 'it has its own hand-drawn doodles');
 check(/dd-btn/.test(auth) && /dd-gloss/.test(auth) && /dd-shine/.test(auth) && /border-dashed/.test(auth), 'it has the same gloss, shine and dashed stitching');
 check(/from-\[#047857\]/.test(auth) && !/from-\[#d97757\]/.test(auth.slice(auth.indexOf('noob-install-wrap'), auth.indexOf('noob-install-wrap') + 3500)), 'it is green, not the orange of the Log In button');
+
+section('3. The buttons never fall back to Google alone');
+const api = read('src/services/supabaseApi.ts');
+check(/DEFAULT_SOCIAL_PROVIDERS[^=]*= \[\s*\{ id: 'google'[^\]]*\{ id: 'facebook'[^\]]*\{ id: 'discord'/.test(api), 'the default list is Google, Facebook and Discord');
+check(/useState<EnabledSocialProvider\[\]>\(\(\) => cachedSocialProviders\(\)\)/.test(social), 'they show from the first moment (saved list or the default), not after the settings load');
+check(/return cachedSocialProviders\(\);/.test(api) && !/\[\{ id: 'google', supabaseId: 'google' \}\];/.test(api), 'when the settings can not be read, the saved list or the three are used, not Google alone');
+check(/socialProvidersPromise = null; \/\/ try again next time/.test(api) && /window\.setTimeout\(load, 6000\)/.test(social), 'a failed read is not remembered: it is tried again');
+check(/setItem\(SOCIAL_CACHE_KEY/.test(api) && /KNOWN_SOCIAL\.includes\(p\.id\)/.test(api), 'the last good list is saved on the device, and a damaged saved list is ignored');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

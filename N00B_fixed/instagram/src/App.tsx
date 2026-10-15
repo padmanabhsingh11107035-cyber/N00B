@@ -97,7 +97,7 @@ import { teamJoinRequested } from './utils/ourTeam';
 import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
-import { usePageLayers, PageLayerSlot } from './utils/pageLayers';
+import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './utils/pageLayers';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { useAnyFullPage } from './utils/fullPage';
 import { setInAppLinkHandler } from './utils/inAppLinks';
@@ -150,6 +150,7 @@ const TAB_PRELOADS: [NavTab, () => Promise<unknown>][] = [
   ['profile', preloadProfile], ['explore', preloadExplore], ['reels', preloadReels], ['videos', preloadVideos],
   ['music', preloadMusic], ['games', preloadGames], ['chat', preloadChat]
 ];
+const KEEP_ALIVE_TABS: readonly NavTab[] = ['feed', 'explore'];
 const UploadVideoModal = React.lazy(() => import('./components/Videos/UploadVideoModal').then((m) => ({ default: m.UploadVideoModal })));
 
 // Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
@@ -205,6 +206,9 @@ export default function App() {
   // pull-down refresh there, and the browser's own one (Android Chrome) is switched off too (see index.css, html[data-refresh="off"]). Anyone who wants a refresh goes Home.
   const fullPageOpen = useAnyFullPage();
   const refreshableHere = activeTab === 'feed' && pageLayers.layers.length === 0 && !fullPageOpen;
+  // Home and Explore, once opened, stay alive (hidden) while another tab shows: going back to them is instant, with nothing rebuilt or fetched again, at the place they were left.
+  const visitedTabs = useRef<{ uid?: string; tabs: Set<NavTab> }>({ tabs: new Set<NavTab>() });
+  useTabScroll(activeTab, KEEP_ALIVE_TABS, pageLayers.layers.length === 0 && !fullPageOpen);
   useEffect(() => { document.documentElement.setAttribute('data-refresh', refreshableHere ? 'on' : 'off'); }, [refreshableHere]);
   // Tracks the tab the user was on immediately before the current one, so
   // the Reels page's back arrow can return them to wherever they actually
@@ -761,12 +765,11 @@ export default function App() {
     try {
       setLoading(true);
       setInitialLoadFailed(false);
-      const [user, pList, trayData, rList, uList, notifRes] = await Promise.all([
+      const [user, pList, trayData, rList, notifRes] = await Promise.all([
         loadSignedInUser(), // a failed request is an error (Retry screen), not "logged out"
         fetchPosts(),
         fetchHomeStoryTray(),
         fetchReels(),
-        fetchUsers(),
         fetchAppNotifications().catch(() => ({ notifications: [] as AppNotification[], failed: true }))
       ]);
       // Best-effort only: keeps this device's last-seen time fresh for the device list, but never
@@ -783,7 +786,8 @@ export default function App() {
       setHomeSuggestions(trayData.suggestions);
       setTraySeed(Math.random());
       setReels(rList);
-      setRegisteredUsers(uList);
+      // The people list is the heaviest request there is and nothing on the first screen needs it: it loads after Home is up (and Explore, opened meanwhile, shares the same request).
+      if (user) void fetchUsers().then((list) => { if (list.length) setRegisteredUsers(list); });
       if (notifRes && !notifRes.failed && Array.isArray(notifRes.notifications)) {
         announceNotifications(notifRes.notifications, true);   // the first load: everything here is already known
         setNotifications(notifRes.notifications);
@@ -1425,6 +1429,9 @@ export default function App() {
   }
 
   const otherUsers = registeredUsers.filter((u) => u.id !== currentUser.id && u.username !== currentUser.username);
+  if (visitedTabs.current.uid !== currentUser.id) visitedTabs.current = { uid: currentUser.id, tabs: new Set<NavTab>() };   // another account: nothing of the last one is kept
+  if (KEEP_ALIVE_TABS.includes(activeTab)) visitedTabs.current.tabs.add(activeTab);
+  const kept = visitedTabs.current.tabs;
   // the page that is really showing: a profile layer counts as the Profile page for the layout
   const pageTab: NavTab = pageLayers.layers.length > 0 ? 'profile' : activeTab;
 
@@ -1698,7 +1705,8 @@ export default function App() {
       >
         {/* the page that is showing; it stays alive (hidden) while a profile is open on top of it */}
         <PageLayerSlot layerId={0} hidden={pageLayers.layers.length > 0} register={pageLayers.register}>
-        {activeTab === 'feed' && (
+        {kept.has('feed') && (
+          <KeepAliveTab hidden={activeTab !== 'feed'}>
           <FeedView
             currentUser={currentUser}
             posts={visiblePosts}
@@ -1734,9 +1742,11 @@ export default function App() {
             initialPostId={selectedPostId}
             onInitialPostIdHandled={() => setSelectedPostId(undefined)}
           />
+          </KeepAliveTab>
         )}
 
-        {activeTab === 'explore' && (
+        {kept.has('explore') && (
+          <KeepAliveTab hidden={activeTab !== 'explore'}>
           <React.Suspense fallback={<LazyFallback />}><ExploreView
             currentUser={currentUser}
             posts={visiblePosts}
@@ -1758,6 +1768,7 @@ export default function App() {
             initialSearchQuery={pendingExploreSearch || undefined}
             onInitialSearchQueryHandled={() => setPendingExploreSearch(null)}
           /></React.Suspense>
+          </KeepAliveTab>
         )}
 
         {activeTab === 'reels' && (

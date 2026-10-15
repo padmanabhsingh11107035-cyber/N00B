@@ -38,21 +38,47 @@ import {
   GameRoom
 } from '../../services/api';
 import confetti from 'canvas-confetti';
+import { lazyTab } from '../../utils/lazyTab';
 
-// Modular Dedicated Mini-Game Engines
-import { CyberSnakeGame } from './minigames/CyberSnakeGame';
-import { TicTacToeGame } from './minigames/TicTacToeGame';
-import { RockPaperScissorsGame } from './minigames/RockPaperScissorsGame';
-import { SpeedMathGame } from './minigames/SpeedMathGame';
-import { MemoryMatchGame } from './minigames/MemoryMatchGame';
-import { ReactionTapGame } from './minigames/ReactionTapGame';
-import { ColorRushGame } from './minigames/ColorRushGame';
-import { GenericArcadeGame } from './minigames/GenericArcadeGame';
-import { ChessGame } from './minigames/chess/ChessGame';
-import { ChessOnlineMatch } from './minigames/chess/ChessOnlineMatch';
-import { SnakesAndLaddersGame } from './minigames/SnakesAndLaddersGame';
-import { LudoGame } from './minigames/LudoGame';
-import { MonopolyGame } from './minigames/MonopolyGame';
+// Modular Dedicated Mini-Game Engines. Each one is its own file that is fetched only when its game is opened (and started fetching the moment the game's window opens, while
+// the player is still choosing how to play), so opening the Games page or a window does not make the phone read and parse every game at once.
+const { View: CyberSnakeGame, preload: preloadSnake } = lazyTab(() => import('./minigames/CyberSnakeGame').then((m) => m.CyberSnakeGame));
+const { View: TicTacToeGame, preload: preloadTicTacToe } = lazyTab(() => import('./minigames/TicTacToeGame').then((m) => m.TicTacToeGame));
+const { View: RockPaperScissorsGame, preload: preloadRps } = lazyTab(() => import('./minigames/RockPaperScissorsGame').then((m) => m.RockPaperScissorsGame));
+const { View: SpeedMathGame, preload: preloadSpeedMath } = lazyTab(() => import('./minigames/SpeedMathGame').then((m) => m.SpeedMathGame));
+const { View: MemoryMatchGame, preload: preloadMemory } = lazyTab(() => import('./minigames/MemoryMatchGame').then((m) => m.MemoryMatchGame));
+const { View: ReactionTapGame, preload: preloadReaction } = lazyTab(() => import('./minigames/ReactionTapGame').then((m) => m.ReactionTapGame));
+const { View: ColorRushGame, preload: preloadColorRush } = lazyTab(() => import('./minigames/ColorRushGame').then((m) => m.ColorRushGame));
+const { View: GenericArcadeGame, preload: preloadGeneric } = lazyTab(() => import('./minigames/GenericArcadeGame').then((m) => m.GenericArcadeGame));
+const { View: ChessGame, preload: preloadChess } = lazyTab(() => import('./minigames/chess/ChessGame').then((m) => m.ChessGame));
+const { View: ChessOnlineMatch, preload: preloadChessOnline } = lazyTab(() => import('./minigames/chess/ChessOnlineMatch').then((m) => m.ChessOnlineMatch));
+const { View: SnakesAndLaddersGame, preload: preloadSnakesLadders } = lazyTab(() => import('./minigames/SnakesAndLaddersGame').then((m) => m.SnakesAndLaddersGame));
+const { View: LudoGame, preload: preloadLudo } = lazyTab(() => import('./minigames/LudoGame').then((m) => m.LudoGame));
+const { View: MonopolyGame, preload: preloadMonopoly } = lazyTab(() => import('./minigames/MonopolyGame').then((m) => m.MonopolyGame));
+
+/** The files a game needs, by catalog id; an id that is not here uses the generic arcade engine. */
+const GAME_PRELOADS: Record<string, Array<() => Promise<unknown>>> = {
+  cyber_snake: [preloadSnake], snake: [preloadSnake], pac_grid: [preloadSnake],
+  tictactoe: [preloadTicTacToe], chess_blitz: [preloadChess, preloadChessOnline], snakes_ladders: [preloadSnakesLadders], ludo_classic: [preloadLudo],
+  monopoly_noob: [preloadMonopoly], rps: [preloadRps], speed_math: [preloadSpeedMath], memory_match: [preloadMemory], reaction_tap: [preloadReaction], bubble_blitz: [preloadColorRush]
+};
+
+// Asks the server again only once the last answer has arrived: on a slow connection a plain timer piled up requests, and the game stalled behind them.
+function pollOnce(ask: () => Promise<void>): () => void {
+  let busy = false;
+  return () => {
+    if (busy) return;
+    busy = true;
+    void ask().finally(() => { busy = false; });
+  };
+}
+
+// Shown for the moment a game's file is on its way (usually already there: it started loading when the window opened).
+const GameLoading: React.FC = () => (
+  <div className="py-16 flex items-center justify-center" role="status" aria-label="Loading the game">
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
+  </div>
+);
 
 interface GamePlayModalProps {
   game: MiniGameMeta;
@@ -142,6 +168,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // "cleanup" isn't a real unmount, guarding on it would just discard the
   // one real in-flight response and leave the check stuck forever.
   const chessCheckStartedRef = useRef(!!restored?.chessStarted);   // a restored chess game already used its round, never take another
+
+  // The game's own file starts loading as soon as its window opens, while the player is still choosing how to play.
+  useEffect(() => {
+    for (const load of GAME_PRELOADS[game.id] ?? [preloadGeneric]) void load().catch(() => undefined);
+  }, [game.id]);
 
   useEffect(() => {
     // Pro accounts used to skip this call entirely (no weekly limit to
@@ -337,7 +368,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       });
     }, 1000);
 
-    matchmakingPollRef.current = setInterval(async () => {
+    matchmakingPollRef.current = setInterval(pollOnce(async () => {
       try {
         const statusRes = await getMatchmakingStatus();
         if (statusRes.matched && statusRes.room) {
@@ -346,7 +377,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }, 2000);
+    }), 2000);
   };
 
   const handleCancelMatchmaking = () => {
@@ -411,7 +442,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // above): poll the shared room until the other person joins.
   useEffect(() => {
     if (!onlineMatch || onlineMatch.phase !== 'waiting_opponent_join') return;
-    const interval = setInterval(async () => {
+    const interval = setInterval(pollOnce(async () => {
       try {
         const res = await getGameRoom(onlineMatch.roomCode);
         if (res.success && res.room && res.room.status !== 'waiting') {
@@ -421,7 +452,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }, 2000);
+    }), 2000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode]);
@@ -430,7 +461,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // submitted theirs too so the head-to-head outcome can be shown.
   useEffect(() => {
     if (!onlineMatch || onlineMatch.phase !== 'waiting_opponent_result') return;
-    const interval = setInterval(async () => {
+    const interval = setInterval(pollOnce(async () => {
       try {
         const res = await getGameRoom(onlineMatch.roomCode);
         if (res.success && res.room && res.room.status === 'finished') {
@@ -440,7 +471,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }, 2000);
+    }), 2000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode]);
@@ -450,7 +481,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // player who makes the winning move learns the outcome directly.
   useEffect(() => {
     if (!onlineMatch || onlineMatch.phase !== 'in_progress' || !SYNCED_GAME_IDS.includes(game.id)) return;
-    const interval = setInterval(async () => {
+    const interval = setInterval(pollOnce(async () => {
       try {
         const res = await getGameRoom(onlineMatch.roomCode);
         if (!res.success || !res.room) return;
@@ -463,7 +494,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }, 1200);
+    }), 1200);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode, game.id]);
@@ -1623,6 +1654,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
           {/* 4. ACTIVE GAMEPLAY */}
           {currentMode === 'play_bot' && (
+            <React.Suspense fallback={<GameLoading />}>
             <div className="space-y-3">
               {isPassAndPlay && (
                 <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold text-center">
@@ -1773,6 +1805,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}
             </div>
+            </React.Suspense>
           )}
 
           {/* 5. GAME OVER / RESULT & POINTS SCREEN */}

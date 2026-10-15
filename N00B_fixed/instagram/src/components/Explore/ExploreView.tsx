@@ -28,7 +28,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { Post, Reel, User } from '../../types';
-import { fetchUsers, subscribeToOnlinePresence, type PresenceEntry } from '../../services/api';
+import { fetchUsersStrict, peekUsersDirectory, subscribeToOnlinePresence, type PresenceEntry } from '../../services/api';
+import { mergePeople, realPeople, shufflePeople } from '../../utils/peopleList';
 import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
@@ -112,8 +113,17 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialSearchQuery]);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [usersList, setUsersList] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  // People already known from an earlier visit (or from start-up) are shown at once and brought up to date in the background; the spinner is only for a first-ever load.
+  const [usersList, setUsersList] = useState<User[]>(() => {
+    const known = peekUsersDirectory(currentUser?.id);
+    return known ? shufflePeople(realPeople(known.list)) : [];
+  });
+  const [loadingUsers, setLoadingUsers] = useState(usersList.length === 0);
+  const [usersFailed, setUsersFailed] = useState(false);
+  const usersRequest = useRef(0);
+  const usersShown = useRef(usersList);
+  usersShown.current = usersList;
+  const usersAreEveryone = useRef(usersList.length > 0);   // the list on screen is the full list, not the answer to a typed search
   const [followLoadingId, setFollowLoadingId] = useState<string | null>(null);
 
   // "Find friends from your contacts" — real, native contact access exists only inside the actual
@@ -186,30 +196,46 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
     setShuffledReels(reels);
   }, [reels]);
 
-  // Load all registered users from backend (filtering out any fake AI accounts)
-  const loadUsers = async (query?: string, shouldShuffle = false) => {
+  // Load the registered people (without NOOB's own AI account). Only the newest request may change the screen; a failure never shows "nobody is here" - it keeps what is
+  // on screen, or offers Retry when there is nothing yet.
+  const loadUsers = async (query?: string) => {
+    const id = ++usersRequest.current;
+    const haveSome = usersShown.current.length > 0;
+    if (!haveSome || query) setLoadingUsers(true);
+    setUsersFailed(false);
     try {
-      setLoadingUsers(true);
-      const rawRes = await fetchUsers(query);
-      const res = (rawRes || []).filter((u: any) => !u.isAi && u.username !== 'noob_ai' && u.id !== 'u_noob_ai');
-      if (shouldShuffle) {
-        // Accounts the admin pinned stay first (in their order); everyone else is shuffled.
-        const pinned = res.filter((u: any) => u.pinned);
-        const others = res.filter((u: any) => !u.pinned).sort(() => Math.random() - 0.5);
-        setUsersList([...pinned, ...others]);
-      } else {
-        setUsersList(res);
-      }
+      const res = realPeople(await fetchUsersStrict(query));
+      if (id !== usersRequest.current) return;
+      setUsersList(haveSome && !query && usersAreEveryone.current ? mergePeople(usersShown.current, res) : shufflePeople(res));
+      usersAreEveryone.current = !query;
     } catch (err) {
+      if (id !== usersRequest.current) return;
       console.error('Error fetching registered users:', err);
+      setUsersFailed(true);
     } finally {
-      setLoadingUsers(false);
+      if (id === usersRequest.current) setLoadingUsers(false);
     }
   };
 
+  // A typed search waits for a short pause in typing; an empty search (the full list) loads at once.
   useEffect(() => {
-    loadUsers(searchQuery, true);
     setVisibleCount(ITEMS_PER_PAGE);
+    if (!searchQuery.trim()) { void loadUsers(''); return; }
+    const t = window.setTimeout(() => { void loadUsers(searchQuery); }, 250);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  // Back online, or back on this tab, after a failed or empty load: try again by itself.
+  useEffect(() => {
+    const retry = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (usersShown.current.length === 0) void loadUsers(searchQuery);
+    };
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    return () => { window.removeEventListener('online', retry); document.removeEventListener('visibilitychange', retry); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   // Handle follow / follow-request toggle — the actual API call lives in
@@ -489,6 +515,13 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             <div className="text-center py-12 text-zinc-400 flex flex-col items-center gap-3">
               <Loader2 className="w-8 h-8 text-noob animate-spin" />
               <p className="text-xs">Fetching active members...</p>
+            </div>
+          ) : usersList.length === 0 && usersFailed ? (
+            <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-white/5 p-6">
+              <Users className="w-10 h-10 text-zinc-500 mx-auto mb-2 opacity-50" />
+              <h3 className="text-sm font-bold text-white">Could not load people</h3>
+              <p className="text-xs text-zinc-400 mt-1">Check your connection and try again.</p>
+              <button onClick={() => { void loadUsers(searchQuery); }} className="mt-4 px-5 py-2 rounded-full bg-noob text-black text-xs font-bold cursor-pointer">Try again</button>
             </div>
           ) : usersList.length === 0 ? (
             <div className="text-center py-12 bg-zinc-900/40 rounded-3xl border border-white/5 p-6">

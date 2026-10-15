@@ -980,11 +980,49 @@ export async function fetchUserById(id: string): Promise<User | null> {
   }
 }
 
+// The people list (Explore -> People, the start-up list, @-search). The server call is the heaviest one the app makes, so:
+//  - a failure is an ERROR the caller can see (fetchUsersStrict), never a quiet empty list that looks like "nobody is here";
+//  - a blip (a weak signal, a server that is waking up) is tried again twice before it counts as a failure;
+//  - the same request asked twice at once (start-up and Explore opening together) is ONE request;
+//  - the last full list is kept, so opening Explore shows people at once and refreshes them in the background.
+let usersDirectory: { uid: string; at: number; list: User[] } | null = null;
+const usersInFlight = new Map<string, Promise<User[]>>();
+const USERS_RETRY_MS = [400, 1200];
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** The last full people list for this account (any age), or null. Never fetches. */
+export function peekUsersDirectory(uid?: string | null): { list: User[]; at: number } | null {
+  return usersDirectory && uid && usersDirectory.uid === uid ? { list: usersDirectory.list, at: usersDirectory.at } : null;
+}
+
+export function fetchUsersStrict(search?: string): Promise<User[]> {
+  const key = search || '';
+  const running = usersInFlight.get(key);
+  if (running) return running;
+  const run = (async () => {
+    const session = await currentSession();
+    if (!session) throw new ApiError('Not signed in');
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= USERS_RETRY_MS.length; attempt++) {
+      if (attempt > 0) await sleep(USERS_RETRY_MS[attempt - 1]);
+      try {
+        const list = (await rpc<User[]>('search_users', { p_search: key }) || []).map((u) => mapUser(u) as User);
+        if (!key) usersDirectory = { uid: session.user.id, at: Date.now(), list };
+        return list;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError;
+  })().finally(() => { usersInFlight.delete(key); });
+  usersInFlight.set(key, run);
+  return run;
+}
+
+/** Same list, but a failure gives []. For callers that only look people up; the people list itself uses fetchUsersStrict. */
 export async function fetchUsers(search?: string): Promise<User[]> {
   try {
-    if (!(await currentSession())) return [];
-    const list = await rpc<User[]>('search_users', { p_search: search || '' });
-    return (list || []).map((u) => mapUser(u) as User);
+    return await fetchUsersStrict(search);
   } catch {
     return [];
   }

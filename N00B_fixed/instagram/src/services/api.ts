@@ -37,6 +37,8 @@ export {
   updateUserBio,
   updateUserStatusNote,
   fetchUsers,
+  fetchUsersStrict,
+  peekUsersDirectory,
   fetchUserById,
   toggleFollowUser,
   removeFollower,

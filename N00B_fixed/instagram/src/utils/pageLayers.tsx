@@ -229,3 +229,60 @@ export const PageLayerSlot: React.FC<{ layerId: number; hidden: boolean; registe
     </PageHiddenContext.Provider>
   );
 };
+
+// ------------------------------------------------------------------------------------------------ pages that stay alive when another tab shows
+
+/** Says "hidden" to everything inside (usePageHidden) when this page, or any page above it, is hidden. */
+export const PageHiddenScope: React.FC<{ hidden: boolean; children?: React.ReactNode }> = ({ hidden, children }) => {
+  const above = useContext(PageHiddenContext);
+  return <PageHiddenContext.Provider value={above || hidden}>{children}</PageHiddenContext.Provider>;
+};
+
+/**
+ * A tab (Home, Explore) that is built once and then only hidden while another tab shows, so coming back is instant: nothing is built again, nothing is fetched again, and the
+ * page is exactly as it was left. While hidden it is told so (usePageHidden), whatever plays by itself is paused (and resumed on return), and it is not drawn again when the app
+ * changes something in the background (its content is held as it was until it is shown again).
+ */
+export const KeepAliveTab: React.FC<{ hidden: boolean; children?: React.ReactNode }> = ({ hidden, children }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const held = useRef<React.ReactNode>(children);
+  if (!hidden) held.current = children;
+  const paused = useRef<HTMLMediaElement[]>([]);
+  useLayoutEffect(() => {
+    if (hidden) paused.current = pauseMedia(ref.current);
+    else { resumeMedia(paused.current); paused.current = []; }
+  }, [hidden]);
+  return (
+    <PageHiddenScope hidden={hidden}>
+      <div ref={ref} data-tab-hidden={hidden ? 'true' : undefined} aria-hidden={hidden ? true : undefined} style={{ display: hidden ? 'none' : 'contents' }}>
+        {held.current}
+      </div>
+    </PageHiddenScope>
+  );
+};
+
+/**
+ * Where each tab was scrolled to. The tabs that stay alive come back at their place; every other tab starts at its top. Only recorded while the tab itself is showing
+ * (`enabled` is false while a profile or another page sits on top of it: that page has its own place).
+ */
+export function useTabScroll(active: string, keepAlive: readonly string[], enabled: boolean): void {
+  const places = useRef(new Map<string, number>());
+  const current = useRef(active);
+  const recording = useRef(enabled);
+  useLayoutEffect(() => { recording.current = enabled; });
+  useEffect(() => {
+    const onScroll = () => { if (recording.current) places.current.set(current.current, window.scrollY); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    current.current = active;
+    if (first.current) { first.current = false; return; }
+    const top = keepAlive.includes(active) ? places.current.get(active) ?? 0 : 0;
+    const apply = () => window.scrollTo({ left: 0, top, behavior: 'instant' as ScrollBehavior });
+    apply();
+    if (top > 0 && typeof requestAnimationFrame === 'function') requestAnimationFrame(apply);   // once more after the page is laid out again
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+}

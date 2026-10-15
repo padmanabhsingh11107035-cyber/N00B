@@ -296,6 +296,8 @@ export default function App() {
   const notificationSettingsRef = useRef(notificationSettings);
   notificationSettingsRef.current = notificationSettings;
   const [loading, setLoading] = useState(true);
+  // The loading screen plays its WHOLE burger animation once, when the app is opened (even if the data arrives sooner); after that, any loading screen inside the app is the quick version.
+  const [openingDone, setOpeningDone] = useState(false);
   // A single failed/rejected call in the initial Promise.all (a network
   // blip, a transient 5xx, the brief boot gap right after a deploy) used to
   // silently drop straight through to the logged-out screen with only a
@@ -1206,12 +1208,12 @@ export default function App() {
     return res;
   };
 
-  if (loading) {
+  if (loading || !openingDone) {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
         <div className="doodle-wallpaper-feed w-full h-screen flex flex-col items-center justify-center text-white">
-          <NoobStackLoader />
+          <NoobStackLoader mode={openingDone ? 'quick' : 'opening'} ready={!loading} onDone={() => setOpeningDone(true)} />
         </div>
       </>
     );

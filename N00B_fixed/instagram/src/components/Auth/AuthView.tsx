@@ -881,7 +881,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   if (oauthChecking) {
     return (
       <div className="doodle-wallpaper-feed min-h-screen w-full text-white flex flex-col items-center justify-center">
-        <NoobStackLoader subtitle="Signing you in…" />
+        <NoobStackLoader mode="quick" subtitle="Signing you in…" />
       </div>
     );
   }

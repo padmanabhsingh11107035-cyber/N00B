@@ -72,5 +72,32 @@ T.saveOwnSeenStoryIds(new Set(['a', 'b']));
 check([...T.loadOwnSeenStoryIds()].join(',') === 'a,b', 'looking at my own story is remembered on this phone');
 data.set('noob.ownStoriesSeen.v1', '{not json'); check(T.loadOwnSeenStoryIds().size === 0, 'damaged storage is ignored');
 
+section('N. The tray is topped up with people from the list of users');
+{
+  const mk = (id, extra = {}) => ({ id, username: `user_${id}`, displayName: `User ${id}`, avatar: `/a/${id}.jpg`, accountType: 'public', ...extra });
+  const pool = Array.from({ length: 40 }, (_, i) => mk(`p${i}`));
+  pool.push(mk('me'), mk('ai1', { isAi: true }), mk('susp', { isSuspended: true }), mk('blk'), mk('hid'), mk('story1'), mk('priv1', { accountType: 'private' }), mk('fol1'), mk('nouser', { username: '' }));
+  const opts = { meId: 'me', followingIds: new Set(['fol1']), blockedIds: new Set(['blk']), hiddenFromIds: new Set(['hid']), takenIds: new Set(['story1']), seed: 0.37 };
+  const out = T.topUpSuggestions([sug('p3'), sug('p3'), sug('me')], pool, opts);
+  const ids = out.map((x) => x.id);
+  check(out.length === T.TRAY_SUGGESTION_TARGET && out.length >= 15, `the row is filled up to ${T.TRAY_SUGGESTION_TARGET} circles`, String(out.length));
+  check(new Set(ids).size === ids.length, 'nobody appears twice (the server\'s duplicate is dropped too)');
+  check(ids[0] === 'p3' && !ids.includes('me'), 'the server\'s own suggestions come first, and I am never in my own tray');
+  check(!['ai1', 'susp', 'blk', 'hid', 'story1', 'nouser'].some((x) => ids.includes(x)), 'no AI, suspended, blocked, hidden, already-in-the-tray (story) or nameless accounts');
+  check(out.every((x) => x.id && x.username && 'avatar' in x), 'each circle carries what the tray needs');
+  const again = T.topUpSuggestions([sug('p3')], pool, opts).map((x) => x.id).join(',');
+  check(again === T.topUpSuggestions([sug('p3')], pool, opts).map((x) => x.id).join(','), 'the same seed gives the same order (nothing jumps around while the page redraws)');
+  const other = T.topUpSuggestions([sug('p3')], pool, { ...opts, seed: 0.91 }).map((x) => x.id).join(',');
+  check(other !== again, 'a new seed (the feed was refreshed) gives a different random order');
+  const small = [mk('a1'), mk('a2', { accountType: 'private' }), mk('a3'), mk('f1')];
+  const few = T.topUpSuggestions([], small, { meId: 'me', followingIds: new Set(['f1']), seed: 0.5 }).map((x) => x.id);
+  check(few.length === 4 && few.indexOf('a2') > Math.max(few.indexOf('a1'), few.indexOf('a3')) && few[3] === 'f1', 'people I can follow come first, private ones next, people I already follow last', few.join(','));
+  check(T.topUpSuggestions([], [], { meId: 'me', seed: 0.5 }).length === 0 && T.topUpSuggestions([sug('x')], [], { meId: 'me', seed: 0.5 }).length === 1, 'an empty list of users changes nothing');
+  const full = Array.from({ length: 25 }, (_, i) => sug(`s${i}`));
+  check(T.topUpSuggestions(full, pool, opts).length === 25, 'a server list that is already long is left alone');
+  const model2 = T.buildStoryTray([story('newB', 30)], out, 'me', new Set(), new Set());
+  check(model2.items.filter((i) => i.kind === 'suggestion').length === out.length && model2.items[0].userId === 'newB', 'the model draws every circle, stories first');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

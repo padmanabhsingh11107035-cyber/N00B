@@ -20,6 +20,66 @@ export interface StoryTraySuggestion {
 
 export type TrayRing = 'unseen' | 'seen' | 'none';
 
+/** How many suggested circles the tray aims for (the server sends up to 10 public / business accounts; the rest is filled in from the app's own list of users). */
+export const TRAY_SUGGESTION_TARGET = 18;
+
+/** The part of a user the tray needs. */
+export interface TrayPoolUser {
+  id?: string;
+  username?: string;
+  displayName?: string;
+  avatar?: string;
+  isVerified?: boolean;
+  accountType?: 'public' | 'private' | 'business';
+  isAi?: boolean;
+  isSuspended?: boolean;
+  isBlocked?: boolean;
+}
+
+// A fixed "random" number for a person under one seed: the order is different on every visit (a new seed each time the feed loads or is refreshed) but does not
+// jump around while the page is simply being redrawn.
+const seededRank = (id: string, seed: number): number => {
+  let h = 2166136261 ^ Math.floor(Math.abs(seed % 1) * 4294967295);
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) / 4294967296;
+};
+
+/**
+ * Fills the suggested circles up to `target` with real people from the app's list of users: random, never the same person twice, never yourself, never
+ * someone you blocked or who is hidden from you, never an AI or suspended account, and never someone already in the tray with a story. People you could
+ * follow come first (public / business, then private ones - those get a follow request), people you already follow last, so the row is never nearly empty.
+ */
+export function topUpSuggestions(
+  base: StoryTraySuggestion[],
+  pool: ReadonlyArray<TrayPoolUser>,
+  opts: { meId: string; followingIds?: ReadonlySet<string>; blockedIds?: ReadonlySet<string>; hiddenFromIds?: ReadonlySet<string>; takenIds?: ReadonlySet<string>; seed: number; target?: number }
+): StoryTraySuggestion[] {
+  const target = opts.target ?? TRAY_SUGGESTION_TARGET;
+  const following = opts.followingIds ?? new Set<string>();
+  const blocked = opts.blockedIds ?? new Set<string>();
+  const hidden = opts.hiddenFromIds ?? new Set<string>();
+  const taken = opts.takenIds ?? new Set<string>();
+  const out: StoryTraySuggestion[] = [];
+  const used = new Set<string>([opts.meId]);
+  for (const sug of base) {
+    if (!sug || !sug.id || used.has(sug.id)) continue;
+    used.add(sug.id);
+    out.push(sug);
+  }
+  if (out.length >= target) return out;
+  const candidates = pool
+    .filter((u): u is TrayPoolUser & { id: string; username: string } =>
+      !!u && !!u.id && !!u.username && !used.has(u.id) && !taken.has(u.id) && !blocked.has(u.id) && !hidden.has(u.id) && !u.isAi && !u.isSuspended && !u.isBlocked)
+    .map((u) => ({ u, tier: following.has(u.id) ? 2 : u.accountType === 'private' ? 1 : 0, r: seededRank(u.id, opts.seed) }))
+    .sort((a, b) => a.tier - b.tier || a.r - b.r);
+  for (const { u } of candidates) {
+    if (out.length >= target) break;
+    used.add(u.id);
+    out.push({ id: u.id, username: u.username, displayName: u.displayName, avatar: u.avatar || '', isVerified: !!u.isVerified, accountType: u.accountType });
+  }
+  return out;
+}
+
 export interface TrayItem {
   kind: 'story' | 'suggestion';
   userId: string;

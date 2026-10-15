@@ -76,7 +76,7 @@ import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
 import { armSongPlayer } from './utils/songSound';
 import { takeRestorePage } from './utils/pageResume';
-import { buildStoryTray, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
+import { buildStoryTray, topUpSuggestions, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { NotificationSettingsState } from './components/Modals/NotificationsModal';
 import { AuthView } from './components/Auth/AuthView';
@@ -225,22 +225,36 @@ export default function App() {
   const postsRef = useRef<Post[]>([]);
   postsRef.current = posts;
   const [stories, setStories] = useState<Story[]>([]);
-  // The home-page story tray: the stories this person may see plus up to 10 random accounts to follow (reshuffled each time the
+  // The home-page story tray: the stories this person may see plus random accounts to follow (reshuffled each time the
   // feed loads or is refreshed), worked out in utils/storyTray.ts. The full-screen viewer plays the same list in the same order;
   // that order is fixed when the viewer opens, so a ring turning grey while you watch can't shuffle the stories under you.
   const [homeSuggestions, setHomeSuggestions] = useState<StoryTraySuggestion[]>([]);
   const [ownSeenStoryIds, setOwnSeenStoryIds] = useState<Set<string>>(() => loadOwnSeenStoryIds());
   const [storyViewerOrder, setStoryViewerOrder] = useState<string[]>([]);
-  const storyTray = useMemo(
-    () => buildStoryTray(stories, homeSuggestions, currentUser?.id ?? '', new Set(currentUser?.followingIds ?? []), ownSeenStoryIds),
-    [stories, homeSuggestions, currentUser?.id, currentUser?.followingIds, ownSeenStoryIds]
-  );
   const storyViewerStories = useMemo(() => {
     const byId = new Map(stories.map((s) => [s.id, s] as const));
     return storyViewerOrder.map((id) => byId.get(id)).filter((s): s is Story => !!s);
   }, [stories, storyViewerOrder]);
   const [reels, setReels] = useState<Reel[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+  // The tray's circles: the server's suggestions topped up with random people from the app's own list of users (a new random order each time the feed loads or
+  // is refreshed, steady in between), then ordered with the stories (utils/storyTray.ts).
+  const [traySeed, setTraySeed] = useState(() => Math.random());
+  const traySuggestions = useMemo(
+    () => topUpSuggestions(homeSuggestions, registeredUsers, {
+      meId: currentUser?.id ?? '',
+      followingIds: new Set(currentUser?.followingIds ?? []),
+      blockedIds: new Set(currentUser?.blockedUserIds ?? []),
+      hiddenFromIds: new Set(currentUser?.hiddenFromIds ?? []),
+      takenIds: new Set(stories.map((st) => st.userId).filter((x): x is string => !!x)),
+      seed: traySeed
+    }),
+    [homeSuggestions, registeredUsers, currentUser?.id, currentUser?.followingIds, currentUser?.blockedUserIds, currentUser?.hiddenFromIds, stories, traySeed]
+  );
+  const storyTray = useMemo(
+    () => buildStoryTray(stories, traySuggestions, currentUser?.id ?? '', new Set(currentUser?.followingIds ?? []), ownSeenStoryIds),
+    [stories, traySuggestions, currentUser?.id, currentUser?.followingIds, ownSeenStoryIds]
+  );
   // A hashtag story sticker tap sets this, then switches to Explore — consumed once and cleared,
   // mirroring the existing autoOpenJoinTeam "arrive with a pending action" pattern below.
   const [pendingExploreSearch, setPendingExploreSearch] = useState<string | null>(null);
@@ -703,6 +717,7 @@ export default function App() {
       setPosts(pList);
       setStories(trayData.stories);
       setHomeSuggestions(trayData.suggestions);
+      setTraySeed(Math.random());
       setReels(rList);
       setRegisteredUsers(uList);
       if (notifRes && !notifRes.failed && Array.isArray(notifRes.notifications)) {

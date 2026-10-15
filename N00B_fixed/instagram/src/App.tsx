@@ -154,6 +154,25 @@ const LazyFallback: React.FC = () => (
   </div>
 );
 
+// While a profile's page is still arriving the person is shown straight away (their picture, name and @handle with the page's outline filling in), never an empty black screen.
+const ProfileSkeleton: React.FC<{ user: User }> = ({ user }) => (
+  <div className="w-full flex flex-col items-center px-4 pt-8 pb-24 gap-4" role="status" aria-label="Opening profile">
+    <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-zinc-50/70 bg-zinc-900">
+      {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : null}
+    </div>
+    <div className="text-center">
+      <p className="text-lg font-extrabold text-white">{user.displayName || user.username}</p>
+      <p className="text-xs text-zinc-400">@{user.username}</p>
+    </div>
+    <div className="flex gap-3 w-full max-w-sm">
+      {[0, 1, 2].map((i) => <div key={i} className="flex-1 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 animate-pulse" />)}
+    </div>
+    <div className="grid grid-cols-3 gap-1 w-full max-w-sm">
+      {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="aspect-square rounded-lg bg-zinc-900 border border-zinc-800 animate-pulse" />)}
+    </div>
+  </div>
+);
+
 const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
 // On the coaching address NOOB STUDY is opened as soon as the person is signed in
@@ -787,7 +806,13 @@ export default function App() {
     setSelectedPostId(postId);
   };
 
-  const handleNavigateToUserProfile = (user: User) => {
+  const handleNavigateToUserProfile = (user: User, isUpdate = false) => {
+    // isUpdate: the same profile, with newer details, arriving after it was already opened (nothing else changes: not the page, not the scroll)
+    if (isUpdate) {
+      setViewingProfileUser((prev) => (prev && prev.id === user.id ? user : prev));
+      return;
+    }
+    preloadProfile().catch(() => undefined);
     if (user.id === currentUser?.id || user.username?.toLowerCase() === currentUser?.username?.toLowerCase()) {
       setViewingProfileUser(null);
     } else {
@@ -1703,7 +1728,7 @@ export default function App() {
         )}
 
         {activeTab === 'profile' && (
-          <React.Suspense fallback={<LazyFallback />}><ProfileView
+          <React.Suspense fallback={<ProfileSkeleton user={viewingProfileUser || currentUser} />}><ProfileView
             currentUser={currentUser}
             viewingUser={viewingProfileUser}
             allUsers={registeredUsers}

@@ -12,11 +12,11 @@ const block = (sel) => { const i = css.indexOf(sel + ' {'); return i < 0 ? '' : 
 
 section('1. The palette');
 const dark = block(':root,\n.force-dark');
-check(/--page: #0a0a0a;/.test(dark) && /--color-zinc-900: #161616;/.test(dark) && /--color-zinc-950: #0a0a0a;/.test(dark) && /--color-zinc-50: #ffffff;/.test(dark) && /--color-zinc-400: #b8b8b8;/.test(dark), 'dark: #0a0a0a page, #161616 cards, white text, #b8b8b8 muted text');
+check(/--page: #0a0a0a;/.test(dark) && /--color-zinc-900: #000000;/.test(dark) && /--color-zinc-50: #ffffff;/.test(dark) && /--color-zinc-400: #d2d2d2;/.test(dark), 'dark: #0a0a0a page, pure black cards, white text, #d2d2d2 muted text (crisp, not faded)');
 check(/--color-noob: #ffffff;/.test(dark), 'dark: the accent is white');
 const light = block(':root[data-theme="light"]');
-check(/--page: #ffffff;/.test(light) && /--color-noob: #0a0a0a;/.test(light) && /--color-zinc-50: #0a0a0a;/.test(light), 'light: white page, black accent and text (the same palette, flipped)');
-check(/--outline: #4a4a4a;/.test(css) && /--on-accent: #0a0a0a;/.test(css) && /--radius-2xl: 0\.75rem;/.test(css), 'outlines #4a4a4a, text on the accent #0a0a0a, cards 12px');
+check(/--page: #ffffff;/.test(light) && /--color-noob: #0a0a0a;/.test(light) && /--color-zinc-50: #000000;/.test(light), 'light: white page, black accent and text (the same palette, flipped)');
+check(/--outline: rgba\(255, 255, 255, \.55\);/.test(css) && /--divider: rgba\(255, 255, 255, \.2\);/.test(css) && /--on-accent: #0a0a0a;/.test(css) && /--radius-2xl: 0\.75rem;/.test(css), 'outlines are a bright white edge, hairlines a softer one, text on the accent #0a0a0a, cards 12px');
 check(!/#d97757|#c6613f|217, ?119, ?87/i.test(css.replace(/\/\*[\s\S]*?\*\//g, '')), 'no orange left in the stylesheet');
 check(/html \{ background-color: #0a0a0a; \}/.test(css), 'the strip above the app on a phone is near-black, not orange');
 
@@ -43,6 +43,24 @@ const lightSrc = read('src/lightAccents.css');
 check(!/#c6613f/.test(lightSrc) && /text-cyan-300[^}]*#111111/.test(lightSrc), 'in light mode the accent and the decorative hues come out black');
 const buttons = read('src/components/Auth/AuthView.tsx');
 check(!/from-noob to-noob-strong[^"'`]*text-white/.test(buttons), 'no white-on-white accent button on the sign-in screens');
+
+section('5. Crisp, not faded');
+check(/\[class~="bg-zinc-900\/40"\][\s\S]*?background-color: color-mix\(in srgb, var\(--color-zinc-900\) 97%, transparent\);/.test(css), 'see-through zinc cards and bars are solid black cards now');
+check(/\.liquid-glass,\s*:root\[data-theme="light"\] \.liquid-glass \{\s*background: var\(--color-zinc-900\);\s*backdrop-filter: none;/.test(css) && /\.liquid-glass::before \{ display: none; \}/.test(css), 'the bottom bar is a black card with a white edge, not frosted glass');
+check(/\.nav-marker \{\s*background: #ffffff;/.test(css) && /:root:not\(\[data-theme="light"\]\) #floating-bottom-nav \.text-noob \{ color: #000000; \}/.test(css) && /:root\[data-theme="light"\] \.nav-marker \{\s*background: var\(--color-zinc-800\);/.test(css), 'the open page in the bar: black text on a white pill (a grey pill with a black edge in Light mode)');
+const post = read('src/components/Feed/PostCard.tsx');
+check(/className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-xl transition-all"/.test(post), 'a post is a solid black card with a bright edge');
+
+section('6. Names on a post can be seen to be tappable, and open a profile at once');
+const UL = 'underline decoration-1 underline-offset-[3px] decoration-zinc-50/70';
+check((post.match(new RegExp(UL.replace(/[[\]/.]/g, '\\$&'), 'g')) || []).length >= 4, 'the name, the @handle, a co-author and a commenter\'s name are always underlined');
+check(/const known = allUsers\.find\(\(u\) => u\.id === userId\);\s*if \(known\) \{\s*onNavigateToProfile\(known\);/.test(post), 'tapping a name opens the profile AT ONCE with what the app already knows');
+check(/fetchUserById\(userId\)\.then\(\(fresh\) => \{ if \(fresh\) onNavigateToProfile\(fresh, true\); \}\)/.test(post), 'and the newest details are fetched quietly and swapped in');
+const app2 = read('src/App.tsx');
+check(/const handleNavigateToUserProfile = \(user: User, isUpdate = false\) => \{\s*[\s\S]{0,200}if \(isUpdate\) \{\s*setViewingProfileUser\(\(prev\) => \(prev && prev\.id === user\.id \? user : prev\)\);\s*return;/.test(app2), 'the quiet update changes only that profile (not the page, not the scroll)');
+check(/<React\.Suspense fallback=\{<ProfileSkeleton user=\{viewingProfileUser \|\| currentUser\} \/>\}><ProfileView/.test(app2) && /const ProfileSkeleton: React\.FC/.test(app2), 'while the profile page arrives, the person is shown (picture, name, @handle), never an empty black screen');
+const lazy = read('src/utils/lazyTab.tsx');
+check(/Date\.now\(\) - last < 60_000/.test(lazy) && /navigator\.onLine === false/.test(lazy) && /reloadForNewVersion\(\); throw e;/.test(lazy), 'a page file that no longer exists (an old copy of the app) gets the new version once - never a loop, never while offline');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -59,7 +59,7 @@ interface PostCardProps {
   onDeleteSlide?: (postId: string, slideId: string) => void;
   onHideAd?: (postId: string) => void;
   onSelectCategory?: (category: string) => void;
-  onNavigateToProfile?: (user: User) => void;
+  onNavigateToProfile?: (user: User, isUpdate?: boolean) => void;
   // Every account, used to open a co-author whose id was never stored (only their @handle).
   allUsers?: User[];
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
@@ -321,8 +321,16 @@ export const PostCard: React.FC<PostCardProps> = ({
   }, [slideCount]);
 
   // Tap the author's name or @handle (on a post or its comments) -> their real, full profile.
+  // It opens AT ONCE with what the app already knows about that person (the list of users it loaded), and the newest details are fetched quietly and swapped in; only a
+  // person that is not in that list is waited for.
   const goToProfile = async (userId: string) => {
-    if (!onNavigateToProfile) return;
+    if (!onNavigateToProfile || !userId) return;
+    const known = allUsers.find((u) => u.id === userId);
+    if (known) {
+      onNavigateToProfile(known);
+      void fetchUserById(userId).then((fresh) => { if (fresh) onNavigateToProfile(fresh, true); }).catch(() => undefined);
+      return;
+    }
     const user = await fetchUserById(userId);
     if (user) onNavigateToProfile(user);
   };
@@ -354,7 +362,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       ref={articleRef}
       data-post-card=""
       id={`post-card-${post.id}`}
-      className="w-full bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden mb-4 shadow-xl backdrop-blur-sm transition-all"
+      className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-xl transition-all"
     >
       {/* 1. Post Header (Dual Overlapping Avatars for Tagged / Collab Posts - Instagram Style) */}
       <header className="flex items-center justify-between px-3.5 py-3 border-b border-white/5">
@@ -395,7 +403,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
                 onClick={() => goToProfile(post.userId)}
-                className="text-xs font-bold text-white tracking-tight hover:underline cursor-pointer"
+                className="text-xs font-bold text-white tracking-tight underline decoration-1 underline-offset-[3px] decoration-zinc-50/70 cursor-pointer"
               >
                 {post.displayName || post.username}
               </span>
@@ -405,7 +413,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               {primaryTaggedUser && (
                 <>
                   <span className="text-[11px] text-zinc-400 font-medium">and</span>
-                  <span onClick={() => goToTagged(primaryTaggedUser)} className="text-xs font-bold text-noob flex items-center gap-1 hover:underline cursor-pointer">
+                  <span onClick={() => goToTagged(primaryTaggedUser)} className="text-xs font-bold text-noob flex items-center gap-1 underline decoration-1 underline-offset-[3px] decoration-zinc-50/70 cursor-pointer">
                     @{primaryTaggedUser.username}
                   </span>
                 </>
@@ -419,7 +427,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   <span className="truncate max-w-[150px]">{post.location}</span>
                 </div>
               ) : (
-                <span onClick={() => goToProfile(post.userId)} className="hover:underline cursor-pointer">@{post.username}</span>
+                <span onClick={() => goToProfile(post.userId)} className="underline decoration-1 underline-offset-[3px] decoration-zinc-50/70 cursor-pointer">@{post.username}</span>
               )}
 
               {post.category && (
@@ -946,7 +954,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* Captions with Formatted Line Breaks */}
         <div className="mt-1.5 text-xs text-zinc-200">
-          <span onClick={() => goToProfile(post.userId)} className="font-bold text-white mr-1.5 cursor-pointer hover:underline">
+          <span onClick={() => goToProfile(post.userId)} className="font-bold text-white mr-1.5 cursor-pointer underline decoration-1 underline-offset-[3px] decoration-zinc-50/70">
             {post.username}
           </span>
           <span translate="no" className={`whitespace-pre-line leading-relaxed ${!isCaptionExpanded ? 'line-clamp-2' : ''}`}>

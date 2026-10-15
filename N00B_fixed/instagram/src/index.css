@@ -25,16 +25,16 @@
   --color-noob-strong: #d4d4d4;
   --page: #0a0a0a;
   --color-zinc-50: #ffffff;
-  --color-zinc-100: #f2f2f2;
-  --color-zinc-200: #e0e0e0;
-  --color-zinc-300: #cbcbcb;
-  --color-zinc-400: #b8b8b8;
-  --color-zinc-500: #8e8e8e;
-  --color-zinc-600: #6a6a6a;
-  --color-zinc-700: #4a4a4a;
-  --color-zinc-800: #2a2a2a;
-  --color-zinc-900: #161616;
-  --color-zinc-950: #0a0a0a;
+  --color-zinc-100: #f8f8f8;
+  --color-zinc-200: #f0f0f0;
+  --color-zinc-300: #e4e4e4;
+  --color-zinc-400: #d2d2d2;
+  --color-zinc-500: #adadad;
+  --color-zinc-600: #8c8c8c;
+  --color-zinc-700: #5a5a5a;
+  --color-zinc-800: #262626;
+  --color-zinc-900: #000000;
+  --color-zinc-950: #050505;
 }
 
 :root[data-theme="light"] {
@@ -42,15 +42,15 @@
   --color-noob: #0a0a0a;
   --color-noob-strong: #2b2b2b;
   --page: #ffffff;
-  --color-zinc-50: #0a0a0a;
-  --color-zinc-100: #1a1a1a;
-  --color-zinc-200: #2e2e2e;
-  --color-zinc-300: #4a4a4a;
-  --color-zinc-400: #6b6b6b;
-  --color-zinc-500: #8c8c8c;
-  --color-zinc-600: #b5b5b5;
-  --color-zinc-700: #cfcfcf;
-  --color-zinc-800: #e4e4e4;
+  --color-zinc-50: #000000;
+  --color-zinc-100: #0f0f0f;
+  --color-zinc-200: #1f1f1f;
+  --color-zinc-300: #3a3a3a;
+  --color-zinc-400: #545454;
+  --color-zinc-500: #737373;
+  --color-zinc-600: #a3a3a3;
+  --color-zinc-700: #bdbdbd;
+  --color-zinc-800: #dedede;
   --color-zinc-900: #f4f4f4;
   --color-zinc-950: #ffffff;
 }
@@ -62,16 +62,16 @@
   --color-noob-strong: #d4d4d4;
   --page: #0a0a0a;
   --color-zinc-50: #ffffff;
-  --color-zinc-100: #f2f2f2;
-  --color-zinc-200: #e0e0e0;
-  --color-zinc-300: #cbcbcb;
-  --color-zinc-400: #b8b8b8;
-  --color-zinc-500: #8e8e8e;
-  --color-zinc-600: #6a6a6a;
-  --color-zinc-700: #4a4a4a;
-  --color-zinc-800: #2a2a2a;
-  --color-zinc-900: #161616;
-  --color-zinc-950: #0a0a0a;
+  --color-zinc-100: #f8f8f8;
+  --color-zinc-200: #f0f0f0;
+  --color-zinc-300: #e4e4e4;
+  --color-zinc-400: #d2d2d2;
+  --color-zinc-500: #adadad;
+  --color-zinc-600: #8c8c8c;
+  --color-zinc-700: #5a5a5a;
+  --color-zinc-800: #262626;
+  --color-zinc-900: #000000;
+  --color-zinc-950: #050505;
 }
 
 /* Reels, stories, calls, live video and the camera are dark in BOTH modes (class "media-dark"): pictures and video sit on black, so in light mode these
@@ -84,16 +84,16 @@
   --color-noob-strong: #d4d4d4;
   --page: #000000;
   --color-zinc-50: #ffffff;
-  --color-zinc-100: #f2f2f2;
-  --color-zinc-200: #e0e0e0;
-  --color-zinc-300: #cbcbcb;
-  --color-zinc-400: #b8b8b8;
-  --color-zinc-500: #8e8e8e;
-  --color-zinc-600: #6a6a6a;
-  --color-zinc-700: #4a4a4a;
-  --color-zinc-800: #2a2a2a;
-  --color-zinc-900: #161616;
-  --color-zinc-950: #0a0a0a;
+  --color-zinc-100: #f8f8f8;
+  --color-zinc-200: #f0f0f0;
+  --color-zinc-300: #e4e4e4;
+  --color-zinc-400: #d2d2d2;
+  --color-zinc-500: #adadad;
+  --color-zinc-600: #8c8c8c;
+  --color-zinc-700: #5a5a5a;
+  --color-zinc-800: #262626;
+  --color-zinc-900: #000000;
+  --color-zinc-950: #050505;
   background-color: #000000 !important;
   color: #ffffff !important;
 }
@@ -813,7 +813,8 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
    ===================================================================================================================================================== */
 :root {
   --on-accent: #0a0a0a;                 /* text on a white (accent) button */
-  --outline: #4a4a4a;                   /* card outlines */
+  --outline: rgba(255, 255, 255, .55);   /* card outlines: a bright white edge, like the Coming-soon card */
+  --divider: rgba(255, 255, 255, .2);    /* the faint lines inside a card */
   --doodle-rgb: 255, 255, 255;          /* doodle and stitch colour */
   --doodle-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='white' stroke-opacity='.075' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M34 31Q34 40 43 40Q34 40 34 49Q34 40 25 40Q34 40 34 31Z'/%3E%3Cpath d='M152 34h16M160 26v16'/%3E%3Cpath d='M212 95l2.6 5.8 6.4.7-4.8 4.3 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2-4.8-4.3 6.4-.7z'/%3E%3Cpath d='M18 132q6-10 12 0t12 0t12 0'/%3E%3Cpath d='M120 112c0-3 4-3 4 0s-6 5-8 0 2-10 10-8 10 12 4 16-18 2-20-6 2-16 14-16'/%3E%3Cpath d='M62 214c-12-8-16-14-12-20 3-4 9-3 12 2 3-5 9-6 12-2 4 6 0 12-12 20z'/%3E%3Cpath d='M196 160a14 14 0 1 0 10 22a11 11 0 0 1-10-22z'/%3E%3Cpath d='M118 196l-6 10 6 10M136 196l6 10-6 10'/%3E%3Cpath d='M88 60q8 10 16 0'/%3E%3Ccircle cx='200' cy='210' r='2'/%3E%3Ccircle cx='96' cy='40' r='1.6'/%3E%3Ccircle cx='24' cy='190' r='1.8'/%3E%3Ccircle cx='232' cy='40' r='1.6'/%3E%3C/svg%3E");
   --doodle-feed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160' fill='none' stroke='white' stroke-opacity='.3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11Q18 20 27 20Q18 20 18 29Q18 20 9 20Q18 20 18 11Z'/%3E%3Cpath d='M74 27c-8-5-11-9-8-13 2-3 6-2 8 1 2-3 6-4 8-1 3 4 0 8-8 13z'/%3E%3Cpath d='M128 13l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6-4.1-3.9 5.6-.7z'/%3E%3Cpath d='M30 72V58l10-3v14M24 72a3 3 0 1 0 6 0a3 3 0 1 0-6 0M34 69a3 3 0 1 0 6 0a3 3 0 1 0-6 0'/%3E%3Cpath d='M94 60h12M100 54v12'/%3E%3Cpath d='M138 70a8 8 0 1 0 16 0a8 8 0 1 0-16 0M143 68h.01M149 68h.01M142.5 73q3.5 3.5 7 0'/%3E%3Cpath d='M6 108q4-8 8 0t8 0t8 0'/%3E%3Cpath d='M75 94l-8 12h6l-2 11 9-14h-6z'/%3E%3Cpath d='M112 104h20v14h-20zM117 104l2-3h6l2 3M122 111a3 3 0 1 0 6 0a3 3 0 1 0-6 0'/%3E%3Cpath d='M12 142h20v12h-9l-5 5v-5h-6z'/%3E%3Cpath d='M80 148c0-2 3-2 3 0s-4 4-6 0 2-8 8-6 8 8 3 12'/%3E%3Cpath d='M142 140a9 9 0 1 0 6 14a7 7 0 0 1-6-14z'/%3E%3Cpath d='M52 40l-4 6 4 6M60 40l4 6-4 6'/%3E%3Cpath d='M104 130v-6a8 8 0 0 1 16 0v6M102 130h4v7h-4zM118 130h4v7h-4z'/%3E%3Cpath d='M46 88l1.6 3.4 3.6.5-2.6 2.6.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.6 3.6-.5z'/%3E%3Cpath d='M118 86q4-6 8 0'/%3E%3Ccircle cx='52' cy='112' r='1.3'/%3E%3Ccircle cx='108' cy='34' r='1.3'/%3E%3Ccircle cx='140' cy='96' r='1.3'/%3E%3Ccircle cx='10' cy='60' r='1.3'/%3E%3Ccircle cx='96' cy='150' r='1.3'/%3E%3Ccircle cx='150' cy='128' r='1.3'/%3E%3Ccircle cx='62' cy='6' r='1.3'/%3E%3Ccircle cx='30' cy='100' r='1.3'/%3E%3Ccircle cx='126' cy='56' r='1.3'/%3E%3Ccircle cx='86' cy='74' r='1.3'/%3E%3C/svg%3E");
@@ -821,7 +822,8 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
 }
 :root[data-theme="light"] {
   --on-accent: #ffffff;
-  --outline: #cfcfcf;
+  --outline: rgba(0, 0, 0, .5);
+  --divider: rgba(0, 0, 0, .16);
   --doodle-rgb: 0, 0, 0;
   --doodle-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='black' stroke-opacity='.065' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M34 31Q34 40 43 40Q34 40 34 49Q34 40 25 40Q34 40 34 31Z'/%3E%3Cpath d='M152 34h16M160 26v16'/%3E%3Cpath d='M212 95l2.6 5.8 6.4.7-4.8 4.3 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2-4.8-4.3 6.4-.7z'/%3E%3Cpath d='M18 132q6-10 12 0t12 0t12 0'/%3E%3Cpath d='M120 112c0-3 4-3 4 0s-6 5-8 0 2-10 10-8 10 12 4 16-18 2-20-6 2-16 14-16'/%3E%3Cpath d='M62 214c-12-8-16-14-12-20 3-4 9-3 12 2 3-5 9-6 12-2 4 6 0 12-12 20z'/%3E%3Cpath d='M196 160a14 14 0 1 0 10 22a11 11 0 0 1-10-22z'/%3E%3Cpath d='M118 196l-6 10 6 10M136 196l6 10-6 10'/%3E%3Cpath d='M88 60q8 10 16 0'/%3E%3Ccircle cx='200' cy='210' r='2'/%3E%3Ccircle cx='96' cy='40' r='1.6'/%3E%3Ccircle cx='24' cy='190' r='1.8'/%3E%3Ccircle cx='232' cy='40' r='1.6'/%3E%3C/svg%3E");
   --doodle-feed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160' fill='none' stroke='black' stroke-opacity='.22' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11Q18 20 27 20Q18 20 18 29Q18 20 9 20Q18 20 18 11Z'/%3E%3Cpath d='M74 27c-8-5-11-9-8-13 2-3 6-2 8 1 2-3 6-4 8-1 3 4 0 8-8 13z'/%3E%3Cpath d='M128 13l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6-4.1-3.9 5.6-.7z'/%3E%3Cpath d='M30 72V58l10-3v14M24 72a3 3 0 1 0 6 0a3 3 0 1 0-6 0M34 69a3 3 0 1 0 6 0a3 3 0 1 0-6 0'/%3E%3Cpath d='M94 60h12M100 54v12'/%3E%3Cpath d='M138 70a8 8 0 1 0 16 0a8 8 0 1 0-16 0M143 68h.01M149 68h.01M142.5 73q3.5 3.5 7 0'/%3E%3Cpath d='M6 108q4-8 8 0t8 0t8 0'/%3E%3Cpath d='M75 94l-8 12h6l-2 11 9-14h-6z'/%3E%3Cpath d='M112 104h20v14h-20zM117 104l2-3h6l2 3M122 111a3 3 0 1 0 6 0a3 3 0 1 0-6 0'/%3E%3Cpath d='M12 142h20v12h-9l-5 5v-5h-6z'/%3E%3Cpath d='M80 148c0-2 3-2 3 0s-4 4-6 0 2-8 8-6 8 8 3 12'/%3E%3Cpath d='M142 140a9 9 0 1 0 6 14a7 7 0 0 1-6-14z'/%3E%3Cpath d='M52 40l-4 6 4 6M60 40l4 6-4 6'/%3E%3Cpath d='M104 130v-6a8 8 0 0 1 16 0v6M102 130h4v7h-4zM118 130h4v7h-4z'/%3E%3Cpath d='M46 88l1.6 3.4 3.6.5-2.6 2.6.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.6 3.6-.5z'/%3E%3Cpath d='M118 86q4-6 8 0'/%3E%3Ccircle cx='52' cy='112' r='1.3'/%3E%3Ccircle cx='108' cy='34' r='1.3'/%3E%3Ccircle cx='140' cy='96' r='1.3'/%3E%3Ccircle cx='10' cy='60' r='1.3'/%3E%3Ccircle cx='96' cy='150' r='1.3'/%3E%3Ccircle cx='150' cy='128' r='1.3'/%3E%3Ccircle cx='62' cy='6' r='1.3'/%3E%3Ccircle cx='30' cy='100' r='1.3'/%3E%3Ccircle cx='126' cy='56' r='1.3'/%3E%3Ccircle cx='86' cy='74' r='1.3'/%3E%3C/svg%3E");
@@ -831,7 +833,8 @@ select.st-input { appearance: none; background-image: linear-gradient(45deg, tra
 :root[data-theme="light"] .force-dark,
 :root[data-theme="light"] .media-dark {
   --on-accent: #0a0a0a;
-  --outline: #4a4a4a;
+  --outline: rgba(255, 255, 255, .55);
+  --divider: rgba(255, 255, 255, .2);
   --doodle-rgb: 255, 255, 255;
   --doodle-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240' fill='none' stroke='white' stroke-opacity='.075' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M34 31Q34 40 43 40Q34 40 34 49Q34 40 25 40Q34 40 34 31Z'/%3E%3Cpath d='M152 34h16M160 26v16'/%3E%3Cpath d='M212 95l2.6 5.8 6.4.7-4.8 4.3 1.4 6.2-5.6-3.2-5.6 3.2 1.4-6.2-4.8-4.3 6.4-.7z'/%3E%3Cpath d='M18 132q6-10 12 0t12 0t12 0'/%3E%3Cpath d='M120 112c0-3 4-3 4 0s-6 5-8 0 2-10 10-8 10 12 4 16-18 2-20-6 2-16 14-16'/%3E%3Cpath d='M62 214c-12-8-16-14-12-20 3-4 9-3 12 2 3-5 9-6 12-2 4 6 0 12-12 20z'/%3E%3Cpath d='M196 160a14 14 0 1 0 10 22a11 11 0 0 1-10-22z'/%3E%3Cpath d='M118 196l-6 10 6 10M136 196l6 10-6 10'/%3E%3Cpath d='M88 60q8 10 16 0'/%3E%3Ccircle cx='200' cy='210' r='2'/%3E%3Ccircle cx='96' cy='40' r='1.6'/%3E%3Ccircle cx='24' cy='190' r='1.8'/%3E%3Ccircle cx='232' cy='40' r='1.6'/%3E%3C/svg%3E");
   --doodle-feed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160' fill='none' stroke='white' stroke-opacity='.3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11Q18 20 27 20Q18 20 18 29Q18 20 9 20Q18 20 18 11Z'/%3E%3Cpath d='M74 27c-8-5-11-9-8-13 2-3 6-2 8 1 2-3 6-4 8-1 3 4 0 8-8 13z'/%3E%3Cpath d='M128 13l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6-4.1-3.9 5.6-.7z'/%3E%3Cpath d='M30 72V58l10-3v14M24 72a3 3 0 1 0 6 0a3 3 0 1 0-6 0M34 69a3 3 0 1 0 6 0a3 3 0 1 0-6 0'/%3E%3Cpath d='M94 60h12M100 54v12'/%3E%3Cpath d='M138 70a8 8 0 1 0 16 0a8 8 0 1 0-16 0M143 68h.01M149 68h.01M142.5 73q3.5 3.5 7 0'/%3E%3Cpath d='M6 108q4-8 8 0t8 0t8 0'/%3E%3Cpath d='M75 94l-8 12h6l-2 11 9-14h-6z'/%3E%3Cpath d='M112 104h20v14h-20zM117 104l2-3h6l2 3M122 111a3 3 0 1 0 6 0a3 3 0 1 0-6 0'/%3E%3Cpath d='M12 142h20v12h-9l-5 5v-5h-6z'/%3E%3Cpath d='M80 148c0-2 3-2 3 0s-4 4-6 0 2-8 8-6 8 8 3 12'/%3E%3Cpath d='M142 140a9 9 0 1 0 6 14a7 7 0 0 1-6-14z'/%3E%3Cpath d='M52 40l-4 6 4 6M60 40l4 6-4 6'/%3E%3Cpath d='M104 130v-6a8 8 0 0 1 16 0v6M102 130h4v7h-4zM118 130h4v7h-4z'/%3E%3Cpath d='M46 88l1.6 3.4 3.6.5-2.6 2.6.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.6 3.6-.5z'/%3E%3Cpath d='M118 86q4-6 8 0'/%3E%3Ccircle cx='52' cy='112' r='1.3'/%3E%3Ccircle cx='108' cy='34' r='1.3'/%3E%3Ccircle cx='140' cy='96' r='1.3'/%3E%3Ccircle cx='10' cy='60' r='1.3'/%3E%3Ccircle cx='96' cy='150' r='1.3'/%3E%3Ccircle cx='150' cy='128' r='1.3'/%3E%3Ccircle cx='62' cy='6' r='1.3'/%3E%3Ccircle cx='30' cy='100' r='1.3'/%3E%3Ccircle cx='126' cy='56' r='1.3'/%3E%3Ccircle cx='86' cy='74' r='1.3'/%3E%3C/svg%3E");
@@ -845,8 +848,12 @@ body, .doodle-wallpaper {
 }
 
 /* card outlines are the one visible grey (#4a4a4a) — not a faint white line */
-.border-white\/5:not(:hover):not(:focus-within),
+.border-white\/5:not(:hover):not(:focus-within) {
+  border-color: var(--divider);
+}
 .border-white\/10:not(:hover):not(:focus-within),
+.border-white\/15:not(:hover):not(:focus-within),
+.border-white\/20:not(:hover):not(:focus-within),
 [class~="border-zinc-800"]:not(:hover):not(:focus-within),
 [class~="border-zinc-700"]:not(:hover):not(:focus-within) {
   border-color: var(--outline);
@@ -930,3 +937,41 @@ button[class*="from-noob"], a[class*="from-noob"] {
 .nsl-spark { stroke: currentColor; opacity: .6; transform-box: fill-box; transform-origin: center; animation: nsl-twinkle 2.2s ease-in-out infinite; }
 .nsl-msg { animation: nsl-msg .35s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .nsl-in, .nsl-fast .nsl-in, .nsl-spark, .nsl-msg { animation: none; } .nsl-shadow { transition: none; } }
+
+/* ---- crisp, not faded --------------------------------------------------------------------------------------------------------------------------------
+   Cards, sheets and bars that were see-through (zinc at 40-90 % with a blur) are solid black cards now, so the doodle wallpaper stays in the gaps and never washes
+   out the card; the bottom bar is a black card with a white edge and a white pill for the open page (black text on it), like the Coming-soon card. */
+[class~="bg-zinc-900/40"], [class~="bg-zinc-900/50"], [class~="bg-zinc-900/60"], [class~="bg-zinc-900/70"], [class~="bg-zinc-900/80"], [class~="bg-zinc-900/90"],
+[class~="bg-zinc-950/40"], [class~="bg-zinc-950/50"], [class~="bg-zinc-950/60"], [class~="bg-zinc-950/70"], [class~="bg-zinc-950/80"], [class~="bg-zinc-950/90"] {
+  background-color: color-mix(in srgb, var(--color-zinc-900) 97%, transparent);
+}
+[class~="bg-zinc-800/40"], [class~="bg-zinc-800/50"], [class~="bg-zinc-800/60"], [class~="bg-zinc-800/70"] {
+  background-color: color-mix(in srgb, var(--color-zinc-800) 94%, transparent);
+}
+
+.liquid-glass,
+:root[data-theme="light"] .liquid-glass {
+  background: var(--color-zinc-900);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--outline);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .55), 0 0 0 1px rgba(var(--doodle-rgb), .05) inset;
+}
+.liquid-glass::before { display: none; }
+:root[data-theme="light"] .liquid-glass { box-shadow: 0 12px 32px rgba(0, 0, 0, .16); }
+
+.nav-marker {
+  background: #ffffff;
+  border: 0;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, .22);
+}
+/* the open page in the bar: black icon and label on the white pill */
+:root:not([data-theme="light"]) #floating-bottom-nav .stroke-noob { stroke: #000000; }
+:root:not([data-theme="light"]) #floating-bottom-nav .text-noob { color: #000000; }
+:root:not([data-theme="light"]) #floating-bottom-nav .ring-noob { --tw-ring-color: #000000; }
+/* Light mode: a light-grey pill with a black edge, black icon and label (the accent is black there) */
+:root[data-theme="light"] .nav-marker {
+  background: var(--color-zinc-800);
+  border: 1.5px solid var(--color-zinc-50);
+  box-shadow: none;
+}

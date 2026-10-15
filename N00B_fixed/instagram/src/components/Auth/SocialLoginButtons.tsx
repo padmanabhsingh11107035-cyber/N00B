@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { fetchEnabledSocialProviders, cachedSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
 import { ButtonDoodles } from './ButtonDoodles';
+import { isOnOtherNoobAddress, MAIN_SITE } from '../../utils/siteUrl';
 
 // "Continue with …" buttons. Only the providers that are switched on in the sign-in settings are shown, so a button appears
 // by itself the moment its setup is finished — and never as a button that can only fail.
@@ -132,9 +133,32 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
     return () => { alive = false; window.clearTimeout(again); };
   }, []);
 
+  // Arriving from the old address with ?social=google (or facebook, discord…): remove it from the address bar and start that sign-in straight away
+  useEffect(() => {
+    let id = '';
+    try {
+      const params = new URLSearchParams(window.location.search);
+      id = params.get('social') || '';
+      if (!id) return;
+      params.delete('social');
+      const q = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+    } catch { return; }
+    if (isOnOtherNoobAddress()) return;
+    const wanted = cachedSocialProviders().find((x) => x.id === id && x.id !== 'apple');
+    if (wanted) void start(wanted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const start = async (p: EnabledSocialProvider) => {
     setBusy(p.id);
     onError(null);
+    // A sign-in has to start and finish on the same address, so on the old one (nooob.xyz) it is handed to the main address first, where it begins by itself
+    // (see the effect above) and comes back to noobsocials.com.
+    if (isOnOtherNoobAddress()) {
+      window.location.assign(`${MAIN_SITE}/?social=${encodeURIComponent(p.id)}`);
+      return;
+    }
     const res = await signInWithProvider(p);
     if (!res.success) {
       setBusy(null);

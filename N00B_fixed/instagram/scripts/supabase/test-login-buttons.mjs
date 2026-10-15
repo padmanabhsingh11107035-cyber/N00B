@@ -36,5 +36,11 @@ check(/return cachedSocialProviders\(\);/.test(api) && !/\[\{ id: 'google', supa
 check(/socialProvidersPromise = null; \/\/ try again next time/.test(api) && /window\.setTimeout\(load, 6000\)/.test(social), 'a failed read is not remembered: it is tried again');
 check(/setItem\(SOCIAL_CACHE_KEY/.test(api) && /KNOWN_SOCIAL\.includes\(p\.id\)/.test(api), 'the last good list is saved on the device, and a damaged saved list is ignored');
 
+section('4. Every social sign-in happens on noobsocials.com');
+check(/redirectTo: window\.location\.origin/.test(api), 'a sign-in comes back to the address it started on');
+check(/isOnOtherNoobAddress\(\)\) \{\s*window\.location\.assign\(`\$\{MAIN_SITE\}\/\?social=\$\{encodeURIComponent\(p\.id\)\}`\)/.test(social), 'on nooob.xyz, tapping a provider opens noobsocials.com/?social=<provider> instead of signing in there');
+check(/params\.get\('social'\)/.test(social) && /params\.delete\('social'\)/.test(social) && /void start\(wanted\)/.test(social), 'on arrival the sign-in starts by itself and ?social= is removed from the address bar (no loop)');
+check(/x\.id !== 'apple'/.test(social) && /if \(isOnOtherNoobAddress\(\)\) return;/.test(social), 'Apple (coming soon) is never auto-started, and the old address never starts one from the hand-off');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

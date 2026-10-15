@@ -83,5 +83,19 @@ section('5. www. opens the address without www');
   check(run(at('www.evil.example')) === null && run(at('www.noobsocials.com.evil.io')) === null, 'another website\'s www is left alone');
 }
 
+section('6. The Install button on the old address installs the new app');
+{
+  const at = (hostname, extra = {}) => { globalThis.window = { location: { hostname }, ...extra }; return S.isOnOtherNoobAddress(); };
+  check(at('nooob.xyz') === true && at('www.nooob.xyz') === true, 'on nooob.xyz the button sends people to the main address');
+  check(at('noobsocials.com') === false && at('www.noobsocials.com') === false, 'on noobsocials.com it installs right there');
+  check(at('localhost') === false && at('192.168.1.5') === false && at('example.com') === false, 'a test address or another website is never sent anywhere');
+  check(at('nooob.xyz', { Capacitor: { isNativePlatform: () => true } }) === false, 'inside the Android app it is never sent anywhere');
+  delete globalThis.window;
+  check(S.isOnOtherNoobAddress() === false, 'with no browser at all (tests) it stays put');
+  check(S.installAddress() === 'https://noobsocials.com/?install=1', 'the address it opens is the main address with ?install=1');
+  const auth = read('src/components/Auth/AuthView.tsx');
+  check(/window\.location\.assign\(installAddress\(\)\)/.test(auth) && /params\.get\('install'\) !== '1'/.test(auth), 'the login screen opens it, and reacts to ?install=1 on arrival');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

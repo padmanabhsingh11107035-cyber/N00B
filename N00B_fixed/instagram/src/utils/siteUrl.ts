@@ -44,3 +44,18 @@ export function siteOrigin(): string {
 export function mediaOrigin(): string {
   return typeof window !== 'undefined' && isNativeApp() ? MAIN_SITE : '';
 }
+
+/** Is this page on one of NOOB's addresses that is NOT the main one (the old nooob.xyz, or www.)? An app can only be installed from the address it is opened on,
+ *  so there the Install button sends people to the main address instead. Localhost, test addresses and the Android app are never "elsewhere". */
+export function isOnOtherNoobAddress(): boolean {
+  if (typeof window === 'undefined' || isNativeApp()) return false;
+  try {
+    const here = window.location.hostname.toLowerCase().replace(/^www\./, '');
+    return isOwnHost(here) && here !== new URL(MAIN_SITE).hostname;
+  } catch { return false; }
+}
+
+/** Where the Install button takes someone who is on the old address: the main address, which then points them at its own Install button. */
+export function installAddress(): string {
+  return MAIN_SITE + '/?install=1';
+}

@@ -59,6 +59,7 @@ import { isIos, currentPushEnv } from '../../utils/pushSupport';
 import { canInstallNow, isInstalled, onInstallStateChange, promptInstall } from '../../utils/pwaInstall';
 import confetti from 'canvas-confetti';
 import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
+import { isOnOtherNoobAddress, installAddress } from '../../utils/siteUrl';
 
 interface AuthViewProps {
   onAuthSuccess: (user: User) => void;
@@ -315,8 +316,35 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     []
   );
   const onIos = useMemo(() => isIos(currentPushEnv()), []);
+  // On the old address (nooob.xyz) the button installs the NEW app: an app can only be installed from the address it is opened on, so it opens the main
+  // address with ?install=1 — there the same button glows harder and says what to tap.
+  const installElsewhere = useMemo(() => isOnOtherNoobAddress(), []);
+  const installBtnRef = useRef<HTMLButtonElement>(null);
+  const [installAttn, setInstallAttn] = useState(false);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('install') !== '1') return;
+      params.delete('install');
+      const q = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+      setInstallAttn(true);
+      setInstallHint(onIos ? 'You are on the new address. Tap Share in Safari’s toolbar, then "Add to Home Screen".' : 'You are on the new address. Tap the glowing button to add NOOB to your home screen.');
+      installBtnRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const t = window.setTimeout(() => setInstallAttn(false), 14000);
+      return () => window.clearTimeout(t);
+    } catch { /* no address bar to read: nothing to do */ }
+  }, [onIos]);
 
   const handleInstallClick = async () => {
+    try {
+      const r = installBtnRef.current?.getBoundingClientRect();
+      if (r) confetti({ particleCount: 45, spread: 65, startVelocity: 28, scalar: 0.8, colors: ['#d97757', '#f6c177', '#22d3ee', '#a78bfa', '#f472b6'], origin: { x: (r.left + r.width / 2) / window.innerWidth, y: (r.top + r.height / 2) / window.innerHeight } });
+    } catch { /* confetti is only decoration */ }
+    if (installElsewhere) {
+      window.location.assign(installAddress());
+      return;
+    }
     if (appInstalled) {
       setInstallHint('NOOB is already installed on this device.');
       return;
@@ -981,7 +1009,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       {/* Install to Home Screen: available before logging in or signing up, on any device. Not installed yet = the first thing the eye
           finds (a glowing button with a pulsing ring, a sweeping shine, a bobbing arrow and a hand-drawn "get the app!" note, all still when the
           device asks for reduced motion); already installed = the small quiet pill. */}
-      {appInstalled ? (
+      {appInstalled && !installElsewhere ? (
         <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
           <button
             type="button"
@@ -1001,27 +1029,37 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         </div>
       ) : (
         <div className="w-full max-w-lg flex flex-col items-center z-10 pt-5 pb-2 gap-2">
-          <div className="noob-install-wrap relative">
-            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-amber-300 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">get the app!</span>
+          <div className={`noob-install-wrap relative ${installAttn ? 'noob-install-attn' : ''}`}>
+            <span className="noob-install-note font-script absolute -top-7 -left-9 text-lg text-amber-300 whitespace-nowrap -rotate-6 pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'new home!' : 'get the app!'}</span>
             <svg viewBox="0 0 40 30" className="noob-install-arrow absolute -top-5 -left-3 w-7 h-6 text-amber-300 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 5 C 14 3 24 10 31 24" /><path d="M24 20 L31 25 L35 16" />
             </svg>
-            <button
-              type="button"
-              onClick={handleInstallClick}
-              disabled={installBusy}
-              className="noob-install-cta relative z-[1] inline-flex items-center gap-3 pl-2.5 pr-5 py-2 rounded-full cursor-pointer disabled:opacity-70"
-              aria-label="Install the NOOB app"
-            >
-              <span className="noob-install-icon w-9 h-9 rounded-full bg-black/85 flex items-center justify-center shrink-0">
-                {installBusy ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Download className="w-4 h-4 text-white" />}
-              </span>
-              <span className="flex flex-col text-left leading-tight">
-                <span className="text-[15px] font-extrabold tracking-tight">Install NOOB app</span>
-                <span className="text-[10.5px] font-semibold opacity-80">Free · opens like a real app · 2 taps</span>
-              </span>
-              <span className="noob-install-shine" aria-hidden="true" />
-            </button>
+            {/* twinkling sparkles around the button */}
+            <svg viewBox="0 0 24 24" className="noob-install-spark absolute -top-3 right-10 w-3.5 h-3.5 text-cyan-300 pointer-events-none" style={{ animationDelay: '0s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+            <svg viewBox="0 0 24 24" className="noob-install-spark absolute top-1/2 -right-5 w-4 h-4 text-pink-300 pointer-events-none" style={{ animationDelay: '.7s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+            <svg viewBox="0 0 24 24" className="noob-install-spark absolute -bottom-3 left-12 w-3 h-3 text-violet-300 pointer-events-none" style={{ animationDelay: '1.4s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+            <svg viewBox="0 0 24 24" className="noob-install-spark absolute top-1/2 -left-6 w-3 h-3 text-amber-200 pointer-events-none" style={{ animationDelay: '2.1s' }} fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
+            <span className="noob-install-sticker absolute -top-3 -right-4 z-[2] rounded-md bg-pink-500 px-1.5 py-0.5 text-[9px] font-black tracking-wider text-white rotate-[9deg] shadow-md pointer-events-none select-none" aria-hidden="true">{installElsewhere ? 'NEW' : 'FREE'}</span>
+            {/* a rainbow edge that keeps running around the button */}
+            <span className="noob-install-border relative z-[1] block rounded-full p-[2.5px]">
+              <button
+                ref={installBtnRef}
+                type="button"
+                onClick={handleInstallClick}
+                disabled={installBusy}
+                className="noob-install-cta relative inline-flex items-center gap-3 pl-2.5 pr-5 py-2 rounded-full cursor-pointer disabled:opacity-70"
+                aria-label={installElsewhere ? 'Install the new NOOB app from noobsocials.com' : 'Install the NOOB app'}
+              >
+                <span className="noob-install-icon w-9 h-9 rounded-full bg-black/85 ring-2 ring-white/40 flex items-center justify-center shrink-0">
+                  {installBusy ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Download className="w-4 h-4 text-white" />}
+                </span>
+                <span className="flex flex-col text-left leading-tight">
+                  <span className="text-[15px] font-extrabold tracking-tight">{installElsewhere ? 'Install the new NOOB app' : 'Install NOOB app'}</span>
+                  <span className="text-[10.5px] font-semibold opacity-80">{installElsewhere ? 'Now at noobsocials.com · free · 2 taps' : 'Free · opens like a real app · 2 taps'}</span>
+                </span>
+                <span className="noob-install-shine" aria-hidden="true" />
+              </button>
+            </span>
           </div>
           {installHint && (
             <div className="max-w-[280px] text-center text-[11px] text-zinc-200 bg-zinc-900/95 border border-white/10 rounded-xl px-3 py-2 leading-snug shadow-lg">

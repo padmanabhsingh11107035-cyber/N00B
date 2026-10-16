@@ -40,7 +40,7 @@ check(/border border-dashed border-white\/20/.test(boundary) && /repeating-linea
 check(/Something went wrong/.test(boundary) && /Your account and data are safe — just reload to continue\./.test(boundary) && /Reload NOOB/.test(boundary), 'the same words as before');
 check(!/text-red-400|errorMessage\}/.test(boundary) && /console\.error\('Uncaught render error:', error, info\.componentStack\)/.test(boundary) && /if \(this\.props\.fallback\) \{\s*return this\.props\.fallback;/.test(boundary), 'no red technical message on the reload page (the error goes to the console instead), and the scoped fallback still works');
 check(/flex-1 justify-center whitespace-nowrap px-3 py-1\.5/.test(read('src/components/Explore/ExploreView.tsx')) && /shrink-0 w-max min-w-full/.test(read('src/components/Explore/ExploreView.tsx')), 'Explore\'s Post / Suggested users / Reel switcher fills the whole width, each part sharing it equally');
-check(/onClick=\{this\.handleReload\}/.test(boundary) && /window\.location\.reload\(\)/.test(boundary), 'Reload still reloads');
+check(/onClick=\{this\.handleReload\}/.test(boundary) && /hardReload\(\)/.test(boundary), 'Reload still reloads (and fetches the newest version: utils/reloadApp.ts)');
 
 section('3. The admin pages');
 check(/'study' \| 'analytics' \| 'daily' \| 'storage' \| 'settings'/.test(admin), 'two new tabs in the admin panel');

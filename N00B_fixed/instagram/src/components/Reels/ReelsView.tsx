@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { BurgerLoading } from '../Common/BurgerLoading';
 import { orderUnseenFirst } from '../../utils/seenContent';
 import { navKey } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
@@ -1256,11 +1257,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     </div>
 
     {liveOverlay && (
-      <React.Suspense fallback={
-        <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
-        </div>
-      }>
+      <React.Suspense fallback={<BurgerLoading />}>
         <LiveStreamView
           currentUser={currentUser}
           mode="view"

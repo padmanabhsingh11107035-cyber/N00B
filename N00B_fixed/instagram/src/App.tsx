@@ -89,6 +89,8 @@ import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
 import { TimeReminder } from './components/Settings/TimeReminder';
+import { hardReload } from './utils/reloadApp';
+import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
 import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
 import { useDevicePrefs } from './utils/devicePrefs';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
@@ -160,11 +162,7 @@ const UploadVideoModal = React.lazy(() => import('./components/Videos/UploadVide
 // Shown for the moment it takes one of the above to load in — quick and unobtrusive rather than a
 // full loading screen, since by the time it appears the user already tapped something and expects
 // a response right away.
-const LazyFallback: React.FC = () => (
-  <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
-  </div>
-);
+const LazyFallback: React.FC = () => <BurgerLoading />;
 
 // While a profile's page is still arriving the person is shown straight away (their picture, name and @handle with the page's outline filling in), never an empty black screen.
 const ProfileSkeleton: React.FC<{ user: User }> = ({ user }) => (
@@ -671,19 +669,22 @@ export default function App() {
   }, [currentUser?.id]);
 
   // The big screens are loaded on demand (smaller first download). Right after sign-in every page of the bottom bar is fetched quietly in the
-  // background, one after the other, so that opening one for the first time shows the page at once instead of a loading spinner.
+  // background (two at a time), so that opening one for the first time shows the page at once instead of waiting.
   // Skipped when the phone is set to save data (a tap still fetches just that page).
   useEffect(() => {
     if (!currentUser) return;
     if ((navigator as any).connection?.saveData) return;
     let stopped = false;
-    const timer = window.setTimeout(async () => {
-      for (const [, preload] of TAB_PRELOADS) {
-        if (stopped) return;
-        try { await preload(); } catch { /* the page loads when opened instead */ }
-        await new Promise((r) => window.setTimeout(r, 150));
+    // Two files at a time (the pages people open most first), starting a moment after sign-in; Settings and activity (small) comes along at the end.
+    const queue: Array<() => Promise<unknown>> = [...TAB_PRELOADS.map(([, preload]) => preload), () => import('./components/Settings/SettingsHub')];
+    const worker = async () => {
+      while (!stopped) {
+        const next = queue.shift();
+        if (!next) return;
+        try { await next(); } catch { /* the page loads when opened instead */ }
       }
-    }, 1500);
+    };
+    const timer = window.setTimeout(() => { void worker(); void worker(); }, 600);
     return () => { stopped = true; window.clearTimeout(timer); };
   }, [currentUser?.id]);
 
@@ -1781,7 +1782,7 @@ export default function App() {
 
         {kept.has('explore') && (
           <KeepAliveTab hidden={activeTab !== 'explore'}>
-          <React.Suspense fallback={<LazyFallback />}><ExploreView
+          <React.Suspense fallback={<TabBurgerLoading />}><ExploreView
             currentUser={currentUser}
             posts={visiblePosts}
             reels={reels}
@@ -1807,7 +1808,7 @@ export default function App() {
 
         {activeTab === 'reels' && (
           <div className="py-2 px-2">
-            <React.Suspense fallback={<LazyFallback />}><ReelsView
+            <React.Suspense fallback={<TabBurgerLoading />}><ReelsView
               reels={reels}
               currentUser={currentUser}
               initialReelId={selectedReelId}
@@ -1819,7 +1820,7 @@ export default function App() {
         )}
 
         {activeTab === 'videos' && (
-          <React.Suspense fallback={<LazyFallback />}>
+          <React.Suspense fallback={<TabBurgerLoading />}>
             <HomeVideoFeedView
               currentUser={currentUser}
               onOpenUpload={() => setShowUploadVideoModal(true)}
@@ -1843,7 +1844,7 @@ export default function App() {
                       The rest of NOOB is unaffected — your account and messages are safe. Reloading usually fixes it.
                     </p>
                     <button
-                      onClick={() => window.location.reload()}
+                      onClick={hardReload}
                       className="w-full py-3 bg-noob text-black font-bold rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
                     >
                       Reload NOOB
@@ -1852,7 +1853,7 @@ export default function App() {
                 </div>
               }
             >
-              <React.Suspense fallback={<LazyFallback />}>
+              <React.Suspense fallback={<TabBurgerLoading />}>
                 <ChatView
                   currentUser={currentUser}
                   pendingChatUser={pendingChatUser}
@@ -1886,7 +1887,7 @@ export default function App() {
         )}
 
         {activeTab === 'games' && (
-          <React.Suspense fallback={<LazyFallback />}><GamesView
+          <React.Suspense fallback={<TabBurgerLoading />}><GamesView
             currentUser={currentUser}
             allUsers={registeredUsers}
             onUserUpdated={(u) => setCurrentUser(u)}
@@ -1895,7 +1896,7 @@ export default function App() {
         )}
 
         {activeTab === 'music' && !musicHidden && (
-          <React.Suspense fallback={<LazyFallback />}><MusicHubView currentUser={currentUser} /></React.Suspense>
+          <React.Suspense fallback={<TabBurgerLoading />}><MusicHubView currentUser={currentUser} /></React.Suspense>
         )}
 
         {activeTab === 'profile' && renderProfileView(null)}

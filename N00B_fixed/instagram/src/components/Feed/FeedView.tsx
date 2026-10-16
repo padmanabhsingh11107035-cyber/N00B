@@ -46,6 +46,7 @@ import { preloadNoobStudy } from '../Study/StudyHost';
 import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
+import { BurgerLoading } from '../Common/BurgerLoading';
 import { favouriteCount, isFavourite, isPostMuted, useFeedLists } from '../../services/settingsApi';
 import type { StoryTrayModel } from '../../utils/storyTray';
 import { PinnedFeedSection } from './PinnedFeedSection';
@@ -84,11 +85,7 @@ const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupport
 
 // A visible spinner instead of a blank Suspense fallback — on a slow connection the first tap of any
 // of these menu items could otherwise look like it did nothing for several seconds.
-const LazyFallback: React.FC = () => (
-  <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
-  </div>
-);
+const LazyFallback: React.FC = () => <BurgerLoading />;
 
 interface FeedViewProps {
   currentUser: User;

@@ -113,7 +113,7 @@ import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
 import type { SettingsContext } from '../Settings/types';
-import { NoobStackLoader } from '../Common/NoobStackLoader';
+import { BurgerLoading } from '../Common/BurgerLoading';
 import { LazyVideo } from '../Common/LazyVideo';
 
 // Lazy-loaded: large, rarely-opened screens pulled out of the main bundle rather than loaded on
@@ -124,11 +124,7 @@ const SuggestionBoxModal = React.lazy(() => import('../Support/SuggestionBoxModa
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 // While a window that is loaded on demand arrives: NOOB's burger, for exactly as long as it takes (no minimum, no maximum time).
-const LazyFallback: React.FC = () => (
-  <div className="fixed inset-0 z-50 bg-page doodle-wallpaper flex items-center justify-center text-white" role="status" aria-label="Loading">
-    <NoobStackLoader mode="quick" subtitle="Loading…" />
-  </div>
-);
+const LazyFallback: React.FC = () => <BurgerLoading />;
 // Settings and activity is fetched in the background while the profile is on screen, so the three dots open it at once.
 const preloadSettingsHub = () => { void import('../Settings/SettingsHub'); };
 

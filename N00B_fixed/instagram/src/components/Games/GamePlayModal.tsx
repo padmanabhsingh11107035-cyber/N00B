@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BurgerSmall } from '../Common/BurgerLoading';
 import {
   X,
   Users,
@@ -74,11 +75,7 @@ function pollOnce(ask: () => Promise<void>): () => void {
 }
 
 // Shown for the moment a game's file is on its way (usually already there: it started loading when the window opened).
-const GameLoading: React.FC = () => (
-  <div className="py-16 flex items-center justify-center" role="status" aria-label="Loading the game">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
-  </div>
-);
+const GameLoading: React.FC = () => <BurgerSmall label="Loading the game…" />;
 
 interface GamePlayModalProps {
   game: MiniGameMeta;
@@ -1065,10 +1062,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           useLargeBoard ? 'p-2 sm:p-5 max-h-[calc(100vh-73px)] sm:max-h-[85vh]' : 'p-5 max-h-[75vh]'
         }`}>
           {!chessLimitChecked ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center gap-3">
-              <div className="w-8 h-8 border-2 border-zinc-700 border-t-noob rounded-full animate-spin" />
-              <p className="text-xs text-zinc-500">Checking availability...</p>
-            </div>
+            <BurgerSmall label="Checking availability…" />
           ) : chessLimitBlocked ? (
             <div className="py-10 flex flex-col items-center text-center space-y-4 px-2">
               <div className="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-2xl">

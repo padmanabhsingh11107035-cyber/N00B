@@ -1,4 +1,5 @@
 import React from 'react';
+import { hardReload } from './reloadApp.ts';
 
 // A page that is downloaded when first needed (smaller first load), but can also be fetched ahead of time.
 //
@@ -16,7 +17,7 @@ function reloadForNewVersion(): void {
     if (Date.now() - last < 60_000) return;
     sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
   } catch { /* no storage: one reload is still fine */ }
-  window.location.reload();
+  hardReload();
 }
 
 export function lazyTab<C extends React.ComponentType<any>>(load: () => Promise<C>): { View: C; preload: () => Promise<unknown> } {

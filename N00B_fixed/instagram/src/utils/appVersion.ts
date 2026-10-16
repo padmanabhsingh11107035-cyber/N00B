@@ -6,6 +6,7 @@
 // tiny static file rewritten on every build with that same id, so re-fetching it (bypassing any
 // cache) and comparing tells this running instance whether it's stale.
 import { useEffect, useState } from 'react';
+import { hardReload } from './reloadApp.ts';
 
 declare const __BUILD_ID__: string;
 
@@ -65,7 +66,7 @@ export function useUpdateAvailable(): boolean {
         alreadyTriedThisVersion: triedVersion() === latest
       })) {
         markTried(latest);
-        window.location.reload();
+        hardReload();
       }
     };
 

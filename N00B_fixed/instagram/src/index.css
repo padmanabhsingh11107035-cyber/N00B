@@ -1038,6 +1038,11 @@ button[class*="from-noob"], a[class*="from-noob"] {
 .scroll-more-arrow { animation: scroll-more-bob 1.1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .scroll-more-arrow { animation: none; } }
 
+/* A page or window that covers the whole screen is a page of its own: the page behind it never scrolls (utils/overlayScrollLock.ts sets data-overlay-open while one is
+   showing), and a front page that is pulled past its top or bottom does not hand the pull on to the page behind it (the iPhone did, so the page behind moved). */
+html[data-overlay-open], html[data-overlay-open] body { overflow: hidden !important; overscroll-behavior: none; }
+.fixed.inset-0, .fixed.inset-0 .overflow-y-auto, .fixed.inset-0 .overflow-auto, .fixed.inset-0.overflow-y-auto { overscroll-behavior: contain; }
+
 /* Only the Home page can be refreshed. Everywhere else the browser's own pull-down refresh (Android Chrome) is switched off too; the app itself has no pull-down refresh there
    (App.tsx sets data-refresh on the page: "on" only on Home). */
 html[data-refresh="off"],

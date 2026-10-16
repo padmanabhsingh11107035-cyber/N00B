@@ -6,6 +6,8 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { MovedNotice, movedNoticeBlocksApp } from './components/Common/MovedNotice.tsx';
 import './index.css';
 import { initTheme } from './utils/theme.ts';
+import { cleanReloadMark } from './utils/reloadApp.ts';
+import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
@@ -48,6 +50,8 @@ console.log(
 );
 
 // The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
+installOverlayScrollLock();   // pages that cover the screen are pages of their own: the page behind them does not scroll (utils/overlayScrollLock.ts)
+cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)
 initTheme();
 void initLanguage();
 

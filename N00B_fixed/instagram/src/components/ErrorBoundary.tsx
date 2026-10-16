@@ -2,6 +2,7 @@ import React from 'react';
 import { LoginDoodles } from './Auth/LoginDoodles';
 import { LoginBigDoodles } from './Auth/LoginBigDoodles';
 import { NoobWordmark } from './Common/NoobWordmark';
+import { hardReload } from '../utils/reloadApp';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -39,7 +40,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   handleReload = () => {
     // A full reload is about to remount everything anyway, so there's no
     // need to reset `hasError` via setState first.
-    window.location.reload();
+    hardReload();
   };
 
   render() {

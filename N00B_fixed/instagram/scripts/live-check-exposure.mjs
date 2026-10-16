@@ -19,7 +19,9 @@ const c = createClient(url, key, { auth: { persistSession: false, autoRefreshTok
 const dir = 'supabase/migrations';
 const fnNames = [...new Set(fs.readdirSync(dir).filter((f) => f.endsWith('.sql'))
   .flatMap((f) => [...fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/create or replace function public\.([a-z_0-9]+)\(/g)].map((m) => m[1])))].sort();
-const allowed = new Set(['check_signup', 'resolve_login_email', 'username_taken']);
+// Meant for visitors: the sign-up / login helpers, and the public pages that open from a shared link (Anonymous Messages, polls, This or That), the platform's public settings,
+// the Study space's public status, and a plain date helper.
+const allowed = new Set(['check_signup', 'resolve_login_email', 'username_taken', 'anon_messages_feed', 'poll_list', 'tot_today', 'tot_previous', 'public_platform_settings', 'study_public_status', 'fun_today']);
 
 console.log('\nEvery database function, called by a logged-out visitor');
 const ran = [];

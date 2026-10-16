@@ -372,9 +372,9 @@ check(/<ComingSoon gate=\{gate\} \/>/.test(studyApp) && /gate\.mode !== 'on' && 
 check(/!gate\.admission && !gate\.isAdmin && gate\.mode === 'on'\) page = 'admission'/.test(studyApp), 'a new student sees the admission form first');
 check(/st-splash/.test(read('src/components/Study/StudySplash.tsx')) && /noob-study-logo/.test(read('src/components/Study/StudySplash.tsx')), 'the logo is shown on a black screen');
 check(/\.st-splash \{[^}]*background: #000/.test(css), 'the opening screen is black');
-check(/__splashSeconds = 3/.test(read('index.html')), 'on the coaching address the logo stays for 3 seconds');
+check(/__splashSeconds = 3/.test(read('public/coaching-init.js')) && /<script src="\/coaching-init\.js"><\/script>/.test(read('index.html')) && !/<script>\s*\(function/.test(read('index.html')), 'on the coaching address the logo stays for 3 seconds');
 check(/coaching/.test(read('index.html')) && /isCoachingHost/.test(read('src/App.tsx')), 'the coaching address opens NOOB STUDY');
-check(/manifest-study\.json/.test(read('index.html')), 'the coaching address installs as NOOB STUDY, with its own icon');
+check(/manifest-study\.json/.test(read('public/coaching-init.js')), 'the coaching address installs as NOOB STUDY, with its own icon');
 const png = fs.readFileSync('public/noob-study-logo-1024.png');
 check(png.readUInt32BE(16) === 1024 && png.readUInt32BE(20) === 1024 && png.subarray(1, 4).toString() === 'PNG', 'the logo is a 1024 x 1024 picture, at full quality');
 check(fs.existsSync('public/noob-study-logo.svg') && fs.statSync('public/noob-study-logo.svg').size > 2000, 'and the sharp vector version is there');

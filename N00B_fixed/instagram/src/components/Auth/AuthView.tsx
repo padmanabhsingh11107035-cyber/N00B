@@ -33,6 +33,7 @@ import {
   Download,
   Loader2,
   Smartphone,
+  ArrowLeft,
   LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
@@ -216,6 +217,36 @@ const BUSINESS_CATEGORIES = [
 
 export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => {
   const [mode, setMode] = useState<'signup' | 'login'>('login');
+
+  // Sign-up is its own page: "Create Account" opens it as a new page (the phone's back button / browser Back return to the log-in page, like any other page), and the Back
+  // button on it does the same. The Continue with Google / Apple / Facebook / Discord buttons stay on the log-in page.
+  const signupEntry = useRef(false);
+  const openSignupPage = () => {
+    setErrorMessage(null);
+    setMode('signup');
+    try { window.history.pushState({ noobAuth: 'signup' }, ''); signupEntry.current = true; } catch { signupEntry.current = false; }
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior }); } catch { /* not important */ }
+  };
+  const backToLogin = () => {
+    setErrorMessage(null);
+    if (signupEntry.current) {
+      signupEntry.current = false;
+      try { window.history.back(); return; } catch { /* fall through to the plain switch */ }
+    }
+    setMode('login');
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior }); } catch { /* not important */ }
+  };
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const onSignup = (e.state as { noobAuth?: string } | null)?.noobAuth === 'signup';
+      signupEntry.current = onSignup;
+      setErrorMessage(null);
+      setMode(onSignup ? 'signup' : 'login');
+      try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior }); } catch { /* not important */ }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(notice || null);
   const [suspendedNotice, setSuspendedNotice] = useState<string | null>(null);
@@ -1083,6 +1114,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
 
       {/* Main Authentication Card */}
       <main className="w-full max-w-lg my-auto z-10 py-3">
+        {mode === 'signup' && (
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={backToLogin}
+              data-testid="signup-back"
+              aria-label="Back to log in"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-900/90 border border-white/20 hover:border-white/50 text-xs font-extrabold text-white cursor-pointer transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+          </div>
+        )}
         {errorMessage && (
           <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5 animate-shake">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -1091,7 +1135,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           </div>
         )}
 
-        <div className="bg-zinc-950/95 backdrop-blur-2xl border border-white/10 rounded-[32px] p-5 sm:p-8 shadow-2xl shadow-black relative overflow-hidden ring-1 ring-white/5">
+        <div key={mode} className="animate-in fade-in duration-200 bg-zinc-950/95 backdrop-blur-2xl border border-white/10 rounded-[32px] p-5 sm:p-8 shadow-2xl shadow-black relative overflow-hidden ring-1 ring-white/5">
           {/* Top Option: Only Log In indicator at top for login page */}
           {mode === 'login' ? (
             <div className="flex items-center justify-center p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5">
@@ -1106,25 +1150,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <Zap className="w-4 h-4 text-cyan-400" />
                 <span>Create New Account</span>
               </div>
-              <button
-                type="button"
-                onClick={() => { setMode('login'); setErrorMessage(null); }}
-                className="text-xs font-bold text-blue-400 hover:text-blue-300 hover:underline cursor-pointer"
-              >
-                ← Back to Log In
-              </button>
             </div>
           )}
 
           {mode === 'signup' && signupsEnabled && signupStep === 'form' && (
-            <div className="mb-4">
-              <SocialLoginButtons onError={setErrorMessage} />
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-white/10" />
-                <span className="text-[11px] text-zinc-500 font-bold">OR</span>
-                <div className="flex-1 h-px bg-white/10" />
-              </div>
-            </div>
+            <p className="mb-4 text-center text-[11px] text-zinc-400 leading-relaxed">
+              Prefer Google, Apple, Facebook or Discord?{' '}
+              <button type="button" onClick={backToLogin} className="text-blue-400 font-bold hover:underline cursor-pointer">Go back</button>{' '}
+              and tap &ldquo;Continue with&hellip;&rdquo;.
+            </p>
           )}
 
           {/* ================= SIGN UP FORM ================= */}
@@ -1137,7 +1171,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               </p>
               <button
                 type="button"
-                onClick={() => setMode('login')}
+                onClick={backToLogin}
                 className="text-blue-400 text-xs font-bold hover:underline cursor-pointer"
               >
                 ← Back to Log In
@@ -1666,7 +1700,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => setMode('login')}
+                    onClick={backToLogin}
                     className="text-blue-400 font-bold hover:underline cursor-pointer"
                   >
                     Log In
@@ -1764,7 +1798,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                   Don&apos;t have an account yet?{' '}
                   <button
                     type="button"
-                    onClick={() => { setMode('signup'); setErrorMessage(null); }}
+                    onClick={openSignupPage}
                     className="text-blue-400 font-bold hover:text-blue-300 hover:underline cursor-pointer transition-colors"
                   >
                     Create Account

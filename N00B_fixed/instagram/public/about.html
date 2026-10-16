@@ -81,12 +81,15 @@
   .card li { margin: 0 0 5px; }
   .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .pills span { border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; background: #0e0e0e; }
+  .back{display:inline-flex;align-items:center;gap:7px;margin:0 0 18px;padding:9px 18px;border:1px solid #4a4a4a;border-radius:999px;background:#161616;color:#fff;text-decoration:none;font:700 14px/1 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}.back:hover{border-color:#fff}
+  .toprow { padding-top: 18px; }
   footer { margin: 50px 0 34px; padding-top: 18px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 13px; }
   footer a { margin: 0 8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div class="toprow"><a class="back" data-back href="/" aria-label="Go back to the previous page"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</a></div>
   <header class="top">
     <a href="/" aria-label="NOOB Socials home"><img src="/brand/noob-wordmark.png" width="640" height="207" alt="NOOB" /></a>
     <p class="tag">The student-run social app</p>
@@ -171,9 +174,11 @@
   </main>
 
   <footer>
+    <p><a class="back" data-back href="/" aria-label="Go back to the previous page"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</a></p>
     <p>&copy; 2026 NOOB Socials &middot; <a href="https://noobsocials.com/">noobsocials.com</a></p>
     <p><a href="https://www.instagram.com/nooob.xyz" rel="me noopener">Instagram @nooob.xyz</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms &amp; Conditions</a> · <a href="/data-deletion">Delete your data</a></p>
   </footer>
 </div>
+<script src="/back-button.js" defer></script>
 </body>
 </html>

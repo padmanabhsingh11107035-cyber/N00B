@@ -24,10 +24,12 @@ ul{padding-left:22px}li{margin:6px 0}
 a{color:var(--accent)}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
 footer a{margin-right:14px}
+.back{display:inline-flex;align-items:center;gap:7px;margin:0 0 18px;padding:9px 18px;border:1px solid #4a4a4a;border-radius:999px;background:#161616;color:#fff;text-decoration:none;font:700 14px/1 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}.back:hover{border-color:#fff}
 </style>
 </head>
 <body>
 <main>
+<a class="back" data-back href="/" aria-label="Go back to the previous page"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</a>
 <header class="top"><img src="/noob-logo-circle.png" alt="NOOB logo" width="44" height="44"><a href="/">NOOB</a></header>
 <h1>Delete Your NOOB Data</h1>
 <p class="meta">You can delete your NOOB account and all of your data yourself, at any time.</p>
@@ -46,9 +48,11 @@ footer a{margin-right:14px}
 <h2>Need help?</h2>
 <p>If you cannot log in to delete your account, ask NOOB AI Customer Support inside the app and we will delete it for you. More about how we handle your data is in our <a href="/privacy.html">Privacy Policy</a>.</p>
 <footer>
+<a class="back" style="margin-top:4px" data-back href="/" aria-label="Go back to the previous page"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</a>
 <a href="/">NOOB home</a><a href="/privacy.html">Privacy Policy</a>
 <p>&copy; 2026 NOOB Social Platform &middot; <a href="https://noobsocials.com">noobsocials.com</a></p>
 </footer>
 </main>
+<script src="/back-button.js" defer></script>
 </body>
 </html>

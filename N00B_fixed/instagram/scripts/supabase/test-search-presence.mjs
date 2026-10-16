@@ -45,7 +45,7 @@ for (const feature of ['Reels', 'Stories', 'Voice and video calls', 'Ludo', 'Che
 }
 check(/href="https:\/\/www\.instagram\.com\/nooob\.xyz"/.test(about) && !/utm_source|vrfl/.test(about), 'the About page links to the Instagram, without tracking codes');
 check(/href="\/\?join=team"/.test(about) && /href="\/privacy"/.test(about) && /href="\/terms"/.test(about) && /href="\/data-deletion"/.test(about), 'links to joining the team, privacy, terms and deleting your data');
-check(!/<script(?![^>]*ld\+json)[^>]*>/.test(about) && /<style>/.test(about), 'it needs no scripts (fast, and allowed by the site\'s security rules)');
+check(!/<script>/.test(about) && (about.match(/<script src="[^"]+"/g) || []).join() === '<script src="/back-button.js"' && /<style>/.test(about), 'its only script is the small Back button file from the site itself (nothing written inside the page)');
 check(fs.existsSync('public/brand/noob-wordmark.png'), 'its logo file exists');
 
 section('3. robots.txt and the sitemap');

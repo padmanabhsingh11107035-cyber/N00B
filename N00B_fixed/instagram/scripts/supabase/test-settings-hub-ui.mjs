@@ -218,6 +218,19 @@ check(/Promise\.all\(ids\.map\(/.test(account) && /if \(ready\.length > 0\) \{ s
 check(/const OrdersView = lazy\(/.test(read('src/components/Settings/pages/support.tsx')), 'the orders list (a big part of the shop) is fetched only when that page is opened');
 check(/animate-in fade-in duration-150/.test(hub), 'a page fades in instead of jumping');
 
+section('10b. About NOOB stays inside the app');
+check(/'about-noob': AboutNoobPage/.test(pagesIndex) && /export const AboutNoobPage/.test(read('src/components/Settings/pages/support.tsx')) && /go\('about-noob'\)/.test(read('src/components/Settings/pages/support.tsx')), 'the About row opens the About NOOB page inside Settings, so Back comes back to the page before');
+check(!/window\.open\('\/about'/.test(profile + allPages) && !/openAbout/.test(types), 'nothing in Settings opens the website any more');
+const aboutSrc = read('src/components/Settings/pages/support.tsx');
+const featureTitles = ['Share and watch', 'Chat and call', 'Play', 'Go live', 'Fun and community', 'Create and learn', 'Shop and rewards', 'Privacy and safety'];
+const publicAbout = read('public/about.html');
+check(featureTitles.every((t) => aboutSrc.includes(`title: '${t}'`)) && /Why students\?/.test(aboutSrc), 'it tells the same story as the website’s About page: who we are, the eight groups of things you can do, why students');
+const websiteItems = [...publicAbout.matchAll(/<li>([^<]+)<\/li>/g)].map((m) => m[1].replace(/&amp;/g, '&'));
+const missing = websiteItems.filter((t) => !aboutSrc.includes(t.replace(/'/g, "\\'")) && !aboutSrc.includes(t));
+check(missing.length === 0, 'every feature the website lists is listed here too', missing.join(' | '));
+check(/\/noob-icon-192\.png/.test(aboutSrc) && !/noob-logo\.svg\.jpeg/.test(aboutSrc) && fs.existsSync('public/noob-icon-192.png'), 'the About pages show the NOOB logo');
+check(/openTeamJoin/.test(aboutSrc) && /instagram\.com\/nooob\.xyz/.test(aboutSrc) && /getDevicePrefs\(\)\.openLinksInApp/.test(aboutSrc), 'Follow us on Instagram (inside NOOB’s own browser unless links are set to open outside) and Join the NOOB team are there');
+
 section('11. Instants and Daily NOOB are the only things deleted by a clock');
 check(!/instants-archive|InstantsArchivePage|fetchInstantsArchive/.test(allPages + registry + pagesIndex), 'no Instants archive in Settings: Instants are deleted for good after 24 hours');
 check(fs.existsSync('supabase/migrations/20261017000002_instants_24h.sql') && /purge_expired_instants/.test(read('supabase/migrations/20261017000002_instants_24h.sql')), 'the migration that deletes finished Instants (and their pictures) exists');

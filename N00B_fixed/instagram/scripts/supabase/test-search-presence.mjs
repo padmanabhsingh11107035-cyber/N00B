@@ -58,7 +58,7 @@ check(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/.tes
 section('4. Nothing keeps search engines away');
 check(!/X-Robots-Tag|noindex/i.test(headers), 'no header tells search engines to skip the site');
 const profile = read('src/components/Profile/ProfileView.tsx');
-check(/openAbout: \(\) => \{ window\.open\('\/about', '_blank', 'noopener'\); \}/.test(profile) && /testId="about-open"/.test(read('src/components/Settings/pages/support.tsx')) && /id: 'about'[^\n]*page: 'about'/.test(read('src/components/Settings/registry.ts')), "the profile's three-dots Settings and activity has an About row, and its About NOOB entry opens the About page");
+check(/onClick=\{\(\) => go\('about-noob'\)\}/.test(read('src/components/Settings/pages/support.tsx')) && /testId="about-open"/.test(read('src/components/Settings/pages/support.tsx')) && /id: 'about'[^\n]*page: 'about'/.test(read('src/components/Settings/registry.ts')) && !/window\.open\('\/about'/.test(profile), "the profile's three-dots Settings and activity has an About row, and its About NOOB entry opens the About NOOB page inside the app (never the website)");
 check(/<a href="\/about" className="[^"]*">About NOOB<\/a>/.test(auth), 'the sign-in page links to the About page, so it is found from the home page');
 const og = fs.readFileSync('public/brand/og-card.png');
 check(og.readUInt32BE(16) === 1200 && og.readUInt32BE(20) === 630 && og.length < 200000, 'the share card is 1200 x 630 and small');

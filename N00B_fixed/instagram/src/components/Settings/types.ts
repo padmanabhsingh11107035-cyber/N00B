@@ -33,7 +33,6 @@ export interface SettingsActions {
   openDeleteAccount: () => void;
   openProfessionalDashboard: () => void;
   openProfileQr: () => void;
-  openAbout: () => void;
   logout: () => void;
   /** Ends Settings (used after something that leaves the page, like logging out). */
   close: () => void;

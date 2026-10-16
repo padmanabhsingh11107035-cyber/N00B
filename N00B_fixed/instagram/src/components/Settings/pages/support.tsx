@@ -1,9 +1,12 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { BadgeCheck, ChevronDown, FileText, Info, KeyRound, Lock, MessageSquarePlus, Package, ShieldCheck, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
+import { BadgeCheck, Brain, Camera, ChevronDown, FileText, Gamepad2, Handshake, Info, Instagram, KeyRound, Lock, MessageCircle, MessageSquarePlus, Package, Radio, ShieldCheck, ShoppingBag, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
 import { PageShell, Section, Row, Note, Spinner } from '../kit';
 import type { PageProps } from '../types';
 const OrdersView = lazy(() => import('../../Store/OrdersView').then((m) => ({ default: m.OrdersView })));
 import { fetchAccountStatus, useAccountSettings } from '../../../services/settingsApi';
+import { openTeamJoin } from '../../Team/teamJoinStore';
+import { openInApp } from '../../../utils/inAppBrowser';
+import { getDevicePrefs } from '../../../utils/devicePrefs';
 
 declare const __BUILD_ID__: string;
 
@@ -123,19 +126,19 @@ export const AccountStatusPage: React.FC<PageProps> = ({ ctx, back }) => {
   );
 };
 
-export const AboutPage: React.FC<PageProps> = ({ ctx, back }) => {
+export const AboutPage: React.FC<PageProps> = ({ ctx, go, back }) => {
   const build = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : '';
   return (
     <PageShell title="About" onBack={back}>
       <Section>
         <div className="px-5 py-7 text-center">
-          <img src="/noob-logo.svg.jpeg" alt="" className="w-16 h-16 rounded-2xl mx-auto mb-3 object-cover border border-white/15" />
+          <img src="/noob-icon-192.png" alt="NOOB" width={72} height={72} className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-3 object-cover border border-white/15" />
           <p className="text-lg font-black text-white tracking-tight">NOOB Socials</p>
           <p className="text-xs text-zinc-400 mt-1">A social app run by students</p>
         </div>
       </Section>
       <Section>
-        <Row icon={Info} label="About NOOB" sub="Who we are and everything NOOB can do" onClick={ctx.actions.openAbout} testId="about-open" />
+        <Row icon={Info} label="About NOOB" sub="Who we are and everything NOOB can do" onClick={() => go('about-noob')} testId="about-open" />
         <Row icon={FileText} label="Terms of use" onClick={ctx.actions.openTerms} />
         <Row icon={Lock} label="Privacy policy" onClick={ctx.actions.openPrivacyPolicy} />
         <Row icon={Package} label="Version" value={build ? build.slice(0, 10) : 'Latest'} />
@@ -143,3 +146,71 @@ export const AboutPage: React.FC<PageProps> = ({ ctx, back }) => {
     </PageShell>
   );
 };
+
+// "About NOOB": the same story as the public About page of the website (public/about.html), but as a page inside the app, so Back brings you to the page you came from.
+const FEATURES: Array<{ title: string; icon: React.ComponentType<{ className?: string }>; items: string[] }> = [
+  { title: 'Share and watch', icon: Camera, items: [
+    'Photo and multi-picture posts with captions, hashtags and music', 'Reels: short vertical videos with sound', 'Longer videos, with playlists',
+    'Stories that last 24 hours, with polls, questions and link stickers', 'Music Hub: listen to songs and share them in posts and chats'] },
+  { title: 'Chat and call', icon: MessageCircle, items: [
+    'Private and group chats', 'Voice messages, photos and videos, replies and reactions', 'Voice and video calls', 'End-to-end encrypted chats', 'Translate messages into your language'] },
+  { title: 'Play', icon: Gamepad2, items: [
+    '50+ mini-games: Ludo, Chess, Snakes & Ladders, Monopoly, Tic-Tac-Toe, Rock Paper Scissors and many more',
+    'Play against smart bots, a friend on the same phone, or someone online', 'Guess the Song, leaderboards and NOOB Points to win'] },
+  { title: 'Go live', icon: Radio, items: ['Live streaming', 'Live Lounge for hosted live sessions', 'NOOB Rooms: voice rooms to talk with friends', 'Meetings you can schedule and join'] },
+  { title: 'Fun and community', icon: Sparkles, items: [
+    'Daily NOOB: a new challenge every day, vote for the best entry, top three win NOOB Points', 'Anonymous Messages and Ask Me Anything',
+    'This or That, Mood Status and public polls', 'Suggestion Box: tell the team what to build next'] },
+  { title: 'Create and learn', icon: Brain, items: [
+    'NOOB AI: a friendly AI assistant', 'NOOB Study: an AI study space with plans, practice and notes', 'NOOB Draw: draw and share your own pictures', 'Customer Support with an AI helper'] },
+  { title: 'Shop and rewards', icon: ShoppingBag, items: ['Shop NOOB and the NOOB Food Stall', 'NOOB Points you earn by taking part', 'NOOB Pro for extra perks'] },
+  { title: 'Privacy and safety', icon: ShieldCheck, items: [
+    'Public or private account, close friends, and hiding your profile from chosen people', 'Block and report people, with a team that handles reports',
+    'Download or delete your data any time', 'Light and dark themes, and many languages'] }
+];
+
+const openLink = (url: string) => { if (getDevicePrefs().openLinksInApp) openInApp(url); else window.open(url, '_blank', 'noopener'); };
+
+export const AboutNoobPage: React.FC<PageProps> = ({ back }) => (
+  <PageShell title="About NOOB" onBack={back}>
+    <Section>
+      <div className="px-5 pt-7 pb-6 text-center">
+        <img src="/noob-icon-192.png" alt="NOOB" width={72} height={72} className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-3 object-cover border border-white/15" />
+        <p className="text-xl font-black text-white tracking-tight">NOOB Socials</p>
+        <p className="text-[13px] text-zinc-300 mt-2 leading-relaxed max-w-sm mx-auto">A free social app and website, built and run by students, for people who want to share moments, play, learn and make real friends.</p>
+      </div>
+    </Section>
+
+    <Section title="About us">
+      <div className="px-4 py-4 space-y-3 text-[13.5px] leading-relaxed text-zinc-200">
+        <p><strong className="text-white">NOOB Socials</strong> (also written NOOB or noobsocials) is a social media website and app that students build, run and look after themselves. It lives at noobsocials.com, works in any browser, and can be installed on a phone like a normal app.</p>
+        <p>Everything on NOOB is made to feel like a friendly hang-out rather than a feed to scroll: you share photos, reels and stories, chat with friends, play games together, join live rooms, take on the Daily NOOB challenge, study with an AI helper and even shop from the NOOB store. It is free to join, and you stay in control of who sees what.</p>
+      </div>
+    </Section>
+
+    {FEATURES.map(({ title, icon: Icon, items }) => (
+      <Section key={title}>
+        <div className="px-4 py-3.5">
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <span className="w-8 h-8 shrink-0 rounded-xl border border-white/20 bg-zinc-900 flex items-center justify-center text-white"><Icon className="w-4 h-4" /></span>
+            <span className="text-[15px] font-black text-white">{title}</span>
+          </div>
+          <ul className="space-y-1.5 text-[13px] leading-snug text-zinc-300">
+            {items.map((t) => <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-zinc-500 select-none">&bull;</span><span>{t}</span></li>)}
+          </ul>
+        </div>
+      </Section>
+    ))}
+
+    <Section title="Why students?">
+      <div className="px-4 py-4 text-[13.5px] leading-relaxed text-zinc-200">
+        NOOB started as a student project and is still built, tested and moderated by students. That is why it keeps changing quickly: new features come from the Suggestion Box, from the team, and from people like you.
+      </div>
+    </Section>
+
+    <Section title="Follow and join">
+      <Row icon={Instagram} label="Follow us on Instagram" sub="@nooob.xyz" onClick={() => openLink('https://www.instagram.com/nooob.xyz')} testId="about-instagram" />
+      <Row icon={Handshake} label="Join the NOOB team" sub="The team is run by students, and new members are welcome" onClick={openTeamJoin} testId="about-join-team" />
+    </Section>
+  </PageShell>
+);

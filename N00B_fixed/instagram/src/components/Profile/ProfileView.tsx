@@ -523,7 +523,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openDeleteAccount: () => setShowDeleteAccountModal(true),
       openProfessionalDashboard: () => { setShowSettingsHub(false); onOpenProfessionalDashboard(); },
       openProfileQr: () => setShowProfileQrModal(true),
-      openAbout: () => { window.open('/about', '_blank', 'noopener'); },
       logout: () => { setShowSettingsHub(false); onLogout?.(); },
       close: closeSettingsHub
     }

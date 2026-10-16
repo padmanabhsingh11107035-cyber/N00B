@@ -57,6 +57,8 @@ check(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/.tes
 
 section('4. Nothing keeps search engines away');
 check(!/X-Robots-Tag|noindex/i.test(headers), 'no header tells search engines to skip the site');
+const profile = read('src/components/Profile/ProfileView.tsx');
+check(/window\.open\('\/about', '_blank', 'noopener'\);[\s\S]{0,900}About NOOB/.test(profile) && /data-testid="open-about"/.test(profile) && /Option 6: Terms and Conditions/.test(profile), "the profile's three-dots menu has an About NOOB entry that opens the About page");
 check(/<a href="\/about" className="[^"]*">About NOOB<\/a>/.test(auth), 'the sign-in page links to the About page, so it is found from the home page');
 const og = fs.readFileSync('public/brand/og-card.png');
 check(og.readUInt32BE(16) === 1200 && og.readUInt32BE(20) === 630 && og.length < 200000, 'the share card is 1200 x 630 and small');

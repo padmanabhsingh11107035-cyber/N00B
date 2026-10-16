@@ -34,6 +34,7 @@ import {
   Github,
   LogOut,
   MoreVertical,
+  Info,
   Monitor,
   Headphones,
   FileText,
@@ -1019,6 +1020,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                       <span className="text-[10px] text-zinc-400 block truncate">
                         Chatway AI &amp; Help Desk
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* About NOOB: the public page (noobsocials.com/about) that tells what NOOB is - a student-run app - and lists every feature */}
+                  <button
+                    onClick={() => {
+                      setShowThreeDotsMenu(false);
+                      window.open('/about', '_blank', 'noopener');
+                    }}
+                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
+                    data-testid="open-about"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Info className="w-4 h-4 text-amber-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-white block group-hover:text-amber-300 transition-colors">
+                        About NOOB
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block truncate">
+                        Student-run &middot; every feature
                       </span>
                     </div>
                   </button>

@@ -81,6 +81,7 @@
 :root[data-theme="light"] .text-purple-200:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .text-purple-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .text-purple-400:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
+:root[data-theme="light"] .text-red-100:not(.force-dark *):not(.media-dark *) { color: #b91c1c !important; }
 :root[data-theme="light"] .text-red-200:not(.force-dark *):not(.media-dark *) { color: #b91c1c !important; }
 :root[data-theme="light"] .text-red-300:not(.force-dark *):not(.media-dark *) { color: #b91c1c !important; }
 :root[data-theme="light"] .text-red-300\/70:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #b91c1c 70%, transparent) !important; }

@@ -10,6 +10,8 @@
 //   { action: "translate-ui", lang, items: [{id,text}] } -> translate the app's own texts into a language, once, and keep them
 //                                                           (table ui_translations, see the migration "languages")
 //   { action: "event_email", emailId }                 -> send an email the database queued (receipts, NOOB Pro warnings); called by the database
+//   { action: "purge_media" }                           -> delete the stored files the database no longer needs (replaced profile pictures, finished Daily NOOB
+//                                                           days...); called by the database, in rounds of 100, after it has checked nothing still uses them
 //   { action: "push", notificationId }                   -> deliver a notification to the person's phone/browser (called by the
 //                                                           database; needs the secret VAPID_PRIVATE_KEY)
 //   { action: "record_signup_device" }                    -> stamp the caller's OWN profile_private row with the real IP and
@@ -391,6 +393,35 @@ async function handleEventEmail(req: Request, body: any, admin: any): Promise<Re
   const ok = await sendEmail(String(data.email), mail.subject, mail.text, mail.html);
   await admin.rpc('email_done', { p_secret: secret, p_id: id, p_ok: ok, p_error: ok ? null : lastEmailDebug || 'send failed' });
   return json({ success: true, sent: ok });
+}
+
+// ---------------------------------------------------------------------------- stored-file cleanup
+// { action: "purge_media" } - sent by the DATABASE (every 10 minutes, and whenever Daily NOOB is settled), with the private password in the x-noob-push header. The database
+// decides which files are due AND no longer used by anything (media_purge_take); this code only removes them with the storage API - the one way that really frees the
+// space, and the one place that may delete other people's files (a phone may only delete its own) - and reports back. Up to 5 rounds of 100 files per call.
+async function handlePurgeMedia(req: Request, admin: any): Promise<Response> {
+  const secret = req.headers.get('x-noob-push') || '';
+  if (!secret) return json({ error: 'Invalid request.' }, 400);
+  let removed = 0;
+  for (let round = 0; round < 5; round++) {
+    const { data, error } = await admin.rpc('media_purge_take', { p_secret: secret, p_limit: 100 });
+    if (error) {
+      const denied = /unauthorized/i.test(String(error.message));
+      if (!denied) console.error(`purge_media: media_purge_take failed: ${String(error.message).slice(0, 200)}`);
+      return json({ error: denied ? 'Unauthorized' : 'Failed.' }, denied ? 401 : 500);
+    }
+    const keys: string[] = Array.isArray(data) ? data.filter((k: unknown): k is string => typeof k === 'string' && k.length > 0) : [];
+    if (keys.length === 0) break;
+    const { error: removeError } = await admin.storage.from('media').remove(keys);
+    await admin.rpc('media_purge_done', { p_secret: secret, p_keys: keys, p_error: removeError ? String(removeError.message || 'remove failed').slice(0, 200) : null });
+    if (removeError) {
+      console.error(`purge_media: remove failed: ${String(removeError.message).slice(0, 200)}`);
+      return json({ success: false, removed });
+    }
+    removed += keys.length;
+    if (keys.length < 100) break;
+  }
+  return json({ success: true, removed });
 }
 
 // ---------------------------------------------------------------------------- push notifications
@@ -1141,6 +1172,8 @@ Deno.serve(async (req) => {
   if (body?.action === 'push') return await handlePush(req, body, admin);
   // Sending an email the database queued (a receipt, a Pro warning): same private-password check, no per-person limit.
   if (body?.action === 'event_email') return await handleEventEmail(req, body, admin);
+  // Removing the files the database no longer needs (a replaced profile picture, a finished Daily NOOB day...): same private-password check.
+  if (body?.action === 'purge_media') return await handlePurgeMedia(req, admin);
 
   // Who is asking? (a real signed-in person, or a guest)
   const token =(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();

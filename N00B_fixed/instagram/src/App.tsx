@@ -32,6 +32,7 @@ import {
   fetchReels,
   fetchReelById,
   fetchUsers,
+  pokeMediaCleanup,
   toggleFollowUser,
   removeFollower,
   acceptFollowRequest,
@@ -760,6 +761,9 @@ export default function App() {
     localStorage.setItem('noob_find_friends_prompted', '1');
     setShowFindFriendsModal(true);
   }, [currentUser?.id]);
+
+  // Once someone is signed in, nudge the server's cleanup (finished Daily NOOB days, files nothing uses any more). The server ignores it if it ran in the last 10 minutes.
+  useEffect(() => { if (currentUser?.id) pokeMediaCleanup(); }, [currentUser?.id]);
 
   const loadInitialData = async () => {
     try {

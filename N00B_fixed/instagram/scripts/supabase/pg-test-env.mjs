@@ -40,7 +40,7 @@ export async function createTestDb({ autoExpose = true, upTo = null } = {}) {
       id text primary key, name text, public boolean default false, file_size_limit bigint, allowed_mime_types text[]
     );
     create table storage.objects (
-      id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid, owner_id text, created_at timestamptz default now()
+      id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid, owner_id text, created_at timestamptz default now(), metadata jsonb default '{}'::jsonb
     );
     alter table storage.objects enable row level security;
     create function storage.foldername(name text) returns text[] language sql immutable as

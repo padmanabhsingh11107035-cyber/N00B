@@ -2075,10 +2075,6 @@ function mapDailyEntry(e: any): DailyChallengeEntry {
 export async function fetchDailyChallenge(): Promise<DailyChallenge | null> {
   try {
     const res = await rpc<any>('get_daily_challenge');
-    const purged: string[] = Array.isArray(res?.purgedMediaKeys)
-      ? res.purgedMediaKeys.filter((k: unknown): k is string => typeof k === 'string' && k.length > 0)
-      : [];
-    if (purged.length > 0) void supabase.storage.from(MEDIA_BUCKET).remove(purged);
     return res as DailyChallenge;
   } catch {
     return null;
@@ -2129,10 +2125,8 @@ export async function fetchDailyChampions(limit = 20): Promise<DailyChampion[]> 
 
 export async function deleteDailyChallengeEntry(entryId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    // the file is queued for removal by the database itself (and deleted on the server), nothing to do here
     const res = await rpc<any>('delete_daily_challenge_entry', { p_entry_id: entryId });
-    if (res?.success && res?.mediaKey) {
-      void supabase.storage.from(MEDIA_BUCKET).remove([res.mediaKey]);
-    }
     return { success: !!res?.success };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not delete your entry.') };
@@ -2147,9 +2141,7 @@ export async function adminAssignDailyChallengeWinners(date: string, firstUserId
     const res = await rpc<any>('admin_assign_daily_challenge_winners', {
       p_date: date, p_first: firstUserId, p_second: secondUserId || null, p_third: thirdUserId || null
     });
-    if (res?.success && Array.isArray(res.purgedMediaKeys) && res.purgedMediaKeys.length > 0) {
-      void supabase.storage.from(MEDIA_BUCKET).remove(res.purgedMediaKeys);
-    }
+    // the entries' files are queued for removal by the database itself (and deleted on the server)
     return { success: !!res?.success };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not assign winners for that day.') };
@@ -2164,6 +2156,110 @@ export async function adminSetDailyChallenge(date: string, prompt: string): Prom
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not save that task.') };
   }
+}
+
+// ----------------------------------------------------------------------------- admin: Daily NOOB page, and the storage cleanup
+export interface AdminDailyDay { date: string; entries: number; votes: number; settled: boolean; winner: string | null }
+export interface AdminDailyOverview {
+  today: string;
+  date: string;
+  prompt: string | null;
+  customPrompt: string | null;
+  settled: boolean;
+  podium: Array<{ rank: number; userId: string; username: string; votesCount: number }>;
+  entries: DailyChallengeEntry[];
+  days: AdminDailyDay[];
+  filesQueued: number;
+}
+
+// Everything the admin's Daily NOOB page shows, in one call. The server first settles any day that has ended (pays the winners, wipes the entries), so a finished day never
+// shows up here with its entries.
+export async function adminFetchDailyOverview(date?: string): Promise<{ success: boolean; overview?: AdminDailyOverview; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_daily_overview', date ? { p_date: date } : {});
+    return { success: true, overview: { ...res, entries: (res.entries || []).map(mapDailyEntry) } as AdminDailyOverview };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not load Daily NOOB.') };
+  }
+}
+
+export interface AdminStorageOverview {
+  files: number;
+  bytes: number;
+  folders: Array<{ folder: string; files: number; bytes: number }>;
+  queue: { pending: number; due: number; failed: number; bytes: number };
+  cleanupEnabled: boolean;
+  serverCleanupReady: boolean;
+}
+export interface AdminUnusedScan { files: number; bytes: number; folders: Array<{ folder: string; files: number; bytes: number }>; sample: string[] }
+
+export async function adminFetchStorageOverview(): Promise<{ success: boolean; overview?: AdminStorageOverview; error?: string }> {
+  try {
+    return { success: true, overview: await rpc<AdminStorageOverview>('admin_storage_overview') };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not read the storage overview.') };
+  }
+}
+
+export async function adminSetMediaCleanup(on: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    await rpc('admin_set_media_cleanup', { p_on: on });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not change that setting.') };
+  }
+}
+
+export async function adminScanUnusedMedia(minAgeDays = 3): Promise<{ success: boolean; scan?: AdminUnusedScan; error?: string }> {
+  try {
+    return { success: true, scan: await rpc<AdminUnusedScan>('admin_media_scan', { p_min_age_days: minAgeDays }) };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not look for unused files.') };
+  }
+}
+
+export async function adminQueueUnusedMedia(minAgeDays = 3, limit = 500): Promise<{ success: boolean; queued?: number; remaining?: number; error?: string }> {
+  try {
+    const res = await rpc<{ queued: number; remaining: number }>('admin_media_queue_unused', { p_min_age_days: minAgeDays, p_limit: limit });
+    return { success: true, queued: res.queued, remaining: res.remaining };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not queue the unused files.') };
+  }
+}
+
+export async function adminCancelMediaQueue(): Promise<{ success: boolean; cancelled?: number; error?: string }> {
+  try {
+    const res = await rpc<{ cancelled: number }>('admin_media_trash_cancel');
+    return { success: true, cancelled: res.cancelled };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not cancel the queue.') };
+  }
+}
+
+// "Remove due files now": the server normally does this by itself (every 10 minutes); this does the same from the admin's own session, which may delete any file in storage,
+// so it also works before the server's function has been updated. The database picks the files (due, and not used by anything), this removes them and reports back.
+export async function adminRemoveDueMediaNow(): Promise<{ success: boolean; removed: number; error?: string }> {
+  let removed = 0;
+  try {
+    for (let round = 0; round < 20; round++) {
+      const keys = ((await rpc<string[]>('admin_media_purge_take', { p_limit: 50 })) || []).filter((k) => typeof k === 'string' && k.length > 0);
+      if (keys.length === 0) break;
+      const { error } = await supabase.storage.from(MEDIA_BUCKET).remove(keys);
+      await rpc('admin_media_purge_done', { p_keys: keys, p_error: error ? String(error.message || 'remove failed').slice(0, 200) : null });
+      if (error) return { success: false, removed, error: error.message || 'Storage refused to remove the files.' };
+      removed += keys.length;
+      if (keys.length < 50) break;
+    }
+    return { success: true, removed };
+  } catch (err) {
+    return { success: false, removed, error: errorText(err, 'Could not remove the files.') };
+  }
+}
+
+// Called when the app starts: asks the server to settle finished Daily NOOB days and empty the deletion queue (it does nothing if it already did so in the last 10 minutes).
+// Never shows or throws anything - the cleanup is not something a person should ever wait for or hear about.
+export function pokeMediaCleanup(): void {
+  try { void Promise.resolve(supabase.rpc('poke_media_cleanup')).then(() => undefined, () => undefined); } catch { /* not important */ }
 }
 
 // Used for a "?reel=<id>" deep link or a shared-reel chat card — see fetchPostById's comment.

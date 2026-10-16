@@ -52,6 +52,7 @@ import { NoobLogo } from '../Common/NoobLogo';
 import { NoobCircleLogo } from '../Common/NoobCircleLogo';
 import { LoginDoodles } from './LoginDoodles';
 import { LoginBigDoodles } from './LoginBigDoodles';
+import { NoobWordmark } from '../Common/NoobWordmark';
 import { LoginMoreDoodles } from './LoginMoreDoodles';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
@@ -1077,20 +1078,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
         </div>
       )}
 
-      {/* Top Header: the real NOOB logo, centered */}
+      {/* Top Header: the NOOB logo written on the page (no box around it), centered */}
       <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
-        <div className="relative transition-transform hover:scale-[1.03]">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-[30px] sm:rounded-[34px] overflow-hidden bg-black ring-1 ring-white/15 shadow-[0_0_40px_rgba(255,255,255,0.35)]">
-            <img src="/noob-logo-circle.png" alt="NOOB" className="w-full h-full object-cover scale-[1.12]" draggable={false} />
-          </div>
-          {/* A few sparkles and dashes around the logo */}
-          <svg viewBox="0 0 24 24" className="absolute -top-2 -right-3 w-5 h-5 text-zinc-50 rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-          <svg viewBox="0 0 24 24" className="absolute -bottom-2 -left-3 w-4 h-4 text-cyan-300 -rotate-12" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></svg>
-          <span className="absolute -top-2 left-2 w-2.5 h-0.5 rounded-full bg-zinc-50 -rotate-45" />
-          <span className="absolute top-3 -left-3.5 w-2 h-0.5 rounded-full bg-zinc-50 rotate-12" />
-          <span className="absolute -bottom-1 -right-3 w-2.5 h-0.5 rounded-full bg-zinc-50 rotate-45" />
-          <svg viewBox="0 0 24 24" className="absolute -bottom-3 right-3 w-4 h-4 text-zinc-50/80 rotate-[15deg]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>
-        </div>
+        <NoobWordmark className="w-52 sm:w-60 mb-4" />
 
         {/* Tagline */}
         <div className="flex items-center gap-2 mt-3 text-xs sm:text-sm font-bold tracking-wide">

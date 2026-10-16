@@ -1,6 +1,6 @@
 // The app's server calls. Everything now runs on Supabase (see supabaseApi.ts and supabase/migrations);
 // this file only lists them under the names the screens have always imported.
-export type { SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry } from './supabaseApi';
+export type { AdminDailyOverview, AdminDailyDay, AdminStorageOverview, AdminUnusedScan, SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry } from './supabaseApi';
 export {
   e2ee,
   searchGifs,
@@ -141,6 +141,14 @@ export {
   fetchDailyChampions,
   deleteDailyChallengeEntry,
   adminSetDailyChallenge,
+  adminFetchDailyOverview,
+  adminFetchStorageOverview,
+  adminSetMediaCleanup,
+  adminScanUnusedMedia,
+  adminQueueUnusedMedia,
+  adminCancelMediaQueue,
+  adminRemoveDueMediaNow,
+  pokeMediaCleanup,
   adminAssignDailyChallengeWinners,
   fetchReelById,
   createReel,

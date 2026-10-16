@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Archive, Bookmark, Clock, Download, Heart, Image as ImageIcon, MessageSquare, Moon, Play, Trash2, X, Zap } from 'lucide-react';
+import { Archive, Bookmark, Clock, Download, Heart, Image as ImageIcon, MessageSquare, Moon, Play, Search, Trash2, X, Zap } from 'lucide-react';
 import { PageShell, Section, Row, ToggleRow, Choice, Note, Spinner, Empty, SmallButton, useFlash } from '../kit';
 import type { PageProps } from '../types';
 import { deleteComment, deleteStory, fetchInstantsArchive } from '../../../services/api';
 import type { InstantArchiveItem } from '../../../services/supabaseApi';
 import { fetchMyComments, fetchStoriesArchive, type ArchivedStory, type MyComment } from '../../../services/settingsApi';
-import { DAILY_LIMIT_CHOICES, setDevicePrefs, useDevicePrefs } from '../../../utils/devicePrefs';
+import { BREAK_CHOICES, DAILY_LIMIT_CHOICES, setDevicePrefs, useDevicePrefs } from '../../../utils/devicePrefs';
+import { clearSearches, forgetSearch, recentSearches } from '../../../utils/searchEngine';
 import { formatDuration, lastDays, secondsToday, useTimeSpentVersion } from '../../../utils/timeSpent';
 
 // Archive, Your activity (likes, comments, time) and Time management.
@@ -111,6 +112,9 @@ export const ActivityPage: React.FC<PageProps> = ({ ctx, go, back }) => (
     <Section title="Time">
       <Row icon={Clock} label="Time on NOOB" sub="How long you used the app" onClick={() => go('time')} />
     </Section>
+    <Section title="Searches">
+      <Row icon={Search} label="Recent searches" sub="What you searched for on this device" onClick={() => go('searches')} testId="activity-searches" />
+    </Section>
     <Section title="Your information">
       <Row icon={Download} label="Download your information" onClick={ctx.actions.openExport} />
     </Section>
@@ -178,6 +182,9 @@ export const TimePage: React.FC<PageProps> = ({ back }) => {
       <Section title="Daily limit" note="When you pass your limit a small reminder appears. It never locks the app.">
         <Choice value={String(prefs.dailyLimitMin)} onChange={(v) => setDevicePrefs({ dailyLimitMin: Number(v) })} options={DAILY_LIMIT_CHOICES.map((m) => ({ value: String(m), label: LIMIT_LABEL(m) }))} />
       </Section>
+      <Section title="Take a break" note="A small reminder after you have been on NOOB this long in a row. Leaving for five minutes counts as a break.">
+        <Choice value={String(prefs.breakEveryMin)} onChange={(v) => setDevicePrefs({ breakEveryMin: Number(v) })} options={BREAK_CHOICES.map((m) => ({ value: String(m), label: m === 0 ? 'No reminder' : `Every ${m} minutes` }))} />
+      </Section>
       <Section title="Sleep mode" note="During these hours a gentle “time to rest” reminder shows when you open NOOB.">
         <ToggleRow icon={Moon} label="Sleep mode" on={prefs.sleepMode.on} onChange={(on) => setDevicePrefs({ sleepMode: { ...prefs.sleepMode, on } })} testId="sleep-toggle" />
         {prefs.sleepMode.on && (
@@ -186,6 +193,24 @@ export const TimePage: React.FC<PageProps> = ({ back }) => {
             <label className="flex items-center gap-2">to <input type="time" value={prefs.sleepMode.to} onChange={(e) => e.target.value && setDevicePrefs({ sleepMode: { ...prefs.sleepMode, to: e.target.value } })} className="bg-zinc-900 border border-white/20 rounded-xl px-2 py-1.5 text-sm" /></label>
           </div>
         )}
+      </Section>
+    </PageShell>
+  );
+};
+
+export const SearchesPage: React.FC<PageProps> = ({ back }) => {
+  const [list, setList] = useState<string[]>(() => recentSearches());
+  return (
+    <PageShell title="Recent searches" onBack={back} right={list.length > 0 ? <SmallButton tone="danger" onClick={() => { clearSearches(); setList([]); }} testId="searches-clear">Clear all</SmallButton> : undefined}>
+      <Note>These are kept only on this device, so the search box can suggest them again. Nobody else sees them.</Note>
+      <Section>
+        {list.length === 0 ? <Empty icon={Search} title="No recent searches" text="What you search for in videos, posts and reels shows up here." /> : list.map((q) => (
+          <div key={q} className="flex items-center gap-3 px-4 py-3" data-testid="search-row">
+            <Search className="w-4 h-4 shrink-0 text-zinc-500" />
+            <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{q}</span>
+            <button type="button" aria-label={`Remove ${q}`} onClick={() => setList(forgetSearch(q))} className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
+          </div>
+        ))}
       </Section>
     </PageShell>
   );

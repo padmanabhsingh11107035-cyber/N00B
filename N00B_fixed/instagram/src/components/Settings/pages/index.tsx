@@ -26,6 +26,7 @@ export const PAGES: Record<string, React.LazyExoticComponent<PageComponent>> = {
   activity: page(() => import('./activity').then((m) => ({ default: m.ActivityPage }))),
   'activity-comments': page(() => import('./activity').then((m) => ({ default: m.MyCommentsPage }))),
   time: page(() => import('./activity').then((m) => ({ default: m.TimePage }))),
+  searches: page(() => import('./activity').then((m) => ({ default: m.SearchesPage }))),
   notifications: page(() => import('./interact').then((m) => ({ default: m.NotificationsPage }))),
   // who can see your content
   privacy: page(() => import('./account').then((m) => ({ default: m.PrivacyPage }))),

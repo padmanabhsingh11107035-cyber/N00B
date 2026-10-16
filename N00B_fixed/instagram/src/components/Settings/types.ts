@@ -18,6 +18,7 @@ export interface SettingsActions {
   openPro: () => void;
   openGetVerified: () => void;
   openSupport: () => void;
+  openSuggestionBox: () => void;                 // send feedback, an idea or a problem to the team
   openTerms: () => void;
   openPrivacyPolicy: () => void;
   openE2ee: () => void;

@@ -119,6 +119,7 @@ import { LazyVideo } from '../Common/LazyVideo';
 // every visit — dynamic import() here and in App.tsx (which also renders AdminControlModal) share
 // the same underlying chunk, so this doesn't double-load anything.
 const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
+const SuggestionBoxModal = React.lazy(() => import('../Support/SuggestionBoxModal').then((m) => ({ default: m.SuggestionBoxModal })));
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 const LazyFallback: React.FC = () => (
@@ -202,6 +203,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showE2eeModal, setShowE2eeModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showSuggestionBox, setShowSuggestionBox] = useState(false);
   const [showGetVerifiedModal, setShowGetVerifiedModal] = useState(false);
   const [showFullscreenAvatar, setShowFullscreenAvatar] = useState(false);
   const [showThreeDotsMenu, setShowThreeDotsMenu] = useState(false);
@@ -495,6 +497,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openPro: () => setShowProFeaturesModal(true),
       openGetVerified: () => setShowGetVerifiedModal(true),
       openSupport: () => setShowSupportModal(true),
+      openSuggestionBox: () => setShowSuggestionBox(true),
       openTerms: () => setShowTermsModal(true),
       openPrivacyPolicy: () => setShowPrivacyModal(true),
       openE2ee: () => setShowE2eeModal(true),
@@ -1725,6 +1728,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showSettingsHub && isOwnProfile && (
         <React.Suspense fallback={<LazyFallback />}>
           <SettingsHub ctx={settingsContext} onClose={closeSettingsHub} />
+        </React.Suspense>
+      )}
+
+      {showSuggestionBox && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <SuggestionBoxModal userId={currentUser.id} onClose={() => setShowSuggestionBox(false)} />
         </React.Suspense>
       )}
 

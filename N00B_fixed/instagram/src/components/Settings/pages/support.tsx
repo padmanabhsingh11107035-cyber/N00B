@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BadgeCheck, ChevronDown, FileText, Info, KeyRound, Lock, Package, ShieldCheck, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
+import { BadgeCheck, ChevronDown, FileText, Info, KeyRound, Lock, MessageSquarePlus, Package, ShieldCheck, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
 import { PageShell, Section, Row, Note, Spinner } from '../kit';
 import type { PageProps } from '../types';
 import { OrdersView } from '../../Store/OrdersView';
@@ -37,6 +37,7 @@ export const HelpPage: React.FC<PageProps> = ({ ctx, back }) => {
     <PageShell title="Help" onBack={back}>
       <Section title="Ask for help">
         <Row icon={Sparkles} label="NOOB support assistant" sub="Ask the AI helper, or talk to a person from the team" onClick={ctx.actions.openSupport} testId="help-assistant" />
+        <Row icon={MessageSquarePlus} label="Report a problem or send an idea" sub="Goes straight to the NOOB team" onClick={ctx.actions.openSuggestionBox} testId="help-feedback" />
       </Section>
       <Section title="Common questions">
         {FAQ.map(([q, a], i) => (

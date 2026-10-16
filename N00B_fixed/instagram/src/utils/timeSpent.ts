@@ -65,10 +65,23 @@ export function formatDuration(seconds: number): string {
 
 let timer: number | null = null;
 /** Starts counting (once). Returns a function that stops it. */
+// "In a row": time since the last break. Leaving NOOB for more than five minutes counts as a break, so does pressing OK on the reminder.
+const AWAY_MS = 5 * 60 * 1000;
+let sinceBreak = 0;
+let lastTickAt = 0;
+/** One tick of use: adds to today and to the time in a row. */
+export function tickUse(seconds: number, nowMs: number = Date.now()): void {
+  if (lastTickAt && nowMs - lastTickAt > AWAY_MS) sinceBreak = 0;
+  lastTickAt = nowMs;
+  sinceBreak += seconds;
+  addSeconds(seconds, new Date(nowMs));
+}
+export const continuousSeconds = (): number => sinceBreak;
+
 export function startTimeTracking(): () => void {
   if (typeof window === 'undefined') return () => undefined;
   if (timer === null) {
-    timer = window.setInterval(() => { if (document.visibilityState === 'visible') addSeconds(TICK_SECONDS); }, TICK_SECONDS * 1000);
+    timer = window.setInterval(() => { if (document.visibilityState === 'visible') tickUse(TICK_SECONDS); }, TICK_SECONDS * 1000);
   }
   return () => { if (timer !== null) { window.clearInterval(timer); timer = null; } };
 }
@@ -98,21 +111,23 @@ export function sleepNightKey(sleep: DevicePrefs['sleepMode'], now: Date = new D
   return dayKey(start);
 }
 
-export type Reminder = { kind: 'limit'; minutes: number } | { kind: 'sleep' } | null;
+export type Reminder = { kind: 'limit'; minutes: number } | { kind: 'sleep' } | { kind: 'break'; minutes: number } | null;
 
 /** Which reminder (if any) is due right now. Pure: the page asks again whenever the time spent changes. */
-export function dueReminder(prefs: DevicePrefs = getDevicePrefs(), now: Date = new Date(), state: RemindState = loadRemind(), spent: number = secondsToday()): Reminder {
+export function dueReminder(prefs: DevicePrefs = getDevicePrefs(), now: Date = new Date(), state: RemindState = loadRemind(), spent: number = secondsToday(), inARow: number = sinceBreak): Reminder {
   if (state.snoozeUntil && state.snoozeUntil > now.getTime()) return null;
   const night = sleepNightKey(prefs.sleepMode, now);
   if (night && state.sleepNight !== night) return { kind: 'sleep' };
   if (prefs.dailyLimitMin > 0 && spent >= prefs.dailyLimitMin * 60 && state.limitDay !== dayKey(now)) return { kind: 'limit', minutes: prefs.dailyLimitMin };
+  if (prefs.breakEveryMin > 0 && inARow >= prefs.breakEveryMin * 60) return { kind: 'break', minutes: prefs.breakEveryMin };
   return null;
 }
 
 /** "OK": not again today (limit) / tonight (sleep). */
 export function dismissReminder(r: NonNullable<Reminder>, now: Date = new Date()): void {
   const s = loadRemind();
-  if (r.kind === 'limit') s.limitDay = dayKey(now);
+  if (r.kind === 'break') sinceBreak = 0;
+  else if (r.kind === 'limit') s.limitDay = dayKey(now);
   else s.sleepNight = sleepNightKey(getDevicePrefs().sleepMode, now) || dayKey(now);
   saveRemind(s);
   emit();
@@ -127,4 +142,4 @@ export function snoozeReminder(minutes = 15, now: Date = new Date()): void {
 }
 
 /** For the tests: forget everything counted. */
-export function resetTimeSpentForTests(): void { days = {}; version++; }
+export function resetTimeSpentForTests(): void { days = {}; sinceBreak = 0; lastTickAt = 0; version++; }

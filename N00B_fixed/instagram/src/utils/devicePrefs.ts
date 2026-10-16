@@ -20,6 +20,7 @@ export interface DevicePrefs {
   openLinksInApp: boolean;
   suggestedAccounts: boolean;
   dailyLimitMin: number;                 // 0 = no reminder
+  breakEveryMin: number;                 // "take a break" reminder after this many minutes in a row, 0 = off
   sleepMode: { on: boolean; from: string; to: string };   // "HH:MM"
 }
 
@@ -34,6 +35,7 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   openLinksInApp: true,
   suggestedAccounts: true,
   dailyLimitMin: 0,
+  breakEveryMin: 0,
   sleepMode: { on: false, from: '23:00', to: '07:00' }
 };
 
@@ -41,6 +43,7 @@ const KEY = 'noob.devicePrefs.v1';
 const TEXT_SIZES: TextSize[] = ['small', 'default', 'large', 'xlarge'];
 const AUTOPLAY: AutoplayMode[] = ['always', 'wifi', 'never'];
 const LIMITS = [0, 15, 30, 45, 60, 90, 120, 180, 240];
+const BREAKS = [0, 10, 20, 30, 45, 60];
 const timeOk = (v: unknown): v is string => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 
 /** Cleans whatever was stored (older versions, hand-edited, damaged) into a complete, valid set of preferences. */
@@ -49,6 +52,7 @@ export function cleanDevicePrefs(raw: unknown): DevicePrefs {
   const d = DEFAULT_DEVICE_PREFS;
   const sm = (r.sleepMode && typeof r.sleepMode === 'object' ? r.sleepMode : {}) as Partial<DevicePrefs['sleepMode']>;
   const lim = Number(r.dailyLimitMin);
+  const brk = Number(r.breakEveryMin);
   return {
     reduceMotion: typeof r.reduceMotion === 'boolean' ? r.reduceMotion : d.reduceMotion,
     textSize: TEXT_SIZES.includes(r.textSize as TextSize) ? (r.textSize as TextSize) : d.textSize,
@@ -60,11 +64,13 @@ export function cleanDevicePrefs(raw: unknown): DevicePrefs {
     openLinksInApp: typeof r.openLinksInApp === 'boolean' ? r.openLinksInApp : d.openLinksInApp,
     suggestedAccounts: typeof r.suggestedAccounts === 'boolean' ? r.suggestedAccounts : d.suggestedAccounts,
     dailyLimitMin: LIMITS.includes(lim) ? lim : 0,
+    breakEveryMin: BREAKS.includes(brk) ? brk : 0,
     sleepMode: { on: sm.on === true, from: timeOk(sm.from) ? sm.from : d.sleepMode.from, to: timeOk(sm.to) ? sm.to : d.sleepMode.to }
   };
 }
 
 export const DAILY_LIMIT_CHOICES = LIMITS;
+export const BREAK_CHOICES = BREAKS;
 
 let current: DevicePrefs = DEFAULT_DEVICE_PREFS;
 const listeners = new Set<() => void>();

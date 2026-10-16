@@ -10,6 +10,7 @@ import { isNativeApp } from '../utils/siteUrl.ts';
 
 interface AppUpdaterPlugin {
   getInfo(): Promise<{ versionCode: number; versionName: string; canInstall: boolean }>;
+  getLatest(): Promise<{ build: number }>;
   downloadAndInstall(options: { url: string }): Promise<{ started?: boolean; needsPermission?: boolean }>;
   addListener(event: 'progress', cb: (p: { percent: number }) => void): Promise<{ remove: () => Promise<void> }>;
 }
@@ -52,7 +53,10 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
   let installed: number | null = null;
   let supported = true;
   try { installed = (await AppUpdater.getInfo()).versionCode || null; } catch { supported = false; }
-  const latest = await fetchLatestNativeBuild();
+  // the app asks for the newest build itself; the release page (which has a request limit per address) is only the second way
+  let latest: number | null = null;
+  try { latest = (await AppUpdater.getLatest()).build || null; } catch { /* an older app, or no connection */ }
+  if (!latest) latest = await fetchLatestNativeBuild();
   return { supported, installed, latest, state: nativeUpdateState(installed, latest) };
 }
 

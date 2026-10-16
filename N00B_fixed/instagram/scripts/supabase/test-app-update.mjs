@@ -41,9 +41,12 @@ check(/notifyListeners\("progress"/.test(java), 'it reports the download as it g
 const wf = read('../../.github/workflows/android-build.yml');
 check(/AppUpdaterPlugin\.java/.test(wf) && /REQUEST_INSTALL_PACKAGES/.test(wf) && /grep -q REQUEST_INSTALL_PACKAGES/.test(wf), 'the build adds the installer and the permission Android needs, and stops if the permission did not get in');
 check(/debug\.keystore/.test(wf) && fs.existsSync('android-overrides/debug.keystore'), 'every build is signed with the same key, so a new app file installs OVER the old one');
-check(/gh release upload android-latest NOOB\.apk --clobber/.test(wf) && /Native build: \$\{\{ github\.run_number \}\}/.test(wf) && /permissions:\s+contents: write/.test(wf), 'every build publishes the app file, and its build number, where the button looks');
+check(/gh release upload android-latest NOOB\.apk native\.json --clobber/.test(wf) && /Native build: \$\{\{ github\.run_number \}\}/.test(wf) && /permissions:\s+contents: write/.test(wf), 'every build publishes the app file, and its build number, where the button looks');
 check(/on:[\s\S]*?paths:\s+- 'N00B_fixed\/instagram\/android-overrides\/\*\*'\s+- 'N00B_fixed\/instagram\/capacitor\.config\.json'/.test(wf) && !/- 'N00B_fixed\/instagram\/\*\*'/.test(wf), 'a new app file is built only when something native changes (not for every website change)');
 check(/ANDROID_APK_URL = 'https:\/\/github\.com\/padmanabhsingh11107035-cyber\/N00B\/releases\/download\/android-latest\/NOOB\.apk'/.test(read('src/utils/appVersion.ts')), 'the website and the app point at the same app file');
+
+check(/public void getLatest\(/.test(java) && /android-latest\/native\.json/.test(java) && /json\.getLong\("build"\)/.test(java), 'the app looks up the newest build number itself, from a tiny file published next to the app file (no browser rule or request limit in the way)');
+check(/native\.json/.test(wf) && /gh release upload android-latest NOOB\.apk native\.json --clobber/.test(wf), 'every build publishes that file too');
 
 section('4. The button');
 const svc = read('src/services/nativeUpdate.ts');
@@ -53,9 +56,12 @@ check(/'needs-permission'/.test(svc) && /Allow NOOB to install apps/.test(svc) &
 const banner = read('src/components/Common/NativeUpdateBanner.tsx');
 check(/info\?\.state !== 'newer'\) return null/.test(banner) && /!u\.native/.test(banner) && /onClick=\{\(\) => void u\.install\(\)\}/.test(banner) && /animate-spin/.test(banner), 'in the Android app a bar with an Update button shows only when a newer app file exists, and shows the work at once');
 check(/\{currentUser && <NativeUpdateBanner \/>\}/.test(read('src/App.tsx')), 'it is part of the app');
+const svc2 = read('src/services/nativeUpdate.ts');
+check(/AppUpdater\.getLatest\(\)/.test(svc2) && /if \(!latest\) latest = await fetchLatestNativeBuild\(\)/.test(svc2), 'the app asks itself first and the GitHub release page only if that fails');
 const page = read('src/components/Settings/pages/update.tsx');
 check(/'update': UpdatePage|update: UpdatePage/.test(read('src/components/Settings/pages/index.tsx')) && /id: 'update'[^\n]*page: 'update'/.test(read('src/components/Settings/registry.ts')), 'Settings and activity has an "Update NOOB" row that opens the page');
 check(/Everyday updates/.test(page) && /You never have to update for those|arrive by themselves/.test(page) && /Update the app/.test(page) && /app\.install/.test(page) && /app\.percent/.test(page), 'the page keeps the two apart: everyday updates need nothing; an app file update has one button with a progress bar');
+check(/Your app is the newest one: there is no app file to install right now/.test(page) && /On iPhone, iPad and computers there is no app file to install/.test(page) && /Newest app/.test(page) && /build \$\{info\.installed\}/.test(page), 'a page with nothing to install says so plainly (which build you have, which is newest), and iPhone and computers are told there is no app file');
 check(/onClick=\{hardReload\}/.test(page) && /Update now/.test(page), 'on the website and the home-screen app "Update now" reloads to the newest version');
 
 console.log(`\n${passed} passed, ${failed} failed`);

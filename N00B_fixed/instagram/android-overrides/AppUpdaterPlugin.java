@@ -14,6 +14,9 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -35,6 +38,7 @@ public class AppUpdaterPlugin extends Plugin {
   private static final String ALLOWED_PREFIX = "https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/";
   private static final long MIN_BYTES = 1024 * 1024;           // a real app file is far bigger than this
   private static final long MAX_BYTES = 200L * 1024 * 1024;     // and far smaller than this
+  private static final String LATEST_INFO = ALLOWED_PREFIX + "android-latest/native.json";   // {"build": 163}, published next to the app file
   private volatile boolean busy = false;
 
   private boolean canInstall() {
@@ -54,6 +58,39 @@ public class AppUpdaterPlugin extends Plugin {
     } catch (Exception e) {
       call.reject("Could not read the app version.");
     }
+  }
+
+  /** The build number of the newest app file, read from a tiny file published with it. (Asked here, not by the web page, so no browser rule or request limit can get in the way.) */
+  @PluginMethod
+  public void getLatest(final PluginCall call) {
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        HttpURLConnection connection = null;
+        try {
+          connection = (HttpURLConnection) new URL(LATEST_INFO).openConnection();
+          connection.setConnectTimeout(15000);
+          connection.setReadTimeout(15000);
+          connection.setInstanceFollowRedirects(true);
+          connection.setUseCaches(false);
+          if (connection.getResponseCode() != 200) throw new Exception("No answer.");
+          InputStream in = connection.getInputStream();
+          ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+          byte[] buffer = new byte[2048];
+          int n;
+          while ((n = in.read(buffer)) != -1 && bytes.size() < 8192) bytes.write(buffer, 0, n);
+          in.close();
+          JSONObject json = new JSONObject(bytes.toString("UTF-8"));
+          JSObject out = new JSObject();
+          out.put("build", json.getLong("build"));
+          call.resolve(out);
+        } catch (Exception e) {
+          call.reject("Could not look up the newest app.");
+        } finally {
+          if (connection != null) connection.disconnect();
+        }
+      }
+    }).start();
   }
 
   @PluginMethod

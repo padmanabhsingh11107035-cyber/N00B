@@ -534,6 +534,34 @@ html[data-i18n-loading] body {
 @media (prefers-reduced-motion: no-preference) { .login-doodle { animation: login-bob 6.5s ease-in-out infinite; } }
 @media (max-width: 639px) { .login-doodle { transform: rotate(var(--r, 0deg)) scale(.8); } }
 
+/* The working phone on the sign-in page (components/Auth/LoginPhoneDemo.tsx): seven screens take turns, 3.4 s each (23.8 s for the whole round), moved by CSS alone.
+   --i is a screen's turn, --d a small delay inside it. People who ask for less motion get the first screen, standing still. */
+@keyframes demo-screen { 0% { opacity: 0; transform: translateX(12px); } 3% { opacity: 1; transform: none; } 13.5% { opacity: 1; transform: none; } 16.5% { opacity: 0; transform: translateX(-12px); } 100% { opacity: 0; } }
+.demo-screen { opacity: 0; animation: demo-screen 23.8s linear infinite both; animation-delay: calc(var(--i) * 3.4s); }
+.demo-at { animation-duration: 23.8s; animation-iteration-count: infinite; animation-fill-mode: both; animation-timing-function: ease-out; animation-delay: calc(var(--i) * 3.4s + var(--d, 0s)); }
+@keyframes demo-pop { 0% { opacity: 0; transform: scale(.6); } 1.5% { opacity: 1; transform: scale(1.06); } 2.5% { opacity: 1; transform: scale(1); } 100% { opacity: 1; transform: scale(1); } }
+.demo-pop { animation-name: demo-pop; }
+@keyframes demo-grow { 0% { transform: scaleX(0); } 13% { transform: scaleX(1); } 100% { transform: scaleX(1); } }
+.demo-grow { animation-name: demo-grow; animation-timing-function: linear; }
+@keyframes demo-dtap { 0%, 4% { opacity: 0; transform: scale(.3); } 6% { opacity: 1; transform: scale(1.15); } 8% { opacity: 1; transform: scale(1); } 11% { opacity: 0; transform: scale(1.35); } 100% { opacity: 0; } }
+.demo-dtap { opacity: 0; animation-name: demo-dtap; }
+@keyframes demo-like { 0% { transform: scale(1); } 1.5% { transform: scale(1.55); } 3% { transform: scale(1); } 100% { transform: scale(1); } }
+.demo-like { display: inline-block; animation-name: demo-like; }
+@keyframes demo-dot { 0%, 100% { transform: translateY(0); opacity: .4; } 50% { transform: translateY(-2px); opacity: 1; } }
+.demo-dot { display: block; width: 4px; height: 4px; border-radius: 9999px; background: rgba(255, 255, 255, .8); animation: demo-dot 1s ease-in-out infinite; }
+@keyframes demo-ring { 0% { transform: scale(.9); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+.demo-ring { opacity: .7; animation: demo-ring 1.4s ease-out infinite; }
+@keyframes demo-blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.demo-ring-dot { animation: demo-blink 1.2s ease-in-out infinite; }
+@keyframes demo-eq { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+.demo-eq { display: block; animation: demo-eq .9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .demo-screen { animation: none; opacity: 0; }
+  .demo-screen:first-child { opacity: 1; }
+  .demo-at, .demo-dot, .demo-ring, .demo-ring-dot, .demo-eq { animation: none; }
+  .demo-dtap { opacity: 0; }
+}
+
 /* NOOB AI's waking-up screen: slowly turning rings, a travelling shimmer, animated dots, a gentle fade for the changing line. */
 @keyframes noob-ring-turn { to { transform: rotate(360deg); } }
 @keyframes noob-shimmer-run { 0% { left: -35%; } 100% { left: 102%; } }

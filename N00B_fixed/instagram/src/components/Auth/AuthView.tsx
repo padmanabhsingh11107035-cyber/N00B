@@ -54,6 +54,7 @@ import { LoginDoodles } from './LoginDoodles';
 import { LoginBigDoodles } from './LoginBigDoodles';
 import { NoobWordmark } from '../Common/NoobWordmark';
 import { LoginMoreDoodles } from './LoginMoreDoodles';
+import { LoginPhoneDemo } from './LoginPhoneDemo';
 import { LanguagePicker } from '../Common/LanguagePicker';
 import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
@@ -959,20 +960,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           <span className="font-script text-sm sm:text-xl text-cyan-300/80 block mt-0.5 sm:mt-1 whitespace-nowrap">Make Friends ♡</span>
         </div>
 
-        {/* Left, mid: phone mockup with a "story" preview */}
-        <div className="hidden sm:block absolute top-[30%] left-[3%] w-28 -rotate-3">
-          <div className="rounded-[22px] border-2 border-white/15 bg-zinc-900/40 p-1.5 shadow-2xl">
-            <div className="rounded-2xl overflow-hidden aspect-[9/16] bg-gradient-to-b from-zinc-300/60 via-zinc-500/40 to-zinc-800/70 relative">
-              <div className="absolute top-1.5 left-1.5 w-4 h-4 rounded-full bg-white/20 border border-white/40" />
-              <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-white/70">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.8C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 20 12.5 17.5 16.65 12 21 12 21z" /></svg>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h12v16l-6-4-6 4V4z" /></svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Top-right: "Good Vibes Only" */}
         <div className="absolute top-[7%] right-[3%] sm:right-[6%] rotate-3 text-right">
           <span className="font-script text-base sm:text-2xl text-violet-300/80 leading-tight block whitespace-nowrap">Good Vibes<br />Only</span>
@@ -1014,6 +1001,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       <LoginDoodles />
       <LoginBigDoodles />
       <LoginMoreDoodles />
+      {/* the phone: a small working demo of the app (reels, chat, games, live rooms...) */}
+      <LoginPhoneDemo />
 
       {/* Install to Home Screen: available before logging in or signing up, on any device. Not installed yet = the first thing the eye
           finds (a glowing button with a pulsing ring, a sweeping shine, a bobbing arrow and a hand-drawn "get the app!" note, all still when the

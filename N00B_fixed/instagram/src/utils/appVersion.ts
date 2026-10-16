@@ -7,6 +7,7 @@
 // cache) and comparing tells this running instance whether it's stale.
 import { useEffect, useState } from 'react';
 import { hardReload } from './reloadApp.ts';
+import { isNativeApp, siteOrigin } from './siteUrl.ts';
 
 declare const __BUILD_ID__: string;
 
@@ -37,9 +38,25 @@ const isEditing = (): boolean => {
 const isMediaPlaying = (): boolean =>
   Array.from(document.querySelectorAll('video, audio')).some((m) => { const el = m as HTMLMediaElement; return !el.paused && !el.ended && el.readyState > 2; });
 
-async function fetchLatestBuildId(): Promise<string | null> {
+/** The version this copy of NOOB is. */
+export const currentBuildId = (): string => (typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : '');
+
+/** Where the newest Android app file is kept (published by .github/workflows/android-build.yml). */
+export const ANDROID_APK_URL = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/android-latest/NOOB.apk';
+
+/** Is this copy older than the newest one? (Build numbers are the time of the build.) null when it could not be found out. */
+export function updateState(current: string, latest: string | null | undefined): 'unknown' | 'newest' | 'newer' {
+  if (!current || !latest) return 'unknown';
+  const a = Number(current), b = Number(latest);
+  if (Number.isFinite(a) && Number.isFinite(b)) return b > a ? 'newer' : 'newest';
+  return latest === current ? 'newest' : 'newer';
+}
+
+/** Asks the website which version is the newest. The Android app (which carries its own copy of NOOB) asks the website by its full address. */
+export async function fetchLatestBuildId(): Promise<string | null> {
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+    const base = isNativeApp() ? siteOrigin() : '';
+    const res = await fetch(`${base}/version.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) return null;
     const data = await res.json();
     return typeof data?.buildId === 'string' ? data.buildId : null;

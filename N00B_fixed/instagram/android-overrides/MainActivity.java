@@ -12,6 +12,8 @@ public class MainActivity extends BridgeActivity {
     // picture in the recent-apps switcher. A website can not do this; only the app can. It is switched on BEFORE anything is drawn, so not even
     // the first frame (the chat list, a chat) can be captured.
     getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+    // "Update the app" (src/services/nativeUpdate.ts): downloads the newest app file and hands it to Android's installer. Plugins of our own are registered before the bridge starts.
+    registerPlugin(AppUpdaterPlugin.class);
     super.onCreate(savedInstanceState);
   }
 }

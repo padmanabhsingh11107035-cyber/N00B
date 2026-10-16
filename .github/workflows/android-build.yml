@@ -2,11 +2,17 @@ name: Build Android APK
 
 on:
   workflow_dispatch: {}
+  # The app is a window onto the live website (capacitor.config.json: server.url), so ordinary changes reach everybody as soon as the website is updated. A new app file is only
+  # needed when something NATIVE changes (these files); then it is built, and published for the "Update the app" button inside the app.
   push:
-    branches: [main]
+    branches: [main, supabase-migration]
     paths:
-      - 'N00B_fixed/instagram/**'
+      - 'N00B_fixed/instagram/android-overrides/**'
+      - 'N00B_fixed/instagram/capacitor.config.json'
       - '.github/workflows/android-build.yml'
+
+permissions:
+  contents: write      # to publish the newest app file as a release (the in-app "Update NOOB" page links to it)
 
 jobs:
   build-android:
@@ -70,8 +76,13 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
-      - name: Secure window (blocks screenshots and screen recording inside the app)
-        run: cp android-overrides/MainActivity.java android/app/src/main/java/com/noob/social/MainActivity.java
+      - name: Native parts (secure window, and the in-app "Update the app" installer)
+        run: |
+          cp android-overrides/MainActivity.java android/app/src/main/java/com/noob/social/MainActivity.java
+          cp android-overrides/AppUpdaterPlugin.java android/app/src/main/java/com/noob/social/AppUpdaterPlugin.java
+          # Android only lets an app start the installer when it says so in its manifest (the person still has to allow it once, and confirm each install)
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />#' android/app/src/main/AndroidManifest.xml
+          grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icon & splash screen from the NOOB logo
         # Installed here rather than as a committed devDependency: it pulls in
@@ -136,6 +147,13 @@ jobs:
             } >> android/app/build.gradle
           fi
 
+      # The same signing key on every build: Android only installs an app OVER an older copy when both were signed with the same key. Without this every build
+      # got a fresh random key, so nobody could update, they had to remove the old app first. (This is the standard "debug" key; the app file is for sideloading.)
+      - name: Use the fixed debug signing key
+        run: |
+          mkdir -p ~/.android
+          cp android-overrides/debug.keystore ~/.android/debug.keystore
+
       - name: Build debug APK (for sideloading / testing)
         working-directory: N00B_fixed/instagram/android
         run: ./gradlew assembleDebug --no-daemon
@@ -145,6 +163,19 @@ jobs:
         with:
           name: noob-debug-apk
           path: N00B_fixed/instagram/android/app/build/outputs/apk/debug/app-debug.apk
+
+      # The newest app file, at one fixed address, for the "Update NOOB" page inside the app:
+      # https://github.com/<repo>/releases/download/android-latest/NOOB.apk
+      - name: Publish the app file for the in-app update page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk NOOB.apk
+          if ! gh release view android-latest >/dev/null 2>&1; then
+            gh release create android-latest --target "${{ github.sha }}" --title "NOOB for Android (newest)" --notes "The newest NOOB app for Android."
+          fi
+          gh release edit android-latest --title "NOOB for Android (newest)" --notes "The newest NOOB app for Android. Native build: ${{ github.run_number }}. Built from commit ${GITHUB_SHA::7} on $(date -u +%Y-%m-%d). Open the file on your phone to install it over the old one."
+          gh release upload android-latest NOOB.apk --clobber
 
       - name: Build signed release AAB (for Play Store)
         working-directory: N00B_fixed/instagram/android

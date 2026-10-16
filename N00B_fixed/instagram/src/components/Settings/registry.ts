@@ -1,7 +1,7 @@
 import {
   Activity, AtSign, Archive, Ban, BarChart3, Bell, Bookmark, BadgeCheck, Briefcase, Calculator, Clock, Crown, Download, Eye, EyeOff, Globe, HeartOff,
   Hourglass, Image as ImageIcon, Info, Languages, LifeBuoy, Link2, Lock, LogOut, MessageCircle, MessageSquare, Package, Repeat2, ScanLine, ShieldCheck, ShieldAlert,
-  SlidersHorizontal, Smartphone, Sparkles, Star, UserCheck, UserCog, UserPlus, UserX, Video, Wallet, Accessibility, Share2, Users, VolumeX
+  RefreshCw, SlidersHorizontal, Smartphone, Sparkles, Star, UserCheck, UserCog, UserPlus, UserX, Video, Wallet, Accessibility, Share2, Users, VolumeX
 } from 'lucide-react';
 import type React from 'react';
 import type { SettingsActions, SettingsContext } from './types';
@@ -88,6 +88,7 @@ export const ROWS: RowDef[] = [
   { id: 'orders', section: 'Your orders and payments', label: 'Orders and payments', icon: Package, page: 'orders', keywords: 'shop orders wallet payment requests coupons points' },
 
   // ---------------------------------------------------------------- More info and support
+  { id: 'update', section: 'More info and support', label: 'Update NOOB', sub: 'Get the newest version', icon: RefreshCw, page: 'update', keywords: 'update upgrade new version latest refresh reload download apk android app install' },
   { id: 'help', section: 'More info and support', label: 'Help', icon: LifeBuoy, page: 'help', keywords: 'support faq questions contact report problem' },
   { id: 'assistant', section: 'More info and support', label: 'NOOB support assistant', sub: 'Ask the AI helper', icon: Sparkles, action: 'openSupport', keywords: 'ai support chat bot help' },
   { id: 'privacy-centre', section: 'More info and support', label: 'Privacy Centre', icon: ShieldCheck, page: 'privacy-centre', keywords: 'privacy policy terms encryption data checkup' },

@@ -89,6 +89,7 @@ import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
 import { TimeReminder } from './components/Settings/TimeReminder';
+import { NativeUpdateBanner } from './components/Common/NativeUpdateBanner';
 import { hardReload } from './utils/reloadApp';
 import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
 import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
@@ -2063,6 +2064,7 @@ export default function App() {
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
       <MiniToast />
       {currentUser && <TimeReminder />}
+      {currentUser && <NativeUpdateBanner />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
       <TeamJoinHost currentUser={currentUser} />

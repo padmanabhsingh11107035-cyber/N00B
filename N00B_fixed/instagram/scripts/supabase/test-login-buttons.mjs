@@ -12,7 +12,7 @@ const auth = read('src/components/Auth/AuthView.tsx');
 const doodles = read('src/components/Auth/ButtonDoodles.tsx');
 
 section('1. Continue with Apple');
-check((auth.match(/<SocialLoginButtons /g) || []).length === 2, 'the social buttons are on both the log-in and the sign-up form');
+check((auth.match(/<SocialLoginButtons /g) || []).length === 1, 'the social buttons are on the log-in form (creating an account is its own page, with a Back button to them)');
 check(/apple: \{\s*name: 'Apple'[^}]*solid: '#000000'/.test(social) && /force-white-text ring-1 ring-white\/60/.test(social), 'it is black with a white edge and white text');
 check(/dd-btn group relative overflow-hidden w-full py-2\.5 font-bold text-sm rounded-2xl/.test(social) && /button\(\{ id: 'apple', supabaseId: 'apple' \}/.test(social), 'it is built by the same code as Google / Facebook / Discord, so it has exactly their shape, size and finish');
 check(/apple: \{ left: appleLeft, right: appleRight, leftMore: appleLeftMore, rightMore: appleRightMore, tone: 'text-white' \}/.test(doodles) && !/AW = \{[^}]*#(?!fff)/i.test(doodles), 'it has its own doodles, all white');

@@ -12,14 +12,14 @@ const app = read('src/App.tsx');
 const css = read('src/index.css');
 
 section('1. The menu touches the left edge');
-const page = /<div className="(min-h-screen bg-black[^"]*)">/.exec(app)?.[1] || '';
+const page = /<div className="(min-h-screen bg-(?:black|page)[^"]*)">/.exec(app)?.[1] || '';
 check(/xl:justify-start/.test(page) && /xl:pl-0/.test(page), 'from 1280 px wide the page starts at the left edge (no centring, no left padding)', page);
 const side = /<aside className="(hidden xl:flex[^"]*)" data-testid="desktop-side-menu">/.exec(app)?.[1] || '';
 check(/xl:h-screen/.test(side) && /xl:top-0/.test(side) && /xl:-my-6/.test(side), 'the menu is as tall as the window and stuck to its top', side);
 check(/xl:border-r/.test(side) && /xl:overflow-y-auto/.test(side) && /2xl:w-\[272px\]/.test(side), 'it has a dividing line, scrolls when the window is short, and is wider on big screens');
 
 section('2. The feed and the people list share the rest');
-const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?\} xl:ml-auto bg-black/.exec(app)?.[0] || '';
+const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?\} xl:ml-auto bg-(?:black|page)/.exec(app)?.[0] || '';
 check(main.includes('xl:ml-auto') && /2xl:max-w-\[800px\] 3xl:max-w-\[880px\]/.test(main), 'the feed takes an equal share of the free space and grows on big screens (800 px, 880 px)');
 check(/2xl:max-w-5xl/.test(main), 'the chat page grows too');
 const people = /<aside className="(hidden lg:flex[^"]*)" data-testid="desktop-people-panel">/.exec(app)?.[1] || '';

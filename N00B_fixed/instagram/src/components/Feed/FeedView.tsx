@@ -46,6 +46,7 @@ import { preloadNoobStudy } from '../Study/StudyHost';
 import { preloadNoobDraw } from '../Draw/NoobDrawHost';
 import { Post, Reel, Story, User, AppNotification } from '../../types';
 import { StoryTray } from '../Stories/StoryTray';
+import { favouriteCount, isFavourite, isPostMuted, useFeedLists } from '../../services/settingsApi';
 import type { StoryTrayModel } from '../../utils/storyTray';
 import { PinnedFeedSection } from './PinnedFeedSection';
 import { usePinnedFeedItems, refreshPinnedFeed } from '../../services/pinnedFeed';
@@ -177,7 +178,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   initialPostId,
   onInitialPostIdHandled
 }) => {
-  const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following'>('foryou');
+  const [activeFeedFilter, setActiveFeedFilter] = useState<'foryou' | 'following' | 'favourites'>('foryou');
   const [showJoinUsModal, setShowJoinUsModal] = useState(false);
   const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
   const [watchVideoPost, setWatchVideoPost] = useState<Post | null>(null);
@@ -326,6 +327,15 @@ export const FeedView: React.FC<FeedViewProps> = ({
         p.hashtags.some((h) => h.toLowerCase().includes(activeCategory.toLowerCase()))
     );
   }
+
+  // Muted accounts (Settings and activity): their posts and reels do not show up here. Your own posts always do.
+  const listsVersion = useFeedLists();     // redraw when the muted / favourite lists change
+  // the Favourites tab only exists while there are favourites: if the last one is removed, go back to For You
+  useEffect(() => { if (activeFeedFilter === 'favourites' && favouriteCount() === 0) setActiveFeedFilter('foryou'); }, [listsVersion, activeFeedFilter]);
+  filteredPosts = filteredPosts.filter((p) => p.userId === currentUser.id || !isPostMuted(p.userId));
+
+  // Favourites: only posts from the accounts you marked as favourites.
+  if (activeFeedFilter === 'favourites') filteredPosts = filteredPosts.filter((p) => isFavourite(p.userId));
 
   // Following: only posts from the accounts you follow.
   if (activeFeedFilter === 'following') {
@@ -582,6 +592,19 @@ export const FeedView: React.FC<FeedViewProps> = ({
             >
               Following
             </button>
+            {favouriteCount() > 0 && (
+              <button
+                onClick={() => setActiveFeedFilter('favourites')}
+                data-testid="feed-favourites"
+                className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+                  activeFeedFilter === 'favourites'
+                    ? 'bg-rose-600 text-white shadow-sm font-bold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Favourites
+              </button>
+            )}
           </div>
         </div>
 
@@ -753,7 +776,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />
             <h3 className="text-sm font-bold text-white">No Posts in this feed</h3>
             <p className="text-xs text-zinc-400 mt-1">
-              {activeFeedFilter === 'following'
+              {activeFeedFilter === 'favourites'
+                ? 'Your favourites have not posted anything here yet.'
+                : activeFeedFilter === 'following'
                 ? (currentUser.followingIds || []).length === 0
                   ? 'Follow people to see their posts here.'
                   : 'The people you follow haven’t posted anything here yet.'

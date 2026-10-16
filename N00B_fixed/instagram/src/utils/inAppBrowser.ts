@@ -3,6 +3,7 @@
 // another site (they get a clear "Open in browser" card instead of an empty frame).
 import { useSyncExternalStore } from 'react';
 import { SITE_DOMAINS } from './siteUrl.ts';
+import { getDevicePrefs } from './devicePrefs.ts';
 
 // Sites that tell browsers "do not show me inside another site" (X-Frame-Options / frame-ancestors). A page cannot see that refusal, so the
 // well-known ones are listed here; anything else is tried, and every page keeps an "Open in browser" button.
@@ -68,6 +69,7 @@ export function useInAppPage(): string | null {
 // Listens for clicks on links anywhere in the app (once). Returns a function that stops listening.
 export function installLinkInterceptor(doc: Document = document): () => void {
   const onClick = (e: MouseEvent) => {
+    if (!getDevicePrefs().openLinksInApp) return;     // Settings and activity > App and website permissions: the person wants links to open in their browser
     const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
     if (!a) return;
     const open = shouldOpenInApp(

@@ -88,6 +88,9 @@ import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
 import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
+import { TimeReminder } from './components/Settings/TimeReminder';
+import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
+import { useDevicePrefs } from './utils/devicePrefs';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
@@ -302,20 +305,29 @@ export default function App() {
   // The tray's circles: the server's suggestions topped up with random people from the app's own list of users (a new random order each time the feed loads or
   // is refreshed, steady in between), then ordered with the stories (utils/storyTray.ts).
   const [traySeed, setTraySeed] = useState(() => Math.random());
+  // Muted accounts (Settings and activity) have no circle and their stories are not played; "Suggested accounts" off removes the plus-badge circles.
+  const feedListsVersion = useFeedLists();
+  const { suggestedAccounts } = useDevicePrefs();
+  const trayStories = useMemo(
+    () => stories.filter((st) => !st.userId || st.userId === currentUser?.id || !isStoryMuted(st.userId)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stories, currentUser?.id, feedListsVersion]
+  );
   const traySuggestions = useMemo(
-    () => topUpSuggestions(homeSuggestions, registeredUsers, {
+    () => (!suggestedAccounts ? [] : topUpSuggestions(homeSuggestions, registeredUsers, {
       meId: currentUser?.id ?? '',
       followingIds: new Set(currentUser?.followingIds ?? []),
       blockedIds: new Set(currentUser?.blockedUserIds ?? []),
       hiddenFromIds: new Set(currentUser?.hiddenFromIds ?? []),
       takenIds: new Set(stories.map((st) => st.userId).filter((x): x is string => !!x)),
       seed: traySeed
-    }),
-    [homeSuggestions, registeredUsers, currentUser?.id, currentUser?.followingIds, currentUser?.blockedUserIds, currentUser?.hiddenFromIds, stories, traySeed]
+    }).filter((sg) => !isStoryMuted(sg.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [homeSuggestions, registeredUsers, currentUser?.id, currentUser?.followingIds, currentUser?.blockedUserIds, currentUser?.hiddenFromIds, stories, traySeed, suggestedAccounts, feedListsVersion]
   );
   const storyTray = useMemo(
-    () => buildStoryTray(stories, traySuggestions, currentUser?.id ?? '', new Set(currentUser?.followingIds ?? []), ownSeenStoryIds),
-    [stories, traySuggestions, currentUser?.id, currentUser?.followingIds, ownSeenStoryIds]
+    () => buildStoryTray(trayStories, traySuggestions, currentUser?.id ?? '', new Set(currentUser?.followingIds ?? []), ownSeenStoryIds),
+    [trayStories, traySuggestions, currentUser?.id, currentUser?.followingIds, ownSeenStoryIds]
   );
   // A hashtag story sticker tap sets this, then switches to Explore — consumed once and cleared,
   // mirroring the existing autoOpenJoinTeam "arrive with a pending action" pattern below.
@@ -734,22 +746,40 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [currentUser?.id]);
 
-  // Announces this session as online (for the admin panel's live status) for as long as this tab/
-  // app stays open — Presence is per-connection, so it disappears on its own when the tab closes or
-  // the socket drops, with no cleanup needed beyond unsubscribing this one channel.
+  // The account's own settings and its muted / favourite lists belong to whoever is signed in: forget them when the account changes, read them for the new one.
+  useEffect(() => {
+    resetSettingsStore();
+    resetFeedLists();
+    if (!currentUser?.id) return;
+    void loadSettings(true);
+    void loadFeedLists();
+  }, [currentUser?.id]);
+
+  // Keeps this account's "last seen" moving while the tab/app stays open (the admin panel's last-seen column).
   useEffect(() => {
     if (!currentUser) return;
     // "Installed" means either a true native (Capacitor) wrapper OR a PWA added to the Home Screen
     // and launched standalone — Capacitor's own check alone misses that second, far more common case
     // (which is what showed as "web" for an account genuinely using the installed Home Screen app).
     const platform = (Capacitor.isNativePlatform() || isInstalled()) ? 'app' : 'web';
-    const stopPresence = startPresenceHeartbeat(currentUser.id, platform);
     const stopLastSeen = startLastSeenHeartbeat(platform);
-    return () => {
-      stopPresence();
-      stopLastSeen();
-    };
+    return () => stopLastSeen();
   }, [currentUser?.id]);
+
+  // Shows this session as online (the live status in chats and the admin panel) for as long as this tab/app stays open - Presence is per-connection, so it disappears on its
+  // own when the tab closes or the socket drops. When the person turned Activity status off (Settings and activity) it is sent as hidden. The choice is read first, so a hidden account is
+  // never shown for even a moment. If it cannot be read (offline, update not installed yet) the usual behaviour applies.
+  const activityStatusOn = useSetting('activity.status');
+  useEffect(() => {
+    if (!currentUser) return;
+    const platform = (Capacitor.isNativePlatform() || isInstalled()) ? 'app' : 'web';
+    let cancelled = false;
+    let stopPresence = () => {};
+    void loadSettings().then(() => {
+      if (!cancelled) stopPresence = startPresenceHeartbeat(currentUser.id, platform, !getSettings()['activity.status']);
+    });
+    return () => { cancelled = true; stopPresence(); };
+  }, [currentUser?.id, activityStatusOn]);
 
   // Prompt for contacts access (to suggest friends already on NOOB) once per
   // install, and only on the native app — there is no contacts permission to
@@ -2031,6 +2061,7 @@ export default function App() {
       {/* 0.6 Push notification soft-ask (website only, shown once per browser) */}
       {showPushPrompt && <PushNotificationPrompt onDone={() => setShowPushPrompt(false)} />}
       <MiniToast />
+      {currentUser && <TimeReminder />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
       <TeamJoinHost currentUser={currentUser} />

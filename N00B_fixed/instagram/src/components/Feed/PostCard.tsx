@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useDevicePrefs, shouldAutoplayVideo } from '../../utils/devicePrefs';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
@@ -32,6 +33,7 @@ import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
 import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
+import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { AvatarMedia } from '../Common/AvatarMedia';
@@ -84,6 +86,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   allUsers = [],
   onOpenVideoWatch
 }) => {
+  const devicePrefs = useDevicePrefs();
+  const videoMayAutoplay = shouldAutoplayVideo(devicePrefs);   // Settings > Media quality: Wi-Fi only / never / data saver
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
@@ -119,6 +123,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const isOwner = post.userId === currentUser.id || post.username === currentUser.username;
+  const hideOthersCounts = useSetting('likes.hideOthers');
+  const likeCountHidden = likeCountHiddenFor(post.isLikeCountHidden, post.userId, currentUser.id, hideOthersCounts);
   // may remove other people's content: the main admin, or an admin who was given the "moderate content" permission
   const isMasterAdmin = can(currentUser, 'moderate_content');
   const pinnedPosts = usePinnedFeedItems();
@@ -562,7 +568,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               muted
               playsInline
               preload="metadata"
-              autoPlay={isInView}
+              autoPlay={isInView && videoMayAutoplay}
               onPlay={(e) => setVideoUnmuted(!e.currentTarget.muted)}
               onPause={() => setVideoUnmuted(false)}
               onVolumeChange={(e) => setVideoUnmuted(!e.currentTarget.muted && !e.currentTarget.paused)}
@@ -943,7 +949,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
 
         {/* Like Counts */}
-        {!post.isLikeCountHidden && (
+        {!likeCountHidden && (
           <button
             onClick={() => setShowLikesSheet(true)}
             disabled={post.likesCount === 0}

@@ -98,7 +98,8 @@ const types = read('src/types.ts');
 check(/'noob_draw_ready'/.test(types), 'the app knows the new type');
 const prof = read('src/components/Profile/ProfileView.tsx');
 check(!/openNoobDraw/.test(prof) && !/NOOB Draw/.test(prof.split('Universal: Appearance')[0].split('Dropdown Menu')[1] || ''), 'NOOB Draw is gone from the Profile three-dots menu');
-check(/Profile finder using QR/.test(prof) && !/>\s*QR Scanner\s*</.test(prof) && /Profile finder using QR/.test(read('src/components/Profile/QrScannerPage.tsx')), 'the QR scanner is now called "Profile finder using QR" (menu and page)');
+const settingsRegistry = read('src/components/Settings/registry.ts');
+check(/Profile finder using QR/.test(settingsRegistry) && !/label: 'QR Scanner'/.test(settingsRegistry) && /Profile finder using QR/.test(read('src/components/Profile/QrScannerPage.tsx')), 'the QR scanner is now called "Profile finder using QR" (Settings and activity, and the page)');
 const feed = read('src/components/Feed/FeedView.tsx');
 check(/openNoobDraw\(\)/.test(feed), 'NOOB Draw is still reachable from the Home page menu');
 

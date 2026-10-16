@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { MovedNotice, movedNoticeBlocksApp } from './components/Common/MovedNotice.tsx';
 import './index.css';
 import { initTheme } from './utils/theme.ts';
+import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
 

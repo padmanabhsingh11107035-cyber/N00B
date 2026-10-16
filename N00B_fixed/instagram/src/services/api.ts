@@ -191,6 +191,7 @@ export {
   startPresenceHeartbeat,
   startLastSeenHeartbeat,
   subscribeToOnlinePresence,
+  looksOnline,
   updateChatSettings,
   endChat,
   submitChatReview,

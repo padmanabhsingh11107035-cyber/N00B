@@ -8,16 +8,12 @@
 :root[data-theme="light"] .group:hover .group-hover\:text-cyan-100:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-cyan-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-cyan-400:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
-:root[data-theme="light"] .group:hover .group-hover\:text-emerald-300:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
-:root[data-theme="light"] .group:hover .group-hover\:text-emerald-400:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-noob:not(.force-dark *):not(.media-dark *) { color: #0a0a0a !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-pink-400:not(.force-dark *):not(.media-dark *) { color: #be185d !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-purple-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-purple-400:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-red-400:not(.force-dark *):not(.media-dark *) { color: #b91c1c !important; }
 :root[data-theme="light"] .group:hover .group-hover\:text-sky-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
-:root[data-theme="light"] .group:hover .group-hover\:text-violet-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
-:root[data-theme="light"] .group:hover .group-hover\:text-violet-400:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .hover\:text-amber-300:hover:not(.force-dark *):not(.media-dark *) { color: #92400e !important; }
 :root[data-theme="light"] .hover\:text-amber-400:hover:not(.force-dark *):not(.media-dark *) { color: #b45309 !important; }
 :root[data-theme="light"] .hover\:text-blue-300:hover:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
@@ -88,7 +84,6 @@
 :root[data-theme="light"] .text-red-300\/80:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #b91c1c 80%, transparent) !important; }
 :root[data-theme="light"] .text-red-300\/90:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #b91c1c 90%, transparent) !important; }
 :root[data-theme="light"] .text-red-400:not(.force-dark *):not(.media-dark *) { color: #b91c1c !important; }
-:root[data-theme="light"] .text-red-400\/70:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #b91c1c 70%, transparent) !important; }
 :root[data-theme="light"] .text-red-400\/80:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #b91c1c 80%, transparent) !important; }
 :root[data-theme="light"] .text-red-400\/90:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #b91c1c 90%, transparent) !important; }
 :root[data-theme="light"] .text-rose-100:not(.force-dark *):not(.media-dark *) { color: #be123c !important; }

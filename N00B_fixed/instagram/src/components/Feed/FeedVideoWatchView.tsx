@@ -17,6 +17,7 @@ import {
   togglePostInPlaylist,
   createLongVideoPlaylist
 } from '../../services/api';
+import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { sendLike } from '../../utils/likeSync';
 import { LazyVideo } from '../Common/LazyVideo';
 
@@ -51,6 +52,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
 
   const videoSlide = activePost.slides.find((s) => s.mediaType === 'video') || activePost.slides[0];
   const isAdmin = isMainAdmin(currentUser);
+  const hideOthersCounts = useSetting('likes.hideOthers');
 
   useEffect(() => {
     let alive = true;
@@ -208,7 +210,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
               }`}
             >
               <Heart className={`w-3.5 h-3.5 ${activePost.isLiked ? 'fill-current' : ''}`} />
-              {!activePost.isLikeCountHidden && formatNoobPoints(activePost.likesCount)}
+              {!likeCountHiddenFor(activePost.isLikeCountHidden, activePost.userId, currentUser.id, hideOthersCounts) && formatNoobPoints(activePost.likesCount)}
             </button>
 
             <button

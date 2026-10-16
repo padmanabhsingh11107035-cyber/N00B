@@ -35,6 +35,7 @@ import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type 
 // shares the same chunk as App.tsx's own dynamic import() of this component.
 const LiveStreamView = React.lazy(() => import('../LiveStream/LiveStreamView').then((m) => ({ default: m.LiveStreamView })));
 import type { LiveStreamSummary } from '../../services/api';
+import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { sendLike } from '../../utils/likeSync';
 import {
   toggleLikeReel,
@@ -97,6 +98,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   onGoBack,
   onNavigateToProfile
 }) => {
+  const hideOthersCounts = useSetting('likes.hideOthers');
   const [currentIndex, setCurrentIndex] = useState(0);
   // Sound: on unless the person switched it off. `soundBlocked` = the browser refused sound (no real tap yet), so the reel plays silently and
   // "Tap for sound" shows until the next real tap (see src/utils/reelAudio.ts for why).
@@ -1017,7 +1019,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'fill-current' : ''}`} />
               <LikeReactionBurst emoji={reactionEmojiForCategory(currentReel.category)} burstKey={likeBurstKey} />
             </button>
-            {!currentReel.isLikeCountHidden && (
+            {!likeCountHiddenFor(currentReel.isLikeCountHidden, currentReel.userId, currentUser.id, hideOthersCounts) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();

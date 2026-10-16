@@ -156,8 +156,10 @@ import {
   fetchUserById,
   e2ee,
   subscribeToOnlinePresence,
+  looksOnline,
   type PresenceEntry
 } from '../../services/api';
+import { useSetting } from '../../services/settingsApi';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
@@ -356,7 +358,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // Real online/offline — a green dot only while the other person is actually connected right now
   // (Supabase Presence), never a stale/offline indicator.
   useEffect(() => subscribeToOnlinePresence(setOnlinePresence), []);
-  const isUserOnline = (userId: string) => !!onlinePresence[userId]?.length;
+  // Your own Activity status decides too: if you hide yours, you do not see the green dot on other people either.
+  const activityStatusOn = useSetting('activity.status');
+  const isUserOnline = (userId: string) => activityStatusOn && looksOnline(onlinePresence[userId]);
 
   useEffect(() => {
     onMobileViewChange?.(mobileView);

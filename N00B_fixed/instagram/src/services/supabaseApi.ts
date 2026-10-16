@@ -8,6 +8,7 @@ import type { PinnedFeedItem, Post, User, StatusNote, AppSettings, AppNotificati
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
+import { uploadImageSettings } from '../utils/devicePrefs';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
 import { mediaOrigin } from '../utils/siteUrl';
@@ -1506,7 +1507,7 @@ export async function uploadMediaFile(
   // Invisibly compress images/videos to reduce latency and bandwidth
   // Smaller pictures cost less data every single time they are shown: a profile picture is never displayed bigger than a phone screen
   // (640 px is plenty), and a post picture at 1440 px is sharp on any phone.
-  const optimizedFile = await compressMedia(file, folder === 'avatars' ? { maxSide: 640, quality: 0.82 } : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : { maxSide: 1440, quality: 0.8 });
+  const optimizedFile = await compressMedia(file, folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other'));   // Settings > Media quality
 
   if (!(await currentSession())) {
     if (folder === 'avatars') {
@@ -2834,7 +2835,11 @@ export async function fetchTypingUsers(chatId: string): Promise<User[]> {
 
 const PRESENCE_CHANNEL = 'presence:online-users';
 export type PresencePlatform = 'app' | 'web';
-export interface PresenceEntry { platform: PresencePlatform; online_at: string }
+// `hidden`: the person turned Activity status off. Everybody's app then shows them as offline; only the admin panel (which keeps the app running) still counts them.
+export interface PresenceEntry { platform: PresencePlatform; online_at: string; hidden?: boolean }
+
+/** Does this person look online to other people? (Not if every one of their connections has Activity status turned off.) */
+export const looksOnline = (entries: PresenceEntry[] | undefined): boolean => !!entries && entries.some((e) => !e.hidden);
 
 type PresenceHandle = {
   channel: ReturnType<typeof supabase.channel>;
@@ -2871,12 +2876,12 @@ function getPresenceChannel(selfKey?: string): PresenceHandle {
 // watching the admin panel. Supabase Presence is ephemeral and per-connection — nothing is written
 // to the database, and the entry disappears the moment this tab closes or the socket drops, so
 // "online" here always reflects a real live connection rather than a stale timestamp.
-export function startPresenceHeartbeat(userId: string, platform: PresencePlatform): () => void {
+export function startPresenceHeartbeat(userId: string, platform: PresencePlatform, hidden = false): () => void {
   try {
     const { channel, ready } = getPresenceChannel(userId);
     let cancelled = false;
     ready.then(() => {
-      if (!cancelled) channel.track({ platform, online_at: new Date().toISOString() }).catch(() => {});
+      if (!cancelled) channel.track({ platform, online_at: new Date().toISOString(), ...(hidden ? { hidden: true } : {}) }).catch(() => {});
     });
     return () => {
       cancelled = true;

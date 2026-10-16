@@ -11,10 +11,8 @@ import {
   Heart,
   Archive,
   Settings,
-  Shield,
   BarChart3,
   Lock,
-  Download,
   CheckCircle2,
   Edit3,
   ExternalLink,
@@ -32,22 +30,13 @@ import {
   Instagram,
   Youtube,
   Github,
-  LogOut,
   MoreVertical,
-  Info,
   Monitor,
-  Headphones,
-  FileText,
-  ShieldCheck,
-  ShieldAlert,
-  Sparkles,
-  HelpCircle,
   MessageCircle,
   UserX,
   Flag,
   ArrowLeft,
   Trash2,
-  Trophy,
   Share2,
   UserPlus,
   UserCheck,
@@ -56,24 +45,17 @@ import {
   Loader2,
   AlertCircle,
   Clock,
-  Calculator as CalculatorIcon,
-  ScanLine,
-  Zap,
-  Smartphone,
   EyeOff,
   Eye,
-  ToggleLeft,
-  ToggleRight,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
-import { Post, Reel, SavedCollection, User, AccountType, Story, StoryHighlight, LongVideo } from '../../types';
+import { Post, Reel, SavedCollection, User, Story, StoryHighlight, LongVideo } from '../../types';
 import { POST_FILTERS } from '../../data/mockData';
 import {
   fetchCollections,
   fetchLikedPosts,
   fetchArchivedPosts,
   fetchSavedPosts,
-  updateCurrentUser,
   acceptFollowRequest,
   declineFollowRequest,
   blockUser,
@@ -130,12 +112,14 @@ import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
 import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
+import type { SettingsContext } from '../Settings/types';
 import { LazyVideo } from '../Common/LazyVideo';
 
 // Lazy-loaded: large, rarely-opened screens pulled out of the main bundle rather than loaded on
 // every visit — dynamic import() here and in App.tsx (which also renders AdminControlModal) share
 // the same underlying chunk, so this doesn't double-load anything.
 const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
+const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 const LazyFallback: React.FC = () => (
   <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
@@ -212,7 +196,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
   const [archivedPosts, setArchivedPosts] = useState<Post[]>([]);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showSettingsHub, setShowSettingsHub] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showE2eeModal, setShowE2eeModal] = useState(false);
@@ -224,23 +208,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showAdminControlModal, setShowAdminControlModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
-  // Settings Modal States
-  const [accountTypeSetting, setAccountTypeSetting] = useState<AccountType>(currentUser.accountType || 'public');
-  const [businessCategorySetting, setBusinessCategorySetting] = useState(currentUser.businessCategory || 'Creator & Brand');
   const [followRequests, setFollowRequests] = useState<any[]>(currentUser.followRequests || []);
-  const [hideTaggedPhotos, setHideTaggedPhotos] = useState(currentUser.privacySettings?.hideTaggedPhotos ?? false);
-  const [autoAcceptFollowRequests, setAutoAcceptFollowRequests] = useState(currentUser.privacySettings?.autoAcceptFollowRequests ?? true);
-  const [blockedWords, setBlockedWords] = useState(currentUser.privacySettings?.blockedWords?.join(', ') || '');
-  const [pushFavoritesEnabled, setPushFavoritesEnabled] = useState(true);
-
-  // Change Password (Settings modal) — no current-password re-entry, since
-  // reaching this screen already requires the same authenticated session
-  // every other profile-field edit here trusts.
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [passwordChangeError, setPasswordChangeError] = useState('');
-  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Modals for Accounts & Statistics, Blocked Accounts, and Report
   const [showAccountsStatisticsModal, setShowAccountsStatisticsModal] = useState(false);
@@ -507,56 +475,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const handleSavePrivacySettings = async () => {
-    try {
-      const res = await updateCurrentUser({
-        accountType: accountTypeSetting,
-        isBusiness: accountTypeSetting === 'business',
-        businessCategory: accountTypeSetting === 'business' ? businessCategorySetting : undefined,
-        privacySettings: {
-          ...currentUser.privacySettings,
-          hideTaggedPhotos,
-          autoAcceptFollowRequests,
-          blockedWords: blockedWords.split(',').map((w) => w.trim()).filter(Boolean)
-        }
-      });
-      if (res && onUserUpdated) {
-        onUserUpdated(res);
-      }
-      setShowSettingsModal(false);
-      confetti({ particleCount: 35, spread: 50, origin: { y: 0.7 } });
-    } catch (err) {
-      console.error(err);
+  const closeSettingsHub = React.useCallback(() => setShowSettingsHub(false), []);
+  const settingsContext = useMemo<SettingsContext>(() => ({
+    currentUser,
+    allUsers,
+    onUserUpdated: (u) => onUserUpdated?.(u),
+    isStaff: isStaff(currentUser),
+    canLogout: !!onLogout,
+    canDeleteAccount: !!onDeleteMyAccount,
+    actions: {
+      editProfile: () => setShowEditProfileModal(true),
+      showProfileTab: (tab) => setActiveTab(tab),
+      openLanguagePicker: () => setShowLanguagePicker(true),
+      openTranslator: () => setShowTranslator(true),
+      openDevices: () => setShowDevices(true),
+      openInstall: () => setShowInstallPermissionsPage(true),
+      openBlocked: () => setShowBlockedAccountsModal(true),
+      openHideProfile: () => setShowHideProfileModal(true),
+      openPro: () => setShowProFeaturesModal(true),
+      openGetVerified: () => setShowGetVerifiedModal(true),
+      openSupport: () => setShowSupportModal(true),
+      openTerms: () => setShowTermsModal(true),
+      openPrivacyPolicy: () => setShowPrivacyModal(true),
+      openE2ee: () => setShowE2eeModal(true),
+      openWallet: () => setShowAccountsStatisticsModal(true),
+      openQrScanner: () => setShowQrScannerPage(true),
+      openCalculator: () => setShowCalculatorPage(true),
+      openFollowUs: () => setShowFollowUsModal(true),
+      openLiveAvatar: () => setShowLiveAvatarModal(true),
+      openAdmin: () => setShowAdminControlModal(true),
+      openSwitchAccount: () => setShowSwitchAccount(true),
+      openExport: () => {
+        const mine = (p: { userId?: string; username?: string }) => p.userId === currentUser.id || p.username === currentUser.username;
+        const newestFirst = (a: { createdAt: string }, b: { createdAt: string }) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
+        setExportText(buildDataExport(currentUser, posts.filter((p) => mine(p) && !p.isArchived).sort(newestFirst), reels.filter(mine).sort(newestFirst)));
+      },
+      openDeleteAccount: () => setShowDeleteAccountModal(true),
+      openProfessionalDashboard: () => { setShowSettingsHub(false); onOpenProfessionalDashboard(); },
+      openProfileQr: () => setShowProfileQrModal(true),
+      openAbout: () => { window.open('/about', '_blank', 'noopener'); },
+      logout: () => { setShowSettingsHub(false); onLogout?.(); },
+      close: closeSettingsHub
     }
-  };
-
-  const handleChangePassword = async () => {
-    setPasswordChangeError('');
-    setPasswordChangeSuccess(false);
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordChangeError('New password must be at least 6 characters.');
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setPasswordChangeError('Passwords do not match.');
-      return;
-    }
-    try {
-      setIsChangingPassword(true);
-      const res = await updateCurrentUser({ password: newPassword });
-      if (res && onUserUpdated) {
-        onUserUpdated(res);
-      }
-      setNewPassword('');
-      setConfirmNewPassword('');
-      setPasswordChangeSuccess(true);
-      setTimeout(() => setPasswordChangeSuccess(false), 4000);
-    } catch (err: any) {
-      setPasswordChangeError(err.message || 'Failed to update password. Please try again.');
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
+  }), [currentUser, allUsers, posts, reels, onUserUpdated, onLogout, onDeleteMyAccount, onOpenProfessionalDashboard, closeSettingsHub]);
 
   const handleProfileUpdated = (updatedUser: User) => {
     if (onUserUpdated) {
@@ -643,14 +604,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-9 h-9" ref={menuRef}>
           <button
-            onClick={() => setShowThreeDotsMenu(!showThreeDotsMenu)}
+            onClick={() => {
+              // Your own profile: the three dots open "Settings and activity" as a full page. Other people's profiles keep the small menu (block, hide, report, share).
+              if (isOwnProfile) { setShowThreeDotsMenu(false); setShowSettingsHub(true); } else setShowThreeDotsMenu(!showThreeDotsMenu);
+            }}
             className={`liquid-glass relative p-2 rounded-xl transition-all cursor-pointer ${
               showThreeDotsMenu
                 ? 'liquid-glass-btn-active text-noob'
                 : 'text-zinc-300 hover:text-white'
             }`}
-            title="Options & Settings"
-            aria-label="Options"
+            title={isOwnProfile ? 'Settings and activity' : 'Options'}
+            aria-label={isOwnProfile ? 'Settings and activity' : 'Options'}
+            data-testid="profile-three-dots"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
@@ -696,446 +661,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </button>
 
-              {/* Own account: signed-in devices and login history (with a way on to the chat encryption keys) */}
-              {isOwnProfile && (
-                <button
-                  onClick={() => {
-                    setShowThreeDotsMenu(false);
-                    setShowDevices(true);
-                  }}
-                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <KeyRound className="w-4 h-4 text-emerald-300" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">My devices</span>
-                    <span className="text-[10px] text-zinc-400 block truncate">Signed-in devices and login history</span>
-                  </div>
-                </button>
-              )}
-
-              {/* NOOB AI moved to the Feed page's hamburger ("NOOB") menu, alongside Daily NOOB,
-                  NOOB Rooms, Guess the Song, Shop NOOB and Live Lounge. */}
-
-              {/* Own account: Install and Permissions (add-to-home-screen + notifications) */}
-              {isOwnProfile && (
-                <button
-                  onClick={() => {
-                    setShowThreeDotsMenu(false);
-                    setShowInstallPermissionsPage(true);
-                  }}
-                  className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <Smartphone className="w-4 h-4 text-cyan-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
-                      Install and Permissions
-                    </span>
-                    <span className="text-[10px] text-zinc-400 block truncate">
-                      Add to Home Screen &amp; notifications
-                    </span>
-                  </div>
-                </button>
-              )}
-
-              {isOwnProfile ? (
-                <>
-                  {/* Option 1: Edit Profile */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowEditProfileModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Edit3 className="w-4 h-4 text-noob" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
-                        Edit Profile
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Update bio, photo, links &amp; details
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option 2: Settings & Privacy */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setAccountTypeSetting(currentUser.accountType || 'public');
-                      setShowSettingsModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Settings className="w-4 h-4 text-zinc-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-zinc-200 transition-colors">
-                        Account Settings &amp; Privacy
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Account type, filters &amp; notifications
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Wallet */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowAccountsStatisticsModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Trophy className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-amber-400 transition-colors">
-                        Wallet
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        NOOB Points, transactions &amp; badges
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Profile finder using QR — find someone by scanning their profile QR code */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowQrScannerPage(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <ScanLine className="w-4 h-4 text-noob" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
-                        Profile finder using QR
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Scan a profile QR code to find that profile
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Calculator */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowCalculatorPage(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <CalculatorIcon className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-emerald-400 transition-colors">
-                        Calculator
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        A quick, distraction-free calculator
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Shop NOOB and NOOB Live Lounge moved to the Feed page's hamburger ("NOOB") menu,
-                      alongside Daily NOOB and NOOB Rooms, so every one of these lives in one place. */}
-
-                  {/* Option: Follow Us On */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowFollowUsModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Instagram className="w-4 h-4 text-pink-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-pink-400 transition-colors">
-                        Follow Us On
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Instagram &amp; YouTube
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Unlock Pro Features */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowProFeaturesModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Sparkles className="w-4 h-4 text-violet-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-violet-400 transition-colors">
-                        Unlock Pro Features
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Subscriptions, perks &amp; exclusive access
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Live Profile Picture (NOOB Pro perk) */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowLiveAvatarModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Zap className="w-4 h-4 text-cyan-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-cyan-400 transition-colors">
-                        Live Profile Picture
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Animated avatars — NOOB Pro exclusive
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Blocked Accounts */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowBlockedAccountsModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <UserX className="w-4 h-4 text-red-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-red-400 transition-colors">
-                        Blocked Accounts
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Manage restricted &amp; blocked profiles
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option: Hide my profile from… */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowHideProfileModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <EyeOff className="w-4 h-4 text-violet-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-violet-300 transition-colors">
-                        Hide my profile from…
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        {(currentUser.hiddenFromIds || []).length > 0
-                          ? `Hidden from ${(currentUser.hiddenFromIds || []).length} ${(currentUser.hiddenFromIds || []).length === 1 ? 'person' : 'people'}`
-                          : 'Choose who can’t see your profile'}
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option 3: Admin Control Panel (the NOOB admin, and anyone the NOOB admin has given admin access to) */}
-                  {isStaff(currentUser) && (
-                    <button
-                      onClick={() => {
-                        setShowThreeDotsMenu(false);
-                        setShowAdminControlModal(true);
-                      }}
-                      className="w-full p-2.5 rounded-xl bg-noob/10 hover:bg-noob/20 border border-noob/40 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-noob/30 border border-noob/50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        <ShieldAlert className="w-4 h-4 text-noob" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-black text-noob block group-hover:text-white transition-colors">
-                          ⚡ NOOB Admin Panel
-                        </span>
-                        <span className="text-[10px] text-zinc-300 block truncate">
-                          Suspend accounts &amp; dispatch notifications
-                        </span>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Option 4: Get Verified */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowGetVerifiedModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <VerifiedBadge size="sm" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-zinc-200 transition-colors">
-                        Get Verified (Verified Badge)
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        {currentUser.isVerified ? 'Badge Active' : 'Hidden Coupon or NOOB Points'}
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option 5: Contact Customer Support */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowSupportModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Headphones className="w-4 h-4 text-noob" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
-                        Contact Customer Support
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Chatway AI &amp; Help Desk
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* About NOOB: the public page (noobsocials.com/about) that tells what NOOB is - a student-run app - and lists every feature */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      window.open('/about', '_blank', 'noopener');
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                    data-testid="open-about"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Info className="w-4 h-4 text-amber-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-amber-300 transition-colors">
-                        About NOOB
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Student-run &middot; every feature
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option 6: Terms and Conditions */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowTermsModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <FileText className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-blue-400 transition-colors">
-                        Terms and Conditions
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Community rules &amp; service terms
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* End-to-End Encryption: what is locked, what is not, and the limits */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowE2eeModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Lock className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-blue-400 transition-colors">
-                        End-to-End Encryption
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        How your private chats are locked
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option 7: Privacy Policy */}
-                  <button
-                    onClick={() => {
-                      setShowThreeDotsMenu(false);
-                      setShowPrivacyModal(true);
-                    }}
-                    className="w-full p-2.5 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <ShieldCheck className="w-4 h-4 text-purple-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-bold text-white block group-hover:text-purple-400 transition-colors">
-                        Privacy Policy
-                      </span>
-                      <span className="text-[10px] text-zinc-400 block truncate">
-                        Security &amp; data protection
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Option 8: Logout (at bottom) */}
-                  {onLogout && (
-                    <div className="pt-1 border-t border-zinc-800/80 space-y-1">
-                      <button
-                        onClick={() => {
-                          setShowThreeDotsMenu(false);
-                          onLogout();
-                        }}
-                        className="w-full p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-3 text-left transition-colors group cursor-pointer"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <LogOut className="w-4 h-4 text-red-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-red-400 block">
-                            Log Out of @{currentUser.username}
-                          </span>
-                          <span className="text-[10px] text-red-400/70 block truncate">
-                            Switch or exit session
-                          </span>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
                   {/* Actions for other user profiles */}
                   <button
                     onClick={() => {
@@ -1216,8 +741,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       </span>
                     </div>
                   </button>
-                </>
-              )}
             </div>
           )}
         </div>
@@ -2198,272 +1721,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         />
       )}
 
-      {/* 9. Settings & Privacy Master Modal */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-noob" />
-                <h3 className="text-sm font-bold text-white">Settings & Account Controls</h3>
-              </div>
-              <button onClick={() => setShowSettingsModal(false)} className="text-zinc-400 hover:text-white p-1 cursor-pointer">
-                ✕
-              </button>
-            </div>
-
-            {/* Account Type Selection */}
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-white block">Account Type Selection</span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAccountTypeSetting('public')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    accountTypeSetting === 'public'
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-zinc-800 bg-zinc-900'
-                  }`}
-                >
-                  <span className="text-sm block">🌐</span>
-                  <span className="text-xs font-bold text-white block mt-1">Public</span>
-                  <span className="text-[9px] text-zinc-400 block">Open visibility</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setAccountTypeSetting('private')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    accountTypeSetting === 'private'
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-zinc-800 bg-zinc-900'
-                  }`}
-                >
-                  <span className="text-sm block">🔒</span>
-                  <span className="text-xs font-bold text-white block mt-1">Private</span>
-                  <span className="text-[9px] text-zinc-400 block">Follow approval</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setAccountTypeSetting('business')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    accountTypeSetting === 'business'
-                      ? 'border-noob bg-emerald-500/10'
-                      : 'border-zinc-800 bg-zinc-900'
-                  }`}
-                >
-                  <span className="text-sm block">💼</span>
-                  <span className="text-xs font-bold text-white block mt-1">Business</span>
-                  <span className="text-[9px] text-zinc-400 block">Creator tools</span>
-                </button>
-              </div>
-            </div>
-
-            {accountTypeSetting === 'business' && (
-              <div className="p-3 bg-zinc-900 rounded-2xl border border-zinc-800 space-y-2">
-                <label className="text-xs font-bold text-zinc-300 block">Creator / Business Category</label>
-                <input
-                  type="text"
-                  value={businessCategorySetting}
-                  onChange={(e) => setBusinessCategorySetting(e.target.value)}
-                  placeholder="e.g. Gaming Creator, Digital Artist..."
-                  className="w-full bg-zinc-950 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none"
-                />
-              </div>
-            )}
-
-            {/* Privacy Controls */}
-            <div className="space-y-3 pt-2 border-t border-zinc-800">
-              <span className="text-xs font-bold text-white block">Privacy & Moderation</span>
-              <div>
-                <label className="text-xs text-zinc-400 block mb-1">Offensive Words Filter</label>
-                <input
-                  type="text"
-                  value={blockedWords}
-                  onChange={(e) => setBlockedWords(e.target.value)}
-                  className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none"
-                  placeholder="spam, bot, scam..."
-                />
-              </div>
-
-              <div className="space-y-2 text-xs text-zinc-300 pt-1">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span>Hide Tagged Photos from Profile</span>
-                  <input
-                    type="checkbox"
-                    checked={hideTaggedPhotos}
-                    onChange={(e) => setHideTaggedPhotos(e.target.checked)}
-                    className="accent-noob"
-                  />
-                </label>
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span>Push Notifications for Favorite Accounts</span>
-                  <input
-                    type="checkbox"
-                    checked={pushFavoritesEnabled}
-                    onChange={(e) => setPushFavoritesEnabled(e.target.checked)}
-                    className="accent-noob"
-                  />
-                </label>
-
-                {/* Only private accounts have follow requests, so only they see this switch (it is kept as it was for everyone else). */}
-                {accountTypeSetting === 'private' && (
-                  <button
-                    type="button"
-                    onClick={() => setAutoAcceptFollowRequests((v) => !v)}
-                    className="w-full flex items-center justify-between cursor-pointer pt-1"
-                  >
-                    <div className="text-left">
-                      <span className="block">Auto-Accept Follow Requests</span>
-                      <span className="text-[10px] text-zinc-500 block">
-                        Anyone who requests to follow you is accepted right away — you won't follow them back automatically.
-                      </span>
-                    </div>
-                    {autoAcceptFollowRequests ? (
-                      <ToggleRight className="w-8 h-8 text-noob shrink-0" />
-                    ) : (
-                      <ToggleLeft className="w-8 h-8 text-zinc-600 shrink-0" />
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions / Edit Profile & Log Out */}
-            <div className="pt-3 border-t border-zinc-800 space-y-2">
-              <span className="text-xs font-bold text-white block">Account Actions</span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsModal(false);
-                    setShowEditProfileModal(true);
-                  }}
-                  className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl border border-zinc-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer hover:border-noob/50 shadow-sm"
-                >
-                  <Edit3 className="w-4 h-4 text-noob" /> Edit Profile
-                </button>
-
-                {onLogout && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSettingsModal(false);
-                      onLogout();
-                    }}
-                    className="w-full py-2.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
-                  >
-                    <LogOut className="w-4 h-4 text-red-400" /> Log Out
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Change Password */}
-            <div className="pt-3 border-t border-zinc-800 space-y-2.5">
-              <span className="text-xs font-bold text-white block">Change Password</span>
-
-              {passwordChangeError && (
-                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-                  {passwordChangeError}
-                </div>
-              )}
-              {passwordChangeSuccess && (
-                <div className="p-2.5 rounded-xl bg-noob/10 border border-noob/20 text-xs text-noob">
-                  Password updated successfully!
-                </div>
-              )}
-
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password (min. 6 characters)"
-                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
-              />
-              <input
-                type="password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-                placeholder="Confirm new password"
-                className="w-full bg-zinc-900 text-xs text-white p-2.5 rounded-xl border border-zinc-800 outline-none focus:border-noob"
-              />
-              <button
-                type="button"
-                onClick={handleChangePassword}
-                disabled={isChangingPassword || !newPassword || !confirmNewPassword}
-                className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                {isChangingPassword ? 'Updating...' : 'Update Password'}
-              </button>
-            </div>
-
-            {/* Danger Zone */}
-            {onDeleteMyAccount && (
-              <div className="pt-3 border-t border-zinc-800 space-y-2">
-                <span className="text-xs font-bold text-red-400 block">Danger Zone</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsModal(false);
-                    setShowDeleteAccountModal(true);
-                  }}
-                  className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-red-500/10 text-red-400 rounded-xl border border-zinc-800 hover:border-red-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete My Account Permanently
-                </button>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  const mine = (p: { userId?: string; username?: string }) => p.userId === currentUser.id || p.username === currentUser.username;
-                  setExportText(
-                    buildDataExport(
-                      currentUser,
-                      posts.filter((p) => mine(p) && !p.isArchived).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)),
-                      reels.filter(mine).sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
-                    )
-                  );
-                }}
-                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-noob" /> Export Data
-              </button>
-
-              <button
-                onClick={handleSavePrivacySettings}
-                className="px-5 py-2 bg-noob hover:bg-noob/90 text-black font-extrabold text-xs rounded-xl shadow-md cursor-pointer"
-              >
-                Save Settings
-              </button>
-            </div>
-
-            {/* Legal & Policy Links */}
-            <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-[11px] text-zinc-400">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowTermsModal(true)}
-                  className="hover:text-white underline cursor-pointer"
-                >
-                  Terms & Conditions
-                </button>
-                <span>•</span>
-                <button
-                  onClick={() => setShowPrivacyModal(true)}
-                  className="hover:text-white underline cursor-pointer"
-                >
-                  Privacy Policy
-                </button>
-              </div>
-
-              <span className="text-[10px] text-zinc-500 font-mono">NOOB Hub</span>
-            </div>
-          </div>
-        </div>
+      {/* "Settings and activity": the full page the three dots open on your own profile. Every row either opens one of its own pages or one of the windows below. */}
+      {showSettingsHub && isOwnProfile && (
+        <React.Suspense fallback={<LazyFallback />}>
+          <SettingsHub ctx={settingsContext} onClose={closeSettingsHub} />
+        </React.Suspense>
       )}
 
       {showDeleteAccountModal && onDeleteMyAccount && (

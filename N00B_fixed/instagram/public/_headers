@@ -26,3 +26,17 @@
   Cache-Control: no-store
 /sw.js
   Cache-Control: no-cache
+
+# Every file in /assets has a fingerprint in its name (a changed file gets a new name), so it can be kept for a year without ever asking the server again. Without this the phone
+# asked the server about every one of the 30-odd files on every visit, which is a lot of waiting on a slow connection. The pictures of the app (brand, live pictures, stickers,
+# food) change rarely and are kept for a week.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/brand/*
+  Cache-Control: public, max-age=604800
+/live-avatars/*
+  Cache-Control: public, max-age=604800
+/draw-stickers/*
+  Cache-Control: public, max-age=604800
+/food-hero/*
+  Cache-Control: public, max-age=604800

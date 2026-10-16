@@ -49,7 +49,7 @@ for (const t of ['profile', 'explore', 'reels', 'videos', 'music', 'games', 'cha
 for (const v of ['ExploreView', 'ReelsView', 'GamesView', 'MusicHubView', 'ProfileView', 'HomeVideoFeedView', 'ChatView']) {
   check(new RegExp(`View: ${v}, preload: preload\\w+ \\} = lazyTab\\(`).test(app) && !new RegExp(`const ${v} = React\\.lazy`).test(app), `${v} uses lazyTab (no spinner flash), not plain React.lazy`);
 }
-check(/for \(const \[, preload\] of TAB_PRELOADS\)/.test(app) && /setTimeout\(async/.test(app), 'after sign-in they are fetched one after the other');
+check(/\.\.\.TAB_PRELOADS\.map\(\(\[, preload\]\) => preload\)/.test(app) && /void worker\(\); void worker\(\)/.test(app), 'after sign-in they are fetched quietly, two at a time');
 check(/onPressTab=\{\(tab\) =>[^}]*TAB_PRELOADS\.find/.test(app), 'touching a tab icon starts its download at once');
 const nav = fs.readFileSync('src/components/Navigation/FloatingNavBar.tsx', 'utf8');
 check(/onPointerDown=/.test(nav) && /onPressTab\?\.\(/.test(nav), 'the bar reports a finger touching an icon');

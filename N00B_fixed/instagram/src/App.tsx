@@ -92,6 +92,7 @@ import { TimeReminder } from './components/Settings/TimeReminder';
 import { NativeUpdateBanner } from './components/Common/NativeUpdateBanner';
 import { AndroidAppPrompt } from './components/Common/AndroidAppPrompt';
 import { hardReload } from './utils/reloadApp';
+import { preloadStoryPictures } from './utils/preloadStoryMedia';
 import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
 import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
 import { useDevicePrefs } from './utils/devicePrefs';
@@ -689,6 +690,22 @@ export default function App() {
     const timer = window.setTimeout(() => { void worker(); void worker(); }, 600);
     return () => { stopped = true; window.clearTimeout(timer); };
   }, [currentUser?.id]);
+
+  // Tapping a circle in the tray shows the story at once: the story screen itself and the first picture of each of the first circles are fetched quietly beforehand
+  // (the viewer then also fetches what comes next). Skipped when the phone is set to save data.
+  useEffect(() => {
+    if (!currentUser || (navigator as any).connection?.saveData) return;
+    const timer = window.setTimeout(() => { void import('./components/Stories/StoryViewerModal').catch(() => undefined); }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [currentUser?.id]);
+  useEffect(() => {
+    if (!currentUser || (navigator as any).connection?.saveData) return;
+    const list = storyTray.viewerStories;
+    const starts = [storyTray.own.hasStory ? storyTray.own.startIndex : -1, ...storyTray.items.slice(0, 10).map((it) => it.startIndex)].filter((i) => i >= 0);
+    if (!starts.length) return;
+    const timer = window.setTimeout(() => preloadStoryPictures(starts.flatMap((i) => [list[i]?.mediaUrl, list[i + 1]?.mediaUrl])), 700);
+    return () => window.clearTimeout(timer);
+  }, [storyTray, currentUser?.id]);
 
   // Links to other websites open inside NOOB, under a bar that says NOOB (utils/inAppBrowser.ts), like Instagram does.
   useEffect(() => installLinkInterceptor(), []);

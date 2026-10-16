@@ -16,6 +16,8 @@ import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
 import { holdSongs } from '../../utils/songSound';
 import { funShareUrl } from '../../utils/funRoutes';
+import { preloadStoryPictures, isStoryPictureLoaded } from '../../utils/preloadStoryMedia';
+import { BurgerSmall } from '../Common/BurgerLoading';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -201,13 +203,18 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     };
   }, [isHighlight, story?.id]);
 
-  // Preload the next story's media so advancing to it is instant instead of showing a blank/
-  // loading frame while the browser only just starts fetching it.
+  // The pictures of the next stories (this person's, then the next person's) and the one before are fetched ahead of time, so moving on shows the picture at once.
   useEffect(() => {
-    if (!nextStory?.mediaUrl) return;
-    const img = new Image();
-    img.src = nextStory.mediaUrl;
-  }, [nextStory?.mediaUrl]);
+    preloadStoryPictures([
+      ...stories.slice(currentIndex + 1, currentIndex + 5).map((s) => s.mediaUrl),
+      stories[currentIndex - 1]?.mediaUrl
+    ]);
+  }, [currentIndex, stories]);
+
+  // The story's timer only runs once its picture is there (before, it ran while the screen was still blank, so a slow picture ate half of the time), and the picture
+  // belongs to ONE story (keyed by its id): moving to the next person never keeps showing the previous person's picture while the new one comes in.
+  const [readyStoryId, setReadyStoryId] = useState<string | null>(null);
+  const mediaReady = !!story && (readyStoryId === story.id || isStoryPictureLoaded(story.mediaUrl));
 
   // Same prefetch-then-cache pattern as the Reels profile-tap fix: the author's card is fetched
   // in the background for the current and next story, so tapping the avatar/username navigates
@@ -259,7 +266,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   }, [isPaused]);
 
   useEffect(() => {
-    if (isPaused || isCommentFocused || isStickerFocused || openQuestionResultsKey !== null || !story || showViewersSheet || showStoryOptionsMenu) return;
+    if (isPaused || isCommentFocused || isStickerFocused || openQuestionResultsKey !== null || !story || !mediaReady || showViewersSheet || showStoryOptionsMenu) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -277,7 +284,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isPaused, isCommentFocused, isStickerFocused, openQuestionResultsKey, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
+  }, [isPaused, isCommentFocused, isStickerFocused, openQuestionResultsKey, currentIndex, stories.length, onClose, story, mediaReady, showViewersSheet, showStoryOptionsMenu]);
 
   // On a computer: A / ← = previous story, D / → = next story (like tapping or swiping on a phone), Esc closes.
   // The one key listener calls the latest handlers through this ref (they are defined below).
@@ -575,14 +582,23 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         {/* Story Media */}
         <div className="relative w-full h-full flex items-center justify-center bg-black" style={{ containerType: 'inline-size' }}>
           <img
+            key={story.id}
+            ref={(el) => { if (el && el.complete && el.naturalWidth > 0 && readyStoryId !== story.id) setReadyStoryId(story.id); }}
             src={story.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
             alt="Story content"
             className="w-full h-full object-contain"
             referrerPolicy="no-referrer"
+            fetchPriority="high"
+            decoding="async"
+            onLoad={() => setReadyStoryId(story.id)}
+            onError={() => setReadyStoryId(story.id)}
           />
+          {!mediaReady && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none" data-testid="story-loading"><BurgerSmall /></div>
+          )}
 
           {/* Interactive Stickers Overlay */}
-          {story.stickers?.map((sticker, idx) => {
+          {mediaReady && story.stickers?.map((sticker, idx) => {
             // Shared position/size/rotation for every layer type. `x` was previously ignored
             // (every sticker forced to left: 50%) — safe to switch on, since every sticker ever
             // saved before this used x: 50 anyway.

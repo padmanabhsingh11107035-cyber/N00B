@@ -457,13 +457,13 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
       {/* 2. Category & Section Switcher */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-2xl border border-white/5 shrink-0">
+        <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-2xl border border-white/5 shrink-0 w-max min-w-full">
           <button
             onClick={() => {
               setActiveTab('posts');
               setVisibleCount(ITEMS_PER_PAGE);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 justify-center whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'posts'
                 ? 'bg-noob text-black shadow-md shadow-noob/20'
                 : 'text-zinc-400 hover:text-white'
@@ -481,7 +481,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               setActiveTab('users');
               setVisibleCount(ITEMS_PER_PAGE);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 justify-center whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-noob text-black shadow-md shadow-noob/20'
                 : 'text-zinc-400 hover:text-white'
@@ -496,7 +496,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               setActiveTab('reels');
               setVisibleCount(ITEMS_PER_PAGE);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 justify-center whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'reels'
                 ? 'bg-noob text-black shadow-md shadow-noob/20'
                 : 'text-zinc-400 hover:text-white'

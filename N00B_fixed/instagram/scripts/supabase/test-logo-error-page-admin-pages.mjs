@@ -38,7 +38,8 @@ check(/<NoobWordmark className="w-44 sm:w-52" \/>/.test(boundary), 'the NOOB let
 check(/font-script absolute -top-5 -left-2 text-2xl[^"]*">oops!/.test(boundary) && />NO WORRIES<\/span>/.test(boundary), 'a hand-written "oops!" and a "NO WORRIES" sticker like the ones on the sign-in page');
 check(/border border-dashed border-white\/20/.test(boundary) && /repeating-linear-gradient\(135deg/.test(boundary), 'a stitched dashed card and a striped pill button, as on the sign-in page');
 check(/Something went wrong/.test(boundary) && /Your account and data are safe — just reload to continue\./.test(boundary) && /Reload NOOB/.test(boundary), 'the same words as before');
-check(/this\.props\.showErrorDetails && this\.state\.errorMessage/.test(boundary) && /if \(this\.props\.fallback\) \{\s*return this\.props\.fallback;/.test(boundary), 'the optional error details and the scoped fallback still work');
+check(!/text-red-400|errorMessage\}/.test(boundary) && /console\.error\('Uncaught render error:', error, info\.componentStack\)/.test(boundary) && /if \(this\.props\.fallback\) \{\s*return this\.props\.fallback;/.test(boundary), 'no red technical message on the reload page (the error goes to the console instead), and the scoped fallback still works');
+check(/flex-1 justify-center whitespace-nowrap px-3 py-1\.5/.test(read('src/components/Explore/ExploreView.tsx')) && /shrink-0 w-max min-w-full/.test(read('src/components/Explore/ExploreView.tsx')), 'Explore\'s Post / Suggested users / Reel switcher fills the whole width, each part sharing it equally');
 check(/onClick=\{this\.handleReload\}/.test(boundary) && /window\.location\.reload\(\)/.test(boundary), 'Reload still reloads');
 
 section('3. The admin pages');

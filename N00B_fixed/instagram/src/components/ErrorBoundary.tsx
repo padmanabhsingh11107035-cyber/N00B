@@ -10,10 +10,8 @@ interface ErrorBoundaryProps {
   // of the app (nav, other tabs) stays usable instead of the whole screen
   // going down over a bug in a single view.
   fallback?: React.ReactNode;
-  // Shows the real caught error's message under the generic text — opt-in (default off, so the
-  // top-level app-wide boundary's wording is unchanged) for newer/less-proven screens, so if one of
-  // them does crash the next report comes with the actual error instead of this needing another
-  // round of guessing from a report of just "it crashed".
+  // Kept so the places that pass it keep compiling. The reload page never shows the technical message to a person (it is not something to read on a phone); the real error is
+  // written to the console (componentDidCatch below), where it can be found when something is reported.
   showErrorDetails?: boolean;
 }
 
@@ -73,11 +71,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 <p className="relative text-zinc-300 text-sm leading-relaxed">
                   This screen ran into an unexpected error. Your account and data are safe — just reload to continue.
                 </p>
-                {this.props.showErrorDetails && this.state.errorMessage && (
-                  <p className="relative text-red-400 text-[11px] font-mono break-words bg-red-500/10 border border-dashed border-red-500/30 rounded-xl p-2.5 text-left">
-                    {this.state.errorMessage}
-                  </p>
-                )}
                 <button
                   onClick={this.handleReload}
                   style={{ background: 'linear-gradient(100deg, var(--color-noob) 0%, var(--color-noob-strong) 100%)', color: 'var(--on-accent)' }}

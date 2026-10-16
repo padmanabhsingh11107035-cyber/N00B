@@ -27,6 +27,8 @@ check(/og:image" content="https:\/\/noobsocials\.com\/brand\/og-card\.png"/.test
 const g = ld(html)['@graph'];
 const org = g.find((x) => x['@type'] === 'Organization'), site = g.find((x) => x['@type'] === 'WebSite'), app = g.find((x) => x['@type'] === 'WebApplication');
 check(org && org.name === 'NOOB Socials' && org.alternateName.includes('noobsocials') && org.alternateName.includes('NOOB') && /students/.test(org.description), 'structured data: the organisation is "NOOB Socials", also known as NOOB / noobsocials, run by students');
+check(org.sameAs.includes('https://www.instagram.com/nooob.xyz') && !/[?&]utm_|vrfl/.test(JSON.stringify(org.sameAs)), 'structured data: our official Instagram is linked to the organisation (clean address, no tracking)');
+check(org.alternateName.includes('noob socials') && site.alternateName.includes('noob socials'), 'the spaced spelling "noob socials" is a known name too');
 check(site && site.name === 'NOOB Socials' && site.alternateName.includes('noobsocials') && site.url === 'https://noobsocials.com/', 'structured data: the site name search results should show');
 check(app && app.applicationCategory === 'SocialNetworkingApplication' && app.offers.price === '0' && app.featureList.length >= 8, 'structured data: a free social app with its list of features');
 check(app.featureList.some((f) => /Ludo/.test(f)) && app.featureList.some((f) => /NOOB Study/.test(f)) && app.featureList.some((f) => /Daily NOOB/.test(f)), '... that names the real features');
@@ -41,6 +43,7 @@ check(aboutLd.some((x) => x['@type'] === 'AboutPage') && aboutLd.some((x) => x['
 for (const feature of ['Reels', 'Stories', 'Voice and video calls', 'Ludo', 'Chess', 'Monopoly', 'Guess the Song', 'Live streaming', 'NOOB Rooms', 'Daily NOOB', 'Anonymous Messages', 'Ask Me Anything', 'This or That', 'Mood Status', 'public polls', 'NOOB AI', 'NOOB Study', 'NOOB Draw', 'Shop NOOB', 'Food Stall', 'NOOB Points', 'NOOB Pro', 'Suggestion Box', 'end-to-end encrypted']) {
   check(new RegExp(feature, 'i').test(about), `lists ${feature}`);
 }
+check(/href="https:\/\/www\.instagram\.com\/nooob\.xyz"/.test(about) && !/utm_source|vrfl/.test(about), 'the About page links to the Instagram, without tracking codes');
 check(/href="\/\?join=team"/.test(about) && /href="\/privacy"/.test(about) && /href="\/terms"/.test(about) && /href="\/data-deletion"/.test(about), 'links to joining the team, privacy, terms and deleting your data');
 check(!/<script(?![^>]*ld\+json)[^>]*>/.test(about) && /<style>/.test(about), 'it needs no scripts (fast, and allowed by the site\'s security rules)');
 check(fs.existsSync('public/brand/noob-wordmark.png'), 'its logo file exists');

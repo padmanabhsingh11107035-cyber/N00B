@@ -1619,6 +1619,8 @@ export interface StoryQuestionAnswer {
   avatar: string;
   answer: string;
   createdAt: string;
+  /** The question was made anonymous: the server sent no name and no picture. */
+  anonymous?: boolean;
 }
 
 export async function answerStoryQuestion(storyId: string, stickerIndex: number, answer: string): Promise<{ success: boolean; error?: string }> {
@@ -1630,7 +1632,17 @@ export async function answerStoryQuestion(storyId: string, stickerIndex: number,
 }
 
 export async function fetchStoryQuestionResults(storyId: string): Promise<Record<string, StoryQuestionAnswer[]>> {
-  try { return (await rpc<Record<string, StoryQuestionAnswer[]>>('story_question_results', { p_story: storyId })) || {}; } catch { return {}; }
+  try {
+    // Newer servers answer { position: { anonymous, answers: [...] } }, older ones { position: [...] }: both are understood.
+    const raw = (await rpc<Record<string, any>>('story_question_results', { p_story: storyId })) || {};
+    const out: Record<string, StoryQuestionAnswer[]> = {};
+    for (const [pos, value] of Object.entries(raw)) {
+      if (Array.isArray(value)) { out[pos] = value; continue; }
+      const anonymous = !!value?.anonymous;
+      out[pos] = (Array.isArray(value?.answers) ? value.answers : []).map((a: StoryQuestionAnswer) => ({ ...a, anonymous }));
+    }
+    return out;
+  } catch { return {}; }
 }
 
 // Today's real comments/likes for one story, by id, regardless of whether it's still in the live

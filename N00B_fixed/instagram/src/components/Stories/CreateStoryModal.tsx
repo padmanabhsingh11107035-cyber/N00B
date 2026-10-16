@@ -89,6 +89,8 @@ interface CountdownLayer {
 interface QuestionLayer {
   id: string;
   prompt: string;
+  /** Answers arrive without a name or a picture (the server leaves them out). */
+  anonymous: boolean;
   x: number;
   y: number;
   width: number;
@@ -467,14 +469,17 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [questionLayers, setQuestionLayers] = useState<QuestionLayer[]>([]);
   const [questionEditorId, setQuestionEditorId] = useState<string | 'new' | null>(null);
   const [draftQuestionPrompt, setDraftQuestionPrompt] = useState('');
+  const [draftQuestionAnonymous, setDraftQuestionAnonymous] = useState(true);
 
   const openNewQuestionLayer = () => {
     setDraftQuestionPrompt('');
+    setDraftQuestionAnonymous(true);
     setQuestionEditorId('new');
   };
 
   const openEditQuestionLayer = (layer: QuestionLayer) => {
     setDraftQuestionPrompt(layer.prompt);
+    setDraftQuestionAnonymous(layer.anonymous);
     setQuestionEditorId(layer.id);
   };
 
@@ -488,11 +493,11 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
       const id = `question-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       setQuestionLayers((prev) => [
         ...prev,
-        { id, prompt, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 62, rotation: 0 }
+        { id, prompt, anonymous: draftQuestionAnonymous, x: 50, y: 40 + Math.min(prev.length * 6, 24), width: 62, rotation: 0 }
       ]);
       setActiveLayerId(id);
     } else if (questionEditorId) {
-      setQuestionLayers((prev) => prev.map((q) => (q.id === questionEditorId ? { ...q, prompt } : q)));
+      setQuestionLayers((prev) => prev.map((q) => (q.id === questionEditorId ? { ...q, prompt, anonymous: draftQuestionAnonymous } : q)));
       setActiveLayerId(questionEditorId);
     }
     setQuestionEditorId(null);
@@ -677,7 +682,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
       questionLayers.forEach((layer) => {
         mainStickers.push({
           type: 'question',
-          data: { prompt: layer.prompt },
+          data: { prompt: layer.prompt, ...(layer.anonymous ? { anonymous: true } : {}) },
           x: layer.x,
           y: layer.y,
           width: layer.width,
@@ -1687,6 +1692,38 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     className="w-full bg-transparent text-center font-extrabold text-white text-lg resize-none focus:outline-none placeholder:text-white/60 mt-1"
                   />
                 </div>
+                <div className="flex flex-wrap justify-center gap-1.5 max-w-xs" data-testid="question-presets">
+                  {[
+                    { text: 'Send me anonymous messages', anonymous: true },
+                    { text: 'Ask me anything', anonymous: false },
+                    { text: 'Ask me a question', anonymous: false }
+                  ].map((preset) => (
+                    <button
+                      key={preset.text}
+                      type="button"
+                      onClick={() => { setDraftQuestionPrompt(preset.text); setDraftQuestionAnonymous(preset.anonymous); }}
+                      className={`px-3 py-1.5 rounded-full border text-[11px] font-bold cursor-pointer active:scale-95 transition-transform ${draftQuestionPrompt === preset.text ? 'bg-white text-black border-white' : 'border-white/30 text-white hover:border-white/70'}`}
+                    >
+                      {preset.text}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={draftQuestionAnonymous}
+                  onClick={() => setDraftQuestionAnonymous((v) => !v)}
+                  data-testid="question-anonymous-switch"
+                  className="w-full max-w-xs flex items-center justify-between gap-3 rounded-2xl border border-white/20 bg-black/50 px-4 py-3 text-left cursor-pointer"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-white">Anonymous answers</span>
+                    <span className="block text-[11px] text-gray-400 leading-snug">{draftQuestionAnonymous ? 'You will read the answers, but not who wrote them.' : 'You will see who wrote each answer.'}</span>
+                  </span>
+                  <span className={`relative w-11 h-6 shrink-0 rounded-full border transition-colors ${draftQuestionAnonymous ? 'bg-white border-white' : 'bg-zinc-800 border-white/25'}`}>
+                    <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full transition-all ${draftQuestionAnonymous ? 'left-[22px] bg-black' : 'left-[2px] bg-white'}`} />
+                  </span>
+                </button>
                 <p className="text-[10px] text-gray-500 text-center">Only you will see the answers people send.</p>
               </div>
             </div>

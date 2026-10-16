@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { openInApp } from '../../utils/inAppLinks';
 import { can } from '../../adminAccess';
-import { X, ChevronLeft, ChevronRight, Heart, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
@@ -94,6 +94,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
   const [questionSent, setQuestionSent] = useState<Record<string, boolean>>({});
   const [questionError, setQuestionError] = useState('');
+  // Typing an answer inside a question sticker holds the story where it is (just like typing a reply at the bottom does); sending is shown while it happens.
+  const [isStickerFocused, setIsStickerFocused] = useState(false);
+  const [questionSending, setQuestionSending] = useState<Record<string, boolean>>({});
   const [openQuestionResultsKey, setOpenQuestionResultsKey] = useState<string | null>(null);
   const [questionResults, setQuestionResults] = useState<Record<string, StoryQuestionAnswer[]>>({});
   const [questionResultsLoading, setQuestionResultsLoading] = useState(false);
@@ -131,7 +134,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   useEffect(() => {
     setProgress(0);
     setPollError('');
+    setQuestionError('');
     setQuizSelected(null);
+    setSliderVal(75);
+    setIsStickerFocused(false);
+    setOpenQuestionResultsKey(null);
   }, [currentIndex]);
 
   // Load this story's poll results (your own vote included) whenever a story with a poll comes up.
@@ -150,6 +157,22 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     return () => {
       alive = false;
     };
+  }, [story?.id]);
+
+  // The owner's own question stickers: the answers that came in are read quietly when the story opens, so the sticker can say how many there are.
+  useEffect(() => {
+    if (isHighlight || !story || story.userId !== currentUser.id || !story.stickers?.some((s) => s.type === 'question')) return;
+    let alive = true;
+    const id = story.id;
+    fetchStoryQuestionResults(id).then((res) => {
+      if (!alive) return;
+      setQuestionResults((prev) => {
+        const next = { ...prev };
+        for (const [idx, answers] of Object.entries(res)) next[`${id}:${idx}`] = answers;
+        return next;
+      });
+    });
+    return () => { alive = false; };
   }, [story?.id]);
 
   // Record a view the moment this story becomes the active one — skipped
@@ -235,7 +258,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   }, [isPaused]);
 
   useEffect(() => {
-    if (isPaused || isCommentFocused || !story || showViewersSheet || showStoryOptionsMenu) return;
+    if (isPaused || isCommentFocused || isStickerFocused || openQuestionResultsKey !== null || !story || showViewersSheet || showStoryOptionsMenu) return;
 
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -253,7 +276,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [isPaused, isCommentFocused, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
+  }, [isPaused, isCommentFocused, isStickerFocused, openQuestionResultsKey, currentIndex, stories.length, onClose, story, showViewersSheet, showStoryOptionsMenu]);
 
   // On a computer: A / ← = previous story, D / → = next story (like tapping or swiping on a phone), Esc closes.
   // The one key listener calls the latest handlers through this ref (they are defined below).
@@ -273,7 +296,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   if (!story) return null;
 
   const handleNext = () => {
-    if (isCommentFocused) return;
+    if (isCommentFocused || isStickerFocused) return;
     if (currentIndex < stories.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
@@ -282,7 +305,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   };
 
   const handlePrev = () => {
-    if (isCommentFocused) return;
+    if (isCommentFocused || isStickerFocused) return;
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
     }
@@ -348,11 +371,16 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     const id = story.id;
     const key = `${id}:${stickerIndex}`;
     const text = (questionDrafts[key] || '').trim();
-    if (!text) return;
+    if (!text || questionSending[key]) return;
     setQuestionError('');
+    setQuestionSending((prev) => ({ ...prev, [key]: true }));
     answerStoryQuestion(id, stickerIndex, text).then((res) => {
+      setQuestionSending((prev) => ({ ...prev, [key]: false }));
       if (res.success) {
         setQuestionSent((prev) => ({ ...prev, [key]: true }));
+        setQuestionDrafts((prev) => ({ ...prev, [key]: '' }));
+        setIsStickerFocused(false);
+        (document.activeElement as HTMLElement | null)?.blur();
         confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
       } else {
         setQuestionError(res.error || 'Could not send your answer. Please try again.');
@@ -376,8 +404,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   };
 
   const handleQuizAnswer = (index: number) => {
+    if (quizSelected !== null) return;     // one answer per quiz: the right one is shown after it
     setQuizSelected(index);
-    if (index === 1) {
+    const correct = story.stickers?.find((s) => s.type === 'quiz')?.data?.correctIndex;
+    if (index === correct) {
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
     }
   };
@@ -634,6 +664,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               const sent = !!questionSent[key];
               const answers = questionResults[key] || [];
               const resultsOpen = openQuestionResultsKey === key;
+              const anonymousQuestion = !!sticker.data?.anonymous;
+              const sending = !!questionSending[key];
               return (
                 <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle} onClick={(e) => e.stopPropagation()}>
                   <div
@@ -641,10 +673,15 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     style={{ fontSize: `${(sticker.width || 62) * 0.06}cqw` }}
                     onClick={() => isOwnStory && openQuestionResults(idx)}
                   >
-                    <p className="font-bold text-white/80" style={{ fontSize: '0.75em' }}>Question</p>
+                    <p className="font-bold text-white/80" style={{ fontSize: '0.75em' }}>{anonymousQuestion ? 'Anonymous question' : 'Question'}</p>
                     <p className="font-extrabold text-white mt-0.5 line-clamp-3" style={{ fontSize: '1em' }}>
                       {sticker.data?.prompt}
                     </p>
+                    {isOwnStory && (
+                      <p className="mt-1 font-bold text-white/90" style={{ fontSize: '0.7em' }} data-testid="question-answer-count">
+                        {answers.length === 0 ? 'No answers yet' : `${answers.length} ${answers.length === 1 ? 'answer' : 'answers'} · tap to read`}
+                      </p>
+                    )}
                   </div>
 
                   {!isOwnStory && !sent && (
@@ -653,23 +690,28 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                         value={questionDrafts[key] || ''}
                         onChange={(e) => setQuestionDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleSubmitQuestionAnswer(idx); }}
-                        placeholder="Type your answer..."
+                        placeholder={anonymousQuestion ? 'Send an anonymous message...' : 'Type your answer...'}
                         maxLength={500}
+                        onFocus={() => setIsStickerFocused(true)}
+                        onBlur={() => setIsStickerFocused(false)}
                         className="flex-1 min-w-0 bg-black/70 backdrop-blur-md border border-white/20 rounded-full px-3 py-1.5 text-white outline-none focus:border-noob"
                         style={{ fontSize: '1em' }}
                       />
                       <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleSubmitQuestionAnswer(idx)}
-                        disabled={!(questionDrafts[key] || '').trim()}
-                        className="p-2 rounded-full bg-noob text-black disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                        disabled={!(questionDrafts[key] || '').trim() || sending}
+                        aria-label="Send"
+                        className="p-2 rounded-full bg-noob text-black disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0 active:scale-90 transition-transform touch-manipulation"
                       >
-                        <Send style={{ width: '1em', height: '1em' }} />
+                        {sending ? <Loader2 className="animate-spin" style={{ width: '1em', height: '1em' }} /> : <Send style={{ width: '1em', height: '1em' }} />}
                       </button>
                     </div>
                   )}
                   {!isOwnStory && sent && (
                     <p className="mt-1.5 text-center text-noob font-bold" style={{ fontSize: `${(sticker.width || 62) * 0.045}cqw` }}>
-                      Sent ✓
+                      {anonymousQuestion ? 'Sent anonymously ✓' : 'Sent ✓'}
                     </p>
                   )}
                   {!isOwnStory && questionError && (
@@ -684,11 +726,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       )}
                       {answers.map((a) => (
                         <div key={a.id} className="flex items-start gap-1.5">
-                          <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 mt-0.5">
-                            <AvatarMedia src={a.avatar} className="w-full h-full object-cover" />
+                          <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 mt-0.5 bg-white/15 flex items-center justify-center text-[10px] font-black text-white/70">
+                            {a.anonymous ? '?' : <AvatarMedia src={a.avatar} className="w-full h-full object-cover" />}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[10px] font-bold text-white/70">@{a.username}</p>
+                            <p className="text-[10px] font-bold text-white/70">{a.anonymous ? 'Anonymous' : `@${a.username}`}</p>
                             <p className="text-[11px] text-white break-words">{a.answer}</p>
                           </div>
                         </div>
@@ -736,7 +778,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                 <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
                   <div className="w-full flex items-center justify-center">
                     <button
-                      onClick={(e) => { e.stopPropagation(); goToProfile(sticker.data?.userId); }}
+                      onClick={(e) => { e.stopPropagation(); if (!onNavigateToProfile) return; void goToProfile(sticker.data?.userId); onClose(); }}
                       className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap cursor-pointer"
                       style={{ fontSize: `${(sticker.width || 42) * 0.1}cqw` }}
                     >

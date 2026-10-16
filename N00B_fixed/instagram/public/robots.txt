@@ -1,0 +1,5 @@
+# NOOB Socials - everything public is open to search engines.
+User-agent: *
+Allow: /
+
+Sitemap: https://noobsocials.com/sitemap.xml

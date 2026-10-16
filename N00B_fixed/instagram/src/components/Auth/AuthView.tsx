@@ -1805,6 +1805,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           >
             Privacy Policy
           </a>
+          <span>•</span>
+          <a href="/about" className="hover:text-zinc-300 transition-colors cursor-pointer">About NOOB</a>
         </div>
         <p className="text-[11px] text-zinc-600">
           © 2026 NOOB Social Platform

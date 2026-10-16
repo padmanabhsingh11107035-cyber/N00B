@@ -50,15 +50,15 @@ check(/msg\.storyReplies/.test(sql) && /limit_applies/.test(sql) && /already sen
 check(/revoke execute on function public\.story_by_id\(uuid\) from public, anon/.test(sql), 'and a stranger can no longer ask for a story by its address');
 
 section('5. The "Send me anonymous messages" button');
-const openAnon = read('src/utils/openAnonymous.ts');
 const app = read('src/App.tsx');
-const feed = read('src/components/Feed/FeedView.tsx');
-check(/OPEN_ANONYMOUS_EVENT = 'noob:open-anonymous'/.test(openAnon) && /requestOpenAnonymousMessages/.test(openAnon), 'one call, from anywhere, asks for the Anonymous Messages page');
-check(/sticker\.type === 'anon_messages'/.test(viewer) && /data-testid="story-anon-button"/.test(viewer) && /requestOpenAnonymousMessages\(\); onClose\(\);/.test(viewer), 'tapping the button on a story closes the story and asks for that page');
-check(/e\.stopPropagation\(\); requestOpenAnonymousMessages/.test(viewer), 'the tap does not also move the story on');
-check(/addEventListener\(OPEN_ANONYMOUS_EVENT, open\)/.test(app) && /setActiveStoryViewerIndex\(null\); setActiveTab\('feed'\)/.test(app), 'the app leaves the story and goes home');
-check(/addEventListener\(OPEN_ANONYMOUS_EVENT, open\)/.test(feed) && /const open = \(\) => openAnonymous\(\)/.test(feed), 'and the home page shows the Anonymous Messages page');
+const share = read('src/components/Fun/shareCard.ts');
+const askPage = read('src/components/Fun/AskPage.tsx');
+check(/sticker\.type === 'anon_messages'/.test(viewer) && /data-testid="story-anon-button"/.test(viewer), 'the story shows the button');
+check(/e\.stopPropagation\(\); openInApp\(funShareUrl\(\{ feature: 'ask', target: story\.username \}\)\); onClose\(\);/.test(viewer), 'tapping it opens the Ask page of whoever posted the story (inside the app), and the story closes; the tap does not also move the story on');
+check(/const loc = parseFunPath\(u\.pathname\);/.test(app) && /setActiveStoryViewerIndex\(null\);[^\n]*\n\s*openFun\(loc\);/.test(app), 'the app opens a NOOB page address inside the app, leaving the story behind');
 check(/data-testid="add-anon-button"/.test(creator) && /type: 'anon_messages'/.test(creator) && /anonButtonLayers\.forEach/.test(creator) && /anonButtonLayers\.map\(\(layer\) => \(\s*<EditableStickerLayer/.test(creator), 'when making a story you can add the button, move and resize it, and it is saved with the story');
+check(/anonymousButton\?: boolean/.test(share) && /export function anonMessagesSticker\(\)/.test(share) && /type: 'anon_messages' as const/.test(share), 'the Ask page can put the same button on its card');
+check(/link: \{ url: link, label: 'Ask me anything' \}, anonymousButton: true \}/.test(askPage), 'the "Ask me anything, anonymously" card on the Ask page carries it (so a story made there is tappable and is not saved to highlights)');
 check(/'anon_messages'/.test(read('src/types.ts')), 'it is a known sticker type');
 
 console.log(`\n${passed} passed, ${failed} failed`);

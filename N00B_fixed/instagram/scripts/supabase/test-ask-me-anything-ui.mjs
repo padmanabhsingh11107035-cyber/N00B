@@ -62,7 +62,7 @@ check(/\{!isTargetBlocked && <ProfileAskCard profileUser=\{targetUser\} isOwnPro
 
 section('6. The picture for a Story');
 check(/canvas\.width = W;\s*canvas\.height = H;/.test(share) && /const W = 1080;\s*const H = 1920;/.test(share), 'a Story-sized picture (1080 x 1920)');
-check(/uploadMediaFile\(file, folder\)/.test(share) && /createStory\(\{ mediaUrl: key, mediaType: 'image', stickers: spec\.link \? \[storyLinkSticker\(spec\.link\)\] : \[\], isCloseFriendsOnly: false \}\)/.test(share), 'it goes through the app\'s own upload and Story publishing, with the link as the Story\'s own tappable button');
+check(/uploadMediaFile\(file, folder\)/.test(share) && /createStory\(\{ mediaUrl: key, mediaType: 'image', stickers: spec\.anonymousButton \? \[anonMessagesSticker\(\)\] : spec\.link \? \[storyLinkSticker\(spec\.link\)\] : \[\], isCloseFriendsOnly: false \}\)/.test(share), 'it goes through the app\'s own upload and Story publishing, with the link as the Story\'s own tappable button');
 check(/createPost\(\{[\s\S]{0,120}caption,/.test(share), 'the same picture can be a Post');
 check(/typeof ctx\.roundRect === 'function'/.test(share), 'older phones without rounded rectangles still get a picture');
 

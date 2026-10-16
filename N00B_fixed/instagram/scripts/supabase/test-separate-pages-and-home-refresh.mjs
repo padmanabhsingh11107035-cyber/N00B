@@ -42,7 +42,7 @@ check(/setInterval\(\(\) => setNow\(Date\.now\(\)\), 30_000\)/.test(pollsPage), 
 section('3. The Story has a real link');
 check(/link\?: \{ url: string; label: string \};/.test(share) && /export const STORY_LINK_STICKER = \{ x: 50, y: 88, width: 66 \} as const;/.test(share), 'a card can carry a real link, placed near the bottom of the Story');
 check(/export function storyLinkSticker\(link: \{ url: string; label: string \}\) \{\s*return \{ type: 'link' as const, data: \{ url: link\.url, label: link\.label \}/.test(share), 'the link is the Story\'s own "link" sticker: a button that opens the address');
-check(/stickers: spec\.link \? \[storyLinkSticker\(spec\.link\)\] : \[\]/.test(share), 'it is added when the Story is posted');
+check(/stickers: spec\.anonymousButton \? \[anonMessagesSticker\(\)\] : spec\.link \? \[storyLinkSticker\(spec\.link\)\] : \[\]/.test(share), 'it is added when the Story is posted');
 check(/if \(spec\.footer && !spec\.link\) \{/.test(share), 'the picture does not also draw the address as dead text under the button');
 check(/webLink: spec\.link\?\.url/.test(share), 'a Post made from the card carries the link as its own web link');
 check(/title: q\.body, body: q\.answer \?\? undefined, link: \{ url: link, label: 'Ask me anything' \}/.test(askPage), 'an answer shared as a Story has the button');

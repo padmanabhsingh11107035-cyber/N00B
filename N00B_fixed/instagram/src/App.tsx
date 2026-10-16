@@ -92,7 +92,6 @@ import { TimeReminder } from './components/Settings/TimeReminder';
 import { NativeUpdateBanner } from './components/Common/NativeUpdateBanner';
 import { AndroidAppPrompt } from './components/Common/AndroidAppPrompt';
 import { hardReload } from './utils/reloadApp';
-import { OPEN_ANONYMOUS_EVENT } from './utils/openAnonymous';
 import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
 import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
 import { useDevicePrefs } from './utils/devicePrefs';
@@ -758,13 +757,6 @@ export default function App() {
     void loadSettings(true);
     void loadFeedLists();
   }, [currentUser?.id]);
-
-  // The "Send me anonymous messages" button on a story: close the story and go home, where the page opens (the home page listens for the same call).
-  useEffect(() => {
-    const open = () => { setActiveStoryViewerIndex(null); setActiveTab('feed'); };
-    window.addEventListener(OPEN_ANONYMOUS_EVENT, open);
-    return () => window.removeEventListener(OPEN_ANONYMOUS_EVENT, open);
-  }, [setActiveTab]);
 
   // Keeps this account's "last seen" moving while the tab/app stays open (the admin panel's last-seen column).
   useEffect(() => {

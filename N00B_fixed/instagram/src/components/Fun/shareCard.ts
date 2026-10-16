@@ -19,6 +19,8 @@ export interface ShareCardSpec {
    * only keeps room for it - the address is never just drawn as text that nobody can tap.
    */
   link?: { url: string; label: string };
+  /** On a Story: put the "Send me anonymous messages" button on the card (it opens the Ask page of whoever posted it) instead of the link button. Such a Story is not saved to highlights. */
+  anonymousButton?: boolean;
 }
 
 /** Where the button of a Story sits (percent of the picture, centred) and how wide it is. */
@@ -163,10 +165,15 @@ export function storyLinkSticker(link: { url: string; label: string }) {
   return { type: 'link' as const, data: { url: link.url, label: link.label }, x: STORY_LINK_STICKER.x, y: STORY_LINK_STICKER.y, width: STORY_LINK_STICKER.width, rotation: 0 };
 }
 
+/** The Story's "Send me anonymous messages" button (see the Story screen): it opens the Ask page of the person who posted the Story. */
+export function anonMessagesSticker() {
+  return { type: 'anon_messages' as const, data: { label: 'Send me anonymous messages' }, x: STORY_LINK_STICKER.x, y: STORY_LINK_STICKER.y, width: STORY_LINK_STICKER.width, rotation: 0 };
+}
+
 /** Posts the card as a Story (visible for the usual day). A card with a link gets a real tappable button on it. */
 export async function shareCardAsStory(spec: ShareCardSpec): Promise<void> {
   const key = await uploadCard(spec, 'stories');
-  await createStory({ mediaUrl: key, mediaType: 'image', stickers: spec.link ? [storyLinkSticker(spec.link)] : [], isCloseFriendsOnly: false });
+  await createStory({ mediaUrl: key, mediaType: 'image', stickers: spec.anonymousButton ? [anonMessagesSticker()] : spec.link ? [storyLinkSticker(spec.link)] : [], isCloseFriendsOnly: false });
 }
 
 /** Posts the card as a normal post on the profile. */

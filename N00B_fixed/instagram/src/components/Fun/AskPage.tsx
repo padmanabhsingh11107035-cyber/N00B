@@ -438,7 +438,7 @@ const Dashboard: React.FC<FunPageProps> = ({ currentUser, onLogin }) => {
         </div>
         <button
           type="button"
-          onClick={async () => { try { await shareCardAsStory({ eyebrow: 'Ask me anything', title: 'Ask me anything, anonymously', body: 'Send me a question. I will never know who asked.', link: { url: link, label: 'Ask me anything' } }); say('Added to your Story.', 'ok'); } catch (e) { say(friendly(e, 'Could not add it to your Story.'), 'err'); } }}
+          onClick={async () => { try { await shareCardAsStory({ eyebrow: 'Ask me anything', title: 'Ask me anything, anonymously', body: 'Send me a question. I will never know who asked.', link: { url: link, label: 'Ask me anything' }, anonymousButton: true }); say('Added to your Story.', 'ok'); } catch (e) { say(friendly(e, 'Could not add it to your Story.'), 'err'); } }}
           className="mt-2.5 w-full h-10 rounded-full border border-zinc-700 hover:border-zinc-50 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
         ><ImageIcon className="w-3.5 h-3.5" aria-hidden="true" /> Put my link in a Story</button>
         <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 px-3.5 py-3">

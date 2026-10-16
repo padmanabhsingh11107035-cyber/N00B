@@ -15,7 +15,7 @@ import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
 import { holdSongs } from '../../utils/songSound';
-import { requestOpenAnonymousMessages } from '../../utils/openAnonymous';
+import { funShareUrl } from '../../utils/funRoutes';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -781,7 +781,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     <button
                       type="button"
                       data-testid="story-anon-button"
-                      onClick={(e) => { e.stopPropagation(); requestOpenAnonymousMessages(); onClose(); }}
+                      onClick={(e) => { e.stopPropagation(); openInApp(funShareUrl({ feature: 'ask', target: story.username })); onClose(); }}
                       className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-4 py-2 shadow-lg whitespace-nowrap cursor-pointer active:scale-95 transition-transform touch-manipulation"
                       style={{ fontSize: `${(sticker.width || 70) * 0.075}cqw` }}
                     >

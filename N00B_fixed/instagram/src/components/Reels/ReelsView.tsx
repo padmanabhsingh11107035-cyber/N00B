@@ -63,6 +63,8 @@ import { getReelPlayer, releaseReelPlayer, getSoundPreference, setSoundPreferenc
 import { getSongPlayer, loadSong, pauseSong, stopSong } from '../../utils/songSound';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 import { usePageHidden } from '../../utils/pageLayers';
+import { prefetchReel, prefetchedReel, cancelReelPrefetch, markReelInUse, clearReelPrefetch } from '../../utils/reelPrefetch';
+import { preloadStoryPictures } from '../../utils/preloadStoryMedia';
 
 interface ToggleFollowResult {
   success: boolean;
@@ -148,7 +150,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   }>({ currentIndex: 0, localReels: [], anyModalOpen: false, handleTap: () => undefined, slideTo: () => undefined, snapBack: () => undefined });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const nextVideoRef = useRef<HTMLVideoElement>(null);
+  const videoUrlRef = useRef('');   // the reel's normal address (the fallback when its in-memory copy cannot be played)
   const playerRef = useRef<HTMLDivElement>(null);
   // Tapping a creator's name/avatar needs their full profile, which the reel itself only carries a
   // denormalized sliver of (username, avatar) — fetching it only ON tap means a real network wait
@@ -173,18 +175,31 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const currentReel = localReels[currentIndex] || localReels[0];
   const nextReel = localReels[currentIndex + 1];
-  const nextNextReel = localReels[currentIndex + 2];
   // The NEXT reel is only downloaded ahead of time once the person has stayed on this one for a moment, and only on a fast connection
   // that is not set to save data. Skimming past reels used to download every one of them in full (the biggest source of wasted data).
   const [nextWarm, setNextWarm] = useState(false);
   useEffect(() => {
     setNextWarm(false);
-    const t = setTimeout(() => setNextWarm(true), 2000);
+    const t = setTimeout(() => setNextWarm(true), 1200);
     return () => clearTimeout(t);
   }, [currentReel?.id]);
   const connection = (typeof navigator !== 'undefined' ? (navigator as any).connection : undefined) as { saveData?: boolean; effectiveType?: string } | undefined;
   const fastConnection = !connection || (!connection.saveData && (!connection.effectiveType || connection.effectiveType === '4g'));
-  const nextPreload: 'auto' | 'metadata' = nextWarm && fastConnection ? 'auto' : 'metadata';
+  const connectionOk = !connection || (!connection.saveData && connection.effectiveType !== '2g' && connection.effectiveType !== 'slow-2g');
+  // whether the reel being watched has been downloaded in full (set from the video's own events)
+  const [currentLoaded, setCurrentLoaded] = useState(false);
+  const currentLoadedRef = useRef(false);
+  // The next reel's video is fetched whole, in the background, and played from memory when it is reached (see src/utils/reelPrefetch.ts) — a hidden
+  // <video preload> did nothing on an iPhone, so every swipe there started a cold download. The pictures of the next few reels (what is seen while a
+  // finger drags) are fetched at once, they are small.
+  useEffect(() => {
+    if (!nextWarm || !connectionOk || !nextReel?.videoUrl) return;
+    if (!fastConnection && !currentLoaded) return;   // on a slower connection the reel being watched gets the line first
+    prefetchReel(nextReel.videoUrl);
+  }, [nextWarm, connectionOk, fastConnection, currentLoaded, nextReel?.videoUrl]);
+  useEffect(() => {
+    preloadStoryPictures([1, 2, 3].map((n) => localReels[currentIndex + n]?.thumbnailUrl).concat(localReels[currentIndex - 1]?.thumbnailUrl));
+  }, [currentIndex, localReels]);
   const isFollowingCreator = !!currentReel && !!currentUser.followingIds?.includes(currentReel.userId);
   const isReelOwner = !!currentReel && currentReel.userId === currentUser.id;
   useScreenshotAlert('reel', currentReel?.id, !!currentReel && !isReelOwner);
@@ -259,6 +274,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       // A missing/corrupt file on our end, not a slow network — the buffering spinner would otherwise spin forever on a
       // frozen black frame, which reads as "the app is broken" rather than "this one video can't be played."
       if (!video.getAttribute('src')) return; // the element was just emptied between two reels
+      if ((video.getAttribute('src') || '').startsWith('blob:') && videoUrlRef.current) {
+        // the copy kept in memory could not be played: play the reel from its normal address instead
+        video.src = videoUrlRef.current;
+        void video.play().catch(() => undefined);
+        return;
+      }
       console.warn('Video failed to load source:', e);
       setIsVideoBuffering(false);
       setVideoFailed(true);
@@ -267,6 +288,16 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     video.addEventListener('playing', onReady);
     video.addEventListener('canplay', onReady);
     video.addEventListener('error', onError);
+    const checkLoaded = () => {
+      if (currentLoadedRef.current || !(video.duration > 0) || !video.buffered.length) return;
+      if (video.buffered.end(video.buffered.length - 1) >= video.duration - 0.3) {
+        currentLoadedRef.current = true;
+        setCurrentLoaded(true);
+      }
+    };
+    video.addEventListener('progress', checkLoaded);
+    video.addEventListener('canplaythrough', checkLoaded);
+    video.addEventListener('loadeddata', checkLoaded);
     let lastTime = 0;
     const onTime = () => {
       const t = video.currentTime;
@@ -282,8 +313,12 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       video.removeEventListener('playing', onReady);
       video.removeEventListener('canplay', onReady);
       video.removeEventListener('error', onError);
+      video.removeEventListener('progress', checkLoaded);
+      video.removeEventListener('canplaythrough', checkLoaded);
+      video.removeEventListener('loadeddata', checkLoaded);
       videoRef.current = null;
       releaseReelPlayer();
+      clearReelPrefetch();
     };
   }, [hasReels]);
 
@@ -291,6 +326,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !currentReel) return;
+    currentLoadedRef.current = false;
+    setCurrentLoaded(false);
     const bar = progressRef.current;
     if (bar) {
       bar.style.transition = 'none';
@@ -302,7 +339,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     video.load();
     if (currentReel.thumbnailUrl) video.poster = currentReel.thumbnailUrl;
     else video.removeAttribute('poster');
-    video.src = currentReel.videoUrl;
+    // already fetched ahead of time: played from memory, so it starts at once; otherwise streamed (and a fetch of it still running is stopped, it would only compete)
+    cancelReelPrefetch(currentReel.videoUrl);
+    markReelInUse(currentReel.videoUrl);
+    videoUrlRef.current = currentReel.videoUrl;
+    video.src = prefetchedReel(currentReel.videoUrl) || currentReel.videoUrl;
   }, [currentReel?.id]);
 
   // play / pause: always asks for sound first, and plays silently when the browser refuses (so a reel never sits on a frozen frame)
@@ -1173,34 +1214,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             {nextReel ? renderCard(nextReel, false) : null}
           </div>
         </div>
-
-        {/* Hidden preload of the next reel so swiping doesn't stall while the browser starts fetching/decoding cold.
-            The one after that only gets its metadata (duration/dimensions), not a full download — fully buffering
-            two whole videos in the background at once was competing for bandwidth with the one actually playing,
-            which is exactly what made media feel slow to load on a real phone connection. */}
-        {nextReel && (
-          <video
-            key={`preload-${nextReel.id}`}
-            ref={nextVideoRef}
-            src={nextReel.videoUrl}
-            muted
-            playsInline
-            preload={nextPreload}
-            className="absolute w-px h-px opacity-0 pointer-events-none"
-            aria-hidden="true"
-          />
-        )}
-        {nextNextReel && (
-          <video
-            key={`preload2-${nextNextReel.id}`}
-            src={nextNextReel.videoUrl}
-            muted
-            playsInline
-            preload="metadata"
-            className="absolute w-px h-px opacity-0 pointer-events-none"
-            aria-hidden="true"
-          />
-        )}
       </div>
 
       {/* 4. Sliding Comments Sheet Overlay */}

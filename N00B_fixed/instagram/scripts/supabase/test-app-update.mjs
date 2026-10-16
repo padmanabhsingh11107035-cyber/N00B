@@ -63,6 +63,21 @@ check(/PackageInstaller\.SessionParams/.test(java) && /USER_ACTION_NOT_REQUIRED/
 check(/installWithScreen\(file\)/.test(java) && /catch \(Exception sessionProblem\)/.test(java), 'and falls back to the older install screen if the package installer cannot be used');
 check(/UPDATE_PACKAGES_WITHOUT_USER_ACTION/.test(wf) && /grep -q UPDATE_PACKAGES_WITHOUT_USER_ACTION/.test(wf), 'the build adds the permission that lets Android 12 and newer skip the screen, and stops if it did not get in');
 
+section('3c. How people on the website get the Android app');
+const P = await import('../../src/utils/androidAppPrompt.ts');
+const droid = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36';
+const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
+const base = { userAgent: droid, native: false, installed: false, memory: null, now: 1_800_000_000_000 };
+check(P.shouldOfferAndroidApp(base) === true, 'an Android phone on the website is offered the app by itself (not hidden in the three dots)');
+check(P.shouldOfferAndroidApp({ ...base, userAgent: iphone }) === false && P.shouldOfferAndroidApp({ ...base, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126' }) === false, 'an iPhone or a computer never is (there is no app file for them)');
+check(P.shouldOfferAndroidApp({ ...base, native: true }) === false && P.shouldOfferAndroidApp({ ...base, installed: true }) === false, 'nor is someone who already has the app, or has NOOB on the home screen');
+check(P.shouldOfferAndroidApp({ ...base, memory: { at: base.now - 3600_000, times: 1 } }) === false, 'after "Not now" it waits');
+check(P.shouldOfferAndroidApp({ ...base, memory: { at: base.now - P.PROMPT_REPEAT_MS - 1, times: 1 } }) === true && P.shouldOfferAndroidApp({ ...base, memory: { at: base.now - P.PROMPT_REPEAT_MS - 1, times: P.PROMPT_MAX_TIMES } }) === false, 'two weeks later it asks again, but never more than three times');
+check(P.shouldOfferAndroidApp({ ...base, memory: { at: base.now - 365 * 86400_000, times: 1, done: true } }) === false, 'once the file was opened it never comes back');
+const promptSrc = read('src/components/Common/AndroidAppPrompt.tsx');
+check(/\{currentUser && <AndroidAppPrompt \/>\}/.test(read('src/App.tsx')) && /setTimeout\(\(\) => setShow\(true\), 25000\)/.test(promptSrc) && /window\.open\(ANDROID_APK_URL, '_blank', 'noopener'\)/.test(promptSrc) && /Open the file to install/.test(promptSrc), 'it comes up 25 seconds after sign-in, opens the app file, and says what to do next');
+check(/\/android\/i\.test\(navigator\.userAgent\) && !isNativeApp\(\)/.test(read('src/components/Auth/AuthView.tsx')) && /Get the Android app/.test(read('src/components/Auth/AuthView.tsx')) && /data-no-inapp/.test(read('src/components/Auth/AuthView.tsx')), 'the sign-in page also has a "Get the Android app" link for Android phones');
+
 section('4. The button');
 const svc = read('src/services/nativeUpdate.ts');
 check(/registerPlugin<AppUpdaterPlugin>\('AppUpdater'\)/.test(svc) && /downloadAndInstall\(\{ url: ANDROID_APK_URL \}\)/.test(svc), 'the app calls the installer with the one app file address');

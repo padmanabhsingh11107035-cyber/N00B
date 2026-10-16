@@ -90,6 +90,7 @@ import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Commo
 import { MiniToast } from './components/Common/MiniToast';
 import { TimeReminder } from './components/Settings/TimeReminder';
 import { NativeUpdateBanner } from './components/Common/NativeUpdateBanner';
+import { AndroidAppPrompt } from './components/Common/AndroidAppPrompt';
 import { hardReload } from './utils/reloadApp';
 import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
 import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists, resetSettingsStore, useFeedLists, useSetting } from './services/settingsApi';
@@ -2065,6 +2066,7 @@ export default function App() {
       <MiniToast />
       {currentUser && <TimeReminder />}
       {currentUser && <NativeUpdateBanner />}
+      {currentUser && <AndroidAppPrompt />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
       <TeamJoinHost currentUser={currentUser} />

@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ANDROID_APK_URL } from '../../utils/appVersion';
+import { isNativeApp } from '../../utils/siteUrl';
 import {
   Sparkles,
   User as UserIcon,
@@ -1830,6 +1832,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           </a>
           <span>•</span>
           <a href="/about" className="hover:text-zinc-300 transition-colors cursor-pointer">About NOOB</a>
+          {/android/i.test(navigator.userAgent) && !isNativeApp() && (
+            <>
+              <span>•</span>
+              <a href={ANDROID_APK_URL} data-no-inapp className="hover:text-zinc-300 transition-colors cursor-pointer" data-testid="login-android-app">Get the Android app</a>
+            </>
+          )}
         </div>
         <p className="text-[11px] text-zinc-600">
           © 2026 NOOB Social Platform

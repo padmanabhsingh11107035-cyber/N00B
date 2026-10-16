@@ -134,6 +134,7 @@ export function resetSettingsStore(): void {
   loaded = false;
   loading = null;
   counts = { restricted: 0, muted: 0, favourite: 0, comment_block: 0, story_hide: 0 };
+  for (const k of Object.keys(listCache)) delete listCache[k as ListKind];
   emit();
 }
 
@@ -168,22 +169,33 @@ export async function updateSettings(patch: Partial<AccountSettings>): Promise<{
 
 // ---- lists of people (restricted, muted, favourites, blocked commenters, hidden from your story)
 
+// the last list read from the server, per kind: a page shows it at once and refreshes it in the background
+const listCache: Partial<Record<ListKind, ListedPerson[]>> = {};
+export const getCachedList = (kind: ListKind): ListedPerson[] | null => listCache[kind] ?? null;
+
 export async function fetchList(kind: ListKind): Promise<ListedPerson[]> {
   try {
     const rows = await call<any[]>('settings_list', { p_kind: kind });
     const list = (rows || []).map(mapPerson);
+    listCache[kind] = list;
     counts = { ...counts, [kind]: list.length };
     emit();
     return list;
   } catch {
-    return [];
+    return listCache[kind] ?? [];
   }
+}
+
+/** Reads the lists the pages show into memory ahead of time (quietly), so opening one of those pages does not wait for the server. */
+export function warmLists(): void {
+  (['restricted', 'comment_block', 'story_hide'] as ListKind[]).forEach((k) => { if (!listCache[k]) void fetchList(k); });
 }
 
 export async function addToList(kind: ListKind, userId: string, extra?: { posts?: boolean; stories?: boolean }): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await call<{ count?: number }>('settings_list_add', { p_kind: kind, p_user: userId, p_extra: extra || {} });
     if (typeof res?.count === 'number') { counts = { ...counts, [kind]: res.count }; emit(); }
+    delete listCache[kind];
     return { success: true };
   } catch (e) {
     return { success: false, error: msg(e, 'Could not add that person.') };
@@ -194,6 +206,7 @@ export async function removeFromList(kind: ListKind, userId: string): Promise<{ 
   try {
     const res = await call<{ count?: number }>('settings_list_remove', { p_kind: kind, p_user: userId });
     if (typeof res?.count === 'number') { counts = { ...counts, [kind]: res.count }; emit(); }
+    if (listCache[kind]) listCache[kind] = listCache[kind]!.filter((p) => p.id !== userId);
     return { success: true };
   } catch (e) {
     return { success: false, error: msg(e, 'Could not remove that person.') };

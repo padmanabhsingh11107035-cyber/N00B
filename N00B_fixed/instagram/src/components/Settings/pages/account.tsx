@@ -5,7 +5,7 @@ import type { PageProps } from '../types';
 import type { User } from '../../../types';
 import { updateCurrentUser, updateFullProfile, fetchCloseFriends, setCloseFriend, blockUser, unblockUser, fetchUserById } from '../../../services/api';
 import type { CloseFriend } from '../../../services/supabaseApi';
-import { addToList, fetchList, refreshFeedLists, removeFromList, updateSettings, useAccountSettings, type ListedPerson } from '../../../services/settingsApi';
+import { addToList, fetchList, getCachedList, refreshFeedLists, removeFromList, updateSettings, useAccountSettings, type ListedPerson } from '../../../services/settingsApi';
 
 // "Your NOOB account", its password, account type and privacy, Close Friends, Blocked, story privacy and activity status.
 
@@ -64,7 +64,7 @@ export const PasswordPage: React.FC<PageProps> = ({ ctx, back }) => {
         <div className="p-4 space-y-3">
           <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="New password" aria-label="New password" className={input} />
           <input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} placeholder="Type it again" aria-label="Type the new password again" className={input} />
-          <button type="button" onClick={() => void save()} disabled={busy || !next || !again} className="w-full py-3 rounded-full bg-white text-black text-sm font-extrabold disabled:opacity-40 cursor-pointer hover:bg-zinc-200">{busy ? 'Saving…' : 'Change password'}</button>
+          <button type="button" onClick={() => save()} disabled={busy || !next || !again} className="w-full py-3 rounded-full bg-white text-black text-sm font-extrabold disabled:opacity-40 cursor-pointer hover:bg-zinc-200">{busy ? 'Saving…' : 'Change password'}</button>
         </div>
       </Section>
     </PageShell>
@@ -101,7 +101,7 @@ export const AccountTypePage: React.FC<PageProps> = ({ ctx, back }) => {
           <div className="p-4"><input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Gaming creator, Digital artist" maxLength={60} aria-label="Business category" className="w-full bg-zinc-900 border border-white/15 focus:border-white/50 rounded-2xl px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500" /></div>
         </Section>
       )}
-      {changed && <button type="button" onClick={() => void save()} disabled={busy} className="mt-5 w-full py-3 rounded-full bg-white text-black text-sm font-extrabold disabled:opacity-40 cursor-pointer hover:bg-zinc-200">{busy ? 'Saving…' : 'Save changes'}</button>}
+      {changed && <button type="button" onClick={() => save()} disabled={busy} className="mt-5 w-full py-3 rounded-full bg-white text-black text-sm font-extrabold disabled:opacity-40 cursor-pointer hover:bg-zinc-200">{busy ? 'Saving…' : 'Save changes'}</button>}
       {isBusiness(u) && (
         <Section title="Tools">
           <Row icon={Briefcase} label="Professional dashboard" sub="Followers, reach and your best posts" onClick={ctx.actions.openProfessionalDashboard} />
@@ -129,12 +129,12 @@ export const PrivacyPage: React.FC<PageProps> = ({ ctx, back }) => {
     <PageShell title="Account privacy" onBack={back}>
       {flash}
       <Section>
-        <ToggleRow icon={Lock} label="Private account" sub="Only people you approve can follow you and see your posts" on={isPrivate} disabled={busy || business} onChange={(v) => void apply({ accountType: v ? 'private' : 'public' }, v ? 'Your account is private now.' : 'Your account is public now.')} testId="privacy-private" />
+        <ToggleRow icon={Lock} label="Private account" sub="Only people you approve can follow you and see your posts" on={isPrivate} disabled={busy || business} onChange={(v) => apply({ accountType: v ? 'private' : 'public' }, v ? 'Your account is private now.' : 'Your account is public now.')} testId="privacy-private" />
       </Section>
       {business && <Note>Business accounts are always public. Switch to a personal account (Account type and tools) to make it private.</Note>}
       {isPrivate && (
         <Section title="Follow requests" note="Anyone who asks to follow you is accepted straight away. You do not follow them back automatically.">
-          <ToggleRow label="Accept follow requests automatically" on={priv.autoAcceptFollowRequests ?? true} disabled={busy} onChange={(v) => void apply({ privacySettings: { ...priv, autoAcceptFollowRequests: v } }, v ? 'Follow requests are accepted automatically.' : 'You will approve follow requests yourself.')} />
+          <ToggleRow label="Accept follow requests automatically" on={priv.autoAcceptFollowRequests ?? true} disabled={busy} onChange={(v) => apply({ privacySettings: { ...priv, autoAcceptFollowRequests: v } }, v ? 'Follow requests are accepted automatically.' : 'You will approve follow requests yourself.')} />
         </Section>
       )}
       <Section title="Hide your profile" note="People you hide your profile from cannot see you, your posts or your stories.">
@@ -169,7 +169,7 @@ export const CloseFriendsPage: React.FC<PageProps> = ({ back }) => {
             <div key={f.id} className="flex items-center gap-3 px-4 py-3">
               <Avatar user={{ avatar: f.avatar || '', username: f.username }} />
               <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white truncate">@{f.username}</span><span className="block text-xs text-zinc-400 truncate">{f.displayName}</span></span>
-              <button type="button" role="checkbox" aria-checked={f.isCloseFriend} aria-label={`${f.isCloseFriend ? 'Remove' : 'Add'} @${f.username}`} onClick={() => void toggle(f, !f.isCloseFriend)} className={`w-7 h-7 rounded-full border-2 flex items-center justify-center cursor-pointer text-xs font-black ${f.isCloseFriend ? 'bg-white border-white text-black' : 'border-zinc-600 text-transparent'}`}>✓</button>
+              <button type="button" role="checkbox" aria-checked={f.isCloseFriend} aria-label={`${f.isCloseFriend ? 'Remove' : 'Add'} @${f.username}`} onClick={() => toggle(f, !f.isCloseFriend)} className={`w-7 h-7 rounded-full border-2 flex items-center justify-center cursor-pointer text-xs font-black ${f.isCloseFriend ? 'bg-white border-white text-black' : 'border-zinc-600 text-transparent'}`}>✓</button>
             </div>
           ))}
         </Section>
@@ -186,12 +186,10 @@ export const BlockedPage: React.FC<PageProps> = ({ ctx, back }) => {
     let alive = true;
     (async () => {
       const known = new Map<string, User>(ctx.allUsers.map((x): [string, User] => [x.id, x]));
-      const out: User[] = [];
-      for (const id of ids) {
-        const hit: User | null = known.get(id) || (await fetchUserById(id));
-        if (hit) out.push(hit);
-      }
-      if (alive) setPeople(out);
+      const found = ids.map((id) => known.get(id) ?? null);
+      if (alive && found.every(Boolean)) { setPeople(found as User[]); return; }          // everybody is already in memory: no waiting
+      const fetched = await Promise.all(ids.map((id, i) => found[i] ?? fetchUserById(id)));
+      if (alive) setPeople(fetched.filter((u): u is User => !!u));
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +221,7 @@ export const BlockedPage: React.FC<PageProps> = ({ ctx, back }) => {
 
 /** A page that is just one list of people kept on the server (restricted, hidden story viewers, blocked commenters). */
 export const ListPage: React.FC<PageProps & { kind: 'restricted' | 'comment_block' | 'story_hide' | 'favourite'; title: string; note: string; emptyTitle: string; emptyText: string; addLabel: string; removeLabel: string; max?: number }> = ({ ctx, back, kind, title, note, emptyTitle, emptyText, addLabel, removeLabel, max }) => {
-  const [people, setPeople] = useState<ListedPerson[] | null>(null);
+  const [people, setPeople] = useState<ListedPerson[] | null>(() => getCachedList(kind));
   const [flash, show] = useFlash();
   useEffect(() => { void fetchList(kind).then(setPeople); }, [kind]);
   return (
@@ -279,7 +277,7 @@ export const ActivityStatusPage: React.FC<PageProps> = ({ back }) => {
     <PageShell title="Activity status" onBack={back}>
       {flash}
       <Section note="When this is off, others do not see the green dot next to your name. You also stop seeing it on other people. Admins can still see who is online to keep NOOB running.">
-        <ToggleRow icon={Eye} label="Show activity status" sub="Let people see when you are online" on={on} onChange={(v) => void set(v)} testId="activity-status-toggle" />
+        <ToggleRow icon={Eye} label="Show activity status" sub="Let people see when you are online" on={on} onChange={(v) => set(v)} testId="activity-status-toggle" />
       </Section>
     </PageShell>
   );

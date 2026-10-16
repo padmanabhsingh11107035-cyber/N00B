@@ -116,7 +116,7 @@ check((await rpc(b, 'my_instants_archive')).length === 0, 'nobody else sees my a
 await db.query("update instants set expires_at = now() - interval '1 minute' where id = $1", [toClose.id]);
 check((await rpc(c, 'my_instant_inbox')).length === 1, 'an expired instant leaves the inbox');
 await expectFail(() => rpc(c, 'open_instant', toClose.id), /no longer available/, 'an expired instant can not be opened');
-check((await rpc(me, 'my_instants_archive')).some((x) => x.id === toClose.id), 'expired instants stay in my own archive');
+check(!(await rpc(me, 'my_instants_archive')).some((x) => x.id === toClose.id), 'an instant past its 24 hours is not in my archive any more (migration 20261017000002 deletes it for good; see test-instants-24h.mjs)');
 
 // undo / delete
 await expectFail(() => rpc(b, 'delete_instant', sent.id), /not found/, 'only the sender can delete an instant');

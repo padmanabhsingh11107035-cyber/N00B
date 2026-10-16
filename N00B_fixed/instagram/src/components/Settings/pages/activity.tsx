@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Archive, Bookmark, Clock, Download, Heart, Image as ImageIcon, MessageSquare, Moon, Play, Search, Trash2, X, Zap } from 'lucide-react';
 import { PageShell, Section, Row, ToggleRow, Choice, Note, Spinner, Empty, SmallButton, useFlash } from '../kit';
 import type { PageProps } from '../types';
-import { deleteComment, deleteStory, fetchInstantsArchive } from '../../../services/api';
-import type { InstantArchiveItem } from '../../../services/supabaseApi';
+import { deleteComment, deleteStory } from '../../../services/api';
 import { fetchMyComments, fetchStoriesArchive, type ArchivedStory, type MyComment } from '../../../services/settingsApi';
 import { BREAK_CHOICES, DAILY_LIMIT_CHOICES, setDevicePrefs, useDevicePrefs } from '../../../utils/devicePrefs';
 import { clearSearches, forgetSearch, recentSearches } from '../../../utils/searchEngine';
@@ -15,9 +14,8 @@ const when = (iso: string) => { try { return new Date(iso).toLocaleDateString(un
 
 export const ArchivePage: React.FC<PageProps> = ({ ctx, go, back }) => (
   <PageShell title="Archive" onBack={back}>
-    <Section note="Your stories are kept here for ever, and so are the Instants you sent. Posts you archive disappear from your profile and wait here until you bring them back.">
+    <Section note="Your stories are kept here for ever. Posts you archive disappear from your profile and wait here until you bring them back. (Instants are deleted for good after 24 hours.)">
       <Row icon={ImageIcon} label="Stories archive" sub="Every story you have posted" onClick={() => go('stories-archive')} testId="archive-stories" />
-      <Row icon={Zap} label="Instants archive" sub="Instants you sent to friends" onClick={() => go('instants-archive')} />
       <Row icon={Archive} label="Posts archive" sub="Posts you took off your profile" onClick={() => { ctx.actions.showProfileTab('archive'); ctx.actions.close(); }} />
     </Section>
   </PageShell>
@@ -62,37 +60,12 @@ export const StoriesArchivePage: React.FC<PageProps> = ({ back }) => {
           <div className="p-4 flex justify-center gap-3">
             {confirm ? (
               <>
-                <SmallButton tone="danger" onClick={() => void remove(open)}>Delete for good</SmallButton>
+                <SmallButton tone="danger" onClick={() => remove(open)}>Delete for good</SmallButton>
                 <SmallButton onClick={() => setConfirm(false)}>Keep it</SmallButton>
               </>
             ) : <SmallButton tone="danger" onClick={() => setConfirm(true)}><span className="inline-flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /> Delete</span></SmallButton>}
           </div>
         </div>
-      )}
-    </PageShell>
-  );
-};
-
-export const InstantsArchivePage: React.FC<PageProps> = ({ back }) => {
-  const [items, setItems] = useState<InstantArchiveItem[] | null>(null);
-  useEffect(() => { void fetchInstantsArchive().then((r) => setItems(r.success ? r.instants : [])); }, []);
-  return (
-    <PageShell title="Instants archive" onBack={back}>
-      {items === null ? <Spinner /> : items.length === 0 ? (
-        <Section><Empty icon={Zap} title="No Instants yet" text="Instants you send to friends are kept here." /></Section>
-      ) : (
-        <Section>
-          {items.map((i) => (
-            <div key={i.id} className="flex items-center gap-3 px-4 py-3">
-              <img src={i.mediaUrl} alt="" loading="lazy" className="w-14 h-14 rounded-xl object-cover border border-white/15 bg-zinc-900" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-white truncate">{i.caption || 'Instant'}</span>
-                <span className="block text-xs text-zinc-400">{when(i.createdAt)} &middot; {i.audience === 'close_friends' ? 'Close Friends' : 'Friends'} &middot; sent to {i.sentTo}</span>
-                {i.reactions.length > 0 && <span className="block text-xs text-zinc-300 mt-0.5">{i.reactions.map((r) => r.emoji).join(' ')}</span>}
-              </span>
-            </div>
-          ))}
-        </Section>
       )}
     </PageShell>
   );
@@ -143,7 +116,7 @@ export const MyCommentsPage: React.FC<PageProps> = ({ back }) => {
               <p className="text-xs text-zinc-400 mt-1">On {c.kind === 'post' ? 'a post' : c.kind === 'reel' ? 'a reel' : 'a video'}{c.targetPreview ? `: “${c.targetPreview}”` : ''} &middot; {when(c.createdAt)}</p>
               <div className="mt-2">
                 {confirmId === c.id ? (
-                  <span className="inline-flex gap-2"><SmallButton tone="danger" onClick={() => void remove(c)}>Delete</SmallButton><SmallButton onClick={() => setConfirmId(null)}>Keep</SmallButton></span>
+                  <span className="inline-flex gap-2"><SmallButton tone="danger" onClick={() => remove(c)}>Delete</SmallButton><SmallButton onClick={() => setConfirmId(null)}>Keep</SmallButton></span>
                 ) : <SmallButton onClick={() => setConfirmId(c.id)}>Delete</SmallButton>}
               </div>
             </div>

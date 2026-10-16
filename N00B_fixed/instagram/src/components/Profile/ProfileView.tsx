@@ -113,6 +113,7 @@ import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
 import type { SettingsContext } from '../Settings/types';
+import { NoobStackLoader } from '../Common/NoobStackLoader';
 import { LazyVideo } from '../Common/LazyVideo';
 
 // Lazy-loaded: large, rarely-opened screens pulled out of the main bundle rather than loaded on
@@ -122,11 +123,14 @@ const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupport
 const SuggestionBoxModal = React.lazy(() => import('../Support/SuggestionBoxModal').then((m) => ({ default: m.SuggestionBoxModal })));
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
+// While a window that is loaded on demand arrives: NOOB's burger, for exactly as long as it takes (no minimum, no maximum time).
 const LazyFallback: React.FC = () => (
-  <div className="fixed inset-0 z-50 bg-zinc-950 flex items-center justify-center">
-    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-noob animate-spin" />
+  <div className="fixed inset-0 z-50 bg-page doodle-wallpaper flex items-center justify-center text-white" role="status" aria-label="Loading">
+    <NoobStackLoader mode="quick" subtitle="Loading…" />
   </div>
 );
+// Settings and activity is fetched in the background while the profile is on screen, so the three dots open it at once.
+const preloadSettingsHub = () => { void import('../Settings/SettingsHub'); };
 
 interface ProfileViewProps {
   currentUser: User;
@@ -478,6 +482,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const closeSettingsHub = React.useCallback(() => setShowSettingsHub(false), []);
+  useEffect(() => {
+    if (!isOwnProfile) return;
+    const w = window as unknown as { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void };
+    if (w.requestIdleCallback) { const id = w.requestIdleCallback(preloadSettingsHub); return () => w.cancelIdleCallback?.(id); }
+    const t = window.setTimeout(preloadSettingsHub, 800);
+    return () => window.clearTimeout(t);
+  }, [isOwnProfile]);
   const settingsContext = useMemo<SettingsContext>(() => ({
     currentUser,
     allUsers,
@@ -611,7 +622,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               // Your own profile: the three dots open "Settings and activity" as a full page. Other people's profiles keep the small menu (block, hide, report, share).
               if (isOwnProfile) { setShowThreeDotsMenu(false); setShowSettingsHub(true); } else setShowThreeDotsMenu(!showThreeDotsMenu);
             }}
-            className={`liquid-glass relative p-2 rounded-xl transition-all cursor-pointer ${
+            onPointerEnter={isOwnProfile ? preloadSettingsHub : undefined}
+            onTouchStart={isOwnProfile ? preloadSettingsHub : undefined}
+            className={`liquid-glass relative p-2 rounded-xl transition-all active:scale-90 touch-manipulation cursor-pointer ${
               showThreeDotsMenu
                 ? 'liquid-glass-btn-active text-noob'
                 : 'text-zinc-300 hover:text-white'

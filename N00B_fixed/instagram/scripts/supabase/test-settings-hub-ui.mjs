@@ -22,7 +22,7 @@ const pageFiles = ['account', 'activity', 'interact', 'see', 'app', 'support'].m
 const allPages = pageFiles.map(([, s]) => s).join('\n');
 
 section('1. Every row opens something real');
-const pageKeys = new Set([...pagesIndex.matchAll(/^\s{2}'?([a-z-]+)'?: page\(/gm)].map((m) => m[1]));
+const pageKeys = new Set([...pagesIndex.matchAll(/^\s{2}'?([a-z-]+)'?: (?:[A-Z]\w+|list\()/gm)].map((m) => m[1]));
 const rows = [...registry.matchAll(/\{ id: '([a-z-]+)', section: '([^']+)', label: '([^']+)'[^\n]*\}/g)].map((m) => ({ id: m[1], section: m[2], label: m[3], line: m[0] }));
 check(rows.length >= 45, `the list has ${rows.length} rows`);
 check(pageKeys.size >= 40, `${pageKeys.size} pages are registered`);
@@ -37,8 +37,8 @@ check(lost.length === 0, 'every page link inside a page goes to a page that exis
 const reachable = new Set([...rows.map((r) => (r.line.match(/page: '([a-z-]+)'/) || [])[1]).filter(Boolean), ...linked]);
 const orphan = [...pageKeys].filter((k) => !reachable.has(k));
 check(orphan.length === 0, 'and every page can be reached from the list or from another page', orphan.join(', '));
-const exported = [...pagesIndex.matchAll(/m\.(\w+Page)\b/g)].map((m) => m[1]);
-check(exported.every((n) => new RegExp(`export const ${n}\\b`).test(allPages)), 'every page the index loads is a real component', exported.filter((n) => !new RegExp(`export const ${n}\\b`).test(allPages)).join(', '));
+const exported = [...pagesIndex.matchAll(/^\s{2}'?[a-z-]+'?: ([A-Z]\w+),?$/gm)].map((m) => m[1]);
+check(exported.every((n) => new RegExp(`export const ${n}\\b`).test(allPages)), 'every page the index names is a real component', exported.filter((n) => !new RegExp(`export const ${n}\\b`).test(allPages)).join(', '));
 
 section('2. All of Instagram’s settings that make sense here, in NOOB’s own look');
 const labels = rows.map((r) => r.label.toLowerCase());
@@ -57,7 +57,7 @@ check(/fixed inset-0 z-\[45\]/.test(hub) && /useFullPage\(true\)/.test(hub), 'it
 check(/pushState\(\{ noobSettings/.test(hub) && /addEventListener\('popstate'/.test(hub) && /history\.go\(-/.test(hub), "the phone's Back button goes up one page, and leaving Settings takes its history entries off");
 check(/e\.key === 'Escape'/.test(hub), 'Escape goes back too');
 check(/searchRows\(rows, query\.trim\(\)\)/.test(hub) && /every word must be found|words\.every/.test(registry), 'the search finds rows by label, text and keywords');
-check(/<Suspense fallback=\{<Spinner \/>\}>/.test(hub), 'a page is loaded only when it is first opened');
+check(/<Suspense fallback=\{<PageLoading \/>\}>/.test(hub), 'if something has to be fetched, the burger shows while it is');
 
 section('4. The profile gives the hub what it asks for');
 for (const k of actionKeys) check(new RegExp(`\\b${k}: `).test(profile.slice(profile.indexOf('const settingsContext'))), `the profile does "${k}"`);
@@ -196,6 +196,34 @@ check(/background-image: var\(--doodle-login\)/.test(chatRule) && /background-si
 check(/background-image: var\(--doodle-login\)/.test(loginRule) && /background-size: 120px 120px/.test(loginRule), 'and the sign-in page still uses the same one, so the two always match');
 check(!/data-theme="light"\] \.chat-wallpaper/.test(cssAll) && !/chat-wallpaper \{[^}]*base64/.test(cssAll), 'the old chat-only pattern is gone (the doodle follows Dark and Light by itself)');
 check(/var pref = saved === 'dark' \|\| saved === 'light' \|\| saved === 'system' \? saved : 'dark';/.test(read('public/theme-init.js')) && /return 'dark';/.test(read('src/utils/theme.ts')), 'with nothing chosen the app is dark, whatever the device uses; Light and System only if the person picks them (Settings and activity > Accessibility)');
+
+section('10. Quick, and never looking dead');
+const kit = read('src/components/Settings/kit.tsx');
+const stackLoader = read('src/components/Common/NoobStackLoader.tsx');
+check(/import \{ NoobStackLoader \} from '\.\.\/Common\/NoobStackLoader'/.test(kit) && /export const Spinner[\s\S]{0,400}<NoobStackLoader mode="quick"/.test(kit) && /export const PageLoading[\s\S]{0,400}<NoobStackLoader mode="quick"/.test(kit), 'waiting inside a page, and a whole page waiting, show the NOOB burger');
+check(/export const NoobStackLoader/.test(stackLoader) && /QUICK_LAYER_MS/.test(stackLoader) && !/setTimeout\([^)]*minimum|MIN_MS|minDuration/i.test(kit), 'the burger shows only for as long as the page really waits: no minimum and no maximum time');
+check(/const LazyFallback[\s\S]{0,400}<NoobStackLoader mode="quick"/.test(profile) && !/border-t-noob animate-spin/.test(profile.slice(profile.indexOf('const LazyFallback'), profile.indexOf('const LazyFallback') + 500)), 'the windows the profile loads on demand wait behind the burger too');
+check(!/lazy\(/.test(pagesIndex) && !/React\.lazy/.test(pagesIndex) && /import \{ AccountPage[^}]*\} from '\.\/account'/.test(pagesIndex), 'tapping a row opens its page at once: every page comes in the same file as the hub');
+check(/const preloadSettingsHub = \(\) => \{ void import\('\.\.\/Settings\/SettingsHub'\); \};/.test(profile) && /requestIdleCallback\(preloadSettingsHub\)/.test(profile) && /onPointerEnter=\{isOwnProfile \? preloadSettingsHub/.test(profile) && /onTouchStart=\{isOwnProfile \? preloadSettingsHub/.test(profile), 'the hub is fetched in the background while the profile is on screen, and again as a finger touches the three dots');
+check(/active:scale-90/.test(profile.slice(profile.indexOf('data-testid="profile-three-dots"') - 900, profile.indexOf('data-testid="profile-three-dots"') + 50)), 'the three dots visibly press down at the touch');
+check(/active:scale-\[\.985\]/.test(kit) && /touch-manipulation/.test(kit), 'every row presses down at the touch (no wait for a double-tap)');
+check(/function useBusy\(\)/.test(kit) && /<Loader2 className="w-5 h-5 shrink-0 text-zinc-300 animate-spin"/.test(kit) && /aria-busy=\{busy\}/.test(kit), 'a row whose action takes a while shows a spinner the moment it is tapped, and ignores a second tap');
+check(/const \[pending, setPending\] = useState<boolean \| null>\(null\)/.test(kit) && /const shown = pending \?\? on/.test(kit) && /\.finally\(\(\) => \{ if \(alive\.current\) setPending\(null\); \}\)/.test(kit), 'a switch moves the moment it is tapped and goes back by itself if saving failed');
+check(/const \[pending, setPending\] = useState<T \| null>\(null\)/.test(kit) && /const shown = pending \?\? value/.test(kit), 'a choice marker moves the moment it is tapped, too');
+check(/export const SmallButton[\s\S]{0,900}active:scale-95[\s\S]{0,700}<Loader2/.test(kit), 'small buttons press down and show a spinner while they work');
+const handlerVoids = (allPages.match(/(?:onClick|onChange)=\{\(\w*\) => void /g) || []).length;
+check(handlerVoids <= 2, 'the page buttons hand their promise to the button, so it can show it is working', `(${handlerVoids} left)`);
+check(/getCachedList\(kind\)/.test(account) && /getCachedList\('muted'\)/.test(read('src/components/Settings/pages/see.tsx')) && /export function warmLists/.test(read('src/services/settingsApi.ts')) && /warmLists\(\)/.test(hub), 'lists of people that were opened before (or warmed in the background) show at once, and refresh quietly');
+check(/Promise\.all\(ids\.map\(/.test(account) && /if \(ready\.length > 0\) \{ setPeople\(ready\); return; \}/.test(interact), 'Blocked asks for everybody at the same time, and Invite starts from the people the app already has');
+check(/const OrdersView = lazy\(/.test(read('src/components/Settings/pages/support.tsx')), 'the orders list (a big part of the shop) is fetched only when that page is opened');
+check(/animate-in fade-in duration-150/.test(hub), 'a page fades in instead of jumping');
+
+section('11. Instants and Daily NOOB are the only things deleted by a clock');
+check(!/instants-archive|InstantsArchivePage|fetchInstantsArchive/.test(allPages + registry + pagesIndex), 'no Instants archive in Settings: Instants are deleted for good after 24 hours');
+check(fs.existsSync('supabase/migrations/20261017000002_instants_24h.sql') && /purge_expired_instants/.test(read('supabase/migrations/20261017000002_instants_24h.sql')), 'the migration that deletes finished Instants (and their pictures) exists');
+const allSql = fs.readdirSync('supabase/migrations').map((f) => [f, read(`supabase/migrations/${f}`)]);
+const clockDeletes = allSql.filter(([, t]) => /delete from public\.(posts|reels|stories|long_videos|post_slides|messages|comments|chats|profiles)\b[^;]*(interval '(30|31|60|90)|30 days)/i.test(t)).map(([f]) => f);
+check(clockDeletes.length === 0, 'nothing in the database deletes posts, reels, stories, videos, messages or comments because of their age', clockDeletes.join(', '));
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

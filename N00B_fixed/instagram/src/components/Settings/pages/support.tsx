@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BadgeCheck, ChevronDown, FileText, Info, KeyRound, Lock, MessageSquarePlus, Package, ShieldCheck, Sparkles, Trash2, Users, Wallet } from 'lucide-react';
 import { PageShell, Section, Row, Note, Spinner } from '../kit';
 import type { PageProps } from '../types';
-import { OrdersView } from '../../Store/OrdersView';
+const OrdersView = lazy(() => import('../../Store/OrdersView').then((m) => ({ default: m.OrdersView })));
 import { fetchAccountStatus, useAccountSettings } from '../../../services/settingsApi';
 
 declare const __BUILD_ID__: string;
@@ -15,7 +15,7 @@ export const OrdersPage: React.FC<PageProps> = ({ ctx, back }) => (
       <Row icon={Wallet} label="Wallet" sub="NOOB Points and your transactions" onClick={ctx.actions.openWallet} testId="orders-wallet" />
     </Section>
     <Section title="Your orders">
-      <div data-testid="orders-list"><OrdersView canManage={false} /></div>
+      <div data-testid="orders-list"><Suspense fallback={<Spinner />}><OrdersView canManage={false} /></Suspense></div>
     </Section>
   </PageShell>
 );

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, Bell, Bold, Camera, Contrast, Download, Globe, HardDrive, Languages, MapPin, Mic, MousePointerClick, Smartphone, Trash2, Zap } from 'lucide-react';
+import { Archive, Bell, Bold, Camera, Contrast, Download, Globe, HardDrive, Languages, MapPin, Mic, MousePointerClick, Smartphone, Trash2 } from 'lucide-react';
 import { PageShell, Section, Row, ToggleRow, Choice, Note, SmallButton, useFlash } from '../kit';
 import type { PageProps } from '../types';
 import { setDevicePrefs, useDevicePrefs, type AutoplayMode, type TextSize, type UploadQuality } from '../../../utils/devicePrefs';
@@ -81,7 +81,7 @@ export const DevicePermissionsPage: React.FC<PageProps> = ({ back }) => {
             right={
               <span className="flex items-center gap-2 shrink-0">
                 <span className={`text-[12px] font-bold ${state[name] === 'granted' ? 'text-white' : 'text-zinc-400'}`}>{STATE_TEXT[state[name]]}</span>
-                {(state[name] === 'prompt' || state[name] === 'denied') && <SmallButton onClick={() => void ask(name)} disabled={busy === name}>{busy === name ? '…' : state[name] === 'denied' ? 'Try again' : 'Allow'}</SmallButton>}
+                {(state[name] === 'prompt' || state[name] === 'denied') && <SmallButton onClick={() => ask(name)} disabled={busy === name}>{busy === name ? '…' : state[name] === 'denied' ? 'Try again' : 'Allow'}</SmallButton>}
               </span>
             }
           />
@@ -93,9 +93,8 @@ export const DevicePermissionsPage: React.FC<PageProps> = ({ back }) => {
 
 export const ArchivingPage: React.FC<PageProps> = ({ ctx, go, back }) => (
   <PageShell title="Archiving and downloading" onBack={back}>
-    <Section title="Archive" note="Stories are saved to your archive automatically when they end, so you can look at them or share them again.">
+    <Section title="Archive" note="Stories are saved to your archive automatically when they end, so you can look at them or share them again. Instants are the one thing NOOB deletes by itself: for good, after 24 hours.">
       <Row icon={Archive} label="Stories archive" sub="Every story you posted" onClick={() => go('stories-archive')} testId="archiving-stories" />
-      <Row icon={Zap} label="Instants archive" onClick={() => go('instants-archive')} />
     </Section>
     <Section title="Download" note="A readable copy of the details on your account.">
       <Row icon={Download} label="Download your information" onClick={ctx.actions.openExport} testId="archiving-export" />
@@ -208,7 +207,7 @@ export const AppWebsitesPage: React.FC<PageProps> = ({ ctx, back }) => {
       </Section>
       <Section title="Stored on this device" note="This removes only the saved copies of pictures and pages. It does not log you out or delete anything from your account.">
         <Row icon={HardDrive} label="Space used by NOOB" value={used || 'Unknown'} />
-        <Row icon={Trash2} label="Clear cache" sub="Free up space on this device" onClick={() => void clearCache()} disabled={clearing} testId="clear-cache" />
+        <Row icon={Trash2} label="Clear cache" sub="Free up space on this device" onClick={() => clearCache()} disabled={clearing} testId="clear-cache" />
       </Section>
       <Section title="Install">
         <Row icon={Smartphone} label="Add NOOB to your home screen" sub="Open it like an app" onClick={ctx.actions.openInstall} />

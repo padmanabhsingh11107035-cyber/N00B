@@ -3,12 +3,12 @@ import { EyeOff, HeartOff, Languages, Sparkles, Star, VolumeX } from 'lucide-rea
 import { PageShell, Section, Row, ToggleRow, Note, Spinner, PeopleList, useFlash } from '../kit';
 import type { PageProps } from '../types';
 import { setDevicePrefs, useDevicePrefs } from '../../../utils/devicePrefs';
-import { addToList, fetchList, refreshFeedLists, removeFromList, updateMute, updateSettings, useAccountSettings, type ListedPerson } from '../../../services/settingsApi';
+import { addToList, fetchList, getCachedList, refreshFeedLists, removeFromList, updateMute, updateSettings, useAccountSettings, type ListedPerson } from '../../../services/settingsApi';
 
 // What you see: muted accounts (posts, stories or both), content preferences, and like and share counts. (Favourites is a ListPage, see pages/index.ts.)
 
 export const MutedPage: React.FC<PageProps> = ({ ctx, back }) => {
-  const [people, setPeople] = useState<ListedPerson[] | null>(null);
+  const [people, setPeople] = useState<ListedPerson[] | null>(() => getCachedList('muted'));
   const [flash, show] = useFlash();
   const reload = async () => { const list = await fetchList('muted'); setPeople(list); void refreshFeedLists(); };
   useEffect(() => { void fetchList('muted').then(setPeople); }, []);
@@ -44,8 +44,8 @@ export const MutedPage: React.FC<PageProps> = ({ ctx, back }) => {
               if (!p) return null;
               return (
                 <div className="px-4 pb-3 -mt-1 grid gap-0.5 pl-[68px]">
-                  <label className="flex items-center justify-between gap-3 text-[13px] text-zinc-300 py-1.5 cursor-pointer">Mute posts and reels<input type="checkbox" className="w-4 h-4 accent-white" checked={p.mutePosts !== false} onChange={(e) => void change(p, { posts: e.target.checked })} /></label>
-                  <label className="flex items-center justify-between gap-3 text-[13px] text-zinc-300 py-1.5 cursor-pointer">Mute stories<input type="checkbox" className="w-4 h-4 accent-white" checked={p.muteStories !== false} onChange={(e) => void change(p, { stories: e.target.checked })} /></label>
+                  <label className="flex items-center justify-between gap-3 text-[13px] text-zinc-300 py-1.5 cursor-pointer">Mute posts and reels<input type="checkbox" className="w-4 h-4 accent-white" checked={p.mutePosts !== false} onChange={(e) => change(p, { posts: e.target.checked })} /></label>
+                  <label className="flex items-center justify-between gap-3 text-[13px] text-zinc-300 py-1.5 cursor-pointer">Mute stories<input type="checkbox" className="w-4 h-4 accent-white" checked={p.muteStories !== false} onChange={(e) => change(p, { stories: e.target.checked })} /></label>
                 </div>
               );
             }}
@@ -87,10 +87,10 @@ export const LikeCountsPage: React.FC<PageProps> = ({ back }) => {
     <PageShell title="Like and share counts" onBack={back}>
       {flash}
       <Section title="On other people's posts" note="You can still like posts. Only the numbers are hidden, for you.">
-        <ToggleRow icon={HeartOff} label="Hide like and share counts" sub="On posts and reels of other people" on={s['likes.hideOthers']} onChange={(v) => void set({ 'likes.hideOthers': v }, v ? 'Counts on other people’s posts are hidden.' : 'Counts on other people’s posts are shown.')} testId="likes-hide-others" />
+        <ToggleRow icon={HeartOff} label="Hide like and share counts" sub="On posts and reels of other people" on={s['likes.hideOthers']} onChange={(v) => set({ 'likes.hideOthers': v }, v ? 'Counts on other people’s posts are hidden.' : 'Counts on other people’s posts are shown.')} testId="likes-hide-others" />
       </Section>
       <Section title="On your posts" note="This changes all your posts and reels now, and every new one. Only you can still see the numbers.">
-        <ToggleRow icon={HeartOff} label="Hide like and share counts on all my posts" on={s['likes.hideMine']} onChange={(v) => void set({ 'likes.hideMine': v }, v ? 'Counts on your posts are hidden.' : 'Counts on your posts are shown.')} testId="likes-hide-mine" />
+        <ToggleRow icon={HeartOff} label="Hide like and share counts on all my posts" on={s['likes.hideMine']} onChange={(v) => set({ 'likes.hideMine': v }, v ? 'Counts on your posts are hidden.' : 'Counts on your posts are shown.')} testId="likes-hide-mine" />
       </Section>
     </PageShell>
   );

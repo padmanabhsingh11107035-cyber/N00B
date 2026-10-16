@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ChevronRight, Info, Loader2, Search, X } from 'lucide-react';
 import type { User } from '../../types';
 import { fetchUsers } from '../../services/api';
+import { NoobStackLoader } from '../Common/NoobStackLoader';
 
 // The small building blocks every page of "Settings and activity" is made from, so all of them look and behave the same: a page with a Back button, sections
 // drawn as rounded cards, rows (with an icon, a value and a chevron, or a switch), choices, notes, and a list of people with a search to add more.
@@ -44,7 +45,8 @@ export interface RowProps {
   label: string;
   sub?: string;
   value?: string;
-  onClick?: () => void;
+  /** May return a promise: the row then shows a small spinner at once and ignores further taps until it is done. */
+  onClick?: () => unknown;
   danger?: boolean;
   right?: React.ReactNode;
   chevron?: boolean;
@@ -52,7 +54,26 @@ export interface RowProps {
   testId?: string;
 }
 
+/** Runs a tap's action and says at once whether it is still working (so a button never looks dead while the server answers). */
+function useBusy(): [boolean, (run: (() => unknown) | undefined) => void] {
+  const [busy, setBusy] = useState(false);
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const start = (run: (() => unknown) | undefined) => {
+    if (!run || busy) return;
+    const r = run();
+    if (r && typeof (r as Promise<unknown>).then === 'function') {
+      setBusy(true);
+      void Promise.resolve(r).catch(() => undefined).finally(() => { if (alive.current) setBusy(false); });
+    }
+  };
+  return [busy, start];
+}
+
+const PRESS = 'hover:bg-white/[.04] active:bg-white/[.1] active:scale-[.985] transition-[background-color,transform] duration-100 touch-manipulation';
+
 export const Row: React.FC<RowProps> = ({ icon: Icon, label, sub, value, onClick, danger, right, chevron = true, disabled, testId }) => {
+  const [busy, start] = useBusy();
   const inner = (
     <>
       {Icon && (
@@ -66,12 +87,13 @@ export const Row: React.FC<RowProps> = ({ icon: Icon, label, sub, value, onClick
       </span>
       {value && <span className="shrink-0 max-w-[40%] truncate text-[13px] text-zinc-400">{value}</span>}
       {right}
-      {onClick && chevron && !right && <ChevronRight className="w-5 h-5 shrink-0 text-zinc-500" />}
+      {onClick && busy && <Loader2 className="w-5 h-5 shrink-0 text-zinc-300 animate-spin" aria-label="Working" />}
+      {onClick && !busy && chevron && !right && <ChevronRight className="w-5 h-5 shrink-0 text-zinc-500" />}
     </>
   );
   if (!onClick) return <div className="flex items-center gap-3 px-4 py-3.5" data-testid={testId}>{inner}</div>;
   return (
-    <button type="button" onClick={onClick} disabled={disabled} data-testid={testId} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/[.04] active:bg-white/[.07] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default">
+    <button type="button" onClick={() => start(onClick)} disabled={disabled} aria-busy={busy} data-testid={testId} className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${PRESS} cursor-pointer disabled:opacity-50 disabled:cursor-default`}>
       {inner}
     </button>
   );
@@ -91,17 +113,40 @@ export const Switch: React.FC<{ on: boolean; onChange: (next: boolean) => void; 
   </button>
 );
 
-/** A row with a switch on the right. */
-export const ToggleRow: React.FC<{ icon?: RowProps['icon']; label: string; sub?: string; on: boolean; onChange: (next: boolean) => void; disabled?: boolean; testId?: string }> = ({ icon, label, sub, on, onChange, disabled, testId }) => (
-  <Row icon={icon} label={label} sub={sub} testId={testId} onClick={disabled ? undefined : () => onChange(!on)} chevron={false} right={<Switch on={on} onChange={onChange} label={label} disabled={disabled} />} />
-);
+/**
+ * A row with a switch on the right. The switch moves the moment it is tapped; if the change is saved by something that takes a while (it returns a promise) it stays where the
+ * person put it until that is done, and goes back by itself if saving failed (the page then says why).
+ */
+export const ToggleRow: React.FC<{ icon?: RowProps['icon']; label: string; sub?: string; on: boolean; onChange: (next: boolean) => unknown; disabled?: boolean; testId?: string }> = ({ icon, label, sub, on, onChange, disabled, testId }) => {
+  const [pending, setPending] = useState<boolean | null>(null);
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const shown = pending ?? on;
+  const flip = (next: boolean) => {
+    if (disabled) return;
+    setPending(next);
+    void Promise.resolve(onChange(next)).catch(() => undefined).finally(() => { if (alive.current) setPending(null); });
+  };
+  return (
+    <Row icon={icon} label={label} sub={sub} testId={testId} onClick={disabled ? undefined : () => flip(!shown)} chevron={false} right={<Switch on={shown} onChange={flip} label={label} disabled={disabled} />} />
+  );
+};
 
 /** One choice out of a few, shown as rows with a round marker. */
-export function Choice<T extends string>({ value, onChange, options, disabled }: { value: T; onChange: (next: T) => void; options: Array<{ value: T; label: string; sub?: string }>; disabled?: boolean }) {
+export function Choice<T extends string>({ value, onChange, options, disabled }: { value: T; onChange: (next: T) => unknown; options: Array<{ value: T; label: string; sub?: string }>; disabled?: boolean }) {
+  // the marker moves the moment a choice is tapped, and goes back if saving it failed
+  const [pending, setPending] = useState<T | null>(null);
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const shown = pending ?? value;
+  const pick = (next: T) => {
+    setPending(next);
+    void Promise.resolve(onChange(next)).catch(() => undefined).finally(() => { if (alive.current) setPending(null); });
+  };
   return (
     <>
       {options.map((o) => {
-        const on = o.value === value;
+        const on = o.value === shown;
         return (
           <button
             key={o.value}
@@ -110,8 +155,8 @@ export function Choice<T extends string>({ value, onChange, options, disabled }:
             aria-checked={on}
             disabled={disabled}
             data-testid={`choice-${o.value}`}
-            onClick={() => { if (!on) onChange(o.value); }}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/[.04] transition-colors cursor-pointer disabled:opacity-50"
+            onClick={() => { if (!on) pick(o.value); }}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${PRESS} cursor-pointer disabled:opacity-50`}
           >
             <span className="min-w-0 flex-1">
               <span className="block text-[15px] font-bold text-white leading-snug">{o.label}</span>
@@ -132,8 +177,18 @@ export const Note: React.FC<{ children: React.ReactNode; tone?: 'info' | 'good' 
   </div>
 );
 
+/** Loading inside a page: NOOB's burger, only for as long as the page is really waiting (no minimum, no maximum time). */
 export const Spinner: React.FC<{ label?: string }> = ({ label = 'Loading…' }) => (
-  <div role="status" className="py-16 flex items-center justify-center gap-2 text-zinc-400 text-sm"><Loader2 className="w-5 h-5 animate-spin" /> {label}</div>
+  <div role="status" aria-label={label} className="h-[190px] flex items-center justify-center overflow-hidden">
+    <div className="origin-center scale-[.62]"><NoobStackLoader mode="quick" subtitle={label} /></div>
+  </div>
+);
+
+/** Loading a whole page (the hub itself, a page that has to be fetched): the burger, big, in the middle. */
+export const PageLoading: React.FC = () => (
+  <div role="status" aria-label="Loading" className="fixed inset-0 z-[45] bg-page doodle-wallpaper flex items-center justify-center text-white">
+    <NoobStackLoader mode="quick" subtitle="Loading…" />
+  </div>
 );
 
 export const Empty: React.FC<{ icon?: RowProps['icon']; title: string; text?: string }> = ({ icon: Icon, title, text }) => (
@@ -148,17 +203,21 @@ export const Avatar: React.FC<{ user: Pick<User, 'avatar' | 'username'>; size?: 
   <img src={user.avatar || '/noob-logo.svg.jpeg'} alt="" loading="lazy" draggable={false} className="rounded-full object-cover bg-zinc-800 border border-white/15 shrink-0" style={{ width: size, height: size }} />
 );
 
-export const SmallButton: React.FC<{ onClick: () => void; children: React.ReactNode; tone?: 'plain' | 'solid' | 'danger'; disabled?: boolean; testId?: string }> = ({ onClick, children, tone = 'plain', disabled, testId }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    data-testid={testId}
-    className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-colors cursor-pointer disabled:opacity-50 ${tone === 'solid' ? 'bg-white text-black hover:bg-zinc-200' : tone === 'danger' ? 'border border-red-500/50 text-red-400 hover:bg-red-500/10' : 'border border-white/30 text-white hover:border-white/70'}`}
-  >
-    {children}
-  </button>
-);
+export const SmallButton: React.FC<{ onClick: () => unknown; children: React.ReactNode; tone?: 'plain' | 'solid' | 'danger'; disabled?: boolean; testId?: string }> = ({ onClick, children, tone = 'plain', disabled, testId }) => {
+  const [busy, start] = useBusy();
+  return (
+    <button
+      type="button"
+      onClick={() => start(onClick)}
+      disabled={disabled || busy}
+      aria-busy={busy}
+      data-testid={testId}
+      className={`shrink-0 min-w-[3.5rem] inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-[background-color,transform,border-color] duration-100 active:scale-95 touch-manipulation cursor-pointer disabled:opacity-60 ${tone === 'solid' ? 'bg-white text-black hover:bg-zinc-200' : tone === 'danger' ? 'border border-red-500/50 text-red-400 hover:bg-red-500/10' : 'border border-white/30 text-white hover:border-white/70'}`}
+    >
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-label="Working" /> : children}
+    </button>
+  );
+};
 
 /**
  * A list of people with a search box to find more. `people` is who is on the list now; `onAdd` / `onRemove` change it (and must return a promise: the row shows a small
@@ -228,7 +287,7 @@ export const PeopleList: React.FC<{
                   <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white truncate">@{u.username}</span><span className="block text-xs text-zinc-400 truncate">{u.displayName}</span></span>
                   {onList.has(u.id)
                     ? <span className="text-xs font-bold text-zinc-400">On the list</span>
-                    : <SmallButton tone="solid" disabled={busy === u.id || full} onClick={() => void run(u.id, async () => { await onAdd(u); setQuery(''); setFound([]); })}>{busy === u.id ? '…' : addLabel}</SmallButton>}
+                    : <SmallButton tone="solid" disabled={busy === u.id || full} onClick={() => run(u.id, async () => { await onAdd(u); setQuery(''); setFound([]); })}>{busy === u.id ? '…' : addLabel}</SmallButton>}
                 </div>
               ))}
             </div>
@@ -244,7 +303,7 @@ export const PeopleList: React.FC<{
               <div className="flex items-center gap-3 px-4 py-3">
                 <Avatar user={p} />
                 <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white truncate">@{p.username}</span><span className="block text-xs text-zinc-400 truncate">{p.displayName}</span></span>
-                <SmallButton disabled={busy === p.id} onClick={() => void run(p.id, () => onRemove(p.id))}>{busy === p.id ? '…' : removeLabel}</SmallButton>
+                <SmallButton disabled={busy === p.id} onClick={() => run(p.id, () => onRemove(p.id))}>{busy === p.id ? '…' : removeLabel}</SmallButton>
               </div>
               {renderExtra?.(p)}
             </div>

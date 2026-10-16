@@ -1,10 +1,10 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { useFullPage } from '../../utils/fullPage';
-import { Row, Section, Spinner } from './kit';
+import { PageLoading, Row, Section } from './kit';
 import { ROWS, SECTIONS, searchRows, type RowDef } from './registry';
 import { PAGES } from './pages';
-import { loadSettings, useAccountSettings } from '../../services/settingsApi';
+import { loadSettings, useAccountSettings, warmLists } from '../../services/settingsApi';
 import type { SettingsContext } from './types';
 
 // "Settings and activity": a full-screen page opened from the profile's three dots. The first screen is the list of everything (with a search box); each row opens its own page,
@@ -26,7 +26,7 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   const settings = useAccountSettings();
   useFullPage(true);
 
-  useEffect(() => { void loadSettings(); }, []);
+  useEffect(() => { void loadSettings(); warmLists(); }, []);
 
   // history: one entry for the first screen and one for each page opened on top, so Back always means "one page up"
   useEffect(() => {
@@ -109,8 +109,8 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   const view = (
     <div ref={scroller} className="fixed inset-0 z-[45] bg-page doodle-wallpaper overflow-y-auto text-white" role="region" aria-label="Settings and activity" data-testid="settings-hub">
       {Page ? (
-        <Suspense fallback={<Spinner />}>
-          <Page ctx={ctx} go={go} back={back} />
+        <Suspense fallback={<PageLoading />}>
+          <div key={current} className="animate-in fade-in duration-150"><Page ctx={ctx} go={go} back={back} /></div>
         </Suspense>
       ) : (
         <div className="min-h-full">

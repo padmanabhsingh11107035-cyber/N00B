@@ -35,6 +35,7 @@ import { openNoobDraw } from '../Draw/drawStore';
 import { VenetianMask } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
 import { useFullPage } from '../../utils/fullPage';
+import { OPEN_ANONYMOUS_EVENT } from '../../utils/openAnonymous';
 import { captureScroll, restoreScroll, type ScrollSnapshot } from '../../utils/pageLayers';
 import { useNoobDrawOpen } from '../Draw/drawStore';
 import { useStudyNav } from '../Study/studyStore';
@@ -207,6 +208,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
     try { window.history.replaceState(null, '', '/' + window.location.search); } catch { /* nothing to undo */ }
     setShowAnonymous(false);
   };
+  // The "Send me anonymous messages" button on a story opens this page (utils/openAnonymous.ts).
+  useEffect(() => {
+    const open = () => openAnonymous();
+    window.addEventListener(OPEN_ANONYMOUS_EVENT, open);
+    return () => window.removeEventListener(OPEN_ANONYMOUS_EVENT, open);
+  }, []);
   const [showNoobRooms, setShowNoobRooms] = useState(restoredPage === 'rooms');
   const [showGuessTheSong, setShowGuessTheSong] = useState(restoredPage === 'song');
   const [showLiveLoungePage, setShowLiveLoungePage] = useState(restoredPage === 'lounge');

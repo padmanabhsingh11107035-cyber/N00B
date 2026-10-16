@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon } from 'lucide-react';
+import { VenetianMask, X, Sparkles, Check, MapPin, HelpCircle, ImagePlus, Loader2, Plus, Trash2, Type, Sticker as StickerIcon, AtSign, Hash, Link2, Search, Pencil, Highlighter, Eraser, Undo2, Timer, MessageCircleQuestion, Music as MusicIcon } from 'lucide-react';
 import { Story, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { EditableStickerLayer } from './EditableStickerLayer';
@@ -469,11 +469,24 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [questionLayers, setQuestionLayers] = useState<QuestionLayer[]>([]);
   const [questionEditorId, setQuestionEditorId] = useState<string | 'new' | null>(null);
   const [draftQuestionPrompt, setDraftQuestionPrompt] = useState('');
-  const [draftQuestionAnonymous, setDraftQuestionAnonymous] = useState(true);
+  const [draftQuestionAnonymous, setDraftQuestionAnonymous] = useState(false);
+
+  // "Send me anonymous messages": one button on the story that takes whoever taps it to the Anonymous Messages page. (A story with this button is not saved to highlights.)
+  const [anonButtonLayers, setAnonButtonLayers] = useState<Array<{ id: string; x: number; y: number; width: number; rotation: number }>>([]);
+  const addAnonButton = () => {
+    if (anonButtonLayers.length > 0) { setActiveLayerId(anonButtonLayers[0].id); return; }
+    const id = `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setAnonButtonLayers([{ id, x: 50, y: 70, width: 74, rotation: 0 }]);
+    setActiveLayerId(id);
+  };
+  const deleteAnonButton = (id: string) => {
+    setAnonButtonLayers((prev) => prev.filter((q) => q.id !== id));
+    setActiveLayerId((cur) => (cur === id ? null : cur));
+  };
 
   const openNewQuestionLayer = () => {
     setDraftQuestionPrompt('');
-    setDraftQuestionAnonymous(true);
+    setDraftQuestionAnonymous(false);
     setQuestionEditorId('new');
   };
 
@@ -683,6 +696,16 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
         mainStickers.push({
           type: 'question',
           data: { prompt: layer.prompt, ...(layer.anonymous ? { anonymous: true } : {}) },
+          x: layer.x,
+          y: layer.y,
+          width: layer.width,
+          rotation: layer.rotation
+        });
+      });
+      anonButtonLayers.forEach((layer) => {
+        mainStickers.push({
+          type: 'anon_messages',
+          data: { label: 'Send me anonymous messages' },
           x: layer.x,
           y: layer.y,
           width: layer.width,
@@ -1125,6 +1148,37 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                     <span className="font-extrabold text-white tabular-nums" style={{ fontSize: '1em' }}>
                       {formatCountdown(layer.targetIso)}
                     </span>
+                  </div>
+                </div>
+              </EditableStickerLayer>
+            ))}
+
+          {/* The "Send me anonymous messages" button */}
+          {selectedImage &&
+            anonButtonLayers.map((layer) => (
+              <EditableStickerLayer
+                key={layer.id}
+                x={layer.x}
+                y={layer.y}
+                width={layer.width}
+                rotation={layer.rotation}
+                canvasRef={canvasRef}
+                active={activeLayerId === layer.id}
+                onSelect={() => setActiveLayerId(layer.id)}
+                onChange={(next) => setAnonButtonLayers((prev) => prev.map((q) => (q.id === layer.id ? { ...q, ...next } : q)))}
+                onTap={() => setActiveLayerId(layer.id)}
+                onDelete={() => deleteAnonButton(layer.id)}
+                onDragStateChange={(dragging, overTrash) => {
+                  setIsDraggingLayer(dragging);
+                  setIsOverTrash(overTrash);
+                }}
+                minWidthPct={40}
+                maxWidthPct={95}
+              >
+                <div className="w-full flex items-center justify-center">
+                  <div className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-4 py-2 shadow-lg whitespace-nowrap" style={{ fontSize: `${layer.width * 0.075}cqw` }}>
+                    <VenetianMask className="shrink-0" style={{ width: '1.2em', height: '1.2em' }} />
+                    <span className="font-extrabold" style={{ fontSize: '1em' }}>Send me anonymous messages</span>
                   </div>
                 </div>
               </EditableStickerLayer>
@@ -1694,9 +1748,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 </div>
                 <div className="flex flex-wrap justify-center gap-1.5 max-w-xs" data-testid="question-presets">
                   {[
-                    { text: 'Send me anonymous messages', anonymous: true },
                     { text: 'Ask me anything', anonymous: false },
-                    { text: 'Ask me a question', anonymous: false }
+                    { text: 'Ask me a question', anonymous: false },
+                    { text: 'Tell me a secret', anonymous: true }
                   ].map((preset) => (
                     <button
                       key={preset.text}
@@ -1792,6 +1846,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
               >
                 <Timer className="w-3.5 h-3.5" /> Countdown
+              </button>
+              <button
+                onClick={addAnonButton}
+                data-testid="add-anon-button"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors bg-neutral-800 text-gray-300 hover:bg-neutral-700"
+              >
+                <VenetianMask className="w-3.5 h-3.5" /> Anonymous
               </button>
               <button
                 onClick={openNewQuestionLayer}

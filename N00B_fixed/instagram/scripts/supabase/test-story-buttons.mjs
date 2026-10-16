@@ -4,7 +4,8 @@
 //   * The quiz cheered for answer number 2 whatever the right answer was, and let you change your answer: it checks the real right answer, once.
 //   * The slider kept its value from one story to the next.
 //   * The owner had to hunt for the answers to a question: the sticker now says how many came in.
-//   * A question can be ANONYMOUS ("Send me anonymous messages"): the answers carry no name and no picture (the database leaves them out; see test-story-questions-anonymous.mjs).
+//   * A question can be ANONYMOUS ("Tell me a secret"): the answers carry no name and no picture (the database leaves them out; see test-story-questions-anonymous.mjs).
+//   * The "Send me anonymous messages" BUTTON opens the Anonymous Messages page, and a story with it is not saved to highlights (see test-anon-story-no-highlight.mjs).
 //
 // Usage: node scripts/supabase/test-story-buttons.mjs
 import fs from 'node:fs';
@@ -42,11 +43,23 @@ section('4. Anonymous questions');
 check(/placeholder=\{anonymousQuestion \? 'Send an anonymous message\.\.\.' : 'Type your answer\.\.\.'\}/.test(viewer) && /Anonymous question/.test(viewer), 'a viewer sees "Send an anonymous message" on an anonymous question');
 check(/a\.anonymous \? 'Anonymous' : `@\$\{a\.username\}`/.test(viewer), 'the owner reads "Anonymous", never a name');
 check(/anonymous\?: boolean/.test(api) && /Array\.isArray\(value\) \)? ?\{ out\[pos\] = value; continue; \}|Array\.isArray\(value\)\) \{ out\[pos\] = value; continue; \}/.test(api) && /\.\.\.a, anonymous/.test(api), 'the app understands both the new and the old answer from the server');
-check(/Send me anonymous messages/.test(creator) && /Ask me anything/.test(creator) && /data-testid="question-anonymous-switch"/.test(creator) && /role="switch"/.test(creator), 'when making a question you can pick "Send me anonymous messages" (or Ask me anything) and switch Anonymous answers on or off');
-check(/\.\.\.\(layer\.anonymous \? \{ anonymous: true \} : \{\}\)/.test(creator) && /useState\(true\)/.test(creator), 'it is saved with the sticker, and a new question is anonymous unless you switch it off');
+check(/Tell me a secret/.test(creator) && /Ask me anything/.test(creator) && /data-testid="question-anonymous-switch"/.test(creator) && /role="switch"/.test(creator), 'when making a question you can pick a ready-made one (Ask me anything, Tell me a secret) and switch Anonymous answers on or off');
+check(/\.\.\.\(layer\.anonymous \? \{ anonymous: true \} : \{\}\)/.test(creator) && /useState\(false\)/.test(creator), 'it is saved with the sticker, and a question names its askers unless you switch Anonymous answers on');
 check(/'anonymous', anon/.test(sql) && /case when anon then 'Anonymous' else p\.username end/.test(sql) && /case when anon then '' else p\.avatar end/.test(sql), 'the database leaves the name and the picture out of an anonymous question’s answers');
 check(/msg\.storyReplies/.test(sql) && /limit_applies/.test(sql) && /already sent 5 answers/.test(sql), 'answers follow "Who can reply to your story", "Limit interactions" and a limit of 5 per person');
 check(/revoke execute on function public\.story_by_id\(uuid\) from public, anon/.test(sql), 'and a stranger can no longer ask for a story by its address');
+
+section('5. The "Send me anonymous messages" button');
+const openAnon = read('src/utils/openAnonymous.ts');
+const app = read('src/App.tsx');
+const feed = read('src/components/Feed/FeedView.tsx');
+check(/OPEN_ANONYMOUS_EVENT = 'noob:open-anonymous'/.test(openAnon) && /requestOpenAnonymousMessages/.test(openAnon), 'one call, from anywhere, asks for the Anonymous Messages page');
+check(/sticker\.type === 'anon_messages'/.test(viewer) && /data-testid="story-anon-button"/.test(viewer) && /requestOpenAnonymousMessages\(\); onClose\(\);/.test(viewer), 'tapping the button on a story closes the story and asks for that page');
+check(/e\.stopPropagation\(\); requestOpenAnonymousMessages/.test(viewer), 'the tap does not also move the story on');
+check(/addEventListener\(OPEN_ANONYMOUS_EVENT, open\)/.test(app) && /setActiveStoryViewerIndex\(null\); setActiveTab\('feed'\)/.test(app), 'the app leaves the story and goes home');
+check(/addEventListener\(OPEN_ANONYMOUS_EVENT, open\)/.test(feed) && /const open = \(\) => openAnonymous\(\)/.test(feed), 'and the home page shows the Anonymous Messages page');
+check(/data-testid="add-anon-button"/.test(creator) && /type: 'anon_messages'/.test(creator) && /anonButtonLayers\.forEach/.test(creator) && /anonButtonLayers\.map\(\(layer\) => \(\s*<EditableStickerLayer/.test(creator), 'when making a story you can add the button, move and resize it, and it is saved with the story');
+check(/'anon_messages'/.test(read('src/types.ts')), 'it is a known sticker type');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

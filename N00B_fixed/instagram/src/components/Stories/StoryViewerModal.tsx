@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { openInApp } from '../../utils/inAppLinks';
 import { can } from '../../adminAccess';
-import { X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask } from 'lucide-react';
 import { Story, User } from '../../types';
 import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
@@ -15,6 +15,7 @@ import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
 import { holdSongs } from '../../utils/songSound';
+import { requestOpenAnonymousMessages } from '../../utils/openAnonymous';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -769,6 +770,25 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   ) : (
                     <img src={sticker.data?.content} alt="" className="w-full h-auto rounded-lg" />
                   )}
+                </div>
+              );
+            }
+
+            if (sticker.type === 'anon_messages') {
+              return (
+                <div key={idx} className="absolute z-30 pointer-events-auto" style={layerStyle}>
+                  <div className="w-full flex items-center justify-center">
+                    <button
+                      type="button"
+                      data-testid="story-anon-button"
+                      onClick={(e) => { e.stopPropagation(); requestOpenAnonymousMessages(); onClose(); }}
+                      className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-4 py-2 shadow-lg whitespace-nowrap cursor-pointer active:scale-95 transition-transform touch-manipulation"
+                      style={{ fontSize: `${(sticker.width || 70) * 0.075}cqw` }}
+                    >
+                      <VenetianMask className="shrink-0" style={{ width: '1.2em', height: '1.2em' }} />
+                      <span className="font-extrabold" style={{ fontSize: '1em' }}>{sticker.data?.label || 'Send me anonymous messages'}</span>
+                    </button>
+                  </div>
                 </div>
               );
             }

@@ -472,7 +472,7 @@ export interface Story {
   likesCount?: number;
   filter?: string;
   stickers?: {
-    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text' | 'sticker' | 'hashtag' | 'link' | 'draw' | 'question';
+    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text' | 'sticker' | 'hashtag' | 'link' | 'draw' | 'question' | 'anon_messages';
     data: any;
     x: number; // percentage, center-anchored
     y: number;

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { BurgerLoading } from '../Common/BurgerLoading';
 import { orderUnseenFirst } from '../../utils/seenContent';
 import { navKey } from '../../utils/keyboardNav';
@@ -16,7 +17,8 @@ import {
   Film,
   ArrowLeft,
   Trash2,
-  MoreHorizontal,
+  MoreVertical,
+  Link2,
   Pin,
   MessageSquareOff,
   EyeOff,
@@ -135,6 +137,15 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [commentError, setCommentError] = useState('');
   const [commentAttachment, setCommentAttachment] = useState<CommentAttachment | null>(null);
   const [liveOverlay, setLiveOverlay] = useState<{ stream: LiveStreamSummary } | null>(null);
+  // What the touch / wheel / key handlers (put on the page once) need to see of the latest render.
+  const live = useRef<{
+    currentIndex: number;
+    localReels: Reel[];
+    anyModalOpen: boolean;
+    handleTap: () => void;
+    slideTo: (dir: 1 | -1) => void;
+    snapBack: () => void;
+  }>({ currentIndex: 0, localReels: [], anyModalOpen: false, handleTap: () => undefined, slideTo: () => undefined, snapBack: () => undefined });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
@@ -212,7 +223,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // read the message, short enough that one bad upload doesn't strand anyone on it.
   useEffect(() => {
     if (!videoFailed) return;
-    const t = setTimeout(() => handleNextReel(), 2500);
+    const t = setTimeout(() => live.current.slideTo(1), 2500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoFailed]);
@@ -259,6 +270,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     let lastTime = 0;
     const onTime = () => {
       const t = video.currentTime;
+      if (progressRef.current && video.duration > 0) progressRef.current.style.width = `${Math.min(100, (t / video.duration) * 100)}%`;
       if (songUrlRef.current && t + 0.4 < lastTime) loadSong(songUrlRef.current, true);   // the video started over: so does its song
       lastTime = t;
     };
@@ -279,6 +291,13 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !currentReel) return;
+    const bar = progressRef.current;
+    if (bar) {
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      void bar.offsetWidth;
+      bar.style.transition = '';
+    }
     video.removeAttribute('src');
     video.load();
     if (currentReel.thumbnailUrl) video.poster = currentReel.thumbnailUrl;
@@ -503,31 +522,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   };
 
-  const handleNextReel = () => {
-    if (currentIndex < localReels.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      // Finished a full pass with no repeats — reshuffle into a fresh
-      // order for the next pass instead of replaying the same sequence.
-      setLocalReels((prev: Reel[]) => {
-        const reshuffled = shuffleReels(prev);
-        // Avoid the last reel of this pass landing right back at the front,
-        // which would read as an immediate repeat across the pass boundary.
-        if (reshuffled.length > 1 && reshuffled[0].id === prev[prev.length - 1].id) {
-          [reshuffled[0], reshuffled[1]] = [reshuffled[1], reshuffled[0]];
-        }
-        return reshuffled;
-      });
-      setCurrentIndex(0);
-    }
-  };
-
-  const handlePrevReel = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
   const handleToggleReelComments = async () => {
     if (!currentReel) return;
     try {
@@ -568,76 +562,175 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   };
 
   // Swipe (touch) / scroll (wheel) / arrow-key navigation between reels.
-  const touchStartY = useRef<number | null>(null);
-  const isNavLockedRef = useRef(false);
+  //
+  // The reels move WITH the finger (like a normal scrolling list): while it drags, the reel before and the reel after are already there, so the next one slides
+  // up under the finger and its top is seen before it is chosen. Letting go far enough (or with a flick) finishes the slide to that reel; letting go early
+  // slides back. The track below holds the reel before / this reel / the reel after, one screen apart, and is moved by hand (not through React) while dragging.
+  const SLIDE_MS = 260;
+  const SLOT_GAP = 4;   // the reels before / after wait a hair further away, so not even a sliver of them shows at rest
+  const pagerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement | null>(null);
+  const animatingRef = useRef(false);
+  const wheelLockRef = useRef(0);
   const anyModalOpen = showComments || showReelOptionsMenu || showLikesViewsSheet;
 
-  const navigateWithCooldown = (direction: 'next' | 'prev') => {
-    if (isNavLockedRef.current) return;
-    isNavLockedRef.current = true;
-    if (direction === 'next') handleNextReel();
-    else handlePrevReel();
-    setTimeout(() => {
-      isNavLockedRef.current = false;
-    }, 400);
+  const snapBack = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.style.transition = 'transform 220ms cubic-bezier(0.22, 0.8, 0.22, 1)';
+    track.style.transform = 'translate3d(0, 0, 0)';
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  // Without this, the browser's own native scroll/rubber-band-bounce runs
-  // at the same time as the swipe gesture, so the page visibly drags and
-  // wobbles with your finger before the touchend below decides whether to
-  // snap to the next/prev reel — the "loose, moves when I swipe" feel.
-  // Blocking every touchmove here means the ONLY way to move between
-  // reels is the deliberate snap below, never a free-scrolling page.
-  //
-  // React registers onTouchMove as a passive listener (preventDefault
-  // inside it is silently ignored, with a console warning), so this has
-  // to be a real addEventListener with passive:false — the touch-action
-  // CSS on the player is a second line of defense, but Android WebView
-  // versions vary in how reliably they honor it alone.
-  useEffect(() => {
-    const el = playerRef.current;
-    if (!el) return;
-    const onTouchMove = (e: TouchEvent) => {
-      if (anyModalOpen) return;
-      e.preventDefault();
-    };
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    return () => el.removeEventListener('touchmove', onTouchMove);
-  }, [anyModalOpen]);
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (anyModalOpen || touchStartY.current === null) return;
-    const deltaY = touchStartY.current - e.changedTouches[0].clientY;
-    touchStartY.current = null;
-    const SWIPE_THRESHOLD = 50;
-    if (deltaY > SWIPE_THRESHOLD) navigateWithCooldown('next');
-    else if (deltaY < -SWIPE_THRESHOLD) navigateWithCooldown('prev');
-    else {
-      // Not a swipe — a tap. Handled here directly (with the browser's own click
-      // suppressed) rather than through onClick/onDoubleClick, which on a real
-      // phone is an unreliable way to tell a single tap from a double one.
-      e.preventDefault();
-      handleTap();
+  const slideTo = (dir: 1 | -1) => {
+    const track = trackRef.current;
+    const pager = pagerRef.current;
+    const target = currentIndex + dir;
+    if (!track || !pager || animatingRef.current) return;
+    if (target < 0 || target >= localReels.length) {
+      snapBack();
+      return;
     }
+    animatingRef.current = true;
+    wheelLockRef.current = Date.now() + SLIDE_MS + 300;
+    track.style.transition = `transform ${SLIDE_MS}ms cubic-bezier(0.22, 0.8, 0.22, 1)`;
+    track.style.transform = `translate3d(0, ${-dir * (pager.clientHeight + SLOT_GAP)}px, 0)`;
+    window.setTimeout(() => {
+      // the new reel is put in the middle slot and the track goes back to rest in the same moment, so nothing flashes in between
+      flushSync(() => setCurrentIndex(target));
+      track.style.transition = 'none';
+      track.style.transform = 'translate3d(0, 0, 0)';
+      animatingRef.current = false;
+    }, SLIDE_MS + 20);
   };
+
+  live.current = { currentIndex, localReels, anyModalOpen, handleTap, slideTo, snapBack };
+
+  // The list never ends: a little before the last reel, the whole set is added again in a fresh order (never starting with the reel just shown),
+  // so the next reel is always there to be seen under the finger.
+  useEffect(() => {
+    if (localReels.length < 2 || currentIndex < localReels.length - 2) return;
+    setLocalReels((prev) => {
+      const unique: Reel[] = Array.from(new Map<string, Reel>(prev.map((r) => [r.id, r] as [string, Reel])).values());
+      if (unique.length < 2) return prev;
+      const pass = shuffleReels(unique);
+      if (pass[0].id === prev[prev.length - 1].id) [pass[0], pass[1]] = [pass[1], pass[0]];
+      return [...prev, ...pass];
+    });
+  }, [currentIndex, localReels.length]);
+
+  useEffect(() => {
+    const el = pagerRef.current;
+    if (!el) return;
+    let active = false;
+    let locked = false;
+    let startX = 0;
+    let startY = 0;
+    let lastY = 0;
+    let lastT = 0;
+    let vy = 0;
+    let onControl = false;
+    let onVideo = false;
+
+    const onStart = (e: TouchEvent) => {
+      if (live.current.anyModalOpen || animatingRef.current || e.touches.length !== 1) {
+        active = false;
+        return;
+      }
+      const t = e.touches[0];
+      const target = e.target as Element | null;
+      active = true;
+      locked = false;
+      startX = t.clientX;
+      startY = lastY = t.clientY;
+      lastT = performance.now();
+      vy = 0;
+      onControl = !!target?.closest('button, a, input, textarea');
+      onVideo = !!target?.closest('[data-reel-tap]');
+    };
+
+    // A touchmove has to be a real (non-passive) listener to be allowed to stop the page from scrolling by itself with the reels.
+    const onMove = (e: TouchEvent) => {
+      if (!active) return;
+      const t = e.touches[0];
+      const dy = t.clientY - startY;
+      const dx = t.clientX - startX;
+      if (!locked) {
+        if (Math.abs(dy) < 8 && Math.abs(dx) < 8) return; // still could be a tap
+        if (Math.abs(dx) > Math.abs(dy)) {
+          active = false; // sideways: not for the reels
+          return;
+        }
+        locked = true;
+      }
+      e.preventDefault();
+      const now = performance.now();
+      const dt = now - lastT;
+      if (dt > 0) vy = 0.6 * vy + 0.4 * ((t.clientY - lastY) / dt);
+      lastY = t.clientY;
+      lastT = now;
+      const L = live.current;
+      let y = dy;
+      if ((y > 0 && L.currentIndex === 0) || (y < 0 && !L.localReels[L.currentIndex + 1])) y *= 0.25; // nothing there: it only gives a little
+      const track = trackRef.current;
+      if (!track) return;
+      track.style.transition = 'none';
+      track.style.transform = `translate3d(0, ${y}px, 0)`;
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      if (!active) return;
+      active = false;
+      const L = live.current;
+      if (!locked) {
+        // Not a swipe — a tap. Handled here directly (with the browser's own click suppressed) rather than through onClick/onDoubleClick, which on a real
+        // phone is an unreliable way to tell a single tap from a double one. Taps on the buttons are left to the buttons.
+        if (onVideo && !onControl) {
+          e.preventDefault();
+          L.handleTap();
+        }
+        return;
+      }
+      e.preventDefault();
+      const dy = lastY - startY;
+      const h = el.clientHeight || 1;
+      const speed = performance.now() - lastT > 80 ? 0 : vy;
+      const fast = Math.abs(speed) > 0.45;
+      const dir: 1 | -1 = fast ? (speed < 0 ? 1 : -1) : dy < 0 ? 1 : -1;
+      if (fast || Math.abs(dy) > h * 0.22) L.slideTo(dir);
+      else L.snapBack();
+    };
+
+    const onCancel = () => {
+      if (active && locked) live.current.snapBack();
+      active = false;
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: false });
+    el.addEventListener('touchcancel', onCancel, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onCancel);
+    };
+  }, [hasReels]);
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (anyModalOpen) return;
-    if (e.deltaY > 20) navigateWithCooldown('next');
-    else if (e.deltaY < -20) navigateWithCooldown('prev');
+    if (anyModalOpen || Date.now() < wheelLockRef.current) return;
+    if (e.deltaY > 20) slideTo(1);
+    else if (e.deltaY < -20) slideTo(-1);
   };
 
   useEffect(() => {
     // On a computer: S / ↓ = next reel, W / ↑ = previous (like swiping up / down on a phone).
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (anyModalOpen) return;
+      if (anyModalOpen || Date.now() < wheelLockRef.current) return;
       const dir = navKey(e);
-      if (dir === 'down') { e.preventDefault(); navigateWithCooldown('next'); }
-      else if (dir === 'up') { e.preventDefault(); navigateWithCooldown('prev'); }
+      if (dir === 'down') { e.preventDefault(); slideTo(1); }
+      else if (dir === 'up') { e.preventDefault(); slideTo(-1); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -667,6 +760,372 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     );
   }
 
+  // One reel as a page (laid out like Roblox's Moments): the picture as wide as the screen and sitting right above the writing (a wide video leaves room
+  // above it), the like / comment / share / save buttons on its bottom edge, then who posted it, the caption, the likes, how far the video has played, and its
+  // sound with the Follow button. The reel before and the reel after are drawn the same way (without the live video), so while a finger drags, the next
+  // reel is already there under it.
+  const renderCard = (reel: Reel, isCur: boolean) => {
+    const countHidden = likeCountHiddenFor(reel.isLikeCountHidden, reel.userId, currentUser.id, hideOthersCounts);
+    const hasCollab = !!(reel.isCollab || reel.collabUsername || (reel.taggedUsers && reel.taggedUsers.length > 0));
+    const own = reel.userId === currentUser.id;
+    const following = !!currentUser.followingIds?.includes(reel.userId);
+    const likeEmoji = reactionEmojiForCategory(reel.category);
+    const cover = reel.audioTrack?.coverUrl;
+    const soundCover = (size: string) => (
+      <span className={`${size} rounded-lg overflow-hidden bg-[#1d1e23] flex items-center justify-center shrink-0`}>
+        {cover ? <img src={cover} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" draggable={false} /> : <Music className="w-1/2 h-1/2 text-zinc-400" />}
+      </span>
+    );
+    return (
+      <div className={`absolute inset-0 flex flex-col ${isCur ? '' : 'pointer-events-none'}`} data-testid={isCur ? 'reel-card' : 'reel-card-peek'}>
+        {/* The picture. Tapping it pauses / plays (twice: likes). */}
+        <div data-reel-tap className="relative flex-1 min-h-0 overflow-hidden cursor-pointer" onClick={isCur ? handleTap : undefined}>
+          {reel.thumbnailUrl && (
+            <img
+              src={reel.thumbnailUrl}
+              alt=""
+              draggable={false}
+              referrerPolicy="no-referrer"
+              className={`absolute inset-0 w-full h-full object-contain object-bottom transition-opacity duration-150 ${isCur && !isVideoBuffering ? 'opacity-0' : ''}`}
+            />
+          )}
+          {isCur && <div ref={playerHostRef} className="absolute inset-0 w-full h-full" />}
+
+          {/* Buffering spinner — without this, a slow-loading video just looks frozen on a black frame, which reads as broken rather than loading. */}
+          {isCur && isVideoBuffering && !videoFailed && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <div className="w-10 h-10 rounded-full border-[3px] border-white/20 border-t-white animate-spin" />
+            </div>
+          )}
+
+          {/* A missing/broken video file — clearly says so instead of a frozen black frame, and moves on by itself so nobody gets stuck. */}
+          {isCur && videoFailed && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none z-20 text-center px-8">
+              <Film className="w-8 h-8 text-zinc-500" />
+              <p className="text-xs text-zinc-400">This video couldn't be loaded.</p>
+            </div>
+          )}
+
+          {/* Double-tap heart animation */}
+          {isCur && showHeartAnim && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
+              <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
+            </div>
+          )}
+
+          {/* Paused-state indicator — tap feedback for the play/pause toggle */}
+          {isCur && !isPlaying && !showHeartAnim && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+              <div className="p-5 rounded-full bg-black/40 backdrop-blur-sm">
+                <div className="w-0 h-0 border-y-[14px] border-y-transparent border-l-[22px] border-l-white ml-1" />
+              </div>
+            </div>
+          )}
+
+          {isCur && soundBlocked && soundWanted && (
+            <div className="absolute top-3 inset-x-0 z-30 flex justify-center pointer-events-none" data-testid="reel-tap-for-sound">
+              <span className="px-3 py-1.5 rounded-full bg-black/65 text-white text-xs font-bold backdrop-blur-md flex items-center gap-1.5">
+                <VolumeX className="w-3.5 h-3.5" /> Tap for sound
+              </span>
+            </div>
+          )}
+
+          {/* Like / comment / share / save: plain icons on the bottom right edge of the picture */}
+          <div className="absolute right-3.5 bottom-3 z-20 flex flex-col items-center gap-5 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]" data-testid="reel-actions">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleLike();
+              }}
+              className={`relative cursor-pointer active:scale-90 transition-transform ${reel.isLiked ? 'text-red-500' : 'text-white'}`}
+              aria-label={reel.isLiked ? 'Unlike' : 'Like'}
+              data-testid="reel-like-button"
+            >
+              <Heart className={`w-7 h-7 ${reel.isLiked ? 'fill-current' : ''}`} strokeWidth={1.7} />
+              {isCur && <LikeReactionBurst emoji={likeEmoji} burstKey={likeBurstKey} />}
+            </button>
+            {!reel.isCommentsDisabled && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowComments(true);
+                }}
+                className="flex flex-col items-center gap-1 cursor-pointer active:scale-90 transition-transform"
+                aria-label="Comments"
+              >
+                <MessageCircle className="w-7 h-7" strokeWidth={1.7} />
+                <span className="text-[13px] font-semibold leading-none">{reel.commentsCount}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowShareSheet(true);
+              }}
+              className="flex flex-col items-center gap-1 cursor-pointer active:scale-90 transition-transform"
+              aria-label="Share"
+            >
+              <Send className="w-[26px] h-[26px] -rotate-12" strokeWidth={1.7} />
+              <span className="text-[13px] font-semibold leading-none">{reel.sharesCount}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleSave();
+              }}
+              className={`cursor-pointer active:scale-90 transition-transform ${reel.isSaved ? 'text-noob' : 'text-white'}`}
+              aria-label={reel.isSaved ? 'Remove from saved' : 'Save'}
+            >
+              <Bookmark className={`w-7 h-7 ${reel.isSaved ? 'fill-current' : ''}`} strokeWidth={1.7} />
+            </button>
+          </div>
+        </div>
+
+        <div className="shrink-0 px-5 pt-3 pb-3">
+          {/* who posted it */}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToProfile(reel.userId);
+              }}
+              className="relative flex items-center shrink-0 cursor-pointer"
+              aria-label={`Open ${reel.username}'s profile`}
+            >
+              <AvatarMedia
+                src={reel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                isLiveAvatar={reel.authorIsLiveAvatar}
+                liveAvatarVideoUrl={reel.authorLiveAvatarVideoUrl}
+                alt={reel.username}
+                className="w-[34px] h-[34px] rounded-full object-cover"
+              />
+              {hasCollab && (
+                <span className="-ml-3 mt-3 w-5 h-5 rounded-full ring-2 ring-[#0f0f11] bg-zinc-800 overflow-hidden">
+                  <img
+                    src={reel.collabUserAvatar || reel.taggedUsers?.[0]?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                    alt={reel.collabUsername || 'Tagged user'}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </span>
+              )}
+            </button>
+            <div className="min-w-0 flex-1 flex items-center gap-1.5">
+              <span
+                translate="no"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToProfile(reel.userId);
+                }}
+                className="text-[16px] font-bold text-white truncate cursor-pointer"
+              >
+                {reel.username}
+              </span>
+              {reel.isVerified && <VerifiedBadge size="xs" />}
+              {hasCollab && (
+                <>
+                  <span className="text-[13px] text-zinc-400 shrink-0">and</span>
+                  <span translate="no" className="text-[15px] font-bold text-white truncate">
+                    @{reel.collabUsername || reel.taggedUsers?.[0]?.username}
+                  </span>
+                </>
+              )}
+              {isCur && reel.isTrialReel && <span className="px-2 py-0.5 bg-yellow-500/80 text-black text-[10px] font-bold rounded-full shrink-0">Trial Reel</span>}
+            </div>
+            {soundCover('w-[26px] h-[26px]')}
+          </div>
+
+          {/* caption */}
+          {reel.caption && (
+            <p translate="no" className="mt-1.5 text-[15px] leading-snug text-zinc-200 line-clamp-2">
+              {reel.caption}
+            </p>
+          )}
+
+          {/* Outbound Web Link (Meta-Verified) */}
+          {reel.webLink && (
+            <a
+              href={reel.webLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-1.5 inline-flex items-center gap-1 bg-white/5 border border-noob/40 px-2 py-0.5 rounded-full text-[11px] text-noob font-medium max-w-full"
+            >
+              <ExternalLink className="w-3 h-3 shrink-0" /> <span className="truncate">{reel.webLink}</span>
+            </a>
+          )}
+
+          {/* AI Voice Translation Button */}
+          {reel.aiTranslationAvailable && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAiVoiceTranslationActive(!aiVoiceTranslationActive);
+              }}
+              className={`mt-1.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                aiVoiceTranslationActive ? 'bg-noob text-black border-noob' : 'bg-white/5 text-purple-300 border-purple-500/40'
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              <span>{aiVoiceTranslationActive ? 'AI Voice Dubbed (EN)' : 'AI Translate Voice'}</span>
+            </button>
+          )}
+
+          {/* likes, and the reel's own menu */}
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="flex items-center -space-x-1.5 shrink-0" aria-hidden="true">
+              <span className="w-[22px] h-[22px] rounded-full bg-[#26272c] ring-2 ring-[#0f0f11] flex items-center justify-center text-[12px] leading-none">❤️</span>
+              {likeEmoji !== '❤️' && (
+                <span className="w-[22px] h-[22px] rounded-full bg-[#26272c] ring-2 ring-[#0f0f11] flex items-center justify-center text-[12px] leading-none">{likeEmoji}</span>
+              )}
+            </span>
+            {!countHidden && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (reel.likesCount > 0) {
+                    setLikesViewsInitialTab('likes');
+                    setShowLikesViewsSheet(true);
+                  }
+                }}
+                disabled={reel.likesCount === 0}
+                className="text-[15px] text-zinc-400 cursor-pointer disabled:cursor-default"
+              >
+                {reel.likesCount === 0 ? 'No likes yet' : `${reel.likesCount.toLocaleString()} ${reel.likesCount === 1 ? 'like' : 'likes'}`}
+              </button>
+            )}
+            <div className="relative ml-auto">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReelOptionsMenu((v) => !v);
+                }}
+                className="p-1 -mr-1 text-white cursor-pointer"
+                aria-label="Reel options"
+                title="Reel options"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {isCur && showReelOptionsMenu && (
+                <>
+                  <div className="absolute -inset-[200vmax] z-30" onClick={(e) => { e.stopPropagation(); setShowReelOptionsMenu(false); }} />
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 bottom-9 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
+                  >
+                    <button
+                      onClick={() => {
+                        setShowReelOptionsMenu(false);
+                        copyReelLink();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Link2 className="w-4 h-4 text-sky-400" /> {shareLinkCopied ? 'Link copied' : 'Copy link'}
+                    </button>
+                    {(isReelOwner || isMasterAdmin) && (
+                      <button
+                        onClick={() => {
+                          setShowReelOptionsMenu(false);
+                          setLikesViewsInitialTab('likes');
+                          setShowLikesViewsSheet(true);
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Heart className="w-4 h-4 text-red-400" /> Likes{isReelOwner ? ' & Views' : ''}
+                      </button>
+                    )}
+                    {isReelOwner && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowReelOptionsMenu(false);
+                            handleToggleReelComments();
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                        >
+                          <MessageSquareOff className="w-4 h-4 text-purple-400" /> {currentReel.isCommentsDisabled ? 'Turn On Comments' : 'Turn Off Comments'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowReelOptionsMenu(false);
+                            handleToggleReelLikeCount();
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                        >
+                          <EyeOff className="w-4 h-4 text-cyan-400" /> {currentReel.isLikeCountHidden ? 'Unhide Like Count' : 'Hide Like Count'}
+                        </button>
+                      </>
+                    )}
+                    {isMainAdmin(currentUser) && (
+                      <button
+                        onClick={async () => {
+                          setShowReelOptionsMenu(false);
+                          const res = await toggleFeedPin('reel', currentReel.id);
+                          if (!res.success) alert(res.error || 'Could not change the pin.');
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Pin className="w-4 h-4 text-noob" /> {pinnedItems.some((p) => p.kind === 'reel' && p.itemId === currentReel.id) ? 'Unpin from Feed' : 'Pin to Feed'}
+                      </button>
+                    )}
+                    {(isReelOwner || isMasterAdmin) && (
+                      <button
+                        onClick={() => {
+                          setShowReelOptionsMenu(false);
+                          handleDeleteReel();
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete Reel
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* how far the video has played */}
+          <div className="mt-3 h-[3px] rounded-full bg-[#1b1b20] overflow-hidden" data-testid={isCur ? 'reel-progress' : undefined}>
+            <div ref={isCur ? progressRef : undefined} className="h-full rounded-full bg-[#bcbcc8] transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
+          </div>
+
+          {/* its sound, and Follow */}
+          <div className="mt-3 flex items-center gap-3" data-testid={isCur ? 'reel-sound-bar' : undefined}>
+            {soundCover('w-[42px] h-[42px]')}
+            <div className="min-w-0 flex-1 leading-tight">
+              <p translate="no" className="text-[15px] font-bold text-white truncate">{reel.audioTrack?.title || 'Original audio'}</p>
+              <p translate="no" className="text-[14px] text-zinc-400 truncate">{reel.audioTrack?.artist || reel.username}</p>
+            </div>
+            {!own && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleFollowCreator();
+                }}
+                className={`h-[42px] px-5 rounded-lg text-[15px] font-semibold cursor-pointer active:scale-95 transition-transform ${
+                  following ? 'bg-white/10 text-zinc-200' : 'bg-[#335fff] text-white'
+                }`}
+              >
+                {following ? 'Following' : 'Follow'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
     {/* `fixed inset-0` anchors to the true viewport regardless of where this
@@ -674,39 +1133,46 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         `calc(100vh-80px)` on a normally-flowing element only avoids the
         floating bottom nav if that element starts at y=0, which it doesn't
         here, so it still overlapped the nav until this switched to `fixed`. */}
-    <div className="fixed inset-0 z-30 bg-black media-dark flex items-center justify-center pb-20">
+    <div className="fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-20">
       <div
         id="reels-page-container"
-        className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black sm:rounded-2xl overflow-hidden flex items-center justify-center select-none shadow-2xl border border-neutral-800"
+        className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden flex flex-col select-none shadow-2xl border border-neutral-800"
       >
       <LiveStreamBar onOpenLive={(s) => setLiveOverlay({ stream: s })} />
 
-      {/* 1. Main Vertical Video Player */}
-      <div
-        ref={playerRef}
-        className="relative w-full h-full flex items-center justify-center cursor-pointer touch-none overscroll-none"
-        onClick={handleTap}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
-      >
-        <div ref={playerHostRef} className="absolute inset-0 w-full h-full" />
+      {/* Title bar: Back, "Reels", and the sound button */}
+      <div className="relative z-30 shrink-0 h-14 px-4 flex items-center justify-between" style={{ marginTop: 'env(safe-area-inset-top)' }}>
+        <div className="flex items-center gap-3 min-w-0">
+          {onGoBack && (
+            <button type="button" onClick={onGoBack} className="p-1 -ml-1 text-white cursor-pointer" title="Go back" aria-label="Go back">
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+          )}
+          <h2 className="text-[26px] leading-none font-bold tracking-tight text-white">Reels</h2>
+        </div>
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="p-1 -mr-1 text-white cursor-pointer"
+          title={soundWanted && !soundBlocked ? 'Sound on' : 'Sound off'}
+          aria-label={soundWanted && !soundBlocked ? 'Turn sound off' : 'Turn sound on'}
+          data-testid="reel-sound-button"
+        >
+          {soundWanted && !soundBlocked ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+        </button>
+      </div>
 
-        {/* Buffering spinner — without this, a slow-loading video just looks
-            frozen on a black frame, which reads as broken rather than loading. */}
-        {isVideoBuffering && !videoFailed && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <div className="w-10 h-10 rounded-full border-[3px] border-white/20 border-t-white animate-spin" />
+      {/* The reels: the one before, this one, the one after — one screen apart, moved together by the finger */}
+      <div ref={pagerRef} className="relative flex-1 min-h-0 overflow-hidden touch-none overscroll-none" onWheel={handleWheel} data-testid="reels-pager">
+        <div ref={trackRef} className="absolute inset-0 will-change-transform" data-testid="reels-track">
+          <div className="absolute inset-0" style={{ transform: `translateY(calc(-100% - ${SLOT_GAP}px))` }}>
+            {localReels[currentIndex - 1] ? renderCard(localReels[currentIndex - 1], false) : null}
           </div>
-        )}
-
-        {/* A missing/broken video file — clearly says so instead of a frozen black frame, and moves on by itself so nobody gets stuck. */}
-        {videoFailed && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none z-20 text-center px-8">
-            <Film className="w-8 h-8 text-zinc-500" />
-            <p className="text-xs text-zinc-400">This video couldn't be loaded.</p>
+          <div className="absolute inset-0">{renderCard(currentReel, true)}</div>
+          <div className="absolute inset-0" style={{ transform: `translateY(calc(100% + ${SLOT_GAP}px))` }}>
+            {nextReel ? renderCard(nextReel, false) : null}
           </div>
-        )}
+        </div>
 
         {/* Hidden preload of the next reel so swiping doesn't stall while the browser starts fetching/decoding cold.
             The one after that only gets its metadata (duration/dimensions), not a full download — fully buffering
@@ -735,364 +1201,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             aria-hidden="true"
           />
         )}
-
-        {/* Double-tap heart animation */}
-        {showHeartAnim && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-ping">
-            <Heart className="w-24 h-24 text-red-500 fill-red-500 drop-shadow-2xl" />
-          </div>
-        )}
-
-        {/* Paused-state indicator — tap feedback for the play/pause toggle */}
-        {!isPlaying && !showHeartAnim && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-            <div className="p-5 rounded-full bg-black/40 backdrop-blur-sm">
-              <div className="w-0 h-0 border-y-[14px] border-y-transparent border-l-[22px] border-l-white ml-1" />
-            </div>
-          </div>
-        )}
-
-        {/* Top Control Bar */}
-        <div
-          className="absolute top-3 inset-x-3 z-30 flex items-center justify-between pointer-events-auto"
-          onTouchEnd={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center gap-2">
-            {onGoBack && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGoBack();
-                }}
-                className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md"
-                title="Go back"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            )}
-            <span className="text-sm font-extrabold text-white tracking-tight drop-shadow-md">
-              Reels
-            </span>
-            {currentReel.isTrialReel && (
-              <span className="px-2 py-0.5 bg-yellow-500/80 text-black text-[10px] font-bold rounded-full">
-                Trial Reel
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSound();
-            }}
-            className="p-1.5 bg-black/60 rounded-full text-white/90 hover:text-white backdrop-blur-md cursor-pointer"
-            title={soundWanted && !soundBlocked ? 'Sound on' : 'Sound off'}
-            aria-label={soundWanted && !soundBlocked ? 'Turn sound off' : 'Turn sound on'}
-            data-testid="reel-sound-button"
-          >
-            {soundWanted && !soundBlocked ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-          {(isReelOwner || isMasterAdmin) && (
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowReelOptionsMenu((v) => !v);
-                }}
-                className="p-1.5 bg-black/60 rounded-full text-white/80 hover:text-white backdrop-blur-md cursor-pointer"
-                title="Reel options"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
-
-              {showReelOptionsMenu && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-9 z-40 w-52 bg-zinc-950/95 border border-white/10 rounded-2xl py-1.5 shadow-2xl backdrop-blur-xl"
-                >
-                  <button
-                    onClick={() => {
-                      setShowReelOptionsMenu(false);
-                      setLikesViewsInitialTab('likes');
-                      setShowLikesViewsSheet(true);
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Heart className="w-4 h-4 text-red-400" /> Likes{isReelOwner ? ' & Views' : ''}
-                  </button>
-                  {isReelOwner && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setShowReelOptionsMenu(false);
-                          handleToggleReelComments();
-                        }}
-                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
-                      >
-                        <MessageSquareOff className="w-4 h-4 text-purple-400" /> {currentReel.isCommentsDisabled ? 'Turn On Comments' : 'Turn Off Comments'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowReelOptionsMenu(false);
-                          handleToggleReelLikeCount();
-                        }}
-                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
-                      >
-                        <EyeOff className="w-4 h-4 text-cyan-400" /> {currentReel.isLikeCountHidden ? 'Unhide Like Count' : 'Hide Like Count'}
-                      </button>
-                    </>
-                  )}
-                  {isMainAdmin(currentUser) && (
-                    <button
-                      onClick={async () => {
-                        setShowReelOptionsMenu(false);
-                        const res = await toggleFeedPin('reel', currentReel.id);
-                        if (!res.success) alert(res.error || 'Could not change the pin.');
-                      }}
-                      className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
-                    >
-                      <Pin className="w-4 h-4 text-noob" /> {pinnedItems.some((p) => p.kind === 'reel' && p.itemId === currentReel.id) ? 'Unpin from Feed' : 'Pin to Feed'}
-                    </button>
-                  )}
-                  {(isReelOwner || isMasterAdmin) && (
-                    <button
-                      onClick={() => {
-                        setShowReelOptionsMenu(false);
-                        handleDeleteReel();
-                      }}
-                      className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-800 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete Reel
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          </div>
-        </div>
-
-        {soundBlocked && soundWanted && (
-          <div className="absolute top-14 inset-x-0 z-30 flex justify-center pointer-events-none" data-testid="reel-tap-for-sound">
-            <span className="px-3 py-1.5 rounded-full bg-black/65 text-white text-xs font-bold backdrop-blur-md flex items-center gap-1.5">
-              <VolumeX className="w-3.5 h-3.5" /> Tap for sound
-            </span>
-          </div>
-        )}
-
-        {/* Left Creator Overlay */}
-        <div
-          className="absolute bottom-6 left-3 right-16 z-20 space-y-2 pointer-events-auto text-left"
-          onTouchEnd={(e) => e.stopPropagation()}
-        >
-          {/* Creator Profile & Follow (with Instagram-style Dual Overlapping Avatars) */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div
-              className="relative flex items-center cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                goToProfile(currentReel.userId);
-              }}
-            >
-              <AvatarMedia
-                src={currentReel.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                isLiveAvatar={currentReel.authorIsLiveAvatar}
-                liveAvatarVideoUrl={currentReel.authorLiveAvatarVideoUrl}
-                alt={currentReel.username}
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-noob"
-              />
-              {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
-                <div className="relative -ml-3 mt-2 w-6 h-6 rounded-full ring-2 ring-black bg-zinc-800 overflow-hidden shadow-md">
-                  <img
-                    src={currentReel.collabUserAvatar || currentReel.taggedUsers?.[0]?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                    alt={currentReel.collabUsername || 'Tagged user'}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1 flex-wrap">
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goToProfile(currentReel.userId);
-                }}
-                className="text-xs font-bold text-white tracking-tight cursor-pointer hover:underline"
-              >
-                {currentReel.username}
-              </span>
-              {currentReel.isVerified && (
-                <VerifiedBadge size="xs" />
-              )}
-
-              {(currentReel.isCollab || currentReel.collabUsername || (currentReel.taggedUsers && currentReel.taggedUsers.length > 0)) && (
-                <>
-                  <span className="text-[10px] text-zinc-400 font-normal">and</span>
-                  <span className="text-xs font-bold text-noob flex items-center gap-1">
-                    @{currentReel.collabUsername || currentReel.taggedUsers?.[0]?.username}
-                  </span>
-                </>
-              )}
-            </div>
-
-            {currentReel.userId !== currentUser.id && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleFollowCreator();
-                }}
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${
-                  isFollowingCreator
-                    ? 'bg-black/50 border-neutral-700 text-gray-300'
-                    : 'bg-noob border-noob text-black'
-                }`}
-              >
-                {isFollowingCreator ? 'Following' : 'Follow'}
-              </button>
-            )}
-          </div>
-
-          {/* Caption */}
-          <p translate="no" className="text-xs text-gray-200 line-clamp-2 leading-snug drop-shadow-md">
-            {currentReel.caption}
-          </p>
-
-          {/* Outbound Web Link (Meta-Verified) */}
-          {currentReel.webLink && (
-            <a
-              href={currentReel.webLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 bg-black/60 border border-noob/40 px-2 py-0.5 rounded-full text-[10px] text-noob font-medium"
-            >
-              <ExternalLink className="w-2.5 h-2.5" /> {currentReel.webLink}
-            </a>
-          )}
-
-          {/* AI Voice Translation Button */}
-          {currentReel.aiTranslationAvailable && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setAiVoiceTranslationActive(!aiVoiceTranslationActive);
-              }}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                aiVoiceTranslationActive
-                  ? 'bg-noob text-black border-noob'
-                  : 'bg-black/60 text-purple-300 border-purple-500/40'
-              }`}
-            >
-              <Globe className="w-3 h-3" />
-              <span>{aiVoiceTranslationActive ? 'AI Voice Dubbed (EN)' : 'AI Translate Voice'}</span>
-            </button>
-          )}
-
-          {/* Audio Marquee */}
-          <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full px-2.5 py-1 w-fit">
-            <Music className="w-3 h-3 text-noob animate-spin" />
-            <span className="text-[10px] text-gray-300 font-medium truncate max-w-[200px]">
-              {currentReel.audioTrack.title} • {currentReel.audioTrack.artist}
-            </span>
-          </div>
-        </div>
-
-        {/* Right Floating Engagement Buttons */}
-        <div
-          className="absolute bottom-6 right-2.5 z-20 flex flex-col items-center gap-4 pointer-events-auto"
-          onTouchEnd={(e) => e.stopPropagation()}
-        >
-          {/* Like */}
-          <div className="flex flex-col items-center gap-1 group">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleLike();
-              }}
-              className={`relative p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform cursor-pointer ${
-                currentReel.isLiked ? 'text-red-500' : 'text-white'
-              }`}
-            >
-              <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'fill-current' : ''}`} />
-              <LikeReactionBurst emoji={reactionEmojiForCategory(currentReel.category)} burstKey={likeBurstKey} />
-            </button>
-            {!likeCountHiddenFor(currentReel.isLikeCountHidden, currentReel.userId, currentUser.id, hideOthersCounts) && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (currentReel.likesCount > 0) {
-                    setLikesViewsInitialTab('likes');
-                    setShowLikesViewsSheet(true);
-                  }
-                }}
-                className="text-[10px] font-bold text-white drop-shadow cursor-pointer hover:underline disabled:hover:no-underline"
-                disabled={currentReel.likesCount === 0}
-              >
-                {currentReel.likesCount.toLocaleString()}
-              </button>
-            )}
-          </div>
-
-          {/* Comment */}
-          {!currentReel.isCommentsDisabled && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowComments(true);
-              }}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
-            >
-              <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
-                <MessageCircle className="w-6 h-6" />
-              </div>
-              <span className="text-[10px] font-bold text-white drop-shadow">
-                {currentReel.commentsCount}
-              </span>
-            </button>
-          )}
-
-          {/* Share */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowShareSheet(true);
-            }}
-            className="flex flex-col items-center gap-1 group cursor-pointer"
-          >
-            <div className="p-2.5 rounded-full bg-black/50 backdrop-blur-md text-white group-hover:scale-110 transition-transform">
-              <Send className="w-5 h-5 -rotate-12" />
-            </div>
-            <span className="text-[10px] font-bold text-white drop-shadow">
-              {currentReel.sharesCount}
-            </span>
-          </button>
-
-          {/* Save / Bookmark */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleToggleSave();
-            }}
-            className="flex flex-col items-center gap-1 group cursor-pointer"
-          >
-            <div
-              className={`p-2.5 rounded-full bg-black/50 backdrop-blur-md group-hover:scale-110 transition-transform ${
-                currentReel.isSaved ? 'text-noob' : 'text-white'
-              }`}
-            >
-              <Bookmark className={`w-6 h-6 ${currentReel.isSaved ? 'fill-current' : ''}`} />
-            </div>
-          </button>
-
-          {/* Audio Spinning Disc */}
-          <div className="w-8 h-8 rounded-full border-2 border-neutral-700 overflow-hidden animate-spin bg-neutral-900 flex items-center justify-center">
-            <Music className="w-4 h-4 text-noob" />
-          </div>
-        </div>
       </div>
 
       {/* 4. Sliding Comments Sheet Overlay */}

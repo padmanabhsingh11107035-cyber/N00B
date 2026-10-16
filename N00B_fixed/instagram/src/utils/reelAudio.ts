@@ -100,7 +100,7 @@ export function getReelPlayer(): HTMLVideoElement {
   v.setAttribute('playsinline', '');
   v.setAttribute('webkit-playsinline', '');
   v.preload = 'auto';
-  v.className = 'w-full h-full object-cover';
+  v.className = 'w-full h-full object-contain object-bottom';
   shared = v;
   return v;
 }

@@ -48,11 +48,26 @@ check(/ANDROID_APK_URL = 'https:\/\/github\.com\/padmanabhsingh11107035-cyber\/N
 check(/public void getLatest\(/.test(java) && /android-latest\/native\.json/.test(java) && /json\.getLong\("build"\)/.test(java), 'the app looks up the newest build number itself, from a tiny file published next to the app file (no browser rule or request limit in the way)');
 check(/native\.json/.test(wf) && /gh release upload android-latest NOOB\.apk native\.json --clobber/.test(wf), 'every build publishes that file too');
 
+section('3b. Updating by itself');
+const ctx = { state: 'newer', supported: true, canInstall: true, busy: false, visible: true, editingText: false, mediaPlaying: false, latest: 165, tried: null, now: 1_000_000_000 };
+check(N.shouldAutoInstall(ctx) === true, 'a newer app file, Android already allows NOOB to install: it starts by itself');
+check(N.shouldAutoInstall({ ...ctx, state: 'newest' }) === false && N.shouldAutoInstall({ ...ctx, state: 'unknown' }) === false, 'nothing starts when the app is the newest or it could not be found out');
+check(N.shouldAutoInstall({ ...ctx, canInstall: false }) === false, 'before Android has been told NOOB may install apps, nothing starts by itself: the bar asks once');
+check(N.shouldAutoInstall({ ...ctx, supported: false }) === false, 'an app from before the installer existed is never started by itself (it can only download the file)');
+check(N.shouldAutoInstall({ ...ctx, editingText: true }) === false && N.shouldAutoInstall({ ...ctx, mediaPlaying: true }) === false && N.shouldAutoInstall({ ...ctx, visible: false }) === false && N.shouldAutoInstall({ ...ctx, busy: true }) === false, 'never while someone is typing, a video or call is playing, the app is behind another, or it is already working');
+check(N.shouldAutoInstall({ ...ctx, tried: { build: 165, at: ctx.now - 3600_000 } }) === false, 'after one try for this build (say the person dismissed Android’s screen) it does not start again for 12 hours');
+check(N.shouldAutoInstall({ ...ctx, tried: { build: 165, at: ctx.now - N.AUTO_RETRY_MS - 1 } }) === true && N.shouldAutoInstall({ ...ctx, tried: { build: 164, at: ctx.now - 60_000 }, latest: 165 }) === true, 'then it tries again, and a newer build is tried at once');
+const bannerSrc = read('src/components/Common/NativeUpdateBanner.tsx');
+check(/autoInstallDue\(u\.info, u\.busy\)/.test(bannerSrc) && /saveAutoTried\(u\.info\.latest\)/.test(bannerSrc) && /void u\.install\(\)/.test(bannerSrc), 'the bar that is on screen in the app starts it, and remembers which build it tried');
+check(/PackageInstaller\.SessionParams/.test(java) && /USER_ACTION_NOT_REQUIRED/.test(java) && /STATUS_PENDING_USER_ACTION/.test(java) && /notifyListeners\("error"/.test(java), 'the installer asks Android to skip its screen where Android allows that, opens the screen where it does not, and reports a failure');
+check(/installWithScreen\(file\)/.test(java) && /catch \(Exception sessionProblem\)/.test(java), 'and falls back to the older install screen if the package installer cannot be used');
+check(/UPDATE_PACKAGES_WITHOUT_USER_ACTION/.test(wf) && /grep -q UPDATE_PACKAGES_WITHOUT_USER_ACTION/.test(wf), 'the build adds the permission that lets Android 12 and newer skip the screen, and stops if it did not get in');
+
 section('4. The button');
 const svc = read('src/services/nativeUpdate.ts');
 check(/registerPlugin<AppUpdaterPlugin>\('AppUpdater'\)/.test(svc) && /downloadAndInstall\(\{ url: ANDROID_APK_URL \}\)/.test(svc), 'the app calls the installer with the one app file address');
 check(/if \(!info\?\.supported\) \{ window\.location\.href = ANDROID_APK_URL; return; \}/.test(svc), 'an app from before the installer existed still gets the file (handed to the phone’s browser)');
-check(/'needs-permission'/.test(svc) && /Allow NOOB to install apps/.test(svc) && /Almost done: confirm the install/.test(svc), 'the person is told what happens next at each step');
+check(/'needs-permission'/.test(svc) && /Allow NOOB to install apps/.test(svc) && /Installing the update/.test(svc), 'the person is told what happens next at each step');
 const banner = read('src/components/Common/NativeUpdateBanner.tsx');
 check(/info\?\.state !== 'newer'\) return null/.test(banner) && /!u\.native/.test(banner) && /onClick=\{\(\) => void u\.install\(\)\}/.test(banner) && /animate-spin/.test(banner), 'in the Android app a bar with an Update button shows only when a newer app file exists, and shows the work at once');
 check(/\{currentUser && <NativeUpdateBanner \/>\}/.test(read('src/App.tsx')), 'it is part of the app');

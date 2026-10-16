@@ -31,11 +31,11 @@ export function shouldAutoApplyUpdate(c: UpdateContext): boolean {
 const TRIED_KEY = 'noob.updateReloadedFor';
 const triedVersion = (): string => { try { return sessionStorage.getItem(TRIED_KEY) || ''; } catch { return ''; } };
 const markTried = (id: string): void => { try { sessionStorage.setItem(TRIED_KEY, id); } catch { /* private mode: the banner is still there */ } };
-const isEditing = (): boolean => {
+export const isEditing = (): boolean => {
   const el = document.activeElement as HTMLElement | null;
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
 };
-const isMediaPlaying = (): boolean =>
+export const isMediaPlaying = (): boolean =>
   Array.from(document.querySelectorAll('video, audio')).some((m) => { const el = m as HTMLMediaElement; return !el.paused && !el.ended && el.readyState > 2; });
 
 /** The version this copy of NOOB is. */

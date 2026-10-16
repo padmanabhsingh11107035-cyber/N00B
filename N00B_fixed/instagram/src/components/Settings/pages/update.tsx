@@ -50,7 +50,7 @@ export const UpdatePage: React.FC<PageProps> = ({ back }) => {
         <>
           <Section
             title="The Android app itself"
-            note="Now and then something changes inside the app itself (for example the screenshot block). Those updates need a new app file: tap the button, and NOOB downloads it and opens Android's installer. Android asks you to confirm, and the first time to allow NOOB to install apps. Your account and chats stay as they are."
+            note="Now and then something changes inside the app itself (for example the screenshot block). Those updates need a new app file. NOOB starts the update by itself when you open the app, downloads it and hands it to Android's installer; where Android still wants a tap, its own update screen opens by itself and you tap Update. The first time, Android asks you to allow NOOB to install apps. Your account and chats stay as they are."
           >
             <Row icon={Smartphone} label="Your app" value={app.checking ? 'Checking…' : info?.installed ? `build ${info.installed}` : 'older app'} testId="update-app-installed" />
             <Row icon={RefreshCw} label="Newest app" value={app.checking ? 'Checking…' : info?.latest ? `build ${info.latest}` : 'Could not check'} testId="update-app-latest" />

@@ -242,11 +242,11 @@ export function resetFeedLists(): void {
 
 // ---- small things that are asked of the server on demand
 
-export async function fetchAccountStatus(): Promise<{ standing: 'good' | 'suspended'; reason?: string; reportsAgainstHandled: number; contentRemoved: number; memberSince?: string; lastLogin?: string }> {
+export async function fetchAccountStatus(): Promise<{ standing: 'good' | 'suspended'; reason?: string; reportsAgainstHandled: number; memberSince?: string; lastLogin?: string }> {
   try {
     return await call('my_account_status');
   } catch {
-    return { standing: 'good', reportsAgainstHandled: 0, contentRemoved: 0 };
+    return { standing: 'good', reportsAgainstHandled: 0 };
   }
 }
 

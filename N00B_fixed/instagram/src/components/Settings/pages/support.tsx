@@ -109,7 +109,6 @@ export const AccountStatusPage: React.FC<PageProps> = ({ ctx, back }) => {
           </Section>
           <Section title="Your record">
             <Row label="Reports against you that were reviewed" value={String(st.reportsAgainstHandled)} />
-            <Row label="Content removed" value={String(st.contentRemoved)} />
             <Row label="Member since" value={day(st.memberSince) || 'Unknown'} />
             <Row label="Last login" value={day(st.lastLogin) || 'Unknown'} />
           </Section>

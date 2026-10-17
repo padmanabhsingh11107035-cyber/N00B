@@ -132,8 +132,12 @@ export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose, onOpenProfi
     if (!m.userId || followBusy) return;
     setFollowBusy(m.id);
     setFollowError(null);
+    // changes at once (the team's accounts are public); the answer from the server is put in when it comes
+    const wasOn = !!m.following || !!m.requested;
+    setTeam((cur) => (cur ? cur.map((x) => (x.id === m.id ? { ...x, following: !wasOn, requested: false } : x)) : cur));
     const res: any = await toggleFollowUser(m.userId);
     setFollowBusy(null);
+    if (!res?.success) setTeam((cur) => (cur ? cur.map((x) => (x.id === m.id ? { ...x, following: !!m.following, requested: !!m.requested } : x)) : cur));
     if (res?.success) {
       setTeam((cur) => (cur ? cur.map((x) => (x.id === m.id ? { ...x, following: !!res.isFollowing, requested: !!res.isFollowRequested } : x)) : cur));
     } else {

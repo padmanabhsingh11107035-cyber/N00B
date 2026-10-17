@@ -524,12 +524,27 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     setTimeout(() => setShareLinkCopied(false), 2000);
   };
 
+  // People whose follow request is waiting (a private account): the Follow button says "Requested" for them. It says so at once on the tap
+  // (a public account turns into "Following" at once instead, from the app's own list), and the server's answer sets it right.
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
+  const setRequested = (id: string, on: boolean) => setRequestedIds((prev) => {
+    if (prev.has(id) === on) return prev;
+    const next = new Set(prev);
+    if (on) next.add(id); else next.delete(id);
+    return next;
+  });
   const handleToggleFollowCreator = async () => {
     if (!currentReel || !onToggleFollowUser) return;
+    const id = currentReel.userId;
+    const wasRequested = requestedIds.has(id);
+    if (!isFollowingCreator) setRequested(id, !wasRequested);
     try {
-      await onToggleFollowUser(currentReel.userId);
+      const res = await onToggleFollowUser(id);
+      if (res) setRequested(id, !!res.isFollowRequested && !res.isFollowing);
+      else setRequested(id, wasRequested);
     } catch (err) {
       console.error(err);
+      setRequested(id, wasRequested);
     }
   };
 
@@ -1155,10 +1170,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   handleToggleFollowCreator();
                 }}
                 className={`h-[42px] px-5 rounded-lg text-[15px] font-semibold cursor-pointer active:scale-95 transition-transform ${
-                  following ? 'bg-white/10 text-zinc-200' : 'bg-[#335fff] text-white'
+                  following || requestedIds.has(reel.userId) ? 'bg-white/10 text-zinc-200' : 'bg-[#335fff] text-white'
                 }`}
               >
-                {following ? 'Following' : 'Follow'}
+                {following ? 'Following' : requestedIds.has(reel.userId) ? 'Requested' : 'Follow'}
               </button>
             )}
           </div>

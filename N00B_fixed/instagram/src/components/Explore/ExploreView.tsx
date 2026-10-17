@@ -30,6 +30,7 @@ import {
 import { Post, Reel, User } from '../../types';
 import { fetchUsersStrict, peekUsersDirectory, subscribeToOnlinePresence, type PresenceEntry } from '../../services/api';
 import { mergePeople, realPeople, shufflePeople } from '../../utils/peopleList';
+import { predictFollowToggle, predictFollowersCount } from '../../utils/followPredict';
 import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
@@ -241,19 +242,27 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   // onToggleFollowUser (App.tsx), which also syncs app-wide user state;
   // this just reflects the result back into this view's own local list.
   const handleToggleFollow = async (userId: string) => {
+    // The button changes AT ONCE to what the tap will most likely turn into (utils/followPredict.ts); the answer from the server is put in when it
+    // comes, and if the follow failed the old state comes back.
+    const person = [...usersList, ...contactMatches].find((u) => u.id === userId);
+    const before = { isFollowing: !!person?.isFollowing, isFollowRequested: !!person?.isFollowRequested };
+    const show = (st: { isFollowing: boolean; isFollowRequested: boolean }, followers?: number) => {
+      const patch = (u: User) => (u.id === userId ? { ...u, isFollowing: st.isFollowing, isFollowRequested: st.isFollowRequested, ...(followers !== undefined ? { followersCount: followers } : {}) } : u);
+      setUsersList((prev) => prev.map(patch));
+      setContactMatches((prev) => prev.map(patch));
+    };
+    if (person) {
+      const guess = predictFollowToggle(before, person);
+      show(guess, predictFollowersCount(person.followersCount, before, guess));
+    }
     try {
       setFollowLoadingId(userId);
       const res = await onToggleFollowUser?.(userId);
-      if (res && res.success) {
-        const patch = (u: User) =>
-          u.id === userId
-            ? { ...u, isFollowing: res.isFollowing, isFollowRequested: res.isFollowRequested, followersCount: res.followersCount }
-            : u;
-        setUsersList((prev) => prev.map(patch));
-        setContactMatches((prev) => prev.map(patch));
-      }
+      if (res && res.success) show({ isFollowing: !!res.isFollowing, isFollowRequested: !!res.isFollowRequested }, res.followersCount);
+      else if (person) show(before, person.followersCount);
     } catch (err) {
       console.error('Follow error:', err);
+      if (person) show(before, person.followersCount);
     } finally {
       setFollowLoadingId(null);
     }

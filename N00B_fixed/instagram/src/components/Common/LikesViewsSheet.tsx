@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, Eye, Search, UserPlus, UserCheck, Clock, Heart } from 'lucide-react';
 import { User } from '../../types';
+import { predictFollowToggle } from '../../utils/followPredict';
 import { VerifiedBadge } from './VerifiedBadge';
 
 interface ListSource {
@@ -126,11 +127,13 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
     if (!onToggleFollowUser || followBusy) return;
     setFollowBusy(u.id);
     const prev = followState[u.id];
-    // Optimistic flip so the tap feels instant; corrected below from the real result.
-    setFollowState((s) => ({ ...s, [u.id]: { isFollowing: !prev?.isFollowing, isFollowRequested: false } }));
+    // The button changes at once to what the tap will most likely turn into (a private account: Requested); corrected below from the real result.
+    const guess = predictFollowToggle({ isFollowing: !!prev?.isFollowing, isFollowRequested: !!prev?.isFollowRequested }, u);
+    setFollowState((s) => ({ ...s, [u.id]: guess }));
     try {
       const res = await onToggleFollowUser(u.id);
-      if (res) setFollowState((s) => ({ ...s, [u.id]: { isFollowing: res.isFollowing, isFollowRequested: res.isFollowRequested } }));
+      if (res && res.success === false) setFollowState((s) => ({ ...s, [u.id]: prev || { isFollowing: false } }));
+      else if (res) setFollowState((s) => ({ ...s, [u.id]: { isFollowing: res.isFollowing, isFollowRequested: res.isFollowRequested } }));
     } catch {
       setFollowState((s) => ({ ...s, [u.id]: prev || { isFollowing: false } }));
     } finally {

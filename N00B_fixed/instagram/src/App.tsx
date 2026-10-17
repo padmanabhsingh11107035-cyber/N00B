@@ -77,6 +77,7 @@ import { useUnreadChatCount } from './components/Chat/useUnreadChatCount';
 import { armNotificationSound, playNotificationSound } from './utils/notificationSound';
 import { armSongPlayer } from './utils/songSound';
 import { takeRestorePage } from './utils/pageResume';
+import { predictFollowToggle, predictFollowersCount } from './utils/followPredict';
 import { buildStoryTray, topUpSuggestions, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { NotificationSettingsState } from './components/Modals/NotificationsModal';
@@ -1163,34 +1164,52 @@ export default function App() {
     }
   };
 
-  const handleToggleFollowUser = async (userId: string) => {
-    try {
-      const res = await toggleFollowUser(userId);
-      setRegisteredUsers((prev) =>
-        prev.map((u) =>
-          u.id === userId
-            ? { ...u, isFollowing: res.isFollowing, isFollowRequested: !!res.isFollowRequested, followersCount: res.followersCount }
-            : u
-        )
-      );
-      if (currentUser) {
-        const curFollowing = currentUser.followingIds || [];
-        const nextFollowing = res.isFollowing
-          ? [...curFollowing.filter((id) => id !== userId), userId]
-          : curFollowing.filter((id) => id !== userId);
-        setCurrentUser({
-          ...currentUser,
-          followingIds: nextFollowing,
-          followingCount: nextFollowing.length
+  // Every Follow / Requested button goes through here. The button changes AT ONCE (what the tap will most likely turn into, see utils/followPredict.ts)
+  // and the server's answer is put in when it arrives; if the follow failed, the old state comes back. A second tap while the first is still
+  // travelling joins it instead of sending another.
+  const followInFlight = useRef(new Map<string, Promise<any>>());
+  const handleToggleFollowUser = (userId: string): Promise<any> => {
+    const running = followInFlight.current.get(userId);
+    if (running) return running;
+    const job = (async () => {
+      const target = registeredUsers.find((u) => u.id === userId) || pageLayers.layers.map((l) => (l.data.kind === 'profile' ? l.data.user : null)).find((u) => u && u.id === userId) || undefined;
+      const before = {
+        isFollowing: !!target?.isFollowing || (currentUser?.followingIds || []).includes(userId),
+        isFollowRequested: !!target?.isFollowRequested
+      };
+      const apply = (st: { isFollowing: boolean; isFollowRequested: boolean }, followers: number | undefined) => {
+        setRegisteredUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, isFollowing: st.isFollowing, isFollowRequested: st.isFollowRequested, ...(followers !== undefined ? { followersCount: followers } : {}) } : u))
+        );
+        setCurrentUser((cur) => {
+          if (!cur) return cur;
+          const list = cur.followingIds || [];
+          const next = st.isFollowing ? [...list.filter((id) => id !== userId), userId] : list.filter((id) => id !== userId);
+          return next.length === list.length && next.every((id, i) => id === list[i]) ? cur : { ...cur, followingIds: next, followingCount: next.length };
         });
+        pageLayers.patch('p:' + userId, (l) => (l.kind === 'profile'
+          ? { ...l, user: { ...l.user, isFollowing: st.isFollowing, isFollowRequested: st.isFollowRequested, ...(followers !== undefined ? { followersCount: followers } : {}) } }
+          : l));
+      };
+      if (target) {
+        const guess = predictFollowToggle(before, target);
+        apply(guess, predictFollowersCount(target.followersCount, before, guess));
       }
-      pageLayers.patch('p:' + userId, (l) => (l.kind === 'profile'
-        ? { ...l, user: { ...l.user, isFollowing: res.isFollowing, isFollowRequested: !!res.isFollowRequested, followersCount: res.followersCount } }
-        : l));
-      return res;
-    } catch (err) {
-      console.error(err);
-    }
+      try {
+        const res = await toggleFollowUser(userId);
+        if (res && res.success === false) {
+          if (target) apply(before, target.followersCount);   // it did not go through: back to how it was
+          return res;
+        }
+        apply({ isFollowing: !!res.isFollowing, isFollowRequested: !!res.isFollowRequested }, res.followersCount);
+        return res;
+      } catch (err) {
+        console.error(err);
+        if (target) apply(before, target.followersCount);
+      }
+    })().finally(() => { followInFlight.current.delete(userId); });
+    followInFlight.current.set(userId, job);
+    return job;
   };
 
   // Removes someone from MY OWN followers list — updates their followingIds (what the followers

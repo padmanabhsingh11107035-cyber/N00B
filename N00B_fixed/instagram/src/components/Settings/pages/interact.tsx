@@ -4,6 +4,7 @@ import { PageShell, Section, Row, ToggleRow, Choice, Note, Spinner, Avatar, Smal
 import type { PageProps } from '../types';
 import type { User } from '../../../types';
 import { fetchUsers, toggleFollowUser, updateFullProfile } from '../../../services/api';
+import { predictFollowToggle } from '../../../utils/followPredict';
 import { updateSettings, useAccountSettings, type AccountSettings } from '../../../services/settingsApi';
 import { siteOrigin } from '../../../utils/siteUrl';
 
@@ -272,7 +273,9 @@ export const InvitePage: React.FC<PageProps> = ({ ctx, back }) => {
     try { if (navigator.share) await navigator.share(data); else await copy(); } catch { /* cancelled */ }
   };
   const follow = async (u: User) => {
-    setState((s) => ({ ...s, [u.id]: 'busy' }));
+    // the button changes at once to what the tap will most likely turn into; the answer from the server is put in when it comes
+    const guess = predictFollowToggle({ isFollowing: false, isFollowRequested: false }, u);
+    setState((s) => ({ ...s, [u.id]: guess.isFollowing ? 'following' : 'requested' }));
     const r = await toggleFollowUser(u.id);
     setState((s) => {
       const next = { ...s };

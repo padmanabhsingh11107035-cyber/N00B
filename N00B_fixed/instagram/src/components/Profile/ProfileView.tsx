@@ -78,6 +78,7 @@ import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { StoryViewerModal } from '../Stories/StoryViewerModal';
 import { HighlightManagerModal } from './HighlightManagerModal';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
+import { predictFollowToggle } from '../../utils/followPredict';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
@@ -396,19 +397,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     // Cancelling a pending request or unfollowing both just clear state;
     // only a fresh follow/request click plays the confetti.
     const wasIdle = !isTargetFollowing && !isTargetFollowRequested;
+    // The button changes AT ONCE to what the tap will most likely turn into; the server's answer is put in when it comes (and the old state comes
+    // back if it failed). See utils/followPredict.ts.
+    const before = { isFollowing: isTargetFollowing, isFollowRequested: isTargetFollowRequested };
+    const guess = predictFollowToggle(before, targetUser);
+    setIsTargetFollowing(guess.isFollowing);
+    setIsTargetFollowRequested(guess.isFollowRequested);
+    if (wasIdle) confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
     try {
       const res = onToggleFollowUser
         ? await onToggleFollowUser(targetUser.id)
         : await toggleFollowUser(targetUser.id);
-      if (res && res.success !== undefined) {
+      if (res && res.success !== undefined && res.success !== false) {
         setIsTargetFollowing(!!res.isFollowing);
         setIsTargetFollowRequested(!!res.isFollowRequested);
-        if (wasIdle && (res.isFollowing || res.isFollowRequested)) {
-          confetti({ particleCount: 25, spread: 50, origin: { y: 0.7 } });
-        }
+      } else {
+        setIsTargetFollowing(before.isFollowing);
+        setIsTargetFollowRequested(before.isFollowRequested);
       }
     } catch (err) {
       console.error(err);
+      setIsTargetFollowing(before.isFollowing);
+      setIsTargetFollowRequested(before.isFollowRequested);
     }
   };
 

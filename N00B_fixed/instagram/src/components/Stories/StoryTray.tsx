@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Check, Clock, Volume2 } from 'lucide-react';
 import { User, StatusNote } from '../../types';
+import { predictFollowToggle } from '../../utils/followPredict';
 import { StatusNoteViewerModal } from '../Modals/StatusNoteViewerModal';
 import { fetchUserById } from '../../services/api';
 import type { StoryTrayModel, TrayItem, TrayRing } from '../../utils/storyTray';
@@ -86,12 +87,19 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
   const followSuggestion = async (item: TrayItem) => {
     if (!onToggleFollowUser || busy.has(item.userId) || followState(item.userId) !== 'none') return;
     setBusy((prev) => new Set(prev).add(item.userId));
+    // the button changes at once; the answer from the server has the last word (and a failed follow puts it back)
+    const guess = predictFollowToggle({ isFollowing: false, isFollowRequested: false }, allUsers.find((u) => u.id === item.userId) || {});
+    setFollowed((prev) => ({ ...prev, [item.userId]: guess.isFollowing ? 'following' : 'requested' }));
+    const undo = () => setFollowed((prev) => { const next = { ...prev }; delete next[item.userId]; return next; });
     try {
       const res = await onToggleFollowUser(item.userId);
       if (res && res.success !== false) {
         if (res.isFollowing) setFollowed((prev) => ({ ...prev, [item.userId]: 'following' }));
         else if (res.isFollowRequested) setFollowed((prev) => ({ ...prev, [item.userId]: 'requested' }));
-      }
+        else undo();
+      } else undo();
+    } catch {
+      undo();
     } finally {
       setBusy((prev) => { const next = new Set(prev); next.delete(item.userId); return next; });
     }

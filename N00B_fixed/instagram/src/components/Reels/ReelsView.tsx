@@ -780,7 +780,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   if (!currentReel || localReels.length === 0) {
     return (
-      <div className="fixed inset-0 z-30 bg-black media-dark flex flex-col items-center justify-center text-center px-4 pb-20">
+      <div className="fixed inset-0 z-30 bg-black media-dark flex flex-col items-center justify-center text-center px-4 pb-[var(--nav-h)]">
         {onGoBack && (
           <button
             onClick={onGoBack}
@@ -1174,7 +1174,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         `calc(100vh-80px)` on a normally-flowing element only avoids the
         floating bottom nav if that element starts at y=0, which it doesn't
         here, so it still overlapped the nav until this switched to `fixed`. */}
-    <div className="fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-20">
+    <div className="fixed inset-0 z-30 bg-[#0f0f11] media-dark flex items-center justify-center pb-[var(--nav-h)]">
       <div
         id="reels-page-container"
         className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-[#0f0f11] sm:rounded-2xl overflow-hidden flex flex-col select-none shadow-2xl border border-neutral-800"

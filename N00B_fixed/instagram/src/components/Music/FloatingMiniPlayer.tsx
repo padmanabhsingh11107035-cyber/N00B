@@ -17,7 +17,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onOpenMu
   return (
     <div
       id="floating-mini-music-player"
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-[420px] bg-zinc-950/95 border border-purple-500/30 rounded-2xl p-2.5 shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom-5 duration-300 ring-1 ring-white/10"
+      className="fixed bottom-[calc(var(--nav-h)+0.5rem)] left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-[420px] bg-zinc-950/95 border border-purple-500/30 rounded-2xl p-2.5 shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom-5 duration-300 ring-1 ring-white/10"
     >
       {/* Track Details & Cover (Click to jump to Music Hub) */}
       <div

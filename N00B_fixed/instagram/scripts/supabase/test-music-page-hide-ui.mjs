@@ -13,18 +13,15 @@ const admin = read('src/components/Modals/AdminControlModal.tsx');
 const api = read('src/services/supabaseApi.ts');
 const sql = read('supabase/migrations/20261015000001_music_page_toggle.sql');
 
-section('1. The bottom bar');
-check(/hideMusic\?: boolean/.test(nav) && /const order = hideMusic \? TAB_ORDER\.filter\(\(t\) => t !== 'music'\) : TAB_ORDER;/.test(nav), 'it takes a "hide music" switch and leaves music out of the order');
-check(/\{!hideMusic && \(\s*<NavButton\s+id="nav-item-music"/.test(nav), 'the Music button is only drawn while the page is shown');
-check(/gridTemplateColumns: `repeat\(\$\{count\}, minmax\(0, 1fr\)\)`/.test(nav) && !/grid-cols-8/.test(nav), 'the columns follow the number of icons (8, or 7 without Music), not a fixed 8');
-check(/order\.indexOf\(activeTab\)/.test(nav) && /order\.includes\(activeTab\)/.test(nav), 'the lit marker is placed by the icons that are really there');
-check(/data-count=\{count\}/.test(nav) && (nav.match(/nav-ico /g) || []).length >= 7 && /nav-ava /.test(nav) && /nav-lbl /.test(nav), 'icons, picture and labels carry the hooks the seven-icon sizing uses');
-check(/left: calc\(4px \+ \(100% - 8px\) \/ var\(--nav-n, 8\)/.test(css) && /width: var\(--nav-mw, 54px\)/.test(css), 'the marker maths uses the number of columns, and is exactly the old one for 8');
-check(/#floating-bottom-nav\[data-count="7"\] \{ --nav-n: 7; --nav-mw: 62px; \}/.test(css) && /\[data-count="7"\] \.nav-ico \{ width: 1\.35rem/.test(css), 'with seven icons the marker and the icons grow to use the room');
+section('1. The bottom bar and the menu on Home');
+const feed = read('src/components/Feed/FeedView.tsx');
+check(!/hideMusic/.test(nav) && !/nav-item-music/.test(nav) && !/nav-item-videos/.test(nav), 'the bottom bar carries neither Music nor Videos (the bar has 3 pages, Create, then 3 pages)');
+check(/musicHidden\?: boolean/.test(feed) && /\{!musicHidden && \(\s*<button\s+onClick=\{\(\) => \{ setShowNoobMenu\(false\); onOpenTab\('music'\); \}\}/.test(feed), 'the menu on Home lists Music only while the page is shown');
+check(/onOpenTab\('videos'\)/.test(feed) && /data-testid="noob-menu-more-pages"/.test(feed), 'the same menu lists the Videos feed');
 
 section('2. Everywhere else the page shows up');
 check(/const musicHidden = platformSettings\?\.musicPageHidden === true;/.test(app), 'hidden only when the administrator says so (a missing setting means shown)');
-check(/hideMusic=\{musicHidden\}/.test(app), 'the bottom bar is told');
+check(/musicHidden=\{musicHidden\}/.test(app) && /onOpenTab=\{handleSelectNavTab\}/.test(app), 'the menu on Home is told');
 check(/\{!musicHidden && \(\s*<button\s+onClick=\{\(\) => handleSelectNavTab\('music'\)\}/.test(app), 'the side menu on computers loses its Music Hub button');
 check(/activeTab === 'music' && !musicHidden/.test(app), 'the page itself is never drawn while hidden');
 check(/if \(musicHidden && activeTab === 'music'\) setActiveTab\('feed'\)/.test(app), 'anyone who is on it when it gets hidden is taken Home');

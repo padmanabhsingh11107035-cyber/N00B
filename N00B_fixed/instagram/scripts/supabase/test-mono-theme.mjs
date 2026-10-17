@@ -47,7 +47,7 @@ check(!/from-noob to-noob-strong[^"'`]*text-white/.test(buttons), 'no white-on-w
 section('5. Crisp, not faded');
 check(/\[class~="bg-zinc-900\/40"\][\s\S]*?background-color: color-mix\(in srgb, var\(--color-zinc-900\) 97%, transparent\);/.test(css), 'see-through zinc cards and bars are solid black cards now');
 check(/\.liquid-glass,\s*:root\[data-theme="light"\] \.liquid-glass \{\s*background: var\(--color-zinc-900\);\s*backdrop-filter: none;/.test(css) && /\.liquid-glass::before \{ display: none; \}/.test(css), 'the bottom bar is a black card with a white edge, not frosted glass');
-check(/\.nav-marker \{\s*background: #ffffff;/.test(css) && /:root:not\(\[data-theme="light"\]\) #floating-bottom-nav \.text-noob \{ color: #000000; \}/.test(css) && /:root\[data-theme="light"\] \.nav-marker \{\s*background: var\(--color-zinc-800\);/.test(css), 'the open page in the bar: black text on a white pill (a grey pill with a black edge in Light mode)');
+check(/#floating-bottom-nav \.nav-item\.is-active \{ color: var\(--color-noob\); \}/.test(css) && /#floating-bottom-nav\[data-tab="reels"\] \{\s*--color-noob: #ffffff;/.test(css), 'the open page in the bar is in the accent colour (white in the dark modes, black in Light); on Reels the bar is near-black with white icons in both');
 const post = read('src/components/Feed/PostCard.tsx');
 check(/className="w-full bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden mb-4 shadow-xl transition-all"/.test(post), 'a post is a solid black card with a bright edge');
 

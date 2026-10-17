@@ -1788,6 +1788,8 @@ export default function App() {
             onNavigateToVideo={handleNavigateToVideo}
             onNavigateToProfile={handleNavigateToUserProfile}
             onOpenFunPage={openFun}
+            onOpenTab={handleSelectNavTab}
+            musicHidden={musicHidden}
             onToggleFollowUser={handleToggleFollowUser}
             allUsers={registeredUsers}
             onUserUpdated={(u) => setCurrentUser(u)}
@@ -1855,7 +1857,7 @@ export default function App() {
           <div className="py-2 px-2">
             <ErrorBoundary
               fallback={
-                <div className="w-full max-w-6xl mx-auto h-[calc(100vh-80px)] min-h-[580px] max-h-[880px] rounded-2xl border border-zinc-800/80 bg-zinc-950 flex items-center justify-center p-6">
+                <div className="w-full max-w-6xl mx-auto h-[calc(100vh-var(--nav-h))] min-h-[580px] max-h-[880px] rounded-2xl border border-zinc-800/80 bg-zinc-950 flex items-center justify-center p-6">
                   <div className="max-w-sm w-full text-center space-y-4">
                     <div className="text-4xl">😬</div>
                     <h2 className="text-white text-base font-bold">This chat ran into a problem</h2>
@@ -2028,7 +2030,7 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Floating Glassmorphism Navigation Bar */}
+      {/* Bottom navigation bar (phones and tablets; computers have the side menu) */}
       <FloatingNavBar
         activeTab={activeTab}
         onSelectTab={handleSelectNavTab}
@@ -2036,7 +2038,6 @@ export default function App() {
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
         hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers.layers.length === 0}
-        hideMusic={musicHidden}
       />
 
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}

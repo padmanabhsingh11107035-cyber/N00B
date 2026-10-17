@@ -54,13 +54,12 @@ check(/onPressTab=\{\(tab\) =>[^}]*TAB_PRELOADS\.find/.test(app), 'touching a ta
 const nav = fs.readFileSync('src/components/Navigation/FloatingNavBar.tsx', 'utf8');
 check(/onPointerDown=/.test(nav) && /onPressTab\?\.\(/.test(nav), 'the bar reports a finger touching an icon');
 
-section('4. One marker, no second outline');
+section('4. A flat bar');
 const css = fs.readFileSync('src/index.css', 'utf8');
 const hoverRule = css.indexOf('.liquid-glass-btn:hover {');
 const mq = css.lastIndexOf('@media (hover: hover)', hoverRule);
 check(hoverRule > 0 && mq > 0 && css.slice(mq, hoverRule).split('}').length <= 2, 'the glass button hover look only applies where a mouse can hover (not stuck after a tap)');
-check(/#floating-bottom-nav \.liquid-glass-btn:hover\s*\{[^}]*background:\s*transparent[^}]*box-shadow:\s*none/.test(css), 'in the bottom bar the buttons have no hover outline at all');
-check(!/liquid-glass-btn-active/.test(nav), 'the buttons no longer carry their own lit look (the sliding marker is the only one)');
+check(!/liquid-glass/.test(nav) && !/nav-marker/.test(nav) && !/\.nav-marker/.test(css), 'the bar is flat: no glass pill and no sliding marker any more');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

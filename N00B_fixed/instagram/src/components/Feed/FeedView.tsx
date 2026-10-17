@@ -29,7 +29,9 @@ import {
   Music2,
   Lightbulb,
   Gift,
-  GraduationCap
+  GraduationCap,
+  Youtube,
+  Music
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
 import { VenetianMask } from 'lucide-react';
@@ -123,6 +125,9 @@ interface FeedViewProps {
   onNavigateToProfile?: (user: User) => void;
   // The Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls): they open on top of this page.
   onOpenFunPage?: (loc: FunLocation) => void;
+  // The pages that do not fit on the bottom bar (the Videos feed and Music) open from the menu here.
+  onOpenTab?: (tab: 'videos' | 'music') => void;
+  musicHidden?: boolean;
   onToggleFollowUser?: (userId: string) => Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean } | void>;
   // Admin Control Panel → Platform switches (both open unless switched off)
   sparkxOpen?: boolean;
@@ -167,6 +172,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onNavigateToVideo,
   onNavigateToProfile,
   onOpenFunPage,
+  onOpenTab,
+  musicHidden = false,
   onToggleFollowUser,
   sparkxOpen = true,
   joinTeamOpen = true,
@@ -845,6 +852,40 @@ export const FeedView: React.FC<FeedViewProps> = ({
             {/* every page button of the menu: it scrolls when they do not all fit (short phones, many pages) */}
             <div className="relative flex-1 min-h-0">
             <div ref={menuScroll.ref} className="space-y-1 h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] no-scrollbar">
+              {/* The pages that are not on the bottom bar (computers have them all in the side menu) */}
+              {onOpenTab && (
+                <div className="pb-1 xl:hidden" role="group" aria-label="More pages" data-testid="noob-menu-more-pages">
+                  <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More pages</p>
+                  <button
+                    onClick={() => { setShowNoobMenu(false); onOpenTab('videos'); }}
+                    className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
+                    aria-label="Videos"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0">
+                      <Youtube className="w-[18px] h-[18px]" aria-hidden="true" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-black text-white block">Videos</span>
+                      <span className="text-[10px] text-zinc-300 block truncate">Long videos and live streams</span>
+                    </div>
+                  </button>
+                  {!musicHidden && (
+                    <button
+                      onClick={() => { setShowNoobMenu(false); onOpenTab('music'); }}
+                      className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
+                      aria-label="Music"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0">
+                        <Music className="w-[18px] h-[18px]" aria-hidden="true" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-black text-white block">Music</span>
+                        <span className="text-[10px] text-zinc-300 block truncate">The Music Hub: songs and playlists</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              )}
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
               <button
                 onClick={() => { setShowNoobMenu(false); openNoobDraw(); }}

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { orderUnseenFirst, mergeIntoOrder } from '../../utils/seenContent';
 import {
   Bell,
-  BellRing,
   Video,
   Sparkles,
   RefreshCw,
@@ -636,22 +635,22 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </button>
           )}
 
-          {/* Notifications Bar Trigger */}
+          {/* Notifications Bar Trigger: a solid bell in the accent colour (white in the dark modes, black in Light) that never changes size; a new
+              notification only puts a small red number on its corner. */}
           <button
             id="notifications-bar-trigger"
             onClick={onOpenNotifications}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              unreadNotificationCount > 0
-                ? 'bg-noob/20 border border-noob text-noob shadow-[0_0_10px_rgba(255,255,255,0.3)]'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white'
-            }`}
+            className="relative w-9 h-9 shrink-0 flex items-center justify-center text-noob cursor-pointer active:scale-90 transition-transform"
             title="Activity & Notifications Bar"
+            aria-label={unreadNotificationCount > 0 ? `Notifications, ${unreadNotificationCount} new` : 'Notifications'}
           >
-            <BellRing className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Alerts</span>
+            <Bell className="w-6 h-6" fill="currentColor" strokeWidth={1.6} strokeLinejoin="round" />
             {unreadNotificationCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-noob text-black font-extrabold text-[9px] rounded-full min-w-[16px] text-center">
-                {unreadNotificationCount}
+              <span
+                data-testid="notification-badge"
+                className="absolute top-0 right-0 min-w-[17px] h-[17px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-none font-extrabold flex items-center justify-center ring-2 ring-[var(--page)]"
+              >
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
               </span>
             )}
           </button>

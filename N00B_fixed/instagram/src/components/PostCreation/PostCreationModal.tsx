@@ -44,6 +44,7 @@ import { analyzeMediaFile } from '../../utils/mediaAnalyzer';
 import { captureVideoThumbnail, captureVideoFrames } from '../../utils/videoThumbnail';
 import { parseLook, buildLook, lookStyle, lookRatio, SLIDE_SHAPES, SlideLook, ALT_LIMIT } from '../../utils/slideLook';
 import { siteOrigin } from '../../utils/siteUrl';
+import { readVideoDuration, describeLength, REEL_MAX_SECONDS } from '../../utils/videoDuration';
 import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -402,6 +403,12 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
         // OS file pickers don't reliably honor the accept="image/*" filter).
         setCreationType('reel');
         setMediaMode('video');
+        // A reel is at most 70 seconds: checked on the phone, before anything is uploaded
+        const length = await readVideoDuration(firstFile);
+        if (Number.isFinite(length) && length > REEL_MAX_SECONDS) {
+          setUploadStatusMsg(`A reel can be up to ${REEL_MAX_SECONDS} seconds. This video is ${describeLength(length)} long — pick a shorter one, or share it as a Video instead.`);
+          return;
+        }
         setUploadStatusMsg(`Verified video format (${analysis.mimeType}) • Ready for Reels`);
         const res = await uploadMediaFile(firstFile, 'reels');
         if (res.url) {
@@ -812,7 +819,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               <div>
                 <p className="text-xl font-light text-white">{creationType === 'reel' ? 'Select a video for your reel' : 'Drag photos and videos here'}</p>
                 <p className="text-xs text-zinc-500 mt-1.5">
-                  {creationType === 'reel' ? 'It plays full screen, with music and a cover you choose.' : 'Up to 20 pictures in one post. A video you pick becomes a reel.'}
+                  {creationType === 'reel' ? 'Up to 70 seconds. It plays full screen, with music and a cover you choose.' : 'Up to 20 pictures in one post. A video you pick becomes a reel (up to 70 seconds).'}
                 </p>
               </div>
 

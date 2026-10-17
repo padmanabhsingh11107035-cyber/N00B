@@ -553,7 +553,7 @@ export interface Reel {
   isLikeCountHidden?: boolean;
 }
 
-// A long-form, YouTube-style upload (up to 2 hours) — shown only on the Home video feed, never mixed
+// A long-form, YouTube-style upload (up to 5 hours) — shown only on the Home video feed, never mixed
 // into Reels. Deliberately minimal next to Reel: no audio track, hashtags, collab or tagging fields.
 export interface LongVideo {
   id: string;

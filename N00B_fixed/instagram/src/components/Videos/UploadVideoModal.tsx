@@ -8,7 +8,7 @@ interface UploadVideoModalProps {
   onUploaded: (video: LongVideo) => void;
 }
 
-const MAX_DURATION_SECONDS = 2 * 60 * 60; // 2 hours
+const MAX_DURATION_SECONDS = 5 * 60 * 60; // 5 hours
 
 // Reads a local video file's duration without uploading it, by loading it into a throwaway <video>
 // element — the only reliable way to know this client-side before committing to an upload.
@@ -102,7 +102,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
     try {
       const duration = await readVideoDuration(file);
       if (duration > MAX_DURATION_SECONDS) {
-        setError(`This video is ${Math.round(duration / 60)} minutes long — the limit here is 2 hours.`);
+        setError(`This video is ${Math.round(duration / 60)} minutes long — the limit here is 5 hours.`);
         return;
       }
       setVideoFile(file);
@@ -189,7 +189,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
               className="w-full flex flex-col items-center justify-center gap-2 py-10 rounded-xl border-2 border-dashed border-neutral-700 text-zinc-400 hover:border-noob/50 hover:text-noob transition-colors cursor-pointer disabled:opacity-60"
             >
               {isChecking ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Film className="w-6 h-6" />}
-              <span className="text-xs font-semibold">{isChecking ? 'Checking video…' : 'Tap to choose a video (up to 2 hours)'}</span>
+              <span className="text-xs font-semibold">{isChecking ? 'Checking video…' : 'Tap to choose a video (up to 5 hours)'}</span>
             </button>
           )}
 

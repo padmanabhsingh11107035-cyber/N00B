@@ -63,6 +63,7 @@ import { getReelPlayer, releaseReelPlayer, getSoundPreference, setSoundPreferenc
 import { getSongPlayer, loadSong, pauseSong, stopSong } from '../../utils/songSound';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 import { usePageHidden } from '../../utils/pageLayers';
+import { useScreenAwake } from '../../utils/screenAwake';
 import { prefetchReel, prefetchedReel, cancelReelPrefetch, markReelInUse, clearReelPrefetch } from '../../utils/reelPrefetch';
 import { preloadStoryPictures } from '../../utils/preloadStoryMedia';
 
@@ -118,6 +119,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const pageHiddenRef = useRef(pageHidden);
   pageHiddenRef.current = pageHidden;
   const playing = isPlaying && !pageHidden;
+  useScreenAwake(!pageHidden);   // the screen must not dim and switch off while reels are being watched
   const [isVideoBuffering, setIsVideoBuffering] = useState(true);
   const [videoFailed, setVideoFailed] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
@@ -555,6 +557,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // finger is down, and carries on from there when it lifts. Works with a finger, a mouse and a pen (pointer events; the bar says touch-action: none).
   const [seekTime, setSeekTime] = useState<number | null>(null);
   const seekWasPlayingRef = useRef(false);
+  const seekingRef = useRef(false);   // a finger / mouse is down on the bar (a ref, so the very first move is not missed while the screen catches up)
   const fmtTime = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
   const seekTo = (clientX: number, bar: HTMLElement) => {
     const video = videoRef.current;
@@ -574,15 +577,17 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     seekWasPlayingRef.current = !video.paused;
+    seekingRef.current = true;
     video.pause();
     seekTo(e.clientX, e.currentTarget);
   };
   const moveSeek = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (seekTime === null) return;
+    if (!seekingRef.current) return;
     seekTo(e.clientX, e.currentTarget);
   };
   const endSeek = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (seekTime === null) return;
+    if (!seekingRef.current) return;
+    seekingRef.current = false;
     if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
     const video = videoRef.current;
     if (progressRef.current) progressRef.current.style.transition = '';

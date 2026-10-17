@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Heart, Gift, Send, Users, Mic, MicOff, Radio, Camera, MonitorUp } from 'lucide-react';
-import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack } from 'agora-rtc-sdk-ng';
+import { X, Heart, Gift, Send, Users, Mic, MicOff, Radio, Camera, MonitorUp, ChevronDown } from 'lucide-react';
+import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalVideoTrack, IRemoteVideoTrack } from 'agora-rtc-sdk-ng';
 import { User } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
@@ -25,6 +25,7 @@ import {
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
 import { can } from '../../adminAccess';
+import { useScreenAwake } from '../../utils/screenAwake';
 import { setVisibleInterval } from '../../utils/visibleInterval';
 
 interface LiveStreamViewProps {
@@ -32,16 +33,31 @@ interface LiveStreamViewProps {
   mode: 'host' | 'view';
   stream?: LiveStreamSummary;
   onClose: () => void;
+  // A host can step out of the full-screen view WITHOUT ending the live: the picture is hidden, the broadcast goes on (the app shows "You are live" with a
+  // way back, and a button that turns the live off). `minimized` hides it, `onMinimize` is the button.
+  minimized?: boolean;
+  onMinimize?: () => void;
+  // Tells the app what the live is doing (and its id), so it can show "You are live" and end it from elsewhere.
+  onStateChange?: (phase: Phase, streamId?: string) => void;
 }
 
 const GIFT_AMOUNTS = [50, 100, 500, 1000];
-type Phase = 'setup' | 'connecting' | 'live' | 'ended';
+export type Phase = 'setup' | 'connecting' | 'live' | 'ended';
+
+// The camera / connection steps used to be able to wait for ever on a bad connection, leaving a spinner and nothing else. Every step now has a time limit
+// and says what it was doing.
+const within = <T,>(p: Promise<T>, ms: number, message: string): Promise<T> =>
+  Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms))]);
+
+// The video SDK is big (1.6 MB): it is fetched in the background while the setup screen is already showing, not before it.
+const loadAgora = () => import('agora-rtc-sdk-ng').then((m) => m.default);
 
 // Full-screen live video — used both by the host (broadcasting their camera) and by a viewer (watching
 // someone else's). Agora carries the actual video; everything else (privacy, viewer counting, chat,
 // gifts) is the database, reached the same way whether this is a host or a viewer session.
-export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mode, stream, onClose }) => {
+export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mode, stream, onClose, minimized = false, onMinimize, onStateChange }) => {
   const [phase, setPhase] = useState<Phase>(mode === 'host' ? 'setup' : 'connecting');
+  const [status, setStatus] = useState(mode === 'host' ? '' : 'Connecting…');
   const [title, setTitle] = useState('');
   const [videoSource, setVideoSource] = useState<'camera' | 'screen'>('camera');
   const [streamId, setStreamId] = useState<string | undefined>(stream?.id);
@@ -65,10 +81,22 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   const localTracksRef = useRef<[IMicrophoneAudioTrack | null, ICameraVideoTrack | ILocalVideoTrack] | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const cleanedUpRef = useRef(false);
+  const remoteVideoRef = useRef<IRemoteVideoTrack | null>(null);
+  useScreenAwake(phase === 'live');   // the screen must not dim and switch off during a live
 
   const connect = useCallback(async (id: string, isHostRole: boolean) => {
-    const join = await joinLiveStream(id);
+    setStatus('Connecting…');
+    let join: Awaited<ReturnType<typeof joinLiveStream>>;
+    try {
+      join = await within(joinLiveStream(id), 20000, 'Could not reach the live service. Check your connection and try again.');
+    } catch (err) {
+      if (isHostRole) void endLiveStream(id);
+      setError(err instanceof Error ? err.message : 'Could not join this stream.');
+      setPhase('ended');
+      return;
+    }
     if (!join.success || !join.token || !join.channelName || !join.appId) {
+      if (isHostRole) void endLiveStream(id);
       setError(join.error || 'Could not join this stream.');
       setPhase('ended');
       return;
@@ -79,6 +107,9 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     const withTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
       Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('This is taking too long — check your camera/microphone permissions and try again.')), ms))]);
     try {
+      setStatus('Loading the video service…');
+      const AgoraRTC = await within(loadAgora(), 30000, 'The video service did not load. Check your connection and try again.');
+      setStatus(isHostRole ? 'Opening the camera…' : 'Connecting…');
       // "rtc" (communication) mode instead of "live" (broadcast) mode — who publishes is already
       // controlled by the token's own role (set server-side in agora-token) and by this app's own
       // logic only ever calling client.publish() for the host; "live" mode adds Agora-side host/
@@ -91,7 +122,8 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
       if (!isHostRole) {
         client.on('user-published', async (user, mediaType) => {
           await client.subscribe(user, mediaType);
-          if (mediaType === 'video' && videoRef.current) user.videoTrack?.play(videoRef.current, { fit: 'cover' });
+          // the picture is kept and shown by the effect below as soon as the live screen is on the page (this can arrive before it is)
+          if (mediaType === 'video') { remoteVideoRef.current = user.videoTrack || null; if (videoRef.current) user.videoTrack?.play(videoRef.current, { fit: 'cover' }); }
           if (mediaType === 'audio') user.audioTrack?.play();
         });
         client.on('user-left', () => {
@@ -151,8 +183,16 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   const handleGoLive = async () => {
     setError('');
+    setStatus('Starting your live…');
     setPhase('connecting');
-    const res = await startLiveStream(title);
+    let res: Awaited<ReturnType<typeof startLiveStream>>;
+    try {
+      res = await within(startLiveStream(title), 20000, 'Starting the live took too long. Check your connection and try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not go live.');
+      setPhase('setup');
+      return;
+    }
     if (!res.success || !res.id) {
       setError(res.error || 'Could not go live.');
       setPhase('setup');
@@ -161,6 +201,22 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
     setStreamId(res.id);
     await connect(res.id, true);
   };
+
+  useEffect(() => { void loadAgora().catch(() => undefined); }, []);   // fetch the video SDK in the background
+
+  // The picture can only be put on the page once the live screen is on it
+  useEffect(() => {
+    if (phase !== 'live' || !videoRef.current) return;
+    if (mode === 'host') {
+      const video = localTracksRef.current?.[1];
+      if (video) video.play(videoRef.current, { fit: videoSource === 'screen' ? 'contain' : 'cover' });
+    } else {
+      remoteVideoRef.current?.play(videoRef.current, { fit: 'cover' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  useEffect(() => { onStateChange?.(phase, streamId); }, [phase, streamId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (mode === 'view' && stream) void connect(stream.id, false);
@@ -319,9 +375,11 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
 
   if (phase === 'connecting') {
     return (
-      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center gap-3">
+      <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col items-center justify-center gap-3" data-testid="live-connecting">
+        <button onClick={() => void handleCloseTap()} className="absolute top-4 right-4 text-white/80" aria-label="Cancel"><X className="w-6 h-6" /></button>
         <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-        <p className="text-white/70 text-sm">Connecting…</p>
+        <p className="text-white/70 text-sm">{status || 'Connecting…'}</p>
+        <button onClick={() => void handleCloseTap()} className="mt-3 bg-white/10 text-white rounded-full px-6 py-2 text-sm">Cancel</button>
       </div>
     );
   }
@@ -336,7 +394,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black media-dark flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black media-dark flex items-center justify-center" style={minimized ? { display: 'none' } : undefined} data-testid="live-screen" aria-hidden={minimized}>
       <div className="relative w-full h-full max-h-[860px] max-w-[440px] mx-auto bg-black overflow-hidden">
         <div ref={videoRef} className="absolute inset-0 w-full h-full bg-neutral-950" />
 
@@ -356,6 +414,17 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
                 className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white"
               >
                 {micOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              </button>
+            )}
+            {mode === 'host' && onMinimize && (
+              <button
+                onClick={onMinimize}
+                title="Go back to the app — the live keeps going"
+                aria-label="Minimize the live"
+                data-testid="live-minimize"
+                className="bg-black/40 backdrop-blur-sm rounded-full p-1.5 text-white"
+              >
+                <ChevronDown className="w-4 h-4" />
               </button>
             )}
             {mode === 'host' ? (

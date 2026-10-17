@@ -34,6 +34,7 @@ import {
   fetchUsers,
   pokeMediaCleanup,
   toggleFollowUser,
+  endLiveStream,
   removeFollower,
   acceptFollowRequest,
   declineFollowRequest,
@@ -388,6 +389,12 @@ export default function App() {
   // threading the new video through app-level state for a tab that's lazy-loaded anyway.
   const [videosRefreshKey, setVideosRefreshKey] = useState(0);
   const [showGoLiveHost, setShowGoLiveHost] = useState(false);
+  // A host can step out of the full-screen live without ending it: the picture hides, the broadcast goes on, and "You are live" shows on the Create sheet
+  // and in a small bar, each with a way back and a button that turns the live off.
+  const [liveMinimized, setLiveMinimized] = useState(false);
+  const [liveInfo, setLiveInfo] = useState<{ phase: string; id?: string }>({ phase: 'setup' });
+  const [endingLive, setEndingLive] = useState(false);
+  const hostIsLive = showGoLiveHost && liveInfo.phase === 'live';
   const [showLiveLoungeUpsell, setShowLiveLoungeUpsell] = useState(false);
   // Desktop/tablet sidebar shortcuts straight to pages that otherwise only open from inside the
   // Profile ⋮ menu — same underlying modals, just a second entry point for a wider screen.
@@ -1321,8 +1328,27 @@ export default function App() {
 
   const handleGoLiveTap = () => {
     setShowPostCreationModal(false);
+    if (hostIsLive) { setLiveMinimized(false); return; }   // already live: back to it
     if (currentUser.hasLiveLounge) setShowGoLiveHost(true);
     else setShowLiveLoungeUpsell(true);
+  };
+
+  useEffect(() => { if (showPostCreationModal) void import('./components/LiveStream/LiveStreamView'); }, [showPostCreationModal]);   // the live screen's file is fetched while the Create sheet is open
+
+  const closeHostLive = () => { setShowGoLiveHost(false); setLiveMinimized(false); setLiveInfo({ phase: 'setup' }); };
+  // "Turn off live": ends the stream for everyone, then the live screen goes (which also lets go of the camera and the microphone)
+  const endHostLive = async () => {
+    if (endingLive) return;
+    setEndingLive(true);
+    try {
+      if (liveInfo.id) await endLiveStream(liveInfo.id);
+    } catch (err) {
+      console.error('Could not end the live:', err);
+    } finally {
+      setEndingLive(false);
+      closeHostLive();
+      setShowPostCreationModal(false);
+    }
   };
 
   const handleSelectNavTab = (tab: NavTab) => {
@@ -2146,6 +2172,7 @@ export default function App() {
       {/* 3. Create: what to make (like Instagram's Create sheet) ... */}
       {showPostCreationModal && (
         <React.Suspense fallback={null}><CreateChooser
+          live={hostIsLive ? { onReturn: () => { setShowPostCreationModal(false); setLiveMinimized(false); }, onEnd: () => void endHostLive(), ending: endingLive } : undefined}
           onClose={() => setShowPostCreationModal(false)}
           onPick={(kind) => {
             setShowPostCreationModal(false);
@@ -2188,9 +2215,27 @@ export default function App() {
           <LiveStreamView
             currentUser={currentUser}
             mode="host"
-            onClose={() => setShowGoLiveHost(false)}
+            minimized={liveMinimized}
+            onMinimize={() => setLiveMinimized(true)}
+            onStateChange={(phase, id) => setLiveInfo({ phase, id })}
+            onClose={closeHostLive}
           />
         </React.Suspense>
+      )}
+
+      {/* While the live is minimized: you are still live — a way back and a button to turn it off */}
+      {hostIsLive && liveMinimized && (
+        <div
+          data-testid="live-bar"
+          className="fixed left-1/2 -translate-x-1/2 bottom-[calc(var(--nav-h)+0.75rem)] z-40 w-[92%] max-w-[420px] flex items-center gap-2 rounded-2xl bg-zinc-950/95 border border-red-500/50 shadow-2xl backdrop-blur-xl pl-3 pr-2 py-2"
+        >
+          <span className="relative flex w-2.5 h-2.5 shrink-0"><span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-70" /><span className="relative w-2.5 h-2.5 rounded-full bg-red-500" /></span>
+          <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">You are live</span>
+          <button onClick={() => setLiveMinimized(false)} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold cursor-pointer">Return</button>
+          <button onClick={() => void endHostLive()} disabled={endingLive} className="px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white text-xs font-bold cursor-pointer">
+            {endingLive ? 'Ending…' : 'Turn off live'}
+          </button>
+        </div>
       )}
 
       {showLiveLoungeUpsell && (

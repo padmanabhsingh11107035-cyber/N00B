@@ -6,6 +6,8 @@ export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought
 interface CreateChooserProps {
   onClose: () => void;
   onPick: (kind: CreateKind) => void;
+  // Set while this person is live right now: the sheet then says so, with a way back to the live and a button that turns it off.
+  live?: { onReturn: () => void; onEnd: () => void; ending: boolean };
 }
 
 // What to make — the first screen of "+" (like Instagram's Create sheet): a sheet that slides up on a phone and sits in the middle on a bigger screen.
@@ -19,7 +21,7 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
   { kind: 'thought', title: 'Thought', blurb: 'Words only, on a coloured card', Icon: Type, tint: 'text-white' }
 ];
 
-export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick }) => {
+export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, live }) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -47,8 +49,28 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick })
           </button>
         </div>
 
+        {live && (
+          <div className="mx-4 mt-3 rounded-2xl border border-red-500/50 bg-red-500/10 p-3" data-testid="create-live-now">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex w-3 h-3 shrink-0"><span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-70" /><span className="relative w-3 h-3 rounded-full bg-red-500" /></span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-white leading-tight">You are live</p>
+                <p className="text-xs text-zinc-400 mt-0.5">People can watch you right now.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button type="button" onClick={live.onReturn} className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-semibold cursor-pointer transition-colors">
+                Return to live
+              </button>
+              <button type="button" data-testid="create-live-off" onClick={live.onEnd} disabled={live.ending} className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white text-sm font-semibold cursor-pointer transition-colors">
+                {live.ending ? 'Turning off…' : 'Turn off live'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <ul className="py-1.5">
-          {ROWS.map(({ kind, title, blurb, Icon, tint }) => (
+          {ROWS.filter((r) => !(live && r.kind === 'live')).map(({ kind, title, blurb, Icon, tint }) => (
             <li key={kind}>
               <button
                 type="button"

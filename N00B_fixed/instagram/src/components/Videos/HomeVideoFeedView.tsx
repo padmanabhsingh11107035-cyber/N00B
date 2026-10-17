@@ -36,6 +36,7 @@ import {
 import { sendLike } from '../../utils/likeSync';
 import { setVisibleInterval } from '../../utils/visibleInterval';
 import { LazyVideo } from '../Common/LazyVideo';
+import { useScreenAwake } from '../../utils/screenAwake';
 import { usePinnedFeedItems, toggleFeedPin } from '../../services/pinnedFeed';
 import { buildIndex, searchIndex, didYouMean, suggest, popularity, recentSearches, rememberSearch, forgetSearch, clearSearches } from '../../utils/searchEngine';
 
@@ -98,6 +99,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [liveStreams, setLiveStreams] = useState<LiveStreamSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [openVideo, setOpenVideo] = useState<LongVideo | null>(null);
+  useScreenAwake(!!openVideo);   // a video that is open: the screen must not dim and switch off while it plays
   const [openLive, setOpenLive] = useState<LiveStreamSummary | null>(null);
   const [filter, setFilter] = useState<FilterChip>('all');
   const [showSearch, setShowSearch] = useState(false);

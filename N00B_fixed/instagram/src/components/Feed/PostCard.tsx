@@ -40,7 +40,7 @@ import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
-import { POST_FILTERS } from '../../data/mockData';
+import { lookStyle, lookRatio } from '../../utils/slideLook';
 import { reportSongVisibility, forgetSong, holdSongs, toggleFeedSound, subscribeFeedSong, getFeedSongView } from '../../utils/songSound';
 
 interface ToggleFollowResult {
@@ -162,7 +162,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   }, [currentSlide?.mediaUrl]);
   const MIN_ASPECT = 4 / 5; // Instagram's tallest allowed portrait
   const MAX_ASPECT = 1.91; // Instagram's widest allowed landscape
-  const boxAspect = Math.min(MAX_ASPECT, Math.max(MIN_ASPECT, slideAspect ?? MIN_ASPECT));
+  // a shape chosen when the post was made (1:1, 4:5, 16:9) wins over the picture's own shape
+  const chosenRatio = currentSlide ? lookRatio(currentSlide.filter) : null;
+  const boxAspect = chosenRatio ?? Math.min(MAX_ASPECT, Math.max(MIN_ASPECT, slideAspect ?? MIN_ASPECT));
 
   const primaryTaggedUser = post.taggedUsers && post.taggedUsers.length > 0 
     ? post.taggedUsers[0] 
@@ -397,7 +399,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   // One picture of the carousel: the picture or video, and the text / sticker / mention layers that belong to it.
   const renderSlide = (slide: PostSlide, isCur: boolean) => {
-    const filterStyle = POST_FILTERS.find((f) => f.id === slide.filter)?.style || '';
+    const look = lookStyle(slide.filter);
     return (
       <>
         {slide.mediaType === 'video' ? (
@@ -405,7 +407,8 @@ export const PostCard: React.FC<PostCardProps> = ({
             <video
               key="live"
               src={slide.mediaUrl}
-              className={`w-full h-full object-cover ${filterStyle}`}
+              className="w-full h-full object-cover"
+              style={look}
               controls
               loop
               muted
@@ -421,14 +424,15 @@ export const PostCard: React.FC<PostCardProps> = ({
               }}
             />
           ) : (
-            <video key="peek" src={slide.mediaUrl} className={`w-full h-full object-cover ${filterStyle}`} muted playsInline preload="metadata" />
+            <video key="peek" src={slide.mediaUrl} className="w-full h-full object-cover" style={look} muted playsInline preload="metadata" />
           )
         ) : (
           <img
             ref={isCur ? slideImgRef : undefined}
             src={slide.mediaUrl}
             alt={slide.caption || post.caption}
-            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${filterStyle}`}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+            style={look}
             referrerPolicy="no-referrer"
             loading={isCur ? 'lazy' : 'eager'}
             decoding="async"

@@ -140,6 +140,7 @@ const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/An
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
 const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
 const PostCreationModal = React.lazy(() => import('./components/PostCreation/PostCreationModal').then((m) => ({ default: m.PostCreationModal })));
+const CreateChooser = React.lazy(() => import('./components/PostCreation/CreateChooser').then((m) => ({ default: m.CreateChooser })));
 const NotificationsModal = React.lazy(() => import('./components/Modals/NotificationsModal').then((m) => ({ default: m.NotificationsModal })));
 const ScratchCardModal = React.lazy(() => import('./components/Modals/ScratchCardModal').then((m) => ({ default: m.ScratchCardModal })));
 const StatusNoteModal = React.lazy(() => import('./components/Modals/StatusNoteModal').then((m) => ({ default: m.StatusNoteModal })));
@@ -377,7 +378,9 @@ export default function App() {
   const [activeStoryViewerIndex, setActiveStoryViewerIndex] = useState<number | null>(null);
   const [activeScratchCardId, setActiveScratchCardId] = useState<string | null>(null);
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  // "+" opens the Create chooser (Post / Reel / Story / Video / Live / Thought); a Post, Reel or Thought then opens the creator
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
+  const [createKind, setCreateKind] = useState<null | 'post' | 'reel' | 'thought'>(null);
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
   // threading the new video through app-level state for a tab that's lazy-loaded anyway.
@@ -2119,14 +2122,29 @@ export default function App() {
         /></React.Suspense>
       )}
 
-      {/* 3. Post & Carousel Creation Modal */}
+      {/* 3. Create: what to make (like Instagram's Create sheet) ... */}
       {showPostCreationModal && (
+        <React.Suspense fallback={null}><CreateChooser
+          onClose={() => setShowPostCreationModal(false)}
+          onPick={(kind) => {
+            setShowPostCreationModal(false);
+            if (kind === 'post' || kind === 'reel' || kind === 'thought') setCreateKind(kind);
+            else if (kind === 'story') setShowCreateStoryModal(true);
+            else if (kind === 'video') setShowUploadVideoModal(true);
+            else if (kind === 'live') handleGoLiveTap();
+          }}
+        /></React.Suspense>
+      )}
+
+      {/* ... and the Post / Reel / Thought creator: pick, edit, details */}
+      {createKind && (
         <React.Suspense fallback={null}><PostCreationModal
+          key={createKind}
+          initialType={createKind}
           currentUser={currentUser}
           allUsers={registeredUsers}
-          onClose={() => setShowPostCreationModal(false)}
+          onClose={() => setCreateKind(null)}
           onSubmitPost={handleCreatePostOrReel}
-          onGoLive={handleGoLiveTap}
         /></React.Suspense>
       )}
 

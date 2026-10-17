@@ -50,7 +50,6 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, Story, StoryHighlight, LongVideo } from '../../types';
-import { POST_FILTERS } from '../../data/mockData';
 import {
   fetchCollections,
   fetchLikedPosts,
@@ -1328,9 +1327,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 >
                   <PostThumbnailMedia
                     src={post.slides?.[0]?.mediaUrl}
+                    filter={post.slides?.[0]?.filter}
                     mediaType={post.slides?.[0]?.mediaType}
                     alt={post.caption}
-                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
+                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300`}
                   />
                   {post.slides.length > 1 && (
                     <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10">
@@ -1509,9 +1509,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   >
                     <PostThumbnailMedia
                       src={post.slides?.[0]?.mediaUrl}
+                      filter={post.slides?.[0]?.filter}
                       mediaType={post.slides?.[0]?.mediaType}
                       alt={post.caption || 'Saved post'}
-                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
+                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300`}
                     />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs backdrop-blur-[2px]">
                       <span className="flex items-center gap-1">
@@ -1574,9 +1575,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               >
                 <PostThumbnailMedia
                   src={post.slides?.[0]?.mediaUrl}
+                  filter={post.slides?.[0]?.filter}
                   mediaType={post.slides?.[0]?.mediaType}
                   alt=""
-                  className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
+                  className={`w-full h-full object-cover group-hover:scale-105 transition-transform`}
                 />
               </div>
             ))}
@@ -1598,9 +1600,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 >
                   <PostThumbnailMedia
                     src={post.slides?.[0]?.mediaUrl}
+                    filter={post.slides?.[0]?.filter}
                     mediaType={post.slides?.[0]?.mediaType}
                     alt=""
-                    className={`w-full h-full object-cover opacity-75 group-hover:opacity-100 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
+                    className={`w-full h-full object-cover opacity-75 group-hover:opacity-100`}
                   />
                   <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[10px] text-amber-400 font-bold">
                     Archived

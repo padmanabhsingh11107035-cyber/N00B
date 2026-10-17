@@ -43,7 +43,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
   const [mobileNumber, setMobileNumber] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
-  const [gender, setGender] = useState('Prefer not to say');
+  const [gender, setGender] = useState('');   // nothing is selected until the person chooses
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -161,6 +161,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
     if (!mobileNumber.trim()) { setErrorMessage('Please enter your mobile number.'); return; }
     const phoneError = phoneProblem(mobileNumber, countryCode);
     if (phoneError) { setErrorMessage(phoneError); return; }
+    if (!gender) { setErrorMessage('Please choose your gender (Male, Female or Prefer not to say).'); return; }
     if (!dateOfBirth) { setErrorMessage('Please enter your date of birth.'); return; }
     if (!(avatarObjectKey || avatarUrl)) { setErrorMessage('Please upload a profile photo. It is required to create a NOOB account.'); return; }
     if (!agreedToTerms) { setErrorMessage("Please check the box to agree to NOOB's general terms and privacy policy."); return; }
@@ -399,7 +400,7 @@ export const CompleteOAuthProfile: React.FC<CompleteOAuthProfileProps> = ({ pend
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Gender</label>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">Gender <span className="text-cyan-400">*</span></label>
                 <div className="flex flex-wrap gap-1.5">
                   {GENDER_OPTIONS.map((g) => (
                     <button

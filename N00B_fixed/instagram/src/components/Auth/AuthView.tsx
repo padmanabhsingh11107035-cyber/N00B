@@ -198,11 +198,10 @@ export const COUNTRY_OPTIONS = [
   { flag: '🇸🇦', code: '+966', name: 'Saudi Arabia', fullLabel: '🇸🇦 Saudi Arabia (+966)' }
 ];
 
+// Only these three are offered (sign-up, the details page after Google / Facebook, Edit profile). Nothing is chosen until the person chooses.
 export const GENDER_OPTIONS = [
-  { id: 'Female', label: 'Female', emoji: '👩' },
   { id: 'Male', label: 'Male', emoji: '👨' },
-  { id: 'Non-binary', label: 'Non-binary', emoji: '🧑' },
-  { id: 'Other', label: 'Other', emoji: '✨' },
+  { id: 'Female', label: 'Female', emoji: '👩' },
   { id: 'Prefer not to say', label: 'Prefer not to say', emoji: '🔒' }
 ];
 
@@ -419,7 +418,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [countryCode, setCountryCode] = useState('🇮🇳 India (+91)'); // Default India with number, name & flag
   const [mobileNumber, setMobileNumber] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('Prefer not to say');
+  const [gender, setGender] = useState('');   // nothing is selected until the person chooses
   const [password, setPassword] = useState('');
   const [userId, setUserId] = useState('');
   const [bio, setBio] = useState('');
@@ -632,6 +631,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       return;
     }
 
+    if (!gender) {
+      setErrorMessage('Please choose your gender (Male, Female or Prefer not to say).');
+      return;
+    }
     if (!dateOfBirth) {
       setErrorMessage('Please enter your date of birth.');
       return;
@@ -1352,7 +1355,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                   Gender <span className="text-cyan-400">*</span>
                 </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {GENDER_OPTIONS.map((g) => (
                     <button
                       key={g.id}

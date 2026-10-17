@@ -91,18 +91,8 @@ export const INITIAL_SETTINGS = {
   storeDeliveryFee: 0
 };
 
-// Shared between the post/reel creation form (the picker) and every place a
-// post/reel is displayed (to render the chosen filter) — a single source so
-// the two can never drift out of sync with each other.
-export const POST_FILTERS = [
-  { id: 'normal', name: 'Normal', style: '' },
-  { id: 'emerald', name: 'Emerald Glow', style: 'hue-rotate-60 contrast-125 saturate-150' },
-  { id: 'cyber', name: 'Cyber Neon', style: 'hue-rotate-180 contrast-150 brightness-110' },
-  { id: 'gala', name: 'GALA Preset', style: 'contrast-110 sepia-25 brightness-105' },
-  { id: 'monochrome', name: 'Monochrome', style: 'grayscale contrast-125' },
-  { id: 'clarendon', name: 'Clarendon', style: 'contrast-125 saturate-125' },
-  { id: 'juno', name: 'Juno', style: 'contrast-115 saturate-140' }
-];
+// The filters live in their own file (src/data/postFilters.ts, no imports) so the look code and its tests can load them on their own.
+export { POST_FILTERS } from './postFilters';
 
 // Content categories offered when creating a post or reel — one shared list
 // for both, so a reel gets the same breadth of streams a post does.

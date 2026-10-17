@@ -33,7 +33,6 @@ import { mergePeople, realPeople, shufflePeople } from '../../utils/peopleList';
 import { getContactsPermissionState, findFriendsFromContacts } from '../../services/contactSync';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { PostThumbnailMedia } from '../Common/PostThumbnailMedia';
-import { POST_FILTERS } from '../../data/mockData';
 import { JoinUsModal } from './JoinUsModal';
 import { LazyVideo } from '../Common/LazyVideo';
 import { buildIndex, searchIndex, popularity } from '../../utils/searchEngine';
@@ -741,9 +740,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               >
                 <PostThumbnailMedia
                   src={post.slides?.[0]?.mediaUrl}
+                  filter={post.slides?.[0]?.filter}
                   mediaType={post.slides?.[0]?.mediaType}
                   alt={post.caption}
-                  className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${POST_FILTERS.find((f) => f.id === post.slides?.[0]?.filter)?.style || ''}`}
+                  className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300`}
                 />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs">
                   <span className="flex items-center gap-1">

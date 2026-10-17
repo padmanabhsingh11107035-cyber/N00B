@@ -40,7 +40,7 @@ import { LikeReactionBurst } from '../Common/LikeReactionBurst';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { reactionEmojiForCategory } from '../../utils/categoryReaction';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
-import { lookStyle, lookRatio } from '../../utils/slideLook';
+import { lookStyle, lookRatio, lookAlt } from '../../utils/slideLook';
 import { reportSongVisibility, forgetSong, holdSongs, toggleFeedSound, subscribeFeedSong, getFeedSongView } from '../../utils/songSound';
 
 interface ToggleFollowResult {
@@ -430,7 +430,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           <img
             ref={isCur ? slideImgRef : undefined}
             src={slide.mediaUrl}
-            alt={slide.caption || post.caption}
+            alt={lookAlt(slide.filter) || slide.caption || post.caption}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
             style={look}
             referrerPolicy="no-referrer"
@@ -745,7 +745,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           {/* The pictures side by side on a track that follows the finger: this one in the middle, the one before and the one after beside it */}
           <div ref={trackRef} className="absolute inset-0 will-change-transform">
             {slideWindow.map(({ slide, idx }) => (
-              <div key={slide.id} className="absolute inset-0" style={{ transform: `translate3d(${(idx - shownIndex) * 100}%, 0, 0)` }}>
+              <div key={slide.id} className="absolute inset-0 overflow-hidden" style={{ transform: `translate3d(${(idx - shownIndex) * 100}%, 0, 0)` }}>
                 {renderSlide(slide, idx === shownIndex)}
               </div>
             ))}

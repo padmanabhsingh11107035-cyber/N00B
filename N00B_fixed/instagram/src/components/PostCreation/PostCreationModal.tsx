@@ -35,13 +35,15 @@ import {
   Smile,
   Camera,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Share2
 } from 'lucide-react';
 import { Post, PostSlide, Reel, User } from '../../types';
 import { uploadMediaFile } from '../../services/api';
 import { analyzeMediaFile } from '../../utils/mediaAnalyzer';
 import { captureVideoThumbnail, captureVideoFrames } from '../../utils/videoThumbnail';
-import { parseLook, buildLook, lookStyle, lookRatio, SLIDE_SHAPES, SlideLook } from '../../utils/slideLook';
+import { parseLook, buildLook, lookStyle, lookRatio, SLIDE_SHAPES, SlideLook, ALT_LIMIT } from '../../utils/slideLook';
+import { siteOrigin } from '../../utils/siteUrl';
 import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -64,6 +66,8 @@ interface PostCreationModalProps {
   onGoLive?: () => void;
   // What the chooser sent the person here to make. 'thought' opens straight on the writing step.
   initialType?: 'post' | 'reel' | 'thought';
+  // "Use this sound" on a reel: the sound is already chosen when the creator opens
+  initialAudio?: MusicSelection | null;
 }
 
 const FILTERS = POST_FILTERS;
@@ -96,12 +100,15 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   allUsers = [],
   onClose,
   onSubmitPost,
-  initialType = 'post'
+  initialType = 'post',
+  initialAudio = null
 }) => {
   // Creation Mode: Post (Image Only) vs Reel (Video Only)
   const [creationType, setCreationType] = useState<'post' | 'reel'>(initialType === 'reel' ? 'reel' : 'post');
   // Three steps, like Instagram: pick the picture(s) or video, edit them, then write the details and share
-  const [step, setStep] = useState<'select' | 'edit' | 'details'>(initialType === 'thought' ? 'details' : 'select');
+  const [step, setStep] = useState<'select' | 'edit' | 'details' | 'done'>(initialType === 'thought' ? 'details' : 'select');
+  const [isAltOpen, setIsAltOpen] = useState(false);
+  const [shareNote, setShareNote] = useState('');
   const [editTab, setEditTab] = useState<'filters' | 'adjust' | 'shape' | 'add'>('filters');
   const [dragOver, setDragOver] = useState(false);
   const [showCaptionEmoji, setShowCaptionEmoji] = useState(false);
@@ -131,7 +138,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   // record your own clip. Fixes a real bug: the old free-text musicTitle field was never actually
   // read by createReel/createPost (both expect an audioTrack object), so anything typed there was
   // silently discarded and every reel got "Original Sound" regardless of user input.
-  const [audioSelection, setAudioSelection] = useState<MusicSelection | null>(null);
+  const [audioSelection, setAudioSelection] = useState<MusicSelection | null>(initialAudio);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   
   // User Tagging / Instagram-style Collaboration
@@ -543,6 +550,22 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
     }
   };
 
+  // After sharing: pass it on to other apps (the phone's own share sheet) or copy the link to the profile it was shared on
+  const shareToOtherApps = async () => {
+    const link = `${siteOrigin()}/?profile=${encodeURIComponent(currentUser.username)}`;
+    const text = creationType === 'reel' ? `I just shared a reel on NOOB Socials: @${currentUser.username}` : `I just shared a post on NOOB Socials: @${currentUser.username}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'NOOB Socials', text, url: link });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text} ${link}`);
+      setShareNote('Link copied.');
+    } catch {
+      /* the person closed the share sheet */
+    }
+  };
+
   const goBack = () => {
     if (step === 'details') {
       if (mediaMode === 'text') { setMediaMode('photos'); setStep('select'); } else setStep('edit');
@@ -669,7 +692,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       }
 
       confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
-      onClose();
+      setStep('done');
     } catch (err: any) {
       alert(err?.message || 'Failed to publish. Please try again.');
     } finally {
@@ -682,7 +705,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
     (creationType === 'reel' ? !!videoUrl : caption.trim().length > 0 || slides.length > 0);
 
   const kindWord = creationType === 'reel' ? 'reel' : mediaMode === 'text' ? 'thought' : 'post';
-  const stepTitle = step === 'select' ? `Create new ${kindWord}` : step === 'edit' ? 'Edit' : `New ${kindWord}`;
+  const stepTitle = step === 'select' ? `Create new ${kindWord}` : step === 'edit' ? 'Edit' : step === 'done' ? 'Shared' : `New ${kindWord}`;
 
   const insertCaptionEmoji = (emoji: string) => {
     const el = captionTextareaRef.current;
@@ -706,7 +729,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
         {/* Header: the step's name in the middle, back on the left, Next / Share on the right (like Instagram) */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-3 border-b border-neutral-800 bg-zinc-950 shrink-0">
           <div className="justify-self-start">
-            {step === 'select' ? (
+            {step === 'select' || step === 'done' ? (
               <button type="button" onClick={onClose} className="p-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-zinc-900 cursor-pointer" aria-label="Close" title="Close">
                 <X className="w-5 h-5" />
               </button>
@@ -1152,7 +1175,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
               {/* Filters / Adjustments / Shape / Add — like Instagram's edit step */}
               <div className="mt-3 flex items-center border-b border-neutral-800 px-1" role="tablist">
-                {([['filters', 'Filters'], ['adjust', 'Adjustments'], ['shape', 'Shape'], ['add', 'Add']] as const).map(([id, label]) => (
+                {([['filters', 'Filters'], ['adjust', 'Adjustments'], ['shape', 'Crop'], ['add', 'Add']] as const).map(([id, label]) => (
                   <button
                     key={id}
                     type="button"
@@ -1240,7 +1263,31 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                         <span className="text-[11px] font-bold">{sh.label}</span>
                       </button>
                     ))}
-                    <p className="w-full text-[11px] text-zinc-500">The picture is cropped from the middle to the shape you choose.</p>
+                    <div className="w-full space-y-3 pt-2" data-testid="create-zoom">
+                      <div>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-semibold text-zinc-200">Zoom</span>
+                          <span className="text-zinc-500 tabular-nums">{Math.round(look.zoom * 100)}%</span>
+                        </div>
+                        <input type="range" min={100} max={300} step={5} value={Math.round(look.zoom * 100)} onChange={(e) => updateLook({ zoom: Number(e.target.value) / 100 })} className="w-full accent-white cursor-pointer" aria-label="Zoom" />
+                      </div>
+                      {look.zoom > 1 && (
+                        <>
+                          <div>
+                            <div className="text-xs font-semibold text-zinc-200 mb-1">Move left / right</div>
+                            <input type="range" min={0} max={100} step={1} value={look.fx} onChange={(e) => updateLook({ fx: Number(e.target.value) })} className="w-full accent-white cursor-pointer" aria-label="Move left or right" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-zinc-200 mb-1">Move up / down</div>
+                            <input type="range" min={0} max={100} step={1} value={look.fy} onChange={(e) => updateLook({ fy: Number(e.target.value) })} className="w-full accent-white cursor-pointer" aria-label="Move up or down" />
+                          </div>
+                        </>
+                      )}
+                      <button type="button" onClick={() => updateLook({ shape: 'original', zoom: 1, fx: 50, fy: 50 })} className="text-[11px] font-bold text-blue-400 hover:text-blue-300 cursor-pointer">
+                        Reset crop
+                      </button>
+                      <p className="text-[11px] text-zinc-500">The shape crops from the middle; zoom in and move to choose which part stays.</p>
+                    </div>
                   </div>
                 )}
 
@@ -1763,6 +1810,68 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Accessibility: a description of each picture for people who can not see it (read out by screen readers) */}
+              {creationType === 'post' && mediaMode === 'photos' && slides.length > 0 && (
+                <div className="border-t border-neutral-800/80" data-testid="create-alt">
+                  <button type="button" onClick={() => setIsAltOpen((v) => !v)} className="w-full flex items-center justify-between py-3 cursor-pointer" aria-expanded={isAltOpen}>
+                    <span className="text-sm text-white">Accessibility</span>
+                    <span className="flex items-center gap-2 text-[11px] text-zinc-500">
+                      {slides.some((sl) => parseLook(sl.filter).alt) ? 'Alt text added' : 'Write alt text'}
+                      <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isAltOpen ? 'rotate-180' : ''}`} />
+                    </span>
+                  </button>
+                  {isAltOpen && (
+                    <div className="pb-3 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                      <p className="text-[11px] text-zinc-500">Alt text describes your pictures for people who use a screen reader or have a slow connection.</p>
+                      {slides.map((sl, idx) => (
+                        <div key={sl.id} className="flex items-start gap-3">
+                          <img src={sl.mediaUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0" style={lookStyle(sl.filter)} />
+                          <input
+                            type="text"
+                            maxLength={ALT_LIMIT}
+                            value={parseLook(sl.filter).alt}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setSlides((prev) => prev.map((x) => (x.id === sl.id ? { ...x, filter: buildLook({ ...parseLook(x.filter), alt: v }) } : x)));
+                            }}
+                            placeholder={slides.length > 1 ? `Describe picture ${idx + 1}` : 'Describe this picture'}
+                            aria-label={`Alt text for picture ${idx + 1}`}
+                            className="flex-1 min-w-0 bg-black text-sm text-white p-2.5 rounded-xl border border-neutral-800 outline-none focus:border-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4 — it is shared: pass it on, or finish */}
+          {step === 'done' && (
+            <div className="min-h-full flex flex-col items-center justify-center text-center px-6 py-12 gap-4" data-testid="create-done">
+              <div className="w-20 h-20 rounded-full border-2 border-white flex items-center justify-center">
+                <Check className="w-10 h-10 text-white" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-xl font-light text-white">{scheduledFor ? `Your ${kindWord} is scheduled.` : `Your ${kindWord} has been shared.`}</p>
+                <p className="text-xs text-zinc-500 mt-1.5">Share it with friends on other apps too.</p>
+              </div>
+              <div className="flex flex-col items-center gap-2.5 mt-2">
+                <button
+                  type="button"
+                  onClick={shareToOtherApps}
+                  data-testid="share-other-apps"
+                  className="px-5 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold cursor-pointer transition-colors flex items-center gap-2"
+                >
+                  <Share2 className="w-4 h-4" /> Share to other apps
+                </button>
+                <button type="button" onClick={onClose} className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white text-sm font-semibold cursor-pointer transition-colors">
+                  Done
+                </button>
+                {shareNote && <p className="text-[11px] text-zinc-400" role="status">{shareNote}</p>}
               </div>
             </div>
           )}

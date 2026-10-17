@@ -81,6 +81,8 @@ interface ReelsViewProps {
   onToggleFollowUser?: (userId: string) => Promise<ToggleFollowResult | void>;
   onGoBack?: () => void;
   onNavigateToProfile?: (user: User) => void;
+  // "Use this sound": open the reel creator with this reel's song already chosen
+  onUseSound?: (sound: { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }) => void;
 }
 
 // Fisher-Yates shuffle — used to randomize reel order and to reshuffle
@@ -101,7 +103,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   initialReelId,
   onToggleFollowUser,
   onGoBack,
-  onNavigateToProfile
+  onNavigateToProfile,
+  onUseSound
 }) => {
   const hideOthersCounts = useSetting('likes.hideOthers');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -548,6 +551,45 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   };
 
+  // Drag the line under the reel to move the video: let go where you want to watch from, or skip a part (and go back to it). The video rests while the
+  // finger is down, and carries on from there when it lifts. Works with a finger, a mouse and a pen (pointer events; the bar says touch-action: none).
+  const [seekTime, setSeekTime] = useState<number | null>(null);
+  const seekWasPlayingRef = useRef(false);
+  const fmtTime = (secs: number) => `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`;
+  const seekTo = (clientX: number, bar: HTMLElement) => {
+    const video = videoRef.current;
+    if (!video || !(video.duration > 0)) return;
+    const r = bar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - r.left) / Math.max(1, r.width)));
+    video.currentTime = ratio * video.duration;
+    if (progressRef.current) {
+      progressRef.current.style.transition = 'none';
+      progressRef.current.style.width = `${ratio * 100}%`;
+    }
+    setSeekTime(ratio * video.duration);
+  };
+  const beginSeek = (e: React.PointerEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video || !(video.duration > 0)) return;
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    seekWasPlayingRef.current = !video.paused;
+    video.pause();
+    seekTo(e.clientX, e.currentTarget);
+  };
+  const moveSeek = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (seekTime === null) return;
+    seekTo(e.clientX, e.currentTarget);
+  };
+  const endSeek = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (seekTime === null) return;
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    const video = videoRef.current;
+    if (progressRef.current) progressRef.current.style.transition = '';
+    setSeekTime(null);
+    if (video && seekWasPlayingRef.current) void video.play().catch(() => undefined);
+  };
+
   const handlePostComment = async () => {
     if (!currentReel || (!commentInput.trim() && !commentAttachment) || isPostingComment) return;
     setCommentError('');
@@ -695,6 +737,10 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       }
       const t = e.touches[0];
       const target = e.target as Element | null;
+      if (target?.closest('[data-reel-seek]')) {   // dragging the seek bar is not a swipe to the next reel
+        active = false;
+        return;
+      }
       active = true;
       locked = false;
       startX = t.clientX;
@@ -1087,6 +1133,19 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                     >
                       <Link2 className="w-4 h-4 text-sky-400" /> {shareLinkCopied ? 'Link copied' : 'Copy link'}
                     </button>
+                    {onUseSound && currentReel?.audioTrack?.audioUrl && (
+                      <button
+                        data-testid="reel-use-sound"
+                        onClick={() => {
+                          setShowReelOptionsMenu(false);
+                          const t = currentReel.audioTrack!;
+                          onUseSound({ title: t.title, artist: t.artist, coverUrl: t.coverUrl, audioUrl: t.audioUrl, trackId: t.trackId });
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800 flex items-center gap-2 cursor-pointer"
+                      >
+                        <Music className="w-4 h-4 text-violet-400" /> Use this sound
+                      </button>
+                    )}
                     {(isReelOwner || isMasterAdmin) && (
                       <button
                         onClick={() => {
@@ -1151,12 +1210,34 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           </div>
 
           {/* how far the video has played */}
-          <div className="mt-3 h-[3px] rounded-full bg-[#1b1b20] overflow-hidden" data-testid={isCur ? 'reel-progress' : undefined}>
-            <div ref={isCur ? progressRef : undefined} className="h-full rounded-full bg-[#bcbcc8] transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
+          <div
+            data-reel-seek
+            data-testid={isCur ? 'reel-seek' : undefined}
+            role="slider"
+            aria-label="Move through this reel"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            className="relative mt-[3px] py-[9px] touch-none cursor-pointer select-none"
+            onPointerDown={isCur ? beginSeek : undefined}
+            onPointerMove={isCur ? moveSeek : undefined}
+            onPointerUp={isCur ? endSeek : undefined}
+            onPointerCancel={isCur ? endSeek : undefined}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isCur && seekTime !== null && (
+              <div className="absolute -top-6 left-0 right-0 flex justify-center pointer-events-none" data-testid="reel-seek-time">
+                <span className="px-2 py-0.5 rounded-full bg-black/75 text-[11px] font-semibold text-white tabular-nums">
+                  {fmtTime(seekTime)} / {fmtTime(videoRef.current?.duration || 0)}
+                </span>
+              </div>
+            )}
+            <div className={`${isCur && seekTime !== null ? 'h-[7px]' : 'h-[3px]'} rounded-full bg-[#1b1b20] overflow-hidden transition-[height] duration-100`} data-testid={isCur ? 'reel-progress' : undefined}>
+              <div ref={isCur ? progressRef : undefined} className="h-full rounded-full bg-[#bcbcc8] transition-[width] duration-300 ease-linear" style={{ width: '0%' }} />
+            </div>
           </div>
 
           {/* its sound, and Follow */}
-          <div className="mt-3 flex items-center gap-3" data-testid={isCur ? 'reel-sound-bar' : undefined}>
+          <div className="mt-[3px] flex items-center gap-3" data-testid={isCur ? 'reel-sound-bar' : undefined}>
             {soundCover('w-[42px] h-[42px]')}
             <div className="min-w-0 flex-1 leading-tight">
               <p translate="no" className="text-[15px] font-bold text-white truncate">{reel.audioTrack?.title || 'Original audio'}</p>

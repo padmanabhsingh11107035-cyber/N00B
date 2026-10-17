@@ -382,6 +382,7 @@ export default function App() {
   // "+" opens the Create chooser (Post / Reel / Story / Video / Live / Thought); a Post, Reel or Thought then opens the creator
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [createKind, setCreateKind] = useState<null | 'post' | 'reel' | 'thought'>(null);
+  const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
   // threading the new video through app-level state for a tab that's lazy-loaded anyway.
@@ -1858,6 +1859,7 @@ export default function App() {
               onToggleFollowUser={handleToggleFollowUser}
               onGoBack={handleReelsGoBack}
               onNavigateToProfile={handleNavigateToUserProfile}
+              onUseSound={(sound) => { setCreateSound(sound); setCreateKind('reel'); }}
             /></React.Suspense>
           </div>
         )}
@@ -2160,9 +2162,10 @@ export default function App() {
         <React.Suspense fallback={null}><PostCreationModal
           key={createKind}
           initialType={createKind}
+          initialAudio={createSound}
           currentUser={currentUser}
           allUsers={registeredUsers}
-          onClose={() => setCreateKind(null)}
+          onClose={() => { setCreateKind(null); setCreateSound(null); }}
           onSubmitPost={handleCreatePostOrReel}
         /></React.Suspense>
       )}

@@ -25,7 +25,7 @@ check(/kind === 'post' \|\| kind === 'reel' \|\| kind === 'thought'\) setCreateK
 check(/<PostCreationModal\s*\n\s*key=\{createKind\}\s*\n\s*initialType=\{createKind\}/.test(app), 'a Post, Reel or Thought opens the creator on that type');
 
 section('2. Three steps');
-check(/useState<'select' \| 'edit' \| 'details'>\(initialType === 'thought' \? 'details' : 'select'\)/.test(modal), 'it starts on "select" (a Thought starts on the details)');
+check(/useState<'select' \| 'edit' \| 'details' \| 'done'>\(initialType === 'thought' \? 'details' : 'select'\)/.test(modal), 'it starts on "select" (a Thought starts on the details)');
 check(/if \(added > 0\) setStep\('edit'\)/.test(modal) && /if \(res\.url \|\| res\.objectKey\) setStep\('edit'\)/.test(modal), 'once the pictures or the video are in, it goes on to editing by itself');
 check(/Select from device/.test(modal) && /Drag photos and videos here/.test(modal) && /onDrop=/.test(modal) && /capture="environment"/.test(modal), 'pick from the device, drag and drop, or the camera');
 check(/or write a thought, with no picture/.test(modal), 'a picture-less thought is still possible');
@@ -33,14 +33,22 @@ check(/onClick=\{\(\) => setStep\('details'\)\}/.test(modal) && /\{isPublishing 
 check(/window\.confirm\('Discard what you picked and start over\?'\)/.test(modal), 'going back from editing asks before throwing the pictures away');
 
 section('3. The edit tools');
-for (const t of ['Filters', 'Adjustments', 'Shape', 'Add']) check(modal.includes(`'${t}'`), `a "${t}" tab`);
+for (const t of ['Filters', 'Adjustments', 'Crop', 'Add']) check(modal.includes(`'${t}'`), `a "${t}" tab`);
 const ids = (read('src/data/postFilters.ts').match(/export const POST_FILTERS = \[[\s\S]*?\];/) || [''])[0].match(/id: '(\w+)'/g) || [];
 check(ids.length >= 14 && ['clarendon', 'gingham', 'moon', 'lark', 'reyes', 'juno', 'slumber', 'crema', 'ludwig', 'aden', 'perpetua'].every((n) => ids.some((i) => i.includes(`'${n}'`))), 'Instagram\'s eleven filters are all there, plus NOOB\'s own');
 for (const w of ['Brightness', 'Contrast', 'Saturation', 'Temperature']) check(modal.includes(`'${w}'`), `an Adjustments slider: ${w}`);
-check(/SLIDE_SHAPES\.map/.test(modal) && L.SLIDE_SHAPES.map((s) => s.id).join() === 'original,1:1,4:5,16:9', 'Shape: Original, 1:1, 4:5, 16:9');
+check(/SLIDE_SHAPES\.map/.test(modal) && L.SLIDE_SHAPES.map((s) => s.id).join() === 'original,1:1,4:5,16:9', 'Crop: Original, 1:1, 4:5, 16:9');
 check(/filter: s\.filter \|\| 'normal'/.test(modal) && !/selectedFilter/.test(modal), 'each picture keeps its OWN look (it used to be one filter for the whole post)');
 check(/Use this filter on all/.test(modal), 'and one tap puts a filter on every picture');
 check(/chooseCoverFrame/.test(modal) && /captureVideoFrames\(firstFile, 8, 96\)/.test(modal) && /Add from device/.test(modal), 'a reel\'s cover: a frame from a strip of eight, or a picture of your own');
+
+section('4b. Crop and zoom, alt text, the shared screen, "Use this sound"');
+check(/aria-label="Zoom"/.test(modal) && /aria-label="Move left or right"/.test(modal) && /aria-label="Move up or down"/.test(modal) && /Reset crop/.test(modal), 'crop: a zoom slider, and (zoomed in) move left / right and up / down');
+check(/data-testid="create-alt"/.test(modal) && /maxLength=\{ALT_LIMIT\}/.test(modal) && /Alt text for picture/.test(modal), 'Accessibility: alt text for each picture');
+check(/setStep\('done'\)/.test(modal) && /data-testid="share-other-apps"/.test(modal) && /navigator\.share\(\{ title: 'NOOB Socials', text, url: link \}\)/.test(modal) && /navigator\.clipboard\.writeText/.test(modal), 'after sharing: a screen with "Share to other apps" (the share sheet of the phone, or the link copied)');
+check(/initialAudio\?: MusicSelection \| null;/.test(modal) && /useState<MusicSelection \| null>\(initialAudio\)/.test(modal), 'the creator can open with a sound already chosen');
+const reelsView = read('src/components/Reels/ReelsView.tsx');
+check(/data-testid="reel-use-sound"/.test(reelsView) && /currentReel\?\.audioTrack\?\.audioUrl/.test(reelsView) && /onUseSound=\{\(sound\) => \{ setCreateSound\(sound\); setCreateKind\('reel'\); \}\}/.test(app), 'the menu of a reel has "Use this sound" (only when the reel has its own song) and it opens the reel creator with that song');
 
 section('4. The details');
 check(/CAPTION_LIMIT = 2200/.test(modal) && /maxLength=\{CAPTION_LIMIT\}/.test(modal) && /data-testid="caption-count"/.test(modal), 'the caption holds 2,200 characters and shows how many are used');
@@ -56,7 +64,13 @@ check(L.parseLook('clarendon').preset === 'clarendon' && L.parseLook('clarendon'
 check(L.parseLook('nonsense|ar=9:9|b=abc').preset === 'normal' && L.parseLook('nonsense|ar=9:9|b=abc').shape === 'original' && L.parseLook('nonsense|ar=9:9|b=abc').brightness === 0 && L.parseLook('clarendon|b=500').brightness === 100 && L.parseLook('clarendon|b=-500').brightness === -100, 'garbage is ignored, numbers are held to -100..100');
 const built = L.buildLook({ preset: 'moon', shape: '1:1', brightness: 20, contrast: -10, saturation: 0, warmth: 30 });
 check(built === 'moon|ar=1:1|b=20|c=-10|w=30', 'a look is written compactly', built);
-check(JSON.stringify(L.parseLook(built)) === JSON.stringify({ preset: 'moon', shape: '1:1', brightness: 20, contrast: -10, saturation: 0, warmth: 30 }), 'and read back exactly');
+check(JSON.stringify(L.parseLook(built)) === JSON.stringify({ preset: 'moon', shape: '1:1', brightness: 20, contrast: -10, saturation: 0, warmth: 30, zoom: 1, fx: 50, fy: 50, alt: '' }), 'and read back exactly');
+const zoomed = L.buildLook({ ...L.NO_LOOK, preset: 'moon', zoom: 1.8, fx: 30, fy: 60, alt: 'A red car | at night = cool ' });
+check(zoomed === 'moon|z=1.8|fx=30|fy=60|alt=A%20red%20car%20%7C%20at%20night%20%3D%20cool%20', 'zoom, where it looks, and the alt text are written safely (a | or = in the alt text can not break the rest)', zoomed);
+const back = L.parseLook(zoomed);
+check(back.zoom === 1.8 && back.fx === 30 && back.fy === 60 && back.alt === 'A red car | at night = cool ', 'and read back exactly, spaces kept');
+check(L.parseLook('x|z=9').zoom === 3 && L.parseLook('x|z=0.2').zoom === 1 && L.parseLook('x|alt=%E0%A4%A').alt === '' && L.lookAlt('clarendon') === '', 'zoom is held to 1..3 and a broken alt text is ignored');
+check(JSON.stringify(L.lookStyle('moon|z=2|fx=25|fy=75')) === JSON.stringify({ filter: 'grayscale(1) contrast(1.1) brightness(1.1)', transform: 'scale(2)', transformOrigin: '25% 75%' }) && L.lookStyle('normal') === undefined, 'a zoom is a scale around the chosen point (the box hides the rest)');
 check(L.buildLook(L.NO_LOOK) === 'normal', 'no look at all is just "normal", like every post before');
 check(L.lookRatio('moon|ar=16:9') > 1.77 && L.lookRatio('moon|ar=4:5') === 0.8 && L.lookRatio('moon') === null, 'the shape is read back as a ratio (none = the picture\'s own)');
 check(L.lookCss('normal|b=100').includes('brightness(1.5') && L.lookCss('normal|s=-100').includes('saturate(0.000)') && L.lookCss('normal') === '', 'adjustments turn into a CSS filter after the preset');

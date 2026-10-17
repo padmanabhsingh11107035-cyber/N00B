@@ -11,7 +11,7 @@ const card = read('src/components/Feed/PostCard.tsx');
 section('1. The pictures sit side by side on a track that moves with the finger');
 check(/const slideWindow = hasSlides\s*\n\s*\? \[shownIndex - 1, shownIndex, shownIndex \+ 1\]\.filter/.test(card), 'the picture shown and the ones before and after it are drawn (nothing else is in the page)');
 check(/<div ref=\{trackRef\} className="absolute inset-0 will-change-transform">/.test(card) && /translate3d\(\$\{\(idx - shownIndex\) \* 100\}%, 0, 0\)/.test(card), 'each picture is placed one box-width from the next on a track');
-check(/<div key=\{slide\.id\} className="absolute inset-0"/.test(card), 'pictures are kept by their id: after a slide nothing is drawn again (no flash)');
+check(/<div key=\{slide\.id\} className="absolute inset-0 overflow-hidden"/.test(card), 'pictures are kept by their id: after a slide nothing is drawn again (no flash)');
 check(/track\.style\.transform = `translate3d\(\$\{px\}px, 0, 0\)`;/.test(card) && /moveTrack\(nothingThere \? dx \* 0\.25 : dx, 0\)/.test(card), 'the track moves by exactly how far the finger moved (a little give before the first / after the last)');
 check(/Math\.abs\(dx\) < 8 && Math\.abs\(dy\) < 8/.test(card) && /d\.horizontal = Math\.abs\(dx\) > Math\.abs\(dy\)/.test(card) && /touchAction: 'pan-y'/.test(card), 'sideways claims the gesture, up and down is left to the page\'s own scrolling');
 check(/Math\.abs\(dx\) > d\.width \* 0\.22/.test(card) && /Math\.abs\(speed\) > 0\.45/.test(card) && /performance\.now\(\) - d\.lastT > 80 \? 0 : d\.speed/.test(card), 'far enough (22 %) or a flick goes on; a finger that rested before lifting is not a flick');

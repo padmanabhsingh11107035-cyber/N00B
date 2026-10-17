@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
 import { useDevicePrefs, shouldAutoplayVideo } from '../../utils/devicePrefs';
 import { installPostKeys, POST_SLIDE_EVENT, NavDirection } from '../../utils/keyboardNav';
 import { can, isMainAdmin } from '../../adminAccess';
@@ -25,7 +26,7 @@ import {
   Music,
   Maximize2
 } from 'lucide-react';
-import { Post, User } from '../../types';
+import { Post, PostSlide, User } from '../../types';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
@@ -130,6 +131,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   const pinnedPosts = usePinnedFeedItems();
   const hasSlides = post.slides && post.slides.length > 0 && post.slides[0]?.mediaUrl;
   const currentSlide = hasSlides ? (post.slides[currentSlideIndex] || post.slides[0]) : null;
+  // only the picture shown and its two neighbours are drawn (they are what a finger drags in); the rest are not in the page at all
+  const shownIndex = hasSlides ? Math.min(currentSlideIndex, post.slides.length - 1) : 0;
+  const slideWindow = hasSlides
+    ? [shownIndex - 1, shownIndex, shownIndex + 1].filter((i) => i >= 0 && i < post.slides.length).map((i) => ({ slide: post.slides[i], idx: i }))
+    : [];
   const [showTagPill, setShowTagPill] = useState(false);
   // The song attached to this post plays by itself, with sound, while the post is on screen (see src/utils/songSound.ts), like Instagram.
   // The speaker button (and the song tag under the picture) turns song sound off and on.
@@ -272,43 +278,84 @@ export const PostCard: React.FC<PostCardProps> = ({
     }, 850);
   };
 
-  // Swipe-to-navigate the carousel on touch devices — tracked entirely in a
-  // ref (not state) so a drag never re-renders anything until the gesture
-  // actually ends and the slide index changes just once. The axis is locked
-  // on first move so a horizontal swipe claims the gesture (stopping it from
-  // reaching FeedView's own vertical pull-to-refresh handler above it),
-  // while a vertical drag is left alone to fall through to that handler.
-  const SWIPE_THRESHOLD = 40;
-  const carouselTouchRef = useRef<{ startX: number; startY: number; horizontal: boolean | null } | null>(null);
+  // Swipe through the carousel with the finger: the pictures sit side by side on a track that moves WITH the finger, so the next (or
+  // previous) picture is already there, sliding in, while the finger drags — like Instagram. Letting go far enough (or with a flick)
+  // slides on to it; letting go early slides back. The drag is kept in refs and written straight to the track's style, so nothing re-renders
+  // until a slide is chosen. The axis locks at the first 8 px: sideways claims the gesture (and stops it reaching FeedView's pull-to-refresh),
+  // up / down is left to the page's own scrolling (the box says touch-action: pan-y).
+  const SLIDE_MS = 260;
+  const boxRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const slideBusyRef = useRef(false);
+  const slideTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(slideTimerRef.current), []);
+  const dragRef = useRef<{ startX: number; startY: number; lastX: number; lastT: number; speed: number; width: number; horizontal: boolean | null } | null>(null);
+
+  const moveTrack = (px: number, ms: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.style.transition = ms ? `transform ${ms}ms cubic-bezier(0.22, 0.8, 0.3, 1)` : 'none';
+    track.style.transform = `translate3d(${px}px, 0, 0)`;
+  };
+  // Slide on to the next (1) or the previous (-1) picture, from wherever the track is now.
+  const slideBy = (dir: 1 | -1) => {
+    if (slideBusyRef.current) return;
+    const count = post.slides?.length || 0;
+    const target = currentSlideIndex + dir;
+    if (target < 0 || target >= count) { moveTrack(0, 200); return; }
+    const width = boxRef.current?.clientWidth || 0;
+    if (!width) { setCurrentSlideIndex(target); return; }
+    slideBusyRef.current = true;
+    moveTrack(-dir * width, SLIDE_MS);
+    window.clearTimeout(slideTimerRef.current);
+    slideTimerRef.current = window.setTimeout(() => {
+      // the new picture takes the middle and the track goes back to rest in the same moment, so nothing flashes
+      flushSync(() => setCurrentSlideIndex(target));
+      moveTrack(0, 0);
+      slideBusyRef.current = false;
+    }, SLIDE_MS + 20);
+  };
+  const slideByRef = useRef(slideBy);
+  slideByRef.current = slideBy;
 
   const handleCarouselTouchStart = (e: React.TouchEvent) => {
-    carouselTouchRef.current = {
-      startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY,
-      horizontal: null
-    };
+    if (slideBusyRef.current) { dragRef.current = null; return; }
+    const t = e.touches[0];
+    dragRef.current = { startX: t.clientX, startY: t.clientY, lastX: t.clientX, lastT: performance.now(), speed: 0, width: boxRef.current?.clientWidth || 1, horizontal: null };
   };
   const handleCarouselTouchMove = (e: React.TouchEvent) => {
-    const t = carouselTouchRef.current;
-    if (!t) return;
-    const dx = e.touches[0].clientX - t.startX;
-    const dy = e.touches[0].clientY - t.startY;
-    if (t.horizontal === null) {
+    const d = dragRef.current;
+    if (!d) return;
+    const x = e.touches[0].clientX;
+    const dx = x - d.startX;
+    const dy = e.touches[0].clientY - d.startY;
+    if (d.horizontal === null) {
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      t.horizontal = Math.abs(dx) > Math.abs(dy);
+      d.horizontal = Math.abs(dx) > Math.abs(dy);
     }
-    if (t.horizontal) e.stopPropagation();
+    if (!d.horizontal) return;
+    e.stopPropagation();
+    const now = performance.now();
+    if (now > d.lastT) d.speed = (x - d.lastX) / (now - d.lastT);   // px per ms, the latest movement
+    d.lastX = x;
+    d.lastT = now;
+    const last = (post.slides?.length || 1) - 1;
+    const nothingThere = (dx > 0 && currentSlideIndex === 0) || (dx < 0 && currentSlideIndex === last);
+    moveTrack(nothingThere ? dx * 0.25 : dx, 0);   // before the first / after the last picture the page only gives a little
   };
   const handleCarouselTouchEnd = (e: React.TouchEvent) => {
-    const t = carouselTouchRef.current;
-    carouselTouchRef.current = null;
-    if (!t || !t.horizontal || !post.slides) return;
-    const dx = e.changedTouches[0].clientX - t.startX;
-    if (dx <= -SWIPE_THRESHOLD && currentSlideIndex < post.slides.length - 1) {
-      setCurrentSlideIndex(currentSlideIndex + 1);
-    } else if (dx >= SWIPE_THRESHOLD && currentSlideIndex > 0) {
-      setCurrentSlideIndex(currentSlideIndex - 1);
-    }
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d || !d.horizontal) return;
+    const dx = e.changedTouches[0].clientX - d.startX;
+    const speed = performance.now() - d.lastT > 80 ? 0 : d.speed;   // a finger that rested before lifting is not a flick
+    const far = Math.abs(dx) > d.width * 0.22 || (Math.abs(speed) > 0.45 && Math.sign(speed) === Math.sign(dx));
+    if (far) slideBy(dx < 0 ? 1 : -1);
+    else moveTrack(0, 200);
+  };
+  const handleCarouselTouchCancel = () => {
+    if (dragRef.current?.horizontal) moveTrack(0, 200);
+    dragRef.current = null;
   };
 
   // On a computer: A / D (or ← / →) move through the photos of the post in the middle of the screen, like a swipe
@@ -320,7 +367,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (!el || slideCount < 2) return;
     const onSlide = (e: Event) => {
       const dir = (e as CustomEvent<NavDirection>).detail;
-      setCurrentSlideIndex((i) => (dir === 'right' ? Math.min(i + 1, slideCount - 1) : dir === 'left' ? Math.max(i - 1, 0) : i));
+      if (dir === 'right') slideByRef.current(1);
+      else if (dir === 'left') slideByRef.current(-1);
     };
     el.addEventListener(POST_SLIDE_EVENT, onSlide);
     return () => el.removeEventListener(POST_SLIDE_EVENT, onSlide);
@@ -345,6 +393,136 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (tagged.userId) { void goToProfile(tagged.userId); return; }
     const match = allUsers.find((u) => u.username?.toLowerCase() === tagged.username.toLowerCase());
     if (match) void goToProfile(match.id);
+  };
+
+  // One picture of the carousel: the picture or video, and the text / sticker / mention layers that belong to it.
+  const renderSlide = (slide: PostSlide, isCur: boolean) => {
+    const filterStyle = POST_FILTERS.find((f) => f.id === slide.filter)?.style || '';
+    return (
+      <>
+        {slide.mediaType === 'video' ? (
+          isCur ? (
+            <video
+              key="live"
+              src={slide.mediaUrl}
+              className={`w-full h-full object-cover ${filterStyle}`}
+              controls
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              autoPlay={isInView && videoMayAutoplay}
+              onPlay={(e) => setVideoUnmuted(!e.currentTarget.muted)}
+              onPause={() => setVideoUnmuted(false)}
+              onVolumeChange={(e) => setVideoUnmuted(!e.currentTarget.muted && !e.currentTarget.paused)}
+              onLoadedMetadata={(e) => {
+                const video = e.currentTarget;
+                if (video.videoWidth && video.videoHeight) setSlideAspect(video.videoWidth / video.videoHeight);
+              }}
+            />
+          ) : (
+            <video key="peek" src={slide.mediaUrl} className={`w-full h-full object-cover ${filterStyle}`} muted playsInline preload="metadata" />
+          )
+        ) : (
+          <img
+            ref={isCur ? slideImgRef : undefined}
+            src={slide.mediaUrl}
+            alt={slide.caption || post.caption}
+            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${filterStyle}`}
+            referrerPolicy="no-referrer"
+            loading={isCur ? 'lazy' : 'eager'}
+            decoding="async"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              if (isCur && img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
+            }}
+          />
+        )}
+
+        {/* Text / sticker / mention / hashtag / link layers placed in the Post creator — same
+            declarative shape as Story.stickers, same EditableStickerLayer engine to create them. */}
+        {slide.stickers?.map((sticker, idx) => {
+          const layerStyle: React.CSSProperties = {
+            top: `${sticker.y}%`,
+            left: `${sticker.x}%`,
+            width: sticker.width ? `${sticker.width}%` : undefined,
+            transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`
+          };
+          if (sticker.type === 'text') {
+            return (
+              <div key={idx} className="absolute z-20 pointer-events-none" style={layerStyle}>
+                <p
+                  className="font-extrabold text-center whitespace-pre-wrap break-words"
+                  style={{ color: sticker.data?.color, fontSize: `${(sticker.width || 55) * 0.12}cqw`, textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.85)' }}
+                >
+                  {sticker.data?.text}
+                </p>
+              </div>
+            );
+          }
+          if (sticker.type === 'sticker') {
+            const w = sticker.width || (sticker.data?.kind === 'emoji' ? 26 : 42);
+            return (
+              <div key={idx} className="absolute z-20 pointer-events-none" style={layerStyle}>
+                {sticker.data?.kind === 'emoji' ? (
+                  <span className="block text-center leading-none" style={{ fontSize: `${w * 0.22}cqw` }}>{sticker.data?.content}</span>
+                ) : (
+                  <img src={sticker.data?.content} alt="" className="w-full h-auto rounded-lg" />
+                )}
+              </div>
+            );
+          }
+          if (sticker.type === 'mention') {
+            return (
+              <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
+                <div className="w-full flex items-center justify-center">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); goToProfile(sticker.data?.userId); }}
+                    className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap cursor-pointer"
+                    style={{ fontSize: `${(sticker.width || 42) * 0.1}cqw` }}
+                  >
+                    <img src={sticker.data?.avatar} alt="" className="rounded-full object-cover shrink-0" style={{ width: '1.8em', height: '1.8em' }} referrerPolicy="no-referrer" />
+                    <span className="font-semibold text-white" style={{ fontSize: '1em' }}>@{sticker.data?.username}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          if (sticker.type === 'hashtag') {
+            return (
+              <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
+                <div className="w-full flex items-center justify-center">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelectCategory && onSelectCategory(sticker.data?.tag); }}
+                    className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                    style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}
+                  >
+                    <span className="font-semibold text-noob" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          if (sticker.type === 'link') {
+            return (
+              <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
+                <div className="w-full flex items-center justify-center">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); window.open(sticker.data?.url, '_blank', 'noopener,noreferrer'); }}
+                    className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
+                    style={{ fontSize: `${(sticker.width || 46) * 0.09}cqw` }}
+                  >
+                    <Link2 className="shrink-0" style={{ width: '1.1em', height: '1.1em' }} />
+                    <span className="font-bold" style={{ fontSize: '1em' }}>{sticker.data?.label}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })}
+      </>
+    );
   };
 
   // Text Background styling for text-only thoughts
@@ -551,47 +729,23 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* 2. Post Media Container OR Rich Text Thought Card */}
       {hasSlides && currentSlide ? (
         <div
+          ref={boxRef}
           className="relative w-full bg-black flex items-center justify-center overflow-hidden cursor-pointer select-none group"
-          style={{ aspectRatio: boxAspect, containerType: 'inline-size' }}
+          style={{ aspectRatio: boxAspect, containerType: 'inline-size', touchAction: 'pan-y' }}
           onDoubleClick={handleDoubleTap}
           onTouchStart={post.slides && post.slides.length > 1 ? handleCarouselTouchStart : undefined}
           onTouchMove={post.slides && post.slides.length > 1 ? handleCarouselTouchMove : undefined}
           onTouchEnd={post.slides && post.slides.length > 1 ? handleCarouselTouchEnd : undefined}
+          onTouchCancel={post.slides && post.slides.length > 1 ? handleCarouselTouchCancel : undefined}
         >
-          {currentSlide.mediaType === 'video' ? (
-            <video
-              key={currentSlide.id}
-              src={currentSlide.mediaUrl}
-              className={`w-full h-full object-cover ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
-              controls
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              autoPlay={isInView && videoMayAutoplay}
-              onPlay={(e) => setVideoUnmuted(!e.currentTarget.muted)}
-              onPause={() => setVideoUnmuted(false)}
-              onVolumeChange={(e) => setVideoUnmuted(!e.currentTarget.muted && !e.currentTarget.paused)}
-              onLoadedMetadata={(e) => {
-                const video = e.currentTarget;
-                if (video.videoWidth && video.videoHeight) setSlideAspect(video.videoWidth / video.videoHeight);
-              }}
-            />
-          ) : (
-            <img
-              ref={slideImgRef}
-              src={currentSlide.mediaUrl}
-              alt={currentSlide.caption || post.caption}
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${POST_FILTERS.find((f) => f.id === currentSlide.filter)?.style || ''}`}
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              decoding="async"
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                if (img.naturalWidth && img.naturalHeight) setSlideAspect(img.naturalWidth / img.naturalHeight);
-              }}
-            />
-          )}
+          {/* The pictures side by side on a track that follows the finger: this one in the middle, the one before and the one after beside it */}
+          <div ref={trackRef} className="absolute inset-0 will-change-transform">
+            {slideWindow.map(({ slide, idx }) => (
+              <div key={slide.id} className="absolute inset-0" style={{ transform: `translate3d(${(idx - shownIndex) * 100}%, 0, 0)` }}>
+                {renderSlide(slide, idx === shownIndex)}
+              </div>
+            ))}
+          </div>
 
           {/* The attached song: a speaker button on the picture (like Instagram) and, if the phone wants a tap first, a "Tap for sound" hint. */}
           {songUrl && (
@@ -628,89 +782,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               <Maximize2 className="w-4 h-4" />
             </button>
           )}
-
-          {/* Text / sticker / mention / hashtag / link layers placed in the Post creator — same
-              declarative shape as Story.stickers, same EditableStickerLayer engine to create them. */}
-          {currentSlide.stickers?.map((sticker, idx) => {
-            const layerStyle: React.CSSProperties = {
-              top: `${sticker.y}%`,
-              left: `${sticker.x}%`,
-              width: sticker.width ? `${sticker.width}%` : undefined,
-              transform: `translate(-50%, -50%) rotate(${sticker.rotation || 0}deg)`
-            };
-            if (sticker.type === 'text') {
-              return (
-                <div key={idx} className="absolute z-20 pointer-events-none" style={layerStyle}>
-                  <p
-                    className="font-extrabold text-center whitespace-pre-wrap break-words"
-                    style={{ color: sticker.data?.color, fontSize: `${(sticker.width || 55) * 0.12}cqw`, textShadow: '0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.85)' }}
-                  >
-                    {sticker.data?.text}
-                  </p>
-                </div>
-              );
-            }
-            if (sticker.type === 'sticker') {
-              const w = sticker.width || (sticker.data?.kind === 'emoji' ? 26 : 42);
-              return (
-                <div key={idx} className="absolute z-20 pointer-events-none" style={layerStyle}>
-                  {sticker.data?.kind === 'emoji' ? (
-                    <span className="block text-center leading-none" style={{ fontSize: `${w * 0.22}cqw` }}>{sticker.data?.content}</span>
-                  ) : (
-                    <img src={sticker.data?.content} alt="" className="w-full h-auto rounded-lg" />
-                  )}
-                </div>
-              );
-            }
-            if (sticker.type === 'mention') {
-              return (
-                <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
-                  <div className="w-full flex items-center justify-center">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); goToProfile(sticker.data?.userId); }}
-                      className="inline-flex items-center gap-1.5 bg-black/80 backdrop-blur-md border border-[#3B82F6]/50 rounded-full pl-1 pr-3 py-1 shadow-lg whitespace-nowrap cursor-pointer"
-                      style={{ fontSize: `${(sticker.width || 42) * 0.1}cqw` }}
-                    >
-                      <img src={sticker.data?.avatar} alt="" className="rounded-full object-cover shrink-0" style={{ width: '1.8em', height: '1.8em' }} referrerPolicy="no-referrer" />
-                      <span className="font-semibold text-white" style={{ fontSize: '1em' }}>@{sticker.data?.username}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-            if (sticker.type === 'hashtag') {
-              return (
-                <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
-                  <div className="w-full flex items-center justify-center">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onSelectCategory && onSelectCategory(sticker.data?.tag); }}
-                      className="inline-flex items-center gap-1 bg-black/80 backdrop-blur-md border border-noob/40 rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
-                      style={{ fontSize: `${(sticker.width || 40) * 0.1}cqw` }}
-                    >
-                      <span className="font-semibold text-noob" style={{ fontSize: '1em' }}>#{sticker.data?.tag}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-            if (sticker.type === 'link') {
-              return (
-                <div key={idx} className="absolute z-20 pointer-events-auto" style={layerStyle}>
-                  <div className="w-full flex items-center justify-center">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); window.open(sticker.data?.url, '_blank', 'noopener,noreferrer'); }}
-                      className="inline-flex items-center gap-1.5 bg-white text-black rounded-full px-3 py-1.5 shadow-lg whitespace-nowrap cursor-pointer"
-                      style={{ fontSize: `${(sticker.width || 46) * 0.09}cqw` }}
-                    >
-                      <Link2 className="shrink-0" style={{ width: '1.1em', height: '1.1em' }} />
-                      <span className="font-bold" style={{ fontSize: '1em' }}>{sticker.data?.label}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })}
 
           {/* Double-tap animated heart pop */}
           {showDoubleTapHeart && (

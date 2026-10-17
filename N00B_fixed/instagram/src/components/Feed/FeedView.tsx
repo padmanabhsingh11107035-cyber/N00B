@@ -20,7 +20,6 @@ import {
   Loader2,
   Rocket,
   Handshake,
-  Plus,
   Coins,
   Menu,
   Flame,
@@ -624,14 +623,16 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <Rocket className="w-4 h-4" />
           </button>
 
-          {/* Create — moved here from the bottom nav bar, which now carries the Home video tab instead */}
-          {onOpenPostCreation && (
+          {/* The Music page (Create is the circled plus in the middle of the bottom bar); not drawn while the administrator has the page hidden */}
+          {onOpenTab && !musicHidden && (
             <button
-              onClick={onOpenPostCreation}
+              onClick={() => onOpenTab('music')}
+              data-testid="feed-music-button"
               className="p-1.5 bg-noob text-black rounded-lg hover:bg-noob/90 transition-colors cursor-pointer"
-              title="Create a post, reel or story"
+              title="Music"
+              aria-label="Music"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Music className="w-4 h-4 stroke-[2.5]" />
             </button>
           )}
 

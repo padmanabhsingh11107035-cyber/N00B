@@ -577,10 +577,10 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
    full colour with a heavier icon and a bold label (the picture, for "You", gets a ring). The colour is the accent (--color-noob: white in the dark
    modes, black in Light), so it follows the theme; on the Reels page the bar is the near-black of that page in both modes.
    --nav-h is the bar's height (with the phone's bottom gesture area), for everything that has to stay clear of it. */
-:root { --nav-h: calc(53px + env(safe-area-inset-bottom, 0px)); }
+:root { --nav-h: calc(61px + max(env(safe-area-inset-bottom, 0px), 10px)); }
 #floating-bottom-nav {
   height: var(--nav-h);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px);   /* never less than 10px, so the labels stay clear of the screen's bottom edge / the home bar */
   background-color: var(--page);
   border-top: 1px solid color-mix(in srgb, var(--color-noob) 14%, transparent);
 }
@@ -588,7 +588,7 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
   --color-noob: #ffffff;
   background-color: #0f0f11;
 }
-#floating-bottom-nav .nav-row { height: 52px; }
+#floating-bottom-nav .nav-row { height: 60px; }
 #floating-bottom-nav .nav-item {
   color: color-mix(in srgb, var(--color-noob) 72%, transparent);
   -webkit-tap-highlight-color: transparent;

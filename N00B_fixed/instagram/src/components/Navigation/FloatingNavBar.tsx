@@ -36,7 +36,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active = false,
     className={`nav-item ${active ? 'is-active' : ''} w-full h-full flex flex-col items-center justify-center gap-[3px] cursor-pointer`}
   >
     {children}
-    {label && <span className="nav-lbl text-[10px] tracking-tight leading-none">{label}</span>}
+    {label && <span className="nav-lbl text-[10px] tracking-tight leading-3">{label}</span>}
   </button>
 );
 

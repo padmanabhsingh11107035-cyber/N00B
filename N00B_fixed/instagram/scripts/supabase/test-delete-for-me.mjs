@@ -29,6 +29,7 @@ const raj = await mkUser('raj');
 const eve = await mkUser('eve');
 const chat = (await db.query(`insert into public.chats (is_group, creator_id) values (false, $1) returning id`, [ann])).rows[0].id;
 await db.query(`insert into public.chat_members (chat_id, user_id) values ($1, $2), ($1, $3)`, [chat, ann, raj]);
+await db.query(`update public.chat_members set joined_at = now() - interval '1 day' where chat_id = $1`, [chat]);   // long-standing members (people who joined after the history rule only read what came after they joined; see test-history-starts-at-join)
 const say = async (sender, text, at) => (await db.query(`insert into public.messages (chat_id, sender_id, text, created_at) values ($1, $2, $3, now() - ($4 || ' seconds')::interval) returning id`, [chat, sender, text, String(at)])).rows[0].id;
 const m1 = await say(ann, 'hello raj', 50);
 const m2 = await say(raj, 'hi ann', 40);

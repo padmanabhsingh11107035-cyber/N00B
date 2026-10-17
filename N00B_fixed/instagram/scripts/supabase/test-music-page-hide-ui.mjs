@@ -16,7 +16,8 @@ const sql = read('supabase/migrations/20261015000001_music_page_toggle.sql');
 section('1. The bottom bar and the menu on Home');
 const feed = read('src/components/Feed/FeedView.tsx');
 check(!/hideMusic/.test(nav) && !/nav-item-music/.test(nav) && !/nav-item-videos/.test(nav), 'the bottom bar carries neither Music nor Videos (the bar has 3 pages, Create, then 3 pages)');
-check(/musicHidden\?: boolean/.test(feed) && /\{!musicHidden && \(\s*<button\s+onClick=\{\(\) => \{ setShowNoobMenu\(false\); onOpenTab\('music'\); \}\}/.test(feed), 'the menu on Home lists Music only while the page is shown');
+check(/musicHidden\?: boolean/.test(feed) && /\{onOpenTab && !musicHidden && \(\s*<button\s+onClick=\{\(\) => onOpenTab\('music'\)\}/.test(feed), 'the Music button at the top of Home is drawn only while the page is shown');
+check(!/setShowNoobMenu\(false\); onOpenTab\('music'\)/.test(feed), 'the three-line menu no longer lists Music (the top button is the way in)');
 check(/onOpenTab\('videos'\)/.test(feed) && /data-testid="noob-menu-more-pages"/.test(feed), 'the same menu lists the Videos feed');
 
 section('2. Everywhere else the page shows up');

@@ -41,7 +41,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, label, title, active = false,
 );
 
 // The bar is flat and full width, like YouTube's: three pages, Create in the middle, three more pages (the pages that do not fit — the Videos
-// feed and Music — are in the menu on Home; the side menu on a computer still lists every page).
+// feed (in the menu on Home) and Music (its own button at the top of Home); the side menu on a computer still lists every page).
 export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   activeTab,
   onSelectTab,
@@ -79,7 +79,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
 
         {/* Create: opens the post / reel / story picker, never a page of its own, so it is never the "open" one */}
         <NavButton id="nav-item-post" title="Create a post, reel or story" onClick={() => onSelectTab('post')}>
-          <CirclePlus className="nav-ico nav-create w-8 h-8" />
+          <CirclePlus className="nav-ico nav-create w-10 h-10" />
         </NavButton>
 
         <NavButton id="nav-item-chat" label="Chat" title="Direct Messages" active={activeTab === 'chat'} onClick={() => onSelectTab('chat')}>

@@ -124,7 +124,7 @@ interface FeedViewProps {
   // The Fun pages of the three-line menu (This or That, Ask Me Anything, Mood Status, Public Polls): they open on top of this page.
   onOpenFunPage?: (loc: FunLocation) => void;
   // The pages that do not fit on the bottom bar (the Videos feed and Music) open from the menu here.
-  onOpenTab?: (tab: 'videos' | 'music') => void;
+  onOpenTab?: (tab: 'videos' | 'music') => void;   // Music has its own button at the top of this page, so the menu lists only Videos
   musicHidden?: boolean;
   onToggleFollowUser?: (userId: string) => Promise<{ success: boolean; isFollowing: boolean; isFollowRequested?: boolean } | void>;
   // Admin Control Panel → Platform switches (both open unless switched off)
@@ -869,21 +869,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
                       <span className="text-[10px] text-zinc-300 block truncate">Long videos and live streams</span>
                     </div>
                   </button>
-                  {!musicHidden && (
-                    <button
-                      onClick={() => { setShowNoobMenu(false); onOpenTab('music'); }}
-                      className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
-                      aria-label="Music"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0">
-                        <Music className="w-[18px] h-[18px]" aria-hidden="true" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-black text-white block">Music</span>
-                        <span className="text-[10px] text-zinc-300 block truncate">The Music Hub: songs and playlists</span>
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}

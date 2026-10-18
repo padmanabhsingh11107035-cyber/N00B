@@ -1835,6 +1835,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
           </a>
           <span>•</span>
           <a href="/about" className="hover:text-zinc-300 transition-colors cursor-pointer">About NOOB</a>
+          <span>•</span>
+          <a href="/screenshots" className="hover:text-zinc-300 transition-colors cursor-pointer">Screenshots</a>
           {/android/i.test(navigator.userAgent) && !isNativeApp() && (
             <>
               <span>•</span>

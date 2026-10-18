@@ -82,6 +82,11 @@
   .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .pills span { border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; background: #0e0e0e; }
   .back{display:inline-flex;align-items:center;gap:7px;margin:0 0 18px;padding:9px 18px;border:1px solid #4a4a4a;border-radius:999px;background:#161616;color:#fff;text-decoration:none;font:700 14px/1 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}.back:hover{border-color:#fff}
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-bottom: 14px; }
+  .shots figure { margin: 0; }
+  .shots img { display: block; width: 100%; height: auto; border-radius: 18px; border: 1px solid var(--line); background: #111; }
+  .shots figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .shots figcaption strong { color: #fff; }
   .toprow { padding-top: 18px; }
   footer { margin: 50px 0 34px; padding-top: 18px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 13px; }
   footer a { margin: 0 8px; }
@@ -96,7 +101,7 @@
     <p class="sub">NOOB Socials is a free social app and website, built and run by students, for people who want to share moments, play, learn and make real friends.</p>
     <a class="cta" href="/">Open NOOB Socials</a>
     <nav class="links" aria-label="More">
-      <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms &amp; Conditions</a> · <a href="/data-deletion">Delete your data</a>
+      <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms &amp; Conditions</a> · <a href="/data-deletion">Delete your data</a> · <a href="/screenshots">Screenshots</a>
     </nav>
   </header>
 
@@ -164,6 +169,19 @@
       <div class="pills" aria-label="Quick list">
         <span>Reels</span><span>Stories</span><span>Chat</span><span>Voice &amp; video calls</span><span>Games</span><span>Live streaming</span><span>NOOB Rooms</span><span>Daily NOOB</span><span>NOOB AI</span><span>NOOB Study</span><span>Shop</span><span>Free</span>
       </div>
+    </section>
+
+    <section id="inside-the-app">
+      <h2><span>Inside the app</span></h2>
+      <div class="shots">
+        <figure><a href="/screens/noob-socials-login-page.jpg"><img src="/screens/noob-socials-login-page.jpg" width="780" height="1688" loading="lazy" decoding="async" alt="NOOB Socials log in page on a phone: user ID, email or phone and password fields, with Continue with Google, Apple, Facebook and Discord buttons" /></a><figcaption><strong>Log in</strong></figcaption></figure>
+        <figure><a href="/screens/noob-socials-home-feed.jpg"><img src="/screens/noob-socials-home-feed.jpg" width="780" height="1688" loading="lazy" decoding="async" alt="NOOB Socials home feed on a phone with stories at the top, topic chips and a photo post" /></a><figcaption><strong>Home feed</strong></figcaption></figure>
+        <figure><a href="/screens/noob-socials-reels.jpg"><img src="/screens/noob-socials-reels.jpg" width="780" height="1688" loading="lazy" decoding="async" alt="NOOB Socials Reels page with a vertical video, like, comment and share buttons, the song name and a Follow button" /></a><figcaption><strong>Reels</strong></figcaption></figure>
+        <figure><a href="/screens/noob-socials-chat.jpg"><img src="/screens/noob-socials-chat.jpg" width="780" height="1688" loading="lazy" decoding="async" alt="A private chat in NOOB Socials with message bubbles, a message box and call buttons" /></a><figcaption><strong>A chat</strong></figcaption></figure>
+        <figure><a href="/screens/noob-socials-games.jpg"><img src="/screens/noob-socials-games.jpg" width="780" height="1688" loading="lazy" decoding="async" alt="The noob arena in NOOB Socials with mini-games such as Ludo, a search box, categories and a leaderboard tab" /></a><figcaption><strong>Mini-games</strong></figcaption></figure>
+        <figure><a href="/screens/noob-socials-profile.jpg"><img src="/screens/noob-socials-profile.jpg" width="780" height="1688" loading="lazy" decoding="async" alt="A profile page on NOOB Socials with the user's picture, number of posts, followers and following, a bio and a Share Profile button" /></a><figcaption><strong>Profile</strong></figcaption></figure>
+      </div>
+      <p><a href="/screenshots">See all NOOB Socials screenshots</a></p>
     </section>
 
     <section class="panel">

@@ -53,7 +53,7 @@ check(/User-agent: \*\s*\nAllow: \//.test(robots) && !/Disallow: \/\s*$/m.test(r
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 check(locs.includes('https://noobsocials.com/') && locs.includes('https://noobsocials.com/about'), 'the sitemap lists the home page and the About page');
 check(locs.every((u) => u === 'https://noobsocials.com/' || fs.existsSync('public/' + u.replace('https://noobsocials.com/', '') + '.html')), 'every address in it is a real page', locs.join(' '));
-check(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/.test(sitemap), 'standard sitemap format');
+check(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"( xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1")?>/.test(sitemap), 'standard sitemap format (with the optional picture extension)');
 
 section('4. Nothing keeps search engines away');
 check(!/X-Robots-Tag|noindex/i.test(headers), 'no header tells search engines to skip the site');

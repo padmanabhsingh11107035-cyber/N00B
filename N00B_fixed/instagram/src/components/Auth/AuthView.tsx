@@ -448,6 +448,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
   const [signupOtpLoading, setSignupOtpLoading] = useState(false);
   const [signupOtpResending, setSignupOtpResending] = useState(false);
   const [signupOtpSuccess, setSignupOtpSuccess] = useState(false);
+  const otpFormRef = useRef<HTMLFormElement>(null);   // the code form: it is sent by itself as soon as the sixth digit is in
+  const [signupOtpSlow, setSignupOtpSlow] = useState(false);   // the check has taken more than a few seconds: say so instead of looking frozen
   // Always start back at the form when the sign-up screen is left and re-entered, however that happens.
   useEffect(() => { if (mode !== 'signup') setSignupStep('form'); }, [mode]);
 
@@ -710,6 +712,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
     }
     setSignupOtpLoading(true);
     setSignupOtpError(null);
+    setSignupOtpSlow(false);
+    const slowTimer = window.setTimeout(() => setSignupOtpSlow(true), 7000);
     // Prefer the durable B2 object key over the presigned/base64 URL —
     // see the comment on customAvatarObjectKey above. A profile photo is
     // now required (validated above), so this is never empty here.
@@ -734,14 +738,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
       agreedToTerms: true,
       language
     });
+    window.clearTimeout(slowTimer);
     setSignupOtpLoading(false);
+    setSignupOtpSlow(false);
 
     if (res.success && res.user) {
       setSignupOtpSuccess(true);
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
       // Best-effort, never blocks the sign-up succeeding either way — see recordSignupDevice.
       void recordSignupDevice();
-      await proceedAfterAuth(res.user);
+      // A brand-new account has no other device that could be signed in, so there is nothing to wait for: the person goes straight in, and this device is noted in the background.
+      void checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
+      onAuthSuccess(res.user);
     } else if (res.suspended) {
       setSignupStep('form');
       setSuspendedNotice(
@@ -1201,7 +1209,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       {signupOtpError}
                     </div>
                   )}
-                  <form onSubmit={(e) => { e.preventDefault(); void handleVerifySignupOtp(); }} className="space-y-3.5">
+                  <form ref={otpFormRef} onSubmit={(e) => { e.preventDefault(); void handleVerifySignupOtp(); }} className="space-y-3.5">
                     <div>
                       <label className="text-xs font-bold text-zinc-300 block mb-1.5">6-digit code</label>
                       <input
@@ -1212,7 +1220,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                         required
                         autoFocus
                         value={signupOtpCode}
-                        onChange={(e) => setSignupOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setSignupOtpCode(v); if (v.length === 6 && !signupOtpLoading) window.setTimeout(() => otpFormRef.current?.requestSubmit(), 0); }}
                         placeholder="000000"
                         className="w-full bg-black/40 text-white text-center text-2xl font-bold tracking-[0.5em] px-3.5 py-3 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-700"
                       />
@@ -1222,8 +1230,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
                       disabled={signupOtpLoading}
                       className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                      {signupOtpLoading ? 'Verifying…' : 'Verify & Create Account'}
+                      {signupOtpLoading ? 'Creating your account…' : 'Verify & Create Account'}
                     </button>
+                    {signupOtpLoading && signupOtpSlow && (
+                      <p data-testid="otp-slow-note" className="text-[11px] text-amber-300 text-center leading-relaxed">This is taking longer than usual — your connection looks slow. Please keep this screen open; it will carry on by itself.</p>
+                    )}
                     <button
                       type="button"
                       disabled={signupOtpResending}

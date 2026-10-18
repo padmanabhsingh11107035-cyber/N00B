@@ -88,7 +88,7 @@ import { PrivacyPolicy } from './components/Legal/PrivacyPolicy';
 import { VerifiedBadge } from './components/Common/VerifiedBadge';
 import { AvatarMedia } from './components/Common/AvatarMedia';
 import { ALL_50_MINI_GAMES, MiniGameMeta } from './components/Games/types';
-import { PushNotificationPrompt, shouldShowPushPrompt } from './components/Common/PushNotificationPrompt';
+import { PushNotificationPrompt, shouldShowPushPrompt, resumePendingPush } from './components/Common/PushNotificationPrompt';
 import { MiniToast } from './components/Common/MiniToast';
 import { TimeReminder } from './components/Settings/TimeReminder';
 import { NativeUpdateBanner } from './components/Common/NativeUpdateBanner';
@@ -603,8 +603,19 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       initPushNotifications();
+      resumePendingPush();   // a "turn on notifications" that was cut short (phone offline, app closed) finishes by itself now
     }
   }, [currentUser?.id]);
+
+  // A new account's profile photo is saved in the background right after sign-up; when it is, the copy shown meanwhile is swapped for the saved one.
+  useEffect(() => {
+    const onOwnAvatar = (e: Event) => {
+      const d = (e as CustomEvent<{ userId: string; avatar: string }>).detail;
+      if (d?.userId && d.avatar) setCurrentUser((u) => (u && u.id === d.userId ? { ...u, avatar: d.avatar } : u));
+    };
+    window.addEventListener('noob:own-avatar', onOwnAvatar);
+    return () => window.removeEventListener('noob:own-avatar', onOwnAvatar);
+  }, []);
 
   // Suspending an account only stops it dead on its NEXT request — there's
   // no push channel to end an already-open session instantly. Polling
@@ -774,7 +785,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser || Capacitor.isNativePlatform()) return;
     if (!shouldShowPushPrompt()) return;
-    const timer = setTimeout(() => setShowPushPrompt(true), 4000);
+    const timer = setTimeout(() => setShowPushPrompt(true), 1500);
     return () => clearTimeout(timer);
   }, [currentUser?.id]);
 

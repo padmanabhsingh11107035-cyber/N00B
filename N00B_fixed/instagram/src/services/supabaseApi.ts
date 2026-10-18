@@ -214,6 +214,7 @@ export interface SignupPayload {
 export async function verifySignupOtp(code: string, payload: SignupPayload): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string; stage?: 'code' | 'form' }> {
   const unavailable = 'Could not verify that code right now. Please try again later.';
   try {
+    const t0 = performance.now();
     const { avatar, pendingKey } = prepareSignupAvatar(payload.avatar);
     const { data, error } = await supabase.functions.invoke('recover-account', {
       body: { action: 'signup-otp-verify', email: payload.email, code, signup: { ...payload, avatar, language: cleanLanguageCode(payload.language) } }
@@ -225,13 +226,22 @@ export async function verifySignupOtp(code: string, payload: SignupPayload): Pro
     }
     if (!data?.success) return { success: false, error: data?.error || unavailable, suspended: data?.suspended, message: data?.message, stage: data?.stage };
     if (!data.tokenHash) return { success: false, error: unavailable };
-    const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
+    const t1 = performance.now();
+    const { data: signedIn, error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
     if (signInError) return { success: false, error: 'Could not sign you in. Please try again.' };
+    const t2 = performance.now();
 
-    await uploadPendingSignupAvatar(pendingKey);
-    const user = await rpc<any>('get_my_user');
+    // The account exists and the person is signed in. Only one thing is still needed to show the app: their profile. The profile photo (an upload and a second save),
+    // the welcome email and the chat keys finish in the background; until the photo is saved, the phone's own copy of it is shown.
+    const signedInId = signedIn?.user?.id;
+    const preview = pendingKey ? pendingAvatarPreview(pendingKey) : '';
+    void uploadPendingSignupAvatar(pendingKey).then((key) => { if (key && signedInId) announceOwnAvatar(signedInId, resolveMedia(key)); });
     void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
-    return { success: true, user: startChatKeys(mapUser(user), payload.password) as User };
+    const user = await rpc<any>('get_my_user');
+    const shown = mapUser(user);
+    if (preview && shown) shown.avatar = preview;
+    console.info('[sign-up] milliseconds: code and account', Math.round(t1 - t0), '| sign-in', Math.round(t2 - t1), '| profile', Math.round(performance.now() - t2));
+    return { success: true, user: startChatKeys(shown, payload.password) as User };
   } catch (err) {
     return { success: false, error: errorText(err, unavailable) };
   }
@@ -259,16 +269,38 @@ function prepareSignupAvatar(avatarInput: string | undefined): { avatar: string;
   return { avatar: pendingKey || toStoredMedia(input), pendingKey };
 }
 
-async function uploadPendingSignupAvatar(pendingKey: string): Promise<void> {
-  if (!pendingKey) return;
+// The photo chosen on the sign-up form, shown from the phone's own copy until it is uploaded (a short-lived address that only this page can use).
+function pendingAvatarPreview(pendingKey: string): string {
+  const file = pendingAvatarFiles.get(pendingKey);
+  try { return file ? URL.createObjectURL(file) : ''; } catch { return ''; }
+}
+
+// Tells the app that this account's photo is now saved, so the copy it was showing is swapped for the saved one.
+function announceOwnAvatar(userId: string, avatar: string): void {
+  try { window.dispatchEvent(new CustomEvent('noob:own-avatar', { detail: { userId, avatar } })); } catch { /* nothing is listening */ }
+}
+
+async function uploadPendingSignupAvatar(pendingKey: string): Promise<string | null> {
+  if (!pendingKey) return null;
   const file = pendingAvatarFiles.get(pendingKey);
   pendingAvatarFiles.delete(pendingKey);
-  if (!file) return;
+  if (!file) return null;
   try {
     const uploaded = await uploadToStorage(file, 'avatars');
-    await rpc('update_my_profile', { p: { avatar: uploaded.objectKey } });
+    // This now runs in the background, so a bad moment on the connection must not leave the account with the placeholder: the save is tried three times.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await rpc('update_my_profile', { p: { avatar: uploaded.objectKey } });
+        break;
+      } catch (err) {
+        if (attempt >= 3) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+      }
+    }
+    return uploaded.objectKey;
   } catch (err) {
     console.error('Profile photo upload after sign-up failed — the account keeps the default photo:', err);
+    return null;
   }
 }
 
@@ -4682,6 +4714,12 @@ export async function registerPushToken(token: string): Promise<{ success: boole
 
 export async function fetchVapidPublicKey(): Promise<string | null> {
   try { return (await rpc<string | null>('get_vapid_public_key')) || null; } catch { return null; }
+}
+
+// Like fetchVapidPublicKey, but says WHY there is no key: `failed` = the question did not get through (no connection - worth asking again later),
+// not failed and no key = the server has no notification key yet.
+export async function fetchVapidKeyResult(): Promise<{ key: string | null; failed: boolean }> {
+  try { return { key: (await rpc<string | null>('get_vapid_public_key')) || null, failed: false }; } catch { return { key: null, failed: true }; }
 }
 
 export async function subscribeToPush(subscription: PushSubscription): Promise<boolean> {

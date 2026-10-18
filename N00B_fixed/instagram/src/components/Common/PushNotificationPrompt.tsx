@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { fetchVapidPublicKey, subscribeToPush, unsubscribeFromPush, fetchMyPushEndpoint } from '../../services/api';
+import { fetchVapidKeyResult, subscribeToPush, unsubscribeFromPush, fetchMyPushEndpoint } from '../../services/api';
 import { checkPushSupport, currentPushEnv, type PushSupport } from '../../utils/pushSupport';
+import { withTimeout, isRetryableFailure, nextDelay, readPending, writePending } from '../../utils/pushRetry';
 
 const DISMISSED_KEY = 'noob_push_prompt_seen';
 
@@ -47,9 +48,54 @@ export type PushEnableStatus = 'granted' | 'denied' | 'unsupported' | 'error';
 //   'save'       - subscribed, but saving it to the account failed (connection)
 export type PushErrorReason = 'not-set-up' | 'browser' | 'save';
 
-// Shared by this soft-ask prompt AND the real on/off toggle in the
-// three-dot Profile menu, so the actual subscribe pipeline (permission,
-// VAPID key, service worker, PushManager) only has to be written once.
+interface PushOutcome { status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason; message?: string; retryable?: boolean }
+
+// The notification key is the same for everyone and never changes: read it once, ahead of time (the prompt does that the moment it appears), so tapping "Turn on" has nothing left to wait for.
+let cachedVapidKey: string | null = null;
+async function loadVapidKey(): Promise<{ key: string | null; failed: boolean }> {
+  if (cachedVapidKey) return { key: cachedVapidKey, failed: false };
+  const found = await fetchVapidKeyResult();
+  if (found.key) cachedVapidKey = found.key;
+  return found;
+}
+
+/** Gets everything ready that does not need the person's answer yet: the key and the service worker. Safe to call any time; never throws. */
+export function warmPushSetup(): void {
+  void loadVapidKey().catch(() => undefined);
+  try { if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js').catch(() => undefined); } catch { /* nothing to warm */ }
+}
+
+// Everything AFTER the permission is given: key -> service worker -> the push service -> save to the account. Each step has a time limit, so nothing hangs for ever.
+// (An iPhone's very first subscription can take 10-30 seconds: it talks to Apple's push service.)
+async function subscribeThisDevice(): Promise<PushOutcome> {
+  try {
+    const found = await withTimeout(loadVapidKey(), 15_000, 'Reading the notification key');
+    if (!found.key) return found.failed ? { status: 'error', reason: 'save', retryable: true } : { status: 'error', reason: 'not-set-up' };
+
+    const registration = await withTimeout(navigator.serviceWorker.register('/sw.js'), 12_000, 'Starting the notification helper');
+    await withTimeout(navigator.serviceWorker.ready, 12_000, 'Starting the notification helper');
+    const subscribeOptions = { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(found.key) };
+    let subscription: PushSubscription;
+    try {
+      subscription = await withTimeout(registration.pushManager.subscribe(subscribeOptions), 45_000, 'Subscribing');
+    } catch (err) {
+      // The browser still holds a subscription made with a different key (e.g. from before the move): drop it and start fresh.
+      const stale = await registration.pushManager.getSubscription();
+      if (!stale) throw err;
+      await stale.unsubscribe();
+      subscription = await withTimeout(registration.pushManager.subscribe(subscribeOptions), 45_000, 'Subscribing');
+    }
+
+    const ok = await withTimeout(subscribeToPush(subscription), 20_000, 'Saving');
+    if (!ok) return { status: 'error', reason: 'save', retryable: true };
+    return { status: 'granted', subscription };
+  } catch (err) {
+    console.error('Failed to enable push notifications:', err);
+    return { status: 'error', reason: 'browser', retryable: isRetryableFailure(err) };
+  }
+}
+
+// Shared by the real on/off toggle in Install and Permissions (which waits for the answer and shows it); the soft-ask prompt below uses startEnablingPush instead.
 export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason; message?: string }> {
   // Not just "unsupported": say WHERE the person is and exactly what to do (iPhone Home Screen, in-app browser, ...)
   const support = getPushSupport();
@@ -57,31 +103,66 @@ export async function enablePushNotifications(): Promise<{ status: PushEnableSta
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return { status: 'denied' };
-
-    const publicKey = await fetchVapidPublicKey();
-    if (!publicKey) return { status: 'error', reason: 'not-set-up' };
-
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    const subscribeOptions = { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) };
-    let subscription: PushSubscription;
-    try {
-      subscription = await registration.pushManager.subscribe(subscribeOptions);
-    } catch (err) {
-      // The browser still holds a subscription made with a different key (e.g. from before the move): drop it and start fresh.
-      const stale = await registration.pushManager.getSubscription();
-      if (!stale) throw err;
-      await stale.unsubscribe();
-      subscription = await registration.pushManager.subscribe(subscribeOptions);
-    }
-
-    const ok = await subscribeToPush(subscription);
-    if (!ok) return { status: 'error', reason: 'save' };
-    return { status: 'granted', subscription };
+    return await subscribeThisDevice();
   } catch (err) {
     console.error('Failed to enable push notifications:', err);
     return { status: 'error', reason: 'browser' };
   }
+}
+
+// ---- Turning notifications on in the background (the soft-ask prompt)
+// The person taps "Turn on" and the prompt is gone at once; the rest happens on its own. If the phone is offline (or the server is slow) the job is remembered
+// on the phone, tried again when the connection is back and whenever the app is opened, and finished without the person doing anything.
+let setupRunning = false;
+let setupAttempt = 0;
+let setupTimer: ReturnType<typeof setTimeout> | undefined;
+let setupListening = false;
+
+async function runPendingSetup(): Promise<void> {
+  if (setupRunning || !readPending()) return;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') { writePending(false); return; } // the permission was taken back: nothing to finish
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;                                         // offline: the "online" event starts it again
+  setupRunning = true;
+  try {
+    const result = await subscribeThisDevice();
+    if (result.status === 'granted' || !result.retryable) { writePending(false); setupAttempt = 0; return; }
+    const wait = nextDelay(setupAttempt++);
+    if (wait !== null) {
+      if (setupTimer) clearTimeout(setupTimer);
+      setupTimer = setTimeout(() => { void runPendingSetup(); }, wait);
+    }
+  } finally {
+    setupRunning = false;
+  }
+}
+
+function listenForRetries(): void {
+  if (setupListening || typeof window === 'undefined') return;
+  setupListening = true;
+  window.addEventListener('online', () => { setupAttempt = 0; void runPendingSetup(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void runPendingSetup(); });
+}
+
+/** Call from the tap on "Turn on": it asks the browser's own question right now (a phone only allows that inside the tap itself) and does all the rest in the background. */
+export function startEnablingPush(): void {
+  let asked: Promise<NotificationPermission>;
+  try { asked = Promise.resolve(Notification.requestPermission()); } catch { return; }
+  listenForRetries();
+  void asked
+    .then((permission) => {
+      if (permission !== 'granted') return undefined;
+      writePending(true);   // remembered first: if the app is closed or the phone is offline right now, it is finished later
+      setupAttempt = 0;
+      return runPendingSetup();
+    })
+    .catch(() => undefined);
+}
+
+/** Call when the app starts for a signed-in person: finishes a "turn on notifications" that was interrupted (offline, app closed). Does nothing when nothing is waiting. */
+export function resumePendingPush(): void {
+  if (!readPending()) return;
+  listenForRetries();
+  void runPendingSetup();
 }
 
 // Can this phone / browser get notifications, and if not, what should the person do? (see utils/pushSupport.ts)
@@ -127,7 +208,8 @@ interface PushNotificationPromptProps {
 }
 
 export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ onDone }) => {
-  const [loading, setLoading] = useState(false);
+  // get the key and the helper ready while the person reads the question
+  useEffect(() => { warmPushSetup(); }, []);
 
   const dismiss = () => {
     try {
@@ -138,9 +220,9 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ 
     onDone();
   };
 
-  const handleEnable = async () => {
-    setLoading(true);
-    await enablePushNotifications();
+  // The prompt closes at once; the browser's own question and all the rest carry on in the background (see startEnablingPush).
+  const handleEnable = () => {
+    startEnablingPush();
     dismiss();
   };
 
@@ -158,15 +240,14 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({ 
         </div>
         <button
           onClick={handleEnable}
-          disabled={loading}
-          className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-60"
+          data-testid="push-turn-on"
+          className="w-full py-3 bg-gradient-to-r from-noob to-noob-strong text-black text-xs font-bold rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
         >
-          {loading ? 'Enabling…' : 'Turn on notifications'}
+          Turn on notifications
         </button>
         <button
           onClick={dismiss}
-          disabled={loading}
-          className="w-full text-xs text-zinc-500 hover:text-zinc-300 font-semibold cursor-pointer disabled:opacity-60"
+          className="w-full text-xs text-zinc-500 hover:text-zinc-300 font-semibold cursor-pointer"
         >
           Maybe later
         </button>

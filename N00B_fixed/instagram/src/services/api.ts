@@ -322,6 +322,7 @@ export {
   deleteChatMessage,
   registerPushToken,
   fetchVapidPublicKey,
+  fetchVapidKeyResult,
   subscribeToPush,
   unsubscribeFromPush,
   fetchCloseFriends,

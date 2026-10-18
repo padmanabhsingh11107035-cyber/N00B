@@ -9,7 +9,6 @@ import { Heart,
   Plus,
   Search,
   Sparkles,
-  Disc3,
   Flame,
   Radio,
   Share2,
@@ -287,12 +286,16 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       {/* Music Header */}
       <div className="flex items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
         <div className="flex items-center gap-3.5 min-w-0">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.35)] shrink-0"
-            style={{ background: 'conic-gradient(from 180deg, #ffffff, #22D3EE, #A855F7, #EC4899, #FB923C, #FACC15, #ffffff)' }}
-          >
-            <Disc3 className="w-6 h-6 text-white stroke-[2.5] animate-spin-slow" />
-          </div>
+          {/* NOOB Music's own picture: a chalk drawing of a disc player (public/noob-music-logo.jpg) */}
+          <img
+            src="/noob-music-logo.jpg"
+            alt="NOOB Music logo"
+            width={400}
+            height={400}
+            data-testid="music-logo"
+            className="w-14 h-14 rounded-[22%] object-cover shrink-0 bg-black"
+            draggable={false}
+          />
           <h1 className="text-xl font-black text-white tracking-tight truncate">NOOB Music</h1>
         </div>
 

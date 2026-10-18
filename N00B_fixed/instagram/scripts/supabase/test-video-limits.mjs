@@ -37,7 +37,7 @@ check(U.describeLength(45) === '45 seconds' && U.describeLength(600) === '10 min
 const modal = read('src/components/PostCreation/PostCreationModal.tsx');
 check(/const length = await readVideoDuration\(firstFile\);\s*\n\s*if \(Number\.isFinite\(length\) && length > REEL_MAX_SECONDS\) \{/.test(modal) && /A reel can be up to \$\{REEL_MAX_SECONDS\} seconds/.test(modal), 'a video over 70 seconds is refused as a reel before it is uploaded, with a message that says how long it is');
 const upload = read('src/components/Videos/UploadVideoModal.tsx');
-check(/const MAX_DURATION_SECONDS = 5 \* 60 \* 60;/.test(upload) && /the limit here is 5 hours/.test(upload) && /up to 5 hours/.test(upload), 'the Videos upload says 5 hours and checks it');
+check(/const MAX_DURATION_SECONDS = 5 \* 60 \* 60;/.test(upload) && /the limit here is 5 hours/.test(upload) && /maxSecondsThatFit/.test(upload) && /One upload can hold about/.test(upload), 'the Videos upload still checks 5 hours, and says up front how much one upload can hold today (storage takes 50 MB a file)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

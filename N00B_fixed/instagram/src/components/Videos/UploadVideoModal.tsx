@@ -2,6 +2,8 @@ import React, { useRef, useState } from 'react';
 import { X, Film, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { uploadMediaFile, createLongVideo } from '../../services/api';
 import { LongVideo } from '../../types';
+import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
+import { describeProgress, explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
 
 interface UploadVideoModalProps {
   onClose: () => void;
@@ -9,6 +11,10 @@ interface UploadVideoModalProps {
 }
 
 const MAX_DURATION_SECONDS = 5 * 60 * 60; // 5 hours
+
+// What one upload can really hold today: storage takes at most 50 MB a file, so a long video is made smaller on the phone first (videoPlan.ts) and the longest
+// that still looks acceptable in 48 MB is about this long (with ordinary sound). A longer video is refused up front, in words, instead of failing after a long wait.
+const FIT_SECONDS = maxSecondsThatFit();
 
 // Reads a local video file's duration without uploading it, by loading it into a throwaway <video>
 // element — the only reliable way to know this client-side before committing to an upload.
@@ -88,6 +94,8 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
   const [error, setError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
@@ -100,9 +108,17 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
     }
     setIsChecking(true);
     try {
-      const duration = await readVideoDuration(file);
+      // The file's own table of contents first (it also works for the iPhone's HEVC .mov, which Chrome can not play); the browser's player as the second way.
+      const { probeVideo } = await import('../../utils/videoTranscode');
+      const probe = await probeVideo(file);
+      const duration = probe ? probe.durationSec : await readVideoDuration(file);
       if (duration > MAX_DURATION_SECONDS) {
         setError(`This video is ${Math.round(duration / 60)} minutes long — the limit here is 5 hours.`);
+        return;
+      }
+      const fits = probe?.audio?.bps ? maxSecondsThatFit(probe.audio.bps) : FIT_SECONDS;
+      if (duration > fits && file.size > MAX_UPLOAD_BYTES) {
+        setError(`This video is ${describeSeconds(duration)} long. One upload can hold about ${describeSeconds(fits)} of video right now (storage takes 50 MB a file). Please trim it, or upload it in parts.`);
         return;
       }
       setVideoFile(file);
@@ -131,8 +147,11 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
     }
     setError('');
     setIsUploading(true);
+    const abort = new AbortController();
+    abortRef.current = abort;
+    setProgress({ stage: 'uploading', fraction: 0 });
     try {
-      const videoRes = await uploadMediaFile(videoFile, 'videos');
+      const videoRes = await uploadMediaFile(videoFile, 'videos', { signal: abort.signal, onProgress: setProgress });
       let thumbnailUrl: string | undefined;
       const thumbnailToUpload = thumbnailFile || (await captureVideoFrame(videoFile));
       if (thumbnailToUpload) {
@@ -148,9 +167,11 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
       });
       onUploaded(video);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not upload this video. Please try again.');
+      setError(explainUploadError(err));
     } finally {
       setIsUploading(false);
+      setProgress(null);
+      abortRef.current = null;
     }
   };
 
@@ -189,7 +210,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
               className="w-full flex flex-col items-center justify-center gap-2 py-10 rounded-xl border-2 border-dashed border-neutral-700 text-zinc-400 hover:border-noob/50 hover:text-noob transition-colors cursor-pointer disabled:opacity-60"
             >
               {isChecking ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Film className="w-6 h-6" />}
-              <span className="text-xs font-semibold">{isChecking ? 'Checking video…' : 'Tap to choose a video (up to 5 hours)'}</span>
+              <span className="text-xs font-semibold">{isChecking ? 'Checking video…' : `Tap to choose a video (up to about ${describeSeconds(FIT_SECONDS)})`}</span>
             </button>
           )}
 
@@ -255,6 +276,15 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
         </div>
 
         <div className="p-3.5 border-t border-neutral-800 shrink-0">
+          {isUploading && progress && (
+            <div className="mb-2.5" data-testid="video-upload-progress">
+              <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-300 mb-1">
+                <span className="min-w-0">{describeProgress(progress)}</span>
+                <button type="button" onClick={() => abortRef.current?.abort()} className="underline text-zinc-400 hover:text-white cursor-pointer shrink-0">Cancel</button>
+              </div>
+              <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden"><div className="h-full bg-noob transition-all duration-300" style={{ width: `${Math.round(progress.fraction * 100)}%` }} /></div>
+            </div>
+          )}
           <button
             onClick={handleUpload}
             disabled={!videoFile || isUploading}

@@ -14,11 +14,12 @@ function parseTimestamp(value?: string | null): Date | null {
   return isNaN(date.getTime()) ? null : date;
 }
 
-/** Exact clock time in the viewer's local timezone, e.g. "3:45 PM". */
-export function formatClockTime(value?: string | null): string {
+/** Exact clock time in the viewer's local timezone, e.g. "3:45 PM" ("15:45" when `hour12` is false: Settings > Chats > Time in chats). */
+export function formatClockTime(value?: string | null, hour12?: boolean): string {
   const date = parseTimestamp(value);
   if (!date) return value || '';
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // the 24-hour clock says 00:05 after midnight (never 24:05), which is what hourCycle 'h23' is for
+  return date.toLocaleTimeString([], hour12 === undefined ? { hour: '2-digit', minute: '2-digit' } : hour12 ? { hour: '2-digit', minute: '2-digit', hour12: true } : { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 }
 
 /** Exact absolute date + time in the viewer's local timezone, e.g. "13 Sep 2026, 4:48 PM". */

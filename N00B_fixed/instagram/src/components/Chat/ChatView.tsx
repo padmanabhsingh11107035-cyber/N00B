@@ -142,6 +142,7 @@ import {
   fetchMessageUpdates,
   hideMessageForMe,
   sendTypingStatus,
+  fetchChatLastSeen,
   fetchTypingUsers,
   translateMessage,
   updateChatSettings,
@@ -159,7 +160,8 @@ import {
   looksOnline,
   type PresenceEntry
 } from '../../services/api';
-import { useSetting } from '../../services/settingsApi';
+import { useSetting, useAccountSettings } from '../../services/settingsApi';
+const ChatSettingsPage = React.lazy(() => import('../Settings/pages/chats').then((m) => ({ default: m.ChatSettingsPage })));
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
@@ -172,6 +174,10 @@ import type { InstantInboxItem } from '../../services/api';
 import { safeJsonStringify, safeLocalStorageSet } from '../../utils/safeJson';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { formatClockTime } from '../../utils/formatTime';
+import { formatLastSeen } from '../../utils/lastSeen';
+import { playChatTone } from '../../utils/chatTone';
+import { describeProgress, explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
+import { mediaMayLoad } from '../../utils/chatMedia';
 import confetti from 'canvas-confetti';
 
 interface ChatViewProps {
@@ -325,6 +331,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const chatVideoInputRef = useRef<HTMLInputElement>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [attachProgress, setAttachProgress] = useState<UploadProgress | null>(null);   // "Making the video smaller... 40%" / "Uploading... 70%"
+  const attachAbortRef = useRef<AbortController | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -360,6 +368,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => subscribeToOnlinePresence(setOnlinePresence), []);
   // Your own Activity status decides too: if you hide yours, you do not see the green dot on other people either.
   const activityStatusOn = useSetting('activity.status');
+  // Settings > Chats: how the chat list and the chats look, sound and behave (the account's own choices, kept by the server)
+  const cs = useAccountSettings();
+  const fmtClock = (iso?: string | null) => formatClockTime(iso, cs['chat.timeFormat'] !== '24h');   // 2nd argument: 12-hour clock?
+  const [loadedMedia, setLoadedMedia] = useState<Set<string>>(new Set());   // received pictures / videos the person tapped to load
+  const [lastSeenMap, setLastSeenMap] = useState<Record<string, string | null>>({});
+  const [showChatSettings, setShowChatSettings] = useState(false);
   const isUserOnline = (userId: string) => activityStatusOn && looksOnline(onlinePresence[userId]);
 
   useEffect(() => {
@@ -599,6 +613,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const newMessageArrived = last.id !== previousLastId;
     const sentByMe = last.senderId === currentUser.id;
 
+    if (newMessageArrived && !sentByMe && previousLastId !== null && !justOpenedChatRef.current) {
+      if (cs['chat.sounds']) playChatTone('in');
+      if (cs['chat.vibrate'] && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(30);
+    }
     if (justOpenedChatRef.current) {
       justOpenedChatRef.current = false;
       scrollMessagesToBottom(false);
@@ -863,6 +881,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
   const headerPartner = activeChat?.participants.find((p) => p.id !== currentUser.id);
+  // When the other person was last seen (only what the server allows: they and I both let it be seen, and we are connected). Asked again every minute while the chat is open.
+  const lastSeenPartnerId = activeChat && !activeChat.isGroup ? headerPartner?.id : undefined;
+  useEffect(() => {
+    if (!lastSeenPartnerId) return;
+    let alive = true;
+    const load = () => { void fetchChatLastSeen([lastSeenPartnerId]).then((m) => { if (alive) setLastSeenMap((prev) => ({ ...prev, ...m })); }); };
+    load();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') load(); }, 60000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [lastSeenPartnerId]);
 
   // End-to-end encryption: is the open chat locked, its security code, and the two screens that explain it
   const [encryptionTick, setEncryptionTick] = useState(0);
@@ -896,7 +924,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
 
-    if (e.target.value.trim()) {
+    if (e.target.value.trim() && cs['chat.typing']) {   // "Typing indicator" off: nobody is told
       if (!isTypingSentRef.current) {
         isTypingSentRef.current = true;
         sendTypingStatus(activeChat.id, true);
@@ -922,6 +950,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setInputText('');
     setScheduledTime('');
     setReplyingToMessage(null);
+    if (cs['chat.sounds']) playChatTone('out');
     if (typingStopTimeoutRef.current) clearTimeout(typingStopTimeoutRef.current);
     if (isTypingSentRef.current) {
       isTypingSentRef.current = false;
@@ -1199,21 +1228,28 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (ref.current) ref.current.value = '';
     setShowAttachMenu(false);
     if (!file || !activeChat) return;
-    const maxBytes = (mediaType === 'video' ? 50 : 15) * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setSendError(`That ${mediaType} is too large — please keep it under ${mediaType === 'video' ? '50MB' : '15MB'}.`);
+    // A picture is shrunk before it is sent, so only an absurdly big one is refused here. A video of any size is let in: it is made smaller on the phone first (to fit the 48 MB
+    // an upload may be), and if it can not be made small enough the upload says so in words.
+    if (mediaType === 'image' && file.size > 15 * 1024 * 1024) {
+      setSendError('That image is too large — please keep it under 15MB.');
       window.setTimeout(() => setSendError((c) => (c.startsWith('That ') ? '' : c)), 6000);
       return;
     }
+    const abort = new AbortController();
+    attachAbortRef.current = abort;
+    setAttachProgress({ stage: 'uploading', fraction: 0 });
     setIsUploadingAttachment(true);
     try {
-      const uploaded = await uploadMediaFile(file, 'chat');
+      const uploaded = await uploadMediaFile(file, 'chat', { signal: abort.signal, onProgress: setAttachProgress });
       await sendMediaMessage(uploaded.objectKey || uploaded.url, mediaType);
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'Could not send that attachment.');
-      window.setTimeout(() => setSendError((c) => (c === (err instanceof Error ? err.message : 'Could not send that attachment.') ? '' : c)), 6000);
+      const message = explainUploadError(err);
+      setSendError(message);
+      window.setTimeout(() => setSendError((c) => (c === message ? '' : c)), 8000);
     } finally {
       setIsUploadingAttachment(false);
+      setAttachProgress(null);
+      attachAbortRef.current = null;
     }
   };
 
@@ -1308,6 +1344,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleDeleteMsg = async (msgId: string) => {
     if (!activeChat) return;
+    if (cs['chat.confirmDelete'] && !window.confirm('Delete this message for everyone?')) return;
     try {
       await deleteMessage(activeChat.id, msgId);
       setMessages(messages.filter((m) => m.id !== msgId));
@@ -1319,6 +1356,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // "Delete for me": gone from this person's chat only (like WhatsApp); everyone else, and the sender, still has the message.
   const handleDeleteForMe = async (msgId: string) => {
     if (!activeChat) return;
+    if (cs['chat.confirmDelete'] && !window.confirm('Delete this message for you?')) return;
     const ok = await hideMessageForMe(msgId);
     if (!ok) { showNotice('Could not delete that message. Please try again.'); return; }
     setMessages((prev) => prev.filter((m) => m.id !== msgId));
@@ -1496,9 +1534,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const sortedConversations = [...visibleConversations].sort((a, b) => {
     if (a.isGlobalDefault && !b.isGlobalDefault) return -1;
     if (!a.isGlobalDefault && b.isGlobalDefault) return 1;
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return 0;
+    if (cs['chat.pinnedOnTop']) {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    }
+    // pinned chats are not kept on top: the newest chat is first
+    return new Date(b.lastMessage?.createdAt || b.createdAt || 0).getTime() - new Date(a.lastMessage?.createdAt || a.createdAt || 0).getTime();
   });
 
   // Apply Filter Tab: 'all' | 'unread' | 'favourites' | 'groups'
@@ -1594,6 +1636,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <SquarePen className="w-4 h-4" />
               </button>
 
+              <button
+                onClick={() => setShowChatSettings(true)}
+                className="p-2 rounded-xl transition-colors cursor-pointer hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                title="Chat settings"
+                aria-label="Chat settings"
+                data-testid="chat-settings-button"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
               <div className="relative" ref={leftMenuRef}>
                 <button
                   onClick={() => setShowLeftMenu(!showLeftMenu)}
@@ -1626,6 +1677,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
                     >
                       <Palette className="w-4 h-4 text-emerald-400" /> Chat Bubble Theme
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLeftMenu(false);
+                        setShowChatSettings(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-sky-400" /> Chat Settings
                     </button>
                   </div>
                 )}
@@ -1739,7 +1799,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setActiveChatId(c.id);
                     setMobileView('chat');
                   }}
-                  className={`p-3.5 flex items-center gap-3 cursor-pointer transition-colors group relative ${
+                  className={`${cs['chat.compactList'] ? 'px-3 py-1.5' : 'p-3.5'} flex items-center gap-3 cursor-pointer transition-colors group relative ${
                     // marked only on a wide screen, where the open chat sits next to the list; the mark is a shadow inside the row (a coloured border here also coloured the line between rows)
                     isSelected
                       ? 'md:bg-zinc-900/95 md:shadow-[inset_3px_0_0_0_var(--color-noob)] hover:bg-zinc-900/50 md:hover:bg-zinc-900/95'
@@ -1747,13 +1807,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   }`}
                 >
                   {/* Left Avatar */}
+                  {cs['chat.listAvatars'] && (
                   <div className="relative shrink-0">
                     {c.isGroup ? (
                       <div className="relative">
                         <img
                           src={c.avatar || '/noob-logo-circle.png'}
                           alt=""
-                          className="w-12 h-12 rounded-full object-cover ring-1 ring-purple-500/50"
+                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-12 h-12'} rounded-full object-cover ring-1 ring-purple-500/50`}
                         />
                         <span className="absolute -bottom-0.5 -right-0.5 px-1 py-0.2 rounded bg-purple-600 text-white text-[7px] font-black uppercase tracking-tight shadow">
                           group
@@ -1767,7 +1828,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                           }
                           alt=""
-                          className="w-12 h-12 rounded-full object-cover ring-1 ring-zinc-700"
+                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-12 h-12'} rounded-full object-cover ring-1 ring-zinc-700`}
                         />
                         {isUserOnline(partner.id) && (
                           <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-noob border-2 border-black rounded-full" />
@@ -1775,6 +1836,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* Middle & Right Content */}
                   <div className="flex-1 min-w-0">
@@ -1797,7 +1859,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
 
                       <span className="text-[11px] text-zinc-500 shrink-0 font-medium">
-                        {c.lastMessage?.createdAt ? formatClockTime(c.lastMessage.createdAt) : 'Active'}
+                        {c.lastMessage?.createdAt ? fmtClock(c.lastMessage.createdAt) : 'Active'}
                       </span>
                     </div>
 
@@ -1817,7 +1879,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           </span>
                         )}
                         <span className="truncate">
-                          {lastMsg?.locked
+                          {!cs['chat.previewInList'] && lastMsg
+                            ? '💬 Message'
+                            : lastMsg?.locked
                             ? '🔒 Locked message'
                             : lastMsg?.text || (c.isGroup ? 'Group channel active' : 'Chat started')}
                         </span>
@@ -1827,7 +1891,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         {c.isPinned && (
                           <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                         )}
-                        {c.unreadCount && c.unreadCount > 0 ? (
+                        {cs['chat.unreadBadges'] && c.unreadCount && c.unreadCount > 0 ? (
                           <span className="w-5 h-5 rounded-full bg-noob text-black text-[10px] font-black flex items-center justify-center shadow-sm">
                             {c.unreadCount}
                           </span>
@@ -1997,6 +2061,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <Users className="w-3 h-3" /> {(activeChat.participants || []).length} members
                       </span>
                     )}
+                    {!activeChat?.isGroup && headerPartner && (isUserOnline(headerPartner.id) ? (
+                      <span className="text-noob font-semibold" data-testid="chat-online-text">Online</span>
+                    ) : lastSeenMap[headerPartner.id] ? (
+                      <span className="text-zinc-300 font-medium" data-testid="chat-last-seen">{formatLastSeen(lastSeenMap[headerPartner.id], cs['chat.timeFormat'] !== '24h')}</span>
+                    ) : null)}
                     {!activeChat?.isGroup && activeChat?.vanishMode && (
                       <span className="text-noob font-medium flex items-center gap-1">
                         <ShieldCheck className="w-3 h-3" /> Vanish Mode On
@@ -2177,8 +2246,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
           )}
 
           {/* Messages History Container */}
-          <div ref={messagesScrollRef} onScroll={handleMessagesScroll} className="chat-wallpaper flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
+          <div ref={messagesScrollRef} onScroll={handleMessagesScroll} className={`${cs['chat.wallpaper'] === 'plain' ? 'bg-page' : cs['chat.wallpaper'] === 'dark' ? 'bg-black' : 'chat-wallpaper'} flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth`}>
             {/* Encryption notice banner */}
+            {cs['chat.encryptionNotice'] && (
             <div className="flex justify-center my-2">
               <div className="px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800/80 text-zinc-400 text-[10px] font-medium flex items-center gap-1.5 shadow-sm">
                 <Lock className="w-3 h-3 text-noob shrink-0" />
@@ -2189,6 +2259,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </span>
               </div>
             </div>
+            )}
 
             {filteredMessages.length === 0 && inChatSearchQuery && (
               <div className="py-8 text-center text-zinc-500 text-xs">
@@ -2435,8 +2506,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       </div>
                     )}
 
+                    {/* Settings > Chats > Photos and videos: a received picture / video that is not loaded by itself waits for a tap (what you sent yourself always shows) */}
+                    {m.mediaUrl && !isSticker && m.mediaType !== 'audio' && !(isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
+                      <button
+                        type="button"
+                        data-testid="media-tap-to-load"
+                        onClick={() => setLoadedMedia((prev) => new Set(prev).add(m.id))}
+                        className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-4 py-5 text-xs font-semibold text-zinc-200 min-w-[200px] cursor-pointer hover:bg-black/60"
+                      >
+                        <span>{m.mediaType === 'video' ? '🎥' : '📷'}</span> Tap to load {m.mediaType === 'video' ? 'video' : 'photo'}
+                      </button>
+                    )}
+
                     {/* Media / GIF / Video Display (stickers render separately, chrome-free, below) */}
-                    {m.mediaUrl && !isSticker && m.mediaType !== 'audio' && (
+                    {m.mediaUrl && !isSticker && m.mediaType !== 'audio' && (isMine || loadedMedia.has(m.id) || mediaMayLoad(cs['chat.autoLoad'])) && (
                       <div className="mb-2 rounded-xl overflow-hidden min-h-[100px] max-w-xs sm:max-w-sm bg-black/40 border border-white/10 shadow-md">
                         {m.mediaType === 'video' ? (
                           <video
@@ -2529,7 +2612,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         </div>
                       </div>
                     ) : m.text ? (
-                      <p translate="no" className="leading-relaxed whitespace-pre-wrap break-words">{renderMessageWithLinks(m.text)}</p>
+                      <p translate="no" data-testid="msg-text" className={`leading-relaxed whitespace-pre-wrap break-words ${cs['chat.fontSize'] === 'small' ? 'text-[12px]' : cs['chat.fontSize'] === 'large' ? 'text-[17px]' : ''}`}>{renderMessageWithLinks(m.text)}</p>
                     ) : !m.mediaUrl && !m.sharedTrack && !m.gameInvite && !m.sharedProfile && !m.sharedPost ? (
                       <p className="italic text-zinc-400 text-xs flex items-center gap-1">
                         📷 <span>Shared Attachment</span>
@@ -2545,7 +2628,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                     {/* Timestamp & Double Check Status */}
                     <div className="flex items-center justify-end gap-1.5 mt-1 text-[10px] text-zinc-400">
-                      <span>{formatClockTime(m.createdAt)}</span>
+                      <span>{fmtClock(m.createdAt)}</span>
                       {m.isEdited && <span className="italic">(edited)</span>}
 
                       {/* Double Check Tick Icons for Outgoing Messages */}
@@ -2741,6 +2824,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <button type="button" onClick={() => setSendError('')} className="text-red-300/70 hover:text-red-200 cursor-pointer" aria-label="Dismiss">
                   <X className="w-3.5 h-3.5" />
                 </button>
+              </div>
+            )}
+            {isUploadingAttachment && attachProgress && (
+              <div data-testid="chat-upload-progress" className="mb-2 px-3 py-2 rounded-xl bg-zinc-800/80 border border-zinc-700/70 text-xs text-zinc-200">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  <span className="flex-1 min-w-0">{describeProgress(attachProgress)}</span>
+                  <button type="button" onClick={() => attachAbortRef.current?.abort()} className="text-zinc-400 hover:text-white underline cursor-pointer shrink-0">Cancel</button>
+                </div>
+                <div className="mt-1.5 h-1 rounded-full bg-zinc-700 overflow-hidden"><div className="h-full bg-noob transition-all duration-300" style={{ width: `${Math.round(attachProgress.fraction * 100)}%` }} /></div>
               </div>
             )}
             {sendBlocked ? (
@@ -3186,6 +3279,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
       )}
 
       {showE2eePage && <EndToEndEncryption onClose={() => setShowE2eePage(false)} />}
+
+      {/* Settings > Chats, opened from the gear at the top of the chat list: the same page as in "Settings and activity" */}
+      {showChatSettings && (
+        <div className="fixed inset-0 z-[70] bg-page overflow-y-auto overscroll-contain" data-testid="chat-settings-overlay">
+          <React.Suspense fallback={null}>
+            <ChatSettingsPage back={() => setShowChatSettings(false)} />
+          </React.Suspense>
+        </div>
+      )}
 
       {/* End-to-end encryption: what this chat's lock means, and my keys & backup */}
       {showEncryption && (

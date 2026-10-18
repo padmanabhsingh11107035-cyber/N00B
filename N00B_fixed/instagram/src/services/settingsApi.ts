@@ -35,6 +35,23 @@ export interface AccountSettings {
   'limit.audience': 'non_followers' | 'recent_followers';
   'likes.hideOthers': boolean;
   'likes.hideMine': boolean;
+  // Chats (see supabase/migrations/20261018000005_chat_settings_last_seen.sql)
+  'chat.lastSeen': 'everyone' | 'contacts' | 'nobody';
+  'chat.groupAdds': 'everyone' | 'contacts' | 'nobody';
+  'chat.typing': boolean;
+  'chat.fontSize': 'small' | 'medium' | 'large';
+  'chat.wallpaper': 'doodle' | 'plain' | 'dark';
+  'chat.timeFormat': '12h' | '24h';
+  'chat.compactList': boolean;
+  'chat.previewInList': boolean;
+  'chat.listAvatars': boolean;
+  'chat.pinnedOnTop': boolean;
+  'chat.unreadBadges': boolean;
+  'chat.sounds': boolean;
+  'chat.vibrate': boolean;
+  'chat.autoLoad': 'always' | 'wifi' | 'never';
+  'chat.confirmDelete': boolean;
+  'chat.encryptionNotice': boolean;
 }
 
 export type SettingKey = keyof AccountSettings;
@@ -64,7 +81,23 @@ export const SETTINGS_DEFAULTS: AccountSettings = {
   'limit.until': null,
   'limit.audience': 'non_followers',
   'likes.hideOthers': false,
-  'likes.hideMine': false
+  'likes.hideMine': false,
+  'chat.lastSeen': 'everyone',
+  'chat.groupAdds': 'everyone',
+  'chat.typing': true,
+  'chat.fontSize': 'medium',
+  'chat.wallpaper': 'doodle',
+  'chat.timeFormat': '12h',
+  'chat.compactList': false,
+  'chat.previewInList': true,
+  'chat.listAvatars': true,
+  'chat.pinnedOnTop': true,
+  'chat.unreadBadges': true,
+  'chat.sounds': true,
+  'chat.vibrate': true,
+  'chat.autoLoad': 'always',
+  'chat.confirmDelete': true,
+  'chat.encryptionNotice': true
 };
 
 export type ListKind = 'restricted' | 'muted' | 'favourite' | 'comment_block' | 'story_hide';

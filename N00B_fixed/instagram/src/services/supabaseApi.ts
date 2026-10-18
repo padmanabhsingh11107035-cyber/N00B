@@ -8,6 +8,9 @@ import type { PinnedFeedItem, Post, User, StatusNote, AppSettings, AppNotificati
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
+import { uploadWithRetry } from '../utils/xhrUpload';
+import { MAX_UPLOAD_BYTES } from '../utils/videoPlan';
+import type { UploadOptions } from '../utils/uploadProgress';
 import { uploadImageSettings } from '../utils/devicePrefs';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
@@ -1477,7 +1480,9 @@ type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
-async function uploadToStorage(file: File, folder: MediaFolder): Promise<{ success: boolean; objectKey: string; url: string }> {
+const sizeText = (bytes: number) => (bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB` : `${Math.round(bytes / 1024 / 1024)} MB`);
+
+async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOptions = {}): Promise<{ success: boolean; objectKey: string; url: string }> {
   const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'dat';
   const mime = (file.type || '').toLowerCase();
   if (BLOCKED_EXTENSIONS.includes(ext) || mime === 'image/heic' || mime === 'image/heif' || mime === 'audio/x-ms-wma') {
@@ -1488,26 +1493,45 @@ async function uploadToStorage(file: File, folder: MediaFolder): Promise<{ succe
     );
   }
   if (!/^(image|video|audio)\//.test(mime)) throw new Error('Only image, video, and audio files can be uploaded.');
+  // Storage takes at most 50 MB a file. Said here, in words, instead of after sending a gigabyte and getting "load error".
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error(
+      mime.startsWith('video/')
+        ? `This video is ${sizeText(file.size)}, and uploads can be at most 48 MB. It could not be made smaller on this phone. Try a shorter video, or use a lower video quality in your camera settings.`
+        : `This file is ${sizeText(file.size)}, and uploads can be at most 48 MB.`
+    );
+  }
 
   const key = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
-  // Straight from the browser to storage — the file never passes through any server of ours.
-  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(key, file, {
-    contentType: mime || undefined,
-    cacheControl: '31536000',
-    upsert: false
+  // Straight from the browser to storage — the file never passes through any server of ours. Sent as the storage library sends it (a form with the file), but with
+  // progress, a new try when the connection drops, and a stop when it stalls (see xhrUpload.ts).
+  const base = (import.meta.env.VITE_SUPABASE_URL as string) || '';
+  const anon = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || '';
+  await uploadWithRetry({
+    url: `${base}/storage/v1/object/${MEDIA_BUCKET}/${key}`,
+    headers: async () => ({ apikey: anon, Authorization: `Bearer ${(await currentSession())?.access_token || anon}`, 'x-upsert': 'false' }),
+    makeBody: () => {
+      const form = new FormData();
+      form.append('cacheControl', '31536000');
+      form.append('', file);
+      return form;
+    },
+    onProgress: (fraction) => opts.onProgress?.({ stage: 'uploading', fraction }),
+    onRetry: (attempt, of, reason) => opts.onProgress?.({ stage: 'retrying', fraction: 0, attempt, of, reason }),
+    signal: opts.signal
   });
-  if (error) throw new Error(error.message || 'Upload failed. Please try again.');
   return { success: true, objectKey: key, url: resolveMedia(key) };
 }
 
 export async function uploadMediaFile(
   file: File,
-  folder: MediaFolder = 'posts'
+  folder: MediaFolder = 'posts',
+  opts: UploadOptions = {}
 ): Promise<{ success: boolean; objectKey: string; url: string }> {
   // Invisibly compress images/videos to reduce latency and bandwidth
   // Smaller pictures cost less data every single time they are shown: a profile picture is never displayed bigger than a phone screen
   // (640 px is plenty), and a post picture at 1440 px is sharp on any phone.
-  const optimizedFile = await compressMedia(file, folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other'));   // Settings > Media quality
+  const optimizedFile = await compressMedia(file, { ...(folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other')), onProgress: opts.onProgress, signal: opts.signal });   // Settings > Media quality
 
   if (!(await currentSession())) {
     if (folder === 'avatars') {
@@ -1518,7 +1542,7 @@ export async function uploadMediaFile(
     }
     throw new Error('Please log in to upload.');
   }
-  return uploadToStorage(optimizedFile, folder);
+  return uploadToStorage(optimizedFile, folder, opts);
 }
 
 // ----------------------------------------------------------------------------- stories & highlights
@@ -2909,6 +2933,19 @@ const LAST_SEEN_EVERY_MS = 3 * 60 * 1000;
 // Persisted complement to the live Presence above — call once per signed-in session (App.tsx). Writes
 // immediately, then every few minutes for as long as the tab stays open, so the admin panel's "last
 // seen" for this account keeps advancing while they're active and simply stops once they leave.
+// When each of these people was last seen (ISO time), for the people the server allows: they let others see it, the asker lets others see theirs, and the two are
+// connected. A person who may not be shown is missing or null. Never throws: an older server without the function just gives nothing.
+export async function fetchChatLastSeen(userIds: string[]): Promise<Record<string, string | null>> {
+  const out: Record<string, string | null> = {};
+  try {
+    const list = (await rpc<{ userId: string; lastSeenAt: string | null }[]>('chat_last_seen', { p_users: userIds })) || [];
+    for (const row of list) if (row && row.userId) out[row.userId] = row.lastSeenAt || null;
+  } catch {
+    /* not available (yet) */
+  }
+  return out;
+}
+
 export function startLastSeenHeartbeat(platform: PresencePlatform): () => void {
   const touch = () => { rpc('touch_last_seen', { p_platform: platform }).catch(() => {}); };
   touch();

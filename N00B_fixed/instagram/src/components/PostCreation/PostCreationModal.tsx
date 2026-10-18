@@ -45,6 +45,7 @@ import { captureVideoThumbnail, captureVideoFrames } from '../../utils/videoThum
 import { parseLook, buildLook, lookStyle, lookRatio, SLIDE_SHAPES, SlideLook, ALT_LIMIT } from '../../utils/slideLook';
 import { siteOrigin } from '../../utils/siteUrl';
 import { readVideoDuration, describeLength, REEL_MAX_SECONDS } from '../../utils/videoDuration';
+import { describeProgress, explainUploadError } from '../../utils/uploadProgress';
 import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -169,6 +170,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);   // how far the video has got in the step it is in (making it smaller, then sending it)
+  const uploadAbortRef = useRef<AbortController | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -410,7 +413,14 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
           return;
         }
         setUploadStatusMsg(`Verified video format (${analysis.mimeType}) • Ready for Reels`);
-        const res = await uploadMediaFile(firstFile, 'reels');
+        const abort = new AbortController();
+        uploadAbortRef.current = abort;
+        setUploadPct(0);
+        const res = await uploadMediaFile(firstFile, 'reels', {
+          signal: abort.signal,
+          onProgress: (p) => { setUploadStatusMsg(describeProgress(p)); setUploadPct(Math.round(p.fraction * 100)); }
+        });
+        setUploadStatusMsg(null);
         if (res.url) {
           setVideoUrl(res.url);
         }
@@ -485,9 +495,11 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       }
     } catch (err) {
       console.error('Failed to upload file:', err);
-      setUploadStatusMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+      setUploadStatusMsg(explainUploadError(err));
     } finally {
       setIsUploadingMedia(false);
+      setUploadPct(null);
+      uploadAbortRef.current = null;
     }
   };
 
@@ -824,7 +836,13 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               </div>
 
               {isUploadingMedia ? (
-                <div className="flex items-center gap-2 text-sm text-zinc-300"><Loader2 className="w-5 h-5 animate-spin" /> {uploadStatusMsg || 'Uploading...'}</div>
+                <div className="flex flex-col items-center gap-2 w-full max-w-xs" data-testid="upload-progress">
+                  <div className="flex items-center gap-2 text-sm text-zinc-300"><Loader2 className="w-5 h-5 animate-spin shrink-0" /> {uploadStatusMsg || 'Uploading...'}</div>
+                  {uploadPct !== null && (
+                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uploadPct}%` }} /></div>
+                  )}
+                  {uploadPct !== null && <button type="button" onClick={() => uploadAbortRef.current?.abort()} className="text-xs text-zinc-400 underline cursor-pointer">Cancel</button>}
+                </div>
               ) : (
                 <div className="flex flex-col items-center gap-2.5">
                   <button

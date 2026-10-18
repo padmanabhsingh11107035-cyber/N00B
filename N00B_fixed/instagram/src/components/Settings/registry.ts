@@ -61,6 +61,7 @@ export const ROWS: RowDef[] = [
   { id: 'activity-status', section: 'Who can see your content', label: 'Activity status', icon: Eye, page: 'activity-status', keywords: 'online active now last seen presence' },
 
   // ---------------------------------------------------------------- How others can interact with you
+  { id: 'chats', section: 'How others can interact with you', label: 'Chats', sub: 'Last seen, privacy, text size, background, sounds and more', icon: MessageSquare, page: 'chats', keywords: 'chat last seen online typing read receipts groups add font text size wallpaper background sounds vibrate media download compact pinned preview time 24 hour' },
   { id: 'messages', section: 'How others can interact with you', label: 'Messages and story replies', icon: MessageCircle, page: 'messages', keywords: 'dm chat who can message read receipts seen replies' },
   { id: 'tags', section: 'How others can interact with you', label: 'Tags and mentions', icon: AtSign, page: 'tags', keywords: 'tag mention collaborator @' },
   { id: 'comments', section: 'How others can interact with you', label: 'Comments', icon: MessageSquare, page: 'comments', keywords: 'who can comment block commenters offensive filter' },

@@ -2,6 +2,7 @@
  * Invisible, client-side media compressor for high-performance uploads.
  * Automatically compresses large camera photos and optimize media before server upload.
  */
+import type { OnUploadProgress } from './uploadProgress';
 
 export async function compressImage(
   file: File,
@@ -232,13 +233,32 @@ async function compressVideoOnAndroid(file: File): Promise<File> {
 }
 
 /**
- * Optimizes video files for upload. Only Android gets real re-encoding
- * (see compressVideoOnAndroid for why) — everyone else's video is left
- * exactly as recorded.
+ * Makes a video small enough to upload (storage takes at most 50 MB per file; a 10-minute phone video is 1 GB or more).
+ *
+ * First choice, on Android (Chrome) and iPhone (Safari 16.4 and newer): the phone's own video chip re-encodes it as a smaller H.264 MP4 that plays everywhere,
+ * with the sound copied as it is and the picture size chosen so it stays sharp (see videoTranscode.ts and videoPlan.ts). A video that is already small or light is
+ * returned untouched. A video too long for one file throws VideoTooLongError, and a cancel throws AbortError - both are meant to reach the person.
+ *
+ * Anything else that goes wrong falls back to the original file (and the upload then says clearly if it is too big), never to a stuck screen.
+ * An Android browser that cannot re-encode at all still has the older recording-based path below.
  */
-export async function compressVideo(file: File): Promise<File> {
+export async function compressVideo(file: File, opts: { onProgress?: OnUploadProgress; signal?: AbortSignal } = {}): Promise<File> {
   if (!file.type.startsWith('video/')) {
     return file;
+  }
+  try {
+    const t = await import('./videoTranscode');
+    if (t.canTranscode()) {
+      const res = await t.transcodeVideo(file, {
+        signal: opts.signal,
+        onProgress: (fraction) => opts.onProgress?.({ stage: 'compressing', fraction })
+      });
+      return res.file;
+    }
+  } catch (err) {
+    const name = (err as { name?: string } | null)?.name;
+    if (name === 'VideoTooLongError' || name === 'AbortError') throw err;
+    console.warn('Video re-encoding is not possible here, using the original file:', err);
   }
   if (file.size < 2 * 1024 * 1024 || !isAndroid()) {
     return file;
@@ -256,14 +276,16 @@ export async function compressVideo(file: File): Promise<File> {
  * Universal media compressor that invisibly detects whether the file is an image or video
  * and compresses it accordingly.
  */
-export async function compressMedia(file: File, opts?: { maxSide?: number; quality?: number }): Promise<File> {
+export async function compressMedia(file: File, opts?: { maxSide?: number; quality?: number; onProgress?: OnUploadProgress; signal?: AbortSignal }): Promise<File> {
   try {
     if (file.type.startsWith('image/')) {
       return await compressImage(file, opts?.maxSide ?? 1600, opts?.maxSide ?? 1600, opts?.quality ?? 0.82);
     } else if (file.type.startsWith('video/')) {
-      return await compressVideo(file);
+      return await compressVideo(file, { onProgress: opts?.onProgress, signal: opts?.signal });
     }
   } catch (err) {
+    const name = (err as { name?: string } | null)?.name;
+    if (name === 'VideoTooLongError' || name === 'AbortError') throw err;
     console.warn('Invisible media compression fallback:', err);
   }
   return file;

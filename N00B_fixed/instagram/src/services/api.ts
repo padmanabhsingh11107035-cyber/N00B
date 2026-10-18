@@ -3,6 +3,7 @@
 export type { AdminDailyOverview, AdminDailyDay, AdminStorageOverview, AdminUnusedScan, SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry } from './supabaseApi';
 export {
   e2ee,
+  fetchChatLastSeen,
   searchGifs,
   recordSignupDevice,
   fetchHealth,

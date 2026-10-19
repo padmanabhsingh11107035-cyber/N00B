@@ -45,7 +45,8 @@ import { captureVideoThumbnail, captureVideoFrames } from '../../utils/videoThum
 import { parseLook, buildLook, lookStyle, lookRatio, SLIDE_SHAPES, SlideLook, ALT_LIMIT } from '../../utils/slideLook';
 import { siteOrigin } from '../../utils/siteUrl';
 import { readVideoDuration, describeLength, REEL_MAX_SECONDS } from '../../utils/videoDuration';
-import { describeProgress, explainUploadError } from '../../utils/uploadProgress';
+import { explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
+import { UploadProgressPage } from '../Common/UploadProgressPage';
 import { POST_FILTERS, CONTENT_CATEGORIES } from '../../data/mockData';
 import confetti from 'canvas-confetti';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
@@ -170,7 +171,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
-  const [uploadPct, setUploadPct] = useState<number | null>(null);   // how far the video has got in the step it is in (making it smaller, then sending it)
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);   // a video that is being made smaller / sent: shown on a full page with a bar
   const uploadAbortRef = useRef<AbortController | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -415,10 +416,10 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
         setUploadStatusMsg(`Verified video format (${analysis.mimeType}) • Ready for Reels`);
         const abort = new AbortController();
         uploadAbortRef.current = abort;
-        setUploadPct(0);
+        setUploadProgress({ stage: 'uploading', fraction: 0 });
         const res = await uploadMediaFile(firstFile, 'reels', {
           signal: abort.signal,
-          onProgress: (p) => { setUploadStatusMsg(describeProgress(p)); setUploadPct(Math.round(p.fraction * 100)); }
+          onProgress: setUploadProgress
         });
         setUploadStatusMsg(null);
         if (res.url) {
@@ -498,7 +499,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       setUploadStatusMsg(explainUploadError(err));
     } finally {
       setIsUploadingMedia(false);
-      setUploadPct(null);
+      setUploadProgress(null);
       uploadAbortRef.current = null;
     }
   };
@@ -744,6 +745,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       id="post-creation-modal"
       className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-stretch sm:items-center justify-center sm:p-6"
     >
+      {isUploadingMedia && uploadProgress && <UploadProgressPage progress={uploadProgress} onCancel={() => uploadAbortRef.current?.abort()} />}
       <div className="relative w-full sm:max-w-xl bg-zinc-950 sm:border sm:border-neutral-800 sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[100dvh] sm:h-auto sm:max-h-[94vh] animate-in zoom-in-95 duration-200">
         {/* Header: the step's name in the middle, back on the left, Next / Share on the right (like Instagram) */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-3 border-b border-neutral-800 bg-zinc-950 shrink-0">
@@ -836,13 +838,7 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
               </div>
 
               {isUploadingMedia ? (
-                <div className="flex flex-col items-center gap-2 w-full max-w-xs" data-testid="upload-progress">
-                  <div className="flex items-center gap-2 text-sm text-zinc-300"><Loader2 className="w-5 h-5 animate-spin shrink-0" /> {uploadStatusMsg || 'Uploading...'}</div>
-                  {uploadPct !== null && (
-                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${uploadPct}%` }} /></div>
-                  )}
-                  {uploadPct !== null && <button type="button" onClick={() => uploadAbortRef.current?.abort()} className="text-xs text-zinc-400 underline cursor-pointer">Cancel</button>}
-                </div>
+                <div className="flex items-center gap-2 text-sm text-zinc-300"><Loader2 className="w-5 h-5 animate-spin shrink-0" /> {uploadStatusMsg || 'Uploading...'}</div>
               ) : (
                 <div className="flex flex-col items-center gap-2.5">
                   <button

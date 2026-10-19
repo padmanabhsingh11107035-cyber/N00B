@@ -177,6 +177,7 @@ import { formatClockTime } from '../../utils/formatTime';
 import { formatLastSeen } from '../../utils/lastSeen';
 import { playChatTone } from '../../utils/chatTone';
 import { describeProgress, explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
+import { UploadProgressPage } from '../Common/UploadProgressPage';
 import { mediaMayLoad } from '../../utils/chatMedia';
 import confetti from 'canvas-confetti';
 
@@ -333,6 +334,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [attachProgress, setAttachProgress] = useState<UploadProgress | null>(null);   // "Making the video smaller... 40%" / "Uploading... 70%"
   const attachAbortRef = useRef<AbortController | null>(null);
+  const [attachIsVideo, setAttachIsVideo] = useState(false);   // a video goes up on a full page with a bar; a photo only needs the small strip
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1238,6 +1240,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const abort = new AbortController();
     attachAbortRef.current = abort;
     setAttachProgress({ stage: 'uploading', fraction: 0 });
+    setAttachIsVideo(mediaType === 'video');
     setIsUploadingAttachment(true);
     try {
       const uploaded = await uploadMediaFile(file, 'chat', { signal: abort.signal, onProgress: setAttachProgress });
@@ -2826,7 +2829,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </button>
               </div>
             )}
-            {isUploadingAttachment && attachProgress && (
+            {isUploadingAttachment && attachProgress && attachIsVideo && <UploadProgressPage progress={attachProgress} onCancel={() => attachAbortRef.current?.abort()} />}
+            {isUploadingAttachment && attachProgress && !attachIsVideo && (
               <div data-testid="chat-upload-progress" className="mb-2 px-3 py-2 rounded-xl bg-zinc-800/80 border border-zinc-700/70 text-xs text-zinc-200">
                 <div className="flex items-center gap-2">
                   <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />

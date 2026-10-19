@@ -46,10 +46,10 @@ check(/attempts \?\? 4/.test(xhr) && /\[1000, 3000, 7000\]/.test(xhr) && /stallM
 
 section('4. The screens');
 check(/describeProgress/.test(progress) && /Making the video smaller/.test(progress) && /trying again \(\$\{p\.attempt\} of \$\{p\.of\}\)/.test(progress) && /Upload cancelled\./.test(progress), 'the words: making smaller, uploading, trying again (n of m), cancelled');
-check(/data-testid="upload-progress"/.test(post) && /uploadAbortRef\.current\?\.abort\(\)/.test(post) && /onProgress: \(p\) => \{ setUploadStatusMsg\(describeProgress\(p\)\)/.test(post) && /explainUploadError\(err\)/.test(post), 'Create (reels): a progress bar, a Cancel, and a clear reason when it fails');
-check(/data-testid="video-upload-progress"/.test(videos) && /abortRef\.current\?\.abort\(\)/.test(videos) && /onProgress: setProgress/.test(videos) && /explainUploadError\(err\)/.test(videos), 'Videos: a progress bar, a Cancel, and a clear reason when it fails');
+check(/<UploadProgressPage progress=\{uploadProgress\}/.test(post) && /uploadAbortRef\.current\?\.abort\(\)/.test(post) && /onProgress: setUploadProgress/.test(post) && /explainUploadError\(err\)/.test(post), 'Create (reels): the full-page progress with a Cancel, and a clear reason when it fails');
+check(/<UploadProgressPage progress=\{progress\}/.test(videos) && /abortRef\.current\?\.abort\(\)/.test(videos) && /onProgress: setProgress/.test(videos) && /explainUploadError\(err\)/.test(videos), 'Videos: the full-page progress with a Cancel, and a clear reason when it fails');
 check(/probeVideo\(file\)/.test(videos) && /maxSecondsThatFit/.test(videos) && /One upload can hold about/.test(videos) && /file\.size > MAX_UPLOAD_BYTES/.test(videos), 'Videos: a video that can not fit in one upload is refused when it is chosen, with how much does fit');
-check(/data-testid="chat-upload-progress"/.test(chat) && /attachAbortRef\.current\?\.abort\(\)/.test(chat) && !/50MB/.test(chat) && /mediaType === 'image' && file\.size > 15 \* 1024 \* 1024/.test(chat), 'Chat: a progress bar and a Cancel; a video is no longer refused at 50 MB before it has been made smaller');
+check(/data-testid="chat-upload-progress"/.test(chat) && /<UploadProgressPage progress=\{attachProgress\}/.test(chat) && /attachAbortRef\.current\?\.abort\(\)/.test(chat) && !/50MB/.test(chat) && /mediaType === 'image' && file\.size > 15 \* 1024 \* 1024/.test(chat), 'Chat: a progress bar and a Cancel; a video is no longer refused at 50 MB before it has been made smaller');
 
 section('5. What it is built on');
 check(pkg.dependencies && pkg.dependencies['mp4box'] && pkg.dependencies['mp4-muxer'], 'the two small libraries (reading and writing MP4) are in the app\'s list');

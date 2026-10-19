@@ -467,17 +467,17 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
                       className="flex items-center justify-between py-1.5 border-b border-zinc-800/60 last:border-0"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs text-zinc-200 truncate">{tx.reason}</p>
+                        <p className="text-xs text-zinc-200 break-words" data-testid="points-reason">{tx.reason}</p>
                         <p className="text-[10px] text-zinc-500">
                           {new Date(tx.timestamp).toLocaleString()}
                         </p>
                       </div>
                       <span
                         className={`text-xs font-bold shrink-0 pl-2 ${
-                          tx.amount >= 0 ? 'text-noob' : 'text-rose-400'
+                          tx.amount > 0 ? 'text-noob' : tx.amount < 0 ? 'text-rose-400' : 'text-zinc-500'
                         }`}
                       >
-                        {tx.amount >= 0 ? '+' : ''}
+                        {tx.amount > 0 ? '+' : ''}
                         {tx.amount.toLocaleString()}
                       </span>
                     </div>

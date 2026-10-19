@@ -165,6 +165,10 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         return <Music className="w-3.5 h-3.5 text-pink-400" />;
       case 'points_transfer':
         return <Coins className="w-3.5 h-3.5 text-amber-400" />;
+      case 'points_earned':
+        return <Coins className="w-3.5 h-3.5 text-noob" />;
+      case 'points_removed':
+        return <Coins className="w-3.5 h-3.5 text-rose-400" />;
       case 'new_message':
         return <MessageCircle className="w-3.5 h-3.5 text-[#00E5FF]" />;
       case 'call_started':

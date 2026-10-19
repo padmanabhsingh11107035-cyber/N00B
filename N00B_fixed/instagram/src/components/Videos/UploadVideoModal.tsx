@@ -3,7 +3,8 @@ import { X, Film, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { uploadMediaFile, createLongVideo } from '../../services/api';
 import { LongVideo } from '../../types';
 import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
-import { describeProgress, explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
+import { explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
+import { UploadProgressPage } from '../Common/UploadProgressPage';
 
 interface UploadVideoModalProps {
   onClose: () => void;
@@ -177,6 +178,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {isUploading && progress && <UploadProgressPage progress={progress} onCancel={() => abortRef.current?.abort()} />}
       <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
           <h3 className="text-sm font-bold text-white">Upload a Video</h3>
@@ -276,15 +278,6 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
         </div>
 
         <div className="p-3.5 border-t border-neutral-800 shrink-0">
-          {isUploading && progress && (
-            <div className="mb-2.5" data-testid="video-upload-progress">
-              <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-300 mb-1">
-                <span className="min-w-0">{describeProgress(progress)}</span>
-                <button type="button" onClick={() => abortRef.current?.abort()} className="underline text-zinc-400 hover:text-white cursor-pointer shrink-0">Cancel</button>
-              </div>
-              <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden"><div className="h-full bg-noob transition-all duration-300" style={{ width: `${Math.round(progress.fraction * 100)}%` }} /></div>
-            </div>
-          )}
           <button
             onClick={handleUpload}
             disabled={!videoFile || isUploading}

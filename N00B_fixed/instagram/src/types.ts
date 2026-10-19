@@ -143,6 +143,8 @@ export type NotificationType =
   | 'music_share'
   | 'game_challenge'
   | 'points_transfer'
+  | 'points_earned'
+  | 'points_removed'
   | 'birthday_wish'
   | 'birthday_follower_alert'
   | 'new_message'

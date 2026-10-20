@@ -57,7 +57,8 @@ import {
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
-import { SharePostToChatModal } from '../Common/SharePostToChatModal';
+import { ReelFriendsStrip } from './ReelFriendsStrip';
+import { contentUrl } from '../../utils/routes';
 import confetti from 'canvas-confetti';
 import { useScreenshotAlert } from '../../utils/useScreenshotAlert';
 import { getReelPlayer, releaseReelPlayer, getSoundPreference, setSoundPreference, playReel, unmuteInTap, onRealTap } from '../../utils/reelAudio';
@@ -131,7 +132,6 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   const [showLikesViewsSheet, setShowLikesViewsSheet] = useState(false);
   const [likesViewsInitialTab, setLikesViewsInitialTab] = useState<'likes' | 'views'>('likes');
   const [showShareSheet, setShowShareSheet] = useState(false);
-  const [showShareToChat, setShowShareToChat] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [aiVoiceTranslationActive, setAiVoiceTranslationActive] = useState(false);
   const [localReels, setLocalReels] = useState<Reel[]>(reels);
@@ -513,7 +513,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const copyReelLink = async () => {
     if (!currentReel) return;
-    const shareUrl = `${window.location.origin}${window.location.pathname}?reel=${encodeURIComponent(currentReel.id)}`;
+    const shareUrl = contentUrl('reel', currentReel.id);
     try {
       if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
       await navigator.clipboard.writeText(shareUrl);
@@ -1297,6 +1297,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           )}
           <h2 className="text-[26px] leading-none font-bold tracking-tight text-white">Reels</h2>
         </div>
+        <div className="flex items-center gap-3 shrink-0">
+        <ReelFriendsStrip currentUser={currentUser} reelId={currentReel?.id} />
         <button
           type="button"
           onClick={toggleSound}
@@ -1307,6 +1309,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
         >
           {soundWanted && !soundBlocked ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
         </button>
+        </div>
       </div>
 
       {/* The reels: the one before, this one, the one after — one screen apart, moved together by the finger */}
@@ -1461,25 +1464,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       )}
 
       {showShareSheet && currentReel && (
-        <SharePostSheet
-          type="reel"
-          linkCopied={shareLinkCopied}
-          onCopyLink={copyReelLink}
-          onSendInChat={() => {
-            setShowShareSheet(false);
-            setShowShareToChat(true);
-          }}
-          onClose={() => setShowShareSheet(false)}
-        />
-      )}
-
-      {showShareToChat && currentReel && (
-        <SharePostToChatModal
-          currentUser={currentUser}
-          itemId={currentReel.id}
-          itemType="reel"
-          onClose={() => setShowShareToChat(false)}
-        />
+        <SharePostSheet type="reel" currentUser={currentUser} itemId={currentReel.id} ownerUsername={currentReel.username} onClose={() => setShowShareSheet(false)} />
       )}
       </div>
     </div>

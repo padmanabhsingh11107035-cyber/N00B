@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="robots" content="noindex" />
+<title>NOOB is taking a short break</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<style>
+  html, body { margin: 0; height: 100%; background: #0a0a0a; color: #fff; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  main { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; box-sizing: border-box; }
+  .card { width: 100%; max-width: 360px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 28px; padding: 30px 22px 24px; background: #101012; position: relative; }
+  .card::after { content: ''; position: absolute; inset: 5px; border: 1px dashed rgba(255, 255, 255, .18); border-radius: 23px; pointer-events: none; }
+  img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255, 255, 255, .22); }
+  .stamp { margin: 14px 0 0; font-size: 54px; font-weight: 900; letter-spacing: -.02em; }
+  h1 { margin: 6px 0 0; font-size: 21px; font-weight: 900; }
+  p { margin: 10px auto 0; max-width: 300px; font-size: 14px; line-height: 1.55; color: #b8b8bd; }
+  button { margin-top: 18px; width: 100%; padding: 13px 24px; border: 0; border-radius: 999px; background: #fff; color: #000; font-weight: 800; font-size: 15px; cursor: pointer; }
+  .small { font-size: 11px; color: #77777c; margin-top: 12px; }
+</style>
+</head>
+<body>
+<main data-noob-down>
+  <div class="card" role="alert">
+    <img src="/noob-logo-circle.png" alt="NOOB" width="88" height="88" />
+    <div class="stamp" aria-hidden="true">BRB</div>
+    <h1>NOOB is taking a short break</h1>
+    <p>We cannot reach NOOB right now. This is usually over in a minute or two. Your account and everything you posted are safe.</p>
+    <button type="button" id="noob-down-retry">Try again</button>
+    <div class="small">NOOB opens again by itself as soon as it is back.</div>
+  </div>
+</main>
+<script src="/boot-guard.js"></script>
+</body>
+</html>

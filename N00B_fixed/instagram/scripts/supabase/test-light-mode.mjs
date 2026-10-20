@@ -60,7 +60,7 @@ section('4. The dark screens');
 const SCREENS = {
   'src/components/Reels/ReelsView.tsx': 2, 'src/components/Stories/StoryViewerModal.tsx': 1, 'src/components/Chat/InstantViewer.tsx': 1, 'src/components/Chat/InstantCamera.tsx': 2,
   'src/components/Chat/ChatCallModal.tsx': 1, 'src/components/LiveStream/LiveStreamView.tsx': 5, 'src/components/LiveStream/LiveLoungeRoomView.tsx': 1,
-  'src/components/Feed/FeedVideoWatchView.tsx': 1, 'src/components/Videos/HomeVideoFeedView.tsx': 1, 'src/components/Common/QrScannerModal.tsx': 1, 'src/components/Common/AvatarAdjustEditor.tsx': 1
+  'src/components/Feed/FeedVideoWatchView.tsx': 1, 'src/components/Videos/VideoWatchPage.tsx': 1, 'src/components/Common/QrScannerModal.tsx': 1, 'src/components/Common/AvatarAdjustEditor.tsx': 1
 };
 for (const [file, n] of Object.entries(SCREENS)) check((read(file).match(/\bmedia-dark\b/g) || []).length >= n, `${file.replace('src/components/', '')} is a dark screen in both modes`);
 const idx = read('src/index.css');

@@ -424,3 +424,7 @@ begin
 end;
 $$;
 grant execute on function public.touch_last_seen(text) to authenticated;
+
+-- the points notifications that were sent before now come from the official NOOB account too, so every one of them shows the real NOOB logo (new ones already do)
+update public.notifications set actor_id = public.noob_admin_id()
+ where type in ('points_earned', 'points_removed') and actor_id is null and public.noob_admin_id() is not null;

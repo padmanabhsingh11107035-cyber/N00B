@@ -32,7 +32,7 @@ const bypassSrc = /export function bypassRequested[\s\S]*?\n}\n/.exec(notice)[0]
 const bypass = new Function(bypassSrc.replace('export function bypassRequested', 'return function bypassRequested'))();
 check(bypass('?old=1', false) === true && bypass('', true) === true && bypass('', false) === false && bypass('?old=2', false) === false && bypass('?x=1', false) === false, 'only the support link ?old=1 (kept for that visit) gets past it, nothing else does');
 const main = read('src/main.tsx');
-check(/const oldAddress = movedNoticeBlocksApp\(\);/.test(main) && /oldAddress \? \(\s*<MovedNotice \/>\s*\) : \(\s*<MusicPlayerProvider>\s*<App \/>/.test(main), 'on the old address only the card is shown: the app is not started there, so no update ever changes or runs on it');
+check(/const oldAddress = movedNoticeBlocksApp\(\);/.test(main) && /oldAddress \? \(\s*<MovedNotice \/>\s*\) : pageNotFound \? \(\s*<SystemPage kind="not-found" \/>\s*\) : \(\s*<MusicPlayerProvider>\s*<App \/>/.test(main), 'on the old address only the card is shown: the app is not started there, so no update ever changes or runs on it');
 check(/const sameThere = MAIN_SITE \+ window\.location\.pathname/.test(notice) && /href=\{sameThere\}/.test(notice), 'an old shared link opens the same page on the new address');
 
 section('3. Updates always reach people');

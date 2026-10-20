@@ -14,6 +14,7 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0a0a0a" />
     <script src="/theme-init.js"></script>
+    <script src="/boot-guard.js"></script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="NOOB" />
@@ -100,6 +101,23 @@
       ]
     }
     </script>
+    <!-- The pages of NOOB a search engine can list under the main result (the "sitelinks"): each is a real page of its own, see public/features. Google decides whether and when to show them. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "NOOB Socials sections",
+      "itemListElement": [
+        { "@type": "SiteNavigationElement", "position": 1, "name": "NOOB Reels", "description": "Short vertical videos", "url": "https://noobsocials.com/features/reels" },
+        { "@type": "SiteNavigationElement", "position": 2, "name": "NOOB Videos", "description": "Long videos in portrait or landscape", "url": "https://noobsocials.com/features/videos" },
+        { "@type": "SiteNavigationElement", "position": 3, "name": "NOOB Chat", "description": "Private chats, groups and calls", "url": "https://noobsocials.com/features/chat" },
+        { "@type": "SiteNavigationElement", "position": 4, "name": "NOOB Games", "description": "50+ mini games", "url": "https://noobsocials.com/features/games" },
+        { "@type": "SiteNavigationElement", "position": 5, "name": "NOOB Music", "description": "Songs, shared in posts and chats", "url": "https://noobsocials.com/features/music" },
+        { "@type": "SiteNavigationElement", "position": 6, "name": "NOOB Explore", "description": "Find people and posts", "url": "https://noobsocials.com/features/explore" },
+        { "@type": "SiteNavigationElement", "position": 7, "name": "About NOOB Socials", "description": "Who runs NOOB and what it is", "url": "https://noobsocials.com/about" }
+      ]
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Grand+Hotel&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -125,6 +143,7 @@
       <h1>NOOB Socials</h1>
       <p>NOOB Socials (noobsocials.com) is a free social app and website run by students: share photos, reels and stories, chat, play 50+ games, go live, study with AI and connect with friends. Turn on JavaScript to use it.</p>
       <p><a href="/about">About NOOB Socials and all its features</a> · <a href="/screenshots">NOOB Socials screenshots</a></p>
+      <p><a href="/features">All features</a> · <a href="/features/reels">NOOB Reels</a> · <a href="/features/videos">NOOB Videos</a> · <a href="/features/chat">NOOB Chat</a> · <a href="/features/games">NOOB Games</a> · <a href="/features/music">NOOB Music</a> · <a href="/features/explore">NOOB Explore</a> · <a href="/features/stories">NOOB Stories</a> · <a href="/features/points">NOOB Points</a></p>
       <p><a href="/privacy.html">Privacy Policy</a> &middot; <a href="/terms.html">Terms &amp; Conditions</a></p>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>

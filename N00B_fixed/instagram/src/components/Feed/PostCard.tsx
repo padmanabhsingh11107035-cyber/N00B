@@ -32,7 +32,7 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
-import { SharePostToChatModal } from '../Common/SharePostToChatModal';
+import { contentUrl } from '../../utils/routes';
 import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { formatExactDateTime } from '../../utils/formatTime';
@@ -98,11 +98,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showFullscreenAvatar, setShowFullscreenAvatar] = useState(false);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
-  const [showShareToChat, setShowShareToChat] = useState(false);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
 
   const copyPostLink = async () => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?post=${encodeURIComponent(post.id)}`;
+    const shareUrl = contentUrl('post', post.id);
     try {
       if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
       await navigator.clipboard.writeText(shareUrl);
@@ -1142,25 +1141,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       )}
 
       {showShareSheet && (
-        <SharePostSheet
-          type="post"
-          linkCopied={shareLinkCopied}
-          onCopyLink={copyPostLink}
-          onSendInChat={() => {
-            setShowShareSheet(false);
-            setShowShareToChat(true);
-          }}
-          onClose={() => setShowShareSheet(false)}
-        />
-      )}
-
-      {showShareToChat && (
-        <SharePostToChatModal
-          currentUser={currentUser}
-          itemId={post.id}
-          itemType="post"
-          onClose={() => setShowShareToChat(false)}
-        />
+        <SharePostSheet type="post" currentUser={currentUser} itemId={post.id} ownerUsername={post.username} onClose={() => setShowShareSheet(false)} />
       )}
     </article>
   );

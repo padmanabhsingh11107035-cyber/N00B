@@ -34,6 +34,9 @@ import {
   LogOut
 } from 'lucide-react';
 import { createSpeaker } from '../../utils/supportSpeech';
+import { useFullPage } from '../../utils/fullPage';
+import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
+import { SupportChatPanel } from './SupportChatPanel';
 
 declare const __BUILD_ID__: string;
 import { User } from '../../types';
@@ -72,6 +75,9 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   onOpenTerms,
   onOpenPrivacy
 }) => {
+  // Support is a page of its own: while it is open the page behind it is hidden (not just covered), and it fills exactly the visible part of the screen (also when the keyboard is up).
+  useFullPage(true);
+  const visibleArea = useVisibleArea();
   // The tab, the conversation and anything half-typed survive closing the app or refreshing (see utils/pageResume.ts).
   const [activeSupportTab, setActiveSupportTab] = useResumeState<'ai_chat' | 'call_us' | 'safety_report' | 'ticket' | 'faq'>(currentUser.id, 'support', 'tab', 'ai_chat');
   
@@ -917,10 +923,10 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-zinc-950 border border-zinc-800 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 doodle-wallpaper-login flex flex-col animate-in fade-in duration-150" style={visibleAreaStyle(visibleArea)} data-testid="support-page">
+      <div className={`bg-zinc-950 w-full ${activeSupportTab === 'ai_chat' ? 'max-w-6xl' : 'max-w-2xl'} mx-auto flex-1 min-h-0 flex flex-col sm:border-x border-zinc-800 overflow-hidden`}>
         {/* Top Header */}
-        <header className="p-4 sm:p-5 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-b border-zinc-800 flex items-center justify-between">
+        <header className="p-4 sm:p-5 pt-[max(1rem,env(safe-area-inset-top))] shrink-0 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-11 h-11 rounded-2xl overflow-hidden">
@@ -938,7 +944,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
                   <Zap className="w-2.5 h-2.5" /> Instant AI
                 </span>
               </div>
-              <p className="text-xs text-zinc-400">
+              <p className="hidden sm:block text-xs text-zinc-400">
                 24/7 AI Chat &amp; Community Support Specialist
               </p>
               {ratingSummary.average !== null && (
@@ -954,21 +960,6 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* End Chat Button */}
-            {activeSupportTab === 'ai_chat' && (
-              <button
-                onClick={() => {
-                  stopSpeaking();
-                  setShowReviewModal(true);
-                }}
-                className="px-2.5 py-1.5 bg-rose-600/20 hover:bg-rose-600 border border-rose-500/40 hover:border-rose-600 text-rose-300 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                title="End support chat and rate session"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">End Chat</span>
-              </button>
-            )}
-
             {/* Voice Toggle */}
             <button
               onClick={() => {
@@ -995,7 +986,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         </header>
 
         {/* User Context Bar */}
-        <div className="bg-zinc-900/60 border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between text-xs">
+        <div className={`bg-zinc-900/60 border-b border-zinc-800/80 px-4 py-2.5 items-center justify-between text-xs shrink-0 ${activeSupportTab === 'ai_chat' ? 'hidden sm:flex' : 'flex'}`}>
           <div className="flex items-center gap-2.5">
             <img
               src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
@@ -1020,7 +1011,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         </div>
 
         {/* Tab Navigation (Differentiates Chat vs Call Us vs Safety vs Ticket vs FAQs) */}
-        <div className="grid grid-cols-5 border-b border-zinc-800 bg-zinc-900/40 px-2 pt-2 gap-1 text-center">
+        <div className="grid grid-cols-5 border-b border-zinc-800 bg-zinc-900/40 px-2 pt-2 gap-1 text-center shrink-0">
           <button
             onClick={() => setActiveSupportTab('ai_chat')}
             className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
@@ -1078,285 +1069,34 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-          {/* TAB 1: AI ASSISTANT CHAT */}
+        <div className={activeSupportTab === 'ai_chat' ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 overflow-y-auto p-4 sm:p-5 space-y-4'}>
+          {/* TAB 1: AI ASSISTANT CHAT (the screen itself is SupportChatPanel.tsx) */}
           {activeSupportTab === 'ai_chat' && (
-            <div className="flex flex-col h-[400px]">
-              {/* Support Session Header Controls: End Chat & Quick Actions */}
-              <div className="flex items-center justify-between pb-2.5 border-b border-zinc-800/80 mb-2 shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-noob animate-pulse" />
-                  <span className="text-xs font-bold text-white">Live Support Session</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsChatEnded(true);
-                      setShowReviewModal(true);
-                    }}
-                    className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                    title="End Support Chat & Rate Experience"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>End Chat</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Session Concluded Banner */}
-              {isChatEnded && (
-                <div className="px-3.5 py-2 bg-gradient-to-r from-amber-950/40 via-zinc-900 to-amber-950/40 border border-amber-500/30 rounded-2xl flex items-center justify-between gap-2 mb-2 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-xs text-amber-200 font-medium">
-                      This support session has concluded.
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setShowReviewModal(true)}
-                    className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <Star className="w-3 h-3 fill-black" />
-                    {reviewSubmitted ? 'Update Review' : 'Rate & Review'}
-                  </button>
-                </div>
-              )}
-
-              {/* Quick Prompt Suggestions */}
-              <div className="flex items-center gap-1.5 pb-2.5 overflow-x-auto no-scrollbar shrink-0">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider shrink-0">
-                  Quick Help:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPrompt('What are the official Terms and Conditions?')}
-                  className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  📜 Terms &amp; Conditions
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPrompt('Explain NOOB Privacy Policy and data security')}
-                  className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  🛡️ Privacy Policy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPrompt('How does mini-games point scoring work?')}
-                  className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  🎮 Mini-Games (+10M Win)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPrompt('How do I order from Shop NOOB?')}
-                  className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  🛍️ Shop NOOB
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPrompt('How does continuous background music work?')}
-                  className="px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] text-zinc-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  🎵 Music Hub
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePaymentIssueQuickAction}
-                  disabled={loadingTransactions}
-                  className="px-2.5 py-1 rounded-full bg-amber-950/40 hover:bg-amber-900/40 border border-amber-500/30 text-[11px] text-amber-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
-                >
-                  💳 {loadingTransactions ? 'Loading...' : 'Payment Issue'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSupportTab('safety_report')}
-                  className="px-2.5 py-1 rounded-full bg-rose-950/40 hover:bg-rose-900/40 border border-rose-500/30 text-[11px] text-rose-300 hover:text-white transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  🛡️ Report Cyber Bullying
-                </button>
-              </div>
-
-              {/* Chat messages thread */}
-              <div className="flex-1 overflow-y-auto space-y-3.5 pr-1.5 scroll-smooth">
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex items-start gap-2.5 ${
-                      m.sender === 'user' ? 'flex-row-reverse' : ''
-                    }`}
-                  >
-                    {m.sender === 'bot' ? (
-                      <div className="relative shrink-0">
-                        <div className="w-8 h-8 rounded-2xl overflow-hidden">
-                          <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
-                        </div>
-                        {currentlySpeakingMsgId === m.id && (
-                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-noob opacity-75" />
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-noob" />
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <img
-                        src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                        alt={currentUser.username}
-                        className="w-8 h-8 rounded-2xl object-cover ring-1 ring-zinc-700 shrink-0"
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
-
-                    <div
-                      className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed ${
-                        m.sender === 'user'
-                          ? 'bg-gradient-to-r from-emerald-600 to-noob text-black font-medium'
-                          : 'bg-zinc-900/95 border border-zinc-800 text-zinc-100'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap">{m.text}</div>
-
-                      {m.transactions && (
-                        <div className="mt-2.5 space-y-1.5">
-                          {m.transactions.map((t) => (
-                            <button
-                              key={t.transferId}
-                              type="button"
-                              onClick={() => handleSelectTransaction(t)}
-                              className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-black/20 hover:bg-black/35 border border-white/10 text-left transition-colors cursor-pointer"
-                            >
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${t.direction === 'sent' ? 'bg-rose-500/20 text-rose-300' : 'bg-noob/20 text-noob'}`}>
-                                {t.direction === 'sent' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownLeft className="w-3.5 h-3.5" />}
-                              </div>
-                              <img src={t.otherParty.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
-                              <div className="min-w-0 flex-1">
-                                <span className="text-[11px] font-bold block truncate">
-                                  {t.direction === 'sent' ? 'To' : 'From'} @{t.otherParty.username}
-                                </span>
-                                <span className="text-[10px] opacity-70 block">{formatPaymentId(t.transferId)} • {new Date(t.createdAt).toLocaleDateString()}</span>
-                              </div>
-                              <span className={`text-xs font-black shrink-0 ${t.direction === 'sent' ? 'text-rose-300' : 'text-noob'}`}>
-                                {t.direction === 'sent' ? '-' : '+'}{t.amount.toLocaleString()}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {m.transactionDetail && (
-                        <div className="mt-2.5 p-3 rounded-xl bg-black/20 border border-white/10 space-y-1.5">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold opacity-90">
-                            <Receipt className="w-3.5 h-3.5" /> {formatPaymentId(m.transactionDetail.transferId)}
-                          </div>
-                          <div className="text-[11px] flex justify-between"><span className="opacity-70">{m.transactionDetail.direction === 'sent' ? 'To' : 'From'}</span><span className="font-bold">@{m.transactionDetail.otherParty.username}</span></div>
-                          <div className="text-[11px] flex justify-between"><span className="opacity-70">Amount</span><span className="font-bold">{m.transactionDetail.amount.toLocaleString()} pts</span></div>
-                          <div className="text-[11px] flex justify-between"><span className="opacity-70">When</span><span className="font-bold">{new Date(m.transactionDetail.createdAt).toLocaleString()}</span></div>
-                          {m.transactionDetail.reason && <div className="text-[11px] flex justify-between gap-2"><span className="opacity-70 shrink-0">Reason</span><span className="font-bold text-right truncate">{m.transactionDetail.reason}</span></div>}
-                        </div>
-                      )}
-
-                      <div
-                        className={`flex items-center justify-between gap-2 mt-2 pt-1 border-t ${
-                          m.sender === 'user'
-                            ? 'border-black/10 text-black/70'
-                            : 'border-zinc-800 text-zinc-500'
-                        } text-[10px]`}
-                      >
-                        <span>{m.time}</span>
-                        {m.sender === 'bot' && (
-                          <button
-                            onClick={() => {
-                              if (currentlySpeakingMsgId === m.id) {
-                                stopSpeaking();
-                              } else {
-                                speakText(m.text, m.id);
-                              }
-                            }}
-                            className="flex items-center gap-1 hover:text-noob transition-colors cursor-pointer"
-                          >
-                            {currentlySpeakingMsgId === m.id ? (
-                              <>
-                                <VolumeX className="w-3 h-3" /> Stop Voice
-                              </>
-                            ) : (
-                              <>
-                                <Volume2 className="w-3 h-3" /> Speak
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {isTyping && (
-                  <div className="flex items-center gap-2 text-xs text-zinc-400 bg-zinc-900/80 p-3 rounded-2xl border border-zinc-800 w-fit">
-                    <div className="w-2 h-2 rounded-full bg-noob animate-bounce" />
-                    <div className="w-2 h-2 rounded-full bg-noob animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 rounded-full bg-noob animate-bounce [animation-delay:0.4s]" />
-                    <span className="text-[11px] text-zinc-400 font-medium">Instant AI knowledge lookup...</span>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Chat Input Bar */}
-              <form
-                id="ai-support-form"
-                onSubmit={handleSendMessage}
-                className="mt-3 flex items-center gap-2 shrink-0"
-              >
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Ask about Terms, Privacy, Mini-Games, Music Hub..."
-                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-noob rounded-2xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleListening}
-                    className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-xl transition-colors cursor-pointer ${
-                      isListening
-                        ? 'bg-rose-500 text-white animate-pulse'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title={isListening ? 'Stop listening' : 'Voice typing'}
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!inputMessage.trim() || isTyping}
-                  className="px-4 py-3 bg-noob text-black font-bold rounded-2xl hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all text-xs sm:text-sm cursor-pointer shadow-md shadow-noob/20"
-                >
-                  <Send className="w-4 h-4" />
-                  <span className="hidden sm:inline">Ask AI</span>
-                </button>
-              </form>
-
-              <div className="flex items-center justify-between px-1 text-[11px] text-zinc-500">
-                <span>NOOB Smart Support Specialist • Online 24/7</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    stopSpeaking();
-                    setShowReviewModal(true);
-                  }}
-                  className="text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
-                >
-                  <LogOut className="w-3 h-3" /> End Chat &amp; Rate
-                </button>
-              </div>
-            </div>
+            <SupportChatPanel
+              messages={messages}
+              isTyping={isTyping}
+              inputMessage={inputMessage}
+              setInputMessage={setInputMessage}
+              onSend={handleSendMessage}
+              onQuickPrompt={handleQuickPrompt}
+              onPaymentIssue={handlePaymentIssueQuickAction}
+              loadingTransactions={loadingTransactions}
+              onReport={() => setActiveSupportTab('safety_report')}
+              onEndChat={() => { stopSpeaking(); setIsChatEnded(true); setShowReviewModal(true); }}
+              isChatEnded={isChatEnded}
+              reviewSubmitted={reviewSubmitted}
+              onOpenReview={() => setShowReviewModal(true)}
+              onNewConversation={() => { setMessages(buildGreeting()); setInputMessage(''); setIsChatEnded(false); setActivePaymentContext(null); }}
+              onSelectTransaction={handleSelectTransaction}
+              speakText={speakText}
+              stopSpeaking={stopSpeaking}
+              speakingId={currentlySpeakingMsgId}
+              isListening={isListening}
+              onToggleListening={toggleListening}
+              userAvatar={currentUser.avatar}
+              username={currentUser.username}
+              onLeave={onClose}
+            />
           )}
 
           {/* TAB 2: CALL US (DIRECT VOICE CALL TO LOGGED-IN ACCOUNT) */}

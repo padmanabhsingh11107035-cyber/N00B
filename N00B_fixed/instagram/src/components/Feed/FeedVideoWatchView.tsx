@@ -7,7 +7,6 @@ import { formatNoobPoints } from '../../utils/formatPoints';
 import { isMainAdmin } from '../../adminAccess';
 import { CommentsSheet } from './CommentsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
-import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import {
   toggleLikePost,
   toggleSavePost,
@@ -38,8 +37,6 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
   const [activePost, setActivePost] = useState(post);
   const [showComments, setShowComments] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
-  const [showShareToChat, setShowShareToChat] = useState(false);
-  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [showPlaylistSheet, setShowPlaylistSheet] = useState(false);
   const [playlists, setPlaylists] = useState<(LongVideoPlaylist & { hasVideo: boolean })[]>([]);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
@@ -67,17 +64,6 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
       alive = false;
     };
   }, [activePost.id]);
-
-  const copyPostLink = async () => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?post=${encodeURIComponent(activePost.id)}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareLinkCopied(true);
-      setTimeout(() => setShareLinkCopied(false), 2000);
-    } catch {
-      // clipboard blocked — nothing more to do here
-    }
-  };
 
   const handleToggleLike = () => {
     const before = activePost;
@@ -161,7 +147,6 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
     setActivePost(next);
     setShowComments(false);
     setShowShareSheet(false);
-    setShowShareToChat(false);
     setShowPlaylistSheet(false);
   };
 
@@ -300,20 +285,7 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
       )}
 
       {showShareSheet && (
-        <SharePostSheet
-          type="post"
-          linkCopied={shareLinkCopied}
-          onCopyLink={copyPostLink}
-          onSendInChat={() => {
-            setShowShareSheet(false);
-            setShowShareToChat(true);
-          }}
-          onClose={() => setShowShareSheet(false)}
-        />
-      )}
-
-      {showShareToChat && (
-        <SharePostToChatModal currentUser={currentUser} itemId={activePost.id} itemType="post" onClose={() => setShowShareToChat(false)} />
+        <SharePostSheet type="post" currentUser={currentUser} itemId={activePost.id} ownerUsername={activePost.username} onClose={() => setShowShareSheet(false)} />
       )}
 
       {showPlaylistSheet && (

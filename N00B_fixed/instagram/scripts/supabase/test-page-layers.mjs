@@ -39,7 +39,7 @@ check(/if \(!m\.isConnected \|\| !\(m\.loop \|\| m\.autoplay\)\) return;/.test(l
 check(/export const usePageHidden/.test(layers) && /const playing = isPlaying && !pageHidden;/.test(reels) && /\}, \[playing, currentReel\?\.id\]\);/.test(reels) && /pageHiddenRef\.current\) return;/.test(reels), 'the Reels (one shared player and song) are told they are hidden: silent underneath, playing again on return, and a tap on the profile cannot unmute them');
 
 section('5. In the app');
-check(/const \[activeTab, setActiveTabState\] = useState<NavTab>\('feed'\);/.test(app) && /const pageLayers = usePageLayers<AppLayer>\(activeTab\);/.test(app), 'the layers follow the page that is showing');
+check(/const \[activeTab, setActiveTabState\] = useState<NavTab>\(\(\) => \{ const t = typeof window !== 'undefined' && !isCoachingHost\(\) \? tabFromPath\(window\.location\.pathname\) : null; return t && t !== 'post' \? t : 'feed'; \}\);/.test(app) && /const pageLayers = usePageLayers<AppLayer>\(activeTab\);/.test(app), 'the layers follow the page that is showing');
 check(/const setActiveTab = useCallback\(\(tab: NavTab\) => \{ clearPageLayers\(\{ restore: false \}\); setActiveTabState\(tab\); \}, \[clearPageLayers\]\);/.test(app), 'every jump to a page ("open this post", "message this person"...) closes the layers first');
 check(!/viewingProfileUser|setViewingProfileUser/.test(app), 'the old "viewing profile" state (which replaced the page) is gone');
 check(/setActiveTab\('profile'\);\s*\} else \{[^}]*pageLayers\.push\(\{ id: 'p:' \+ user\.id, kind: 'profile', user \}\);/.test(app), 'someone else\'s profile is pushed as a layer; my own is the Profile tab');

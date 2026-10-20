@@ -111,11 +111,15 @@ import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './utils/pageLayers';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
+import { TAB_PATHS, cleanPath, contentPath, parseContentPath, parseContentQuery, tabFromPath, FEATURE_PAGES, type ContentRoute } from './utils/routes';
+import { afterHistoryIdle } from './utils/historyGate';
+import { showTabAddress, tabFromHistoryEntry } from './utils/addressBar';
 import { useAnyFullPage } from './utils/fullPage';
 import { setInAppLinkHandler } from './utils/inAppLinks';
 import { isOwnHost } from './utils/siteUrl';
 import { findPinnedPost, patchPinnedPost } from './services/pinnedFeed';
 import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner';
+import { SystemPage } from './components/Common/SystemPage';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
@@ -141,6 +145,7 @@ const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./compo
 const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
 const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
+const PublicContentPage = React.lazy(() => import('./components/Public/PublicContentPage').then((m) => ({ default: m.PublicContentPage })));
 const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
 const StoryViewerModal = React.lazy(() => import('./components/Stories/StoryViewerModal').then((m) => ({ default: m.StoryViewerModal })));
 const CreateStoryModal = React.lazy(() => import('./components/Stories/CreateStoryModal').then((m) => ({ default: m.CreateStoryModal })));
@@ -206,7 +211,8 @@ type AppLayer =
   | { id: 'fun'; kind: 'fun'; loc: FunLocation };
 
 export default function App() {
-  const [activeTab, setActiveTabState] = useState<NavTab>('feed');
+  // The page the address bar names (/explore, /reels ...) is the page that opens; anything else (/, a shared reel or profile link) opens Home.
+  const [activeTab, setActiveTabState] = useState<NavTab>(() => { const t = typeof window !== 'undefined' && !isCoachingHost() ? tabFromPath(window.location.pathname) : null; return t && t !== 'post' ? t : 'feed'; });   // ('post' is the Create button, a window over a page, never a page of its own)
   // "Go to previous page": a profile opens as a LAYER on top of the page that is showing (Home, Explore, Reels, Chat, another profile...) instead of replacing it, so the page
   // underneath stays exactly as it was (same posts in the same order, same scroll) and the "Go to previous page" button, or the phone's back button, brings it back (utils/pageLayers.tsx).
   const pageLayers = usePageLayers<AppLayer>(activeTab);
@@ -224,8 +230,8 @@ export default function App() {
   // Tracks the tab the user was on immediately before the current one, so
   // the Reels page's back arrow can return them to wherever they actually
   // came from (feed, explore, profile, etc.) instead of a hardcoded tab.
-  const activeTabRef = useRef<NavTab>('feed');
-  const previousTabRef = useRef<NavTab>('feed');
+  const activeTabRef = useRef<NavTab>(activeTab);
+  const previousTabRef = useRef<NavTab>(activeTab);
   useEffect(() => {
     previousTabRef.current = activeTabRef.current;
     activeTabRef.current = activeTab;
@@ -371,6 +377,17 @@ export default function App() {
   // A Fun page opened from its own address (/polls/<id>, /ask/<username>, /mood ...): shown to a visitor who is not logged in (they can look; the page asks them to log in for the
   // rest) and opened on top of Home once someone is logged in. `bootFun` is that address until it has been opened.
   const [bootFun, setBootFun] = useState<FunLocation | null>(() => parseFunPath(window.location.pathname));
+  // A post / reel / video / profile opened from its own address (/reel/<id>, /u/<name>, or the older ?reel=<id>): anyone can look at it without an account (PublicContentPage);
+  // once someone is logged in it opens inside the app. `bootRoute` is that address until the person leaves the public page.
+  const [bootRoute] = useState<ContentRoute | null>(() => (typeof window !== 'undefined' ? parseContentPath(window.location.pathname) || parseContentQuery(window.location.search) : null));
+  const [publicRouteOpen, setPublicRouteOpen] = useState(true);
+  // Opened from the address of a page (/reels ...) while logged out: the sign-in page says which page the person asked for, and the page opens after they log in.
+  const [bootNotice] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const path = cleanPath(window.location.pathname);
+    const feature = FEATURE_PAGES.find((f) => f.path === path && path !== '/');
+    return feature ? `Log in to open ${feature.title}.` : null;
+  });
   const [publicFunOpen, setPublicFunOpen] = useState(true);
   // A single failed/rejected call in the initial Promise.all (a network
   // blip, a transient 5xx, the brief boot gap right after a deploy) used to
@@ -488,6 +505,12 @@ export default function App() {
         } else if (hasRememberedTeamJoin()) {
           setPendingTeamPageJoin(true);
         }
+
+        const route = parseContentPath(window.location.pathname);
+        if (route?.kind === 'profile') setSharedProfileUsername(route.id);
+        else if (route?.kind === 'post') setSharedPostId(route.id);
+        else if (route?.kind === 'reel') setSharedReelId(route.id);
+        else if (route?.kind === 'video') setSharedVideoId(route.id);
 
         if (postParam) {
           setSharedPostId(postParam);
@@ -968,8 +991,14 @@ export default function App() {
     setBootFun(null);
   }, [currentUser?.id, bootFun]);
 
-  // The address follows the Fun page that is showing (so it can be copied and shared), and goes back to the home address when it closes.
+  // The address follows the page that is showing, so it can be copied, shared, refreshed and gone back to (like chatgpt.com/c/<id>):
+  //  * a Fun page or someone's profile opened on top of a page shows its own address (/polls/<id>, /u/<name>); closing it brings the page's own address back (the browser
+  //    restores the address of the history entry that Back returns to);
+  //  * a bottom-bar page shows /explore, /reels ... : every move to another page adds a history entry, so the browser's Back (and the phone's) returns to the page before.
   const topLayerData = pageLayers.layers[pageLayers.layers.length - 1]?.data;
+  const layerCount = pageLayers.layers.length;
+  const layerCountRef = useRef(layerCount);
+  layerCountRef.current = layerCount;
   useEffect(() => {
     if (!currentUser || bootFun) return;   // the address of a page that is still waiting to be opened is left alone
     try {
@@ -977,11 +1006,39 @@ export default function App() {
       if (topLayerData && topLayerData.kind === 'fun') {
         const want = funPath(topLayerData.loc);
         if (here !== want) window.history.replaceState(window.history.state, '', want + window.location.search);
-      } else if (parseFunPath(here)) {
-        window.history.replaceState(window.history.state, '', '/' + window.location.search);
+      } else if (topLayerData && topLayerData.kind === 'profile') {
+        const want = contentPath('profile', topLayerData.user.username);
+        if (here !== want) window.history.replaceState(window.history.state, '', want);
+      } else if (parseFunPath(here) || parseContentPath(here)) {
+        window.history.replaceState(window.history.state, '', TAB_PATHS[activeTabRef.current] + window.location.search);
       }
     } catch { /* the page works without it */ }
   }, [topLayerData, currentUser?.id, bootFun]);
+
+  const addressFirst = useRef(true);
+  const cameByHistory = useRef(false);
+  useEffect(() => {
+    if (!currentUser || bootFun || isCoachingHost()) return;
+    const tab = activeTab;
+    afterHistoryIdle(() => {
+      if (layerCountRef.current > 0) return;   // a page opened on top of this one has its own address
+      try { showTabAddress(tab, addressFirst.current || cameByHistory.current); } catch { /* the page works without it */ }
+      addressFirst.current = false;
+      cameByHistory.current = false;
+    });
+  }, [activeTab, currentUser?.id, bootFun, layerCount]);
+  // The browser's Back / Forward (or the phone's back button) landing on a page of the bottom bar: show that page
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      if (isCoachingHost()) return;
+      const tab = tabFromHistoryEntry(e.state, window.location.pathname);
+      if (!tab || tab === activeTabRef.current) return;
+      cameByHistory.current = true;
+      setActiveTabState(tab);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
 
   // --- SMART POST OR REEL ACTIONS ---
@@ -1432,32 +1489,25 @@ export default function App() {
   }
 
   if (initialLoadFailed) {
-    return (
-      <>
-        {isUpdateAvailable && <UpdateAvailableBanner />}
-        <div className="w-full h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-2xl">
-            ⚠️
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">Couldn't Load Your Data</h2>
-            <p className="text-xs text-zinc-400 mt-1.5 max-w-xs">
-              NOOB couldn't reach the server just now — this is usually a brief connection hiccup. Your account is fine.
-            </p>
-          </div>
-          <button
-            onClick={loadInitialData}
-            className="px-6 py-2.5 bg-noob text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      </>
-    );
+    // NOOB could not reach its servers: only the "short break" page is shown, and it tries again by itself
+    return <SystemPage kind="down" onRetry={loadInitialData} />;
   }
 
   // If no user is logged in, present the main Login / Sign Up Page
   if (!currentUser) {
+    if (bootRoute && publicRouteOpen) {
+      // a post / reel / video / profile opened from its link: anyone can look at it first; "Log in" leaves this page (the address stays, so it opens inside the app afterwards)
+      return (
+        <>
+          {isUpdateAvailable && <UpdateAvailableBanner />}
+          <ErrorBoundary showErrorDetails>
+            <React.Suspense fallback={<LazyFallback />}>
+              <PublicContentPage route={bootRoute} onLogin={() => setPublicRouteOpen(false)} />
+            </React.Suspense>
+          </ErrorBoundary>
+        </>
+      );
+    }
     if (bootFun && publicFunOpen) {
       // asking someone a question or looking at a poll from a shared link: look first, log in when it is time to send or vote
       const leaveFunPublic = () => setPublicFunOpen(false);   // (the address is kept: it opens as soon as someone has logged in)
@@ -1488,7 +1538,7 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
-        <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} />
+        <AuthView onAuthSuccess={handleAuthSuccess} notice={sessionEndedNotice || undefined} hint={bootNotice || undefined} />
       </>
     );
   }

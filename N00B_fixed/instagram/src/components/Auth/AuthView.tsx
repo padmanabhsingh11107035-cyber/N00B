@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ANDROID_APK_URL } from '../../utils/appVersion';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+import { ANDROID_APK_URL } from '../../utils/appVersion';
+
 import { isNativeApp } from '../../utils/siteUrl';
 import {
   Sparkles,
@@ -73,6 +75,8 @@ interface AuthViewProps {
   // Shown once, e.g. when a session was force-ended (account suspended)
   // rather than the user choosing to log out themselves.
   notice?: string;
+  // A plain note above the form (not a warning): e.g. "Log in to open NOOB Reels." when someone arrives from the address of a page.
+  hint?: string;
 }
 
 // Generate a random 6-character captcha code that's guaranteed to mix a
@@ -216,7 +220,7 @@ const BUSINESS_CATEGORIES = [
   'Local Business & Cafe'
 ];
 
-export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => {
+export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint }) => {
   const [mode, setMode] = useState<'signup' | 'login'>('login');
 
   // Sign-up is its own page: "Create Account" opens it as a new page (the phone's back button / browser Back return to the log-in page, like any other page), and the Back
@@ -1139,6 +1143,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice }) => 
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
           </div>
+        )}
+        {hint && !errorMessage && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-white/5 border border-white/15 text-zinc-200 text-xs text-center font-semibold" role="note" data-testid="auth-hint">{hint}</div>
         )}
         {errorMessage && (
           <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5 animate-shake">

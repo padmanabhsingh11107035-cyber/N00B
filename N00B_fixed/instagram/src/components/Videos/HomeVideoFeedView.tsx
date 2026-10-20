@@ -6,7 +6,6 @@ import { formatRelativeTime } from '../../utils/formatTime';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
-import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { VideoCommentsSheet } from './VideoCommentsSheet';
 import { EditVideoDetailsModal } from './EditVideoDetailsModal';
 import { LongVideoListPage } from './LongVideoListPage';
@@ -115,8 +114,6 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const [actionVideo, setActionVideo] = useState<LongVideo | null>(null);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
-  const [showShareToChat, setShowShareToChat] = useState(false);
-  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showLikesSheet, setShowLikesSheet] = useState(false);
@@ -231,25 +228,6 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     setRecents(rememberSearch(text));
   };
   const pickFilter = (f: FilterChip) => { setFilter(f); setShowFeedMenu(false); };
-
-  const copyVideoLink = async (videoId: string) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?video=${encodeURIComponent(videoId)}`;
-    try {
-      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = shareUrl;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); } catch { /* best effort */ }
-      document.body.removeChild(ta);
-    }
-    setShareLinkCopied(true);
-    setTimeout(() => setShareLinkCopied(false), 1800);
-  };
 
   const copyLiveLink = async (streamId: string) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(streamId)}`;
@@ -688,16 +666,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       )}
 
       {showShareSheet && actionVideo && (
-        <SharePostSheet
-          type="video"
-          linkCopied={shareLinkCopied}
-          onCopyLink={() => copyVideoLink(actionVideo.id)}
-          onSendInChat={() => { setShowShareSheet(false); setShowShareToChat(true); }}
-          onClose={() => setShowShareSheet(false)}
-        />
-      )}
-      {showShareToChat && actionVideo && (
-        <SharePostToChatModal currentUser={currentUser} itemId={actionVideo.id} itemType="video" onClose={() => setShowShareToChat(false)} />
+        <SharePostSheet type="video" currentUser={currentUser} itemId={actionVideo.id} ownerUsername={actionVideo.username} onClose={() => setShowShareSheet(false)} />
       )}
       {showComments && openVideo && (
         <VideoCommentsSheet video={openVideo} currentUser={currentUser} isMasterAdmin={isMasterAdmin} onClose={() => setShowComments(false)} />

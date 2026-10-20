@@ -16,15 +16,39 @@
 const isAppleTouchDevice =
   /iPad|iPhone|iPod/.test(self.navigator.userAgent) ||
   (self.navigator.platform === 'MacIntel' && self.navigator.maxTouchPoints > 1);
+//
+// What this listener does besides that: when a PAGE cannot be fetched at all (the website is down, or the phone is offline) or the server answers with an error (5xx), the person sees
+// NOOB's own "NOOB is taking a short break" page (public/app-down.html) instead of the browser's or the host's error page. Only page loads (navigations) and the four small
+// files that page needs are touched; every other request goes straight to the network exactly as before.
+const DOWN_CACHE = 'noob-down-page-v1';
+const DOWN_FILES = ['/app-down.html', '/boot-guard.js', '/noob-logo-circle.png', '/favicon-32.png'];
+const DOWN_PAGE = '/app-down.html';
+const downResponse = () => caches.open(DOWN_CACHE).then((c) => c.match(DOWN_PAGE)).then((r) => r || new Response('NOOB is taking a short break. Please try again in a minute.', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } }));
 if (!isAppleTouchDevice) {
-  self.addEventListener('fetch', () => {});
+  self.addEventListener('fetch', (event) => {
+    const req = event.request;
+    if (req.method !== 'GET') return;
+    if (req.mode === 'navigate') {
+      event.respondWith(fetch(req).then((res) => (res.status >= 500 && res.status < 600 ? downResponse() : res)).catch(() => downResponse()));
+      return;
+    }
+    let path = '';
+    try { const u = new URL(req.url); if (u.origin === self.location.origin) path = u.pathname; } catch (err) { /* not a normal address */ }
+    if (DOWN_FILES.indexOf(path) !== -1) {
+      event.respondWith(fetch(req).catch(() => caches.open(DOWN_CACHE).then((c) => c.match(path)).then((r) => r || Response.error())));
+    }
+  });
 }
 
 // Without these, a browser that already had the old sw.js (from before this file existed, or from
 // any earlier version) keeps running it — a new version only takes over once every tab of the site
 // is fully closed — so this exact fix would sit inert for anyone who already had NOOB open before.
 // skipWaiting + clients.claim make a newly-deployed worker take control on the very next load.
-self.addEventListener('install', () => { self.skipWaiting(); });
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  // keep the "short break" page and its few files on the device, so it can be shown when nothing can be fetched
+  event.waitUntil(caches.open(DOWN_CACHE).then((c) => Promise.all(DOWN_FILES.map((f) => c.add(new Request(f, { cache: 'reload' })).catch(() => undefined)))).catch(() => undefined));
+});
 self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
 
 self.addEventListener('push', (event) => {

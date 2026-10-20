@@ -11,6 +11,12 @@ import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
+import { installHistoryGate } from './utils/historyGate.ts';
+import { isKnownPath } from './utils/routes.ts';
+import { parseFunPath } from './utils/funRoutes.ts';
+import { isNativeApp } from './utils/siteUrl.ts';
+import { isCoachingHost } from './components/Study/studyStore.ts';
+import { SystemPage } from './components/Common/SystemPage.tsx';
 
 // The app's `/api/...` calls are written as relative paths, which only
 // resolve correctly when the frontend is served from the same origin as
@@ -50,6 +56,7 @@ console.log(
 );
 
 // The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
+installHistoryGate();   // lets the address bar wait while the browser is still walking back through history (utils/historyGate.ts)
 installOverlayScrollLock();   // pages that cover the screen are pages of their own: the page behind them does not scroll (utils/overlayScrollLock.ts)
 cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)
 initTheme();
@@ -93,11 +100,16 @@ if (splash) {
 // on the old one can change or be used by mistake. (NOOB's own support can still open the app there with ?old=1 — see MovedNotice.tsx.)
 const oldAddress = movedNoticeBlocksApp();
 
+// An address that is not a page of NOOB shows only the "page not found" page: the app is not even started (no sign-in screen, no loading, no browser error page).
+const pageNotFound = !oldAddress && !isNativeApp() && !isCoachingHost() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       {oldAddress ? (
         <MovedNotice />
+      ) : pageNotFound ? (
+        <SystemPage kind="not-found" />
       ) : (
         <MusicPlayerProvider>
           <App />
@@ -106,3 +118,6 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
+// Tells public/boot-guard.js that the app started (if it does not, that file shows the "NOOB is taking a short break" page by itself).
+(window as unknown as { __noobBooted?: boolean }).__noobBooted = true;

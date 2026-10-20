@@ -42,7 +42,7 @@ check(state.history.replaced === null, 'an address without the mark is left alon
 const files = ['src/utils/appVersion.ts', 'src/components/Common/UpdateAvailableBanner.tsx', 'src/components/ErrorBoundary.tsx', 'src/utils/lazyTab.tsx'];
 check(files.every((f) => /hardReload/.test(read(f)) && !/window\.location\.reload\(\)/.test(read(f))), 'the update banner, the automatic update, the crash screen and a missing page file all reload this way');
 check(/onClick=\{hardReload\}/.test(read('src/App.tsx')) && /cleanReloadMark\(\);/.test(read('src/main.tsx')), 'the chat "Reload NOOB" button does too, and the mark is removed at start-up');
-check(/\/version\.json[\s\S]{0,40}no-store/.test(read('public/_headers')) && /\/index\.html\s+Cache-Control: no-cache/.test(read('public/_headers').replace(/\r/g, '')) && !/addEventListener\('fetch', \(event\)/.test(read('public/sw.js')), 'the page, the version file and the service worker are never kept, and the service worker keeps no copies of its own');
+check(/\/version\.json[\s\S]{0,40}no-store/.test(read('public/_headers')) && /\/index\.html\s+Cache-Control: no-cache/.test(read('public/_headers').replace(/\r/g, '')) && !/\.put\(/.test(read('public/sw.js')) && /DOWN_FILES = \['\/app-down\.html', '\/boot-guard\.js', '\/noob-logo-circle\.png', '\/favicon-32\.png'\]/.test(read('public/sw.js')), 'the page, the version file and the service worker are never kept, and the service worker keeps no copies of its own pages (only the four small files of the "short break" page)');
 
 section('2. Burger while waiting, pages fetched ahead');
 const burger = read('src/components/Common/BurgerLoading.tsx');

@@ -171,16 +171,16 @@ function composeEmail(spec: Spec, hi: string, acct: Account | null): { subject: 
   const sections = [...spec.sections, { title: 'Your account', rows: accountRows }];
   const pill = spec.pill ? `<p style="margin:14px 0 0"><span style="display:inline-block;background:${TONES[spec.pill.tone][0]};color:${TONES[spec.pill.tone][1]};border-radius:999px;padding:6px 14px;font:800 11px/1 ${FONT};letter-spacing:.1em;text-transform:uppercase">${escapeHtml(spec.pill.text)}</span></p>` : '';
   const hero = spec.hero
-    ? `<tr><td style="padding:20px 26px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf6f3;background-image:linear-gradient(135deg,#fff7f1 0%,#f6f0ff 100%);border:1px solid #f0e2da;border-radius:18px"><tr><td align="center" style="padding:22px 16px">`
+    ? `<tr><td style="padding:20px 26px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#fbf6f3" style="background:#fbf6f3;background-image:linear-gradient(135deg,#fff7f1 0%,#f6f0ff 100%);border:1px solid #f0e2da;border-radius:18px"><tr><td align="center" style="padding:22px 16px">`
       + `<p style="margin:0;font:800 11px/1 ${FONT};letter-spacing:.16em;text-transform:uppercase;color:#b8714f">${escapeHtml(spec.hero.label)}</p>`
-      + `<p style="margin:10px 0 0;font:900 28px/1.2 ${FONT};letter-spacing:-.5px;color:#16161d">${escapeHtml(spec.hero.value)}</p>`
+      + `<p style="margin:10px 0 0;font:900 28px/1.2 ${FONT};letter-spacing:-.5px;color:#000000;-webkit-text-fill-color:#000000">${escapeHtml(spec.hero.value)}</p>`   // black, and kept black in a mail app's dark mode (which turns dark text white but leaves this light card as it is)
       + (spec.hero.note ? `<p style="margin:8px 0 0;font:500 12px/1.5 ${FONT};color:#6b6b78">${escapeHtml(spec.hero.note)}</p>` : '')
       + `</td></tr></table></td></tr>` : '';
   const button = spec.button
     ? `<tr><td align="center" style="padding:26px 26px 0">${spec.button.note ? `<p style="margin:0 0 12px;font:500 12px/1.6 ${FONT};color:#6b6b78">${escapeHtml(spec.button.note)}</p>` : ''}`
       + `<a href="${escapeHtml(spec.button.href)}" style="display:inline-block;background:${BRAND};color:#1a0f0a;font:800 14px/1 ${FONT};text-decoration:none;padding:15px 30px;border-radius:14px">${escapeHtml(spec.button.label)}</a>`
       + `<p style="margin:10px 0 0;font:400 11px/1.4 ${FONT};color:#9a8f8a;word-break:break-all">${escapeHtml(spec.button.href)}</p></td></tr>` : '';
-  const html = `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${escapeHtml(spec.preheader)}</div>`
+  const body = `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${escapeHtml(spec.preheader)}</div>`
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f2f7"><tr><td align="center" style="padding:24px 12px">`
     + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:24px;border:1px solid #e8e6ef;border-collapse:separate;overflow:hidden">`
     + `<tr><td style="background:${BRAND};background-image:linear-gradient(135deg,#f0996d 0%,#D97757 46%,#8b5cf6 150%);padding:20px 26px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>`
@@ -194,6 +194,8 @@ function composeEmail(spec: Spec, hi: string, acct: Account | null): { subject: 
     + button
     + `<tr><td style="padding:28px 26px 26px"><p style="margin:0;padding-top:18px;border-top:1px solid #f0edf3;font:400 12px/1.7 ${FONT};color:#8a8794">You are getting this email because of an action on your NOOB account. If you did not do this, open NOOB and change your password straight away.<br/>— The NOOB team</p></td></tr>`
     + `</table></td></tr></table>`;
+  // A whole page that says "light only", so mail apps that honour it do not re-colour the email in dark mode; the big figure is also kept black on its own (above).
+  const html = `<!doctype html><html lang="en" style="color-scheme:light only"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><style>:root{color-scheme:light only;supported-color-schemes:light}</style></head><body style="margin:0;padding:0;background:#f3f2f7">${body}</body></html>`;
   const textSections = sections.map((s) => { const r = keepRows(s.rows); return r.length ? `${s.title.toUpperCase()}\n${r.map((x) => `${x[0]}: ${x[1]}`).join('\n')}` : ''; }).filter(Boolean);
   const textLists = (spec.lists || []).filter((l) => l.items.length).map((l) => `${l.title}\n${l.items.map((i) => `  - ${i}`).join('\n')}`);
   const text = [`${hi} ${spec.intro}`, spec.hero ? `${spec.hero.label}: ${spec.hero.value}${spec.hero.note ? ` (${spec.hero.note})` : ''}` : '', ...textSections, ...textLists,

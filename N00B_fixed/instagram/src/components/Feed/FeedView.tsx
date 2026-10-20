@@ -704,7 +704,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       )}
 
-      {/* Random post-bonus offer — posts, reels and long videos normally award a flat 25 NOOB
+      {/* Random post-bonus offer — posts, reels and long videos normally award a flat 10,000,000 NOOB
           Points on publish; the server rolls a one-off 5,000,000–30,000,000 bonus instead when
           this offer is accepted, credited the moment anything actually gets published. Rejecting
           just dismisses it; it quietly expires server-side and that next post earns the normal 25.

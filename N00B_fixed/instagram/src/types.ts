@@ -107,7 +107,7 @@ export interface User {
   // browser — admin-only, same visibility as ipAddress. Persists after they go offline (unlike the
   // live Presence-based online/offline status, which only ever reflects a connection right now).
   lastSeenAt?: string;
-  lastSeenPlatform?: 'app' | 'web';
+  lastSeenPlatform?: 'app' | 'pwa' | 'web';
   // Admin-only: has this person switched notifications on (a saved push registration exists), when that was last confirmed, and
   // roughly what kind of phone / browser it is. The registration itself never leaves the server.
   pushEnabled?: boolean;

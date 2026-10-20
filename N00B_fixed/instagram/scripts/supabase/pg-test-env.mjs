@@ -27,6 +27,8 @@ export async function createTestDb({ autoExpose = true, upTo = null } = {}) {
       email text,
       encrypted_password text,
       raw_user_meta_data jsonb default '{}'::jsonb,
+      raw_app_meta_data jsonb default '{}'::jsonb,
+      last_sign_in_at timestamptz,
       banned_until timestamptz,
       created_at timestamptz default now()
     );

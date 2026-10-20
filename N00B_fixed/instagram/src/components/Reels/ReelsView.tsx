@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
 import { flushSync } from 'react-dom';
 import { BurgerLoading } from '../Common/BurgerLoading';
 import { orderUnseenFirst } from '../../utils/seenContent';
@@ -107,6 +108,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   onNavigateToProfile,
   onUseSound
 }) => {
+  const visibleArea = useVisibleArea();   // the comments screen is exactly the part above the keyboard, opaque
   const hideOthersCounts = useSetting('likes.hideOthers');
   const [currentIndex, setCurrentIndex] = useState(0);
   // Sound: on unless the person switched it off. `soundBlocked` = the browser refused sound (no real tap yet), so the reel plays silently and
@@ -223,8 +225,11 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
     }
   }, [currentReel, nextReel]);
 
+  // A watch is told to the server once per reel per time the page is open (the server counts one view per person however often they watch; this just saves the repeats).
+  const viewedReelsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (currentReel) {
+    if (currentReel && !viewedReelsRef.current.has(currentReel.id)) {
+      viewedReelsRef.current.add(currentReel.id);
       recordReelView(currentReel.id).catch(console.error);
     }
     // Always start a freshly-shown reel playing, matching TikTok/Reels-style
@@ -1320,7 +1325,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && (
         <div
-          className="absolute inset-x-0 bottom-0 z-40 bg-zinc-950/95 backdrop-blur-md border-t border-neutral-800 rounded-t-2xl p-4 max-h-[60%] flex flex-col animate-in slide-in-from-bottom duration-200"
+          className="fixed inset-x-0 top-0 bottom-0 z-[60] bg-zinc-950 p-4 flex flex-col animate-in slide-in-from-bottom duration-200"
+          style={visibleAreaStyle(visibleArea)}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between pb-2 border-b border-neutral-800">

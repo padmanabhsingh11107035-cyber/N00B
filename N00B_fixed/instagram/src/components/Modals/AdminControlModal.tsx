@@ -74,6 +74,12 @@ import { AdminSignInPanel } from './AdminSignInPanel';
 import { AdminTeamPanel } from './AdminTeamPanel';
 import { AdminStudyPanel } from './AdminStudyPanel';
 import { AdminAnalyticsPanel } from './AdminAnalyticsPanel';
+import { hasNativeApp } from '../../utils/appPlatform';
+import { AdminUserLogsPanel } from './AdminUserLogsPanel';
+import { AdminAccountsPanel } from './AdminAccountsPanel';
+import { AdminVisitorsPanel } from './AdminVisitorsPanel';
+import { AdminUserTransactions } from './AdminUserTransactions';
+import { phoneFacts } from '../../utils/phoneLookup';
 import { AdminDailyNoobPanel } from './AdminDailyNoobPanel';
 import { AdminStoragePanel } from './AdminStoragePanel';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
@@ -108,7 +114,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'settings';
+type AdminTab = 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1404,6 +1410,45 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('userLogs')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'userLogs'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <History className="w-4 h-4" /> User logs
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('accounts')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'accounts'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Coins className="w-4 h-4" /> Accounts
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('visitors')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'visitors'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Globe2 className="w-4 h-4" /> Visitors
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('settings')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -1518,9 +1563,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                     const isOnline = !!presence?.length;
                     const onApp = !!presence?.some((p) => p.platform === 'app');
                     const onWeb = !!presence?.some((p) => p.platform === 'web');
-                    // Has the installed app, not just a browser — live right now, or the last time they
-                    // were seen at all (so this still shows for someone currently offline).
-                    const hasApp = onApp || user.lastSeenPlatform === 'app';
+                    // Has the real Android app, not just a browser or the website on the home screen: on it right now, or last seen on it within the last 14 days.
+                    // Someone who deleted the app and now opens NOOB in a browser is last seen on the web, so the tick goes at once.
+                    const hasApp = hasNativeApp({ liveOnApp: onApp, lastSeenPlatform: user.lastSeenPlatform, lastSeenAt: user.lastSeenAt });
 
                     return (
                       <div
@@ -1552,7 +1597,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-black text-white truncate">@{user.username}</span>
                               {user.isVerified && <VerifiedBadge size="sm" />}
-                              {hasApp && <BadgeCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" title="Has the NOOB app installed" />}
+                              {hasApp && <span title="Has the NOOB Android app installed" aria-label="Has the NOOB Android app installed" data-testid="app-tick" className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-sky-500 ring-1 ring-sky-300/50 shrink-0"><Check className="w-2.5 h-2.5 text-white" strokeWidth={4} /></span>}
                               {isOnline ? (
                                 <span className="flex items-center gap-1 text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30 shrink-0">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -1565,7 +1610,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
                                   {user.lastSeenAt ? `Last seen ${formatRelativeTime(user.lastSeenAt)}` : 'Offline'}
                                   {user.lastSeenPlatform === 'app' && <Smartphone className="w-2.5 h-2.5" />}
-                                  {user.lastSeenPlatform === 'web' && <Globe2 className="w-2.5 h-2.5" />}
+                                  {(user.lastSeenPlatform === 'web' || user.lastSeenPlatform === 'pwa') && <Globe2 className="w-2.5 h-2.5" />}
                                 </span>
                               )}
                               {isSuspended && (
@@ -2632,6 +2677,12 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </div>
           ) : activeTab === 'team' && main ? (
             <AdminTeamPanel onPendingChange={setTeamPendingCount} />
+          ) : activeTab === 'userLogs' && main ? (
+            <AdminUserLogsPanel />
+          ) : activeTab === 'accounts' && main ? (
+            <AdminAccountsPanel />
+          ) : activeTab === 'visitors' && main ? (
+            <AdminVisitorsPanel />
           ) : activeTab === 'analytics' && main ? (
             <AdminAnalyticsPanel />
           ) : activeTab === 'study' && main ? (
@@ -3125,6 +3176,21 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                         : 'Not provided'}
                     </span>
                   </div>
+                  {(() => {
+                    const pf = phoneFacts(selectedUserForDetails.countryCode, selectedUserForDetails.mobileNumber);
+                    if (!pf) return null;
+                    const signedUpAs = [selectedUserForDetails.firstName, selectedUserForDetails.lastName].filter(Boolean).join(' ') || selectedUserForDetails.displayName;
+                    return (
+                      <div className="rounded-xl bg-zinc-950/60 border border-zinc-800 p-2.5 space-y-1.5" data-testid="phone-lookup">
+                        <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Full number</span><span className="text-zinc-200 font-mono">{pf.e164}</span></div>
+                        <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Country</span><span className="text-zinc-200">{pf.countryName || pf.iso || 'Unknown'}</span></div>
+                        <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Name given at sign-up</span><span className="text-zinc-200 text-right">{signedUpAs || 'Not provided'}</span></div>
+                        <a href={pf.truecallerUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[11px] font-bold hover:bg-sky-500/25 transition-colors">
+                          <Phone className="w-3 h-3" /> See the registered name on Truecaller
+                        </a>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -3283,6 +3349,9 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                   </div>
                 </div>
               </div>
+
+              {/* every NOOB Points transaction of this user */}
+              <AdminUserTransactions userId={selectedUserForDetails.id} />
 
               {/* Platform Activity Stats */}
               <div className="space-y-2">

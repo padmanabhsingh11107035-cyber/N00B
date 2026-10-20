@@ -118,6 +118,8 @@ import { UpdateAvailableBanner } from './components/Common/UpdateAvailableBanner
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
+import { detectPlatform } from './utils/appPlatform';
+import { startVisitTracking, noteVisit } from './services/visitTracker';
 import { getDeviceId, getDeviceLabel } from './utils/deviceId';
 import { initPushNotifications } from './services/pushNotifications';
 import { Capacitor } from '@capacitor/core';
@@ -600,6 +602,10 @@ export default function App() {
     window.history.replaceState({}, '', url.toString());
   }, [pendingJoinTeam, currentUser]);
 
+  // the admin panel's Visitors page: this device opened NOOB (also with no account), and again once the person logs in so the visit is linked to them
+  useEffect(() => { startVisitTracking(); }, []);
+  useEffect(() => { if (currentUser?.id) void noteVisit(true); }, [currentUser?.id]);
+
   useEffect(() => {
     if (currentUser) {
       initPushNotifications();
@@ -801,10 +807,8 @@ export default function App() {
   // Keeps this account's "last seen" moving while the tab/app stays open (the admin panel's last-seen column).
   useEffect(() => {
     if (!currentUser) return;
-    // "Installed" means either a true native (Capacitor) wrapper OR a PWA added to the Home Screen
-    // and launched standalone — Capacitor's own check alone misses that second, far more common case
-    // (which is what showed as "web" for an account genuinely using the installed Home Screen app).
-    const platform = (Capacitor.isNativePlatform() || isInstalled()) ? 'app' : 'web';
+    // 'app' is the real Android app only; the website put on the home screen is 'pwa' (still the website, so no "has the app" tick in the admin panel); a browser tab is 'web'.
+    const platform = detectPlatform(Capacitor.isNativePlatform(), isInstalled());
     const stopLastSeen = startLastSeenHeartbeat(platform);
     return () => stopLastSeen();
   }, [currentUser?.id]);
@@ -815,7 +819,7 @@ export default function App() {
   const activityStatusOn = useSetting('activity.status');
   useEffect(() => {
     if (!currentUser) return;
-    const platform = (Capacitor.isNativePlatform() || isInstalled()) ? 'app' : 'web';
+    const platform = detectPlatform(Capacitor.isNativePlatform(), isInstalled());
     let cancelled = false;
     let stopPresence = () => {};
     void loadSettings().then(() => {

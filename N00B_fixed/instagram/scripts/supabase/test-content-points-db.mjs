@@ -30,18 +30,18 @@ const ann = await mkUser('ann'), bob = await mkUser('bob'), cat = await mkUser('
 
 section('1. A post: told what was received, then deleted');
 const p1 = await makePost(ann);
-check(await points(ann) === 25, 'publishing a post gives 25 points');
+check(await points(ann) === 10000000, 'publishing a post gives 10,000,000 points');
 let n = await notes(ann, 'points_earned');
-check(n.length === 1 && /You received 25 NOOB Points for publishing a post\./.test(n[0].message) && /received/i.test(n[0].title), 'and a notification says how many and for what', JSON.stringify(n));
-check(n[0] && n[0].data.contentType === 'post' && n[0].data.amount === 25 && n[0].data.contentId === p1, 'the notification carries what it was for');
-check((await db.query(`select 1 from public.content_point_awards where content_type = 'post' and content_id = $1 and amount = 25`, [p1])).rows.length === 1, 'the award is remembered against that post');
+check(n.length === 1 && /You received 10,000,000 NOOB Points for publishing a post\./.test(n[0].message) && /received/i.test(n[0].title), 'and a notification says how many and for what', JSON.stringify(n));
+check(n[0] && n[0].data.contentType === 'post' && n[0].data.amount === 10000000 && n[0].data.contentId === p1, 'the notification carries what it was for');
+check((await db.query(`select 1 from public.content_point_awards where content_type = 'post' and content_id = $1 and amount = 10000000`, [p1])).rows.length === 1, 'the award is remembered against that post');
 await ownerDelete(ann, 'posts', p1);
-check(await points(ann) === 0, 'deleting the post takes the 25 points back');
+check(await points(ann) === 0, 'deleting the post takes the 10,000,000 points back');
 let l = await ledger(ann);
-check(l.length === 2 && l[1].amount === -25 && /^Points taken back: you deleted the post you earned them for$/.test(l[1].reason), 'the points history says why', JSON.stringify(l));
+check(l.length === 2 && l[1].amount === -10000000 && /^Points taken back: you deleted the post you earned them for$/.test(l[1].reason), 'the points history says why', JSON.stringify(l));
 n = await notes(ann, 'points_removed');
-check(n.length === 1 && /You deleted your post, so the 25 NOOB Points you earned for it were taken back\./.test(n[0].message) && /taken back/i.test(n[0].title), 'and a notification says so', JSON.stringify(n));
-check((await db.query(`select taken_back_at, taken_back_amount::text from public.content_point_awards where content_id = $1`, [p1])).rows[0].taken_back_amount === '25', 'the award is marked as taken back (once)');
+check(n.length === 1 && /You deleted your post, so the 10,000,000 NOOB Points you earned for it were taken back\./.test(n[0].message) && /taken back/i.test(n[0].title), 'and a notification says so', JSON.stringify(n));
+check((await db.query(`select taken_back_at, taken_back_amount::text from public.content_point_awards where content_id = $1`, [p1])).rows[0].taken_back_amount === '10000000', 'the award is marked as taken back (once)');
 
 section('2. A reel with the big bonus offer');
 await db.query(`insert into public.post_bonus_offers (user_id, amount, created_at, expires_at, claimed_at) values ($1, 12345678, now(), now() + interval '30 minutes', null) on conflict (user_id) do update set amount = 12345678, expires_at = now() + interval '30 minutes', claimed_at = null`, [bob]);
@@ -52,29 +52,29 @@ check(l.length === 1 && /Published a reel \(bonus offer\)/.test(l[0].reason), 't
 n = await notes(bob, 'points_earned');
 check(n.length === 1 && /12,345,678 NOOB Points for publishing a reel - your bonus offer!/.test(n[0].message) && n[0].data.bonus === true, 'and so does the notification', JSON.stringify(n));
 await ownerDelete(bob, 'reels', r1);
-check(await points(bob) === 0, 'deleting the reel takes back exactly that amount, not the normal 25');
+check(await points(bob) === 0, 'deleting the reel takes back exactly that amount, not the normal 10,000,000');
 l = await ledger(bob);
 check(l[1].amount === -12345678 && /you deleted the reel you earned them for/.test(l[1].reason), 'with the reason in the history', JSON.stringify(l));
 check((await db.query(`select claimed_at is not null as c from public.post_bonus_offers where user_id = $1`, [bob])).rows[0].c, 'the offer stays used: deleting does not make it available again');
 
 section('3. A video; the points were already spent');
 const v1 = await makeVideo(cat);
-check(await points(cat) === 25, 'uploading a video gives 25 points');
+check(await points(cat) === 10000000, 'uploading a video gives 10,000,000 points');
 check((await notes(cat, 'points_earned'))[0].message.includes('for uploading a video'), 'the notification says "uploading a video"');
 await db.query(`update public.profiles set noob_points = 10 where id = $1`, [cat]);   // she spent 15 of them
 await ownerDelete(cat, 'long_videos', v1);
 check(await points(cat) === 0, 'only what is left is taken (10), and the balance is not pushed below zero');
 l = await ledger(cat);
-check(l[l.length - 1].amount === -10 && /10 of 25 could be taken - the rest was already spent/.test(l[l.length - 1].reason), 'the history says how much could be taken', JSON.stringify(l));
+check(l[l.length - 1].amount === -10 && /10 of 10,000,000 could be taken - the rest was already spent/.test(l[l.length - 1].reason), 'the history says how much could be taken', JSON.stringify(l));
 n = await notes(cat, 'points_removed');
-check(n.length === 1 && /10 of the 25 NOOB Points .* taken back \(the rest was already spent\)/.test(n[0].message), 'and so does the notification', JSON.stringify(n));
+check(n.length === 1 && /10 of the 10,000,000 NOOB Points .* taken back \(the rest was already spent\)/.test(n[0].message), 'and so does the notification', JSON.stringify(n));
 
 section('4. Nothing left at all');
 const p2 = await makePost(dan);
 await db.query(`update public.profiles set noob_points = 0 where id = $1`, [dan]);
 await ownerDelete(dan, 'posts', p2);
 l = await ledger(dan);
-check(await points(dan) === 0 && l[l.length - 1].amount === 0 && /0 of 25 could be taken/.test(l[l.length - 1].reason), 'an empty wallet gets a history line that explains, and stays at zero', JSON.stringify(l));
+check(await points(dan) === 0 && l[l.length - 1].amount === 0 && /0 of 10,000,000 could be taken/.test(l[l.length - 1].reason), 'an empty wallet gets a history line that explains, and stays at zero', JSON.stringify(l));
 
 section('5. An admin removes it');
 const p3 = await makePost(eve);
@@ -82,7 +82,7 @@ await asClaim(root, async () => db.query(`delete from public.posts where id = $1
 check(await points(eve) === 0, 'points are taken back when a post is removed by an admin too');
 l = await ledger(eve);
 check(/the post you earned them for was removed/.test(l[l.length - 1].reason), 'the history says it was removed, not that she deleted it', JSON.stringify(l));
-check(/Your post was removed, so the 25 NOOB Points/.test((await notes(eve, 'points_removed'))[0].message), 'and so does the notification');
+check(/Your post was removed, so the 10,000,000 NOOB Points/.test((await notes(eve, 'points_removed'))[0].message), 'and so does the notification');
 
 section('6. Other cases');
 const fay = await mkUser('fay');
@@ -96,14 +96,14 @@ check(await points(gus) === 500, 'a post that earned nothing (made before) takes
 const hal = await mkUser('hal');
 await rpc(hal, `select public.set_my_settings('{"notif.points": false}'::jsonb) as r`);
 const p5 = await makePost(hal);
-check(await points(hal) === 25 && (await notes(hal, 'points_earned')).length === 0, 'with "points" notifications switched off the points still arrive, just no notification');
+check(await points(hal) === 10000000 && (await notes(hal, 'points_earned')).length === 0, 'with "points" notifications switched off the points still arrive, just no notification');
 await ownerDelete(hal, 'posts', p5);
 check(await points(hal) === 0 && (await notes(hal, 'points_removed')).length === 0 && (await ledger(hal)).length === 2, 'and they are still taken back, with the history line');
 const ida = await mkUser('ida');
 const pa = await makePost(ida), pb = await makePost(ida);
-check(await points(ida) === 50, 'two posts, 50 points');
+check(await points(ida) === 20000000, 'two posts, 20,000,000 points');
 await ownerDelete(ida, 'posts', pa);
-check(await points(ida) === 25, 'deleting one takes back only its own 25');
+check(await points(ida) === 10000000, 'deleting one takes back only its own 10,000,000');
 
 section('7. Safe and private');
 let denied = 0;
@@ -113,10 +113,11 @@ for (const fn of ['claim_post_bonus_or_default(null, 1, \'x\')', 'take_back_cont
 check(denied === 2, 'nobody can call the points functions directly');
 check((await db.query(`select count(*)::int n from pg_proc where proname = 'claim_post_bonus_or_default'`)).rows[0].n === 1, 'there is one points-claiming function (the old three-argument one is gone)');
 const sql = fs.readFileSync('supabase/migrations/20261019000001_points_for_content.sql', 'utf8');
-await db.exec(sql);
+await db.exec(sql);   // run again (this puts the old amount of 25 back for a moment) and then the newer migration, in the order they are run for real
+await db.exec(fs.readFileSync('supabase/migrations/20261020000001_points_views_ticks.sql', 'utf8'));
 const jo = await mkUser('jo');
 await makePost(jo);
-check(await points(jo) === 25, 'running the migration twice changes nothing');
+check(await points(jo) === 10000000, 'running the migration twice (and the newer one after it) changes nothing');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

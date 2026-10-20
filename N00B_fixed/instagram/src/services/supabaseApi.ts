@@ -2902,7 +2902,7 @@ export async function fetchTypingUsers(chatId: string): Promise<User[]> {
 // ----------------------------------------------------------------------------- live online/offline presence
 
 const PRESENCE_CHANNEL = 'presence:online-users';
-export type PresencePlatform = 'app' | 'web';
+export type PresencePlatform = 'app' | 'pwa' | 'web';
 // `hidden`: the person turned Activity status off. Everybody's app then shows them as offline; only the admin panel (which keeps the app running) still counts them.
 export interface PresenceEntry { platform: PresencePlatform; online_at: string; hidden?: boolean }
 

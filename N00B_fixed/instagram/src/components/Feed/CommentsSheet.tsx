@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
 import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, PostComment, User } from '../../types';
 import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike, fetchUserById } from '../../services/api';
@@ -16,6 +17,7 @@ interface CommentsSheetProps {
 }
 
 export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser, onClose, onNavigateToProfile }) => {
+  const visibleArea = useVisibleArea();   // the screen is exactly the part above the keyboard, opaque: nothing of the page behind shows
   const openProfile = async (userId?: string) => {
     if (!userId || !onNavigateToProfile) return;
     const user = await fetchUserById(userId);
@@ -240,9 +242,10 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   return (
     <div
       id="comments-sheet-modal"
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-x-0 top-0 bottom-0 z-50 bg-black flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={visibleAreaStyle(visibleArea)}
     >
-      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl h-full sm:h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">

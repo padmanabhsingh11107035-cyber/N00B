@@ -373,7 +373,7 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
               <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase block">Posts &amp; Reels</span>
                 <span className="text-xl font-black text-white block mt-1">{postsCount}</span>
-                <span className="text-[10px] text-cyan-400 font-semibold mt-0.5 block">+25 pts / post</span>
+                <span className="text-[10px] text-cyan-400 font-semibold mt-0.5 block">+10M pts / post</span>
               </div>
               <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-3">
                 <span className="text-[10px] font-bold text-zinc-400 uppercase block">Followers</span>
@@ -497,11 +497,11 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
                   <span className="text-zinc-300">📸 Publish Image Post or Reel</span>
-                  <span className="font-bold text-noob">+25 pts</span>
+                  <span className="font-bold text-noob">+10,000,000 pts</span>
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
-                  <span className="text-zinc-300">💬 Comments &amp; High-Engagement Reactions</span>
-                  <span className="font-bold text-noob">+5 pts</span>
+                  <span className="text-zinc-300">💬 Every comment you write</span>
+                  <span className="font-bold text-noob">+1,000,000 pts</span>
                 </div>
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80">
                   <span className="text-zinc-300">🏆 Top 10 Global Leaderboard Finish</span>

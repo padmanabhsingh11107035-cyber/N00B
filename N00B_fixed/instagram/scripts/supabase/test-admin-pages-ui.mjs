@@ -62,12 +62,12 @@ check(I.newVisitorId(() => 'abcd1234-abcd-1234-abcd-123456789012') === 'abcd1234
 const tracker = read('src/services/visitTracker.ts');
 check(/record_visit/.test(tracker) && /MIN_GAP_MS = 10 \* 60 \* 1000/.test(tracker) && /catch \{[^}]*never in the way/.test(tracker), 'the tracker calls record_visit, not more than every 10 minutes, and never gets in the way');
 
-section('4. The phone: full number, country, Truecaller');
+section('4. The phone: full number, country, the name given at sign-up');
 const Ph = await load('src/utils/phoneLookup.ts');
 const f = Ph.phoneFacts('🇮🇳 India (+91)', '9123456789');
-check(f.e164 === '+919123456789' && f.iso === 'IN' && f.countryName === 'India' && f.truecallerUrl === 'https://www.truecaller.com/search/in/9123456789', 'an Indian number that itself starts with 91 is not mistaken for already having its code', JSON.stringify(f));
-check(Ph.phoneFacts('🇬🇧 United Kingdom (+44)', '7911 123456').truecallerUrl === 'https://www.truecaller.com/search/gb/7911123456' && Ph.phoneFacts('🇺🇸 United States (+1)', '2025550123').e164 === '+12025550123', 'other countries');
-check(Ph.phoneFacts('🇮🇳 India (+91)', '') === null && Ph.phoneFacts(null, null) === null, 'no number, no link');
+check(f.e164 === '+919123456789' && f.iso === 'IN' && f.countryName === 'India' && !('truecallerUrl' in f), 'an Indian number that itself starts with 91 is not mistaken for already having its code', JSON.stringify(f));
+check(Ph.phoneFacts('🇬🇧 United Kingdom (+44)', '7911 123456').e164 === '+447911123456' && Ph.phoneFacts('🇺🇸 United States (+1)', '2025550123').e164 === '+12025550123', 'other countries');
+check(Ph.phoneFacts('🇮🇳 India (+91)', '') === null && Ph.phoneFacts(null, null) === null, 'no number, nothing shown');
 check(Ph.isoFromLabel('🇦🇪 United Arab Emirates (+971)') === 'AE', 'the country comes from the flag in its label');
 
 section('5. In the admin panel');
@@ -78,7 +78,7 @@ for (const [tab, label] of [['userLogs', 'User logs'], ['accounts', 'Accounts'],
 }
 check(/activeTab === 'userLogs' && main \? \(\s*<AdminUserLogsPanel \/>/.test(admin) && /activeTab === 'accounts' && main \? \(\s*<AdminAccountsPanel \/>/.test(admin) && /activeTab === 'visitors' && main \? \(\s*<AdminVisitorsPanel \/>/.test(admin), 'each tab shows its page');
 check(/<AdminUserTransactions userId=\{selectedUserForDetails\.id\} \/>/.test(admin), 'one user\'s details show all that user\'s transactions');
-check(/data-testid="phone-lookup"/.test(admin) && /See the registered name on Truecaller/.test(admin) && /Name given at sign-up/.test(admin), 'the phone box shows the full number, country, the sign-up name and a Truecaller button');
+check(/data-testid="phone-lookup"/.test(admin) && !/truecaller/i.test(admin) && /Name given at sign-up/.test(admin) && /NOOB cannot see the name a phone company has on record/.test(admin), 'the phone box shows the full number, country and the name the person typed at sign-up, and says plainly what it is');
 const panels = ['AdminUserLogsPanel', 'AdminAccountsPanel', 'AdminVisitorsPanel'].map((n) => read(`src/components/Modals/${n}.tsx`));
 check(panels.every((p) => /Download/.test(p) && /text\/csv/.test(p)), 'each page can be downloaded as a spreadsheet');
 check(/Show more/.test(panels[0]) && /Show more/.test(panels[1]) && /Show more/.test(panels[2]), 'and pages through long lists');

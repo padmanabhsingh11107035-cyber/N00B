@@ -3184,10 +3184,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                       <div className="rounded-xl bg-zinc-950/60 border border-zinc-800 p-2.5 space-y-1.5" data-testid="phone-lookup">
                         <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Full number</span><span className="text-zinc-200 font-mono">{pf.e164}</span></div>
                         <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Country</span><span className="text-zinc-200">{pf.countryName || pf.iso || 'Unknown'}</span></div>
-                        <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Name given at sign-up</span><span className="text-zinc-200 text-right">{signedUpAs || 'Not provided'}</span></div>
-                        <a href={pf.truecallerUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[11px] font-bold hover:bg-sky-500/25 transition-colors">
-                          <Phone className="w-3 h-3" /> See the registered name on Truecaller
-                        </a>
+                        <div className="flex items-center justify-between gap-3 text-[11px]"><span className="text-zinc-500">Name given at sign-up</span><span className="text-zinc-200 text-right" data-testid="phone-signup-name">{signedUpAs || 'Not provided'}</span></div>
+                        <p className="text-[10px] leading-snug text-zinc-500">This is the name the person typed in themselves. NOOB cannot see the name a phone company has on record for a number.</p>
                       </div>
                     );
                   })()}

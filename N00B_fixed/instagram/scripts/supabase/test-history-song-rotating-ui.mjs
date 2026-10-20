@@ -83,7 +83,7 @@ check(!/AUDD_API_TOKEN\s*=\s*['"][A-Za-z0-9]/.test(fn) && !/audd|AUDD/.test(read
 const ssp = read('src/components/Settings/pages/searchsong.tsx');
 check(/echoCancellation: false, noiseSuppression: false, autoGainControl: false/.test(ssp), 'the microphone is asked for music, not speech (no voice clean-up)');
 check(/action: 'recognize_song'/.test(ssp) && /song-listen/.test(ssp) && /Search again/.test(ssp) && /song-problem/.test(ssp), 'the page listens, searches, shows the answer, and offers "Search again"');
-check(/id: 'search-song', section: 'More from NOOB'/.test(reg) && /'search-song': SearchSongPage/.test(pages), 'it is in the three-dot menu (Settings and activity) as "Search song"');
+check(/id: 'search-song', section: 'Quick tools'/.test(reg) && /export const SECTIONS = \[\s*'Quick tools'/.test(reg) && /'search-song': SearchSongPage/.test(pages), 'it is in the three-dot menu (Settings and activity) as "Search song"');
 
 section('6. Rotating Story');
 const R = await load('src/utils/rotatingStory.ts');

@@ -1,5 +1,5 @@
-// A phone number as the admin panel can use it: the full international form, the country it belongs to, and a link that opens that number on Truecaller.
-// (Truecaller has no public service a website can ask for a number's registered name, so the name itself has to be looked up on their page, with the admin's own Truecaller login.)
+// A phone number as the admin panel can use it: the full international form and the country it belongs to.
+// (Nothing a website can ask returns the name a phone company has on record for a number, so the name shown next to it is the one the person typed in at sign-up.)
 
 /** "🇮🇳 India (+91)" -> "IN": the flag in a country label is two letters written as symbols. */
 export function isoFromLabel(label: string): string {
@@ -11,7 +11,7 @@ export function dialFromLabel(label: string): string {
   return /\(\+(\d+)\)/.exec(label || '')?.[1] || '';
 }
 
-export interface PhoneFacts { e164: string; display: string; iso: string; countryName: string; truecallerUrl: string }
+export interface PhoneFacts { e164: string; display: string; iso: string; countryName: string }
 
 export function phoneFacts(countryLabel: string | undefined | null, number: string | undefined | null): PhoneFacts | null {
   const digits = String(number || '').replace(/\D/g, '');
@@ -25,7 +25,6 @@ export function phoneFacts(countryLabel: string | undefined | null, number: stri
     e164,
     display: dial ? `+${dial} ${digits}` : e164,
     iso,
-    countryName: label.replace(/[^\p{L}\s]/gu, '').trim(),
-    truecallerUrl: `https://www.truecaller.com/search/${(iso || 'in').toLowerCase()}/${encodeURIComponent(digits)}`
+    countryName: label.replace(/[^\p{L}\s]/gu, '').trim()
   };
 }

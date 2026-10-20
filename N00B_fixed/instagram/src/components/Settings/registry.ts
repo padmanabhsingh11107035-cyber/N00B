@@ -27,6 +27,7 @@ export interface RowDef {
 }
 
 export const SECTIONS = [
+  'Quick tools',
   'Your account', 'How you use NOOB', 'Your insights and tools', 'Subscriptions', 'Who can see your content', 'How others can interact with you', 'What you see',
   'Your app and media', 'Your orders and payments', 'More info and support', 'More from NOOB', 'Login'
 ] as const;
@@ -98,7 +99,7 @@ export const ROWS: RowDef[] = [
   { id: 'about', section: 'More info and support', label: 'About', icon: Info, page: 'about', keywords: 'version terms privacy team students noobsocials' },
 
   // ---------------------------------------------------------------- More from NOOB (what this app has that Instagram does not)
-  { id: 'search-song', section: 'More from NOOB', label: 'Search song', sub: 'Play a song on another device and find its name', icon: AudioLines, page: 'search-song', keywords: 'shazam song music identify listen tune name find' },
+  { id: 'search-song', section: 'Quick tools', label: 'Search song', sub: 'Play a song on another device and find its name', icon: AudioLines, page: 'search-song', keywords: 'shazam song music identify listen tune name find' },
   { id: 'wallet', section: 'More from NOOB', label: 'Wallet', sub: 'NOOB Points and transactions', icon: Wallet, action: 'openWallet', keywords: 'points money transactions balance' },
   { id: 'qr', section: 'More from NOOB', label: 'Profile finder using QR', icon: ScanLine, action: 'openQrScanner', keywords: 'scan qr code profile' },
   { id: 'my-qr', section: 'More from NOOB', label: 'My QR code', icon: ScanLine, action: 'openProfileQr', keywords: 'share profile qr' },

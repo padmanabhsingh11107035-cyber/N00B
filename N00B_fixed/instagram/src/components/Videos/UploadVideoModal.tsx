@@ -5,6 +5,7 @@ import { LongVideo } from '../../types';
 import { maxSecondsThatFit, describeSeconds, MAX_UPLOAD_BYTES } from '../../utils/videoPlan';
 import { explainUploadError, type UploadProgress } from '../../utils/uploadProgress';
 import { UploadProgressPage } from '../Common/UploadProgressPage';
+import { queueRenditions } from '../../utils/videoRenditions';
 
 interface UploadVideoModalProps {
   onClose: () => void;
@@ -166,6 +167,8 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({ onClose, onU
         description: description.trim(),
         durationSeconds
       });
+      // the lower-quality copies (the Feed's quality options) are made quietly in the background from here: posting is not held up
+      queueRenditions({ videoId: video.id, source: videoFile, mainHeight: Math.min(videoRes.width || 0, videoRes.height || 0), durationSec: durationSeconds });
       onUploaded(video);
     } catch (err) {
       setError(explainUploadError(err));

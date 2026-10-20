@@ -15,6 +15,8 @@ export type OnUploadProgress = (p: UploadProgress) => void;
 export interface UploadOptions {
   onProgress?: OnUploadProgress;
   signal?: AbortSignal;
+  /** The file is already the version to upload (a lower-quality copy): do not make it smaller again. */
+  skipCompress?: boolean;
 }
 
 /** The line to show: "Making the video smaller... 42%", "Uploading... 63%", "The connection dropped - trying again (2 of 4)..." */

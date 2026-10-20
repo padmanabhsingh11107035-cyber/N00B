@@ -474,7 +474,7 @@ export interface Story {
   likesCount?: number;
   filter?: string;
   stickers?: {
-    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text' | 'sticker' | 'hashtag' | 'link' | 'draw' | 'question' | 'anon_messages';
+    type: 'poll' | 'quiz' | 'slider' | 'countdown' | 'add_yours' | 'location' | 'weather' | 'mention' | 'music' | 'text' | 'sticker' | 'hashtag' | 'link' | 'draw' | 'question' | 'anon_messages' | 'effect';
     data: any;
     x: number; // percentage, center-anchored
     y: number;
@@ -577,6 +577,10 @@ export interface LongVideo {
   isLiked: boolean;
   isSaved: boolean;
   createdAt: string;
+  /** Only in the watch history: when this person last watched it. */
+  watchedAt?: string;
+  /** Lower-quality copies of the video (480p, 240p ...), when the person who posted it has made them. */
+  renditions?: Array<{ height: number; url: string; bytes: number }>;
 }
 
 // Something the NOOB admin pinned to the top of the Feed page: a post, a reel or a video.

@@ -9,6 +9,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
 import { uploadWithRetry } from '../utils/xhrUpload';
+import { factsOf } from '../utils/videoTranscode';
 import { MAX_UPLOAD_BYTES } from '../utils/videoPlan';
 import type { UploadOptions } from '../utils/uploadProgress';
 import { uploadImageSettings } from '../utils/devicePrefs';
@@ -1514,7 +1515,7 @@ const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
 const sizeText = (bytes: number) => (bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB` : `${Math.round(bytes / 1024 / 1024)} MB`);
 
-async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOptions = {}): Promise<{ success: boolean; objectKey: string; url: string }> {
+async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOptions = {}): Promise<{ success: boolean; objectKey: string; url: string; width?: number; height?: number; bytes?: number }> {
   const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'dat';
   const mime = (file.type || '').toLowerCase();
   if (BLOCKED_EXTENSIONS.includes(ext) || mime === 'image/heic' || mime === 'image/heif' || mime === 'audio/x-ms-wma') {
@@ -1552,18 +1553,19 @@ async function uploadToStorage(file: File, folder: MediaFolder, opts: UploadOpti
     onRetry: (attempt, of, reason) => opts.onProgress?.({ stage: 'retrying', fraction: 0, attempt, of, reason }),
     signal: opts.signal
   });
-  return { success: true, objectKey: key, url: resolveMedia(key) };
+  const shown = factsOf(file);
+  return { success: true, objectKey: key, url: resolveMedia(key), bytes: file.size, ...(shown ? { width: shown.width, height: shown.height } : {}) };
 }
 
 export async function uploadMediaFile(
   file: File,
   folder: MediaFolder = 'posts',
   opts: UploadOptions = {}
-): Promise<{ success: boolean; objectKey: string; url: string }> {
+): Promise<{ success: boolean; objectKey: string; url: string; width?: number; height?: number; bytes?: number }> {
   // Invisibly compress images/videos to reduce latency and bandwidth
   // Smaller pictures cost less data every single time they are shown: a profile picture is never displayed bigger than a phone screen
   // (640 px is plenty), and a post picture at 1440 px is sharp on any phone.
-  const optimizedFile = await compressMedia(file, { ...(folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other')), onProgress: opts.onProgress, signal: opts.signal });   // Settings > Media quality
+  const optimizedFile = opts.skipCompress ? file : await compressMedia(file, { ...(folder === 'avatars' ? uploadImageSettings('avatar') : folder === 'team' ? { maxSide: 1100, quality: 0.85 } : uploadImageSettings('other')), onProgress: opts.onProgress, signal: opts.signal });   // Settings > Media quality
 
   if (!(await currentSession())) {
     if (folder === 'avatars') {
@@ -1855,7 +1857,8 @@ export async function fetchReels(): Promise<Reel[]> {
 // ----------------------------------------------------------------------------- long-form videos (Home)
 
 function mapLongVideo(v: any): LongVideo {
-  return { ...v, userAvatar: resolveMedia(v.userAvatar), videoUrl: resolveMedia(v.videoUrl), thumbnailUrl: v.thumbnailUrl ? resolveMedia(v.thumbnailUrl) : v.thumbnailUrl };
+  const renditions = Array.isArray(v.renditions) ? v.renditions.filter((r: any) => r && r.url && r.height > 0).map((r: any) => ({ height: Number(r.height), bytes: Number(r.bytes) || 0, url: resolveMedia(r.url) })) : [];
+  return { ...v, renditions, userAvatar: resolveMedia(v.userAvatar), videoUrl: resolveMedia(v.videoUrl), thumbnailUrl: v.thumbnailUrl ? resolveMedia(v.thumbnailUrl) : v.thumbnailUrl };
 }
 
 // ----------------------------------------------------------------------------- pinned to the Feed page by the admin (migration 20261011000002)
@@ -2015,6 +2018,34 @@ export async function fetchLongVideoHistory(): Promise<LongVideo[]> {
     return ((await rpc<any[]>('history_long_videos')) || []).map(mapLongVideo);
   } catch {
     return [];
+  }
+}
+
+// The lower-quality copies of a video (see utils/videoRenditions.ts); only the person who posted it can set them.
+export async function setLongVideoRenditions(videoId: string, renditions: Array<{ height: number; url: string; bytes: number }>): Promise<boolean> {
+  try { return !!(await rpc<{ success: boolean }>('set_long_video_renditions', { p_video: videoId, p_renditions: renditions }))?.success; } catch { return false; }
+}
+
+// Watch history (the Feed / Videos page): each video the person started watching, newest first, with when.
+export async function removeFromWatchHistory(videoId: string): Promise<boolean> {
+  try { return !!(await rpc<{ success: boolean }>('remove_from_watch_history', { p_video: videoId }))?.success; } catch { return false; }
+}
+export async function clearWatchHistory(): Promise<boolean> {
+  try { return !!(await rpc<{ success: boolean }>('clear_watch_history'))?.success; } catch { return false; }
+}
+
+// The plan the person is on now, what renewing costs, and every NOOB Pro plan they ever had (bought, renewed, paid by a friend, won).
+export interface SubscriptionHistory {
+  current: { tier: string | null; billing: string | null; autoRenew: boolean; endsAt: string | null; purchasedAt: string | null; active: boolean; daysLeft: number | null; renewalPrice: number | null; balance: number; shortfall: number | null };
+  history: Array<{ at: string; kind: 'purchase' | 'renewal' | 'friend' | 'prize'; tier: string | null; planName: string | null; billing: string | null; paid: number | null; listPrice: number | null; coupon: string | null; endsAt: string | null; paidBy: string | null }>;
+  plans: Array<{ tier: string; monthly: number; yearly: number }>;
+}
+export async function fetchSubscriptionHistory(): Promise<{ ok: true; data: SubscriptionHistory; error?: undefined } | { ok: false; error: string; data?: undefined }> {
+  try {
+    return { ok: true, data: await rpc<SubscriptionHistory>('my_subscription_history') };
+  } catch (err) {
+    const m = errorText(err, 'Could not load your subscription history.');
+    return { ok: false, error: /could not find the function|schema cache/i.test(m) ? 'The subscription history needs its database update. It will work as soon as that is done.' : m };
   }
 }
 

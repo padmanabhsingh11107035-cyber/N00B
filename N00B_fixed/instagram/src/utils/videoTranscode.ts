@@ -4,7 +4,11 @@
 //
 // Anything this cannot do (a browser without video encoding, a video type it does not know, a sound it cannot copy) throws TranscodeUnsupported, and the caller sends the
 // original instead; a video that is too long for one file throws VideoTooLongError. The size and the bitrate are decided by videoPlan.ts.
-import { planEncoding, maxSecondsThatFit, MAX_UPLOAD_BYTES, type EncodingPlan } from './videoPlan';
+import { planEncoding, maxSecondsThatFit, sizeForStep, targetFps, MAX_UPLOAD_BYTES, type EncodingPlan } from './videoPlan';
+
+// What each finished file is (its picture size as shown), kept beside the file so the upload can tell the rest of the app without probing it again.
+const facts = new WeakMap<object, { width: number; height: number }>();
+export const factsOf = (file: object): { width: number; height: number } | undefined => facts.get(file);
 
 export class TranscodeUnsupported extends Error {
   constructor(message: string) { super(message); this.name = 'TranscodeUnsupported'; }
@@ -404,7 +408,7 @@ export async function transcodeVideo(file: File, opts: TranscodeOptions = {}): P
     smallBytes: opts.skipBelowBytes
   });
   if (!plan.fits) throw new VideoTooLongError(probe.durationSec, maxSecondsThatFit(probe.audio?.bps ?? 128_000, target));
-  if (!plan.transcode) return { file, plan, probe, unchanged: true };
+  if (!plan.transcode) { facts.set(file, { width: probe.width, height: probe.height }); return { file, plan, probe, unchanged: true }; }
 
   let bps = plan.videoBps;
   let buffer = await encodeOnce(file, opened, plan, bps, opts);
@@ -418,6 +422,26 @@ export async function transcodeVideo(file: File, opts: TranscodeOptions = {}): P
     if (buffer.byteLength > target) throw new VideoTooLongError(probe.durationSec, maxSecondsThatFit(probe.audio?.bps ?? 128_000, target));
   }
   const name = (file.name || 'video').replace(/\.[^/.]+$/, '') + '.mp4';
-  return { file: new File([buffer], name, { type: 'video/mp4', lastModified: Date.now() }), plan: { ...plan, videoBps: bps }, probe, unchanged: false };
+  const done = new File([buffer], name, { type: 'video/mp4', lastModified: Date.now() });
+  facts.set(done, { width: plan.width, height: plan.height });
+  return { file: done, plan: { ...plan, videoBps: bps }, probe, unchanged: false };
+}
+
+/** A smaller copy of a video at a chosen picture size (the short side becomes `height` pixels), for the Feed's quality options. Sound is copied as it is. */
+export async function transcodeToHeight(file: File, height: number, opts: TranscodeOptions = {}): Promise<{ file: File; width: number; height: number }> {
+  if (!canTranscode()) throw new TranscodeUnsupported('This browser cannot re-encode video.');
+  const opened = await openMovie(file);
+  if (!opened) throw new TranscodeUnsupported('This is not a video file this code can read.');
+  const { probe } = opened;
+  const size = sizeForStep(probe.width, probe.height, height);
+  const fps = Math.min(targetFps(probe.fps), height <= 360 ? 24 : 30);
+  const videoBps = Math.max(80_000, Math.round(0.075 * size.width * size.height * fps));
+  const plan: EncodingPlan = { transcode: true, fits: true, width: size.width, height: size.height, fps, videoBps, bpp: 0.075, estimatedBytes: 0 };
+  const buffer = await encodeOnce(file, opened, plan, videoBps, opts);
+  const limit = opts.targetBytes ?? MAX_UPLOAD_BYTES;
+  if (buffer.byteLength > limit) throw new VideoTooLongError(probe.durationSec, maxSecondsThatFit(probe.audio?.bps ?? 128_000, limit));
+  const done = new File([buffer], `${height}p.mp4`, { type: 'video/mp4', lastModified: Date.now() });
+  facts.set(done, { width: size.width, height: size.height });
+  return { file: done, width: size.width, height: size.height };
 }
 

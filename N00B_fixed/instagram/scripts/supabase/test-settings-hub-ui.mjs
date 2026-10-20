@@ -18,7 +18,7 @@ const pagesIndex = read('src/components/Settings/pages/index.tsx');
 const types = read('src/components/Settings/types.ts');
 const hub = read('src/components/Settings/SettingsHub.tsx');
 const profile = read('src/components/Profile/ProfileView.tsx');
-const pageFiles = ['account', 'activity', 'interact', 'see', 'app', 'support', 'update', 'chats'].map((n) => [n, read(`src/components/Settings/pages/${n}.tsx`)]);
+const pageFiles = ['account', 'activity', 'interact', 'see', 'app', 'support', 'update', 'chats', 'subscription', 'searchsong'].map((n) => [n, read(`src/components/Settings/pages/${n}.tsx`)]);
 const allPages = pageFiles.map(([, s]) => s).join('\n');
 
 section('1. Every row opens something real');

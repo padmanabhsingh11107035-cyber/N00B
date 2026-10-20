@@ -1,7 +1,7 @@
 import {
   Activity, AtSign, Archive, Ban, BarChart3, Bell, Bookmark, BadgeCheck, Briefcase, Calculator, Clock, Crown, Download, Eye, EyeOff, Globe, HeartOff,
   Hourglass, Image as ImageIcon, Info, Languages, LifeBuoy, Link2, Lock, LogOut, MessageCircle, MessageSquare, Package, Repeat2, ScanLine, ShieldCheck, ShieldAlert,
-  RefreshCw, SlidersHorizontal, Smartphone, Sparkles, Star, UserCheck, UserCog, UserPlus, UserX, Video, Wallet, Accessibility, Share2, Users, VolumeX
+  RefreshCw, SlidersHorizontal, Smartphone, Sparkles, Star, UserCheck, UserCog, UserPlus, UserX, Video, Wallet, Accessibility, Share2, Users, VolumeX, Receipt, AudioLines
 } from 'lucide-react';
 import type React from 'react';
 import type { SettingsActions, SettingsContext } from './types';
@@ -50,6 +50,7 @@ export const ROWS: RowDef[] = [
   { id: 'account-type', section: 'Your insights and tools', label: 'Account type and tools', icon: Briefcase, page: 'account-type', keywords: 'business creator personal professional category', value: (c) => (c.currentUser.accountType === 'business' || c.currentUser.isBusiness ? 'Business' : 'Personal') },
 
   // ---------------------------------------------------------------- Subscriptions
+  { id: 'subscription-history', section: 'Subscriptions', label: 'Subscription history', sub: 'Your plan, when it ends, what renewing costs, and every plan you had', icon: Receipt, page: 'subscription-history', keywords: 'pro plan purchase renew billing ends receipts history' },
   { id: 'pro', section: 'Subscriptions', label: 'NOOB Pro', icon: Crown, action: 'openPro', keywords: 'subscription premium plan upgrade', value: (c) => tierName(c.currentUser.proTier) || 'Not subscribed' },
 
   // ---------------------------------------------------------------- Who can see your content
@@ -97,6 +98,7 @@ export const ROWS: RowDef[] = [
   { id: 'about', section: 'More info and support', label: 'About', icon: Info, page: 'about', keywords: 'version terms privacy team students noobsocials' },
 
   // ---------------------------------------------------------------- More from NOOB (what this app has that Instagram does not)
+  { id: 'search-song', section: 'More from NOOB', label: 'Search song', sub: 'Play a song on another device and find its name', icon: AudioLines, page: 'search-song', keywords: 'shazam song music identify listen tune name find' },
   { id: 'wallet', section: 'More from NOOB', label: 'Wallet', sub: 'NOOB Points and transactions', icon: Wallet, action: 'openWallet', keywords: 'points money transactions balance' },
   { id: 'qr', section: 'More from NOOB', label: 'Profile finder using QR', icon: ScanLine, action: 'openQrScanner', keywords: 'scan qr code profile' },
   { id: 'my-qr', section: 'More from NOOB', label: 'My QR code', icon: ScanLine, action: 'openProfileQr', keywords: 'share profile qr' },

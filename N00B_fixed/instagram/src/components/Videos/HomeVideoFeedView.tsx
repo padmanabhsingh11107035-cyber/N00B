@@ -10,6 +10,8 @@ import { SharePostToChatModal } from '../Common/SharePostToChatModal';
 import { VideoCommentsSheet } from './VideoCommentsSheet';
 import { EditVideoDetailsModal } from './EditVideoDetailsModal';
 import { LongVideoListPage } from './LongVideoListPage';
+import { WatchHistoryPage } from './WatchHistoryPage';
+import { VideoWatchPage } from './VideoWatchPage';
 import { LongVideoPlaylistsView } from './LongVideoPlaylistsView';
 import { can, isMainAdmin } from '../../adminAccess';
 import {
@@ -529,61 +531,24 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       </div>
 
       {openVideo && (
-        <div className="fixed inset-0 z-50 bg-black media-dark flex flex-col">
-          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-zinc-800/80 shrink-0">
-            <button onClick={() => setOpenVideo(null)} className="p-1.5 text-white cursor-pointer"><X className="w-5 h-5" /></button>
-            <button onClick={() => { setActionVideo(openVideo); setShowOptionsMenu(true); }} className="p-1.5 text-white cursor-pointer" title="More">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="w-full bg-black shrink-0">
-            <video
-              src={openVideo.videoUrl}
-              controls
-              autoPlay
-              className="w-full max-h-[45vh] bg-black"
-              onPlay={() => { void recordLongVideoView(openVideo.id).then((res) => { if (res.success && typeof res.viewsCount === 'number') patchVideo(openVideo.id, { viewsCount: res.viewsCount }); }); }}
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3">
-            <h2 className="text-white text-sm font-bold leading-snug">{openVideo.title || 'Untitled video'}</h2>
-            <button
-              onClick={() => { if (canModerate(openVideo)) setShowLikesSheet(true); }}
-              disabled={!canModerate(openVideo)}
-              className="text-zinc-400 text-[11px] text-left cursor-pointer disabled:cursor-default"
-            >
-              {openVideo.viewsCount.toLocaleString()} views • {formatRelativeTime(openVideo.createdAt)}
-            </button>
-
-            <div className="flex items-center justify-between py-2 border-y border-zinc-800/80">
-              <button
-                onClick={() => { void fetchUserById(openVideo.userId).then((u) => u && onNavigateToProfile?.(u)); }}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <AvatarMedia src={openVideo.userAvatar} alt={openVideo.username} className="w-9 h-9 rounded-full object-cover" />
-                <span className="text-white text-xs font-semibold">@{openVideo.username}</span>
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleToggleLike(openVideo)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer ${
-                    openVideo.isLiked ? 'bg-red-500/15 text-red-400 border border-red-500/40' : 'bg-zinc-900 text-zinc-300 border border-zinc-800'
-                  }`}
-                >
-                  <Heart className={`w-3.5 h-3.5 ${openVideo.isLiked ? 'fill-current' : ''}`} />
-                  {(!openVideo.isLikeCountHidden || canModerate(openVideo)) && formatNoobPoints(openVideo.likesCount)}
-                </button>
-                <button
-                  onClick={() => setShowComments(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer bg-zinc-900 text-zinc-300 border border-zinc-800"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" /> {openVideo.commentsCount > 0 ? formatNoobPoints(openVideo.commentsCount) : ''}
-                </button>
-              </div>
-            </div>
-            {openVideo.description && <p className="text-zinc-300 text-xs whitespace-pre-line leading-relaxed">{openVideo.description}</p>}
-          </div>
-        </div>
+        <VideoWatchPage
+          video={openVideo}
+          allVideos={videos}
+          followingIds={currentUser.followingIds || []}
+          currentUserAvatar={currentUser.avatar}
+          canModerate={canModerate(openVideo)}
+          onClose={() => setOpenVideo(null)}
+          onMore={() => { setActionVideo(openVideo); setShowOptionsMenu(true); }}
+          onToggleLike={() => handleToggleLike(openVideo)}
+          onToggleSave={() => { void handleToggleSave(openVideo); }}
+          onShare={() => { setActionVideo(openVideo); setShowShareSheet(true); }}
+          onOpenComments={() => setShowComments(true)}
+          onOpenLikers={() => setShowLikesSheet(true)}
+          onOpenProfile={() => { void fetchUserById(openVideo.userId).then((u) => u && onNavigateToProfile?.(u)); }}
+          onOpenVideo={(v) => setOpenVideo(v)}
+          onViewCounted={(n) => patchVideo(openVideo.id, { viewsCount: n })}
+          recordView={recordLongVideoView}
+        />
       )}
 
       {openLive && (
@@ -861,13 +826,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       )}
 
       {showHistory && (
-        <LongVideoListPage
-          title="History"
-          icon={<Clock className="w-4.5 h-4.5" />}
-          emptyIcon={<Clock className="w-8 h-8 text-zinc-700" />}
-          emptyText="Videos you watch will show up here."
-          loadingText="Loading your watch history…"
-          fetcher={fetchLongVideoHistory}
+        <WatchHistoryPage
           onClose={() => setShowHistory(false)}
           onOpenVideo={(v) => { setShowHistory(false); setOpenVideo(v); }}
         />

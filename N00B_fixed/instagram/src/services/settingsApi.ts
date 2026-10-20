@@ -52,6 +52,7 @@ export interface AccountSettings {
   'chat.autoLoad': 'always' | 'wifi' | 'never';
   'chat.confirmDelete': boolean;
   'chat.encryptionNotice': boolean;
+  'history.paused': boolean;   // no new videos are written into the watch history while this is on
 }
 
 export type SettingKey = keyof AccountSettings;
@@ -97,7 +98,8 @@ export const SETTINGS_DEFAULTS: AccountSettings = {
   'chat.vibrate': true,
   'chat.autoLoad': 'always',
   'chat.confirmDelete': true,
-  'chat.encryptionNotice': true
+  'chat.encryptionNotice': true,
+  'history.paused': false
 };
 
 export type ListKind = 'restricted' | 'muted' | 'favourite' | 'comment_block' | 'story_hide';

@@ -18,6 +18,7 @@ import { holdSongs } from '../../utils/songSound';
 import { funShareUrl } from '../../utils/funRoutes';
 import { preloadStoryPictures, isStoryPictureLoaded } from '../../utils/preloadStoryMedia';
 import { BurgerSmall } from '../Common/BurgerLoading';
+import { rotateClass, rotateModeOf } from '../../utils/rotatingStory';
 
 interface StoryViewerModalProps {
   stories: Story[];
@@ -586,7 +587,8 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             ref={(el) => { if (el && el.complete && el.naturalWidth > 0 && readyStoryId !== story.id) setReadyStoryId(story.id); }}
             src={story.mediaUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80'}
             alt="Story content"
-            className="w-full h-full object-contain"
+            data-rotate={rotateModeOf(story.stickers)}
+            className={`w-full h-full object-contain ${rotateClass(rotateModeOf(story.stickers))}`}
             referrerPolicy="no-referrer"
             fetchPriority="high"
             decoding="async"
@@ -602,6 +604,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             // Shared position/size/rotation for every layer type. `x` was previously ignored
             // (every sticker forced to left: 50%) — safe to switch on, since every sticker ever
             // saved before this used x: 50 anyway.
+            if (sticker.type === 'effect') return null;   // the rotation is played by the picture itself (above), not drawn as a layer
             const layerStyle: React.CSSProperties = {
               top: `${sticker.y}%`,
               left: `${sticker.x}%`,

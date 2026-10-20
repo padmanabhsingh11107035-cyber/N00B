@@ -1019,6 +1019,15 @@ button[class*="from-noob"], a[class*="from-noob"] {
 html[data-overlay-open], html[data-overlay-open] body { overflow: hidden !important; overscroll-behavior: none; }
 .fixed.inset-0, .fixed.inset-0 .overflow-y-auto, .fixed.inset-0 .overflow-auto, .fixed.inset-0.overflow-y-auto { overscroll-behavior: contain; }
 
+/* The "Rotating Story": the picture of a story turns while it is watched (utils/rotatingStory.ts). Still for people who ask for less motion. */
+@keyframes noob-rotate-spin { from { transform: scale(0.72) rotate(0deg); } to { transform: scale(0.72) rotate(360deg); } }
+@keyframes noob-rotate-swing { 0%, 100% { transform: scale(0.86) rotate(-12deg); } 50% { transform: scale(0.86) rotate(12deg); } }
+@keyframes noob-rotate-tilt { 0%, 100% { transform: perspective(900px) scale(0.9) rotateY(-26deg) rotateX(7deg); } 50% { transform: perspective(900px) scale(0.9) rotateY(26deg) rotateX(-7deg); } }
+.noob-rotate-spin { animation: noob-rotate-spin 14s linear infinite; transform-origin: center; will-change: transform; }
+.noob-rotate-swing { animation: noob-rotate-swing 3.4s ease-in-out infinite; transform-origin: center; will-change: transform; }
+.noob-rotate-tilt { animation: noob-rotate-tilt 4.2s ease-in-out infinite; transform-origin: center; will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .noob-rotate-spin, .noob-rotate-swing, .noob-rotate-tilt { animation: none; } }
+
 /* Only the Home page can be refreshed. Everywhere else the browser's own pull-down refresh (Android Chrome) is switched off too; the app itself has no pull-down refresh there
    (App.tsx sets data-refresh on the page: "on" only on Home). */
 html[data-refresh="off"],

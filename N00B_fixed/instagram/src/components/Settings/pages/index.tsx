@@ -8,6 +8,8 @@ import { DevicePermissionsPage, ArchivingPage, AccessibilityPage, LanguagePage, 
 import { OrdersPage, HelpPage, PrivacyCentrePage, AccountStatusPage, AboutPage, AboutNoobPage } from './support';
 import { UpdatePage } from './update';
 import { ChatSettingsPage } from './chats';
+import { SubscriptionHistoryPage } from './subscription';
+import { SearchSongPage } from './searchsong';
 
 // Every page of "Settings and activity", by name. All of them come in the same file as the hub, so tapping a row opens its page at once (nothing is fetched first); the
 // hub itself is loaded in the background while the profile is on screen (ProfileView). The hub shows a row only when its page is in this list (registry.ts), and
@@ -45,6 +47,8 @@ export const PAGES: Record<string, PageComponent> = {
   // how others can interact with you
   messages: MessagesPage,
   chats: ChatSettingsPage,
+  'subscription-history': SubscriptionHistoryPage,
+  'search-song': SearchSongPage,
   tags: TagsPage,
   comments: CommentsPage,
   'comment-block': list('comment_block', {

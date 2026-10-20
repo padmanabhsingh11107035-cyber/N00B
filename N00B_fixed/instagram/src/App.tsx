@@ -93,6 +93,7 @@ import { MiniToast } from './components/Common/MiniToast';
 import { TimeReminder } from './components/Settings/TimeReminder';
 import { NativeUpdateBanner } from './components/Common/NativeUpdateBanner';
 import { AndroidAppPrompt } from './components/Common/AndroidAppPrompt';
+import { RenditionStrip } from './components/Common/RenditionStrip';
 import { hardReload } from './utils/reloadApp';
 import { preloadStoryPictures } from './utils/preloadStoryMedia';
 import { BurgerLoading, TabBurgerLoading } from './components/Common/BurgerLoading';
@@ -2150,6 +2151,7 @@ export default function App() {
       {currentUser && <TimeReminder />}
       {currentUser && <NativeUpdateBanner />}
       {currentUser && <AndroidAppPrompt />}
+      {currentUser && <RenditionStrip />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
       <TeamJoinHost currentUser={currentUser} />

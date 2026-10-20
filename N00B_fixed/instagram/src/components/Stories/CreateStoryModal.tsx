@@ -8,6 +8,7 @@ import { AnimatedStickerPanel, GifPanel } from '../Chat/StickerGifPanels';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { formatCountdown } from '../../utils/countdown';
 import { MusicPicker, MusicSelection } from '../Common/MusicPicker';
+import { ROTATE_MODES, rotateClass, rotateSticker, type RotateMode } from '../../utils/rotatingStory';
 
 const TEXT_COLORS = ['#FFFFFF', '#000000', '#00FF66', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899'];
 
@@ -118,6 +119,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [isPublishing, setIsPublishing] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [filter, setFilter] = useState<'none' | 'emerald' | 'cyber' | 'gala' | 'monochrome'>('none');
+  const [rotateMode, setRotateMode] = useState<RotateMode>('off');   // the "Rotating Story": the picture turns while it is watched
   const [isCloseFriends, setIsCloseFriends] = useState(false);
   const [pollQuestion, setPollQuestion] = useState('');
   const [showPollInput, setShowPollInput] = useState(false);
@@ -712,6 +714,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
           rotation: layer.rotation
         });
       });
+      const rotation = rotateSticker(rotateMode);
+      if (rotation) mainStickers.push(rotation);
       if (musicSelection) {
         mainStickers.push({
           type: 'music',
@@ -812,7 +816,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
             <img
               src={selectedImage}
               alt="Preview"
-              className={`w-full h-full object-contain transition-all duration-300 ${getFilterStyle()}`}
+              className={`w-full h-full object-contain transition-all duration-300 ${getFilterStyle()} ${rotateClass(rotateMode)}`}
             />
           ) : (
             <button
@@ -2016,6 +2020,32 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
                 )}
               </div>
             )}
+
+            {/* Rotating Story: the picture turns while people watch it */}
+            <div data-testid="rotating-story-picker">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1.5">
+                🔄 Rotating story
+              </span>
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                {ROTATE_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    title={m.hint}
+                    data-testid={`rotate-${m.id}`}
+                    onClick={() => setRotateMode(m.id)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all whitespace-nowrap ${
+                      rotateMode === m.id
+                        ? 'border-noob bg-noob/10 text-noob'
+                        : 'border-neutral-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] text-gray-500 mt-1">{ROTATE_MODES.find((m) => m.id === rotateMode)?.hint}. You see it turning here too.</p>
+            </div>
 
             {/* AR / Classic Filters Selector */}
             <div>

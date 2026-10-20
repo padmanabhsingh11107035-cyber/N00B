@@ -1160,6 +1160,30 @@ HOW TO ANSWER:
 - ENDING: if the person clearly asks to end or close this chat, or to hang up the call, or says goodbye or that they are done (in ANY language), reply with [[END]] immediately followed by ONE warm sentence in their language that thanks them and asks them to rate the support with 5 stars. Never write [[END]] in any other situation.`;
 }
 
+// <song-mapping>
+// What the song-finding service answered, as the app needs it. Written without anything but plain JavaScript on purpose (a test runs this very text).
+function mapSong(data: any) {
+  const httpsOnly = (u: any) => (typeof u === 'string' && /^https:\/\//.test(u) ? u.slice(0, 500) : undefined);
+  if (!data || typeof data !== 'object') return { found: false, failed: true };
+  if (data.status === 'error') {
+    const code = Number(data.error?.error_code);
+    return code === 901 || code === 900 ? { found: false, unavailable: true } : { found: false, failed: true };
+  }
+  const r = data.result;
+  if (!r || typeof r !== 'object' || !r.title) return { found: false };
+  const art = typeof r.apple_music?.artwork?.url === 'string' ? r.apple_music.artwork.url.replace('{w}', '400').replace('{h}', '400') : undefined;
+  const cover = httpsOnly(art) || httpsOnly(r.spotify?.album?.images?.[0]?.url);
+  return {
+    found: true,
+    song: {
+      title: String(r.title).slice(0, 200), artist: String(r.artist || '').slice(0, 200), album: r.album ? String(r.album).slice(0, 200) : undefined,
+      releaseDate: r.release_date ? String(r.release_date).slice(0, 20) : undefined, label: r.label ? String(r.label).slice(0, 120) : undefined, cover,
+      links: { apple: httpsOnly(r.apple_music?.url), spotify: httpsOnly(r.spotify?.external_urls?.spotify), other: httpsOnly(r.song_link) }
+    }
+  };
+}
+// </song-mapping>
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -1417,6 +1441,39 @@ Deno.serve(async (req) => {
     } catch (err: any) {
       console.warn('GIF search error:', err?.message || err);
       return json({ configured: true, gifs: [] });
+    }
+  }
+
+  // ------------------------------------------------------------------ "Search song": which song is playing? (the phone listened for a few seconds)
+  // { action: "recognize_song", audio: <base64 of the recording>, mime } -> { configured, found, song? }. Needs the secret AUDD_API_TOKEN (a free token from audd.io);
+  // without it the answer is { configured: false } and the app says the search is being set up. Each person can ask 12 times an hour and 40 times a day.
+  if (body?.action === 'recognize_song') {
+    if (!userId) return json({ error: 'Please log in.' }, 401);
+    const auddKey = (Deno.env.get('AUDD_API_TOKEN') || '').trim();
+    if (!auddKey) return json({ configured: false });
+    const hour = new Date().toISOString().slice(0, 13);
+    const [{ data: okHour }, { data: okDay }] = await Promise.all([
+      admin.rpc('ui_usage_take', { p_bucket: `song:${userId}:${hour}`, p_amount: 1, p_limit: 12 }),
+      admin.rpc('ui_usage_take', { p_bucket: `song-day:${userId}:${hour.slice(0, 10)}`, p_amount: 1, p_limit: 40 })
+    ]);
+    if (okHour !== true || okDay !== true) return json({ configured: true, limited: true });
+    const audio = typeof body.audio === 'string' ? body.audio : '';
+    if (audio.length < 2000) return json({ configured: true, found: false, tooShort: true });
+    if (audio.length > 4_000_000) return json({ error: 'That recording is too long.' }, 413);
+    let bytes: Uint8Array;
+    try { bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0)); } catch { return json({ error: 'That recording could not be read.' }, 400); }
+    const mime = String(body.mime || 'audio/webm').split(';')[0].slice(0, 40);
+    const ext = /mp4|m4a|aac/.test(mime) ? 'm4a' : /ogg/.test(mime) ? 'ogg' : /wav/.test(mime) ? 'wav' : /mpeg|mp3/.test(mime) ? 'mp3' : 'webm';
+    const form = new FormData();
+    form.append('api_token', auddKey);
+    form.append('return', 'apple_music,spotify');
+    form.append('file', new Blob([bytes], { type: mime }), `listen.${ext}`);
+    try {
+      const res = await fetch('https://api.audd.io/', { method: 'POST', body: form, signal: AbortSignal.timeout(25_000) });
+      return json({ configured: true, ...mapSong(await res.json()) });
+    } catch (err: any) {
+      console.warn('Song search error:', err?.message || err);
+      return json({ configured: true, found: false, failed: true });
     }
   }
 

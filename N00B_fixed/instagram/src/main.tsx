@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { MovedNotice, movedNoticeBlocksApp } from './components/Common/MovedNotice.tsx';
+import { InstallInvite } from './components/Common/InstallInvite.tsx';
 import './index.css';
 import { initTheme } from './utils/theme.ts';
 import { cleanReloadMark } from './utils/reloadApp.ts';
@@ -127,6 +128,7 @@ createRoot(document.getElementById('root')!).render(
       ) : (
         <MusicPlayerProvider>
           <App />
+          <InstallInvite />
         </MusicPlayerProvider>
       )}
     </ErrorBoundary>

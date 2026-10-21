@@ -59,7 +59,7 @@ export function isOnOtherNoobAddress(): boolean {
   try { return isOtherNoobHost(window.location.hostname); } catch { return false; }
 }
 
-/** Where the Install button takes someone who is on the old address: the main address, which then points them at its own Install button. */
-export function installAddress(): string {
-  return MAIN_SITE + '/?install=1';
+/** Where the Install button takes someone who is on the old address: the main address, which opens its own Install card there (&from=old adds how to remove the old app). */
+export function installAddress(fromOld = false): string {
+  return MAIN_SITE + '/?install=1' + (fromOld ? '&from=old' : '');
 }

@@ -73,14 +73,14 @@ export const MovedNotice: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => window.location.assign(installAddress())}
+          onClick={() => window.location.assign(installAddress(true))}
           className="relative z-10 mt-5 w-full inline-flex items-center justify-center gap-2.5 rounded-full py-3 text-sm font-extrabold cursor-pointer transition-transform hover:scale-[1.02] active:scale-[.98]"
           style={{ backgroundColor: '#ffffff', color: '#000000' }}
         >
           <Download className="w-4 h-4" />
           <span>Install NOOB from {host}</span>
         </button>
-        <p className="relative z-10 mt-4 mb-6 text-[11px] leading-snug text-white/55">Keep this old app until you have logged in on the new one and checked that your chats open.</p>
+        <p className="relative z-10 mt-4 mb-6 text-[11px] leading-snug text-white/55">Keep this old app until you have logged in on the new one and checked that your chats open. Then remove this old one yourself: touch and hold its icon and tap Uninstall (iPhone: Remove App). A website cannot remove an app by itself.</p>
       </div>
     </div>
   );

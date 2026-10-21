@@ -25,7 +25,11 @@ check(applies(false, 'localhost', '') === false && applies(false, 'localhost', '
 section('2. What it says and does');
 check(/>NOOB<\/p>/.test(notice) && /We have a new home/.test(notice) && /We have changed our domain/.test(notice) && /all your data has been shifted there exactly as it was/.test(notice), 'NOOB at the top, a new-home heading, the domain-change message and the data message');
 check(/href=\{sameThere\}/.test(notice) && /\{host\}/.test(notice), 'it shows the new address as a link');
-check(/window\.location\.assign\(installAddress\(\)\)/.test(notice) && /Install NOOB from/.test(notice), 'the Install button opens the new address ready to install');
+check(/window\.location\.assign\(installAddress\(true\)\)/.test(notice) && /Install NOOB from/.test(notice), 'the Install button opens the new address ready to install');
+check(/touch and hold its icon and tap Uninstall/.test(notice) && /A website cannot remove an app by itself/.test(notice), 'it says how to remove this old app (a website cannot do it for them)');
+const invite = read('src/components/Common/InstallInvite.tsx');
+check(/await promptInstall\(\)/.test(invite) && /readInvite\(window\.location\.search\)/.test(invite) && /from=old|'from'\) === 'old'/.test(invite), 'the new address opens a full-screen Install card whose button is the real install dialog');
+check(/<InstallInvite \/>/.test(read('src/main.tsx')), 'the Install card is part of the new address');
 check(/backgroundColor: '#000000'/.test(notice) && /rounded-\[30px\]/.test(notice) && /border-dashed/.test(notice) && (notice.match(/<Doodle /g) || []).length >= 8, 'a curved, fully black card with white doodles and a dashed stitch');
 check(!/Not now/.test(notice) && !/<button type="button" onClick=\{close\}/.test(notice) && !/setOpen/.test(notice), 'there is no close button: nobody can dismiss it');
 const bypassSrc = /export function bypassRequested[\s\S]*?\n}\n/.exec(notice)[0].replace(/: boolean/g, '').replace(/: string/g, '');

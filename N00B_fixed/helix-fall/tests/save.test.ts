@@ -29,6 +29,28 @@ describe('save', () => {
     expect(insertScore(board, { name: 'low', score: 0, seconds: 1, at: 1 }).rank).toBe(-1)
   })
 
+  it('shows each player once: only their best score, per day', () => {
+    const day1 = Date.UTC(2026, 9, 21, 1)
+    const day2 = Date.UTC(2026, 9, 22, 1)
+    let board = insertScore([], { name: 'Ann', score: 330, seconds: 50, at: day1 }).board
+    board = insertScore(board, { name: 'Ann', score: 960, seconds: 60, at: day1 + 1000 }).board
+    const worse = insertScore(board, { name: 'ann', score: 755, seconds: 40, at: day1 + 2000 })
+    expect(worse.board.map(e => e.score)).toEqual([960])
+    expect(worse.rank).toBe(0)
+    board = insertScore(worse.board, { name: 'Bob', score: 500, seconds: 40, at: day1 + 3000 }).board
+    expect(board.map(e => `${e.name}:${e.score}`)).toEqual(['Ann:960', 'Bob:500'])
+    // the same player on the next day gets a row of that day (today's board must not lose to yesterday's high score)
+    board = insertScore(board, { name: 'Ann', score: 100, seconds: 40, at: day2 }).board
+    expect(board.filter(e => e.name === 'Ann').map(e => e.score).sort((a, b) => b - a)).toEqual([960, 100])
+  })
+
+  it('cleans up an old board that holds the same player many times', () => {
+    const at = Date.UTC(2026, 9, 21, 1)
+    const old = [960, 755, 330, 330, 330].map((score, i) => ({ name: 'Player7033', score, seconds: 60, at: at + i }))
+    const parsed = parseSave(JSON.stringify({ ...defaultSave(), leaderboard: old }))
+    expect(parsed.leaderboard.map(e => e.score)).toEqual([960])
+  })
+
   it('persists through storage and survives storage errors', () => {
     const mem = new Map<string, string>()
     const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) }

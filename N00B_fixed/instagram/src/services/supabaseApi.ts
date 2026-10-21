@@ -3502,6 +3502,36 @@ export async function submitSurvivalScore(
   }
 }
 
+// Helix Fall (migration 20261021000001): every level cleared pays 50,000,000; every player has one best score on the board.
+export interface HelixBoardEntry { rank: number; userId: string; username: string; displayName: string; avatar?: string; score: number; level: number; floors: number; isMe: boolean }
+export interface HelixBoard { period: 'today' | 'all'; day: string; total: number; entries: HelixBoardEntry[]; me: { rank: number; score: number } | null }
+
+export async function helixLevelComplete(level: number): Promise<{ success: boolean; earnedPoints: number; totalNoobPoints: number; level: number; user?: User; error?: string }> {
+  try {
+    const res = await rpc<any>('helix_level_complete', { p_level: level });
+    return { ...res, user: mapUser(res.user) };
+  } catch (err) {
+    return { success: false, earnedPoints: 0, totalNoobPoints: 0, level, error: errorText(err, 'Could not save this level.') };
+  }
+}
+
+export async function helixSubmitRun(run: { score: number; floors: number; level: number; daily: boolean }): Promise<{ success: boolean; bestScore: number; bestLevel: number; todayBest: number; newBest: boolean; error?: string }> {
+  try {
+    return await rpc<any>('helix_submit_run', { p_score: run.score, p_floors: run.floors, p_level: run.level, p_daily: run.daily });
+  } catch (err) {
+    return { success: false, bestScore: 0, bestLevel: 1, todayBest: 0, newBest: false, error: errorText(err, 'Could not save this run.') };
+  }
+}
+
+export async function helixLeaderboard(period: 'today' | 'all'): Promise<HelixBoard | null> {
+  try {
+    const res = await rpc<any>('helix_leaderboard', { p_period: period });
+    return { ...res, entries: (res.entries || []).map((e: any) => ({ ...e, avatar: e.avatar ? resolveMedia(e.avatar) : e.avatar })) };
+  } catch {
+    return null;
+  }
+}
+
 export async function sendGameInvite(
   targetUserId: string,
   gameId: string,

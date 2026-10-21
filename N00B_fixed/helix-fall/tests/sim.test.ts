@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { TOTAL_FLOORS, checkRun } from '../server/helix-rules.mjs'
-import { SLOT_ANGLE, angleDiff, dailySeed, generateTower, probe, type Tower } from '../src/game/level'
+import { LEVEL_FLOORS, TOTAL_FLOORS, checkRun } from '../server/helix-rules.mjs'
+import { SLOT_ANGLE, angleDiff, dailySeed, extendTower, generateTower, probe, stageOf, type Tower } from '../src/game/level'
 import { BALL_RADIUS, GRAVITY, ROT_SPEED, Sim, floorY } from '../src/game/sim'
 
 type Skill = { name: string; delay: number; care: number; speed: number; aimError: number }
@@ -17,7 +17,7 @@ function rngFor(seed: number) {
 }
 
 /** Heuristic player: aims for the gap, avoids landing on hazards it notices in time. */
-function play(tower: Tower, skill: Skill, seed: number) {
+function play(tower: Tower, skill: Skill, seed: number, levels = 1) {
   const sim = new Sim(tower)
   const r = rngFor(seed)
   const dt = 1 / 60
@@ -26,7 +26,9 @@ function play(tower: Tower, skill: Skill, seed: number) {
   let aimOffset = 0
   let aimFloor = -1
   let cause = ''
-  while (!sim.over && sim.time < 300) {
+  let levelEvents = 0
+  let saved = 0
+  while (!sim.over && sim.levelsCleared < levels && sim.time < 300 * levels) {
     const view = Math.max(0, history.length - Math.round(skill.delay / dt))
     void view
     if (sim.floor !== aimFloor) {
@@ -34,7 +36,7 @@ function play(tower: Tower, skill: Skill, seed: number) {
       aimOffset = (r() - 0.5) * skill.aimError * 2
     }
     let turn = 0
-    if (sim.floor < TOTAL_FLOORS) {
+    {
       const spec = tower.floors[sim.floor]
       const gapSlots = spec.slots.filter(s => s === 'gap').length
       const gapCenter = spec.offset + (gapSlots / 2) * SLOT_ANGLE + aimOffset
@@ -60,10 +62,14 @@ function play(tower: Tower, skill: Skill, seed: number) {
     }
     history.push(turn)
     const delayed = history[Math.max(0, history.length - 1 - Math.round(skill.delay / dt))]
-    for (const e of sim.step(dt, delayed, 0)) if (e.type === 'death') cause = `${e.cause}@s${tower.floors[e.floor].stage}`
+    for (const e of sim.step(dt, delayed, 0)) {
+      if (e.type === 'death') cause = `${e.cause}@s${tower.floors[e.floor].stage}`
+      if (e.type === 'level') levelEvents += 1
+      if (e.type === 'saved') saved += 1
+    }
     if (firstScoreAt < 0 && sim.score > 0) firstScoreAt = sim.time
   }
-  return { cause, score: sim.score, floors: sim.floors, time: sim.time, over: sim.over, firstScoreAt, bestChain: sim.bestChain, smashes: sim.smashes }
+  return { cause, levelEvents, saved, levelsCleared: sim.levelsCleared, score: sim.score, floors: sim.floors, time: sim.time, over: sim.over, firstScoreAt, bestChain: sim.bestChain, smashes: sim.smashes }
 }
 
 describe('tower generation', () => {
@@ -95,8 +101,84 @@ describe('tower generation', () => {
   })
 })
 
+describe('levels never end', () => {
+  it('clearing 90 floors pays a level and the run goes straight on into the next one', () => {
+    let found = false
+    for (let seed = 1; seed <= 40 && !found; seed += 1) {
+      const tower = generateTower(dailySeed('2026-10-21') ^ (seed * 2654435761))
+      const sim = new Sim(tower)
+      const dt = 1 / 60
+      let levelEvent: { level: number; points: number } | null = null
+      let before = 0
+      const guide = () => {
+        const spec = tower.floors[sim.floor]
+        const gapSlots = spec.slots.filter(s => s === 'gap').length
+        const diff = angleDiff(spec.offset + (gapSlots / 2) * SLOT_ANGLE, sim.ballAngle)
+        return Math.abs(diff) < 0.04 ? 0 : -Math.max(-1, Math.min(1, diff / 0.3))
+      }
+      while (!sim.over && sim.time < 400 && sim.floor < LEVEL_FLOORS + 25) {
+        if (sim.floor === LEVEL_FLOORS - 1) before = sim.score
+        for (const e of sim.step(dt, guide(), 0)) if (e.type === 'level') levelEvent = { level: e.level, points: e.points }
+      }
+      if (sim.floor >= LEVEL_FLOORS + 25 && levelEvent) {
+        found = true
+        expect(levelEvent).toEqual({ level: 1, points: 500 })
+        expect(sim.over).toBeNull()
+        expect(sim.level).toBe(2)
+        expect(sim.levelsCleared).toBe(1)
+        expect(tower.floors.length).toBeGreaterThanOrEqual(LEVEL_FLOORS * 2)
+        expect(tower.floors[LEVEL_FLOORS].index).toBe(LEVEL_FLOORS)
+        expect(sim.stage).toBe(stageOf(sim.floor))
+        expect(sim.score).toBeGreaterThan(before)
+      }
+    }
+    expect(found).toBe(true)
+  })
+  it('is the same tower for everyone, however far it has been built', () => {
+    const a = generateTower(777)
+    const b = generateTower(777)
+    for (let i = 0; i < 3; i += 1) { extendTower(a); extendTower(b) }
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b))
+    expect(a.floors.length).toBe(LEVEL_FLOORS * 4)
+    expect(a.floors.every((f, i) => f.index === i && f.slots.includes('gap'))).toBe(true)
+    expect(a.floors.slice(LEVEL_FLOORS, LEVEL_FLOORS + 3).some(f => f.slots.some(k => k === 'danger'))).toBe(false)
+  })
+  it('stays fair in later levels: never fewer than 2 gap slots, hazards capped', () => {
+    const t = generateTower(4242)
+    for (let l = 0; l < 12; l += 1) extendTower(t)
+    for (const f of t.floors) {
+      expect(f.slots.filter(k => k === 'gap').length).toBeGreaterThanOrEqual(2)
+      expect(f.slots.filter(k => k === 'danger' || k === 'blink').length).toBeLessThanOrEqual(4)
+    }
+  })
+})
+
+describe('the shield', () => {
+  it('forgives the first hazard of a level and not the second', () => {
+    const tower = generateTower(5)
+    // a floor with no way through: everything on it is a hazard
+    tower.floors[0] = { ...tower.floors[0], slots: new Array(16).fill('danger'), sweeper: undefined, blink: undefined }
+    const sim = new Sim(tower)
+    expect(sim.shield).toBe(1)
+    const kinds: string[] = []
+    for (let i = 0; i < 600 && !sim.over; i += 1) for (const e of sim.step(1 / 60, 0, 0)) kinds.push(e.type)
+    expect(kinds.filter(k => k === 'saved')).toHaveLength(1)
+    expect(kinds.indexOf('saved')).toBeLessThan(kinds.indexOf('death'))
+    expect(sim.over).toBe('dead')
+    expect(sim.shield).toBe(0)
+  })
+})
+
 describe('simulated players', () => {
   const report: string[] = []
+  const clearRate = (skill: Skill, levels: number, n = 60) => {
+    let cleared = 0
+    for (let s = 0; s < n; s += 1) {
+      const tower = generateTower(dailySeed(`2026-10-${String((s % 28) + 1).padStart(2, '0')}`) ^ (s * 2654435761))
+      if (play(tower, skill, s + 1, levels).levelsCleared >= levels) cleared += 1
+    }
+    return cleared / n
+  }
   for (const skill of [NOVICE, REGULAR, EXPERT]) {
     it(`${skill.name}: every run passes server plausibility checks`, () => {
       const runs = []
@@ -111,13 +193,21 @@ describe('simulated players', () => {
       const med = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
       const scores = runs.map(r => r.score)
       const first = runs.map(r => r.firstScoreAt).filter(t => t >= 0)
-      report.push(
-        `${skill.name.padEnd(8)} median score ${med(scores)} · max ${Math.max(...scores)} · median floors ${med(runs.map(r => r.floors))} · median time ${med(runs.map(r => r.time)).toFixed(1)}s · wins ${runs.filter(r => r.over === 'won').length}/60 · first score median ${med(first).toFixed(1)}s · max chain ${Math.max(...runs.map(r => r.bestChain))} · smashes/run ${(runs.reduce((n, r) => n + r.smashes, 0) / 60).toFixed(1)}\n    deaths ${Object.entries(runs.reduce((m, r) => ((m[r.cause] = (m[r.cause] ?? 0) + 1), m), {} as Record<string, number>)).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join(' ')}`,
-      )
+      report.push(`${skill.name.padEnd(8)} median score ${med(scores)} · max ${Math.max(...scores)} · median floors ${med(runs.map(r => r.floors))} · median time ${med(runs.map(r => r.time)).toFixed(1)}s`)
       if (skill === NOVICE) expect(med(first)).toBeLessThan(10)
     })
   }
+  it('is easy for people: most careful players clear level 1, and later levels are still reachable', () => {
+    const novice = clearRate(NOVICE, 1)
+    const regular = clearRate(REGULAR, 1)
+    const expert = clearRate(EXPERT, 1)
+    report.push(`level 1 cleared: novice ${Math.round(novice * 100)}% · regular ${Math.round(regular * 100)}% · expert ${Math.round(expert * 100)}%`)
+    expect(novice).toBeGreaterThanOrEqual(0.5)
+    expect(regular).toBeGreaterThanOrEqual(0.7)
+    expect(expert).toBeGreaterThanOrEqual(0.85)
+    expect(clearRate(REGULAR, 3, 40)).toBeGreaterThanOrEqual(0.25)
+  })
   it('prints the difficulty report', () => {
-    console.log(`\n${report.join('\n')}`)
+    console.log(['', ...report].join(String.fromCharCode(10)))
   })
 })

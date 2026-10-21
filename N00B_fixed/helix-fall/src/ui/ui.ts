@@ -5,7 +5,7 @@ import type { BoardData } from '../online/leaderboard'
 
 export type Screen = 'boot' | 'title' | 'hud' | 'results'
 export type Modal = 'pause' | 'board' | 'settings' | 'share'
-export type PopupKind = 'score' | 'combo' | 'near' | 'smash' | 'stage' | 'danger' | 'best' | 'target'
+export type PopupKind = 'score' | 'combo' | 'near' | 'smash' | 'stage' | 'level' | 'saved' | 'danger' | 'best' | 'target'
 
 export type Handlers = Record<string, (el: HTMLElement) => void>
 
@@ -88,6 +88,7 @@ export class UI {
   <div class="hud-top">
     <div class="hud-left">
       <div class="hud-pill" data-el="hudStage"></div>
+      <div class="hud-pill hud-shield" data-el="hudShield" data-i18n="hud.shield"></div>
       <div class="hud-pill hud-mode is-hidden" data-el="hudMode" data-i18n="hud.practice"></div>
     </div>
     <div class="hud-center">
@@ -311,7 +312,7 @@ export class UI {
   }
 
   // ─── HUD ──────────────────────────────────────────────────────────────
-  setHud(h: { score: number; best: number; stage: number; stages: number; depth: number; practice: boolean; target: { name: string; score: number } | null }): void {
+  setHud(h: { score: number; best: number; level: number; shield: boolean; stage: number; stages: number; depth: number; practice: boolean; target: { name: string; score: number } | null }): void {
     const t = this.i18n.t.bind(this.i18n)
     const scoreEl = this.els.hudScore
     if (scoreEl.textContent !== String(h.score)) {
@@ -322,7 +323,8 @@ export class UI {
     }
     this.els.hudBest.textContent = h.best > 0 ? t('hud.best', { score: h.best }) : ''
     this.els.hudBest.classList.toggle('is-beaten', h.best > 0 && h.score > h.best)
-    this.els.hudStage.textContent = t('hud.stage', { n: h.stage + 1, total: h.stages })
+    this.els.hudStage.textContent = t('hud.levelStage', { l: h.level, n: h.stage + 1, total: h.stages })
+    this.els.hudShield.classList.toggle('is-off', !h.shield)
     this.els.hudMode.classList.toggle('is-hidden', !h.practice)
     const d = Math.max(0, Math.min(1, h.depth))
     this.els.hudDepth.style.transform = `scaleY(${d})`
@@ -364,6 +366,16 @@ export class UI {
     el.classList.add('is-on')
   }
 
+  /** "Level n complete!" in gold, on the same banner the stage names use. */
+  levelBanner(n: number): void {
+    const el = this.els.stageBanner
+    el.textContent = this.i18n.t('level.banner', { n })
+    el.style.color = '#ffd35c'
+    el.classList.remove('is-on')
+    void el.offsetWidth
+    el.classList.add('is-on')
+  }
+
   flash(color: string, strength: number): void {
     const el = this.els.flash
     el.style.background = color
@@ -372,11 +384,11 @@ export class UI {
 
   popup(text: string, kind: PopupKind, at: { x: number; y: number }): void {
     const t = this.i18n.t.bind(this.i18n)
-    const label: Partial<Record<PopupKind, string>> = { near: t('pop.near'), smash: t('pop.smash'), stage: t('pop.stage'), danger: t('pop.danger'), best: t('pop.best'), target: t('pop.target') }
+    const label: Partial<Record<PopupKind, string>> = { near: t('pop.near'), smash: t('pop.smash'), stage: t('pop.stage'), level: t('pop.level'), saved: t('pop.saved'), danger: t('pop.danger'), best: t('pop.best'), target: t('pop.target') }
     const el = document.createElement('div')
     el.className = `popup popup-${kind}`
     el.innerHTML = `${label[kind] ? `<small>${esc(label[kind]!)}</small>` : ''}${text ? `<b>${esc(text)}</b>` : ''}`
-    const big = kind === 'best' || kind === 'target' || kind === 'danger' || kind === 'stage'
+    const big = kind === 'best' || kind === 'target' || kind === 'danger' || kind === 'stage' || kind === 'level' || kind === 'saved'
     const x = big ? 50 : at.x + (Math.random() - 0.5) * 6
     const y = big ? 44 : at.y - 6
     el.style.left = `${x}%`
@@ -393,9 +405,9 @@ export class UI {
   }
 
   // ─── Results ──────────────────────────────────────────────────────────
-  showResults(r: { won: boolean; score: number; newBest: boolean; floors: number; chain: number; smashes: number; seconds: number; note: string; name: string; showName: boolean }): void {
+  showResults(r: { won: boolean; levels: number; score: number; newBest: boolean; floors: number; chain: number; smashes: number; seconds: number; note: string; name: string; showName: boolean }): void {
     const t = this.i18n.t.bind(this.i18n)
-    this.els.rTitle.textContent = t(r.won ? 'results.won' : 'results.dead')
+    this.els.rTitle.textContent = t(r.won ? 'results.won' : 'results.dead', { n: r.levels })
     this.root.querySelector('.screen-results')!.classList.toggle('is-won', r.won)
     this.els.rBest.classList.toggle('is-on', r.newBest)
     this.els.rFloors.textContent = String(r.floors)
@@ -424,6 +436,11 @@ export class UI {
 
   setOnline(html: string): void {
     this.els.rOnline.innerHTML = html
+  }
+
+  /** Switch the "New best" tag of the results screen (the account's best can arrive after the screen is shown). */
+  setNewBest(on: boolean): void {
+    this.els.rBest.classList.toggle('is-on', on)
   }
 
   toast(text: string, where: 'results' | 'share' = 'results'): void {

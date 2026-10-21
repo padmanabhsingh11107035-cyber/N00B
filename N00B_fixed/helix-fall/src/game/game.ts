@@ -3,7 +3,6 @@ import type { Audio } from '../engine/audio'
 import type { Input } from '../engine/input'
 import type { Renderer } from '../engine/renderer'
 import type { Quality } from '../engine/save'
-import { TOTAL_FLOORS } from '../../server/helix-rules.mjs'
 import { Fx } from './fx'
 import { generateTower, type Tower } from './level'
 import { BALL_RADIUS, Sim, floorY, type SimEvent } from './sim'
@@ -22,6 +21,8 @@ export type RunResult = {
   floors: number
   durationMs: number
   outcome: 'dead' | 'won'
+  /** Levels cleared in this run (each is 90 floors); the run ended on level `levels + 1`. */
+  levels: number
   bestChain: number
   smashes: number
   nearMisses: number
@@ -30,11 +31,13 @@ export type RunResult = {
 
 export type GameEvents = {
   /** Floating text near the ball. kind styles it. */
-  popup: (text: string, kind: 'score' | 'combo' | 'near' | 'smash' | 'stage' | 'danger' | 'best' | 'target') => void
+  popup: (text: string, kind: 'score' | 'combo' | 'near' | 'smash' | 'stage' | 'level' | 'saved' | 'danger' | 'best' | 'target') => void
   flash: (color: string, strength: number) => void
   smashMode: (on: boolean) => void
   chain: (chain: number) => void
   stage: (stage: number, theme: Theme) => void
+  /** A level (90 floors) was cleared. */
+  level: (level: number, points: number) => void
   scored: (score: number) => void
   end: (run: RunResult) => void
   startRequest: () => void
@@ -222,7 +225,6 @@ export class Game {
   /** One fixed simulation step. */
   step(dt: number): void {
     if (this.mode === 'paused') return
-    this.fx.step(dt)
     if (this.hitstop > 0) {
       this.hitstop -= dt
       return
@@ -304,14 +306,24 @@ export class Game {
       case 'stage': {
         this.audio.play('stage')
         this.events.popup(`+${e.points}`, 'stage')
-        const next = Math.min(e.stage + 1, THEMES.length - 1)
-        if (e.stage + 1 < THEMES.length) {
-          this.themeFrom = this.currentTheme()
-          this.themeTo = THEMES[next]
-          this.themeT = 0
-          this.audio.stage = next
-          this.events.stage(next, THEMES[next])
-        }
+        // The six themes repeat in every level.
+        const next = (e.stage + 1) % THEMES.length
+        this.themeFrom = this.currentTheme()
+        this.themeTo = THEMES[next]
+        this.themeT = 0
+        this.audio.stage = next
+        this.events.stage(next, THEMES[next])
+        break
+      }
+      case 'saved': {
+        this.squash = 1
+        this.audio.play('near')
+        this.events.chain(0)
+        this.events.popup('', 'saved')
+        this.events.flash('#7ef9ff', 0.4 * motion)
+        this.fx.burst(new THREE.Vector3(0, floorY(e.floor) + 0.05, BALL_ORBIT), Math.round(14 * this.fx.density), '#7ef9ff', 3.2)
+        this.shake = Math.max(this.shake, 0.25 * motion)
+        this.slowmo = 0.15
         break
       }
       case 'death': {
@@ -326,14 +338,16 @@ export class Game {
         this.finish('dead')
         break
       }
-      case 'win':
+      case 'level': {
         this.audio.play('win')
-        this.audio.intensity = 0
-        this.events.popup(`+${e.points}`, 'stage')
+        this.events.popup(`+${e.points}`, 'level')
         this.events.flash('#ffe38a', 0.5 * motion)
-        for (let i = 0; i < 4; i += 1) this.fx.burst(new THREE.Vector3((Math.random() - 0.5) * 4, floorY(TOTAL_FLOORS) + 1 + i, (Math.random() - 0.5) * 4), 60, ['#ffd35c', '#7ef9ff', '#ff9bf5', '#9effa0'][i], 9)
-        this.finish('won')
+        const at = this.ball.position
+        for (let i = 0; i < 4; i += 1) this.fx.burst(new THREE.Vector3(at.x + (Math.random() - 0.5) * 4, at.y + 1 + i, at.z + (Math.random() - 0.5) * 4), 60, ['#ffd35c', '#7ef9ff', '#ff9bf5', '#9effa0'][i], 9)
+        this.shake = Math.max(this.shake, 0.3 * motion)
+        this.events.level(e.level, e.points)
         break
+      }
     }
     if (e.type !== 'bounce' || e.points) this.events.scored(this.sim.score)
     if (this.personalBest > 0 && !this.bestAnnounced && this.sim.score > this.personalBest) {
@@ -360,6 +374,7 @@ export class Game {
       floors: s.floors,
       durationMs: Math.floor(s.time * 1000),
       outcome,
+      levels: s.levelsCleared,
       bestChain: s.bestChain,
       smashes: s.smashes,
       nearMisses: s.nearMisses,
@@ -383,7 +398,7 @@ export class Game {
       this.lastRenderedFloor = s.floor
     }
     this.towerView.update(s.time)
-    this.fx.update(dt, alpha)
+    this.fx.update(dt)
 
     // Ball squash & stretch.
     this.squash = Math.max(0, this.squash - dt * 7)

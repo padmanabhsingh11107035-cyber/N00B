@@ -1,3 +1,5 @@
+import { boardDay } from '../../server/helix-rules.mjs'
+
 /**
  * Versioned local save. Everything the player keeps between sessions lives in one JSON record so
  * it is easy to migrate. Corrupt or foreign data falls back to defaults instead of crashing.
@@ -70,7 +72,7 @@ export function parseSave(raw: string | null): SaveData {
   }
   if (data.version !== 1) return base
   const board = Array.isArray(data.leaderboard) ? data.leaderboard : []
-  return {
+  const parsed: SaveData = {
     version: 1,
     locale: data.locale === 'en' || data.locale === 'zh-CN' ? data.locale : '',
     musicVolume: clamp01(data.musicVolume, base.musicVolume),
@@ -85,18 +87,37 @@ export function parseSave(raw: string | null): SaveData {
     leaderboard: board
       .filter((e): e is ScoreEntry => !!e && typeof e === 'object' && typeof (e as ScoreEntry).name === 'string' && Number.isFinite((e as ScoreEntry).score))
       .map(e => ({ name: e.name.slice(0, 16), score: Math.max(0, Math.floor(e.score)), seconds: Number.isFinite(e.seconds) ? e.seconds : 0, at: Number.isFinite(e.at) ? e.at : 0 }))
-      .slice(0, LEADERBOARD_SIZE),
+      .slice(0, LEADERBOARD_SIZE * 3),
     best: nonNegInt(data.best),
     dailyDay: typeof data.dailyDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.dailyDay) ? data.dailyDay : '',
     dailyBest: nonNegInt(data.dailyBest),
     plays: nonNegInt(data.plays),
   }
+  // Boards saved before "one score per player" can hold the same player many times: keep each one's best.
+  parsed.leaderboard = bestPerPlayer(parsed.leaderboard).slice(0, LEADERBOARD_SIZE)
+  return parsed
 }
 
-/** Insert a run into a bounded, deterministically ordered leaderboard (higher score, then faster, then earlier). */
+const byScore = (a: ScoreEntry, b: ScoreEntry) => b.score - a.score || a.seconds - b.seconds || a.at - b.at
+const sameWho = (a: ScoreEntry, b: ScoreEntry) => a.name.trim().toLowerCase() === b.name.trim().toLowerCase()
+
+/** A player shows once per board: only their best score is kept (one per player per day, so today's board never loses to an older high score). */
+export function bestPerPlayer(entries: ScoreEntry[], perDay = true): ScoreEntry[] {
+  const out: ScoreEntry[] = []
+  for (const e of [...entries].sort(byScore)) {
+    if (!out.some(o => sameWho(o, e) && (!perDay || boardDay(o.at) === boardDay(e.at)))) out.push(e)
+  }
+  return out
+}
+
+/**
+ * Insert a run into a bounded, deterministically ordered leaderboard (higher score, then faster, then earlier).
+ * A player already on the board for that day keeps only the better of the two scores. `rank` is where that player's best now sits.
+ */
 export function insertScore(board: ScoreEntry[], entry: ScoreEntry): { board: ScoreEntry[]; rank: number } {
-  const next = [...board, entry].sort((a, b) => b.score - a.score || a.seconds - b.seconds || a.at - b.at).slice(0, LEADERBOARD_SIZE)
-  return { board: next, rank: next.indexOf(entry) }
+  const next = bestPerPlayer([...board, entry]).slice(0, LEADERBOARD_SIZE)
+  const mine = next.find(e => sameWho(e, entry) && boardDay(e.at) === boardDay(entry.at))
+  return { board: next, rank: mine ? next.indexOf(mine) : -1 }
 }
 
 export class SaveStore {

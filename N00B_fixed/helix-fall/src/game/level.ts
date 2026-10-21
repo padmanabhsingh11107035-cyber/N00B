@@ -1,4 +1,4 @@
-import { STAGE_FLOORS, TOTAL_FLOORS } from '../../server/helix-rules.mjs'
+import { LEVEL_FLOORS, STAGE_FLOORS } from '../../server/helix-rules.mjs'
 
 /** Every floor is a ring split into this many equal slots. */
 export const SLOTS = 16
@@ -20,7 +20,8 @@ export type FloorSpec = {
   blink?: { period: number; phase: number; duty: number }
 }
 
-export type Tower = { seed: number; floors: FloorSpec[] }
+/** The floors built so far: level 1 first, and every later level is added by `extendTower` as the ball nears it. */
+export type Tower = { seed: number; floors: FloorSpec[]; levels: number }
 
 /** Small fast deterministic PRNG (mulberry32). */
 export function rng(seed: number): () => number {
@@ -46,8 +47,9 @@ export function hashSeed(text: string): number {
 
 export const dailySeed = (day: string) => hashSeed(`helix-drop/daily/${day}`)
 
+/** Stage (0-5) of a floor; the six stages repeat in every level. */
 export function stageOf(floor: number): number {
-  let left = floor
+  let left = floor % LEVEL_FLOORS
   for (let s = 0; s < STAGE_FLOORS.length; s += 1) {
     if (left < STAGE_FLOORS[s]) return s
     left -= STAGE_FLOORS[s]
@@ -57,13 +59,17 @@ export function stageOf(floor: number): number {
 
 /** True when `floor` is the last floor of its stage. */
 export function isStageEnd(floor: number): boolean {
+  const local = floor % LEVEL_FLOORS
   let acc = 0
   for (const f of STAGE_FLOORS) {
     acc += f
-    if (floor === acc - 1) return true
+    if (local === acc - 1) return true
   }
   return false
 }
+
+/** Level (1, 2, 3 …) a floor belongs to. */
+export const levelOf = (floor: number) => Math.floor(floor / LEVEL_FLOORS) + 1
 
 export const wrapAngle = (a: number) => {
   const t = a % (Math.PI * 2)
@@ -71,88 +77,114 @@ export const wrapAngle = (a: number) => {
 }
 
 /**
- * Difficulty knobs by floor. `d` rises 0 → 1 across the tower; stages add discrete steps so each
- * theme change also feels like a new challenge.
+ * Difficulty knobs by floor. `d` rises 0 → 1 across a level; stages add discrete steps so each
+ * theme change also feels like a new challenge. Made for people, not experts: wide gaps, few hazards,
+ * and the next gap is never far away. Each new level is a little harder than the one before, up to a ceiling.
  */
-function knobs(index: number, stage: number) {
-  const d = index / (TOTAL_FLOORS - 1)
+function knobs(local: number, stage: number, level: number) {
+  const d = local / (LEVEL_FLOORS - 1)
+  const lv = Math.min(level - 1, 6)
   return {
-    gap: index < 5 ? 4 : stage === 0 ? 3 : stage < 3 ? (index % 2 === 0 ? 3 : 2) : stage < 5 ? (index % 4 === 0 ? 3 : 2) : 2,
-    dangerMin: index < 3 ? 0 : [0, 1, 1, 2, 3, 3][stage],
-    dangerMax: index < 3 ? 0 : [1, 2, 3, 3, 4, 5][stage],
-    blinkChance: stage >= 1 ? 0.12 + 0.08 * stage : 0,
-    sweeperChance: stage >= 2 ? 0.15 + 0.1 * (stage - 2) : 0,
-    blinkPeriod: 2.0 - 0.5 * d,
+    gap: local < 10 ? 5 : stage <= 2 ? 4 : stage === 3 ? (local % 2 === 0 ? 4 : 3) : lv >= 3 && local % 5 === 0 ? 2 : 3,
+    dangerMin: local < 5 ? 0 : [0, 0, 0, 0, 1, 1][stage],
+    dangerMax: local < 5 ? 0 : [0, 1, 1, 1, 2, 2][stage] + (lv >= 2 ? 1 : 0),
+    blinkChance: stage >= 3 ? 0.05 + 0.04 * (stage - 3) + 0.02 * lv : 0,
+    sweeperChance: stage >= 4 ? 0.06 + 0.05 * (stage - 4) + 0.02 * lv : 0,
+    /** Chance that a floor keeps its hazards off the short way from where the ball lands to the gap. */
+    guard: stage <= 2 ? 1 : 0.8,
+    blinkPeriod: 2.4 - 0.4 * d,
     /** Chance that the next floor's gap sits right under this one: a "chute" for chains/smash. */
-    chute: 0.3 - 0.12 * d,
+    chute: 0.5 - 0.1 * d,
   }
 }
 
-export function generateTower(seed: number): Tower {
-  const r = rng(seed)
+/** The 90 floors of one level, continuing from the floor above (`prev`, none for level 1). */
+function generateLevel(seed: number, level: number, prev: FloorSpec | null): FloorSpec[] {
+  const r = rng(level === 1 ? seed : (seed ^ Math.imul(level, 0x9e3779b1)) >>> 0)
+  const base = (level - 1) * LEVEL_FLOORS
   const floors: FloorSpec[] = []
-  // The first gap sits a quarter turn away so the very first input already scores.
-  let offset = 0
-  let prevGapCenter = 0
-  for (let i = 0; i < TOTAL_FLOORS; i += 1) {
-    const stage = stageOf(i)
-    const k = knobs(i, stage)
+  // Where the gap above sat (tower frame); the first floor of level 1 has a gap a quarter turn away so the first input already scores.
+  let prevGapCenter = prev ? prev.offset + (prev.slots.filter(k => k === 'gap').length / 2) * SLOT_ANGLE : 0
+  for (let li = 0; li < LEVEL_FLOORS; li += 1) {
+    const i = base + li
+    const stage = stageOf(li)
+    const k = knobs(li, stage, level)
     const slots: SlotKind[] = new Array(SLOTS).fill('safe')
     // Gap slots start at local slot 0.
     for (let s = 0; s < k.gap; s += 1) slots[s] = 'gap'
-    // Where to put this floor's gap (tower frame): near a quarter/half turn from the previous one,
+    // Where to put this floor's gap (tower frame): a short turn from the previous one (never more than about a third of a lap),
     // or directly underneath it for a chute.
     let gapCenter: number
     if (i === 0) gapCenter = Math.PI / 2
     else if (r() < k.chute) gapCenter = prevGapCenter + (r() - 0.5) * SLOT_ANGLE * 1.2
-    else gapCenter = prevGapCenter + (r() < 0.5 ? -1 : 1) * (Math.PI * (0.35 + r() * 0.55))
-    offset = wrapAngle(gapCenter - (k.gap * SLOT_ANGLE) / 2)
+    else gapCenter = prevGapCenter + (r() < 0.5 ? -1 : 1) * (Math.PI * (0.22 + r() * 0.4))
+    const offset = wrapAngle(gapCenter - (k.gap * SLOT_ANGLE) / 2)
     // Slots directly beneath the previous floor's gap are the landing zone: keep them safe so a
     // clean drop never lands on a hazard the player could not see.
+    const above = li === 0 ? prev : floors[li - 1]
     const landing = new Set<number>()
-    if (i > 0) {
-      const prev = floors[i - 1]
-      const prevGap = prev.slots.map((s, j) => (s === 'gap' ? j : -1)).filter(j => j >= 0)
+    if (above) {
+      const prevGap = above.slots.map((s, j) => (s === 'gap' ? j : -1)).filter(j => j >= 0)
       for (const j of prevGap) {
-        const a = wrapAngle(prev.offset + (j + 0.5) * SLOT_ANGLE - offset)
+        const a = wrapAngle(above.offset + (j + 0.5) * SLOT_ANGLE - offset)
         landing.add(Math.floor(a / SLOT_ANGLE) % SLOTS)
+      }
+    }
+    // The short way from the landing zone to the gap is where the ball usually turns: most floors keep their hazards off it.
+    const corridor = new Set<number>()
+    if (i > 0 && r() < k.guard) {
+      const way = angleDiff(gapCenter, prevGapCenter)
+      for (let s = 0; s < SLOTS; s += 1) {
+        const along = angleDiff(offset + (s + 0.5) * SLOT_ANGLE, prevGapCenter)
+        if (Math.sign(along) === Math.sign(way) && Math.abs(along) <= Math.abs(way) + SLOT_ANGLE * 0.75) corridor.add(s)
       }
     }
     const free = () => {
       const out: number[] = []
-      for (let s = k.gap + 1; s < SLOTS - 1; s += 1) if (slots[s] === 'safe' && !landing.has(s)) out.push(s)
-      // Late stages may put a hazard right beside the gap.
-      if (stage >= 3) for (const s of [k.gap, SLOTS - 1]) if (slots[s] === 'safe' && !landing.has(s)) out.push(s)
+      for (let s = k.gap + 1; s < SLOTS - 1; s += 1) if (slots[s] === 'safe' && !landing.has(s) && !corridor.has(s)) out.push(s)
+      // Late stages may put a hazard right beside the gap (never in the first levels).
+      if (stage >= 4 && level >= 3) for (const s of [k.gap, SLOTS - 1]) if (slots[s] === 'safe' && !landing.has(s) && !corridor.has(s)) out.push(s)
       return out
     }
+    const hazards = () => slots.filter(k => k === 'danger' || k === 'blink').length
     const dangers = k.dangerMin + Math.floor(r() * (k.dangerMax - k.dangerMin + 1))
     for (let n = 0; n < dangers; n += 1) {
       const options = free()
-      if (!options.length) break
+      if (!options.length || hazards() >= 4) break
       const s = options[Math.floor(r() * options.length)]
       slots[s] = 'danger'
       // Sometimes grow into a two-slot block for readable larger hazards.
-      if (stage >= 2 && r() < 0.35 && s + 1 < SLOTS && slots[s + 1] === 'safe' && !landing.has(s + 1) && s + 1 > k.gap) slots[s + 1] = 'danger'
+      if (stage >= 3 && hazards() < 4 && r() < 0.25 && s + 1 < SLOTS && slots[s + 1] === 'safe' && !landing.has(s + 1) && s + 1 > k.gap) slots[s + 1] = 'danger'
     }
     let blink: FloorSpec['blink']
-    if (r() < k.blinkChance) {
+    if (hazards() < 4 && r() < k.blinkChance) {
       const options = free()
-      const count = stage >= 4 ? 2 : 1
-      for (let n = 0; n < count && options.length; n += 1) {
+      for (let n = 0; n < 1 && options.length; n += 1) {
         const pick = options.splice(Math.floor(r() * options.length), 1)[0]
         slots[pick] = 'blink'
       }
-      blink = { period: k.blinkPeriod, phase: r() * k.blinkPeriod, duty: 0.5 }
+      blink = { period: k.blinkPeriod, phase: r() * k.blinkPeriod, duty: 0.45 }
     }
     let sweeper: Sweeper | undefined
     if (r() < k.sweeperChance) {
-      const speed = (0.7 + r() * 0.7 + stage * 0.08) * (r() < 0.5 ? -1 : 1)
-      sweeper = { start: r() * Math.PI * 2, width: SLOT_ANGLE * 1.25, speed }
+      const speed = (0.4 + r() * 0.4 + stage * 0.03) * (r() < 0.5 ? -1 : 1)
+      sweeper = { start: r() * Math.PI * 2, width: SLOT_ANGLE, speed }
     }
     floors.push({ index: i, stage, offset, slots, sweeper, blink })
     prevGapCenter = gapCenter
   }
-  return { seed, floors }
+  return floors
+}
+
+/** A new tower: level 1. */
+export function generateTower(seed: number): Tower {
+  return { seed, floors: generateLevel(seed, 1, null), levels: 1 }
+}
+
+/** Add the next level below the floors built so far (the same tower for the same seed, whoever plays). */
+export function extendTower(tower: Tower): void {
+  tower.levels += 1
+  tower.floors.push(...generateLevel(tower.seed, tower.levels, tower.floors[tower.floors.length - 1]))
 }
 
 /** Slot under a tower-frame angle. */

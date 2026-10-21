@@ -1,7 +1,7 @@
 /**
  * Fixed-step simulation loop with interpolated rendering.
  *
- * Gameplay and physics advance in constant `stepSeconds` increments so behaviour is identical on
+ * Gameplay advances in constant `stepSeconds` increments so behaviour is identical on
  * 30 Hz phones and 144 Hz monitors. Rendering happens once per animation frame and receives the
  * interpolation factor `alpha` (0..1) between the previous and current simulation state.
  */

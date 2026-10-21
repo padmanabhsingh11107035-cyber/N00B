@@ -73,14 +73,12 @@ export class TowerView {
   private readonly floorMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.62, metalness: 0.02 })
   private readonly dangerMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.4, emissive: new THREE.Color(DANGER), emissiveIntensity: 0.45 })
   private readonly pillarMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.7 })
-  private readonly base: THREE.Group
   private tower: Tower
   shadows = true
 
   constructor(tower: Tower) {
     this.tower = tower
-    this.base = this.buildBase()
-    this.root.add(this.base)
+    // Levels never end, so there is no gold base at the bottom of the tower any more.
   }
 
   setTower(tower: Tower): void {
@@ -230,35 +228,6 @@ export class TowerView {
     group.userData.pillar = pillar
     this.root.add(group)
     return { spec, group, blinkMat, sweeperPivot, broken: false, decals: [] }
-  }
-
-  private buildBase(): THREE.Group {
-    const g = new THREE.Group()
-    const index = this.tower.floors.length
-    const y = floorTop(index)
-    const pos: number[] = []
-    const col: number[] = []
-    const gold = new THREE.Color('#ffd35c')
-    const cream = new THREE.Color('#fff1dc')
-    for (let k = 0; k < 16; k += 1) {
-      const a0 = (k / 16) * Math.PI * 2
-      const a1 = ((k + 1) / 16) * Math.PI * 2
-      pushSector(pos, col, a0, a1, 0.01, RING_OUTER + 0.6, y, 1.2, k % 2 ? gold : cream, 1)
-      pushSector(pos, col, a0, a1, RING_OUTER + 0.3, RING_OUTER + 0.9, y + 0.35, 0.35, k % 2 ? cream : gold, 1)
-    }
-    const mesh = new THREE.Mesh(geometryFrom(pos, col), new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.5, emissive: new THREE.Color('#ffb020'), emissiveIntensity: 0.15 }))
-    mesh.receiveShadow = true
-    g.add(mesh)
-    return g
-  }
-
-  /** Rebuild the base under a new tower length. */
-  resetBase(): void {
-    this.base.removeFromParent()
-    this.base.traverse(o => (o as THREE.Mesh).geometry?.dispose())
-    const b = this.buildBase()
-    ;(this as unknown as { base: THREE.Group }).base = b
-    this.root.add(b)
   }
 
   private dispose(v: FloorView): void {

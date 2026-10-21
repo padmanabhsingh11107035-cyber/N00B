@@ -15,6 +15,8 @@ export interface MiniGameMeta {
   // Pictures of the game's own (portrait posters, shown instead of the cartoon banner on the game's card and page).
   posters?: string[];
   isNew?: boolean;
+  // For a game that pays for something other than a win (Helix Fall: every level cleared): what the reward is for, e.g. 'per level'.
+  rewardNote?: string;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -29,14 +31,15 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     id: 'helix_fall',
     title: 'Helix Fall',
     category: 'arcade',
-    description: 'Rotate the tower, find the gaps and drop the glowing orb all the way down. Reach the base to win — one wrong landing and it shatters.',
+    description: 'Rotate the tower, find the gaps and drop the glowing orb down. Every 90 floors is a level worth 50,000,000 NOOBs, and levels never end. You have one shield per level.',
     bannerBg: 'from-[#2a2552] to-[#1b1838]',
     badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    pointsReward: 10_000_000,
-    difficulty: 'Medium',
+    pointsReward: 50_000_000,
+    rewardNote: 'per level',
+    difficulty: 'Easy',
     players: 'Solo',
     iconType: 'helix',
-    tags: ['3D', 'One Input', 'Daily Tower'],
+    tags: ['3D', 'Endless Levels', 'Daily Tower'],
     isNew: true,
     posters: [
       '/game-posters/helix-fall/01-hero-drop.webp',

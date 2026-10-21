@@ -1,5 +1,5 @@
-import { SCORE, TOTAL_FLOORS, finishBonus, floorPoints } from '../../server/helix-rules.mjs'
-import { isStageEnd, probe, stageOf, type Tower } from './level'
+import { LEVEL_FLOORS, SCORE, floorPoints } from '../../server/helix-rules.mjs'
+import { extendTower, isStageEnd, levelOf, probe, stageOf, type Tower } from './level'
 
 export const GRAVITY = 38
 export const BOUNCE_SPEED = 11.4
@@ -26,7 +26,10 @@ export type SimEvent =
   | { type: 'smash'; floor: number; points: number }
   | { type: 'stage'; stage: number; points: number }
   | { type: 'death'; floor: number; cause: 'danger' | 'blink' | 'sweeper' }
-  | { type: 'win'; points: number }
+  /** The shield took a hit that would have ended the run (one per level). */
+  | { type: 'saved'; floor: number; cause: 'danger' | 'blink' | 'sweeper' }
+  /** A level (90 floors) was cleared; the next one starts right below. */
+  | { type: 'level'; level: number; points: number }
 
 export class Sim {
   phi = 0
@@ -36,7 +39,7 @@ export class Sim {
   prevY = this.y
   vy = 0
   time = 0
-  /** Index of the next intact floor below the ball (== TOTAL_FLOORS → the base). */
+  /** Index of the next intact floor below the ball. */
   floor = 0
   chain = 0
   bestChain = 0
@@ -45,14 +48,23 @@ export class Sim {
   floors = 0
   smashes = 0
   nearMisses = 0
-  over: null | 'dead' | 'won' = null
+  over: null | 'dead' = null
+  /** Levels cleared so far (the run is on level `levelsCleared + 1`). */
+  levelsCleared = 0
+  /** One free mistake per level: the first hazard hit in a level bounces the ball away instead of ending the run. */
+  shield = 1
   private passing = false
   private nearDone = new Set<number>()
 
   constructor(readonly tower: Tower) {}
 
   get stage(): number {
-    return stageOf(Math.min(this.floor, TOTAL_FLOORS - 1))
+    return stageOf(this.floor)
+  }
+
+  /** The level the ball is in (1, 2, 3 …). */
+  get level(): number {
+    return levelOf(this.floor)
   }
 
   /** Tower-frame angle under the ball (the ball sits at world angle 0). */
@@ -76,18 +88,8 @@ export class Sim {
     this.vy = Math.max(this.vy - GRAVITY * dt, -TERMINAL_SPEED)
     this.y += this.vy * dt
 
-    if (this.floor >= TOTAL_FLOORS) {
-      const top = floorY(TOTAL_FLOORS)
-      if (this.y - BALL_RADIUS < top) {
-        this.y = top + BALL_RADIUS
-        this.vy = 0
-        const points = finishBonus(this.time)
-        this.score += points
-        this.over = 'won'
-        events.push({ type: 'win', points })
-      }
-      return events
-    }
+    // The tower grows a level at a time, well before the ball gets there.
+    if (this.floor + 30 > this.tower.floors.length) extendTower(this.tower)
 
     const top = floorY(this.floor)
     const spec = this.tower.floors[this.floor]
@@ -106,9 +108,17 @@ export class Sim {
         this.vy = Math.min(this.vy, -7)
         this.stageCheck(this.floor, events)
         this.floor += 1
+        this.levelCheck(events)
         return events
       } else if (p.kind === 'danger' || p.kind === 'blink' || p.kind === 'sweeper') {
         this.y = top + BALL_RADIUS
+        if (this.shield > 0) {
+          this.shield -= 1
+          this.vy = BOUNCE_SPEED
+          this.chain = 0
+          events.push({ type: 'saved', floor: this.floor, cause: p.kind })
+          return events
+        }
         this.vy = 0
         this.over = 'dead'
         events.push({ type: 'death', floor: this.floor, cause: p.kind })
@@ -142,8 +152,18 @@ export class Sim {
       }
       this.stageCheck(this.floor, events)
       this.floor += 1
+      this.levelCheck(events)
     }
     return events
+  }
+
+  private levelCheck(events: SimEvent[]): void {
+    if (this.floor % LEVEL_FLOORS !== 0) return
+    this.levelsCleared = this.floor / LEVEL_FLOORS
+    this.shield = 1
+    const points = SCORE.finish
+    this.score += points
+    events.push({ type: 'level', level: this.levelsCleared, points })
   }
 
   private stageCheck(floor: number, events: SimEvent[]): void {

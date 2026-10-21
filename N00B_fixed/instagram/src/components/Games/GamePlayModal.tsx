@@ -24,6 +24,9 @@ import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../uti
 import { User } from '../../types';
 import {
   recordGameMatch,
+  helixLevelComplete,
+  helixSubmitRun,
+  helixLeaderboard,
   sendGameInvite,
   submitSurvivalScore,
   joinGameRoom,
@@ -771,19 +774,21 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     }
   };
 
-  // Helix Fall keeps its own result screen on show between runs, so each finished run is recorded here (same payout and Global Leaderboard as finishGame: a win is
-  // +10,000,000, a loss 0) without switching to the app's result page. Resolves with what was added, or null when the server could not save it.
-  const recordSoloRun = async (result: 'win' | 'loss'): Promise<{ earned: number } | null> => {
-    try {
-      const res = await recordGameMatch(game.id, game.title, result, 'Solo', false);
-      if (!res.success) return null;
-      if (result === 'win') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-      onPointsUpdated(res.earnedPoints, res.totalNoobPoints, result === 'win');
-      return { earned: res.earnedPoints };
-    } catch (err) {
-      console.error(err);
-      return null;
+  // Helix Fall keeps its own screens on show (it has levels, its own results and its own board), so it reports to the app instead of using finishGame:
+  // every level cleared pays 50,000,000 at once (levels never end), and a finished run keeps only the player's best score for the board.
+  const payHelixLevel = async (level: number): Promise<{ earned: number } | { error: string }> => {
+    const res = await helixLevelComplete(level);
+    if (!res.success) {
+      const text = res.error || 'Could not save this level.';
+      return { error: /function .*does not exist|schema cache|PGRST202/i.test(text) ? 'saving levels is being set up, try again soon.' : text };
     }
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+    onPointsUpdated(res.earnedPoints, res.totalNoobPoints, true);
+    return { earned: res.earnedPoints };
+  };
+  const saveHelixRun = async (run: { score: number; floors: number; level: number; kind: 'daily' | 'practice' }) => {
+    const res = await helixSubmitRun({ score: run.score, floors: run.floors, level: run.level, daily: run.kind === 'daily' });
+    return res.success ? { bestScore: res.bestScore, newBest: res.newBest } : null;
   };
 
   // Survival games (no win/tie/loss, no opponent) pay out 10 NOOB Points
@@ -1056,7 +1061,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white leading-tight">{game.title}</h2>
               <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
+                <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs {game.rewardNote ?? 'on Win'}</span>
                 <span>•</span>
                 <span className="text-zinc-400">
                   {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : game.id === 'helix_fall' ? 'Solo' : '5,000,000 NOOBs on Tie'}
@@ -1126,7 +1131,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {game.id === 'helix_fall' ? (
                 <div className="pt-2 space-y-2.5">
                   <div className="px-3 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center text-[11px] font-bold text-amber-300">
-                    Reach the base of the tower: +{game.pointsReward.toLocaleString()} NOOBs on the Global Leaderboard. Fall and it's 0.
+                    Clear 90 floors = a level: +{game.pointsReward.toLocaleString()} NOOBs, paid at once, level after level. Your best score is on the leaderboard.
                   </div>
                   <button
                     onClick={startBotGameNow}
@@ -1134,7 +1139,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   >
                     Play Helix Fall
                   </button>
-                  <p className="text-[10px] text-zinc-500 text-center">Solo game: rotate with A / D, the arrow keys, or by dragging.</p>
+                  <p className="text-[10px] text-zinc-500 text-center">Rotate with A / D, the arrow keys, or by dragging. One shield per level forgives your first hazard.</p>
                 </div>
               ) : (
               <div className="pt-2 space-y-2.5">
@@ -1692,7 +1697,13 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'helix_fall' && (
-                <HelixFallGame onRun={recordSoloRun} pointsReward={game.pointsReward} />
+                <HelixFallGame
+                  userName={currentUser.username}
+                  pointsPerLevel={game.pointsReward}
+                  onLevel={payHelixLevel}
+                  onRun={saveHelixRun}
+                  loadBoard={helixLeaderboard}
+                />
               )}
 
               {game.id === 'tictactoe' && onlineMatch && (

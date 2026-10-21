@@ -1,22 +1,26 @@
 import * as THREE from 'three'
-import { Physics, RAPIER } from '../engine/physics'
 import { SLOTS, SLOT_ANGLE, type FloorSpec } from './level'
 import { PILLAR_RADIUS, PLATFORM_THICKNESS, RING_INNER, RING_OUTER, floorTop, geometryFrom, pushSector } from './tower'
 import { DANGER, THEMES } from './theme'
 
-type Shard = { mesh: THREE.Mesh; body: RAPIER.RigidBody; age: number; life: number }
+/** A tumbling piece: plain integration (gravity, spin, a bounce off the pillar), nothing heavier is needed for a one-second effect. */
+type Shard = { mesh: THREE.Mesh; vel: THREE.Vector3; spin: THREE.Vector3; damping: number; radius: number; bounce: number; age: number; life: number }
 type Ring = { mesh: THREE.Mesh; age: number; life: number; grow: number }
 
 const MAX_SPARKS = 480
 const MID_R = (RING_INNER + RING_OUTER) / 2
 
+const SHARD_GRAVITY = -26
+const scratch = new THREE.Quaternion()
+const axis = new THREE.Vector3()
+
 /**
- * Juice: platform shards are real Rapier rigid bodies (they tumble and bounce off the pillar),
- * sparks are one additive point cloud, and shockwave rings mark smashes.
+ * Juice: platform shards tumble and bounce off the pillar, sparks are one additive point cloud,
+ * and shockwave rings mark smashes. (They used to be Rapier rigid bodies; the physics engine was four fifths of the
+ * game's download, which made it slow to start, for an effect that lasts a second.)
  */
 export class Fx {
   readonly group = new THREE.Group()
-  private physics = new Physics(-26)
   private shards: Shard[] = []
   private rings: Ring[] = []
   private geoCache = new Map<string, THREE.BufferGeometry>()
@@ -34,8 +38,6 @@ export class Fx {
   density = 1
 
   constructor() {
-    // The pillar is a static collider so shards ricochet off it instead of passing through.
-    this.physics.world.createCollider(RAPIER.ColliderDesc.cylinder(400, PILLAR_RADIUS).setTranslation(0, -390, 0).setRestitution(0.3))
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(this.sparkPos, 3))
     g.setAttribute('color', new THREE.BufferAttribute(this.sparkCol, 3))
@@ -81,14 +83,19 @@ export class Fx {
       mesh.rotation.y = a
       mesh.castShadow = false
       this.group.add(mesh)
-      const body = this.physics.addDynamic(mesh, RAPIER.ColliderDesc.cuboid(0.34, PLATFORM_THICKNESS / 2, 0.9).setRestitution(0.35).setDensity(1), 0.25)
-      body.setRotation(mesh.quaternion, true)
-      this.physics.snap(body)
+      mesh.quaternion.setFromEuler(new THREE.Euler(0, a, 0))
       const out = (2.6 + Math.random() * 3.2) * power
       const up = power > 1 ? 3 + Math.random() * 2.5 : -2.2 + Math.random() * 1.6
-      body.setLinvel({ x: dir.x * out, y: up, z: dir.z * out }, true)
-      body.setAngvel({ x: (Math.random() - 0.5) * 9, y: (Math.random() - 0.5) * 6, z: (Math.random() - 0.5) * 9 }, true)
-      this.shards.push({ mesh, body, age: 0, life: power > 1 ? 1.1 + Math.random() * 0.5 : 0.75 + Math.random() * 0.35 })
+      this.shards.push({
+        mesh,
+        vel: new THREE.Vector3(dir.x * out, up, dir.z * out),
+        spin: new THREE.Vector3((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 9),
+        damping: 0.25,
+        radius: 0.45,
+        bounce: 0.35,
+        age: 0,
+        life: power > 1 ? 1.1 + Math.random() * 0.5 : 0.75 + Math.random() * 0.35,
+      })
     }
     // Hard cap on simultaneously simulated shards.
     while (this.shards.length > 90) this.removeShard(this.shards[0])
@@ -105,10 +112,17 @@ export class Fx {
       const mesh = new THREE.Mesh(geo, this.hotMat)
       mesh.position.copy(at)
       this.group.add(mesh)
-      const body = this.physics.addDynamic(mesh, RAPIER.ColliderDesc.ball(0.12).setRestitution(0.5), 0.2)
       const a = Math.random() * Math.PI * 2
-      body.setLinvel({ x: Math.cos(a) * 5, y: 3 + Math.random() * 5, z: Math.sin(a) * 5 }, true)
-      this.shards.push({ mesh, body, age: 0, life: 1.6 })
+      this.shards.push({
+        mesh,
+        vel: new THREE.Vector3(Math.cos(a) * 5, 3 + Math.random() * 5, Math.sin(a) * 5),
+        spin: new THREE.Vector3((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8),
+        damping: 0.2,
+        radius: 0.12,
+        bounce: 0.5,
+        age: 0,
+        life: 1.6,
+      })
     }
     this.burst(at, Math.round(90 * this.density), DANGER, 8)
     this.burst(at, Math.round(40 * this.density), '#ffffff', 5)
@@ -149,16 +163,11 @@ export class Fx {
     this.rings.push({ mesh, age: 0, life: 0.45, grow: to })
   }
 
-  /** Fixed-step physics for shards. */
-  step(dt: number): void {
-    if (this.shards.length) this.physics.step(dt)
-  }
-
   /** Per-frame visuals (interpolated shards, sparks, rings). */
-  update(dt: number, alpha: number): void {
-    this.physics.sync(alpha)
+  update(dt: number): void {
     for (const s of [...this.shards]) {
       s.age += dt
+      this.moveShard(s, dt)
       const k = s.age / s.life
       if (k > 0.7) s.mesh.scale.setScalar(Math.max(0.01, 1 - (k - 0.7) / 0.3))
       if (k >= 1) this.removeShard(s)
@@ -194,8 +203,33 @@ export class Fx {
     }
   }
 
+  private moveShard(s: Shard, dt: number): void {
+    s.vel.y += SHARD_GRAVITY * dt
+    s.vel.multiplyScalar(Math.exp(-s.damping * dt))
+    const p = s.mesh.position.addScaledVector(s.vel, dt)
+    const spin = s.spin.length()
+    if (spin > 1e-4) {
+      axis.copy(s.spin).divideScalar(spin)
+      scratch.setFromAxisAngle(axis, spin * dt)
+      s.mesh.quaternion.premultiply(scratch)
+    }
+    // The pillar in the middle: bounce off it instead of passing through.
+    const r = Math.hypot(p.x, p.z)
+    const reach = PILLAR_RADIUS + s.radius
+    if (r < reach && r > 1e-4) {
+      const nx = p.x / r
+      const nz = p.z / r
+      const inward = s.vel.x * nx + s.vel.z * nz
+      if (inward < 0) {
+        s.vel.x -= (1 + s.bounce) * inward * nx
+        s.vel.z -= (1 + s.bounce) * inward * nz
+      }
+      p.x = nx * reach
+      p.z = nz * reach
+    }
+  }
+
   private removeShard(s: Shard): void {
-    this.physics.removeBody(s.body)
     s.mesh.removeFromParent()
     this.shards.splice(this.shards.indexOf(s), 1)
   }

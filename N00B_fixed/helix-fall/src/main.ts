@@ -1,15 +1,14 @@
 import './styles/main.css'
 import orbUrl from '../assets/models/helix-fall-orb.glb?url'
 import faviconUrl from '../assets/share/favicon.png?url'
-import { STAGE_FLOORS, TOTAL_FLOORS, boardDay } from '../server/helix-rules.mjs'
+import { LEVEL_FLOORS, STAGE_FLOORS, boardDay } from '../server/helix-rules.mjs'
 import { Assets } from './engine/assets'
 import { Audio } from './engine/audio'
 import { I18n, resolveLocale } from './engine/i18n'
 import { Input } from './engine/input'
 import { GameLoop } from './engine/loop'
-import { initPhysics } from './engine/physics'
 import { Renderer, suggestQuality } from './engine/renderer'
-import { insertScore, SaveStore, SAVE_KEY, type Locale, type Quality } from './engine/save'
+import { bestPerPlayer, insertScore, SaveStore, SAVE_KEY, type Locale, type Quality } from './engine/save'
 import { Game, type RunKind, type RunResult } from './game/game'
 import { dailySeed } from './game/level'
 import { THEMES } from './game/theme'
@@ -33,7 +32,9 @@ function tellHost(run: RunResult): void {
       kind: run.kind,
       score: run.score,
       floors: run.floors,
-      totalFloors: TOTAL_FLOORS,
+      levels: run.levels,
+      level: run.levels + 1,
+      totalFloors: LEVEL_FLOORS,
       stage: run.stage,
       durationMs: run.durationMs,
     }, location.origin)
@@ -44,11 +45,62 @@ function tellStatus(type: 'ready' | 'error', detail = ''): void {
   if (!embedded) return
   try { window.parent.postMessage({ type: `helixfall:${type}`, detail }, location.origin) } catch { /* nothing to tell */ }
 }
+/** A new run began (the page around the game clears what it showed about the last one). */
+function tellRunStart(kind: RunKind): void {
+  if (!embedded) return
+  try { window.parent.postMessage({ type: 'helixfall:run-start', kind }, location.origin) } catch { /* nothing to tell */ }
+}
+/** A level (90 floors) was cleared: the page around the game pays it at once, while the run goes on. */
+function tellLevel(level: number, run: { kind: RunKind; floors: number; score: number; durationMs: number }): void {
+  if (!embedded) return
+  try { window.parent.postMessage({ type: 'helixfall:level', level, ...run }, location.origin) } catch { /* nothing to tell */ }
+}
+
+// The leaderboard of an embedded game is the one of NOOB (one best score per player): the page around the game fetches it and answers here.
+type HostBoard = { id: number; ok: boolean; period: 'today' | 'all'; total: number; entries: { rank: number; userId: string; displayName: string; score: number; isMe: boolean }[]; me: { rank: number; score: number } | null }
+let boardRequestId = 0
+const boardWaiters = new Map<number, (board: HostBoard | null) => void>()
+function askHostBoard(period: 'today' | 'all', timeoutMs = 8000): Promise<HostBoard | null> {
+  return new Promise(resolve => {
+    const id = (boardRequestId += 1)
+    const timer = window.setTimeout(() => { boardWaiters.delete(id); resolve(null) }, timeoutMs)
+    boardWaiters.set(id, board => { window.clearTimeout(timer); boardWaiters.delete(id); resolve(board) })
+    try { window.parent.postMessage({ type: 'helixfall:board-request', id, period }, location.origin) } catch { window.clearTimeout(timer); boardWaiters.delete(id); resolve(null) }
+  })
+}
+const toBoardData = (b: HostBoard): BoardData => ({
+  period: b.period,
+  day: boardDay(),
+  total: b.total,
+  entries: b.entries.map(e => ({ playerId: e.userId, displayName: e.displayName, score: e.score, rank: e.rank })),
+  myRank: b.me,
+})
+const myIdOf = (b: HostBoard | null): string | null => b?.entries.find(e => e.isMe)?.userId ?? null
+type HostNote = { type: string; bestScore?: number; newBest?: boolean }
+let onHostNote: ((note: HostNote) => void) | null = null
+if (embedded) {
+  window.addEventListener('message', e => {
+    if (e.origin !== location.origin || e.source !== window.parent) return
+    const d = e.data as (HostBoard & { type?: string }) | HostNote | null
+    if (!d || typeof d.type !== 'string') return
+    if (d.type === 'helixfall:board' && typeof (d as HostBoard).id === 'number') boardWaiters.get((d as HostBoard).id)?.((d as HostBoard).ok ? (d as HostBoard) : null)
+    else if (d.type === 'helixfall:saved' || d.type === 'helixfall:profile') onHostNote?.(d as HostNote)
+  })
+}
+// The name on the board is the player's NOOB name (given by the page around the game).
+const hostName = (() => {
+  if (!embedded) return ''
+  try { return (new URLSearchParams(location.search).get('name') ?? '').normalize('NFKC').replace(/[<>\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16) } catch { return '' }
+})()
 const storedGame = (): string | null => {
   try { return localStorage.getItem(SAVE_KEY) } catch { return null }
 }
 
 async function boot(): Promise<void> {
+  // The ball's model starts downloading at once, while the rest of the game is being set up.
+  const assets = new Assets()
+  const modelLoading = assets.gltf(orbUrl)
+  modelLoading.catch(() => undefined)
   const save = new SaveStore()
   if (storedGame() === null) save.update({ quality: suggestQuality() })
   const i18n = new I18n(resolveLocale(save.data.locale, navigator.languages))
@@ -67,6 +119,7 @@ async function boot(): Promise<void> {
   ui.bootIndeterminate(true)
   handlers.retryBoot = () => window.location.reload()
 
+  if (hostName && save.data.playerName !== hostName) save.update({ playerName: hostName })
   if (!save.data.playerName) {
     save.update({ playerName: `${i18n.locale === 'zh-CN' ? '玩家' : 'Player'}${Math.floor(1000 + Math.random() * 9000)}` })
   }
@@ -74,9 +127,7 @@ async function boot(): Promise<void> {
   const previewUnranked: () => boolean = () => false
   const activateTuningRun: () => void = () => undefined
   try {
-    await initPhysics()
-    const assets = new Assets()
-    const model = await assets.gltf(orbUrl)
+    const model = await modelLoading
     const renderer = new Renderer(canvas, save.data.quality)
     let currentDay = boardDay()
     let lastKind: RunKind = 'daily'
@@ -85,6 +136,8 @@ async function boot(): Promise<void> {
     let lastWasBest = false
     let runWasUnranked = false
     let resultsTimer = 0
+    let titleToken = 0
+    let boardToken = 0
     let shareUrl = ''
     let shareBlob: Blob | null = null
 
@@ -92,8 +145,8 @@ async function boot(): Promise<void> {
     const meId = () => `device:${save.data.playerName || 'player'}`
     function localBoard(period: 'today' | 'all', limit = 50): BoardData {
       const today = boardDay()
-      const rows = save.data.leaderboard
-        .filter(entry => period === 'all' || boardDay(entry.at) === today)
+      // One row per player: the all-time board keeps each player's best of all days.
+      const rows = bestPerPlayer(save.data.leaderboard.filter(entry => period === 'all' || boardDay(entry.at) === today), false)
         .slice(0, limit)
       const entries = rows.map((entry, index) => ({
         playerId: entry.name === save.data.playerName ? meId() : `saved:${entry.at}:${index}`,
@@ -111,6 +164,10 @@ async function boot(): Promise<void> {
       smashMode: on => ui.smashMode(on),
       chain: n => ui.chain(n),
       stage: (stage, theme) => ui.stageBanner(stage, theme.accent),
+      level: level => {
+        ui.levelBanner(level)
+        tellLevel(level, { kind: game.kind, floors: game.sim.floors, score: game.sim.score, durationMs: Math.floor(game.sim.time * 1000) })
+      },
       scored: () => undefined,
       end: run => onEnd(run),
       startRequest: () => {
@@ -124,7 +181,17 @@ async function boot(): Promise<void> {
     const todayBest = () => save.data.dailyDay === currentDay ? save.data.dailyBest : 0
     function refreshTitle(): void {
       ui.setTitle({ day: currentDay, best: save.data.best, todayBest: todayBest(), challenge: target() })
-      ui.setTitleTop(localBoard('today', 5), false, meId())
+      if (!embedded) {
+        ui.setTitleTop(localBoard('today', 5), false, meId())
+        return
+      }
+      // In NOOB: today's top 5 of everybody, one best score each.
+      const token = (titleToken += 1)
+      ui.setTitleTop(null, false, null)
+      void askHostBoard('today', 8000).then(board => {
+        if (token !== titleToken) return
+        ui.setTitleTop(board ? toBoardData(board) : null, !board, myIdOf(board))
+      })
     }
 
     function startRun(kind: RunKind): void {
@@ -145,6 +212,7 @@ async function boot(): Promise<void> {
       } else {
         game.start('practice', (Math.random() * 2 ** 32) >>> 0, '')
       }
+      tellRunStart(kind)
       ui.show('hud')
       ui.touchHint(save.data.plays < 2 && document.body.classList.contains('is-touch'))
       loop.resetAccumulator()
@@ -194,7 +262,8 @@ async function boot(): Promise<void> {
         note = t('results.nearBest', { diff: previousBest - run.score })
       }
       const show = () => ui.showResults({
-        won: run.outcome === 'won',
+        won: run.levels > 0,
+        levels: run.levels,
         score: run.score,
         newBest: lastWasBest,
         floors: run.floors,
@@ -208,6 +277,7 @@ async function boot(): Promise<void> {
       resultsTimer = window.setTimeout(show, run.outcome === 'won' ? 1400 : 750)
       if (run.kind === 'practice') ui.setOnline(`<p class="muted">${t('results.practice')}</p>`)
       else if (runWasUnranked) ui.setOnline(`<p class="muted">${t('results.unranked')}</p>`)
+      else if (embedded) ui.setOnline(`<p class="muted">${t('results.bestKept', { score: Math.max(save.data.best, run.score) })}</p>`)
       else if (lastRank) ui.setOnline(`<p class="muted">${t('results.localRank', { rank: lastRank })}</p>`)
       else ui.setOnline(`<p class="muted">${t('results.localOnly')}</p>`)
     }
@@ -249,7 +319,16 @@ async function boot(): Promise<void> {
 
     function openBoard(period: 'today' | 'all'): void {
       if (ui.modal !== 'board') ui.openModal('board')
-      ui.setBoard(period, localBoard(period), meId())
+      if (!embedded) {
+        ui.setBoard(period, localBoard(period), meId())
+        return
+      }
+      const token = (boardToken += 1)
+      ui.setBoard(period, 'loading', null)
+      void askHostBoard(period).then(board => {
+        if (token !== boardToken || ui.modal !== 'board') return
+        ui.setBoard(period, board ? toBoardData(board) : 'error', myIdOf(board))
+      })
     }
 
     function pause(): void {
@@ -330,7 +409,7 @@ async function boot(): Promise<void> {
         game.render(alpha, frame)
         if (ui.screen === 'hud') {
           const sim = game.sim
-          ui.setHud({ score: sim.score, best: save.data.best, stage: sim.stage, stages: STAGE_FLOORS.length, depth: sim.floors / TOTAL_FLOORS, practice: game.kind === 'practice', target: target() })
+          ui.setHud({ score: sim.score, best: save.data.best, level: sim.level, shield: sim.shield > 0, stage: sim.stage, stages: STAGE_FLOORS.length, depth: (sim.floor % LEVEL_FLOORS) / LEVEL_FLOORS, practice: game.kind === 'practice', target: target() })
         }
         input.endFrame()
         input.update()
@@ -372,6 +451,18 @@ async function boot(): Promise<void> {
     }
     window.addEventListener('pointerdown', firstGesture, { once: true })
     window.addEventListener('keydown', firstGesture, { once: true })
+
+    // What the page around the game knows about the account: its best score (from any device) and, after a run, whether that run set a new one.
+    onHostNote = note => {
+      const t = i18n.t.bind(i18n)
+      if (typeof note.bestScore === 'number' && note.bestScore >= 0) {
+        if (note.bestScore !== save.data.best) save.update({ best: note.bestScore })
+        game.personalBest = note.bestScore
+        if (note.type === 'helixfall:saved') ui.setOnline(`<p class="muted">${t('results.bestKept', { score: note.bestScore })}</p>`)
+      }
+      if (note.type === 'helixfall:saved') ui.setNewBest(note.newBest === true)
+      if (ui.screen === 'title') refreshTitle()
+    }
 
     ui.bootIndeterminate(false)
     ui.bootProgress(1)

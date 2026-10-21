@@ -1,5 +1,6 @@
 export declare const STAGE_FLOORS: number[]
 export declare const TOTAL_FLOORS: number
+export declare const LEVEL_FLOORS: number
 export declare const SCORE: {
   floor: number
   maxMultiplier: number
@@ -20,5 +21,6 @@ export declare function boardDay(nowMs?: number): string
 export declare function floorPoints(chain: number): number
 export declare function stagesCleared(floors: number): number
 export declare function stageBonusTotal(stages: number): number
+export declare function stageBonusForFloors(floors: number): number
 export declare function finishBonus(seconds: number): number
 export declare function checkRun(run: { score: number; durationMs: number; floors: number }): string | null

@@ -72,7 +72,7 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, au
       }`}
     >
       {isHighStakes ? <Crown className="w-7 h-7 text-amber-300" /> : <Trophy className="w-7 h-7 text-amber-300" />}
-      <span className="text-lg font-black text-white">+{game.pointsReward.toLocaleString()} NOOBs{game.rewardNote ? ` ${game.rewardNote}` : ''}</span>
+      <span className="text-lg font-black text-white">{game.pointsReward > 0 ? `+${game.pointsReward.toLocaleString()} NOOBs${game.rewardNote ? ` ${game.rewardNote}` : ''}` : game.rewardNote}</span>
       <span className="text-[10px] text-zinc-200 uppercase tracking-wider font-bold">
         {isHighStakes ? 'On Win — Lose vs Bot and your balance resets to 0' : game.rewardNote ? 'For every level you clear — levels never end' : 'On Win'}
       </span>

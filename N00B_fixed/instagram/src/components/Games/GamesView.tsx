@@ -73,10 +73,14 @@ export const GamesView: React.FC<GamesViewProps> = ({
 
   // Music for the whole Games page: starts when the page opens, keeps playing during a game, stops when the page closes.
   const [musicOn, setMusicOn] = useState(isGameMusicOn());
+  // The exception: a game that brings its own music and sounds (Helix Fall, Neon Alley) must not have the arcade loop over it. The loop stops while such a game is open
+  // and comes back when it is closed (the person's own on/off choice is not touched).
+  const quietGame = !!selectedGameForPlay?.ownSound;
   useEffect(() => {
+    if (quietGame) { stopGameMusic(); return undefined; }
     startGameMusic();
     return () => stopGameMusic();
-  }, []);
+  }, [quietGame]);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -340,7 +344,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                         {game.title}
                       </h3>
                       <span className="text-[10px] font-extrabold text-amber-400 shrink-0">
-                        +{game.pointsReward.toLocaleString()} NOOBs{game.rewardNote ? ` ${game.rewardNote}` : ''}
+                        {game.pointsReward > 0 ? `+${game.pointsReward.toLocaleString()} NOOBs${game.rewardNote ? ` ${game.rewardNote}` : ''}` : game.rewardNote}
                       </span>
                     </div>
 

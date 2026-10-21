@@ -17,6 +17,10 @@ export interface MiniGameMeta {
   isNew?: boolean;
   // For a game that pays for something other than a win (Helix Fall: every level cleared): what the reward is for, e.g. 'per level'.
   rewardNote?: string;
+  // A game that is a page of its own (made with Manus, shown in a frame): its address.
+  embedUrl?: string;
+  // The game brings its own music and sounds, so the Games page's arcade loop is stopped while it is open.
+  ownSound?: boolean;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -41,6 +45,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     iconType: 'helix',
     tags: ['3D', 'Endless Levels', 'Daily Tower'],
     isNew: true,
+    ownSound: true,
     posters: [
       '/game-posters/helix-fall/01-hero-drop.webp',
       '/game-posters/helix-fall/02-one-input.webp',
@@ -49,6 +54,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
       '/game-posters/helix-fall/05-beat-your-best.webp',
       '/game-posters/helix-fall/06-chinese.webp',
       '/game-posters/helix-fall/07-last-floor.webp'
+    ]
+  },
+
+  // --- NEW: NEON ALLEY: LAST CALL (made with Manus; lives on its own page and is shown in a frame — see minigames/HostedGameFrame) ---
+  {
+    id: 'neon_alley',
+    title: 'Neon Alley: Last Call',
+    category: 'arcade',
+    description: 'A neon pixel-art street brawler. Chain combos, grab street weapons, fight through two stages and take down the rooftop boss.',
+    bannerBg: 'from-[#4a044e] to-[#0f0720]',
+    badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'neon',
+    tags: ['Beat-em-up', 'Pixel Art', 'Combos'],
+    isNew: true,
+    ownSound: true,
+    embedUrl: 'https://neonlast-dpzbm55t.manus.game/',
+    posters: [
+      '/game-posters/neon-alley/01-cover.webp',
+      '/game-posters/neon-alley/02-keyart.webp',
+      '/game-posters/neon-alley/03-street.webp',
+      '/game-posters/neon-alley/04-garage.webp',
+      '/game-posters/neon-alley/05-rooftop.webp'
     ]
   },
 

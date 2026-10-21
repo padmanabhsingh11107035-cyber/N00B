@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
+import { HostedGameFrame } from './minigames/HostedGameFrame';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../utils/pageResume';
 import { User } from '../../types';
 import {
@@ -1041,7 +1042,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Ludo/Snakes&Ladders/Monopoly (isBoardGame) and Chess all need real screen
   // real estate to render at a comfortable size — everything else fits fine
   // in the standard modal width.
-  const useLargeBoard = (isBoardGame || game.id === 'chess_blitz' || game.id === 'helix_fall') && currentMode === 'play_bot';
+  const useLargeBoard = (isBoardGame || game.id === 'chess_blitz' || game.id === 'helix_fall' || !!game.embedUrl) && currentMode === 'play_bot';
 
   return (
     <div className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center ${
@@ -1061,10 +1062,10 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white leading-tight">{game.title}</h2>
               <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs {game.rewardNote ?? 'on Win'}</span>
+                <span className="text-amber-400 font-semibold">{game.pointsReward > 0 ? `${game.pointsReward.toLocaleString()} NOOBs ${game.rewardNote ?? 'on Win'}` : game.rewardNote}</span>
                 <span>•</span>
                 <span className="text-zinc-400">
-                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : game.id === 'helix_fall' ? 'Solo' : '5,000,000 NOOBs on Tie'}
+                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : game.id === 'helix_fall' || game.embedUrl ? 'Solo' : '5,000,000 NOOBs on Tie'}
                 </span>
               </div>
             </div>
@@ -1110,6 +1111,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             </div>
           ) : (
             <>
+          {/* A hosted game (its own page) is added here, out of sight, as soon as its page opens, and shown when Play is pressed */}
+          {game.embedUrl && (currentMode === 'select_mode' || currentMode === 'play_bot') && (
+            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} />
+          )}
+
           {/* 1. SELECT MODE VIEW */}
           {currentMode === 'select_mode' && (
             <div className="space-y-4">
@@ -1128,7 +1134,20 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 </div>
               </div>
 
-              {game.id === 'helix_fall' ? (
+              {game.embedUrl ? (
+                <div className="pt-2 space-y-2.5">
+                  <div className="px-3 py-2 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/30 text-center text-[11px] font-bold text-fuchsia-300">
+                    It starts loading now, so it is ready when you press Play. The first time it is a big download.
+                  </div>
+                  <button
+                    onClick={startBotGameNow}
+                    className="w-full py-3.5 rounded-2xl bg-noob hover:bg-noob/90 text-black text-sm font-black transition-colors cursor-pointer"
+                  >
+                    Play {game.title}
+                  </button>
+                  <p className="text-[10px] text-zinc-500 text-center">Keyboard: arrows to move, the on-screen buttons on a phone. It has its own music; no NOOBs for this one, it is just for fun.</p>
+                </div>
+              ) : game.id === 'helix_fall' ? (
                 <div className="pt-2 space-y-2.5">
                   <div className="px-3 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center text-[11px] font-bold text-amber-300">
                     Clear 90 floors = a level: +{game.pointsReward.toLocaleString()} NOOBs, paid at once, level after level. Your best score is on the leaderboard.
@@ -1842,7 +1861,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'reaction_tap',
                 'bubble_blitz',
                 'helix_fall'
-              ].includes(game.id) && (
+              ].includes(game.id) && !game.embedUrl && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}
             </div>

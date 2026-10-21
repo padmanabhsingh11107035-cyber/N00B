@@ -5,8 +5,8 @@ const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/d
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
 const FILES = {
-  // the engine (the website compresses it for the browser on the way out)
-  'engine.5b0faa32.wasm': { file: 'na-engine-5b0faa32.wasm', type: 'application/wasm' },
+  // the engine, kept compressed (9 MB instead of 40 MB); the browser unpacks it by itself
+  'engine-br.5b0faa32.wasm': { file: 'na-engine-5b0faa32.br', type: 'application/wasm', encoding: 'br' },
   // the game's pictures, music and scripts
   'data.e7565660.pck': { file: 'na-data-e7565660.pck', type: 'application/octet-stream' },
 };
@@ -23,7 +23,9 @@ export default {
     const cache = caches.default;
     const key = new Request(url.origin + url.pathname, { method: 'GET' });
     let res = await cache.match(key);
+    let from = 'edge';
     if (!res) {
+      from = 'origin';
       const upstream = await fetch(RELEASE + entry.file);
       if (!upstream.ok) return new Response('Game file unavailable', { status: 502, headers: { 'Cache-Control': 'no-store' } });
       const headers = new Headers({
@@ -31,11 +33,15 @@ export default {
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff',
       });
+      // the file is already compressed: hand it over as it is (without this the runtime would compress it a second time)
+      if (entry.encoding) headers.set('Content-Encoding', entry.encoding);
       const length = upstream.headers.get('Content-Length');
       if (length) headers.set('Content-Length', length);
-      res = new Response(upstream.body, { status: 200, headers });
-      ctx.waitUntil(cache.put(key, res.clone()));
+      res = new Response(upstream.body, { status: 200, headers, encodeBody: entry.encoding ? 'manual' : 'automatic' });
+      ctx.waitUntil(cache.put(key, res.clone()).catch((e) => console.log('game file not remembered:', String(e))));
     }
-    return request.method === 'HEAD' ? new Response(null, { status: 200, headers: res.headers }) : res;
+    const out = new Response(request.method === 'HEAD' ? null : res.body, { status: 200, headers: res.headers, encodeBody: entry.encoding ? 'manual' : 'automatic' });
+    out.headers.set('X-Served-From', from);
+    return out;
   },
 };

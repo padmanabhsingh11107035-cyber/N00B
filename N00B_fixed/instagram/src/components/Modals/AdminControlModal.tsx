@@ -1048,7 +1048,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(255,255,255,0.4)] bg-black p-0.5">
+            <div className="w-10 h-10 rounded-[24%] overflow-hidden border-2 border-noob shadow-[0_0_12px_rgba(255,255,255,0.4)] bg-black p-0.5">
               <img src="/noob-logo-circle.png" alt="NOOB Logo" className="w-full h-full object-cover" />
             </div>
             <div>

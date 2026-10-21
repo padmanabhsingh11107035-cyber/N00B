@@ -39,7 +39,7 @@
     o.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center;overflow:auto';
     o.innerHTML =
       '<div style="width:100%;max-width:360px;border:1px solid rgba(255,255,255,.16);border-radius:28px;padding:30px 22px 24px;background:#101012">' +
-      '<img src="/noob-logo-circle.png" alt="NOOB" width="88" height="88" style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.22)">' +
+      '<img src="/noob-logo-circle.png" alt="NOOB" width="88" height="88" style="width:88px;height:88px;border-radius:24%;object-fit:cover;border:1px solid rgba(255,255,255,.22)">' +
       '<div aria-hidden="true" style="margin-top:14px;font-size:54px;font-weight:900;letter-spacing:-.02em">BRB</div>' +
       '<h1 style="margin:6px 0 0;font-size:21px;font-weight:900">NOOB is taking a short break</h1>' +
       '<p style="margin:10px auto 0;max-width:300px;font-size:14px;line-height:1.55;color:#b8b8bd">We cannot reach NOOB right now. This is usually over in a minute or two. Your account and everything you posted are safe.</p>' +

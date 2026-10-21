@@ -125,7 +125,7 @@ const LoginApprovalPage: React.FC = () => {
   return (
     <div className="min-h-screen w-full bg-page text-white flex flex-col items-center justify-center p-4" data-testid="login-approval-page">
       <div className="flex items-center gap-2.5 mb-5">
-        <img src="/noob-logo-circle.png" alt="" width={36} height={36} className="w-9 h-9 rounded-full" />
+        <img src="/noob-logo-circle.png" alt="" width={36} height={36} className="w-9 h-9 rounded-[24%]" />
         <span className="text-xl font-black tracking-tight">NOOB</span>
       </div>
       <div className={card} role="status" aria-live="polite">{body}</div>

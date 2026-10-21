@@ -77,7 +77,7 @@ a { color:inherit; }
 .wrap { max-width: 760px; margin: 0 auto; padding: 22px 18px 60px; }
 header.top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:18px; border-bottom:1px solid var(--line); }
 .brand { display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:800; font-size:18px; }
-.brand img { width:34px; height:34px; border-radius:50%; }
+.brand img { width:34px; height:34px; border-radius:24%; }
 nav.crumbs { font-size:13px; color:var(--muted); margin:18px 0 6px; }
 nav.crumbs a { color:var(--muted); }
 h1 { font-size: clamp(28px, 6vw, 40px); line-height:1.15; margin:8px 0 10px; font-weight:800; }

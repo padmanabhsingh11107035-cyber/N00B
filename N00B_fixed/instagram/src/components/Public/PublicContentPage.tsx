@@ -44,7 +44,7 @@ export const PublicContentPage: React.FC<Props> = ({ route, onLogin }) => {
       <header className="sticky top-0 z-10 bg-black/90 backdrop-blur border-b border-zinc-800">
         <div className="max-w-md mx-auto h-14 px-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2 no-underline text-white">
-            <img src="/noob-logo-circle.png" alt="" className="w-8 h-8 rounded-full" />
+            <img src="/noob-logo-circle.png" alt="" className="w-8 h-8 rounded-[24%]" />
             <span className="font-black tracking-tight">NOOB</span>
           </a>
           <div className="flex items-center gap-2">

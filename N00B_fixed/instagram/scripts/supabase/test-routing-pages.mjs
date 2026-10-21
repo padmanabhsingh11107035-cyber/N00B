@@ -70,7 +70,7 @@ section('3. The two pages that stand alone');
 const main = read('src/main.tsx');
 const sys = read('src/components/Common/SystemPage.tsx');
 const app = read('src/App.tsx');
-check(/installHistoryGate\(\)/.test(main) && /pageNotFound = !oldAddress && !editorPage && !isNativeApp\(\) && !isCoachingHost\(\) && !isKnownPath\(/.test(main) && /<SystemPage kind="not-found" \/>/.test(main), 'an address that is not a page shows only the "page not found" page, before the app starts');
+check(/installHistoryGate\(\)/.test(main) && /pageNotFound = !oldAddress && !editorPage && !approvalPage && !isNativeApp\(\) && !isCoachingHost\(\) && !isKnownPath\(/.test(main) && /<SystemPage kind="not-found" \/>/.test(main), 'an address that is not a page shows only the "page not found" page, before the app starts');
 check(/__noobBooted = true/.test(main), 'the app says when it has started');
 check(/kind === 'down'/.test(sys) && /Trying again by itself in/.test(sys) && /NOOB is taking a short break/.test(sys) && /This page does not exist/.test(sys) && /href="\/"/.test(sys), 'the pages say what is wrong in plain words, offer a way out, and the short break one retries by itself');
 check(/if \(initialLoadFailed\) \{\s*\/\/[^\n]*\n\s*return <SystemPage kind="down" onRetry=\{loadInitialData\} \/>;/.test(app), 'when the first load fails only the "short break" page is shown');

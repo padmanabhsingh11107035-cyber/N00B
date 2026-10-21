@@ -2,6 +2,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { useFullPage } from '../../utils/fullPage';
 import { PageLoading, Row, Section } from './kit';
+import { LoginApprovalRow } from './LoginApprovalRow';
 import { ROWS, SECTIONS, searchRows, type RowDef } from './registry';
 import { PAGES } from './pages';
 import { loadSettings, useAccountSettings, warmLists } from '../../services/settingsApi';
@@ -99,7 +100,7 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
     if (r.action) (ctx.actions[r.action] as () => void)();
   };
 
-  const renderRow = (r: RowDef) => (
+  const renderRow = (r: RowDef) => r.toggle === 'login-approval' ? <LoginApprovalRow key={r.id} /> : (
     <Row key={r.id} icon={r.icon} label={r.label} sub={r.sub} value={valueOf(r)} danger={r.danger} onClick={() => press(r)} testId={`row-${r.id}`} />
   );
 

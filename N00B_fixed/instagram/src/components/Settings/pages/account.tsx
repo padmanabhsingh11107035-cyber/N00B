@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Download, Eye, KeyRound, Lock, Smartphone, Star, Trash2, UserPlus, Users, Briefcase, Ban } from 'lucide-react';
+import { LoginApprovalRow } from '../LoginApprovalRow';
 import { PageShell, Section, Row, ToggleRow, Choice, Note, Spinner, Empty, PeopleList, Avatar, SmallButton, useFlash } from '../kit';
 import type { PageProps } from '../types';
 import type { User } from '../../../types';
@@ -24,6 +25,7 @@ export const AccountPage: React.FC<PageProps> = ({ ctx, go, back }) => {
       </Section>
       <Section title="Password and security">
         <Row icon={KeyRound} label="Change password" onClick={() => go('password')} testId="account-password" />
+        <LoginApprovalRow />
         <Row icon={Smartphone} label="Where you are logged in" sub="Devices and login history" onClick={a.openDevices} />
         <Row icon={Lock} label="End-to-end encryption" sub="How your private chats are locked" onClick={a.openE2ee} />
       </Section>

@@ -1,7 +1,7 @@
 // The app's server calls. Everything now runs on Supabase (see supabaseApi.ts and supabase/migrations);
 // this file only lists them under the names the screens have always imported.
 export type { HelixBoard, HelixBoardEntry } from './supabaseApi';
-export type { AdminDailyOverview, AdminDailyDay, AdminStorageOverview, AdminUnusedScan, SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry } from './supabaseApi';
+export type { AdminDailyOverview, AdminDailyDay, AdminStorageOverview, AdminUnusedScan, SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry, LoginApprovalTicket, LoginApprovalStatus } from './supabaseApi';
 export {
   e2ee,
   fetchChatLastSeen,
@@ -20,6 +20,13 @@ export {
   signInToExistingOAuthAccount,
   completeOAuthSignup,
   loginUser,
+  startLoginApproval,
+  checkLoginApproval,
+  fetchMyLoginApproval,
+  startEnableLoginApproval,
+  checkEnableLoginApproval,
+  turnOffLoginApproval,
+  answerLoginApproval,
   verifyUsernameExists,
   recoverAccountAccess,
   requestLoginOtp,

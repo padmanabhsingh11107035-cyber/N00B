@@ -592,13 +592,135 @@ export async function completeOAuthSignup(code: string, payload: OAuthSignupPayl
   }
 }
 
+// ----------------------------------------------------------------------------- Login approval by email ("Is this you?", two buttons in an email)
+// An account that switched it on is not signed in by the password alone: the right password makes the server email two buttons, and this device waits (checkLoginApproval)
+// until "Yes, it's me" is tapped there (then it is signed in at once) or "No, it's not me" (then it is told "Access denied"). Nothing changes for any other account.
+export interface LoginApprovalTicket { challengeId: string; pollToken: string; maskedEmail: string; /** when the question expires (ms since 1970) */ expiresAt: number }
+
+// Does the account behind this login box ask for an approval? (Anything unknown, and any failure to ask, means "no": the ordinary login then goes ahead.)
+async function loginNeedsApproval(identifier: string): Promise<boolean> {
+  try { return (await rpc<boolean>('login_approval_needed', { identifier })) === true; } catch { return false; }
+}
+
+async function approvalFailure(error: any, fallback: string): Promise<{ error: string; retryAfter?: number }> {
+  let body: any = null;
+  try { body = await error?.context?.json?.(); } catch { /* use the fallback */ }
+  return { error: body?.error || fallback, retryAfter: typeof body?.retryAfter === 'number' ? body.retryAfter : undefined };
+}
+
+function ticketFrom(data: any): LoginApprovalTicket | null {
+  if (!data?.challengeId || !data?.pollToken) return null;
+  return { challengeId: String(data.challengeId), pollToken: String(data.pollToken), maskedEmail: String(data.maskedEmail || ''), expiresAt: Date.now() + (Number(data.expiresInSeconds) || 600) * 1000 };
+}
+
+// Step 1 of such a login: the server checks the password (nothing is signed in) and emails the two buttons.
+export async function startLoginApproval(payload: { identifier: string; password: string; device?: string }): Promise<{ success: boolean; required?: boolean; ticket?: LoginApprovalTicket; error?: string; retryAfter?: number }> {
+  const unavailable = 'Could not send the approval email. Please try again.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-start', identifier: payload.identifier, password: payload.password, device: payload.device || '' } });
+    if (error) return { success: false, ...(await approvalFailure(error, unavailable)) };
+    if (!data?.success) return { success: false, error: data?.error || unavailable };
+    if (!data.required) return { success: true, required: false };
+    const ticket = ticketFrom(data);
+    return ticket ? { success: true, required: true, ticket } : { success: false, error: unavailable };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
+export type LoginApprovalStatus = 'pending' | 'approved' | 'denied' | 'expired' | 'suspended' | 'error';
+
+// Step 2, asked every couple of seconds while waiting. "approved" comes with the signed-in user (the sign-in token the server hands over is used right here); "error" is a failed
+// attempt to ask (no network...) after which the screen simply asks again.
+export async function checkLoginApproval(ticket: LoginApprovalTicket, password: string): Promise<{ status: LoginApprovalStatus; user?: User; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-status', challengeId: ticket.challengeId, pollToken: ticket.pollToken } });
+    if (error) return { status: 'error', error: (await approvalFailure(error, 'Could not check the email answer. Trying again…')).error };
+    const status = String(data?.status || '');
+    if (status === 'approved' && data?.tokenHash) {
+      const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: data.tokenHash, type: 'magiclink' });
+      if (signInError) return { status: 'expired', error: 'Could not sign you in. Please log in again.' };
+      const user = await rpc<any>('get_my_user');
+      if (user?.isSuspended) {
+        await supabase.auth.signOut({ scope: 'local' });
+        return { status: 'suspended', error: `This account has been suspended by NOOB Administrator.${user.suspendedReason ? ' Reason: ' + user.suspendedReason : ''}` };
+      }
+      return { status: 'approved', user: startChatKeys(mapUser(user), password) as User };
+    }
+    if (status === 'pending' || status === 'denied' || status === 'suspended') return { status };
+    return { status: 'expired' };   // expired, already used, or not known (any more)
+  } catch (err) {
+    return { status: 'error', error: errorText(err, 'Could not check the email answer. Trying again…') };
+  }
+}
+
+// Settings: is it on for the signed-in person? (`hasEmail` false = there is no address to send to, so it cannot be switched on)
+export async function fetchMyLoginApproval(): Promise<{ enabled: boolean; hasEmail: boolean } | null> {
+  try {
+    const r = await rpc<any>('my_login_approval');
+    return { enabled: r?.enabled === true, hasEmail: r?.hasEmail !== false };
+  } catch { return null; }   // not installed yet, or no network: the screen says it is not available
+}
+
+// Settings: switching it on sends the same two buttons to the address on file; it only turns on when "Yes, it's me" is tapped there.
+export async function startEnableLoginApproval(device?: string): Promise<{ success: boolean; ticket?: LoginApprovalTicket; error?: string; retryAfter?: number }> {
+  const unavailable = 'Could not send the email. Please try again.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-enable', device: device || '' } });
+    if (error) return { success: false, ...(await approvalFailure(error, unavailable)) };
+    const ticket = data?.success ? ticketFrom(data) : null;
+    return ticket ? { success: true, ticket } : { success: false, error: data?.error || unavailable };
+  } catch (err) {
+    return { success: false, error: errorText(err, unavailable) };
+  }
+}
+
+// Settings: has the "turn it on" email been answered?
+export async function checkEnableLoginApproval(ticket: LoginApprovalTicket): Promise<'pending' | 'approved' | 'denied' | 'expired' | 'error'> {
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-status', challengeId: ticket.challengeId, pollToken: ticket.pollToken } });
+    if (error) return 'error';
+    const s = String(data?.status || '');
+    return s === 'pending' || s === 'approved' || s === 'denied' ? s : 'expired';
+  } catch { return 'error'; }
+}
+
+// Settings: switching it off asks for the password again.
+export async function turnOffLoginApproval(password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const r = await rpc<any>('login_approval_turn_off', { p_password: password });
+    return r?.success ? { success: true } : { success: false, error: r?.error || 'Could not turn it off. Please try again.' };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not turn it off. Please try again.') };
+  }
+}
+
+// The page the email buttons open (/login-approval): sends the one tap (the secret in the link says which button it was).
+export async function answerLoginApproval(challengeId: string, token: string): Promise<{ status: 'approved' | 'denied' | 'expired' | 'already' | 'invalid' | 'error'; result?: string; purpose?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-decide', challengeId, token } });
+    if (error) return { status: 'error' };
+    const s = String(data?.status || '');
+    return s === 'approved' || s === 'denied' || s === 'expired' || s === 'already' ? { status: s, result: data?.result, purpose: data?.purpose } : { status: 'invalid' };
+  } catch { return { status: 'error' }; }
+}
+
 export async function loginUser(payload: {
   identifier: string;
   password?: string;
-}): Promise<{ success: boolean; user?: User; error?: string }> {
+  /** what the approval email says about this device (e.g. "Chrome on Windows") */
+  device?: string;
+}): Promise<{ success: boolean; user?: User; error?: string; approval?: LoginApprovalTicket }> {
   const identifier = (payload.identifier || '').trim();
   if (!identifier || !payload.password) return { success: false, error: 'Username/Email and password are required' };
   try {
+    // An account that asks for an approval by email is not signed in here: the server checks the password and emails the two buttons, and the screen waits for the answer.
+    if (await loginNeedsApproval(identifier)) {
+      const started = await startLoginApproval({ identifier, password: payload.password, device: payload.device });
+      if (!started.success) return { success: false, error: started.error };
+      if (started.required && started.ticket) return { success: false, approval: started.ticket };
+      // not required after all (it was switched off a moment ago): the ordinary login below
+    }
     const email = await rpc<string>('resolve_login_email', { identifier });
     const { error } = await supabase.auth.signInWithPassword({ email, password: payload.password });
     if (error) {
@@ -653,6 +775,8 @@ export async function fetchLinkedAccounts(): Promise<{ accounts: LinkedAccount[]
 export async function signInLinkedAccount(username: string, password: string): Promise<{ success: boolean; id?: string; error?: string }> {
   if (!username || !password) return { success: false, error: 'Please enter the password of this account.' };
   try {
+    // an account that asks for an email approval cannot be added with the password alone
+    if (await loginNeedsApproval(username)) return { success: false, error: 'This account asks for an approval by email. Log out and log in to it from the login screen.' };
     const email = await rpc<string>('resolve_login_email', { identifier: username });
     const temp = createIsolatedClient();
     const { data, error } = await temp.auth.signInWithPassword({ email, password });

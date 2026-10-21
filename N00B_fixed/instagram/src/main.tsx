@@ -13,7 +13,7 @@ import { initLanguage } from './i18n/engine.ts';
 import { startTextFit } from './utils/textFit.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
 import { installHistoryGate } from './utils/historyGate.ts';
-import { isKnownPath } from './utils/routes.ts';
+import { cleanPath, isKnownPath } from './utils/routes.ts';
 import { parseFunPath } from './utils/funRoutes.ts';
 import { isNativeApp } from './utils/siteUrl.ts';
 import { isCoachingHost } from './components/Study/studyStore.ts';
@@ -22,6 +22,8 @@ import { isEditorHost } from './components/Studio/studioStore.ts';
 
 // NOOB Studio as a page of its own (editor.noobsocials.com): fetched only on that address
 const StudioStandalone = lazy(() => import('./components/Studio/StudioStandalone.tsx'));
+// The page the two buttons of the "Is this you?" login email open (/login-approval): fetched only there, the app itself is not started
+const LoginApprovalPage = lazy(() => import('./components/Auth/LoginApprovalPage.tsx'));
 
 // The app's `/api/...` calls are written as relative paths, which only
 // resolve correctly when the frontend is served from the same origin as
@@ -108,7 +110,8 @@ const oldAddress = movedNoticeBlocksApp();
 
 // An address that is not a page of NOOB shows only the "page not found" page: the app is not even started (no sign-in screen, no loading, no browser error page).
 const editorPage = !oldAddress && !isNativeApp() && isEditorHost();
-const pageNotFound = !oldAddress && !editorPage && !isNativeApp() && !isCoachingHost() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
+const approvalPage = !oldAddress && !editorPage && !isNativeApp() && cleanPath(window.location.pathname) === '/login-approval';
+const pageNotFound = !oldAddress && !editorPage && !approvalPage && !isNativeApp() && !isCoachingHost() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -117,6 +120,8 @@ createRoot(document.getElementById('root')!).render(
         <MovedNotice />
       ) : editorPage ? (
         <Suspense fallback={null}><StudioStandalone /></Suspense>
+      ) : approvalPage ? (
+        <Suspense fallback={null}><LoginApprovalPage /></Suspense>
       ) : pageNotFound ? (
         <SystemPage kind="not-found" />
       ) : (

@@ -41,7 +41,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession } from '../../services/api';
+import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession, type LoginApprovalTicket } from '../../services/api';
+import { LoginApprovalWait } from './LoginApprovalWait';
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
 import { SocialLoginButtons } from './SocialLoginButtons';
 import { ButtonDoodles } from './ButtonDoodles';
@@ -262,6 +263,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   const [deviceConflict, setDeviceConflict] = useState<ActiveDeviceSession[] | null>(null);
   const [pendingAuthUser, setPendingAuthUser] = useState<User | null>(null);
   const [deviceActionBusy, setDeviceActionBusy] = useState<string | null>(null);
+  // An account that asks for an approval by email: the right password was entered, the two buttons were emailed, and this screen waits for the answer (LoginApprovalWait).
+  const [approval, setApproval] = useState<{ ticket: LoginApprovalTicket; identifier: string; password: string } | null>(null);
 
   const proceedAfterAuth = async (user: User) => {
     const check = await checkAndRegisterDevice(getDeviceId(), getDeviceLabel());
@@ -798,11 +801,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
       setLoading(true);
       const res = await loginUser({
         identifier: loginIdentifier.trim(),
-        password: loginPassword
+        password: loginPassword,
+        device: getDeviceLabel()
       });
 
       if (res.success && res.user) {
         await proceedAfterAuth(res.user);
+      } else if (res.approval) {
+        setApproval({ ticket: res.approval, identifier: loginIdentifier.trim(), password: loginPassword });
       } else {
         setErrorMessage(res.error || 'Authentication failed. Please check your credentials.');
       }
@@ -2112,6 +2118,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
             </button>
           </div>
         </div>
+      )}
+
+      {/* Login approval by email: the two buttons were emailed; this waits for the answer (nothing is signed in meanwhile). */}
+      {approval && (
+        <LoginApprovalWait
+          ticket={approval.ticket}
+          identifier={approval.identifier}
+          password={approval.password}
+          device={getDeviceLabel()}
+          onApproved={(user) => { setApproval(null); void proceedAfterAuth(user); }}
+          onClose={() => setApproval(null)}
+          onNewTicket={(ticket) => setApproval((a) => (a ? { ...a, ticket } : a))}
+        />
       )}
 
       {/* NOOB only allows one signed-in device at a time. A successful login/signup lands here

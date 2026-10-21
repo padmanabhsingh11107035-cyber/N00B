@@ -22,6 +22,8 @@ export interface RowDef {
   page?: string;
   action?: keyof SettingsActions;
   danger?: boolean;
+  /** a row that is a switch of its own instead of opening a page (the hub draws it) */
+  toggle?: 'login-approval';
   show?: (ctx: SettingsContext) => boolean;
   value?: (ctx: SettingsContext) => string | undefined;
 }
@@ -111,6 +113,7 @@ export const ROWS: RowDef[] = [
 
   // ---------------------------------------------------------------- Login
   { id: 'add-profile', section: 'Login', label: 'Add profile', sub: 'Use another NOOB account on this device', icon: Users, action: 'openSwitchAccount', keywords: 'switch account add another login' },
+  { id: 'login-approval', section: 'Login', label: 'Login approval by email', sub: 'After your password, an email asks “Is this you?” with two buttons', icon: ShieldCheck, toggle: 'login-approval', keywords: '2fa two factor two-factor two step 2 step login approval email confirm verify security protect hacked password it is me not me' },
   { id: 'logout', section: 'Login', label: 'Log out', icon: LogOut, action: 'logout', danger: true, keywords: 'sign out', show: (c) => c.canLogout }
 ];
 

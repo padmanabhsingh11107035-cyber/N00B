@@ -38,13 +38,13 @@ section('1. The sound plays');
 reset();
 check(S.isNotificationSoundOn() === true, 'it is on by default');
 S.playNotificationSound('notification');
-check(contexts === 1 && oscillators.length === 4, 'a notification makes a two-note chime (each note has an overtone)');
-check(oscillators.some((o) => o.frequency.values[0] === 880) && oscillators.some((o) => o.frequency.values[0] === 1318.5), 'the two notes are A5 and E6');
+check(contexts === 1 && oscillators.length === 8, 'a notification rings a bell twice (each strike is four tones)');
+check(oscillators.some((o) => Math.abs(o.frequency.values[0] - 1174.7) < 0.01) && oscillators.some((o) => Math.abs(o.frequency.values[0] - 1174.7 * 2.76) < 0.01), 'the bell is D6 with tones that are not whole multiples of it (that is what makes it sound like metal)');
 check(resumed === 1, 'audio that the phone had paused is woken up');
 check(vibrations.length === 1, 'the phone buzzes with it');
 clock += 5000; oscillators = [];
 S.playNotificationSound('message');
-check(oscillators.length === 2 && contexts === 1, 'a chat message makes one soft pop, on the same audio (not a new one each time)');
+check(oscillators.length === 4 && contexts === 1, 'a chat message rings the bell once, a little softer, on the same audio (not a new one each time)');
 
 section('2. Not too much');
 reset();
@@ -66,7 +66,7 @@ S.playNotificationSound('notification');
 check(oscillators.length === 0, 'and no sound is made while it is off');
 clock += 5000;
 S.setNotificationSoundOn(true);
-check(S.isNotificationSoundOn() === true && oscillators.length === 4, 'turning it back on plays the chime so they hear what they chose');
+check(S.isNotificationSoundOn() === true && oscillators.length === 8, 'turning it back on rings the bell so they hear what they chose');
 data.set('noob.sound.alerts', 'off');
 check(S.isNotificationSoundOn() === false, 'the choice is read back from the device');
 

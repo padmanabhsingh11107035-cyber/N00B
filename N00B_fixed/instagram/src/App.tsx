@@ -272,7 +272,7 @@ export default function App() {
   const [viewAsUser, setViewAsUser] = useState(false);
   // A short sound when a chat message arrives while the app is open and the person is not already in the chat tab.
   const unreadChatCount = useUnreadChatCount(currentUser, () => {
-    if (document.visibilityState === 'visible' && activeTabRef.current !== 'chat') playNotificationSound('message');
+    if (activeTabRef.current !== 'chat') playNotificationSound('message');
   });
 
   // The admin console's "whole-app maintenance lock" (see AdminControlModal's Platform tab) — checked
@@ -357,7 +357,7 @@ export default function App() {
     seenNotificationIdsRef.current = new Set<string>([...(known || []), ...list.map((n) => String(n.id))]);
     if (silent || !known) return;
     const fresh = list.some((n) => !n.isRead && !known.has(String(n.id)));
-    if (fresh && notificationSettingsRef.current.masterEnabled && document.visibilityState === 'visible') playNotificationSound('notification');
+    if (fresh && notificationSettingsRef.current.masterEnabled) playNotificationSound('notification');
   };
   useEffect(() => { armNotificationSound(); armSongPlayer(); }, []);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsState>({

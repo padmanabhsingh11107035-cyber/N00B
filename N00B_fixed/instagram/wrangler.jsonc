@@ -4,8 +4,13 @@
   // so links like /profile or /reels open correctly when a page is refreshed.
   "name": "n00b",
   "compatibility_date": "2026-09-01",
+  // A small script answers only the two big files of Neon Alley (too large for a website file, kept in the repository's "game-data" release); every other address is served
+  // straight from the files, as before. See worker/index.js.
+  "main": "worker/index.js",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/games/neon-alley/data/*"]
   }
 }

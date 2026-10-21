@@ -23,6 +23,15 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+# Neon Alley (a game made with the Godot engine) runs in a frame of its own, from this site as well. The engine needs WebAssembly and the game's scripts need to evaluate small bits of
+# code; both are allowed for this folder only. Its two big files come from /games/neon-alley/data/ (see worker/index.js).
+/games/neon-alley/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/neon-alley/index.html
+  Cache-Control: no-cache
 /games/helix-fall/index.html
   Cache-Control: no-cache
 /games/helix-fall/assets/*

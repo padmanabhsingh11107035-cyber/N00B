@@ -1,6 +1,6 @@
 # Helix Fall — Standalone Source
 
-Portable source for a responsive Three.js Helix Drop remix. It includes the game code, generated orb model, supplied game fonts and licenses, and a game-specific favicon. This export removes Manus Preview/build hooks; the original WebDev project retains its managed asset recovery and development Tweak bridge.
+Portable source for a responsive Three.js Helix Drop remix. It includes the game code, generated orb model, supplied game fonts and licenses, and a game-specific favicon.
 
 ## Run and build
 

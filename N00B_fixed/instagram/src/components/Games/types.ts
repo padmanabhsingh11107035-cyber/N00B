@@ -17,7 +17,7 @@ export interface MiniGameMeta {
   isNew?: boolean;
   // For a game that pays for something other than a win (Helix Fall: every level cleared): what the reward is for, e.g. 'per level'.
   rewardNote?: string;
-  // A game that is a page of its own (made with Manus, shown in a frame): its address.
+  // A game that is a page of its own (shown in a frame): its address on this site.
   embedUrl?: string;
   // The game brings its own music and sounds, so the Games page's arcade loop is stopped while it is open.
   ownSound?: boolean;
@@ -57,7 +57,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
-  // --- NEW: NEON ALLEY: LAST CALL (made with Manus; lives on its own page and is shown in a frame — see minigames/HostedGameFrame) ---
+  // --- NEW: NEON ALLEY: LAST CALL (lives on its own page, /games/neon-alley/, shown in a frame — see minigames/HostedGameFrame and worker/index.js) ---
   {
     id: 'neon_alley',
     title: 'Neon Alley: Last Call',
@@ -73,7 +73,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     tags: ['Beat-em-up', 'Pixel Art', 'Combos'],
     isNew: true,
     ownSound: true,
-    embedUrl: 'https://neonlast-dpzbm55t.manus.game/',
+    embedUrl: '/games/neon-alley/',
     posters: [
       '/game-posters/neon-alley/01-cover.webp',
       '/game-posters/neon-alley/02-keyart.webp',

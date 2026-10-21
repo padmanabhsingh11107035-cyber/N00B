@@ -1,6 +1,6 @@
 # Helix Fall inside NOOB
 
-This is the Helix Fall source from Manus, changed so it can run inside the NOOB Games page and so that it is easy, endless and quick to start.
+This is the Helix Fall source, changed so it can run inside the NOOB Games page and so that it is easy, endless and quick to start.
 
 ## What was changed (compared with the zip you sent)
 

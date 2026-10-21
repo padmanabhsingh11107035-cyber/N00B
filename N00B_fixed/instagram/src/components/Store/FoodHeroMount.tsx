@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StoreProduct } from '../../types';
 
-// The Manus-built "scroll assembly" hero — a plain CSS/JS module (public/food-hero/), not a React
+// The ready-made "scroll assembly" hero — a plain CSS/JS module (public/food-hero/), not a React
 // component, that mounts itself into a host <div> and owns its own look entirely (per the brief:
 // no design changes). This wrapper's only job is the host-integration half its own README asks
 // for: real prices/copy from the actual store_products rows (so every edit an admin makes in

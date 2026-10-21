@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#1b1838" />
+    <meta name="application-name" content="Underhall: After Curfew" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Underhall: After Curfew" />
+    <meta property="og:description" content="A superhero high-school dungeon roguelike beneath Super Academy. Explore two seeded floors, rescue classmates and face The Proctor and The Librarian." />
+    <meta property="og:image" content="https://noobsocials.com/game-posters/underhall/01-cover.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Underhall: After Curfew</title>
+    <meta name="description" content="A superhero high-school dungeon roguelike beneath Super Academy. Explore two seeded floors, rescue classmates and face The Proctor and The Librarian." />
+    <link rel="icon" href="./underhall-icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./underhall-icon.png" />
+    <link rel="preload" href="./fonts/Bangers-Regular.latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./fonts/Sora-VF.subset.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="./fonts/Figtree-VF.subset.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="ui"></div>
+    <div id="rotate-hint" role="alert" aria-live="assertive"><div class="rot-card"><div class="rot-phone" aria-hidden="true"></div><p>Turn your phone sideways to play</p></div></div>
+    <div id="boot">
+      <div class="boot-card">
+        <img class="boot-icon" src="./underhall-icon.png" alt="" aria-hidden="true" />
+        <div class="boot-kicker">UNDERHALL:</div>
+        <div class="boot-title">AFTER CURFEW</div>
+        <div class="boot-bar" role="progressbar" aria-label="Loading game" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+        <p id="boot-status" aria-live="polite">Opening the Underhall...</p>
+        <p id="boot-error" class="boot-error hidden" role="alert"></p>
+        <button id="boot-retry" class="btn hidden" type="button">Retry</button>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

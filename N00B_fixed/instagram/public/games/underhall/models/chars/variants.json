@@ -1,0 +1,84 @@
+{
+ "hero": {
+  "gender": "male",
+  "hair": "Hair_SimpleParted",
+  "hairColor": "#2c1a47",
+  "eyes": "#ffe3a1",
+  "eyeGlow": 1.1,
+  "emit": true
+ },
+ "pixel": {
+  "gender": "female",
+  "hair": "Hair_Long",
+  "hairColor": "#16202e",
+  "eyes": "#3a2a1e",
+  "emit": true
+ },
+ "rocky": {
+  "gender": "male",
+  "hair": "Hair_Buzzed",
+  "hairColor": "#2a1a12",
+  "eyes": "#2a1a10",
+  "emit": true
+ },
+ "zephyr": {
+  "gender": "female",
+  "hair": "Hair_BuzzedFemale",
+  "hairColor": "#e9e4d6",
+  "eyes": "#3d6d8a",
+  "emit": true
+ },
+ "mira": {
+  "gender": "female",
+  "hair": "Hair_Long",
+  "hairColor": "#6e2a18",
+  "eyes": "#4a2a14",
+  "emit": true
+ },
+ "tock": {
+  "gender": "male",
+  "hair": "Hair_SimpleParted",
+  "hairColor": "#c9c3dd",
+  "eyes": "#6a4aa0",
+  "emit": true
+ },
+ "blaze": {
+  "gender": "male",
+  "hair": "Hair_Buzzed",
+  "hairColor": "#120c0a",
+  "eyes": "#1a0e08",
+  "emit": true
+ },
+ "shade": {
+  "gender": "male",
+  "hair": null,
+  "hairColor": "#000000",
+  "eyes": "#ff4d6d",
+  "eyeGlow": 3,
+  "emit": true
+ },
+ "bruiser": {
+  "gender": "male",
+  "hair": null,
+  "hairColor": "#000000",
+  "eyes": "#c58cff",
+  "emit": false
+ },
+ "proctor": {
+  "gender": "male",
+  "hair": null,
+  "hairColor": "#000000",
+  "eyes": "#ffcf4d",
+  "eyeGlow": 0,
+  "hideEyes": true,
+  "emit": true
+ },
+ "librarian": {
+  "gender": "female",
+  "hair": "Hair_Buns",
+  "hairColor": "#b8b3b0",
+  "eyes": "#8dffcf",
+  "eyeGlow": 2.5,
+  "emit": true
+ }
+}

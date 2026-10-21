@@ -21,6 +21,7 @@ import {
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
 import { HostedGameFrame } from './minigames/HostedGameFrame';
+import { warmUnderhallFiles } from '../../utils/underhallWarmup';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../utils/pageResume';
 import { User } from '../../types';
 import {
@@ -141,6 +142,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   onClose,
   onPointsUpdated
 }) => {
+  // a big hosted game: its files are fetched quietly as soon as its page opens, so Play starts it at once
+  useEffect(() => { if (game.embedLazy) void warmUnderhallFiles(); }, [game.embedLazy]);
   // Chess Blitz is capped at one round a week for free accounts (its real
   // stakes make it something worth grinding otherwise). The check/consume
   // call fires once on mount for every entry path — bot, pass & play,
@@ -1113,7 +1116,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <>
           {/* A hosted game (its own page) is added here, out of sight, as soon as its page opens, and shown when Play is pressed */}
           {game.embedUrl && (currentMode === 'select_mode' || currentMode === 'play_bot') && (
-            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} />
+            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} lazy={game.embedLazy} />
           )}
 
           {/* 1. SELECT MODE VIEW */}

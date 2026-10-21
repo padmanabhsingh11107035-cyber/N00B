@@ -13,6 +13,8 @@ interface HostedGameFrameProps {
   title: string;
   /** false while the person is still on the game's page (loading in the background), true once Play was pressed. */
   visible: boolean;
+  /** true: the frame is only created when Play is pressed (a big game whose files were already fetched quietly), instead of being kept out of sight from the start. */
+  lazy?: boolean;
 }
 
 const useUpright = (): boolean => {
@@ -26,7 +28,7 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
@@ -80,7 +82,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
   return (
     <div className={visible ? 'space-y-2' : 'fixed left-[-10000px] top-0 w-[800px] h-[450px] opacity-0 pointer-events-none'} aria-hidden={!visible}>
       <div className="relative w-full overflow-hidden rounded-2xl bg-black" style={boxStyle}>
-        <iframe
+        {(visible || !lazy) && <iframe
           ref={frameRef}
           title={title}
           src={url}
@@ -91,7 +93,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
           sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
           onLoad={() => setLoaded(true)}
           className="block w-full h-full border-0 bg-black"
-        />
+        />}
         {visible && !loaded && (
           <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-3 text-center px-6 pointer-events-none">
             <div className="w-9 h-9 rounded-full border-4 border-pink-400/30 border-t-pink-400 animate-spin" />

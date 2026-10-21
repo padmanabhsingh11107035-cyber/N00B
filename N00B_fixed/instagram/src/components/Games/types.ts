@@ -21,6 +21,8 @@ export interface MiniGameMeta {
   embedUrl?: string;
   // The game brings its own music and sounds, so the Games page's arcade loop is stopped while it is open.
   ownSound?: boolean;
+  // A big hosted game: its frame is only created when Play is pressed (its files are fetched quietly beforehand), instead of being kept out of sight from the moment its page opens.
+  embedLazy?: boolean;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -54,6 +56,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
       '/game-posters/helix-fall/05-beat-your-best.webp',
       '/game-posters/helix-fall/06-chinese.webp',
       '/game-posters/helix-fall/07-last-floor.webp'
+    ]
+  },
+
+  // --- NEW: UNDERHALL: AFTER CURFEW (a 3D dungeon game on its own page, /games/underhall/, shown in a frame — see minigames/HostedGameFrame) ---
+  {
+    id: 'underhall_after_curfew',
+    title: 'Underhall: After Curfew',
+    category: 'arcade',
+    description: 'A superhero school dungeon in 3D. Fight through two seeded floors under the academy, rescue classmates, pick your powers and take down The Proctor and The Librarian. On a phone it plays sideways with an on-screen joystick and buttons.',
+    bannerBg: 'from-[#1b1838] to-[#0d0b22]',
+    badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'underhall',
+    tags: ['3D', 'Roguelike', 'Boss Fights'],
+    isNew: true,
+    ownSound: true,
+    embedLazy: true,
+    embedUrl: '/games/underhall/',
+    posters: [
+      '/game-posters/underhall/01-cover.webp',
+      '/game-posters/underhall/02-campus.webp',
+      '/game-posters/underhall/03-hall-of-origins.webp',
+      '/game-posters/underhall/04-training-gym.webp'
     ]
   },
 

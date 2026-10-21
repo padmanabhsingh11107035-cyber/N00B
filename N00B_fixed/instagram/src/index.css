@@ -534,10 +534,10 @@ html[data-serif="on"] body, html[data-serif="on"] button, html[data-serif="on"] 
 html[data-serif="on"] .draw-sans, html[data-serif="on"] .st-root { font-family: var(--font-sans); }
 /* Bigger text all over the app. The app is set in a serif now, which looks smaller than the rounded sans it replaced, and most labels are small fixed sizes (text-[10px], text-[11px] ...).
    --tx is the one number that scales them all (Settings > Accessibility > Text size changes it); the Tailwind sizes (text-xs ... text-3xl) read their size from the --text-* variables below. */
-html { --tx: 1.2; --tx-big: calc(1 + (var(--tx) - 1) / 2); }
-html[data-text-size="small"] { --tx: 1.06; }
-html[data-text-size="large"] { --tx: 1.34; }
-html[data-text-size="xlarge"] { --tx: 1.48; }
+html { --tx: 1.38; --tx-big: calc(1 + (var(--tx) - 1) / 2); }
+html[data-text-size="small"] { --tx: 1.2; }
+html[data-text-size="large"] { --tx: 1.55; }
+html[data-text-size="xlarge"] { --tx: 1.72; }
 html {
   --text-xs: calc(0.75rem * var(--tx)); --text-sm: calc(0.875rem * var(--tx)); --text-base: calc(1rem * var(--tx));
   --text-lg: calc(1.125rem * var(--tx-big)); --text-xl: calc(1.25rem * var(--tx-big)); --text-2xl: calc(1.5rem * var(--tx-big)); --text-3xl: calc(1.875rem * var(--tx-big));

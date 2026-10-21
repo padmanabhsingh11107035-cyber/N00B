@@ -17,7 +17,7 @@ for (const f of walk('src')) for (const m of read(f).matchAll(/text-\[([0-9.]+)p
 const rule = (z) => `html .text-${bs}[${z.replace('.', `${bs}.`)}px${bs}] { font-size: calc(${z}px * var(--tx)); }`;
 const missing = [...used].filter((z) => !css.includes(rule(z)));
 check(used.size >= 10 && missing.length === 0, `every small fixed size used in the app (${[...used].sort((a, b) => a - b).join(', ')} px) scales with the text size`, `missing: ${missing.join(', ')}`);
-check(/html \{ --tx: 1\.2;/.test(css) && /--text-xs: calc\(0\.75rem \* var\(--tx\)\)/.test(css) && /--text-base: calc\(1rem \* var\(--tx\)\)/.test(css), 'the Tailwind sizes (xs to 3xl) are bigger by the same number');
+check(/html \{ --tx: 1\.38;/.test(css) && /--text-xs: calc\(0\.75rem \* var\(--tx\)\)/.test(css) && /--text-base: calc\(1rem \* var\(--tx\)\)/.test(css), 'the Tailwind sizes (xs to 3xl) are bigger by the same number');
 check(/data-text-size="small"\] \{ --tx: /.test(css) && /data-text-size="large"\] \{ --tx: /.test(css) && /data-text-size="xlarge"\] \{ --tx: /.test(css), 'and the Text size setting (small, large, extra large) moves that number');
 
 console.log(`\n${passed} passed, ${failed} failed`);

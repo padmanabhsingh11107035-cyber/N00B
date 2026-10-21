@@ -88,7 +88,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
           allowFullScreen
           referrerPolicy="no-referrer"
           // boxed in: it can run and keep its own saved data, but cannot navigate NOOB away
-          sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-fullscreen"
+          sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
           onLoad={() => setLoaded(true)}
           className="block w-full h-full border-0 bg-black"
         />

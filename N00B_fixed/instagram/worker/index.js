@@ -3,12 +3,12 @@
 // (their names carry a fingerprint, so they never change), and nothing else can be fetched through here.
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 
-/** address under /games/neon-alley/data/  ->  file in the release */
+/** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
 const FILES = {
-  // the engine, kept compressed (8 MB instead of 39 MB); the browser unpacks it by itself
-  'engine.wasm': { file: 'na-engine-5b0faa32.br', type: 'application/wasm', encoding: 'br' },
+  // the engine (the website compresses it for the browser on the way out)
+  'engine.5b0faa32.wasm': { file: 'na-engine-5b0faa32.wasm', type: 'application/wasm' },
   // the game's pictures, music and scripts
-  'data.pck': { file: 'na-data-e7565660.pck', type: 'application/octet-stream' },
+  'data.e7565660.pck': { file: 'na-data-e7565660.pck', type: 'application/octet-stream' },
 };
 
 export default {
@@ -31,7 +31,6 @@ export default {
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff',
       });
-      if (entry.encoding) headers.set('Content-Encoding', entry.encoding);
       const length = upstream.headers.get('Content-Length');
       if (length) headers.set('Content-Length', length);
       res = new Response(upstream.body, { status: 200, headers });

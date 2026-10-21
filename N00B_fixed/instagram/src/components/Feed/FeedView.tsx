@@ -544,7 +544,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </div>
       </div>
       {/* 1. Minimalist Top Header */}
-      <header ref={headerRef} className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-3 py-2.5 flex items-center gap-1 shadow-sm">
+      <header ref={headerRef} className="sticky top-0 z-40 w-full bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-800/80 px-2.5 py-2.5 flex items-center gap-1 shadow-sm">
         {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -567,17 +567,17 @@ export const FeedView: React.FC<FeedViewProps> = ({
           {joinTeamOpen && (
             <button
               onClick={() => setShowJoinUsModal(true)}
-              className="p-1 text-zinc-400 hover:text-violet-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer shrink-0"
+              className="p-1 text-zinc-400 hover:text-violet-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer shrink-0 max-[560px]:hidden"
               title="Join the NOOB team"
               aria-label="Join the NOOB team"
             >
               <Handshake className="w-4 h-4" />
             </button>
           )}
-          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] shrink-0">
+          <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-[11px] min-w-0 max-w-full">
             <button
               onClick={() => setActiveFeedFilter('foryou')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+              className={`px-2 min-[400px]:px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                 activeFeedFilter === 'foryou'
                   ? 'bg-rose-600 text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-white'
@@ -587,7 +587,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
             </button>
             <button
               onClick={() => setActiveFeedFilter('following')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+              className={`px-2 min-[400px]:px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                 activeFeedFilter === 'following'
                   ? 'bg-rose-600 text-white shadow-sm font-bold'
                   : 'text-zinc-400 hover:text-white'
@@ -599,7 +599,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <button
                 onClick={() => setActiveFeedFilter('favourites')}
                 data-testid="feed-favourites"
-                className={`px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer ${
+                className={`px-2 min-[400px]:px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                   activeFeedFilter === 'favourites'
                     ? 'bg-rose-600 text-white shadow-sm font-bold'
                     : 'text-zinc-400 hover:text-white'
@@ -616,7 +616,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           {/* Apply to join the SparkX team */}
           <button
             onClick={() => setShowSparkXModal(true)}
-            className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
+            className="p-1.5 text-zinc-400 hover:text-orange-300 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer max-[560px]:hidden"
             title="Join our SparkX team (IIT Bombay Techfest)"
           >
             <Rocket className="w-4 h-4" />
@@ -916,6 +916,33 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-black text-white block">Our Team</span>
                   <span className="text-[10px] text-zinc-300 block truncate">Meet the people behind NOOB</span>
+                </div>
+              </button>
+              {/* The two "join us" forms; on a wide screen they are also icons in the top bar */}
+              {joinTeamOpen && (
+                <button
+                  onClick={() => { setShowNoobMenu(false); setShowJoinUsModal(true); }}
+                  className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-violet-500/20 border border-violet-400/30 text-violet-300 flex items-center justify-center shrink-0">
+                    <Handshake className="w-[18px] h-[18px]" aria-hidden="true" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white block">Join the NOOB team</span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Apply to help build NOOB</span>
+                  </div>
+                </button>
+              )}
+              <button
+                onClick={() => { setShowNoobMenu(false); setShowSparkXModal(true); }}
+                className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
+              >
+                <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-400/30 text-orange-300 flex items-center justify-center shrink-0">
+                  <Rocket className="w-[18px] h-[18px]" aria-hidden="true" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-black text-white block">Join our SparkX team</span>
+                  <span className="text-[10px] text-zinc-300 block truncate">IIT Bombay Techfest</span>
                 </div>
               </button>
               {/* Anonymous Messages: a public feed of messages with no author shown */}

@@ -534,11 +534,20 @@ html[data-serif="on"] body, html[data-serif="on"] button, html[data-serif="on"] 
 html[data-serif="on"] .draw-sans, html[data-serif="on"] .st-root { font-family: var(--font-sans); }
 /* Bigger text all over the app. The app is set in a serif now, which looks smaller than the rounded sans it replaced, and most labels are small fixed sizes (text-[10px], text-[11px] ...).
    --tx is the one number that scales them all (Settings > Accessibility > Text size changes it); the Tailwind sizes (text-xs ... text-3xl) read their size from the --text-* variables below. */
-html { --tx: 1.38; --tx-big: calc(1 + (var(--tx) - 1) / 2); }
-html[data-text-size="small"] { --tx: 1.2; }
-html[data-text-size="large"] { --tx: 1.55; }
-html[data-text-size="xlarge"] { --tx: 1.72; }
+html { --tx0: 1.38; --tx: var(--tx0); --tx-big: calc(1 + (var(--tx) - 1) / 2); }
+html[data-text-size="small"] { --tx0: 1.2; }
+html[data-text-size="large"] { --tx0: 1.55; }
+html[data-text-size="xlarge"] { --tx0: 1.72; }
 html {
+  --text-xs: calc(0.75rem * var(--tx)); --text-sm: calc(0.875rem * var(--tx)); --text-base: calc(1rem * var(--tx));
+  --text-lg: calc(1.125rem * var(--tx-big)); --text-xl: calc(1.25rem * var(--tx-big)); --text-2xl: calc(1.5rem * var(--tx-big)); --text-3xl: calc(1.875rem * var(--tx-big));
+}
+/* A bar that runs out of room (utils/textFit.ts sets data-fit on it): its text takes back part of the extra size, 2/3, 1/3, all of it. */
+[data-fit="1"] { --tx: calc(1 + (var(--tx0) - 1) * 0.66); }
+[data-fit="2"] { --tx: calc(1 + (var(--tx0) - 1) * 0.33); }
+[data-fit="3"] { --tx: 1; }
+[data-fit] {
+  --tx-big: calc(1 + (var(--tx) - 1) / 2);
   --text-xs: calc(0.75rem * var(--tx)); --text-sm: calc(0.875rem * var(--tx)); --text-base: calc(1rem * var(--tx));
   --text-lg: calc(1.125rem * var(--tx-big)); --text-xl: calc(1.25rem * var(--tx-big)); --text-2xl: calc(1.5rem * var(--tx-big)); --text-3xl: calc(1.875rem * var(--tx-big));
 }

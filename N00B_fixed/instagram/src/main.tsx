@@ -10,6 +10,7 @@ import { cleanReloadMark } from './utils/reloadApp.ts';
 import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
+import { startTextFit } from './utils/textFit.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
 import { installHistoryGate } from './utils/historyGate.ts';
 import { isKnownPath } from './utils/routes.ts';
@@ -61,6 +62,7 @@ installOverlayScrollLock();   // pages that cover the screen are pages of their 
 cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)
 initTheme();
 void initLanguage();
+startTextFit();   // a bar that runs out of room (top bar, bottom bar ...) takes back some of the bigger text until it fits
 
 // Android's browser/WebView renders the "liquid glass" bottom nav and three-dot menus (see
 // .liquid-glass in index.css) almost fully see-through instead of blurred-translucent — that

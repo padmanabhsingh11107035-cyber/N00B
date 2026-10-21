@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { SLOTS, SLOT_ANGLE, type FloorSpec } from './level'
 import { PILLAR_RADIUS, PLATFORM_THICKNESS, RING_INNER, RING_OUTER, floorTop, geometryFrom, pushSector } from './tower'
-import { DANGER, THEMES } from './theme'
+import { DANGER, themeOf } from './theme'
 
 /** A tumbling piece: plain integration (gravity, spin, a bounce off the pillar), nothing heavier is needed for a one-second effect. */
 type Shard = { mesh: THREE.Mesh; vel: THREE.Vector3; spin: THREE.Vector3; damping: number; radius: number; bounce: number; age: number; life: number }
@@ -68,7 +68,7 @@ export class Fx {
    * break so pieces start exactly where the slots were drawn. `power` 1 = passed, 2 = smashed.
    */
   shatterFloor(spec: FloorSpec, towerAngle: number, power: number): void {
-    const theme = THEMES[spec.stage]
+    const theme = themeOf(spec.index)
     const y = floorTop(spec.index)
     const step = this.density < 0.75 ? 2 : 1
     for (let s = 0; s < SLOTS; s += step) {

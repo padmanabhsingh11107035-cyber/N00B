@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LEVEL_FLOORS, TOTAL_FLOORS, checkRun } from '../server/helix-rules.mjs'
-import { SLOT_ANGLE, angleDiff, dailySeed, extendTower, generateTower, probe, stageOf, type Tower } from '../src/game/level'
+import { SLOT_ANGLE, angleDiff, dailySeed, extendTower, generateTower, levelOf, probe, stageOf, type Tower } from '../src/game/level'
+import { THEMES, themeIndexOf } from '../src/game/theme'
 import { BALL_RADIUS, GRAVITY, ROT_SPEED, Sim, floorY } from '../src/game/sim'
 
 type Skill = { name: string; delay: number; care: number; speed: number; aimError: number }
@@ -169,6 +170,33 @@ describe('the shield', () => {
   })
 })
 
+describe('plate colours', () => {
+  const lum = (hex: string) => { const n = parseInt(hex.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255) }
+  it('has 11 palettes (5 more than before) and every plate colour is different', () => {
+    expect(THEMES.length).toBe(11)
+    expect(new Set(THEMES.map(t => t.safe)).size).toBe(11)
+    expect(new Set(THEMES.map(t => t.id)).size).toBe(11)
+  })
+  it('keeps the plates easy to tell from the background and from the red hazards', () => {
+    for (const t of THEMES) {
+      expect(lum(t.safe) - lum(t.skyLow), t.id).toBeGreaterThan(90)
+      // the hazard red is #ff2d55: plate colours must not be red-ish
+      const n = parseInt(t.safe.slice(1), 16)
+      const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255]
+      expect(!(r > 220 && g < 110 && b < 130), t.id).toBe(true)
+    }
+  })
+  it('carries on through the palettes: all 11 turn up within two levels, and a new level starts on a new colour', () => {
+    const seen = new Set<number>()
+    for (let f = 0; f < LEVEL_FLOORS * 2; f += 1) seen.add(themeIndexOf(f))
+    expect(seen.size).toBe(11)
+    for (let l = 1; l < 6; l += 1) expect(themeIndexOf(l * LEVEL_FLOORS)).not.toBe(themeIndexOf(l * LEVEL_FLOORS - 1))
+    expect(themeIndexOf(0)).toBe(0)
+    expect(levelOf(LEVEL_FLOORS)).toBe(2)
+    expect(stageOf(0)).toBe(0)
+  })
+})
+
 describe('simulated players', () => {
   const report: string[] = []
   const clearRate = (skill: Skill, levels: number, n = 60) => {
@@ -197,15 +225,18 @@ describe('simulated players', () => {
       if (skill === NOVICE) expect(med(first)).toBeLessThan(10)
     })
   }
-  it('is easy for people: most careful players clear level 1, and later levels are still reachable', () => {
+  it('is a real challenge but fair: careful players clear level 1 most of the time, careless ones only sometimes, later levels are still reachable', () => {
     const novice = clearRate(NOVICE, 1)
     const regular = clearRate(REGULAR, 1)
     const expert = clearRate(EXPERT, 1)
     report.push(`level 1 cleared: novice ${Math.round(novice * 100)}% · regular ${Math.round(regular * 100)}% · expert ${Math.round(expert * 100)}%`)
-    expect(novice).toBeGreaterThanOrEqual(0.5)
-    expect(regular).toBeGreaterThanOrEqual(0.7)
-    expect(expert).toBeGreaterThanOrEqual(0.85)
-    expect(clearRate(REGULAR, 3, 40)).toBeGreaterThanOrEqual(0.25)
+    // it used to be 68% / 85% / 97%, which was too easy
+    expect(novice).toBeGreaterThanOrEqual(0.2)
+    expect(novice).toBeLessThanOrEqual(0.55)
+    expect(regular).toBeGreaterThanOrEqual(0.5)
+    expect(regular).toBeLessThanOrEqual(0.8)
+    expect(expert).toBeGreaterThanOrEqual(0.75)
+    expect(clearRate(REGULAR, 3, 40)).toBeGreaterThanOrEqual(0.08)
   })
   it('prints the difficulty report', () => {
     console.log(['', ...report].join(String.fromCharCode(10)))

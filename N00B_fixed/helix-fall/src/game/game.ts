@@ -4,9 +4,9 @@ import type { Input } from '../engine/input'
 import type { Renderer } from '../engine/renderer'
 import type { Quality } from '../engine/save'
 import { Fx } from './fx'
-import { generateTower, type Tower } from './level'
+import { generateTower, stageOf, type Tower } from './level'
 import { BALL_RADIUS, Sim, floorY, type SimEvent } from './sim'
-import { BALL, DANGER, THEMES, type Theme } from './theme'
+import { BALL, DANGER, THEMES, themeIndexOf, themeOf, type Theme } from './theme'
 import { RING_INNER, RING_OUTER, TowerView } from './tower'
 import { CONFIG } from './config'
 
@@ -27,6 +27,8 @@ export type RunResult = {
   smashes: number
   nearMisses: number
   stage: number
+  /** Palette the run ended on (see theme.ts). */
+  themeIndex: number
 }
 
 export type GameEvents = {
@@ -262,7 +264,7 @@ export class Game {
       case 'bounce': {
         this.squash = 1
         this.audio.play('bounce', e.floor)
-        this.towerView.splat(e.floor, s.ballAngle, THEMES[this.tower.floors[e.floor].stage].accent)
+        this.towerView.splat(e.floor, s.ballAngle, themeOf(e.floor).accent)
         this.fx.burst(new THREE.Vector3(0, floorY(e.floor) + 0.05, BALL_ORBIT), Math.round(6 * this.fx.density), '#ffffff', 2.2)
         this.events.chain(0)
         if (e.points > 0) {
@@ -281,7 +283,7 @@ export class Game {
         this.events.popup(e.chain > 1 ? `+${e.points} ×${Math.min(e.chain, 8)}` : `+${e.points}`, e.chain > 1 ? 'combo' : 'score')
         this.events.chain(e.chain)
         this.shake = Math.max(this.shake, (0.05 + 0.03 * e.chain) * motion)
-        if (e.chain >= 2) this.events.flash(THEMES[this.sim.stage].accent, Math.min(0.12 + e.chain * 0.05, 0.35) * motion)
+        if (e.chain >= 2) this.events.flash(themeOf(this.sim.floor).accent, Math.min(0.12 + e.chain * 0.05, 0.35) * motion)
         break
       }
       case 'smashOn':
@@ -306,13 +308,13 @@ export class Game {
       case 'stage': {
         this.audio.play('stage')
         this.events.popup(`+${e.points}`, 'stage')
-        // The six themes repeat in every level.
-        const next = (e.stage + 1) % THEMES.length
+        // The palettes carry on from stage to stage and from level to level.
+        const next = themeIndexOf(e.floor + 1)
         this.themeFrom = this.currentTheme()
         this.themeTo = THEMES[next]
         this.themeT = 0
         this.audio.stage = next
-        this.events.stage(next, THEMES[next])
+        this.events.stage(stageOf(e.floor + 1), THEMES[next])
         break
       }
       case 'saved': {
@@ -379,6 +381,7 @@ export class Game {
       smashes: s.smashes,
       nearMisses: s.nearMisses,
       stage: s.stage,
+      themeIndex: themeIndexOf(s.floor),
     })
   }
 

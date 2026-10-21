@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { SLOTS, SLOT_ANGLE, blinkActive, type FloorSpec, type Tower } from './level'
-import { DANGER, DANGER_DARK, THEMES } from './theme'
+import { DANGER, DANGER_DARK, themeOf } from './theme'
 
 export const FLOOR_SPACING = 3.3
 export const PLATFORM_THICKNESS = 0.5
@@ -115,7 +115,7 @@ export class TowerView {
         // Telegraph: flicker during the last 22% of the "off" window before turning on.
         const warn = !on && u > 1 - 0.22
         const flick = warn && Math.floor(time * 14) % 2 === 0
-        const theme = THEMES[v.spec.stage]
+        const theme = themeOf(v.spec.index)
         v.blinkMat.color.set(on ? DANGER : flick ? '#ff9fb2' : theme.safeAlt)
         v.blinkMat.emissive.set(on ? DANGER : '#000000')
         v.blinkMat.emissiveIntensity = on ? 0.55 : 0
@@ -157,7 +157,7 @@ export class TowerView {
   private build(spec: FloorSpec): FloorView {
     const group = new THREE.Group()
     group.rotation.y = spec.offset
-    const theme = THEMES[spec.stage]
+    const theme = themeOf(spec.index)
     const y = floorTop(spec.index)
     const safePos: number[] = []
     const safeCol: number[] = []

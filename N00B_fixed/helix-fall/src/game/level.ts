@@ -78,23 +78,24 @@ export const wrapAngle = (a: number) => {
 
 /**
  * Difficulty knobs by floor. `d` rises 0 → 1 across a level; stages add discrete steps so each
- * theme change also feels like a new challenge. Made for people, not experts: wide gaps, few hazards,
- * and the next gap is never far away. Each new level is a little harder than the one before, up to a ceiling.
+ * theme change also feels like a new challenge. Still fair for people (a gap is never narrower than 2 slots and the
+ * ball's landing spot is always safe), but it asks for real steering: narrower gaps, hazards from the second stage,
+ * blinking plates and sweepers earlier, and fewer straight drops. Each new level is harder than the one before, up to a ceiling.
  */
 function knobs(local: number, stage: number, level: number) {
   const d = local / (LEVEL_FLOORS - 1)
-  const lv = Math.min(level - 1, 6)
+  const lv = Math.min(level - 1, 8)
   return {
-    gap: local < 10 ? 5 : stage <= 2 ? 4 : stage === 3 ? (local % 2 === 0 ? 4 : 3) : lv >= 3 && local % 5 === 0 ? 2 : 3,
-    dangerMin: local < 5 ? 0 : [0, 0, 0, 0, 1, 1][stage],
-    dangerMax: local < 5 ? 0 : [0, 1, 1, 1, 2, 2][stage] + (lv >= 2 ? 1 : 0),
-    blinkChance: stage >= 3 ? 0.05 + 0.04 * (stage - 3) + 0.02 * lv : 0,
-    sweeperChance: stage >= 4 ? 0.06 + 0.05 * (stage - 4) + 0.02 * lv : 0,
+    gap: local < 8 ? 4 : stage <= 1 ? 3 : stage === 2 ? (local % 3 === 0 ? 2 : 3) : stage === 3 ? (local % 2 === 0 ? 2 : 3) : local % 3 === 0 || lv >= 4 ? 2 : 3,
+    dangerMin: local < 4 ? 0 : [0, 0, 1, 1, 1, 2][stage],
+    dangerMax: local < 4 ? 0 : [1, 2, 2, 3, 3, 3][stage] + (lv >= 2 ? 1 : 0),
+    blinkChance: stage >= 2 ? 0.1 + 0.05 * (stage - 2) + 0.03 * lv : 0,
+    sweeperChance: stage >= 3 ? 0.1 + 0.06 * (stage - 3) + 0.03 * lv : 0,
     /** Chance that a floor keeps its hazards off the short way from where the ball lands to the gap. */
-    guard: stage <= 2 ? 1 : 0.8,
-    blinkPeriod: 2.4 - 0.4 * d,
+    guard: stage <= 1 ? 0.85 : 0.55,
+    blinkPeriod: 2.2 - 0.5 * d,
     /** Chance that the next floor's gap sits right under this one: a "chute" for chains/smash. */
-    chute: 0.5 - 0.1 * d,
+    chute: 0.38 - 0.14 * d,
   }
 }
 
@@ -167,7 +168,7 @@ function generateLevel(seed: number, level: number, prev: FloorSpec | null): Flo
     }
     let sweeper: Sweeper | undefined
     if (r() < k.sweeperChance) {
-      const speed = (0.4 + r() * 0.4 + stage * 0.03) * (r() < 0.5 ? -1 : 1)
+      const speed = (0.5 + r() * 0.5 + stage * 0.04) * (r() < 0.5 ? -1 : 1)
       sweeper = { start: r() * Math.PI * 2, width: SLOT_ANGLE, speed }
     }
     floors.push({ index: i, stage, offset, slots, sweeper, blink })

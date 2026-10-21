@@ -286,7 +286,7 @@ async function boot(): Promise<void> {
       if (!lastRun) return
       const t = i18n.t.bind(i18n)
       const run = lastRun
-      const theme = THEMES[Math.min(run.stage, THEMES.length - 1)]
+      const theme = THEMES[run.themeIndex % THEMES.length]
       shareUrl = challengeUrl(run.score, save.data.playerName, run.kind === 'daily' ? run.seedDay : null)
       const display = getComputedStyle(document.documentElement).getPropertyValue('--display') || 'sans-serif'
       const { blob, url } = await drawCard({

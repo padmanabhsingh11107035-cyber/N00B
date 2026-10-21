@@ -24,7 +24,7 @@ export type SimEvent =
   | { type: 'pass'; floor: number; chain: number; points: number }
   | { type: 'smashOn' }
   | { type: 'smash'; floor: number; points: number }
-  | { type: 'stage'; stage: number; points: number }
+  | { type: 'stage'; stage: number; floor: number; points: number }
   | { type: 'death'; floor: number; cause: 'danger' | 'blink' | 'sweeper' }
   /** The shield took a hit that would have ended the run (one per level). */
   | { type: 'saved'; floor: number; cause: 'danger' | 'blink' | 'sweeper' }
@@ -171,6 +171,6 @@ export class Sim {
     const stage = stageOf(floor)
     const points = (stage + 1) * SCORE.stageClear
     this.score += points
-    events.push({ type: 'stage', stage, points })
+    events.push({ type: 'stage', stage, floor, points })
   }
 }

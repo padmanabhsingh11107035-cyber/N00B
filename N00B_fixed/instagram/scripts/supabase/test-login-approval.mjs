@@ -91,5 +91,16 @@ check(!/drop |delete from public\.(profiles|profile_private|posts|messages)|alte
 check(/only a SHA-256|only their SHA-256 hashes are stored/.test(sql) || /login_approval_hash/.test(sql), 'only hashes of the secrets are stored');
 check(/Nobody is asked|OPT-IN/.test(sql), 'it is opt-in: nobody is asked unless they switched it on');
 
+
+section('7. The guard on the side door (the own password login of Supabase)');
+const hookSql = read('supabase/migrations/20261022000003_login_approval_enforce.sql');
+check(hookSql.includes("event->>'authentication_method', '') = 'password'"), 'the guard looks only at plain password logins');
+check(hookSql.includes("'http_code', 403") && hookSql.includes('approval by email'), 'and refuses them, with a message that says why');
+check(/exception when others then[\s\S]*return jsonb_build_object\('claims', event->'claims'\)/.test(hookSql), 'any problem inside it lets the login through (it can never lock everybody out)');
+check(hookSql.includes('revoke execute on function public.login_approval_access_hook(jsonb) from public, anon, authenticated') && hookSql.includes('grant execute on function public.login_approval_access_hook(jsonb) to supabase_auth_admin'), 'only the login service of Supabase may call it');
+check(hookSql.includes('Switching the hook off there undoes it at once'), 'it does nothing until the hook is switched on in Supabase, and switching it off undoes it');
+check(login.includes('(error as { status?: number }).status === 403') && login.includes('approval by email') && login.slice(login.indexOf('signInWithPassword')).includes('startLoginApproval({ identifier, password: payload.password'), 'if the guard ever stops a password login, the app takes the approval road instead of saying "wrong password"');
+check(api.includes("error && /approval by email/i.test(error.message)"), 'adding a linked account that asks for an approval says so');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

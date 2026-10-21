@@ -21,6 +21,7 @@ export async function createTestDb({ autoExpose = true, upTo = null } = {}) {
     create role anon nologin;
     create role authenticated nologin;
     create role service_role nologin bypassrls;
+    create role supabase_auth_admin nologin;
     create schema auth;
     create table auth.users (
       id uuid primary key,

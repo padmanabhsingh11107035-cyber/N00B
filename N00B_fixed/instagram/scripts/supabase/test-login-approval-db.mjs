@@ -152,5 +152,37 @@ for (const role of ['anon', 'authenticated']) {
 check(!(await denied('anon', `select public.login_approval_needed('ann')`)), 'the login box (not signed in) can ask whether an approval is needed');
 check(await denied('anon', `select public.my_login_approval()`), 'but only a signed-in person can read their own setting');
 
+
+section('7. The guard on the own login address of Supabase (the access-token hook)');
+const hook = async (uid, method) => one(`select public.login_approval_access_hook($1::jsonb) as r`, [JSON.stringify({ user_id: uid, authentication_method: method, claims: { sub: uid, role: 'authenticated', aal: 'aal1' } })]);
+// bob has switched it on (section 5b), ann has not (she turned it off in section 5), dee never did
+const dee = await mkUser('dee');
+r = await hook(bob, 'password');
+check(r.error?.http_code === 403 && /approval by email/.test(r.error.message) && !r.claims, 'a plain password login for an account that asks for an approval is refused');
+for (const m of ['magiclink', 'otp', 'token_refresh', 'oauth', 'recovery', 'email/signup', 'sso/saml', 'totp']) {
+  r = await hook(bob, m);
+  check(!r.error && r.claims?.sub === bob, `and ${m} is let through (the approved login, keeping a login alive, Google, recovery ...)`);
+}
+r = await hook(dee, 'password');
+check(!r.error && r.claims?.sub === dee, 'a password login for an account that did not switch it on is untouched');
+r = await hook(ann, 'password');
+check(!r.error && r.claims?.sub === ann, 'and so is one that switched it off again');
+await db.query(`update public.profile_private set email = '' where user_id = $1`, [bob]);
+r = await hook(bob, 'password');
+check(!r.error, 'an account that has it on but no email on file is not locked out (nowhere to send the question)');
+await db.query(`update public.profile_private set email = 'bob@example.com' where user_id = $1`, [bob]);
+r = await hook(bob, 'password');
+check(r.error?.http_code === 403, 'and with the email back it is refused again');
+check(JSON.stringify(Object.keys(await hook(dee, 'password'))) === JSON.stringify(['claims']), 'the answer for a passing login is only { claims }, as Supabase expects');
+r = await one(`select public.login_approval_access_hook('{"authentication_method":"password","user_id":"not-a-uuid","claims":{"a":1}}'::jsonb) as r`);
+check(!r.error && r.claims?.a === 1, 'a broken request lets the login through instead of breaking it (fail open)');
+r = await one(`select public.login_approval_access_hook('{}'::jsonb) as r`);
+check(!r.error, 'and so does an empty one');
+const hookDenied = async (role) => { try { await db.exec(`set role ${role}`); await db.query(`select public.login_approval_access_hook('{}'::jsonb)`); return false; } catch { return true; } finally { await db.exec(`reset role`); } };
+check(await hookDenied('anon') && await hookDenied('authenticated'), 'nobody on the web can call the guard themselves');
+let allowed = false;
+try { await db.exec('set role supabase_auth_admin'); await db.query(`select public.login_approval_access_hook('{}'::jsonb)`); allowed = true; } catch { /* refused */ } finally { await db.exec('reset role'); }
+check(allowed, 'the login service of Supabase can call it');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

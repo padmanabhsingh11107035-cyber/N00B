@@ -711,6 +711,15 @@ export async function loginUser(payload: {
     const email = await rpc<string>('resolve_login_email', { identifier });
     const { error } = await supabase.auth.signInWithPassword({ email, password: payload.password });
     if (error) {
+      // The server's own guard (the login_approval_access_hook, see migration 20261022000003) refuses a plain password login for an account that asks for an approval. If that is what happened
+      // (the first question, "does it need one?", could not be answered a moment ago), take the approval road now instead of showing a wrong-password message.
+      if (/approval by email/i.test(error.message) || (error as { status?: number }).status === 403) {
+        if (await loginNeedsApproval(identifier)) {
+          const started = await startLoginApproval({ identifier, password: payload.password, device: payload.device });
+          if (started.success && started.required && started.ticket) return { success: false, approval: started.ticket };
+          if (!started.success) return { success: false, error: started.error };
+        }
+      }
       if (/rate|too many/i.test(error.message)) return { success: false, error: 'Too many attempts. Please wait a moment and try again.' };
       if (/banned/i.test(error.message)) return { success: false, error: 'This account has been suspended by NOOB Administrator.' };
       if (/^[+(]?[0-9][0-9 ().-]{5,}$/.test(identifier)) {
@@ -768,6 +777,7 @@ export async function signInLinkedAccount(username: string, password: string): P
     const temp = createIsolatedClient();
     const { data, error } = await temp.auth.signInWithPassword({ email, password });
     if (error || !data?.session) {
+      if (error && /approval by email/i.test(error.message)) return { success: false, error: 'This account asks for an approval by email. Log out and log in to it from the login screen.' };
       if (error && /rate|too many/i.test(error.message)) return { success: false, error: 'Too many attempts. Please wait a moment and try again.' };
       if (error && /banned/i.test(error.message)) return { success: false, error: 'This account has been suspended by NOOB Administrator.' };
       return { success: false, error: 'Incorrect password. Please check and try again.' };

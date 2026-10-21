@@ -3,7 +3,8 @@
 This is the Helix Fall source from Manus, with two small changes so it can run inside the NOOB Games page (everything else is untouched):
 
 1. `src/main.ts` — when the page is opened inside a frame with `?embed=1`, every finished run is posted to the page around it (`helixfall:run-end`: outcome, score, floors, totalFloors, stage). NOOB pays and ranks that result (see `instagram/src/components/Games/minigames/HelixFallGame.tsx`). Opened on its own, nothing changes.
-2. `src/styles/main.css` — in that frame the "Share" and "Copy challenge link" buttons are hidden (they would link to this game's own page).
+2. `public/embed-probe.js` (+ one line in `index.html`) and `tellStatus` in `src/main.ts` — inside that frame the game reports "hello" (the page loaded), "ready" (on screen) and any start-up error, so the page around it can show a loading screen and, if the game cannot start, what went wrong.
+3. `src/styles/main.css` — in that frame the "Share" and "Copy challenge link" buttons are hidden (they would link to this game's own page).
 
 To change the game: edit here, then build and copy the result into the app:
 

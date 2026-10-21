@@ -26,6 +26,7 @@ check(refs.length >= 4 && refs.every((r) => fs.existsSync(`${dir}/${r}`)), 'ever
 const js = fs.readdirSync(`${dir}/assets`).filter((f) => f.endsWith('.js')).map((f) => read(`${dir}/assets/${f}`)).join('');
 check(/helixfall:run-end/.test(js) && /totalFloors/.test(js), 'the built game tells the page around it how each run ended');
 check(!/https?:\/\/(?!www\.w3\.org|jcgt\.org)/.test(js), 'the game talks to no other website');
+check(/helixfall:\$\{|helixfall:ready/.test(js) && fs.existsSync(`${dir}/embed-probe.js`) && /embed-probe\.js/.test(html), 'it says when it is on screen, and a small first script reports it when the game cannot start');
 check(fs.existsSync(`${dir}/ASSET_PROVENANCE.md`) && fs.existsSync(`${dir}/fonts/Sora-OFL.txt`), 'its credits and font licences travel with it');
 
 section('3. The site\'s security rules');
@@ -44,6 +45,9 @@ check(/onPointsUpdated\(res\.earnedPoints, res\.totalNoobPoints, result === 'win
 check(/e\.origin !== window\.location\.origin \|\| e\.source !== frameRef\.current\?\.contentWindow/.test(game), 'only the game\'s own frame can report a run');
 check(/run\.outcome === 'won' \? 'win' : 'loss'/.test(game), 'reaching the base is a win, falling is a loss');
 check(/helix_fall: \[preloadHelix\]/.test(modal) && /'helix_fall'\s*\]\.includes\(game\.id\)/.test(modal), 'its file is fetched when the window opens, and the generic engine is not used for it');
+
+check(/phase === 'loading'/.test(game) && /Loading Helix Fall/.test(game) && /phase === 'stuck'/.test(game) && /Try again/.test(game), 'the window shows a loading screen (never a blank frame) and, when the game cannot start, what went wrong with a Try again button');
+check(/import\.meta\.env\.DEV \? '\/games\/helix-fall\/index\.html\?embed=1' : '\/games\/helix-fall\/\?embed=1'/.test(game), 'on the real site the game is opened at its final address (no redirect inside the frame)');
 
 section('5. The posters are shown');
 const car = read('src/components/Games/GamePosterCarousel.tsx');

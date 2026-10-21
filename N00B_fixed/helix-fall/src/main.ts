@@ -39,6 +39,11 @@ function tellHost(run: RunResult): void {
     }, location.origin)
   } catch { /* the page around the game is gone: nothing to tell */ }
 }
+// "ready": the game is on screen. "error": it could not start (the page around the game shows that, with a way to try again).
+function tellStatus(type: 'ready' | 'error', detail = ''): void {
+  if (!embedded) return
+  try { window.parent.postMessage({ type: `helixfall:${type}`, detail }, location.origin) } catch { /* nothing to tell */ }
+}
 const storedGame = (): string | null => {
   try { return localStorage.getItem(SAVE_KEY) } catch { return null }
 }
@@ -374,13 +379,16 @@ async function boot(): Promise<void> {
     input.update()
     loop.start()
     ;(window as unknown as { __helix: unknown }).__helix = { game, ui, save, input, getBoard: localBoard }
+    tellStatus('ready')
   } catch (error) {
     console.error('Helix Fall startup failed:', error)
+    tellStatus('error', `startup: ${error instanceof Error ? error.message : String(error)}`)
     ui.showBootFailure()
   }
 }
 
 void boot().catch(error => {
   console.error('Helix Fall could not start:', error)
+  tellStatus('error', `boot: ${error instanceof Error ? error.message : String(error)}`)
   activeUi?.showBootFailure()
 })

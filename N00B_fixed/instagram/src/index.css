@@ -709,6 +709,7 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
   .team-stage.force-dark, body.light .team-stage.force-dark { background-color: #09090d !important; }
   .team-banner.force-dark, body.light .team-banner.force-dark { background-color: #1a1408 !important; }
   .study-banner.force-dark, body.light .study-banner.force-dark { background-color: #161a26 !important; }
+  .studio-banner.force-dark, body.light .studio-banner.force-dark { background-color: #1d1230 !important; }
   .team-card-inner.force-dark, body.light .team-card-inner.force-dark { background-color: #111117 !important; }
 }
 

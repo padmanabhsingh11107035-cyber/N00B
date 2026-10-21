@@ -101,6 +101,8 @@ import { getSettings, isStoryMuted, loadFeedLists, loadSettings, resetFeedLists,
 import { useDevicePrefs } from './utils/devicePrefs';
 import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
+import { StudioHost } from './components/Studio/StudioHost';
+import { closeStudio, openStudio } from './components/Studio/studioStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { StudyHost } from './components/Study/StudyHost';
 import { isCoachingHost, openStudy } from './components/Study/studyStore';
@@ -403,6 +405,11 @@ export default function App() {
   // "+" opens the Create chooser (Post / Reel / Story / Video / Live / Thought); a Post, Reel or Thought then opens the creator
   const [showPostCreationModal, setShowPostCreationModal] = useState(false);
   const [createKind, setCreateKind] = useState<null | 'post' | 'reel' | 'thought'>(null);
+  // A picture or video finished in NOOB Studio: the Post / Reel / Story creator opens with it (it is only published when the person does that there)
+  const [studioFile, setStudioFile] = useState<File | null>(null);
+  const [studioStoryFile, setStudioStoryFile] = useState<File | null>(null);
+  // the address /studio opens NOOB Studio
+  useEffect(() => { try { if (/^\/studio\/?$/i.test(window.location.pathname)) openStudio(); } catch { /* the app opens as usual */ } }, []);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
@@ -2204,6 +2211,11 @@ export default function App() {
       {currentUser && <RenditionStrip />}
       <InAppBrowserHost />
       <NoobDrawHost currentUser={currentUser} onUserUpdated={(u) => setCurrentUser(u)} />
+      <StudioHost onUse={(file, target) => {
+        closeStudio();
+        if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
+        else { setStudioFile(file); setCreateKind(target); }
+      }} />
       <TeamJoinHost currentUser={currentUser} />
       <StudyHost currentUser={currentUser} />
 
@@ -2230,7 +2242,8 @@ export default function App() {
       {/* 2. Story Creation Modal */}
       {showCreateStoryModal && (
         <React.Suspense fallback={null}><CreateStoryModal
-          onClose={() => setShowCreateStoryModal(false)}
+          initialFile={studioStoryFile}
+          onClose={() => { setShowCreateStoryModal(false); setStudioStoryFile(null); }}
           onSubmitStory={handleCreateStory}
           allUsers={registeredUsers}
         /></React.Suspense>
@@ -2245,6 +2258,7 @@ export default function App() {
             setShowPostCreationModal(false);
             if (kind === 'post' || kind === 'reel' || kind === 'thought') setCreateKind(kind);
             else if (kind === 'story') setShowCreateStoryModal(true);
+            else if (kind === 'studio') openStudio();
             else if (kind === 'video') setShowUploadVideoModal(true);
             else if (kind === 'live') handleGoLiveTap();
           }}
@@ -2257,9 +2271,10 @@ export default function App() {
           key={createKind}
           initialType={createKind}
           initialAudio={createSound}
+          initialFile={studioFile}
           currentUser={currentUser}
           allUsers={registeredUsers}
-          onClose={() => { setCreateKind(null); setCreateSound(null); }}
+          onClose={() => { setCreateKind(null); setCreateSound(null); setStudioFile(null); }}
           onSubmitPost={handleCreatePostOrReel}
         /></React.Suspense>
       )}

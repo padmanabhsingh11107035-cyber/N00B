@@ -32,6 +32,9 @@ import {
   Music
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
+import { openStudio } from '../Studio/studioStore';
+import { preloadStudio } from '../Studio/StudioHost';
+import { Wand2 } from 'lucide-react';
 import { VenetianMask } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
 import { useFullPage } from '../../utils/fullPage';
@@ -884,6 +887,22 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Draw <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
                   <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
+                </div>
+              </button>
+              {/* NOOB Studio: the photo and video editor (everything is edited on the device, nothing is uploaded) */}
+              <button
+                onClick={() => { setShowNoobMenu(false); openStudio(); }}
+                onPointerDown={preloadStudio}
+                data-testid="menu-studio"
+                className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-fuchsia-400/40 active:scale-[0.99] transition-transform"
+                style={{ background: 'linear-gradient(120deg, rgba(217,70,239,0.28), rgba(56,189,248,0.2) 60%, rgba(251,191,36,0.14))' }}
+              >
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-300 to-sky-300 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(217,70,239,0.5)]">
+                  <Wand2 className="w-[18px] h-[18px] text-black" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Studio <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                  <span className="text-[10px] text-zinc-300 block truncate">Edit photos and videos: filters, text, music, export</span>
                 </div>
               </button>
               {/* NOOB STUDY: the student's personal learning space (for everyone once it is switched on; until then for the main administrator) */}

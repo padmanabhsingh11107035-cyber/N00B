@@ -71,6 +71,8 @@ interface PostCreationModalProps {
   initialType?: 'post' | 'reel' | 'thought';
   // "Use this sound" on a reel: the sound is already chosen when the creator opens
   initialAudio?: MusicSelection | null;
+  // A picture or video that was just finished in NOOB Studio: the creator opens with it already picked
+  initialFile?: File | null;
 }
 
 const FILTERS = POST_FILTERS;
@@ -104,7 +106,8 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   onClose,
   onSubmitPost,
   initialType = 'post',
-  initialAudio = null
+  initialAudio = null,
+  initialFile = null
 }) => {
   // Creation Mode: Post (Image Only) vs Reel (Video Only)
   const [creationType, setCreationType] = useState<'post' | 'reel'>(initialType === 'reel' ? 'reel' : 'post');
@@ -122,6 +125,13 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
   // Media attachments
   const [mediaMode, setMediaMode] = useState<'text' | 'photos' | 'video'>(initialType === 'reel' ? 'video' : initialType === 'thought' ? 'text' : 'photos');
   const [slides, setSlides] = useState<PostSlide[]>([]);
+  const initialFileUsed = useRef(false);
+  useEffect(() => {
+    if (!initialFile || initialFileUsed.current) return;
+    initialFileUsed.current = true;
+    void uploadPicked([initialFile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [selectedTextBg, setSelectedTextBg] = useState('clean');
   

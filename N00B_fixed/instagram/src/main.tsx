@@ -1,4 +1,4 @@
-import {StrictMode} from 'react';
+import {StrictMode, Suspense, lazy} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
@@ -18,6 +18,10 @@ import { parseFunPath } from './utils/funRoutes.ts';
 import { isNativeApp } from './utils/siteUrl.ts';
 import { isCoachingHost } from './components/Study/studyStore.ts';
 import { SystemPage } from './components/Common/SystemPage.tsx';
+import { isEditorHost } from './components/Studio/studioStore.ts';
+
+// NOOB Studio as a page of its own (editor.noobsocials.com): fetched only on that address
+const StudioStandalone = lazy(() => import('./components/Studio/StudioStandalone.tsx'));
 
 // The app's `/api/...` calls are written as relative paths, which only
 // resolve correctly when the frontend is served from the same origin as
@@ -103,13 +107,16 @@ if (splash) {
 const oldAddress = movedNoticeBlocksApp();
 
 // An address that is not a page of NOOB shows only the "page not found" page: the app is not even started (no sign-in screen, no loading, no browser error page).
-const pageNotFound = !oldAddress && !isNativeApp() && !isCoachingHost() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
+const editorPage = !oldAddress && !isNativeApp() && isEditorHost();
+const pageNotFound = !oldAddress && !editorPage && !isNativeApp() && !isCoachingHost() && !isKnownPath(window.location.pathname, [(p) => !!parseFunPath(p)]);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       {oldAddress ? (
         <MovedNotice />
+      ) : editorPage ? (
+        <Suspense fallback={null}><StudioStandalone /></Suspense>
       ) : pageNotFound ? (
         <SystemPage kind="not-found" />
       ) : (

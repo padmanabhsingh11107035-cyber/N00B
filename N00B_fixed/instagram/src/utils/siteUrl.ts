@@ -34,7 +34,7 @@ export function siteOrigin(): string {
   if (typeof window === 'undefined' || isNativeApp()) return MAIN_SITE;
   try {
     const { hostname, origin } = window.location;
-    return isOwnHost(hostname) && !/^(ai|coaching)\./i.test(hostname) ? clean(origin) : MAIN_SITE;
+    return isOwnHost(hostname) && !/^(ai|coaching|editor)\./i.test(hostname) ? clean(origin) : MAIN_SITE;
   } catch {
     return MAIN_SITE;
   }

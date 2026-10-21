@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight } from 'lucide-react';
+import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2 } from 'lucide-react';
 
-export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought';
+export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'studio';
 
 interface CreateChooserProps {
   onClose: () => void;
@@ -18,7 +18,8 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
   { kind: 'story', title: 'Story', blurb: 'Gone after 24 hours', Icon: CirclePlus, tint: 'text-white' },
   { kind: 'video', title: 'Video', blurb: 'A long video for the Videos page', Icon: MonitorPlay, tint: 'text-white' },
   { kind: 'live', title: 'Live', blurb: 'Go live and talk to people right now', Icon: Radio, tint: 'text-red-500' },
-  { kind: 'thought', title: 'Thought', blurb: 'Words only, on a coloured card', Icon: Type, tint: 'text-white' }
+  { kind: 'thought', title: 'Thought', blurb: 'Words only, on a coloured card', Icon: Type, tint: 'text-white' },
+  { kind: 'studio', title: 'Edit in Studio', blurb: 'Edit photos and videos first, then share them', Icon: Wand2, tint: 'text-fuchsia-300' }
 ];
 
 export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, live }) => {

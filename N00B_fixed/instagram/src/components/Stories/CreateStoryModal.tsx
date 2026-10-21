@@ -104,6 +104,8 @@ interface CreateStoryModalProps {
   // background) that must be created right after the main one — see handlePublish.
   onSubmitStory: (storyData: Partial<Story>[]) => void;
   allUsers?: User[];
+  // A picture that was just finished in NOOB Studio: the story opens with it already picked
+  initialFile?: File | null;
 }
 
 const POLL_BG_COLORS = ['#00FF66', '#7C3AED', '#EF4444', '#3B82F6', '#F59E0B', '#EC4899', '#000000', '#FFFFFF'];
@@ -112,7 +114,7 @@ const MIN_POLL_OPTIONS = 2;
 const MAX_POLL_OPTIONS = 8;
 const MAX_OPTION_LENGTH = 40;
 
-export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory, allUsers = [] }) => {
+export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onSubmitStory, allUsers = [], initialFile = null }) => {
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [selectedImageObjectKey, setSelectedImageObjectKey] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -143,6 +145,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [pollGeo, setPollGeo] = useState({ x: 50, y: 50, width: 70, rotation: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialFileUsed = useRef(false);
+  useEffect(() => {
+    if (!initialFile || initialFileUsed.current) return;
+    initialFileUsed.current = true;
+    void uploadStoryFile(initialFile);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile]);
   const canvasRef = useRef<HTMLDivElement>(null);
   const pollCanvasRef = useRef<HTMLDivElement>(null);
 
@@ -563,7 +572,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ onClose, onS
   const handlePickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await uploadStoryFile(file);
+  };
 
+  const uploadStoryFile = async (file: File) => {
     setIsUploading(true);
     setUploadError('');
     try {

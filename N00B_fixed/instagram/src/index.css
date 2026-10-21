@@ -527,6 +527,11 @@ html[data-text-size="large"] { font-size: 17.5px; }
 html[data-text-size="xlarge"] { font-size: 19.5px; }
 html[data-bold="on"] body { font-weight: 600; }
 html[data-bold="on"] p, html[data-bold="on"] span, html[data-bold="on"] li { font-weight: 600; }
+/* Settings > Accessibility > "Serif text" (on by default): all the app's text is set in a classic serif, like the song title and the chips of the Music player.
+   The script fonts of the logo and the code font stay as they are. */
+html[data-serif="on"] { --font-sans: "Times New Roman", Times, "Liberation Serif", "Noto Serif", Georgia, serif; }
+html[data-serif="on"] body, html[data-serif="on"] button, html[data-serif="on"] input, html[data-serif="on"] textarea, html[data-serif="on"] select,
+html[data-serif="on"] .draw-sans, html[data-serif="on"] .st-root { font-family: var(--font-sans); }
 html[data-contrast="high"] { --outline: rgba(255, 255, 255, .95); --divider: rgba(255, 255, 255, .45); }
 html[data-contrast="high"] .text-zinc-500, html[data-contrast="high"] .text-zinc-400 { color: #e4e4e7 !important; }
 html[data-contrast="high"] [class*="border-white/10"], html[data-contrast="high"] [class*="border-white/15"] { border-color: rgba(255, 255, 255, .55) !important; }

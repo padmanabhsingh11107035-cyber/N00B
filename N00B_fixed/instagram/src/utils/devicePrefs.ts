@@ -14,6 +14,8 @@ export interface DevicePrefs {
   textSize: TextSize;
   highContrast: boolean;
   boldText: boolean;
+  /** The whole app in a classic bold serif (on by default). */
+  serifText: boolean;
   dataSaver: boolean;
   uploadQuality: UploadQuality;
   autoplay: AutoplayMode;
@@ -29,6 +31,7 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   textSize: 'default',
   highContrast: false,
   boldText: false,
+  serifText: true,
   dataSaver: false,
   uploadQuality: 'standard',
   autoplay: 'always',
@@ -58,6 +61,7 @@ export function cleanDevicePrefs(raw: unknown): DevicePrefs {
     textSize: TEXT_SIZES.includes(r.textSize as TextSize) ? (r.textSize as TextSize) : d.textSize,
     highContrast: typeof r.highContrast === 'boolean' ? r.highContrast : d.highContrast,
     boldText: typeof r.boldText === 'boolean' ? r.boldText : d.boldText,
+    serifText: typeof r.serifText === 'boolean' ? r.serifText : d.serifText,
     dataSaver: typeof r.dataSaver === 'boolean' ? r.dataSaver : d.dataSaver,
     uploadQuality: r.uploadQuality === 'high' ? 'high' : 'standard',
     autoplay: AUTOPLAY.includes(r.autoplay as AutoplayMode) ? (r.autoplay as AutoplayMode) : d.autoplay,
@@ -88,6 +92,7 @@ export function applyDevicePrefs(p: DevicePrefs = current): void {
   set('data-text-size', p.textSize !== 'default', p.textSize);
   set('data-contrast', p.highContrast, 'high');
   set('data-bold', p.boldText);
+  set('data-serif', p.serifText);
 }
 
 export function getDevicePrefs(): DevicePrefs { return current; }

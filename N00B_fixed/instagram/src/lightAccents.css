@@ -71,6 +71,7 @@
 :root[data-theme="light"] .text-orange-200:not(.force-dark *):not(.media-dark *) { color: #9a3412 !important; }
 :root[data-theme="light"] .text-orange-300:not(.force-dark *):not(.media-dark *) { color: #9a3412 !important; }
 :root[data-theme="light"] .text-orange-400:not(.force-dark *):not(.media-dark *) { color: #c2410c !important; }
+:root[data-theme="light"] .text-pink-200:not(.force-dark *):not(.media-dark *) { color: #be185d !important; }
 :root[data-theme="light"] .text-pink-300:not(.force-dark *):not(.media-dark *) { color: #be185d !important; }
 :root[data-theme="light"] .text-pink-400:not(.force-dark *):not(.media-dark *) { color: #be185d !important; }
 :root[data-theme="light"] .text-purple-100:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }

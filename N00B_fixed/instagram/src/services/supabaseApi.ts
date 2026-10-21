@@ -662,27 +662,14 @@ export async function fetchMyLoginApproval(): Promise<{ enabled: boolean; hasEma
   } catch { return null; }   // not installed yet, or no network: the screen says it is not available
 }
 
-// Settings: switching it on sends the same two buttons to the address on file; it only turns on when "Yes, it's me" is tapped there.
-export async function startEnableLoginApproval(device?: string): Promise<{ success: boolean; ticket?: LoginApprovalTicket; error?: string; retryAfter?: number }> {
-  const unavailable = 'Could not send the email. Please try again.';
+// Settings: switching it on is just that: it sends no email (the question is only ever asked when someone logs in with the right password).
+export async function turnOnLoginApproval(): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-enable', device: device || '' } });
-    if (error) return { success: false, ...(await approvalFailure(error, unavailable)) };
-    const ticket = data?.success ? ticketFrom(data) : null;
-    return ticket ? { success: true, ticket } : { success: false, error: data?.error || unavailable };
+    const r = await rpc<any>('login_approval_turn_on');
+    return r?.success ? { success: true } : { success: false, error: r?.error || 'Could not turn it on. Please try again.' };
   } catch (err) {
-    return { success: false, error: errorText(err, unavailable) };
+    return { success: false, error: errorText(err, 'Could not turn it on. Please try again.') };
   }
-}
-
-// Settings: has the "turn it on" email been answered?
-export async function checkEnableLoginApproval(ticket: LoginApprovalTicket): Promise<'pending' | 'approved' | 'denied' | 'expired' | 'error'> {
-  try {
-    const { data, error } = await supabase.functions.invoke('recover-account', { body: { action: 'login-approval-status', challengeId: ticket.challengeId, pollToken: ticket.pollToken } });
-    if (error) return 'error';
-    const s = String(data?.status || '');
-    return s === 'pending' || s === 'approved' || s === 'denied' ? s : 'expired';
-  } catch { return 'error'; }
 }
 
 // Settings: switching it off asks for the password again.

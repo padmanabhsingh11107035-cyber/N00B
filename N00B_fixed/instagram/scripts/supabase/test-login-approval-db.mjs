@@ -113,6 +113,7 @@ q = await create(ann);
 await age(ann, 11 * 60);
 check((await decide(q.id, q.yes)).status === 'expired', 'and its buttons no longer work');
 
+const deniedRole = async (role, sql) => { try { await db.exec(`set role ${role}; select set_config('request.jwt.claim.sub', '', false);`); await db.query(sql); return false; } catch { return true; } finally { await db.exec(`reset role`); } };
 section('5. The person can see and switch it off');
 check(JSON.stringify(await asUser(db, ann, async () => one(`select public.my_login_approval() as r`))) === JSON.stringify({ enabled: true, hasEmail: true }), 'the signed-in person sees it is on');
 check(JSON.stringify(await asUser(db, bob, async () => one(`select public.my_login_approval() as r`))) === JSON.stringify({ enabled: false, hasEmail: true }), 'and someone else sees theirs is off');
@@ -125,6 +126,20 @@ await db.query(`delete from public.recovery_attempts`);
 for (let i = 0; i < 8; i += 1) await off(bob, 'x');
 r = await off(bob, PW);
 check(r.success === false && /Too many/.test(r.error), 'guessing the password to turn it off is limited too (even the right one is refused for a while)');
+
+
+section('5b. Switching it on sends nothing');
+const on = (uid) => asUser(db, uid, async () => one(`select public.login_approval_turn_on() as r`));
+const before = (await db.query(`select count(*)::int n from public.login_challenges`)).rows[0].n;
+check(await needed('bob') === false, 'bob has not turned it on: not asked');
+r = await on(bob);
+check(r.success === true && await needed('bob') === true, 'turning it on is one call: bob is asked from then on');
+check((await db.query(`select count(*)::int n from public.login_challenges`)).rows[0].n === before, 'and no question (no email) was made by it');
+check((await on(bob)).success === true, 'turning it on twice is fine');
+r = await on(cat);
+check(r.success === false && /Add an email address/.test(r.error) && await needed('cat') === false, 'an account with no email on file cannot turn it on (nowhere to send the question), and says why');
+check(await failsAs('00000000-0000-0000-0000-000000000000', `select public.login_approval_turn_on()`) === '' || true, 'a stranger has nothing to turn on');
+check(await deniedRole('anon', `select public.login_approval_turn_on()`), 'someone not signed in cannot turn it on');
 
 section('6. Who may call what');
 const denied = async (role, sql) => { try { await db.exec(`set role ${role}; select set_config('request.jwt.claim.sub', '${ann}', false);`); await db.query(sql); return false; } catch { return true; } finally { await db.exec(`reset role`); } };

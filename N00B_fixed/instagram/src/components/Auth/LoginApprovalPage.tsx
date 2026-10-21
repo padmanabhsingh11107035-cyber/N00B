@@ -22,7 +22,6 @@ function readLink(): { id: string; token: string; answer: 'yes' | 'no' } | null 
 const LoginApprovalPage: React.FC = () => {
   const [link] = useState(readLink);
   const [step, setStep] = useState<Step>(link ? 'ready' : 'invalid');
-  const [purpose, setPurpose] = useState('login');
   const [result, setResult] = useState('');
   const sent = useRef(false);
 
@@ -40,7 +39,6 @@ const LoginApprovalPage: React.FC = () => {
     const res = await answerLoginApproval(link.id, link.token);
     // the secret is not needed any more: take it off the address
     try { window.history.replaceState(null, '', window.location.pathname); } catch { /* not important */ }
-    if (res.purpose) setPurpose(res.purpose);
     if (res.result) setResult(res.result);
     if (res.status === 'error') { sent.current = false; setStep('error'); return; }
     setStep(res.status);
@@ -56,7 +54,6 @@ const LoginApprovalPage: React.FC = () => {
   }, [link, send]);
 
   const yes = link?.answer === 'yes';
-  const enabling = purpose === 'enable';
   const card = 'w-full max-w-sm bg-zinc-900 border border-white/10 rounded-3xl p-6 text-center shadow-2xl';
   const icon = (tone: 'good' | 'bad' | 'plain', node: React.ReactNode) => (
     <div className={`w-16 h-16 mx-auto rounded-full border flex items-center justify-center ${tone === 'good' ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : tone === 'bad' ? 'bg-red-500/15 border-red-500/50 text-red-400' : 'bg-zinc-800 border-white/15 text-zinc-300'}`}>{node}</div>
@@ -67,16 +64,16 @@ const LoginApprovalPage: React.FC = () => {
     body = (
       <>
         {icon('good', <CheckCircle2 className="w-8 h-8" />)}
-        <h1 className="mt-4 text-2xl font-black text-emerald-400">{enabling ? 'Login approval is on' : 'Approved'}</h1>
-        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">{enabling ? 'From now on, a login to your account needs your approval by email. You can turn it off again in Settings.' : 'The device that is waiting logs in by itself now. You can close this page.'}</p>
+        <h1 className="mt-4 text-2xl font-black text-emerald-400">Approved</h1>
+        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">The device that is waiting logs in by itself now. You can close this page.</p>
       </>
     );
   } else if (step === 'denied') {
     body = (
       <>
         {icon('bad', <ShieldAlert className="w-8 h-8" />)}
-        <h1 className="mt-4 text-2xl font-black text-red-400">{enabling ? 'Left off' : 'Access denied'}</h1>
-        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">{enabling ? 'Login approval was not turned on. Nothing changed.' : 'Nobody was logged in. If this was not you, someone may know your password: change it as soon as you can (Settings → Your NOOB account → Change password).'}</p>
+        <h1 className="mt-4 text-2xl font-black text-red-400">Access denied</h1>
+        <p className="mt-2 text-sm text-zinc-300 leading-relaxed">Nobody was logged in. If this was not you, someone may know your password: change it as soon as you can (Settings → Your NOOB account → Change password).</p>
       </>
     );
   } else if (step === 'expired') {

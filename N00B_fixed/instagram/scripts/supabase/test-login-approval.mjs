@@ -25,15 +25,14 @@ const headers = read('public/_headers');
 const sql = read('supabase/migrations/20261022000001_login_approval.sql');
 
 section('1. The email function');
-for (const a of ['login-approval-start', 'login-approval-status', 'login-approval-decide', 'login-approval-enable']) check(fn.includes(`body?.action === '${a}'`), `action ${a}`);
+for (const a of ['login-approval-start', 'login-approval-status', 'login-approval-decide']) check(fn.includes(`body?.action === '${a}'`), `action ${a}`);
 const start = fn.slice(fn.indexOf("body?.action === 'login-approval-start'"), fn.indexOf("body?.action === 'login-approval-status'"));
 check(/login_approval_check/.test(start) && !/signInWithPassword|generateLink|issueSignInToken/.test(start), 'starting only checks the password: nothing is signed in and no sign-in token is made before the answer');
 check(/if \(!check\.required\) return json\(\{ success: true, required: false \}\)/.test(start), 'an account that has not switched it on is told "not required" (the app then logs in the ordinary way)');
 const status = fn.slice(fn.indexOf("body?.action === 'login-approval-status'"), fn.indexOf("body?.action === 'login-approval-decide'"));
 check(/res\.status === 'approved' && res\.redeem/.test(status) && /issueSignInToken/.test(status), 'the sign-in token is made only for an approved question, once (the database says redeem only the first time)');
 check(/is_suspended/.test(status), 'and never for an account suspended in the meantime');
-const enable = fn.slice(fn.indexOf("body?.action === 'login-approval-enable'"), fn.indexOf("body?.action === 'otp-request'"));
-check(/auth\.getUser\(token\)/.test(enable) && /startApproval\(admin, userId, 'enable'/.test(enable), 'turning it on needs a signed-in person and sends the question to that account');
+check(!fn.includes("'login-approval-enable'") && !/kind === 'enable'/.test(fn) && /p_purpose: 'login'/.test(fn), 'the function sends only one kind of email, the login question: switching the setting on sends none');
 check(/#c=\$\{id\}&t=\$\{secret\}&a=\$\{answer\}/.test(fn) && /\$\{SITE_URL\}\/login-approval#/.test(fn), 'the buttons open the app\'s /login-approval page, with the secret after the # (never in a server log)');
 check(/Yes, it&#8217;s me/.test(fn) && /No, it&#8217;s not me/.test(fn), 'the email has exactly the two buttons: "Yes, it\'s me" and "No, it\'s not me"');
 check(!/\bcode\b[^\n]*approv|approv[^\n]*\bOTP\b/i.test(fn.slice(fn.indexOf('const sendApprovalEmail'), fn.indexOf('async function startApproval'))), 'no code is sent or asked for');
@@ -42,7 +41,7 @@ check(/case 'cooldown'/.test(fn) && /case 'rate_limited'/.test(fn), 'sending is 
 check(/RESEND_API_KEY/.test(start) && /notConfigured: true/.test(start), 'without the email key it answers "cannot be sent" instead of pretending');
 
 section('2. The app\'s calls');
-for (const f of ['startLoginApproval', 'checkLoginApproval', 'fetchMyLoginApproval', 'startEnableLoginApproval', 'checkEnableLoginApproval', 'turnOffLoginApproval', 'answerLoginApproval']) check(new RegExp(`export async function ${f}\\b`).test(api) && new RegExp(`\\b${f},`).test(apiIndex), `${f} is there and exported`);
+for (const f of ['startLoginApproval', 'checkLoginApproval', 'fetchMyLoginApproval', 'turnOnLoginApproval', 'turnOffLoginApproval', 'answerLoginApproval']) check(new RegExp(`export async function ${f}\\b`).test(api) && new RegExp(`\\b${f},`).test(apiIndex), `${f} is there and exported`);
 const login = api.slice(api.indexOf('export async function loginUser'), api.indexOf('// ----------------------------------------------------------------------------- "Switch account"'));
 check(/loginNeedsApproval\(identifier\)/.test(login) && login.indexOf('loginNeedsApproval') < login.indexOf('signInWithPassword'), 'the login asks "does this account want an approval?" BEFORE it signs in with the password');
 check(/return \{ success: false, approval: started\.ticket \}/.test(login) && /return \{ success: false, error: started\.error \}/.test(login), 'when it does, nothing is signed in: the app gets a ticket to wait with (or the error)');
@@ -80,8 +79,9 @@ check(ids.join() === 'add-profile,login-approval,logout', 'in the last section, 
 check(/r\.toggle === 'login-approval' \? <LoginApprovalRow/.test(hub), 'the hub draws it as a switch');
 check(/<LoginApprovalRow \/>/.test(account), 'and it is under "Password and security" of Your NOOB account too');
 check(/two factor|2fa/i.test(registry), 'the search finds it as "2fa" or "two factor"');
-check(/startEnableLoginApproval\(getDeviceLabel\(\)\)/.test(row) && /checkEnableLoginApproval\(ticket\)/.test(row), 'turning it on sends the email and waits for "Yes"');
-check(/Add an email address to your account first/.test(row), 'an account without an email is told why it cannot');
+check(/turnOnLoginApproval\(\)/.test(row) && !/startEnable|checkEnable|login-approval-enable|Check your email/.test(row + api.slice(api.indexOf('export async function turnOnLoginApproval'), api.indexOf('export async function turnOffLoginApproval'))), 'turning it on just turns it on: no email is sent, no dialog waits for one');
+check(/Add an email address to your account first/.test(read('supabase/migrations/20261022000002_login_approval_turn_on.sql')) && /approval-problem-dialog/.test(row), 'an account without an email is told why it cannot be turned on');
+check(/Off until you turn it on/.test(row), 'the switch says it is off until it is turned on');
 check(/turnOffLoginApproval\(password\)/.test(row) && /autoComplete="current-password"/.test(row), 'turning it off asks for the password');
 check(/disabled=\{info === null \|\| info === 'unavailable'\}/.test(row), 'the switch is disabled until the server says where it stands (and when it is not available)');
 

@@ -25,7 +25,7 @@
 // using the CALLER's OWN bearer token to know which already-authenticated account is asking, instead
 // of creating a new one.
 //
-// (actions: "login-approval-start" / "-status" / "-decide" / "-enable") Login approval by email: after the right password, an email asks "Is this you?" with two buttons
+// (actions: "login-approval-start" / "-status" / "-decide") Login approval by email: after the right password, an email asks "Is this you?" with two buttons
 // ("Yes, it's me" logs the waiting screen in at once, "No, it's not me" shows "Access denied"). Opt-in per account; see migration 20261022000001_login_approval.sql.
 //
 // (action: "welcome") sends the "Welcome to NOOB" email right after a brand new account's own first session exists.
@@ -221,24 +221,10 @@ function approvalButtons(yes: string, no: string): string {
   return `<p style="margin:20px 0 6px">${btn(yes, 'Yes, it&#8217;s me', '#16a34a')}${btn(no, 'No, it&#8217;s not me', '#dc2626')}</p>`;
 }
 
-const sendApprovalEmail = (email: string, name: string, username: string, kind: 'login' | 'enable', device: string, ip: string, yes: string, no: string) => {
+const sendApprovalEmail = (email: string, name: string, username: string, device: string, ip: string, yes: string, no: string) => {
   const when = new Date().toUTCString();
   const details = `Device: ${device || 'unknown'}\nTime: ${when}\nIP address: ${ip || 'unknown'}`;
   const detailsHtml = `<p style="font-size:13px;color:#444;line-height:1.7;margin:12px 0;padding:12px 14px;background:#f5f5f5;border-radius:10px">Device: <strong>${escapeHtml(device || 'unknown')}</strong><br/>Time: ${escapeHtml(when)}<br/>IP address: ${escapeHtml(ip || 'unknown')}</p>`;
-  if (kind === 'enable') {
-    return sendEmail(
-      email,
-      'Turn on login approval for your NOOB account?',
-      `Hi ${name},\n\nYou asked to turn on login approval for @${username}. From then on, after the right password, NOOB will email you a question like this one, and the login only goes through when you tap "Yes, it's me".\n\n${details}\n\nYes, turn it on: ${yes}\nNo, leave it off: ${no}\n\nThese links work once and expire in 10 minutes.`,
-      `<div style="font-family:system-ui,sans-serif;max-width:460px;margin:0 auto;padding:24px;color:#111">
-        <p style="font-size:18px;font-weight:800;margin:0 0 10px">Turn on login approval?</p>
-        <p style="font-size:14px;line-height:1.6">Hi ${escapeHtml(name)}, you asked to turn on login approval for <strong>@${escapeHtml(username)}</strong>. From then on, after the right password, NOOB emails you a question like this one, and the login only goes through when you tap <strong>Yes, it&#8217;s me</strong>.</p>
-        ${detailsHtml}
-        ${approvalButtons(yes, no)}
-        <p style="font-size:12px;color:#666;line-height:1.6">The buttons work once and expire in 10 minutes. If you did not ask for this, tap No.</p>
-      </div>`
-    );
-  }
   return sendEmail(
     email,
     'Is this you logging in to NOOB?',
@@ -253,9 +239,9 @@ const sendApprovalEmail = (email: string, name: string, username: string, kind: 
   );
 };
 
-// Makes the question for one account and emails it. `purpose` is 'login' (someone entered the right password) or 'enable' (the person is switching the setting on).
-async function startApproval(admin: ReturnType<typeof createClient>, userId: string, purpose: 'login' | 'enable', device: string, ip: string) {
-  const { data: made, error } = await admin.rpc('login_approval_create', { p_user: userId, p_purpose: purpose, p_device: device, p_ip: ip });
+// Makes the question for one account (someone entered the right password) and emails it. Nothing else ever sends one: switching the setting on sends no email.
+async function startApproval(admin: ReturnType<typeof createClient>, userId: string, device: string, ip: string) {
+  const { data: made, error } = await admin.rpc('login_approval_create', { p_user: userId, p_purpose: 'login', p_device: device, p_ip: ip });
   if (error || !made) return json({ error: 'Login approval is unavailable right now. Please try again later.' }, 500);
   switch (made.status) {
     case 'cooldown': return json({ error: `An email was just sent. Please wait ${made.seconds} seconds before asking for another.`, retryAfter: made.seconds }, 429);
@@ -264,7 +250,7 @@ async function startApproval(admin: ReturnType<typeof createClient>, userId: str
     case 'ok': break;
     default: return json({ error: 'Login approval is unavailable right now. Please try again later.' }, 500);
   }
-  const sent = await sendApprovalEmail(String(made.email), String(made.displayName || made.username), String(made.username), purpose, device, ip, approvalLink(made.id, made.yes, 'yes'), approvalLink(made.id, made.no, 'no'));
+  const sent = await sendApprovalEmail(String(made.email), String(made.displayName || made.username), String(made.username), device, ip, approvalLink(made.id, made.yes, 'yes'), approvalLink(made.id, made.no, 'no'));
   if (!sent) return json({ error: 'We could not send the email right now. Please try again in a moment.' }, 502);
   return json({ success: true, required: true, challengeId: made.id, pollToken: made.poll, maskedEmail: maskEmail(String(made.email)), expiresInSeconds: 600 });
 }
@@ -493,7 +479,7 @@ Deno.serve(async (req) => {
     }
     if (!check.required) return json({ success: true, required: false });
     if (!key) return json({ error: 'The approval email cannot be sent right now. Please try again later.', notConfigured: true }, 503);
-    return await startApproval(admin, String(check.userId), 'login', String(body?.device ?? '').slice(0, 100), ip);
+    return await startApproval(admin, String(check.userId), String(body?.device ?? '').slice(0, 100), ip);
   }
 
   // Step 2 (login screen, every couple of seconds): has the email been answered? An approved login answers once, with a one-time sign-in token.
@@ -515,17 +501,6 @@ Deno.serve(async (req) => {
     const { data: res, error } = await admin.rpc('login_approval_decide', { p_id: String(body?.challengeId ?? ''), p_token: String(body?.token ?? '') });
     if (error || !res) return json({ status: 'invalid' });
     return json({ status: res.status, result: res.result, purpose: res.purpose });
-  }
-
-  // Switching the setting on (Settings): an email with the same two buttons goes to the address on file, and the setting only turns on when "Yes" is tapped there.
-  if (body?.action === 'login-approval-enable') {
-    const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-    if (!token) return json({ error: 'Please log in.' }, 401);
-    const { data: authData } = await admin.auth.getUser(token);
-    const userId = authData?.user?.id;
-    if (!userId) return json({ error: 'Please log in again.' }, 401);
-    if (!(Deno.env.get('RESEND_API_KEY') || '').trim()) return json({ error: 'The approval email cannot be sent right now. Please try again later.', notConfigured: true }, 503);
-    return await startApproval(admin, userId, 'enable', String(body?.device ?? '').slice(0, 100), ip);
   }
 
   // -------------------------------------------------------------- emailed one-time code

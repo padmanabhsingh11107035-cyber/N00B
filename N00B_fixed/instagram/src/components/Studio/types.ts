@@ -23,6 +23,15 @@ export const NO_ADJUST: Adjust = {
 };
 export const isPlain = (a: Adjust): boolean => (Object.keys(NO_ADJUST) as Array<keyof Adjust>).every((k) => a[k] === 0);
 
+/** A colour wheel of the grading panel: where the puck sits on the wheel (x, y inside a circle of radius 1) and the brightness of that tonal range (-100..100). */
+export interface Wheel { x: number; y: number; l: number }
+/** Colour grading: lift (shadows), gamma (midtones), gain (highlights) and one colour wash over everything. */
+export interface Grade { lift: Wheel; gamma: Wheel; gain: Wheel; washHue: number; washSat: number; washAmt: number }
+export const NO_WHEEL: Wheel = { x: 0, y: 0, l: 0 };
+export const NO_GRADE: Grade = { lift: NO_WHEEL, gamma: NO_WHEEL, gain: NO_WHEEL, washHue: 0, washSat: 1, washAmt: 0 };
+const plainWheel = (w: Wheel) => w.x === 0 && w.y === 0 && w.l === 0;
+export const isPlainGrade = (g?: Grade): boolean => !g || (plainWheel(g.lift) && plainWheel(g.gamma) && plainWheel(g.gain) && g.washAmt === 0);
+
 export type Anim = 'none' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom' | 'pop' | 'bounce' | 'rotate' | 'shake' | 'typewriter';
 export type TransitionType = 'cut' | 'fade' | 'dissolve' | 'slide' | 'zoom' | 'wipe' | 'blur';
 
@@ -69,6 +78,10 @@ export interface MediaLayer extends Base {
   transition: { type: TransitionType; duration: number };
   fit: 'contain' | 'cover';
   radius: number;
+  /** colour grading (the Color tab); missing = none, so projects made before it still open */
+  grade?: Grade;
+  /** the sound of this clip is switched off (its picture stays) */
+  muted?: boolean;
 }
 
 export interface TextLayer extends Base {
@@ -119,6 +132,7 @@ export interface AudioLayer extends Base {
   volume: number;
   fadeIn: number;
   fadeOut: number;
+  muted?: boolean;
 }
 
 export interface Cue { id: string; start: number; end: number; text: string }

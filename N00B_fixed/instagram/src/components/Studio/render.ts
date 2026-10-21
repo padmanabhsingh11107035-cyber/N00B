@@ -1,4 +1,4 @@
-import { ASPECTS, Anim, Asset, CaptionLayer, DrawLayer, Layer, MediaLayer, Project, StickerLayer, Stroke, TextLayer, isPlain, mainClips, projectDuration } from './types';
+import { ASPECTS, Anim, Asset, CaptionLayer, DrawLayer, Layer, MediaLayer, Project, StickerLayer, Stroke, TextLayer, isPlain, isPlainGrade, mainClips, projectDuration } from './types';
 import { GLProcessor } from './gl';
 
 // Draws one frame of the project at time t onto a canvas. The editor's preview, the picture export and the video export all call this, so what is shown is what is saved.
@@ -181,14 +181,14 @@ function drawMedia(ctx: CanvasRenderingContext2D, env: RenderEnv, l: MediaLayer,
   ctx.rotate(((l.rotation + an.rot) * Math.PI) / 180);
   ctx.scale(l.flipX ? -1 : 1, l.flipY ? -1 : 1);
   if (l.radius > 0) { ctx.beginPath(); roundRect(ctx, -w / 2, -h / 2, w, h, l.radius * sc * k); ctx.clip(); }
-  const plain = env.original || (l.filter === 'none' && isPlain(l.adjust));
+  const plain = env.original || (l.filter === 'none' && isPlain(l.adjust) && isPlainGrade(l.grade));
   const needGL = !!env.gl && !env.gl.lost && (!plain || m.blur > 0);
   const sx = s.w * l.crop.x, sy = s.h * l.crop.y;
   if (needGL) {
     const r = env.gl!.process(s.src, w, h, {
       crop: { x: l.crop.x, y: l.crop.y, w: l.crop.w, h: l.crop.h },
       adjust: env.original ? { ...l.adjust, brightness: 0, contrast: 0, exposure: 0, highlights: 0, shadows: 0, saturation: 0, vibrance: 0, temperature: 0, tint: 0, hue: 0, fade: 0, vignette: 0, grain: 0, sharpness: 0, blur: 0 } : l.adjust,
-      filter: env.original ? 'none' : l.filter, filterAmount: l.filterAmount, extraBlur: m.blur, seed: Math.floor(t * 24) % 97
+      filter: env.original ? 'none' : l.filter, filterAmount: l.filterAmount, grade: env.original ? undefined : l.grade, extraBlur: m.blur, seed: Math.floor(t * 24) % 97
     });
     ctx.drawImage(r.canvas, r.sx, r.sy, r.sw, r.sh, -w / 2, -h / 2, w, h);
   } else {
@@ -203,14 +203,10 @@ function blurredBackdrop(ctx: CanvasRenderingContext2D, env: RenderEnv, l: Media
   const size = ASPECTS[env.project.aspect];
   const W = size.w * env.k, H = size.h * env.k;
   const bw = 72, bh = Math.max(2, Math.round((72 * H) / W));
-  const r = env.gl.process(s.src, bw, bh, { crop: { x: 0, y: 0, w: 1, h: 1 }, adjust: { ...l.adjust, blur: 5 }, filter: l.filter, filterAmount: l.filterAmount });
+  const r = env.gl.process(s.src, bw, bh, { crop: { x: 0, y: 0, w: 1, h: 1 }, adjust: { ...l.adjust, blur: 5 }, filter: l.filter, filterAmount: l.filterAmount, grade: l.grade });
   ctx.save();
   ctx.globalAlpha = 0.9;
   // fill the canvas by "cover"
-  const k2 = Math.max(W / s.w, H / s.h);
-  const dw = s.w * k2, dh = s.h * k2;
-  const tmpW = Math.round(dw), tmpH = Math.round(dh);
-  void tmpW; void tmpH;
   ctx.drawImage(r.canvas, r.sx, r.sy, r.sw, r.sh, 0, 0, W, H);
   ctx.restore();
   ctx.fillStyle = 'rgba(0,0,0,0.25)';

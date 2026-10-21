@@ -62,6 +62,7 @@
 :root[data-theme="light"] .text-emerald-400:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
 :root[data-theme="light"] .text-emerald-400\/70:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #047857 70%, transparent) !important; }
 :root[data-theme="light"] .text-emerald-400\/90:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #047857 90%, transparent) !important; }
+:root[data-theme="light"] .text-fuchsia-200:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .text-fuchsia-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .text-green-300:not(.force-dark *):not(.media-dark *) { color: #15803d !important; }
 :root[data-theme="light"] .text-indigo-300:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }

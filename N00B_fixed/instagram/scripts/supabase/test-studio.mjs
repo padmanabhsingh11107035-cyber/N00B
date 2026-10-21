@@ -10,7 +10,7 @@ const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).jo
 const dir = 'src/components/Studio';
 
 section('1. The editor is all there');
-const files = ['types.ts', 'filters.ts', 'gl.ts', 'assets.ts', 'render.ts', 'player.ts', 'export.ts', 'history.ts', 'emoji.ts', 'templates.ts', 'Stage.tsx', 'Timeline.tsx', 'ui.tsx', 'panels.tsx', 'panels2.tsx', 'ExportDialog.tsx', 'StudioApp.tsx', 'StudioHost.tsx', 'StudioStandalone.tsx', 'studioStore.ts'];
+const files = ['types.ts', 'filters.ts', 'gl.ts', 'assets.ts', 'render.ts', 'player.ts', 'export.ts', 'history.ts', 'emoji.ts', 'templates.ts', 'Stage.tsx', 'Timeline.tsx', 'ui.tsx', 'panels.tsx', 'panels2.tsx', 'ExportDialog.tsx', 'ColorPanel.tsx', 'MediaPool.tsx', 'strips.ts', 'StudioApp.tsx', 'StudioHost.tsx', 'StudioStandalone.tsx', 'studioStore.ts'];
 for (const f of files) check(fs.existsSync(path.join(dir, f)), `${f} exists`);
 const all = fs.readdirSync(dir).filter((f) => /\.(ts|tsx)$/.test(f)).map((f) => [f, read(path.join(dir, f))]);
 
@@ -71,6 +71,23 @@ check([...filters.matchAll(/\{ id: '/g)].length >= 18, 'at least 18 filters');
 check(/SRT|\.srt/.test(read(`${dir}/panels2.tsx`)) && /parseSrt/.test(read(`${dir}/panels2.tsx`)), 'captions can be opened and saved as .srt');
 check(/not switched on|needs a provider/.test(read(`${dir}/panels2.tsx`)), 'GIF search and automatic captions say honestly that they need a provider');
 check(/force-dark/.test(read(`${dir}/StudioApp.tsx`)), 'the editor stays dark in the light theme');
+
+section('8. Professional layout: media pool, colour grading, timeline');
+const types = read(`${dir}/types.ts`), gl = read(`${dir}/gl.ts`), rend = read(`${dir}/render.ts`), color = read(`${dir}/ColorPanel.tsx`), pool = read(`${dir}/MediaPool.tsx`), tl = read(`${dir}/Timeline.tsx`), shell = read(`${dir}/StudioApp.tsx`), css = read('src/index.css');
+check(/interface Grade/.test(types) && /grade\?: Grade/.test(types), 'a clip can carry a colour grade (optional, so older projects still open)');
+check(/uLift/.test(gl) && /uGamma/.test(gl) && /uGain/.test(gl) && /uWash/.test(gl), 'the shader does lift / gamma / gain and a colour wash');
+check(/grade: env\.original \? undefined : l\.grade/.test(rend) && /isPlainGrade\(l\.grade\)/.test(rend), 'the grade is drawn in the preview and both exports, and left out while comparing with the original');
+check(/data-testid=\{testId\}/.test(color) && /wheel-lift/.test(color) && /wheel-gamma/.test(color) && /wheel-gain/.test(color), 'three colour wheels: shadows, midtones, highlights');
+check(/color-spectrum/.test(color) && /color-histogram/.test(color) && /look-\$\{l\.id\}/.test(color) && /id: 'teal-orange'/.test(color), 'a colour spectrum, a live histogram and starting looks');
+check(/onKeyDown=\{key\}/.test(color) && /colour wheel`\}/.test(color), 'the wheels can be used with the keyboard and are named for screen readers');
+check(/ASSET_DRAG/.test(pool) && /draggable/.test(pool) && /data-testid=\{`bin-\$\{b\.id\}`\}/.test(pool), 'the media pool has folders and thumbnails that can be dragged');
+check(/dropAsset/.test(tl) && /onDrop=\{lane/.test(tl) && /ASSET_DRAG/.test(tl), 'a thumbnail dropped on a track lands where it is dropped');
+check(/useStrip/.test(tl) && /<Film /.test(tl) && /<Wave /.test(tl), 'clips show real frames along them and a waveform under the sound');
+check(/'V1'/.test(tl) && /`A\$\{i \+ 1\}`/.test(tl) && /VolumeX/.test(tl) && /EyeOff/.test(tl) && /LockOpen/.test(tl), 'every track has a name and hide / lock / mute switches');
+check(/data-testid="studio-snap"/.test(tl) && /snapTime/.test(tl), 'clips snap to the playhead and to each other (and it can be switched off)');
+check(/\.studio-grid/.test(css) && /grid-template-areas: "nav panel stage props" "tl tl tl tl"/.test(css) && /className="studio-grid"/.test(shell), 'on a computer the timeline runs along the whole bottom');
+check(/waveform\(list\[i\]\)/.test(shell), 'a video\'s own sound outline is worked out in the background');
+check(/if \(l\.muted\) return 0;/.test(read(`${dir}/player.ts`)), 'a muted track is silent in the preview and in the export');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

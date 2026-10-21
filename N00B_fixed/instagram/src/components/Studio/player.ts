@@ -129,6 +129,7 @@ export class Player {
 
   // ---- following the playhead
   private gainAt(l: MediaLayer | AudioLayer, t: number): number {
+    if (l.muted) return 0;
     let g = l.volume;
     if (l.fadeIn > 0) g *= clamp((t - l.start) / l.fadeIn);
     if (l.fadeOut > 0) g *= clamp((l.start + l.duration - t) / l.fadeOut);

@@ -1076,3 +1076,15 @@ html[data-overlay-open], html[data-overlay-open] body { overflow: hidden !import
    (App.tsx sets data-refresh on the page: "on" only on Home). */
 html[data-refresh="off"],
 html[data-refresh="off"] body { overscroll-behavior-y: contain; }
+
+/* NOOB Studio: on a phone the stage, the timeline, the tool panel and the tool bar are stacked; on a computer the tool bar, the panel, the stage and the properties sit in a row
+   and the timeline runs along the whole bottom, like a professional editor. */
+.studio-grid { display: flex; flex-direction: column; flex: 1 1 0%; min-height: 0; }
+@media (min-width: 1024px) {
+  .studio-grid { display: grid; grid-template-columns: 74px var(--studio-panel-w, 320px) minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "nav panel stage props" "tl tl tl tl"; }
+  .studio-grid > .studio-nav { grid-area: nav; }
+  .studio-grid > .studio-panel { grid-area: panel; height: auto; }
+  .studio-grid > .studio-stage { grid-area: stage; }
+  .studio-grid > .studio-props { grid-area: props; }
+  .studio-grid > .studio-tl { grid-area: tl; }
+}

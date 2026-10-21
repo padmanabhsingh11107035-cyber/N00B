@@ -17,63 +17,6 @@ export function mediaTarget(ctl: StudioCtl): MediaLayer | null {
 
 const NeedMedia = () => <Empty>Add a photo or video first (Media tab), then come back here.</Empty>;
 
-// ---------------------------------------------------------------- Media
-export const MediaPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
-  const input = useRef<HTMLInputElement>(null);
-  const [over, setOver] = useState(false);
-  const images = ctl.assetList.filter((a) => a.kind === 'image');
-  const [layout, setLayout] = useState('grid4');
-  const [gap, setGap] = useState(12);
-  const [round, setRound] = useState(0);
-  return (
-    <div onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={(e) => { e.preventDefault(); setOver(false); void ctl.addFiles(Array.from(e.dataTransfer.files)); }}>
-      <Section title="Import">
-        <input ref={input} type="file" multiple accept="image/*,video/*,audio/*" className="hidden" data-testid="studio-file-input" onChange={(e) => { void ctl.addFiles(Array.from(e.target.files || [])); e.target.value = ''; }} />
-        <button onClick={() => input.current?.click()} className={`w-full py-6 rounded-xl border-2 border-dashed flex flex-col items-center gap-1 text-[12px] font-bold ${over ? 'border-fuchsia-400 bg-fuchsia-500/10' : 'border-zinc-600 hover:border-zinc-400'}`}>
-          <FilePlus2 className="w-6 h-6 text-fuchsia-300" />
-          Add photos, videos or sounds
-          <span className="text-[10px] font-normal text-zinc-400">or drop them here · everything stays on this device</span>
-        </button>
-        {ctl.busy && <div className="text-[11px] text-fuchsia-300 animate-pulse">{ctl.busy}</div>}
-      </Section>
-      <Section title={`Your files (${ctl.assetList.length})`}>
-        {ctl.assetList.length === 0 && <p className="text-[11px] text-zinc-500">Nothing yet.</p>}
-        <div className="grid grid-cols-2 gap-2">
-          {ctl.assetList.map((a) => (
-            <div key={a.id} className="rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden" data-testid="studio-asset">
-              <div className="relative aspect-video bg-black flex items-center justify-center">
-                {a.thumb ? <img src={a.thumb} alt="" className="w-full h-full object-cover" /> : <Music className="w-8 h-8 text-emerald-300" />}
-                <span className="absolute top-1 left-1 px-1 rounded bg-black/70 text-[9px] font-bold">{a.kind === 'video' ? <Film className="w-3 h-3 inline" /> : a.kind === 'image' ? <ImageIcon className="w-3 h-3 inline" /> : <Music className="w-3 h-3 inline" />}</span>
-                <button onClick={() => ctl.removeAsset(a.id)} aria-label={`Remove ${a.name}`} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 hover:bg-rose-600 flex items-center justify-center"><X className="w-3 h-3" /></button>
-              </div>
-              <div className="p-1.5">
-                <div className="text-[10px] font-bold truncate" title={a.name}>{a.name}</div>
-                <div className="text-[9px] text-zinc-500">{a.kind === 'audio' ? '' : `${a.width}×${a.height} · `}{a.duration ? `${fmtTime(a.duration)} · ` : ''}{fmtSize(a.size)}</div>
-                <div className="flex gap-1 mt-1">
-                  {a.kind !== 'audio' && <Btn className="flex-1 !py-1 !px-1.5 !text-[10px]" onClick={() => ctl.placeAsset(a, ctl.project.mode === 'video' ? 'main' : (ctl.project.layers.some((l) => l.type === 'media' && l.track === 'main') ? 'overlay' : 'main'))}><Plus className="w-3 h-3" />{ctl.project.mode === 'video' ? 'Clip' : 'Add'}</Btn>}
-                  {a.kind !== 'audio' && ctl.project.mode === 'video' && <Btn className="flex-1 !py-1 !px-1.5 !text-[10px]" onClick={() => ctl.placeAsset(a, 'overlay')}>Overlay</Btn>}
-                  {a.kind === 'audio' && <Btn className="flex-1 !py-1 !text-[10px]" onClick={() => ctl.placeAsset(a, 'audio')}><Plus className="w-3 h-3" />Music</Btn>}
-                  {a.kind === 'video' && <Btn className="!py-1 !px-1.5 !text-[10px]" title="Use this video's sound as music" onClick={() => ctl.placeAsset(a, 'audio')}><Music className="w-3 h-3" /></Btn>}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-      <Section title="Collage">
-        {images.length < 2 ? <p className="text-[11px] text-zinc-500">Import two or more photos to make a collage.</p> : (
-          <>
-            <Chips options={COLLAGES.map((c) => ({ id: c.id, label: c.name }))} value={layout} onChange={setLayout} />
-            <Slider label="Spacing" value={gap} min={0} max={60} onChange={setGap} reset={12} unit="px" />
-            <Slider label="Rounded corners" value={round} min={0} max={80} onChange={setRound} reset={0} unit="px" />
-            <Btn tone="primary" className="w-full" onClick={() => ctl.update((p) => collage(p, images, layout, gap, round))} data-testid="studio-collage">Make the collage</Btn>
-          </>
-        )}
-      </Section>
-    </div>
-  );
-};
-
 // ---------------------------------------------------------------- Canvas (size and background)
 export const CanvasPanel: React.FC<{ ctl: StudioCtl }> = ({ ctl }) => {
   const p = ctl.project;

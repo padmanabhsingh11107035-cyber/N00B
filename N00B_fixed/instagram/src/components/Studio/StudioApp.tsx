@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Captions, Crop, Download, Frame, ImagePlus, Keyboard, Layers, LayoutTemplate, Music, Pencil, Redo2, SlidersHorizontal, Smile, Sparkles, SquarePen, Type, Undo2, X } from 'lucide-react';
+import { Captions, Crop, Download, Frame, ImagePlus, Keyboard, Layers, LayoutTemplate, Music, Palette, Pencil, Redo2, SlidersHorizontal, Smile, Sparkles, SquarePen, Type, Undo2, X } from 'lucide-react';
 import {
   ASPECTS, Aspect, Asset, Layer, MediaLayer, Project, Stroke, clipLength, emptyProject, fitLayer, mainClips, newAudioLayer, newMediaLayer, newStickerLayer, newTextLayer, normalizeMain, projectDuration, uid
 } from './types';
@@ -11,11 +11,14 @@ import { releaseSharedGL } from './gl';
 import { Stage } from './Stage';
 import { Timeline } from './Timeline';
 import { ExportDialog } from './ExportDialog';
-import { AdjustPanel, CanvasPanel, CropPanel, FiltersPanel, LayersPanel, MediaPanel, TemplatesPanel } from './panels';
+import { AdjustPanel, CanvasPanel, CropPanel, FiltersPanel, LayersPanel, TemplatesPanel } from './panels';
+import { MediaPanel } from './MediaPool';
+import { ColorPanel } from './ColorPanel';
+import { waveform } from './assets';
 import { AudioPanel, CaptionsPanel, DrawPanel, PropsPanel, StickersPanel, TextPanel } from './panels2';
 
 // NOOB Studio: the shell. It owns the project (with undo / redo), the imported files and the player, and gives every panel one controller object (StudioCtl) to work through.
-export type ToolId = 'media' | 'canvas' | 'adjust' | 'filters' | 'crop' | 'text' | 'stickers' | 'draw' | 'audio' | 'captions' | 'templates' | 'layers' | 'props';
+export type ToolId = 'media' | 'canvas' | 'adjust' | 'color' | 'filters' | 'crop' | 'text' | 'stickers' | 'draw' | 'audio' | 'captions' | 'templates' | 'layers' | 'props';
 export interface Brush { kind: Stroke['kind'] | 'eraser'; color: string; size: number; opacity: number }
 export type Target = 'post' | 'story' | 'reel';
 
@@ -48,7 +51,8 @@ export interface StudioCtl {
   moveLayer: (id: string, dir: 'up' | 'down' | 'front' | 'back') => void;
   addFiles: (files: File[], as?: 'audio') => Promise<Asset[]>;
   removeAsset: (id: string) => void;
-  placeAsset: (a: Asset, as: 'main' | 'overlay' | 'audio') => void;
+  placeAsset: (a: Asset, as: 'main' | 'overlay' | 'audio', at?: number) => void;
+  dropAsset: (id: string, lane: 'main' | 'overlay' | 'audio', time: number) => void;
   addText: (text: string, patch: Record<string, unknown>) => void;
   addSticker: (kind: 'emoji' | 'shape', content: string) => void;
   addImageSticker: (file: File) => Promise<void>;
@@ -71,6 +75,7 @@ const TOOLS: Array<{ id: ToolId; label: string; icon: React.ComponentType<{ clas
   { id: 'media', label: 'Media', icon: ImagePlus },
   { id: 'canvas', label: 'Canvas', icon: Frame },
   { id: 'adjust', label: 'Adjust', icon: SlidersHorizontal },
+  { id: 'color', label: 'Color', icon: Palette },
   { id: 'filters', label: 'Filters', icon: Sparkles },
   { id: 'crop', label: 'Crop', icon: Crop },
   { id: 'text', label: 'Text', icon: Type },
@@ -113,6 +118,17 @@ function finalize(p: Project, assets: Map<string, Asset>): Project {
   const q = changed ? { ...p, layers } : p;
   const n = normalizeMain(q);
   return n.layers.every((l, i) => l === q.layers[i] || l.start === q.layers[i].start) ? q : n;
+}
+
+/** Put a main-track clip at a position in the story (0 = first): the clips are given their order and normalizeMain lays them out one after another. */
+function reorderMain(p: Project, id: string, index: number): Project {
+  const clips = mainClips(p);
+  const me = clips.find((c) => c.id === id);
+  if (!me) return p;
+  const order = clips.filter((c) => c.id !== id);
+  order.splice(Math.max(0, Math.min(order.length, index)), 0, me);
+  const pos = new Map(order.map((c, i) => [c.id, i]));
+  return { ...p, layers: p.layers.map((l) => (l.type === 'media' && l.track === 'main' ? { ...l, start: pos.get(l.id) ?? l.start } : l)) };
 }
 
 function closestAspect(w: number, h: number): Aspect {
@@ -200,11 +216,11 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
   // ---- files
   const assetList = useMemo(() => [...assetsRef.current.values()].filter((a) => !hiddenAssets.current.has(a.id)), [assetVersion]);
 
-  const place = useCallback((a: Asset, as: 'main' | 'overlay' | 'audio', p0: Project): Project => {
+  const place = useCallback((a: Asset, as: 'main' | 'overlay' | 'audio', p0: Project, at?: number): Project => {
     let p = p0;
     if (as === 'audio') {
       if (a.duration <= 0) return p;
-      const start = p.mode === 'video' ? player.t : 0;
+      const start = at ?? (p.mode === 'video' ? player.t : 0);
       const contentEnd = p.layers.reduce((m, l) => (l.type === 'audio' || l.type === 'captions' ? m : Math.max(m, l.start + l.duration)), 0);
       const layer = newAudioLayer(a, start, 'music');
       if (contentEnd > start + 0.5) layer.duration = Math.min(a.duration, contentEnd - start);
@@ -216,19 +232,23 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
     if (firstEver && p.layers.length === 0) p = { ...p, aspect: closestAspect(a.width, a.height) };
     const hasMain = p.layers.some((l) => l.type === 'media' && l.track === 'main');
     const track: 'main' | 'overlay' = as === 'main' && (p.mode === 'video' || !hasMain) ? 'main' : 'overlay';
-    const start = track === 'main' ? Math.max(0, ...mainClips(p).map((c) => c.start + c.duration)) : p.mode === 'video' ? player.t : 0;
-    return { ...p, layers: [...p.layers, newMediaLayer(a, p, track, start)] };
+    const start = track === 'main' ? Math.max(0, ...mainClips(p).map((c) => c.start + c.duration)) : at ?? (p.mode === 'video' ? player.t : 0);
+    const layer = newMediaLayer(a, p, track, start);
+    const q = { ...p, layers: [...p.layers, layer] };
+    // dropped at a moment of the story: it goes in front of the clips that begin after that moment
+    if (track === 'main' && at !== undefined) return reorderMain(q, layer.id, mainClips(p).filter((c) => c.start + c.duration / 2 < at).length);
+    return q;
   }, [player]);
 
-  const placeAsset = useCallback((a: Asset, as: 'main' | 'overlay' | 'audio') => {
+  const placeAsset = useCallback((a: Asset, as: 'main' | 'overlay' | 'audio', at?: number) => {
     if (as === 'audio' && a.duration <= 0) { notify('That file has no sound to use.', 'error'); return; }
     const before = projectRef.current;
     if (as === 'audio' && before.mode === 'photo') notify('Sound needs a timeline, so the project switched to Video.', 'info');
     if (a.kind === 'video' && as !== 'audio' && before.mode === 'photo') notify('A video needs a timeline, so the project switched to Video.', 'info');
     const id = uid();
     update((p) => {
-      const q = place(a, as, p);
-      const added = q.layers[q.layers.length - 1];
+      const q = place(a, as, p, at);
+      const added = q.layers.find((l) => !p.layers.some((x) => x.id === l.id));
       if (added && q !== p) (added as { id: string }).id = id;
       return q;
     });
@@ -246,6 +266,8 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
         const a = await importFile(list[i]);
         assetsRef.current.set(a.id, a);
         added.push(a);
+        // the loudness outline of a video's own sound, worked out in the background (the timeline draws it under the clip)
+        if (a.kind === 'video' && list[i].size < 60 * 1024 * 1024) void waveform(list[i]).then((peaks) => { a.peaks = peaks; bump(); }).catch(() => undefined);
       } catch (e) {
         notify(e instanceof ImportError ? e.message : `"${list[i].name.slice(0, 40)}" could not be opened. It may be damaged or in a format this browser cannot read.`, 'error');
       }
@@ -271,6 +293,14 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
     hiddenAssets.current.add(id);
     bump();
   }, [bump, notify]);
+
+  const dropAsset = useCallback((id: string, lane: 'main' | 'overlay' | 'audio', time: number) => {
+    const a = assetsRef.current.get(id);
+    if (!a) return;
+    if (lane === 'audio' && a.kind === 'image') { notify('A picture has no sound. Drop it on a video track.', 'error'); return; }
+    if (lane !== 'audio' && a.kind === 'audio') { notify('That is a sound. Drop it on a sound track.', 'error'); return; }
+    placeAsset(a, lane, Math.max(0, time));
+  }, [notify, placeAsset]);
 
   const mountedFiles = useRef(false);
   useEffect(() => {
@@ -334,17 +364,7 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
       return { ...p, layers };
     });
   }, [update]);
-  const moveMain = useCallback((id: string, index: number) => {
-    update((p) => {
-      const clips = mainClips(p);
-      const me = clips.find((c) => c.id === id);
-      if (!me) return p;
-      const order = clips.filter((c) => c.id !== id);
-      order.splice(Math.max(0, Math.min(order.length, index)), 0, me);
-      const pos = new Map(order.map((c, i) => [c.id, i]));
-      return { ...p, layers: p.layers.map((l) => (l.type === 'media' && l.track === 'main' ? { ...l, start: pos.get(l.id) ?? l.start } : l)) };
-    });
-  }, [update]);
+  const moveMain = useCallback((id: string, index: number) => update((p) => reorderMain(p, id, index)), [update]);
 
   const split = useCallback(() => {
     const p = projectRef.current;
@@ -397,7 +417,7 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
   // ---- keyboard
   const ctl: StudioCtl = {
     project, assets: assetsRef.current, assetList, assetVersion, player, update, updateLayer, replaceProject, selectedId, selected, select, tool, setTool, brush, setBrush,
-    time, duration, playing, onPlayheadTick, exporting, setExporting, split, moveMain, duplicateLayer, removeLayer, moveLayer, addFiles, removeAsset, placeAsset,
+    time, duration, playing, onPlayheadTick, exporting, setExporting, split, moveMain, duplicateLayer, removeLayer, moveLayer, addFiles, removeAsset, placeAsset, dropAsset,
     addText, addSticker, addImageSticker, addVoice, setMode, setAspect, busy, notify, onUse
   };
   const ctlRef = useRef(ctl);
@@ -461,6 +481,7 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
       case 'media': return <MediaPanel ctl={ctl} />;
       case 'canvas': return <CanvasPanel ctl={ctl} />;
       case 'adjust': return <AdjustPanel ctl={ctl} />;
+      case 'color': return <ColorPanel ctl={ctl} />;
       case 'filters': return <FiltersPanel ctl={ctl} />;
       case 'crop': return <CropPanel ctl={ctl} />;
       case 'text': return <TextPanel ctl={ctl} />;
@@ -497,8 +518,8 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-        <nav className="order-3 lg:order-1 shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-y-auto border-t lg:border-t-0 lg:border-r border-zinc-800 bg-zinc-950 lg:w-[74px]" aria-label="Tools">
+      <div className="studio-grid" style={{ ['--studio-panel-w' as string]: tool === 'media' ? '460px' : '320px' }}>
+        <nav className="studio-nav order-4 shrink-0 flex lg:flex-col overflow-x-auto lg:overflow-y-auto border-t lg:border-t-0 lg:border-r border-zinc-800 bg-zinc-950" aria-label="Tools">
           {visibleTools.map((t) => {
             const Icon = t.icon;
             const active = tool === t.id;
@@ -515,18 +536,19 @@ export const StudioApp: React.FC<StudioProps> = ({ initialFiles, onClose, onUse 
           })}
         </nav>
 
-        <section className={`order-2 shrink-0 h-[28vh] lg:h-auto lg:w-[310px] overflow-y-auto border-t lg:border-t-0 lg:border-r border-zinc-800 bg-zinc-950 ${panelOpen ? '' : 'hidden lg:block'}`} data-testid="studio-panel" aria-label={`${tool} tools`}>
+        <section className={`studio-panel order-3 shrink-0 h-[28vh] lg:h-auto overflow-y-auto border-t lg:border-t-0 lg:border-r border-zinc-800 bg-zinc-950 ${panelOpen ? '' : 'hidden lg:block'}`} data-testid="studio-panel" aria-label={`${tool} tools`}>
           {panel}
         </section>
 
-        <main className="order-1 lg:order-3 flex-1 min-h-0 min-w-0 flex flex-col">
+        <main className="studio-stage order-1 relative min-h-0 min-w-0 flex flex-col flex-1">
           <Stage ctl={ctl} />
-          {project.mode === 'video' && <Timeline ctl={ctl} />}
-          {busy && <div className="absolute left-1/2 -translate-x-1/2 top-16 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-[12px] font-bold z-20" role="status">{busy}</div>}
+          {busy && <div className="absolute left-1/2 -translate-x-1/2 top-3 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-[12px] font-bold z-20" role="status">{busy}</div>}
         </main>
 
+        {project.mode === 'video' && <div className="studio-tl order-2 min-w-0"><Timeline ctl={ctl} /></div>}
+
         {xl && (
-          <aside className="order-4 w-[290px] shrink-0 overflow-y-auto border-l border-zinc-800 bg-zinc-950" aria-label="Properties">
+          <aside className="studio-props order-5 w-[290px] overflow-y-auto border-l border-zinc-800 bg-zinc-950" aria-label="Properties">
             <div className="px-3 pt-3 text-[11px] font-black uppercase tracking-wider text-zinc-500">Selected</div>
             <PropsPanel ctl={ctl} />
           </aside>

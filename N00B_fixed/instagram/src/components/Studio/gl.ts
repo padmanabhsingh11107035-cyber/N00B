@@ -1,4 +1,4 @@
-import { Adjust, NO_ADJUST } from './types';
+import { Adjust, Grade, NO_ADJUST, Wheel } from './types';
 import { filterAdjust, filterMatrix } from './filters';
 
 // The picture-processing engine: one small program that runs on the graphics chip (WebGL), so sliders move live even on video. It does the crop of a picture, the colour
@@ -16,6 +16,8 @@ uniform float uBr, uCo, uEx, uHi, uSh, uSa, uVi, uTe, uTi, uHue, uFade, uVig, uG
 uniform mat4 uM;
 uniform vec4 uMo;
 uniform vec4 uRect;
+uniform vec3 uLift, uGamma, uGain, uWash;
+uniform float uWashAmt;
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233)) + uSeed) * 43758.5453); }
 vec3 hueRot(vec3 c, float a) {
@@ -62,6 +64,11 @@ void main() {
   c = c * (1.0 - uFade * 0.28) + uFade * 0.12;
   vec3 f = (uM * vec4(c, 1.0)).rgb + uMo.rgb;
   c = mix(c, f, uAmount);
+  // colour grading: gain (highlights), lift (shadows), gamma (midtones), then the colour wash that keeps the brightness
+  c = c * uGain;
+  c += uLift * (1.0 - c);
+  c = pow(max(c, vec3(0.0001)), vec3(1.0) / uGamma);
+  c += (uWash - luma(uWash)) * uWashAmt * 0.6;
   float d = distance(vUv, uRect.xy + uRect.zw * 0.5) / (0.5 * length(uRect.zw));
   c *= 1.0 - uVig * smoothstep(0.45, 1.05, d) * 0.85;
   c += (hash(vUv * uOut) - 0.5) * uGrain * 0.3;
@@ -79,7 +86,24 @@ export interface ProcessOptions {
   /** extra blur used by a transition */
   extraBlur?: number;
   seed?: number;
+  grade?: Grade;
 }
+
+const hsv = (h: number, s: number): [number, number, number] => {
+  const k = (n: number) => (n + h / 60) % 6;
+  const f = (n: number) => 1 - s * Math.max(0, Math.min(k(n), 4 - k(n), 1));
+  return [f(5), f(3), f(1)];
+};
+/** The colour a wheel's puck stands for, as an offset around zero (the same hue as the wheel shows). */
+export function wheelTint(w: Wheel): [number, number, number] {
+  const s = Math.min(1, Math.hypot(w.x, w.y));
+  if (s < 1e-4) return [0, 0, 0];
+  const h = ((Math.atan2(w.y, w.x) * 180) / Math.PI + 360) % 360;
+  const c = hsv(h, 1);
+  const m = (c[0] + c[1] + c[2]) / 3;
+  return [(c[0] - m) * 1.5 * s, (c[1] - m) * 1.5 * s, (c[2] - m) * 1.5 * s];
+}
+const PLAIN_WHEEL: Wheel = { x: 0, y: 0, l: 0 };
 
 export class GLProcessor {
   readonly canvas: HTMLCanvasElement;
@@ -112,7 +136,7 @@ export class GLProcessor {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const aPos = gl.getAttribLocation(prog, 'aPos');
     gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-    for (const n of ['uTex', 'uTexel', 'uOut', 'uBr', 'uCo', 'uEx', 'uHi', 'uSh', 'uSa', 'uVi', 'uTe', 'uTi', 'uHue', 'uFade', 'uVig', 'uGrain', 'uSharp', 'uBlur', 'uAmount', 'uSeed', 'uM', 'uMo', 'uRect']) this.loc[n] = gl.getUniformLocation(prog, n);
+    for (const n of ['uTex', 'uTexel', 'uOut', 'uBr', 'uCo', 'uEx', 'uHi', 'uSh', 'uSa', 'uVi', 'uTe', 'uTi', 'uHue', 'uFade', 'uVig', 'uGrain', 'uSharp', 'uBlur', 'uAmount', 'uSeed', 'uM', 'uMo', 'uRect', 'uLift', 'uGamma', 'uGain', 'uWash', 'uWashAmt']) this.loc[n] = gl.getUniformLocation(prog, n);
     this.tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -159,6 +183,15 @@ export class GLProcessor {
     gl.uniformMatrix4fv(this.loc.uM, false, new Float32Array([m[0], m[5], m[10], m[15], m[1], m[6], m[11], m[16], m[2], m[7], m[12], m[17], m[3], m[8], m[13], m[18]]));
     gl.uniform4f(this.loc.uMo, m[4], m[9], m[14], 0);
     gl.uniform4f(this.loc.uRect, o.crop.x, o.crop.y, o.crop.w, o.crop.h);
+    const g = o.grade;
+    const lt = wheelTint(g?.lift || PLAIN_WHEEL), gt = wheelTint(g?.gamma || PLAIN_WHEEL), nt = wheelTint(g?.gain || PLAIN_WHEEL);
+    const ll = (g?.lift.l || 0) / 100, gl2 = (g?.gamma.l || 0) / 100, nl = (g?.gain.l || 0) / 100;
+    gl.uniform3f(this.loc.uLift, lt[0] * 0.25 + ll * 0.2, lt[1] * 0.25 + ll * 0.2, lt[2] * 0.25 + ll * 0.2);
+    gl.uniform3f(this.loc.uGamma, Math.max(0.25, 1 + gt[0] * 0.6 + gl2 * 0.6), Math.max(0.25, 1 + gt[1] * 0.6 + gl2 * 0.6), Math.max(0.25, 1 + gt[2] * 0.6 + gl2 * 0.6));
+    gl.uniform3f(this.loc.uGain, Math.max(0, 1 + nt[0] * 0.5 + nl * 0.7), Math.max(0, 1 + nt[1] * 0.5 + nl * 0.7), Math.max(0, 1 + nt[2] * 0.5 + nl * 0.7));
+    const wash = hsv(g?.washHue || 0, g?.washSat ?? 1);
+    gl.uniform3f(this.loc.uWash, wash[0], wash[1], wash[2]);
+    u('uWashAmt', (g?.washAmt || 0) / 100);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // the viewport is the bottom-left corner of the canvas; as a normal image that is the lower-left part
     return { canvas: this.canvas, sx: 0, sy: this.canvas.height - h, sw: w, sh: h };

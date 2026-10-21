@@ -320,6 +320,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   {/* Game Number Badge */}
                   <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono font-black text-white border border-white/10">
                     #{idx + 1}
+                    {game.isNew && <span className="ml-1.5 text-amber-300">NEW</span>}
                   </span>
 
                   {/* Mode Player Indicator */}

@@ -24,9 +24,11 @@ interface GamePosterCarouselProps {
   // the dot indicators are turned off there — they'd otherwise fight the card's own tap/scroll.
   showDots?: boolean;
   swipeEnabled?: boolean;
+  // The game's own page (not its card): a game that has portrait posters shows each one whole, on a taller frame.
+  tall?: boolean;
 }
 
-export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, autoAdvanceMs = 0, showDots = true, swipeEnabled = true }) => {
+export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, autoAdvanceMs = 0, showDots = true, swipeEnabled = true, tall = false }) => {
   const [activeSlide, setActiveSlide] = useState(0);
   // Plays one rotate-in transition right when this game's page (the modal) opens, then settles.
   const [justEntered, setJustEntered] = useState(true);
@@ -42,7 +44,7 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, au
   // true for chess). Check the actual high-stakes game directly instead.
   const isHighStakes = game.id === 'chess_blitz';
 
-  const slides = [
+  const baseSlides = [
     // Slide 1: the game's existing unique cartoon banner art
     <GameBannerArtwork key="art" id={game.id} className="w-full h-40" />,
 
@@ -159,6 +161,29 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, au
       </span>
     </div>
   ];
+
+  // A game with posters of its own (Helix Fall) shows them instead of the cartoon banner and the generic cards, keeping only the cards that say something true for it.
+  const posterSlides = (game.posters ?? []).map((src, i) => (
+    <div key={src} className={`relative w-full overflow-hidden bg-black ${tall ? 'h-[22rem]' : 'h-40'}`}>
+      {tall ? (
+        <>
+          <img src={src} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125 opacity-60" />
+          <img src={src} alt={`${game.title} poster ${i + 1}`} className="relative w-full h-full object-contain" />
+        </>
+      ) : (
+        <img src={src} alt={`${game.title} poster`} loading="lazy" className="w-full h-full object-cover object-top" />
+      )}
+    </div>
+  ));
+  const slides = posterSlides.length
+    ? [...posterSlides, ...baseSlides.filter((slide) => ['howto', 'rewards', 'leaderboard'].includes(String(slide.key)))]
+    : baseSlides;
+
+  // On the game's own page the posters are fetched together once it opens, so swiping never waits on a picture.
+  useEffect(() => {
+    if (!tall) return;
+    for (const src of game.posters ?? []) new Image().src = src;
+  }, [tall, game.posters]);
 
   // Loops through the slides on its own — a manual swipe/dot-tap/arrow-key jumps straight to that
   // slide, and the loop just continues on from there on the next tick.

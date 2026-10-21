@@ -12,6 +12,9 @@ export interface MiniGameMeta {
   players: '1v1 Online' | 'vs Bot' | 'Solo / Friend' | 'Solo';
   iconType: string;
   tags: string[];
+  // Pictures of the game's own (portrait posters, shown instead of the cartoon banner on the game's card and page).
+  posters?: string[];
+  isNew?: boolean;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -21,6 +24,31 @@ export interface MiniGameMeta {
 // games felt repeated. Add a new entry here only alongside a real,
 // distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
+  // --- NEW: HELIX FALL (a real 3D game, runs in its own frame — see minigames/HelixFallGame) ---
+  {
+    id: 'helix_fall',
+    title: 'Helix Fall',
+    category: 'arcade',
+    description: 'Rotate the tower, find the gaps and drop the glowing orb all the way down. Reach the base to win — one wrong landing and it shatters.',
+    bannerBg: 'from-[#2a2552] to-[#1b1838]',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pointsReward: 10_000_000,
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'helix',
+    tags: ['3D', 'One Input', 'Daily Tower'],
+    isNew: true,
+    posters: [
+      '/game-posters/helix-fall/01-hero-drop.webp',
+      '/game-posters/helix-fall/02-one-input.webp',
+      '/game-posters/helix-fall/03-daily-tower.webp',
+      '/game-posters/helix-fall/04-rotate-dodge-drop.webp',
+      '/game-posters/helix-fall/05-beat-your-best.webp',
+      '/game-posters/helix-fall/06-chinese.webp',
+      '/game-posters/helix-fall/07-last-floor.webp'
+    ]
+  },
+
   // --- BOARD GAME CLASSICS (shown first) ---
   {
     id: 'ludo_classic',

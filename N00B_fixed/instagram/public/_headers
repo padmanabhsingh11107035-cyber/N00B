@@ -16,6 +16,22 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz https://api.github.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
 
+# Helix Fall (the 3D tower game on the Games page) runs inside the app in a frame of its own, from this same site. It is the one place the app is allowed to be framed (by itself only),
+# and its 3D physics engine is WebAssembly, which the strict rule above does not allow. Everything else stays as strict as the rest of the site: no other site, no network, no frames.
+/games/helix-fall/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/helix-fall/index.html
+  Cache-Control: no-cache
+/games/helix-fall/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/games/helix-fall/fonts/*
+  Cache-Control: public, max-age=604800
+/game-posters/*
+  Cache-Control: public, max-age=604800
+
 # The files that decide whether the app is up to date are never kept by a browser or a CDN: the page itself, the tiny file naming the current build (the app re-reads
 # it to know a newer version exists, see src/utils/appVersion.ts) and the service worker. Everything else has a fingerprint in its name and can be kept forever.
 /

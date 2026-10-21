@@ -50,6 +50,7 @@ const { View: SpeedMathGame, preload: preloadSpeedMath } = lazyTab(() => import(
 const { View: MemoryMatchGame, preload: preloadMemory } = lazyTab(() => import('./minigames/MemoryMatchGame').then((m) => m.MemoryMatchGame));
 const { View: ReactionTapGame, preload: preloadReaction } = lazyTab(() => import('./minigames/ReactionTapGame').then((m) => m.ReactionTapGame));
 const { View: ColorRushGame, preload: preloadColorRush } = lazyTab(() => import('./minigames/ColorRushGame').then((m) => m.ColorRushGame));
+const { View: HelixFallGame, preload: preloadHelix } = lazyTab(() => import('./minigames/HelixFallGame').then((m) => m.HelixFallGame));
 const { View: GenericArcadeGame, preload: preloadGeneric } = lazyTab(() => import('./minigames/GenericArcadeGame').then((m) => m.GenericArcadeGame));
 const { View: ChessGame, preload: preloadChess } = lazyTab(() => import('./minigames/chess/ChessGame').then((m) => m.ChessGame));
 const { View: ChessOnlineMatch, preload: preloadChessOnline } = lazyTab(() => import('./minigames/chess/ChessOnlineMatch').then((m) => m.ChessOnlineMatch));
@@ -61,7 +62,7 @@ const { View: MonopolyGame, preload: preloadMonopoly } = lazyTab(() => import('.
 const GAME_PRELOADS: Record<string, Array<() => Promise<unknown>>> = {
   cyber_snake: [preloadSnake], snake: [preloadSnake], pac_grid: [preloadSnake],
   tictactoe: [preloadTicTacToe], chess_blitz: [preloadChess, preloadChessOnline], snakes_ladders: [preloadSnakesLadders], ludo_classic: [preloadLudo],
-  monopoly_noob: [preloadMonopoly], rps: [preloadRps], speed_math: [preloadSpeedMath], memory_match: [preloadMemory], reaction_tap: [preloadReaction], bubble_blitz: [preloadColorRush]
+  monopoly_noob: [preloadMonopoly], helix_fall: [preloadHelix], rps: [preloadRps], speed_math: [preloadSpeedMath], memory_match: [preloadMemory], reaction_tap: [preloadReaction], bubble_blitz: [preloadColorRush]
 };
 
 // Asks the server again only once the last answer has arrived: on a slow connection a plain timer piled up requests, and the game stalled behind them.
@@ -770,6 +771,21 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     }
   };
 
+  // Helix Fall keeps its own result screen on show between runs, so each finished run is recorded here (same payout and Global Leaderboard as finishGame: a win is
+  // +10,000,000, a loss 0) without switching to the app's result page. Resolves with what was added, or null when the server could not save it.
+  const recordSoloRun = async (result: 'win' | 'loss'): Promise<{ earned: number } | null> => {
+    try {
+      const res = await recordGameMatch(game.id, game.title, result, 'Solo', false);
+      if (!res.success) return null;
+      if (result === 'win') confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      onPointsUpdated(res.earnedPoints, res.totalNoobPoints, result === 'win');
+      return { earned: res.earnedPoints };
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  };
+
   // Survival games (no win/tie/loss, no opponent) pay out 10 NOOB Points
   // per second survived via a dedicated endpoint instead of finishGame's
   // fixed win/tie/loss amounts.
@@ -1020,7 +1036,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // Ludo/Snakes&Ladders/Monopoly (isBoardGame) and Chess all need real screen
   // real estate to render at a comfortable size — everything else fits fine
   // in the standard modal width.
-  const useLargeBoard = (isBoardGame || game.id === 'chess_blitz') && currentMode === 'play_bot';
+  const useLargeBoard = (isBoardGame || game.id === 'chess_blitz' || game.id === 'helix_fall') && currentMode === 'play_bot';
 
   return (
     <div className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center ${
@@ -1043,7 +1059,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <span className="text-amber-400 font-semibold">{game.pointsReward.toLocaleString()} NOOBs on Win</span>
                 <span>•</span>
                 <span className="text-zinc-400">
-                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : '5,000,000 NOOBs on Tie'}
+                  {game.id === 'chess_blitz' ? 'Balance wiped on Loss' : game.id === 'helix_fall' ? 'Solo' : '5,000,000 NOOBs on Tie'}
                 </span>
               </div>
             </div>
@@ -1093,7 +1109,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
           {currentMode === 'select_mode' && (
             <div className="space-y-4">
               {/* Game Artwork Preview: auto-advancing, swipeable poster carousel */}
-              <GamePosterCarousel game={game} />
+              <GamePosterCarousel game={game} tall />
 
               <div className="text-center px-2">
                 <p className="text-xs text-zinc-300">{game.description}</p>
@@ -1107,6 +1123,20 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 </div>
               </div>
 
+              {game.id === 'helix_fall' ? (
+                <div className="pt-2 space-y-2.5">
+                  <div className="px-3 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center text-[11px] font-bold text-amber-300">
+                    Reach the base of the tower: +{game.pointsReward.toLocaleString()} NOOBs on the Global Leaderboard. Fall and it's 0.
+                  </div>
+                  <button
+                    onClick={startBotGameNow}
+                    className="w-full py-3.5 rounded-2xl bg-noob hover:bg-noob/90 text-black text-sm font-black transition-colors cursor-pointer"
+                  >
+                    Play Helix Fall
+                  </button>
+                  <p className="text-[10px] text-zinc-500 text-center">Solo game: rotate with A / D, the arrow keys, or by dragging.</p>
+                </div>
+              ) : (
               <div className="pt-2 space-y-2.5">
                 <span className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase block px-1">
                   Choose How To Play:
@@ -1196,6 +1226,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
                 </button>
               </div>
+              )}
             </div>
           )}
 
@@ -1660,6 +1691,10 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} />
               )}
 
+              {game.id === 'helix_fall' && (
+                <HelixFallGame onRun={recordSoloRun} pointsReward={game.pointsReward} />
+              )}
+
               {game.id === 'tictactoe' && onlineMatch && (
                 <div className="flex flex-col items-center justify-center p-3 w-full max-w-sm mx-auto">
                   <div className="flex items-center justify-between w-full mb-4 px-3 py-2 bg-zinc-900 rounded-xl border border-zinc-800">
@@ -1794,7 +1829,8 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                 'speed_math',
                 'memory_match',
                 'reaction_tap',
-                'bubble_blitz'
+                'bubble_blitz',
+                'helix_fall'
               ].includes(game.id) && (
                 <GenericArcadeGame game={game} onGameOver={handleGameOver} targetScore={12} />
               )}

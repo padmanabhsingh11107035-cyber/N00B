@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Search, Check, Link2, Loader2, Send, Mail, MessageSquare, Instagram, Twitter, Facebook, Share, CheckCircle2 } from 'lucide-react';
 import { User } from '../../types';
 import { fetchChats, sendMessage } from '../../services/api';
@@ -9,6 +10,8 @@ import { MAX_FRIENDS_AT_ONCE, appLink, filterFriends, friendsFromChats, shareTex
 
 // The Share sheet of a post, reel or video, laid out like Instagram's: a search box, the people you talk to as a grid of faces (tap to pick up to five, then Send), and under them a row of
 // the other apps (WhatsApp, Instagram, X, Facebook, Telegram, Messages, Email), Copy link and More (the phone's own share sheet).
+// It is drawn straight on the page (a portal), not inside the page that opened it: the Reels page is a layer of its own, under the bottom bar, and the row of apps used to be
+// hidden behind that bar there.
 export interface SharePostSheetProps {
   type: 'post' | 'reel' | 'video';
   currentUser: User;
@@ -111,7 +114,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
     else window.open(link, '_blank', 'noopener,noreferrer');
   };
 
-  return (
+  const sheet = (
     <div className="fixed inset-0 z-[95] bg-black/70 flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={onClose} data-testid="share-sheet">
       <div
         onClick={(e) => e.stopPropagation()}
@@ -173,7 +176,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
               </button>
             </div>
           ) : (
-            <div className="flex gap-3.5 overflow-x-auto no-scrollbar px-4 py-3" data-testid="share-apps">
+            <div className="flex gap-3.5 overflow-x-auto no-scrollbar px-4 pt-3 pb-6" data-testid="share-apps">
               {APP_ORDER.slice(0, 1).map((a) => (
                 <ShareIcon key={a.id} label={a.label} look={APP_LOOK[a.id].bg} onClick={() => void openApp(a.id)} testId={`share-app-${a.id}`}>{APP_LOOK[a.id].icon}</ShareIcon>
               ))}
@@ -188,6 +191,7 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
       </div>
     </div>
   );
+  return typeof document === 'undefined' ? sheet : createPortal(sheet, document.body);
 };
 
 const ShareIcon: React.FC<{ label: string; look: string; onClick: () => void; testId: string; children: React.ReactNode }> = ({ label, look, onClick, testId, children }) => (

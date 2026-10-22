@@ -58,5 +58,9 @@ check(!fs.existsSync('src/components/Common/SharePostToChatModal.tsx'), 'the old
 check(/<ReelFriendsStrip currentUser=\{currentUser\} reelId=\{currentReel\?\.id\} \/>/.test(reels) && reels.indexOf('<ReelFriendsStrip') < reels.indexOf('reel-sound-button'), 'the faces are in the title bar of Reels, before the sound button');
 check(/topFriends\(friendsFromChats\(chats, currentUser\.id\), 4\)/.test(strip) && /sharedPostId: reelId, sharedPostType: 'reel'/.test(strip) && /if \(busy \|\| sent\[key\]\) return;/.test(strip), 'four faces; a tap sends the reel on the screen, once');
 
+{
+  const sheetSrc = fs.readFileSync('src/components/Common/SharePostSheet.tsx', 'utf8').split(String.fromCharCode(13)).join('');
+  check(/createPortal\(sheet, document\.body\)/.test(sheetSrc) && /z-\[95\]/.test(sheetSrc), 'the sheet is drawn on the page itself, above the bottom bar (the Reels page is a layer under the bar: the row of apps used to be hidden there)');
+}
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

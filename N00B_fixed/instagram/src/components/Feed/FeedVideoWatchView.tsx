@@ -19,6 +19,7 @@ import {
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
 import { sendLike } from '../../utils/likeSync';
 import { LazyVideo } from '../Common/LazyVideo';
+import { VideoPlayer } from '../Videos/VideoPlayer';
 
 interface FeedVideoWatchViewProps {
   post: Post;
@@ -161,13 +162,12 @@ export const FeedVideoWatchView: React.FC<FeedVideoWatchViewProps> = ({ post, cu
 
       <div className="w-full bg-black shrink-0">
         {videoSlide && (
-          <video
+          <VideoPlayer
             key={activePost.id}
             src={videoSlide.mediaUrl}
-            controls
-            autoPlay
-            playsInline
-            className="w-full max-h-[45vh] bg-black"
+            durationSeconds={0}
+            adaptive
+            title={activePost.caption ? activePost.caption.slice(0, 90) : undefined}
           />
         )}
       </div>

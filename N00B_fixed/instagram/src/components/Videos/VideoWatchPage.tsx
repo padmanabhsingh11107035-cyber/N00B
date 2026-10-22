@@ -75,6 +75,7 @@ export const VideoWatchPage: React.FC<VideoWatchPageProps> = ({ video, allVideos
         src={video.videoUrl}
         renditions={video.renditions}
         poster={video.thumbnailUrl}
+        title={video.title || 'Untitled video'}
         durationSeconds={video.durationSeconds}
         className={landscapePhone ? '!aspect-auto h-full' : wide ? 'rounded-2xl overflow-hidden' : ''}
         onPlay={() => { void recordView(video.id).then((res) => { if (res?.success && typeof res.viewsCount === 'number') onViewCounted(res.viewsCount); }); }}

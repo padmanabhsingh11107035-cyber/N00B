@@ -1,11 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, Settings, Maximize, Minimize, RotateCcw, ChevronRight, ChevronLeft, Check, Loader2, FastForward, Rewind } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Settings, Maximize, Minimize, RotateCcw, RotateCw, ChevronRight, ChevronLeft, Check, Loader2, FastForward, Rewind } from 'lucide-react';
 import type { Rendition } from '../../utils/videoQuality';
 import { buildOptions, chooseAuto, dataPerMinute, readNetwork, ORIGINAL_ID, autoLabel, type QualityOption } from '../../utils/videoQuality';
 import { SPEEDS, bufferedShare, clamp, countdownLeft, formatClock, keyAction, seekTo, speedLabel, tapZone } from '../../utils/videoPlayerMath';
 
 // A video player in the style of YouTube's: tap to show the controls, double-tap the left or right side to jump 10 seconds, a seek bar that shows how much is loaded, a mute button,
 // a settings menu with Quality (Auto or a chosen one, with how much data each uses) and Playback speed, fullscreen (turning the phone to landscape), and "Up next" at the end.
+// Full screen is landscape, as on YouTube: Android and computers use the browser's own full screen (and lock the phone to landscape); an iPhone cannot give a web page full screen
+// (only the video itself, in a portrait player of Apple's), so there the player makes its own: it covers the whole screen and, while the phone is held upright, is turned on its side
+// so the picture is the right way up the moment the phone is turned (with the phone's rotation lock off the page turns by itself and the player simply fills the screen).
+// In full screen the player shows YouTube's layout: the title and a back arrow on top, 10-second jumps and play in the middle, the seek bar below.
 // The person's choices (muted, quality, speed) are remembered.
 const KEY_MUTED = 'noob_video_muted', KEY_QUALITY = 'noob_video_quality';
 const store = {
@@ -24,12 +28,16 @@ export interface VideoPlayerProps {
   /** At the end: if given, "Up next" counts down and then calls onPlayNext (unless cancelled). */
   upNext?: { title: string } | null;
   onPlayNext?: () => void;
+  /** shown on top while the player is full screen */
+  title?: string;
+  /** the frame takes the video's own shape (a tall video is shown tall, up to 45% of the screen) instead of always 16:9 */
+  adaptive?: boolean;
   className?: string;
 }
 
 type Menu = null | 'main' | 'quality' | 'speed';
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poster, durationSeconds, autoPlay = true, onPlay, upNext, onPlayNext, className = '' }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poster, durationSeconds, autoPlay = true, onPlay, upNext, onPlayNext, title, adaptive = false, className = '' }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const resume = useRef<{ time: number; playing: boolean } | null>(null);
@@ -50,6 +58,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
   const [showControls, setShowControls] = useState(true);
   const [menu, setMenu] = useState<Menu>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [pseudoFs, setPseudoFs] = useState(false);   // the iPhone's way of full screen (see the top of this file)
+  const [vp, setVp] = useState(() => ({ w: typeof window === 'undefined' ? 0 : window.innerWidth, h: typeof window === 'undefined' ? 0 : window.innerHeight }));
+  const [turnHint, setTurnHint] = useState(false);
+  const [ratio, setRatio] = useState(16 / 9);
   const [choice, setChoice] = useState<string>(store.get(KEY_QUALITY) || 'auto');
   const [originalHeight, setOriginalHeight] = useState(0);
   const [originalBytes, setOriginalBytes] = useState<number | null>(null);
@@ -89,6 +101,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
     const v = videoRef.current; if (!v) return;
     setDuration(Number.isFinite(v.duration) && v.duration > 0 ? v.duration : durationSeconds);
     if (active.id === ORIGINAL_ID && v.videoWidth) setOriginalHeight(Math.min(v.videoWidth, v.videoHeight));
+    if (adaptive && v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
     v.playbackRate = rate; v.muted = muted; v.volume = volume;
     if (resume.current) {
       const r = resume.current; resume.current = null;
@@ -127,17 +140,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
   const toggleFullscreen = useCallback(async () => {
     const w = wrapRef.current, v = videoRef.current as any; if (!w || !v) return;
     try {
-      if (document.fullscreenElement) {
+      if (pseudoFs) {
+        setPseudoFs(false);
+      } else if (document.fullscreenElement) {
         await document.exitFullscreen();
       } else if (w.requestFullscreen) {
         await w.requestFullscreen();
         // a wide video turns the phone to landscape while it is full screen
         if (v.videoWidth > v.videoHeight) { try { await (screen.orientation as any)?.lock?.('landscape'); } catch { /* not allowed here */ } }
-      } else if (v.webkitEnterFullscreen) {
-        v.webkitEnterFullscreen();   // iPhone: only the video itself can go full screen
+      } else {
+        // iPhone: no full screen for a page, only for the video in a portrait player of Apple's. The player makes its own, on its side.
+        setVp({ w: window.innerWidth, h: window.innerHeight });
+        setPseudoFs(true);
       }
     } catch { /* the browser refused */ }
-  }, []);
+  }, [pseudoFs]);
   useEffect(() => {
     const on = () => {
       const fs = !!document.fullscreenElement;
@@ -147,6 +164,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
     document.addEventListener('fullscreenchange', on);
     return () => document.removeEventListener('fullscreenchange', on);
   }, []);
+
+  // iPhone full screen: follow the screen's size (the address bar comes and goes, the phone turns), tell the person to turn the phone while it is upright, and let Escape leave
+  useEffect(() => {
+    if (!pseudoFs) { setTurnHint(false); return; }
+    const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    on();
+    window.addEventListener('resize', on);
+    window.addEventListener('orientationchange', on);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPseudoFs(false); };
+    window.addEventListener('keydown', onKey);
+    setTurnHint(true);
+    const t = window.setTimeout(() => setTurnHint(false), 4500);
+    return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); window.removeEventListener('keydown', onKey); window.clearTimeout(t); };
+  }, [pseudoFs]);
+  const rotated = pseudoFs && vp.h > vp.w;   // held upright: the player is turned on its side
+  const fsLike = fullscreen || pseudoFs;
 
   // the size of the file behind "original", looked up only when the menu is opened (so the quality list can say how much data each one uses)
   useEffect(() => {
@@ -160,7 +193,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
   const onSurfacePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[data-controls]')) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const zone = tapZone(e.clientX - rect.left, rect.width);
+    // turned on its side, the player's left-to-right is the screen's top-to-bottom
+    const zone = rotated ? tapZone(e.clientY - rect.top, rect.height) : tapZone(e.clientX - rect.left, rect.width);
     const now = Date.now();
     const prev = lastTap.current;
     lastTap.current = { at: now, zone };
@@ -215,8 +249,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
       tabIndex={0}
       onKeyDown={onKeyDown}
       onMouseMove={poke}
-      className={`relative bg-black text-white select-none outline-none ${fullscreen ? 'w-screen h-screen' : 'w-full aspect-video'} ${className}`}
+      style={pseudoFs
+        ? (rotated
+          ? { position: 'fixed', top: 0, left: 0, width: vp.h, height: vp.w, transformOrigin: 'top left', transform: `translateX(${vp.w}px) rotate(90deg)`, zIndex: 2147483000 }
+          : { position: 'fixed', top: 0, left: 0, width: vp.w, height: vp.h, zIndex: 2147483000 })
+        : (adaptive && !fullscreen ? { aspectRatio: String(ratio) } : undefined)}
+      className={`${pseudoFs ? '' : 'relative'} bg-black text-white select-none outline-none ${fullscreen ? 'w-screen h-screen' : pseudoFs ? '' : adaptive ? 'w-full max-h-[45vh]' : 'w-full aspect-video'} ${pseudoFs ? '' : className}`}
       data-testid="video-player"
+      data-fullscreen={fsLike ? (pseudoFs ? (rotated ? 'turned' : 'own') : 'browser') : undefined}
     >
       <video
         ref={videoRef}
@@ -256,7 +296,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
       )}
 
       {/* the big play button when it is paused */}
-      {!playing && !buffering && !failed && countdownStart === null && (
+      {!playing && !buffering && !failed && countdownStart === null && !fsLike && (
         <button data-controls onClick={toggle} className="absolute inset-0 m-auto z-20 w-16 h-16 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center cursor-pointer" aria-label="Play" data-testid="player-big-play"><Play className="w-8 h-8 fill-white" /></button>
       )}
 
@@ -272,10 +312,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
         </div>
       )}
 
+      {/* full screen, as on YouTube: a back arrow and the title on top, 10 seconds back / play / 10 seconds forward in the middle */}
+      {fsLike && (
+        <div data-controls className={`absolute inset-x-0 top-0 z-20 transition-opacity duration-200 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={rotated ? { paddingLeft: 'env(safe-area-inset-top)', paddingRight: 'env(safe-area-inset-bottom)' } : undefined} data-testid="player-fs-top">
+          <div className="h-20 bg-gradient-to-b from-black/80 to-transparent absolute inset-x-0 top-0 pointer-events-none" />
+          <div className="relative flex items-center gap-2 px-3 pt-3">
+            <button onClick={() => void toggleFullscreen()} className="p-2 rounded-full bg-black/40 cursor-pointer" aria-label="Exit full screen" data-testid="player-fs-back"><ChevronLeft className="w-5 h-5" /></button>
+            {title && <span className="text-sm font-bold truncate" data-testid="player-fs-title">{title}</span>}
+          </div>
+        </div>
+      )}
+      {fsLike && !buffering && !failed && countdownStart === null && (showControls || !playing) && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center gap-10 pointer-events-none" data-testid="player-fs-center">
+          <button data-controls onClick={() => jump(-10, 'left')} className="pointer-events-auto relative w-12 h-12 rounded-full bg-black/45 flex items-center justify-center cursor-pointer" aria-label="Back 10 seconds"><RotateCcw className="w-7 h-7" /><span className="absolute text-[9px] font-black">10</span></button>
+          <button data-controls onClick={toggle} className="pointer-events-auto w-16 h-16 rounded-full bg-black/55 flex items-center justify-center cursor-pointer" aria-label={playing ? 'Pause' : 'Play'} data-testid="player-fs-play">{playing ? <Pause className="w-8 h-8 fill-white" /> : <Play className="w-8 h-8 fill-white" />}</button>
+          <button data-controls onClick={() => jump(10, 'right')} className="pointer-events-auto relative w-12 h-12 rounded-full bg-black/45 flex items-center justify-center cursor-pointer" aria-label="Forward 10 seconds"><RotateCw className="w-7 h-7" /><span className="absolute text-[9px] font-black">10</span></button>
+        </div>
+      )}
+      {rotated && turnHint && (
+        <div className="absolute top-16 inset-x-0 z-30 flex justify-center pointer-events-none" data-testid="turn-hint"><span className="px-3 py-1.5 rounded-full bg-white text-black text-xs font-black shadow-lg">Turn your phone sideways</span></div>
+      )}
+
       {/* the controls */}
       <div data-controls className={`absolute inset-x-0 bottom-0 z-20 transition-opacity duration-200 ${showControls || !playing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} data-testid="player-controls">
         <div className="h-16 bg-gradient-to-t from-black/85 to-transparent absolute inset-x-0 bottom-0 pointer-events-none" />
-        <div className="relative px-3 pb-2 pt-6">
+        <div className="relative px-3 pb-2 pt-6" style={rotated ? { paddingLeft: 'calc(0.75rem + env(safe-area-inset-top))', paddingRight: 'calc(0.75rem + env(safe-area-inset-bottom))' } : undefined}>
           <div className="relative h-5 flex items-center group" data-testid="player-seek">
             <div className="absolute inset-x-0 h-1 rounded-full bg-white/25 group-hover:h-1.5 transition-all">
               <div className="absolute inset-y-0 left-0 rounded-full bg-white/40" style={{ width: `${bufPct}%` }} />
@@ -293,7 +354,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, renditions, poste
             <span className="text-[11px] font-semibold tabular-nums ml-1" data-testid="player-time">{formatClock(time)} / {formatClock(duration)}</span>
             <span className="flex-1" />
             <button onClick={() => setMenu(menu ? null : 'main')} className="p-1.5 cursor-pointer" aria-label="Settings" data-testid="player-settings"><Settings className="w-5 h-5" /></button>
-            <button onClick={() => void toggleFullscreen()} className="p-1.5 cursor-pointer" aria-label={fullscreen ? 'Exit full screen' : 'Full screen'} data-testid="player-fullscreen">{fullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
+            <button onClick={() => void toggleFullscreen()} className="p-1.5 cursor-pointer" aria-label={fsLike ? 'Exit full screen' : 'Full screen'} data-testid="player-fullscreen">{fsLike ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
           </div>
         </div>
       </div>

@@ -112,6 +112,7 @@ import { installLinkInterceptor } from './utils/inAppBrowser';
 import { sendLike } from './utils/likeSync';
 import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './utils/pageLayers';
+import { LogoLightbox } from './components/Common/LogoLightbox';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { TAB_PATHS, cleanPath, contentPath, parseContentPath, parseContentQuery, tabFromPath, FEATURE_PAGES, type ContentRoute } from './utils/routes';
 import { afterHistoryIdle } from './utils/historyGate';
@@ -1652,9 +1653,7 @@ export default function App() {
         <div className="space-y-7">
           {/* Logo & Brand Header */}
           <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-[24%] overflow-hidden border border-white/15 shadow-[0_0_20px_rgba(255,255,255,0.12)]">
-              <img src="/noob-logo-circle.png" alt="NOOB" className="w-full h-full object-cover" />
-            </div>
+            <LogoLightbox className="w-10 h-10 rounded-[24%] overflow-hidden border border-white/15 shadow-[0_0_20px_rgba(255,255,255,0.12)] cursor-pointer hover:border-white/50 transition-colors" />
             <div>
               <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
                 NOOB <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold border border-red-500/30">APP</span>

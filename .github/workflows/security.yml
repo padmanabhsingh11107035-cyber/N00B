@@ -1,0 +1,68 @@
+# Security checks: the database audit, the packages, the secrets and CodeQL. They run on every push and pull request and once a week, and they do not deploy anything.
+name: Security checks
+
+on:
+  push:
+    branches: [main, supabase-migration]
+  pull_request:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database-audit:
+    name: Database audit (row-level security, privileged functions)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: N00B_fixed/instagram/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: node scripts/security-audit-db.mjs
+
+  packages:
+    name: Packages with known problems
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # the packages the website is built from; a problem in a package that only runs on a developer's computer is not a hole in the site
+      - run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secrets in the code or its history
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    name: CodeQL (finds common mistakes in the code)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3

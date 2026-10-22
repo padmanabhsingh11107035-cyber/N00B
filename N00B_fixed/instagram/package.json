@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "audit:db": "node scripts/security-audit-db.mjs",
     "dev": "tsx server.ts",
     "i18n": "node scripts/i18n/extract.mjs",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist-server/server.cjs",

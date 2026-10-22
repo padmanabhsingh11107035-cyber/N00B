@@ -1,0 +1,6 @@
+# Same as /.well-known/security.txt (some scanners look here first).
+Contact: https://github.com/padmanabhsingh11107035-cyber/N00B/security/advisories/new
+Expires: 2027-10-22T00:00:00.000Z
+Preferred-Languages: en, hi
+Canonical: https://noobsocials.com/.well-known/security.txt
+Policy: https://github.com/padmanabhsingh11107035-cyber/N00B/blob/main/SECURITY.md

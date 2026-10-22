@@ -30,6 +30,8 @@ jobs:
       - run: node scripts/security-audit-db.mjs
       # a normal logged-in person cannot make themselves admin, verified or rich by editing their own rows
       - run: node --liftoff-only scripts/supabase/test-privilege-escalation-db.mjs
+      # other people cannot read when somebody's Pro renews or what they bought; the Live Lounge tables can be read by the people who belong in them
+      - run: node --liftoff-only scripts/supabase/test-profile-privacy-lounge-db.mjs
       - run: node scripts/supabase/test-security-config.mjs
 
   packages:

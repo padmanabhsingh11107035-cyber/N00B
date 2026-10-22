@@ -118,6 +118,15 @@ const anonWrites = await q(`select table_name from information_schema.role_table
 const noRlsSet = new Set(noRls.map((r) => r.relname));
 for (const r of anonWrites) if (noRlsSet.has(r.table_name)) flag('ANONYMOUS VISITOR MAY WRITE (no row-level security)', r.table_name);
 
+// 8. profiles: what every logged-in person may read of everybody else. The Pro / shop columns are closed (only the database's own functions read them, so they only reach the person
+//    themselves and the admin); every other column stays readable, and a NEW column has to be granted on purpose (grant select (column) on public.profiles to authenticated) or listed here.
+const CLOSED_PROFILE_COLUMNS = ['pro_billing', 'pro_auto_renew', 'pro_renews_at', 'purchased_item_ids'];
+for (const c of (await q(`select column_name from information_schema.columns where table_schema = 'public' and table_name = 'profiles'`)).map((r) => r.column_name)) {
+  const can = (await q(`select has_column_privilege('authenticated', 'public.profiles', $1, 'select') as c`, [c]))[0].c;
+  if (CLOSED_PROFILE_COLUMNS.includes(c) && can) flag('PRIVATE PROFILE COLUMN READABLE BY EVERY LOGGED-IN PERSON', c);
+  if (!CLOSED_PROFILE_COLUMNS.includes(c) && !can) flag('PROFILE COLUMN NOT READABLE BY LOGGED-IN PEOPLE', c, `a new column is closed until it is granted: grant select (${c}) on public.profiles to authenticated (or list it in CLOSED_PROFILE_COLUMNS if it must stay private)`);
+}
+
 const tableCount = (await q(`select count(*)::int n from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p')`))[0].n;
 console.log(`Checked ${tableCount} tables, ${policies.length} policies and ${fns.filter((f) => f.prosecdef).length} SECURITY DEFINER functions (${openNames.size} open to visitors on purpose, each with a reason in this file).`);
 for (const n of notes) console.log('  note   ' + n);

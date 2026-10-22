@@ -49,6 +49,14 @@ const tracked = read('.env.production');
 check(/VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_/.test(tracked) && !/service_role|sb_secret_|SECRET|PRIVATE/i.test(tracked.replace(/#.*$/gm, '')), 'the only key in the repository is the public one');
 check(!/sourcemap\s*:\s*true/.test(read('vite.config.ts')), 'the published files carry no source maps');
 
+section('5b. Profile privacy and the Live Lounge rules');
+{
+  const m5 = read('supabase/migrations/20261022000005_profile_privacy_and_lounge_rls.sql');
+  check(/revoke select on public\.profiles from authenticated/.test(m5) && /column_name not in \('pro_billing', 'pro_auto_renew', 'pro_renews_at', 'purchased_item_ids'\)/.test(m5), 'the Pro renewal, billing, auto-renew and shop purchase columns are closed to other people');
+  check(/lounge_is_host/.test(m5) && /lounge_is_member/.test(m5) && /lounge_is_admitted/.test(m5) && /grant select on public\.live_lounge_rooms, public\.live_lounge_room_participants, public\.live_lounge_room_chat to authenticated/.test(m5), 'the Live Lounge rules ask small functions instead of each other, so they no longer loop');
+  check(/CLOSED_PROFILE_COLUMNS/.test(read('scripts/security-audit-db.mjs')), 'the audit watches the profile columns, so a new column cannot be forgotten');
+}
+
 section('6. Links people type, and where a notification leads');
 {
   const src = read('src/utils/safeUrl.ts');

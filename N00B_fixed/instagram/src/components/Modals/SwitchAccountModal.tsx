@@ -1,7 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Check, KeyRound, Loader2, Trash2, UserPlus } from 'lucide-react';
 import { tabSessions } from '../../services/supabase';
-import { fetchLinkedAccounts, signInLinkedAccount, type LinkedAccount } from '../../services/supabaseApi';
+import { fetchCurrentUser, fetchLinkedAccounts, fetchUserById, signInLinkedAccount, type LinkedAccount } from '../../services/supabaseApi';
+
+// What the saved accounts look like right now (picture and name). The saved login only knows the user name, so the pictures are asked for when the sheet opens; the last answer is kept on this
+// device, so the next time they show at once and are then refreshed.
+interface AccountCard { avatar: string; displayName: string }
+const CARDS_KEY = 'noob.accountCards.v1';
+const readCards = (): Record<string, AccountCard> => {
+  try { const v = JSON.parse(localStorage.getItem(CARDS_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+};
+const writeCards = (cards: Record<string, AccountCard>) => { try { localStorage.setItem(CARDS_KEY, JSON.stringify(cards)); } catch { /* private window: it still shows for now */ } };
+
+/** The round picture of an account: its profile picture, or its first letter until there is one (or when the picture cannot be loaded). */
+const AccountFace: React.FC<{ avatar?: string; username: string }> = ({ avatar, username }) => {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [avatar]);
+  return avatar && !broken ? (
+    <img src={avatar} alt="" className="w-10 h-10 rounded-full object-cover shrink-0 bg-zinc-800 border border-white/10" referrerPolicy="no-referrer" onError={() => setBroken(true)} data-testid="account-face" />
+  ) : (
+    <span className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-black text-zinc-300 shrink-0" translate="no">{username.slice(0, 1).toUpperCase()}</span>
+  );
+};
 
 interface SwitchAccountModalProps {
   onClose: () => void;
@@ -15,6 +35,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
   const [accounts, setAccounts] = useState(() => tabSessions.savedAccounts());
   const [removingId, setRemovingId] = useState<string | null>(null); // tap once to arm, tap again to confirm
   const currentId = tabSessions.currentAccount();
+  const [cards, setCards] = useState<Record<string, AccountCard>>(readCards);
   const [linked, setLinked] = useState<LinkedAccount[]>([]);
   const [linkedState, setLinkedState] = useState<'loading' | 'ok' | 'missing' | 'error'>('loading');
   const [opening, setOpening] = useState<string | null>(null);   // the linked account whose password is being asked
@@ -23,6 +44,24 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
   const [error, setError] = useState('');
   // Switching ends with a full reload of the app, which takes a few seconds on a phone: from the first tap this says what is happening (a spinner and the name), so the button never looks dead.
   const [switching, setSwitching] = useState<{ label: string } | null>(null);
+
+  // the current picture and name of every saved account: this account's own profile, and the others' public profile (one by one, each shown as soon as it arrives)
+  useEffect(() => {
+    let live = true;
+    const put = (id: string, u: { avatar?: string; displayName?: string } | null) => {
+      if (!live || !u || (!u.avatar && !u.displayName)) return;
+      setCards((cur) => {
+        const next = { ...cur, [id]: { avatar: u.avatar || cur[id]?.avatar || '', displayName: u.displayName || cur[id]?.displayName || '' } };
+        writeCards(next);
+        return next;
+      });
+    };
+    tabSessions.savedAccounts().forEach((a) => {
+      const ask = a.id === currentId ? fetchCurrentUser() : fetchUserById(a.id);
+      ask.then((u) => put(a.id, u)).catch(() => undefined);
+    });
+    return () => { live = false; };
+  }, [currentId]);
 
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -33,6 +72,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
   }, [retry]);
   // the other accounts that are not on this device yet
   const notYet = linked.filter((l) => !accounts.some((a) => a.id === l.id));
+  const cardOf = (id: string): AccountCard | undefined => cards[id] || (() => { const l = linked.find((x) => x.id === id); return l ? { avatar: l.avatar, displayName: l.displayName } : undefined; })();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -113,11 +153,12 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl transition-colors border ${here ? 'bg-cyan-500/15 border-cyan-400/40' : confirming ? 'bg-red-500/10 border-red-500/40' : 'border-transparent hover:bg-white/5'}`}
               >
                 <button type="button" onClick={() => use(a.id)} disabled={!!switching} className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer disabled:opacity-60">
-                  <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-300 shrink-0" translate="no">
-                    {a.username.slice(0, 1).toUpperCase()}
-                  </span>
+                  <AccountFace avatar={cardOf(a.id)?.avatar} username={a.username} />
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-bold text-white truncate" translate="no">@{a.username}</span>
+                    <span className="block text-sm font-bold text-white truncate" translate="no">
+                      @{a.username}
+                      {cardOf(a.id)?.displayName && cardOf(a.id)?.displayName !== a.username ? <span className="ml-1.5 font-semibold text-zinc-400" data-testid="account-name">{cardOf(a.id)?.displayName}</span> : null}
+                    </span>
                     <span className="block text-[11px] text-zinc-500">
                       {confirming ? 'Remove this account from the list?' : here ? 'Used in this tab' : 'Use in this tab'}
                     </span>
@@ -180,11 +221,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
                 return (
                   <div key={l.id} className={`rounded-2xl border transition-colors ${open ? 'bg-cyan-500/10 border-cyan-400/40' : 'border-transparent hover:bg-white/5'}`}>
                     <button type="button" onClick={() => { setOpening(open ? null : l.id); setPassword(''); setError(''); }} className="w-full flex items-center gap-3 px-3.5 py-3 text-left cursor-pointer">
-                      {l.avatar ? (
-                        <img src={l.avatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 bg-zinc-800" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-300 shrink-0" translate="no">{l.username.slice(0, 1).toUpperCase()}</span>
-                      )}
+                      <AccountFace avatar={l.avatar} username={l.username} />
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-bold text-white truncate" translate="no">@{l.username}</span>
                         <span className="block text-[11px] text-zinc-500">{open ? 'Enter its password to switch' : 'Tap to switch (password asked once)'}</span>

@@ -321,7 +321,8 @@ export const GamesView: React.FC<GamesViewProps> = ({
                 key={game.id}
                 className="bg-zinc-950 border border-zinc-800/90 hover:border-zinc-700 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col group"
               >
-                {/* Looping poster carousel — same slides as the game's own detail page, cycling on its own */}
+                {/* Looping poster carousel — same slides as the game's own detail page, cycling on its own. The small gap around it keeps the picture's white outline whole: it used to sit on the card's own edge, where the card's rounder corners cut it off. */}
+                <div className="p-2 pb-0">
                 <div className="relative overflow-hidden cursor-pointer group-hover:scale-105 transition-transform duration-500" onClick={() => setSelectedGameForPlay(game)}>
                   <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} />
 
@@ -335,6 +336,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   <span className="game-badge absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-noob border border-noob/30">
                     {game.players}
                   </span>
+                </div>
                 </div>
 
                 {/* Card Info */}

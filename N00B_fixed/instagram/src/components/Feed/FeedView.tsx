@@ -892,7 +892,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {onOpenTab && (
                 <div className="pb-1 xl:hidden" role="group" aria-label="More pages" data-testid="noob-menu-more-pages">
                   <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More pages</p>
-                  <MenuBanner tone="videos" icon={<Youtube className="w-[18px] h-[18px]" aria-hidden="true" />} title="Videos" blurb="Long videos and live streams" ariaLabel="Videos" onClick={() => { setShowNoobMenu(false); onOpenTab('videos'); }} />
+                  <MenuBanner tone="videos" icon={<Youtube className="w-[18px] h-[18px]" aria-hidden="true" />} title="Feed" blurb="Long videos and live streams" ariaLabel="Feed" onClick={() => { setShowNoobMenu(false); onOpenTab('videos'); }} />
                 </div>
               )}
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}

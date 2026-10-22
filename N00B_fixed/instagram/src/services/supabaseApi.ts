@@ -8,6 +8,7 @@ import type { PinnedFeedItem, Post, User, StatusNote, AppSettings, AppNotificati
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
+import { pagesOf, type ActiveAd, type AdApplication, type AdminAdRow, type AdPage, type AdWhere } from '../utils/ads';
 import { uploadWithRetry } from '../utils/xhrUpload';
 import { factsOf } from '../utils/videoTranscode';
 import { MAX_UPLOAD_BYTES } from '../utils/videoPlan';
@@ -1630,7 +1631,7 @@ export async function updateUserSettings(userConfig: Partial<User>): Promise<Use
 
 // ----------------------------------------------------------------------------- media upload
 
-type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily' | 'songs' | 'team';
+type MediaFolder = 'posts' | 'reels' | 'stories' | 'avatars' | 'music' | 'covers' | 'stickers' | 'products' | 'chat' | 'instants' | 'comments' | 'videos' | 'daily' | 'songs' | 'team' | 'ads';
 
 const BLOCKED_EXTENSIONS = ['heic', 'heif', 'wma'];
 
@@ -6222,3 +6223,64 @@ export async function fetchPollReports(): Promise<PollReport[]> {
   return Array.isArray(res?.reports) ? res.reports.map((r) => ({ ...r, poll: mapPoll(r.poll) })) : [];
 }
 export async function dismissPollReports(pollId: string): Promise<void> { await rpc('poll_admin_dismiss', { p_poll: pollId }); }
+
+// ----------------------------------------------------------------------------- NOOB Ads
+// A business account sends a request (free): the picture or video is uploaded first, then the request itself. The NOOB admin approves it, chooses the pages and the ad is shown
+// at the top of those pages. See supabase/migrations/20261022000006_ads.sql.
+const mapAdMedia = <T extends { mediaUrl: string }>(a: T): T => ({ ...a, mediaUrl: resolveMedia(a.mediaUrl) });
+
+export async function submitAdApplication(input: { file: File; where: AdWhere; durationDays: number; title: string; link: string; onProgress?: UploadOptions['onProgress'] }): Promise<{ success: boolean; error?: string }> {
+  try {
+    const mime = (input.file.type || '').toLowerCase();
+    if (!/^(image|video)\//.test(mime)) return { success: false, error: 'An ad is a picture or a video.' };
+    const up = await uploadMediaFile(input.file, 'ads', { onProgress: input.onProgress });
+    await rpc('submit_ad_application', { p: {
+      mediaUrl: up.objectKey, mediaType: mime.startsWith('video/') ? 'video' : 'image', durationDays: input.durationDays, pages: pagesOf(input.where),
+      title: input.title.trim(), link: input.link.trim() || null
+    } });
+    return { success: true };
+  } catch (err) {
+    return failWith(err, 'Could not send your request. Please try again.');
+  }
+}
+
+export async function fetchMyAdApplications(): Promise<AdApplication[]> {
+  try { return ((await rpc<AdApplication[]>('my_ad_applications')) || []).map(mapAdMedia); } catch { return []; }
+}
+
+export type AdminAdFilter = 'pending' | 'live' | 'ended' | 'rejected' | 'all';
+export async function adminFetchAdApplications(filter: AdminAdFilter = 'pending'): Promise<{ ok: true; pendingCount: number; rows: AdminAdRow[] } | { ok: false; error: string }> {
+  try {
+    const res = await rpc<{ pendingCount: number; rows: AdminAdRow[] }>('admin_ad_applications', { p_status: filter === 'all' ? null : filter });
+    return { ok: true, pendingCount: Number(res?.pendingCount || 0), rows: (res?.rows || []).map((r) => ({ ...mapAdMedia(r), avatar: resolveMedia(r.avatar) })) };
+  } catch (err) {
+    return { ok: false, error: errorText(err, 'Could not load the ad requests.') };
+  }
+}
+
+/** approve (with the pages and the days), reject (with a note), stop a running ad, or change the pages of a running ad */
+export async function adminReviewAd(id: string, action: 'approve' | 'reject' | 'stop' | 'pages', opts: { pages?: AdPage[]; days?: number; note?: string } = {}): Promise<{ success: boolean; error?: string; ad?: AdminAdRow }> {
+  try {
+    const res = await rpc<{ success: boolean; ad: AdminAdRow }>('admin_review_ad', { p_id: id, p_action: action, p_pages: opts.pages ?? null, p_days: opts.days ?? null, p_note: opts.note ?? null });
+    return { success: true, ad: res?.ad ? { ...mapAdMedia(res.ad), avatar: resolveMedia(res.ad.avatar) } : undefined };
+  } catch (err) {
+    return failWith(err, 'Could not save that.');
+  }
+}
+
+// The ads running on a page. Asked once and kept for a few minutes, so opening Home, Feed or Reels again does not ask the server again.
+const adCache = new Map<string, { at: number; ads: ActiveAd[] }>();
+const AD_CACHE_MS = 5 * 60 * 1000;
+export function resetAdCache(): void { adCache.clear(); }
+export async function fetchActiveAds(page: AdPage): Promise<ActiveAd[]> {
+  const hit = adCache.get(page);
+  if (hit && Date.now() - hit.at < AD_CACHE_MS) return hit.ads;
+  try {
+    if (!(await currentSession())) return [];
+    const ads = ((await rpc<ActiveAd[]>('active_ads', { p_page: page })) || []).map((a) => ({ ...mapAdMedia(a), advertiser: { ...a.advertiser, avatar: resolveMedia(a.advertiser?.avatar) } }));
+    adCache.set(page, { at: Date.now(), ads });
+    return ads;
+  } catch {
+    return hit?.ads || [];
+  }
+}

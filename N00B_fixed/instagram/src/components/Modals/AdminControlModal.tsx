@@ -66,7 +66,7 @@ import {
   UtensilsCrossed,
   Lightbulb,
   BellRing,
-  BellOff, GraduationCap, BarChart3 } from 'lucide-react';
+  BellOff, GraduationCap, BarChart3, Megaphone } from 'lucide-react';
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
@@ -82,6 +82,8 @@ import { AdminUserTransactions } from './AdminUserTransactions';
 import { phoneFacts } from '../../utils/phoneLookup';
 import { AdminDailyNoobPanel } from './AdminDailyNoobPanel';
 import { AdminStoragePanel } from './AdminStoragePanel';
+import { AdminAdsPanel } from './AdminAdsPanel';
+import { adminFetchAdApplications } from '../../services/api';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
@@ -114,7 +116,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'settings';
+type AdminTab = 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -186,6 +188,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
     if (!main) return;
     let alive = true;
     void fetchTeamApplications().then((r) => { if (alive && r.success && r.state) setTeamPendingCount(r.state.applications.filter((a) => a.status === 'pending').length); });
+    return () => { alive = false; };
+  }, [main]);
+  // how many ad requests wait (the number on the Ads tab)
+  const [adsPending, setAdsPending] = useState(0);
+  useEffect(() => {
+    if (!main) return;
+    let alive = true;
+    void adminFetchAdApplications('pending').then((r) => { if (alive && r.ok) setAdsPending(r.pendingCount); });
     return () => { alive = false; };
   }, [main]);
   const [activeTab, setActiveTab] = useState<AdminTab>(canOpenAccounts ? 'users' : canHandleReports ? 'reports' : canNotify ? 'notify' : canManageStore ? 'orders' : 'users');
@@ -1405,6 +1415,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               }`}
             >
               <HardDrive className="w-4 h-4" /> Storage
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('ads')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'ads'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+              data-testid="admin-tab-ads"
+            >
+              <Megaphone className="w-4 h-4" /> Ads{adsPending > 0 ? ` (${adsPending})` : ''}
             </button>
           )}
 
@@ -2691,6 +2715,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminDailyNoobPanel />
           ) : activeTab === 'storage' && main ? (
             <AdminStoragePanel />
+          ) : activeTab === 'ads' && main ? (
+            <AdminAdsPanel onPendingChange={setAdsPending} />
           ) : activeTab === 'settings' && main ? (
             /* Platform-wide toggles */
             <div className="space-y-3">

@@ -43,7 +43,7 @@ check(/flex-1 justify-center whitespace-nowrap px-3 py-1\.5/.test(read('src/comp
 check(/onClick=\{this\.handleReload\}/.test(boundary) && /hardReload\(\)/.test(boundary), 'Reload still reloads (and fetches the newest version: utils/reloadApp.ts)');
 
 section('3. The admin pages');
-check(/'study' \| 'analytics' \| 'daily' \| 'storage' \| 'settings'/.test(admin), 'two new tabs in the admin panel');
+check(/'study' \| 'analytics' \| 'daily' \| 'storage' \| 'ads' \| 'settings'/.test(admin), 'the Daily NOOB, Storage and Ads tabs in the admin panel');
 check(/setActiveTab\('daily'\)[\s\S]{0,500}<Trophy className="w-4 h-4" \/> Daily NOOB/.test(admin) && /setActiveTab\('storage'\)[\s\S]{0,500}<HardDrive className="w-4 h-4" \/> Storage/.test(admin), 'Daily NOOB and Storage tabs, for the main admin');
 check(/activeTab === 'daily' && main \? \(\s*<AdminDailyNoobPanel \/>/.test(admin) && /activeTab === 'storage' && main \? \(\s*<AdminStoragePanel \/>/.test(admin), 'each opens its own page');
 check(!/Daily NOOB — assign winners|Daily NOOB task|dailyWinners|dailyNoobDate/.test(admin), 'the old Daily NOOB blocks are gone from the Platform tab (they live on the new page now)');

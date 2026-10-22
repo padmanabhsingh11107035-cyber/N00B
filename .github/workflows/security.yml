@@ -32,6 +32,8 @@ jobs:
       - run: node --liftoff-only scripts/supabase/test-privilege-escalation-db.mjs
       # other people cannot read when somebody's Pro renews or what they bought; the Live Lounge tables can be read by the people who belong in them
       - run: node --liftoff-only scripts/supabase/test-profile-privacy-lounge-db.mjs
+      # ads: only business accounts apply, only the admin approves and chooses the pages, nobody reads or writes the table directly
+      - run: node --liftoff-only scripts/supabase/test-ads-db.mjs
       - run: node scripts/supabase/test-security-config.mjs
 
   packages:

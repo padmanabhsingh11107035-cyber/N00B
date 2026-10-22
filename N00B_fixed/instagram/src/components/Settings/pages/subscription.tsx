@@ -5,6 +5,7 @@ import type { PageProps } from '../types';
 import { fetchSubscriptionHistory, type SubscriptionHistory } from '../../../services/api';
 import { formatExactDateTime } from '../../../utils/formatTime';
 import { describeHistoryRow, planLabel, statusOf } from '../../../utils/subscriptionView';
+import { AdsEntryCard } from '../../Ads/AdsEntryCard';
 
 // "Subscription history": the plan you are on, when it was bought and when it ends, what renewing costs and whether your wallet has enough, and every NOOB Pro plan you ever had.
 const nf = (n: number | null | undefined) => (n === null || n === undefined ? '0' : Number(n).toLocaleString('en-IN'));
@@ -23,6 +24,7 @@ export const SubscriptionHistoryPage: React.FC<PageProps> = ({ ctx, back }) => {
   const st = c ? statusOf(c) : null;
   return (
     <PageShell title="Subscription history" subtitle="Your NOOB Pro plans" onBack={back}>
+      <AdsEntryCard currentUser={ctx.currentUser} />
       {error && <p className="mx-4 my-3 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-xl p-3" role="alert">{error}</p>}
       {!data && !error && <div className="py-12 text-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-400 mx-auto" /></div>}
       {data && c && st && (

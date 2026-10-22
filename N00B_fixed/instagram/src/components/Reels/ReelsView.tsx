@@ -58,6 +58,7 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
 import { safeExternalUrl } from '../../utils/safeUrl';
+import { AdBanner } from '../Ads/AdBanner';
 import { ReelFriendsStrip } from './ReelFriendsStrip';
 import { contentUrl } from '../../utils/routes';
 import confetti from 'canvas-confetti';
@@ -1324,6 +1325,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
             {nextReel ? renderCard(nextReel, false) : null}
           </div>
         </div>
+        {/* An ad at the top of Reels (NOOB Ads), when one is running here; it floats over the top of the reel and never takes a swipe */}
+        <div className="absolute top-2 inset-x-3 z-30 pointer-events-none"><div className="pointer-events-auto"><AdBanner page="reels" compact /></div></div>
       </div>
 
       {/* 4. Sliding Comments Sheet Overlay */}

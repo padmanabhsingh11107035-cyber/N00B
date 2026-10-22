@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AdBanner } from '../Ads/AdBanner';
 import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon } from 'lucide-react';
 import { User, LongVideo, LongVideoPlaylist } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
@@ -482,6 +483,9 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
           ))}
         </div>
       </header>
+
+      {/* An ad at the top of the Feed (NOOB Ads), when one is running here */}
+      <AdBanner page="feed" className="mx-3.5 mt-3 w-[calc(100%-1.75rem)]" />
 
       <div className="w-full max-w-2xl px-3 py-3" onClick={() => setSearchOpen(false)}>
         {query && !loading && (

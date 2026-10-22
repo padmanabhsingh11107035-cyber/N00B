@@ -65,6 +65,7 @@ import { JoinUsModal } from '../Explore/JoinUsModal';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { MenuBanner } from './MenuBanner';
+import { AdBanner } from '../Ads/AdBanner';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
@@ -780,6 +781,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* An ad at the top of Home (NOOB Ads), when one is running here */}
+      <AdBanner page="home" className="mx-3 mt-3" />
 
       {/* 2. Stories Tray */}
       <StoryTray

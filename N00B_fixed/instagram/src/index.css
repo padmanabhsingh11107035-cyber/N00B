@@ -780,7 +780,7 @@ body.light .st-root:not([data-st-theme])::before, .st-root[data-st-theme='light'
 .st-root button { font-family: inherit; }
 .st-root h1, .st-root h2, .st-root h3, .st-root p { margin: 0; }
 .st-root h1, .st-root h2, .st-root h3, .st-root h4 { font-family: inherit; font-style: normal; }
-.st-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.st-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
 .st-wrap { width: 100%; max-width: 640px; margin: 0 auto; padding: 14px 16px 28px; }
 .st-wrap-wide { max-width: 980px; }
 
@@ -1077,7 +1077,7 @@ button[class*="from-noob"], a[class*="from-noob"] {
 /* A page or window that covers the whole screen is a page of its own: the page behind it never scrolls (utils/overlayScrollLock.ts sets data-overlay-open while one is
    showing), and a front page that is pulled past its top or bottom does not hand the pull on to the page behind it (the iPhone did, so the page behind moved). */
 html[data-overlay-open], html[data-overlay-open] body { overflow: hidden !important; overscroll-behavior: none; }
-.fixed.inset-0, .fixed.inset-0 .overflow-y-auto, .fixed.inset-0 .overflow-auto, .fixed.inset-0.overflow-y-auto { overscroll-behavior: contain; }
+.fixed.inset-0, .fixed.inset-0 .overflow-y-auto, .fixed.inset-0 .overflow-auto, .fixed.inset-0.overflow-y-auto { overscroll-behavior: none; }
 
 /* The "Rotating Story": the picture of a story turns while it is watched (utils/rotatingStory.ts). Still for people who ask for less motion. */
 @keyframes noob-rotate-spin { from { transform: scale(0.72) rotate(0deg); } to { transform: scale(0.72) rotate(360deg); } }
@@ -1091,7 +1091,19 @@ html[data-overlay-open], html[data-overlay-open] body { overflow: hidden !import
 /* Only the Home page can be refreshed. Everywhere else the browser's own pull-down refresh (Android Chrome) is switched off too; the app itself has no pull-down refresh there
    (App.tsx sets data-refresh on the page: "on" only on Home). */
 html[data-refresh="off"],
-html[data-refresh="off"] body { overscroll-behavior-y: contain; }
+html[data-refresh="off"] body { overscroll-behavior: none; }
+html[data-refresh="on"],
+html[data-refresh="on"] body { overscroll-behavior-x: none; }
+
+/* No rubber band anywhere: a page that is dragged past its top or bottom used to follow the finger (blank space opened above the Chat page) and spring back when let go. "contain" only
+   stops the pull from reaching the page behind, the spring stays; "none" removes the spring too. The same for every list and panel inside a page (a vertical one springs only
+   vertically, a sideways one only sideways). Un-layered on purpose: it also beats the Tailwind "overscroll-contain" on the panels. Home keeps its own pull-down refresh, which does not
+   need the spring. */
+.overflow-y-auto, .overflow-y-scroll, .st-scroll, .st-sheet { overscroll-behavior-y: none; }
+.overflow-x-auto, .overflow-x-scroll, .st-hscroll { overscroll-behavior-x: none; }
+.overflow-auto, .overflow-scroll { overscroll-behavior: none; }
+[style*="overflow-y: auto"], [style*="overflow-y: scroll"] { overscroll-behavior-y: none; }
+[style*="overflow-x: auto"], [style*="overflow-x: scroll"] { overscroll-behavior-x: none; }
 
 /* NOOB Studio: on a phone the stage, the timeline, the tool panel and the tool bar are stacked; on a computer the tool bar, the panel, the stage and the properties sit in a row
    and the timeline runs along the whole bottom, like a professional editor. */

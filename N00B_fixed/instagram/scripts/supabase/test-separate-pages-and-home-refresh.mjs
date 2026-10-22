@@ -32,7 +32,7 @@ check(/Fun pages|FunHub|PageLayerSlot layerId=\{0\} hidden=\{pageLayers\.layers\
 
 section('2. Only the Home page can be refreshed');
 check(/const refreshableHere = activeTab === 'feed' && pageLayers\.layers\.length === 0 && !fullPageOpen;/.test(app) && /setAttribute\('data-refresh', refreshableHere \? 'on' : 'off'\)/.test(app), 'the app knows whether this is the Home page (and nothing is open over it)');
-check(/html\[data-refresh="off"\],\s*html\[data-refresh="off"\] body \{ overscroll-behavior-y: contain; \}/.test(css), 'everywhere else the browser\'s own pull-down refresh (Android Chrome) is switched off');
+check(/html\[data-refresh="off"\],\s*html\[data-refresh="off"\] body \{ overscroll-behavior: none; \}/.test(css), 'everywhere else the browser\'s own pull-down refresh (Android Chrome) is switched off');
 check(/handleRefresh\(\)/.test(feed) && /Pull down to refresh/.test(feed), 'the Home page keeps its pull-down refresh');
 check(!/handleTouchStart|handleTouchMove|handleTouchEnd|pullDistance|Pull down to|handleShuffleAndRefresh|startsInsideOverlay/.test(explore), 'Explore no longer has a pull-down refresh / shuffle');
 check(!/RefreshCw|refreshNow|aria-label="Refresh messages"|setInterval/.test(anon), 'Anonymous Messages has no refresh button and no reload timer');

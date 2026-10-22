@@ -204,7 +204,7 @@ const Draw: React.FC<PageProps> = ({ params }) => {
   return (
     <>
       <Head title={title || 'New sketch'} subtitle={status} onBack={() => void leave()} />
-      <div className="st-scroll" style={{ overscrollBehavior: 'contain' }}>
+      <div className="st-scroll" style={{ overscrollBehavior: 'none' }}>
         <div className="st-wrap st-wrap-wide" style={{ display: 'grid', gap: 10 }}>
           {saveError && <ErrorBox text={saveError} onRetry={() => { dirty.current = true; void flush(); }} />}
           {full.state !== 'ok' && <div className="st-notice st-notice-warn" role="status"><p className="st-small">{full.state === 'full' ? 'This sketch is full. Start a new sketch, or undo or clear some lines.' : 'This sketch is almost full. You may want to start a new one soon.'}</p></div>}

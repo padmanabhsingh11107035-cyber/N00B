@@ -66,7 +66,7 @@ check(!O.coversScreen({ width: 390, height: 844 }, { ...live, pointerEvents: 'no
 check(!O.coversScreen({ width: 390, height: 844 }, { ...live, display: 'none' }, vp) && !O.coversScreen({ width: 390, height: 844 }, { ...live, visibility: 'hidden' }, vp) && !O.coversScreen({ width: 390, height: 844 }, { ...live, opacity: '0' }, vp), 'a hidden layer does not (so a page that was switched away from can never leave the screen locked)');
 const css = read('src/index.css');
 check(/html\[data-overlay-open\], html\[data-overlay-open\] body \{ overflow: hidden !important; overscroll-behavior: none; \}/.test(css), 'while a covering layer shows, the page behind has no scrolling');
-check(/\.fixed\.inset-0, \.fixed\.inset-0 \.overflow-y-auto, \.fixed\.inset-0 \.overflow-auto, \.fixed\.inset-0\.overflow-y-auto \{ overscroll-behavior: contain; \}/.test(css), 'and a front page pulled past its end does not hand the pull on to the page behind (the iPhone did)');
+check(/\.fixed\.inset-0, \.fixed\.inset-0 \.overflow-y-auto, \.fixed\.inset-0 \.overflow-auto, \.fixed\.inset-0\.overflow-y-auto \{ overscroll-behavior: none; \}/.test(css), 'and a front page pulled past its end does not hand the pull on to the page behind (the iPhone did)');
 const lock = read('src/utils/overlayScrollLock.ts');
 check(/MIN_GAP_MS = 100/.test(lock) && /MutationObserver/.test(lock) && /setInterval\(schedule, 3000\)/.test(lock) && /removeAttribute\(OVERLAY_ATTR\)/.test(lock), 'it looks at most ten times a second, notices every change, and puts right anything it missed within seconds');
 check(/installOverlayScrollLock\(\);/.test(read('src/main.tsx')), 'it is started when the app starts');

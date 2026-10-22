@@ -11,6 +11,12 @@ import React, { createContext, useCallback, useContext, useEffect, useLayoutEffe
 
 export interface PageLayer<T> { id: number; data: T }
 
+// Window events: the person went back from the LAST layer to the page underneath (the Back button, the phone's back), and: every layer was closed at once (a tab of the bottom bar,
+// the Home tab pressed again). The three-line menu on Home listens, to drop the person back in the menu after a Fun page (utils/menuReturn.ts).
+export const LAYERS_BACK_EVENT = 'noob:layers-back-to-page';
+export const LAYERS_CLEARED_EVENT = 'noob:layers-cleared';
+const announce = (name: string) => { try { if (typeof window !== 'undefined') window.dispatchEvent(new Event(name)); } catch { /* nobody is listening: nothing to tell */ } };
+
 const PageHiddenContext = createContext(false);
 /** True while this page sits underneath another one (a profile that was opened over it): pages that play media by themselves should stay quiet. */
 export const usePageHidden = (): boolean => useContext(PageHiddenContext);
@@ -100,6 +106,7 @@ export function usePageLayers<T extends { id: string }>(page: string): PageLayer
   const historyDepth = useRef(0);   // browser-history entries added for the open layers
   const ignorePops = useRef(0);     // pops that we caused ourselves (closing all layers at once)
   const backPending = useRef(false);
+  const viaBack = useRef(false);   // the layer that is closing was closed by going back (not by closing all of them)
 
   const register = useCallback((layerId: number, el: HTMLElement | null) => {
     if (el) roots.current.set(layerId, el);
@@ -129,6 +136,7 @@ export function usePageLayers<T extends { id: string }>(page: string): PageLayer
 
   const popOne = useCallback(() => {
     restoreNext.current = true;
+    viaBack.current = true;
     backPending.current = false;
     setLayers((prev) => prev.slice(0, -1));
   }, []);
@@ -153,7 +161,9 @@ export function usePageLayers<T extends { id: string }>(page: string): PageLayer
   const clear = useCallback((opts?: { restore?: boolean }) => {
     if (layersRef.current.length === 0) return;
     restoreNext.current = !!opts?.restore;
+    viaBack.current = false;
     setLayers([]);
+    announce(LAYERS_CLEARED_EVENT);
     let n = historyDepth.current;
     historyDepth.current = 0;
     if (backPending.current) {
@@ -209,6 +219,8 @@ export function usePageLayers<T extends { id: string }>(page: string): PageLayer
       snaps.current.length = count;
       mediaPaused.current.length = count;
       restoreNext.current = false;
+      if (count === 0 && viaBack.current) announce(LAYERS_BACK_EVENT);
+      viaBack.current = false;
     }
   }, [layers.length]);
 

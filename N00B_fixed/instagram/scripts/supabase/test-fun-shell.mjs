@@ -25,8 +25,8 @@ check(funShareUrl({ feature: 'ask', target: 'ann_secret' }, 'https://noobsocials
 check(isUsername('a.b_c9') && !isUsername('') && !isUsername('x'.repeat(31)) && isPollId(pid) && !isPollId('123'), 'username and poll id checks');
 
 section('2. The three-line menu');
-check(/FUN_FEATURES\.map\(\(f\) => \{\s*const Icon = FUN_MENU_ICONS\[f\.id\];/.test(feed) && /aria-label=\{f\.label\}/.test(feed), 'the menu lists the four pages with their names and icons');
-check(/onClick=\{\(\) => \{ setShowNoobMenu\(false\); onOpenFunPage\(\{ feature: f\.id \}\); \}\}/.test(feed) && /onPointerDown=\{preloadFunHub\}/.test(feed), 'tapping one closes the menu and opens that page (its code starts loading on the touch)');
+check(/FUN_FEATURES\.map\(\(f\) => \{\s*const Icon = FUN_MENU_ICONS\[f\.id\];/.test(feed) && /ariaLabel=\{f\.label\}/.test(feed), 'the menu lists the four pages with their names and icons');
+check(/onClick=\{\(\) => \{ markMenuEntry\('fun-' \+ f\.id\); setShowNoobMenu\(false\); onOpenFunPage\(\{ feature: f\.id \}\); \}\}/.test(feed) && /onPointerDown=\{preloadFunHub\}/.test(feed), 'tapping one closes the menu and opens that page (its code starts loading on the touch)');
 check(/Fun &amp; community/.test(feed) && /\{onOpenFunPage && \(/.test(feed), 'they sit under their own heading, only where the app can open them');
 check(/Anonymous Messages/.test(feed) && /Our Team/.test(feed) && /Customer Support/.test(feed) && /NOOB Draw/.test(feed), 'every earlier menu entry is still there');
 check(/onOpenFunPage=\{openFun\}/.test(app), 'Home is given the way to open them');

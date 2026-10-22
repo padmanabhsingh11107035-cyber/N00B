@@ -26,7 +26,7 @@ check(/\[data-fit="1"\] \{ --tx: calc/.test(css) && /\[data-fit="2"\] \{ --tx: c
 check(/header, nav, \[data-fit\]/.test(fit) && /startTextFit\(\);/.test(read('src/main.tsx')), 'every top bar, bottom bar and anything marked data-fit is watched from the start');
 check(/hidden\|auto\|scroll\|clip/.test(fit), 'rows that scroll or cut their text with "…" on purpose are left alone');
 const feed = read('src/components/Feed/FeedView.tsx');
-check((feed.match(/max-\[560px\]:hidden/g) || []).length === 2 && /Join our SparkX team<\/span>/.test(feed) && /Join the NOOB team<\/span>/.test(feed), 'on a phone the home bar keeps room for the Following switch: the two small icons live in the menu');
+check((feed.match(/max-\[560px\]:hidden/g) || []).length === 2 && /title="Join our SparkX team"/.test(feed) && /title="Join the NOOB team"/.test(feed), 'on a phone the home bar keeps room for the Following switch: the two small icons live in the menu');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

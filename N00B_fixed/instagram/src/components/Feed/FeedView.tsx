@@ -32,13 +32,14 @@ import {
   Music
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
-import { openStudio } from '../Studio/studioStore';
+import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
 import { Wand2 } from 'lucide-react';
 import { VenetianMask } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
 import { useFullPage } from '../../utils/fullPage';
-import { captureScroll, restoreScroll, type ScrollSnapshot } from '../../utils/pageLayers';
+import { captureScroll, restoreScroll, usePageHidden, LAYERS_BACK_EVENT, LAYERS_CLEARED_EVENT, type ScrollSnapshot } from '../../utils/pageLayers';
+import { markMenuEntry, currentMenuEntry, scrollToMenuEntry } from '../../utils/menuReturn';
 import { useNoobDrawOpen } from '../Draw/drawStore';
 import { useStudyNav } from '../Study/studyStore';
 import { Zap, MessageCircleQuestion, Smile, BarChart3 } from 'lucide-react';
@@ -80,6 +81,7 @@ const AnonymousMessagesPage = React.lazy(() => loadAnonymousPage().then((m) => (
 const preloadOurTeam = () => { void import('../Team/OurTeamPage'); };
 const preloadFunHub = () => { void import('../Fun/FunHub'); };
 // The four Fun pages in the menu, with the icon each one wears there.
+const FUN_MENU_TONES: Record<FunFeature, 'pick' | 'ask' | 'mood' | 'polls'> = { 'this-or-that': 'pick', ask: 'ask', mood: 'mood', polls: 'polls' };
 const FUN_MENU_ICONS: Record<FunFeature, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>> = { 'this-or-that': Zap, ask: MessageCircleQuestion, mood: Smile, polls: BarChart3 };
 const DailyNoobView = React.lazy(() => import('../Daily/DailyNoobView').then((m) => ({ default: m.DailyNoobView })));
 const NoobRoomsLobbyView = React.lazy(() => import('../NoobRooms/NoobRoomsLobbyView').then((m) => ({ default: m.NoobRoomsLobbyView })));
@@ -299,6 +301,36 @@ export const FeedView: React.FC<FeedViewProps> = ({
     if (menuPageWasOpen.current && !menuPageOpen && homeSnapshot.current) { restoreScroll(homeSnapshot.current); homeSnapshot.current = null; }
     menuPageWasOpen.current = menuPageOpen;
   }, [menuPageOpen]);
+
+  // Back to the three-line menu: a page that was opened from the menu drops the person back in the menu, at the button they pressed, when it is closed (utils/menuReturn.ts).
+  // The pages of this file, Draw, Study and Studio are seen closing right here; the Fun pages are layers of the app (utils/pageLayers.tsx), which says so with an event when the
+  // person goes back from the last layer. Nothing happens when Home is not on screen (another tab was opened meanwhile) or when the page was not opened from the menu.
+  const pageHidden = usePageHidden();
+  const pageHiddenRef = useRef(pageHidden);
+  pageHiddenRef.current = pageHidden;
+  const studioOpen = useStudioState().open;
+  const entryPageOpen = !!(menuPageOpen || showJoinUsModal || showSparkXModal || studioOpen);
+  const entryPageWasOpen = useRef(false);
+  const backToMenu = () => {
+    const id = currentMenuEntry();
+    if (!id) return;
+    markMenuEntry(null);
+    setShowNoobMenu(true);
+    scrollToMenuEntry(id);
+  };
+  useLayoutEffect(() => {
+    if (entryPageWasOpen.current && !entryPageOpen) { if (pageHiddenRef.current) markMenuEntry(null); else backToMenu(); }
+    entryPageWasOpen.current = entryPageOpen;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryPageOpen]);
+  useEffect(() => {
+    const onBack = () => { const id = currentMenuEntry(); if (id && id.startsWith('fun-') && !pageHiddenRef.current) backToMenu(); };
+    const onCleared = () => { const id = currentMenuEntry(); if (id && id.startsWith('fun-')) markMenuEntry(null); };
+    window.addEventListener(LAYERS_BACK_EVENT, onBack);
+    window.addEventListener(LAYERS_CLEARED_EVENT, onCleared);
+    return () => { window.removeEventListener(LAYERS_BACK_EVENT, onBack); window.removeEventListener(LAYERS_CLEARED_EVENT, onCleared); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -552,7 +584,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         {/* Brand Wordmark + menu — the hamburger opens NOOB's extra features (Daily NOOB, Rooms) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={() => setShowNoobMenu(true)}
+            onClick={() => { markMenuEntry(null); setShowNoobMenu(true); }}
             className="p-1 -ml-1 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer"
             title="More from NOOB"
           >
@@ -860,24 +892,13 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {onOpenTab && (
                 <div className="pb-1 xl:hidden" role="group" aria-label="More pages" data-testid="noob-menu-more-pages">
                   <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More pages</p>
-                  <button
-                    onClick={() => { setShowNoobMenu(false); onOpenTab('videos'); }}
-                    className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
-                    aria-label="Videos"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0">
-                      <Youtube className="w-[18px] h-[18px]" aria-hidden="true" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-black text-white block">Videos</span>
-                      <span className="text-[10px] text-zinc-300 block truncate">Long videos and live streams</span>
-                    </div>
-                  </button>
+                  <MenuBanner tone="videos" icon={<Youtube className="w-[18px] h-[18px]" aria-hidden="true" />} title="Videos" blurb="Long videos and live streams" ariaLabel="Videos" onClick={() => { setShowNoobMenu(false); onOpenTab('videos'); }} />
                 </div>
               )}
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
               <button
-                onClick={() => { setShowNoobMenu(false); openNoobDraw(); }}
+                onClick={() => { markMenuEntry('draw'); setShowNoobMenu(false); openNoobDraw(); }}
+                data-menu-entry="draw"
                 onPointerDown={preloadNoobDraw}
                 className="force-dark draw-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#9e9cff]/40 active:scale-[0.99] transition-transform"
                 style={{ background: 'linear-gradient(120deg, rgba(158,156,255,0.30), rgba(236,72,153,0.22) 60%, rgba(251,191,36,0.2))' }}
@@ -892,7 +913,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
               </button>
               {/* NOOB Studio: the photo and video editor (everything is edited on the device, nothing is uploaded) */}
               <button
-                onClick={() => { setShowNoobMenu(false); openStudio(); }}
+                onClick={() => { markMenuEntry('studio'); setShowNoobMenu(false); openStudio(); }}
+                data-menu-entry="studio"
                 onPointerDown={preloadStudio}
                 data-testid="menu-studio"
                 className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-fuchsia-400/40 active:scale-[0.99] transition-transform"
@@ -909,7 +931,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {/* NOOB STUDY: the student's personal learning space (for everyone once it is switched on; until then for the main administrator) */}
               {(isMainAdmin(currentUser) || studyStatus?.mode === 'on' || studyStatus?.mode === 'coming_soon') && (
                 <button
-                  onClick={() => { setShowNoobMenu(false); openStudy('home'); }}
+                  onClick={() => { markMenuEntry('study'); setShowNoobMenu(false); openStudy('home'); }}
+                  data-menu-entry="study"
                   onPointerDown={preloadNoobStudy}
                   className="force-dark study-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#e38b69]/40 active:scale-[0.99] transition-transform"
                   style={{ background: 'linear-gradient(120deg, rgba(227,139,105,0.26), rgba(185,168,242,0.2) 60%, rgba(127,209,172,0.16))' }}
@@ -925,7 +948,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
               )}
               {/* Our Team: the people behind NOOB */}
               <button
-                onClick={() => { setShowNoobMenu(false); setShowOurTeam(true); }}
+                onClick={() => { markMenuEntry('team'); setShowNoobMenu(false); setShowOurTeam(true); }}
+                data-menu-entry="team"
                 onPointerDown={preloadOurTeam}
                 className="force-dark team-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-amber-300/35 active:scale-[0.99] transition-transform"
                 style={{ background: 'linear-gradient(120deg, rgba(251,191,36,0.24), rgba(244,114,182,0.18) 62%, rgba(167,139,250,0.2))' }}
@@ -940,46 +964,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
               </button>
               {/* The two "join us" forms; on a wide screen they are also icons in the top bar */}
               {joinTeamOpen && (
-                <button
-                  onClick={() => { setShowNoobMenu(false); setShowJoinUsModal(true); }}
-                  className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-violet-500/20 border border-violet-400/30 text-violet-300 flex items-center justify-center shrink-0">
-                    <Handshake className="w-[18px] h-[18px]" aria-hidden="true" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-black text-white block">Join the NOOB team</span>
-                    <span className="text-[10px] text-zinc-300 block truncate">Apply to help build NOOB</span>
-                  </div>
-                </button>
+                <MenuBanner tone="join" entryId="join" icon={<Handshake className="w-[18px] h-[18px]" aria-hidden="true" />} title="Join the NOOB team" blurb="Apply to help build NOOB" onClick={() => { markMenuEntry('join'); setShowNoobMenu(false); setShowJoinUsModal(true); }} />
               )}
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowSparkXModal(true); }}
-                className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
-              >
-                <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-400/30 text-orange-300 flex items-center justify-center shrink-0">
-                  <Rocket className="w-[18px] h-[18px]" aria-hidden="true" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-black text-white block">Join our SparkX team</span>
-                  <span className="text-[10px] text-zinc-300 block truncate">IIT Bombay Techfest</span>
-                </div>
-              </button>
+              <MenuBanner tone="spark" entryId="spark" icon={<Rocket className="w-[18px] h-[18px]" aria-hidden="true" />} title="Join our SparkX team" blurb="IIT Bombay Techfest" onClick={() => { markMenuEntry('spark'); setShowNoobMenu(false); setShowSparkXModal(true); }} />
               {/* Anonymous Messages: a public feed of messages with no author shown */}
-              <button
-                onClick={() => { setShowNoobMenu(false); openAnonymous(); }}
-                onPointerDown={() => { void loadAnonymousPage(); }}
-                className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all"
-                aria-label="Anonymous Messages"
-              >
-                <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0">
-                  <VenetianMask className="w-[18px] h-[18px]" aria-hidden="true" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-black text-white block">Anonymous Messages</span>
-                  <span className="text-[10px] text-zinc-300 block truncate">Your words, without your name</span>
-                </div>
-              </button>
+              <MenuBanner tone="mask" entryId="anonymous" icon={<VenetianMask className="w-[18px] h-[18px]" aria-hidden="true" />} title="Anonymous Messages" blurb="Your words, without your name" ariaLabel="Anonymous Messages" onPointerDown={() => { void loadAnonymousPage(); }} onClick={() => { markMenuEntry('anonymous'); setShowNoobMenu(false); openAnonymous(); }} />
               {/* The Fun pages: This or That, Ask Me Anything, Mood Status, Public Polls */}
               {onOpenFunPage && (
                 <div className="pt-2 pb-1" role="group" aria-label="Fun and community">
@@ -987,41 +976,40 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   {FUN_FEATURES.map((f) => {
                     const Icon = FUN_MENU_ICONS[f.id];
                     return (
-                      <button
+                      <MenuBanner
                         key={f.id}
-                        onClick={() => { setShowNoobMenu(false); onOpenFunPage({ feature: f.id }); }}
+                        tone={FUN_MENU_TONES[f.id]}
+                        entryId={'fun-' + f.id}
+                        icon={<Icon className="w-[18px] h-[18px]" aria-hidden={true} />}
+                        title={f.label}
+                        blurb={f.blurb}
+                        ariaLabel={f.label}
                         onPointerDown={preloadFunHub}
-                        className="w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer bg-zinc-900 border border-zinc-700 hover:border-zinc-50 active:scale-[0.99] transition-all group"
-                        aria-label={f.label}
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-noob text-black flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <Icon className="w-[18px] h-[18px]" aria-hidden={true} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-black text-white block">{f.label}</span>
-                          <span className="text-[10px] text-zinc-300 block truncate">{f.blurb}</span>
-                        </div>
-                      </button>
+                        onClick={() => { markMenuEntry('fun-' + f.id); setShowNoobMenu(false); onOpenFunPage({ feature: f.id }); }}
+                      />
                     );
                   })}
                 </div>
               )}
-              {/* The rest of the menu, dressed like the banners above (see MenuBanner.tsx) */}
-              <MenuBanner tone="daily" icon={<Flame className="w-[18px] h-[18px]" />} title="Daily NOOB" blurb="Today's challenge — win real points" onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }} />
-              <MenuBanner tone="rooms" icon={<Trophy className="w-[18px] h-[18px]" />} title="NOOB Rooms" blurb="Live voice rooms — join, talk, play" onClick={() => { setShowNoobMenu(false); setShowNoobRooms(true); }} />
-              <MenuBanner tone="song" icon={<Music2 className="w-[18px] h-[18px]" />} title="Guess the Song" blurb="A clip plays — pick the right title, score points" onClick={() => { setShowNoobMenu(false); setShowGuessTheSong(true); }} />
-              <MenuBanner tone="lounge" icon={<Sparkles className="w-[18px] h-[18px]" />} title={`NOOB Live Lounge${currentUser.hasLiveLounge ? ' — Unlocked' : ''}`} blurb="Private meeting rooms — screen share, whiteboard & chat" onClick={() => { setShowNoobMenu(false); setShowLiveLoungePage(true); }} />
-              <MenuBanner tone="shop" icon={<ShoppingBag className="w-[18px] h-[18px]" />} title={<span className="shop-wordmark text-base leading-none font-normal">Shop NOOB</span>} blurb="Browse products & your cart" onClick={() => { setShowNoobMenu(false); setShowStorePage(true); }} />
+              {/* The rest of the menu, dressed like the banners above (see MenuBanner.tsx), under a heading of its own */}
+              <div className="pt-2 pb-1" role="group" aria-label="More from NOOB">
+              <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More from NOOB</p>
+              <MenuBanner tone="daily" entryId="daily" icon={<Flame className="w-[18px] h-[18px]" />} title="Daily NOOB" blurb="Today's challenge — win real points" onClick={() => { markMenuEntry('daily'); setShowNoobMenu(false); setShowDailyNoob(true); }} />
+              <MenuBanner tone="rooms" entryId="rooms" icon={<Trophy className="w-[18px] h-[18px]" />} title="NOOB Rooms" blurb="Live voice rooms — join, talk, play" onClick={() => { markMenuEntry('rooms'); setShowNoobMenu(false); setShowNoobRooms(true); }} />
+              <MenuBanner tone="song" entryId="song" icon={<Music2 className="w-[18px] h-[18px]" />} title="Guess the Song" blurb="A clip plays — pick the right title, score points" onClick={() => { markMenuEntry('song'); setShowNoobMenu(false); setShowGuessTheSong(true); }} />
+              <MenuBanner tone="lounge" entryId="lounge" icon={<Sparkles className="w-[18px] h-[18px]" />} title={`NOOB Live Lounge${currentUser.hasLiveLounge ? ' — Unlocked' : ''}`} blurb="Private meeting rooms — screen share, whiteboard & chat" onClick={() => { markMenuEntry('lounge'); setShowNoobMenu(false); setShowLiveLoungePage(true); }} />
+              <MenuBanner tone="shop" entryId="shop" icon={<ShoppingBag className="w-[18px] h-[18px]" />} title={<span className="shop-wordmark text-base leading-none font-normal">Shop NOOB</span>} blurb="Browse products & your cart" onClick={() => { markMenuEntry('shop'); setShowNoobMenu(false); setShowStorePage(true); }} />
               {foodStallVisible && (
                 foodStallComingSoon ? (
-                  <MenuBanner tone="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" badge="Coming Soon" />
+                  <MenuBanner tone="food" entryId="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" badge="Coming Soon" />
                 ) : (
-                  <MenuBanner tone="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" blurb="Burgers, bhel, fries, manchurian & coke" onClick={() => { setShowNoobMenu(false); setShowFoodStall(true); }} />
+                  <MenuBanner tone="food" entryId="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" blurb="Burgers, bhel, fries, manchurian & coke" onClick={() => { markMenuEntry('food'); setShowNoobMenu(false); setShowFoodStall(true); }} />
                 )
               )}
-              <MenuBanner tone="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { setShowNoobMenu(false); setShowNoobAi(true); }} />
-              <MenuBanner tone="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { setShowNoobMenu(false); setShowSupportModal(true); }} />
-              <MenuBanner tone="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { setShowNoobMenu(false); setShowSuggestionBox(true); }} />
+              <MenuBanner tone="ai" entryId="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { markMenuEntry('ai'); setShowNoobMenu(false); setShowNoobAi(true); }} />
+              <MenuBanner tone="support" entryId="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { markMenuEntry('support'); setShowNoobMenu(false); setShowSupportModal(true); }} />
+              <MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />
+              </div>
             </div>
             {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
             </div>

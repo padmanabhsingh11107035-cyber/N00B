@@ -15,8 +15,8 @@ const css = read('src/index.css');
 const sql = read('supabase/migrations/20261015000002_anonymous_messages.sql');
 
 section('1. The Home menu entry and the address');
-check(/aria-label="Anonymous Messages"/.test(feed) && /Anonymous Messages<\/span>/.test(feed) && /Your words, without your name<\/span>/.test(feed), 'the three-line menu has an "Anonymous Messages" entry');
-check(/onClick=\{\(\) => \{ setShowNoobMenu\(false\); openAnonymous\(\); \}\}/.test(feed), 'it closes the menu and opens the page');
+check(/ariaLabel="Anonymous Messages"/.test(feed) && /title="Anonymous Messages"/.test(feed) && /blurb="Your words, without your name"/.test(feed), 'the three-line menu has an "Anonymous Messages" entry');
+check(/onClick=\{\(\) => \{ markMenuEntry\('anonymous'\); setShowNoobMenu\(false\); openAnonymous\(\); \}\}/.test(feed), 'it closes the menu and opens the page (and remembers the button, to come back to it)');
 check(/React\.lazy\(\(\) => loadAnonymousPage\(\)/.test(feed) && /onPointerDown=\{\(\) => \{ void loadAnonymousPage\(\); \}\}/.test(feed), 'the page is loaded on demand (and starts loading the moment the entry is pressed)');
 check(/window\.location\.pathname\.replace\(\/\\\/\+\$\/, ''\) === '\/anonymous'/.test(feed) && /replaceState\(null, '', '\/anonymous'/.test(feed) && /replaceState\(null, '', '\/' \+ window\.location\.search\)/.test(feed), '/anonymous opens it directly, and closing goes back to the home address');
 check(/\{showAnonymous && \(\s*<ErrorBoundary showErrorDetails>\s*<React\.Suspense fallback=\{<LazyFallback \/>\}>\s*<AnonymousMessagesPage currentUser=\{currentUser\} onClose=\{closeAnonymous\} \/>/.test(feed), 'the page sits in an error boundary, so a fault there can never take Home down');

@@ -1353,7 +1353,7 @@ export default function App() {
       setNotifications((prev) =>
         prev.map((n) =>
           n.id === notifId
-            ? { ...n, actionStatus: 'accepted', text: 'You accepted their follow request.' }
+            ? { ...n, actionStatus: 'accepted', text: 'You accepted their noob request.' }
             : n
         )
       );
@@ -1375,7 +1375,7 @@ export default function App() {
       setNotifications((prev) =>
         prev.map((n) =>
           n.id === notifId
-            ? { ...n, actionStatus: 'declined', text: 'Follow request dismissed.' }
+            ? { ...n, actionStatus: 'declined', text: 'Noob request dismissed.' }
             : n
         )
       );
@@ -2126,7 +2126,7 @@ export default function App() {
                         : 'bg-gradient-to-r from-[#ff4e6a] to-[#ff758c] text-white hover:opacity-90 shadow-sm'
                     }`}
                   >
-                    {user.isFollowing ? 'Following' : user.isFollowRequested ? 'Requested' : user.accountType === 'private' ? 'Request' : 'Follow'}
+                    {user.isFollowing ? 'Noobed' : user.isFollowRequested ? 'Requested' : user.accountType === 'private' ? 'Request' : 'Noob'}
                   </button>
                 </div>
               ))

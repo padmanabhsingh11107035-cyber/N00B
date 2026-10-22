@@ -138,11 +138,11 @@ export const FindFriendsModal: React.FC<FindFriendsModalProps> = ({
                     >
                       {user.isFollowing ? (
                         <>
-                          <UserCheck className="w-3.5 h-3.5" /> Following
+                          <UserCheck className="w-3.5 h-3.5" /> Noobed
                         </>
                       ) : (
                         <>
-                          <UserPlus className="w-3.5 h-3.5" /> Follow
+                          <UserPlus className="w-3.5 h-3.5" /> Noob
                         </>
                       )}
                     </button>

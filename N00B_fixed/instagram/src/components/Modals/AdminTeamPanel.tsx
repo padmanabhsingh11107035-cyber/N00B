@@ -327,7 +327,7 @@ export const AdminTeamPanel: React.FC<Props> = ({ onPendingChange }) => {
           <label className="block space-y-1">
             <span className="text-[11px] font-bold text-zinc-300">NOOB User ID <span className="text-zinc-500 font-medium">(optional)</span></span>
             <input value={draft.username} maxLength={40} onChange={(e) => setDraft({ ...draft, username: e.target.value })} placeholder="e.g. asha_rao" className={field} autoCapitalize="none" autoCorrect="off" />
-            <span className="block text-[10px] text-zinc-500 leading-snug">Links this card to their NOOB account: the page then shows their @User ID and a "Follow on NOOB" button. People who join through the link are linked automatically.</span>
+            <span className="block text-[10px] text-zinc-500 leading-snug">Links this card to their NOOB account: the page then shows their @User ID and a "Noob" button. People who join through the link are linked automatically.</span>
           </label>
 
           <div className="flex gap-2 pt-1">

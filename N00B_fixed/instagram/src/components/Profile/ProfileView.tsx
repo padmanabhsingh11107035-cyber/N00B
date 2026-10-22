@@ -909,7 +909,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     >
                       {isTargetFollowing ? (
                         <>
-                          <UserCheck className="w-3.5 h-3.5 text-red-400 group-hover:text-red-500" /> Unfollow
+                          <UserCheck className="w-3.5 h-3.5 text-red-400 group-hover:text-red-500" /> Unnoob
                         </>
                       ) : isTargetFollowRequested ? (
                         <>
@@ -917,7 +917,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         </>
                       ) : (
                         <>
-                          <UserPlus className="w-3.5 h-3.5" /> {targetUser.accountType === 'private' ? 'Request' : 'Follow'}
+                          <UserPlus className="w-3.5 h-3.5" /> {targetUser.accountType === 'private' ? 'Request' : 'Noob'}
                         </>
                       )}
                     </button>
@@ -1109,7 +1109,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-purple-400" />
-              <span className="text-xs font-bold text-white">Pending Follow Requests ({followRequests.length})</span>
+              <span className="text-xs font-bold text-white">Pending Noob Requests ({followRequests.length})</span>
             </div>
             <span className="text-[10px] text-purple-300">Requires manual review</span>
           </div>

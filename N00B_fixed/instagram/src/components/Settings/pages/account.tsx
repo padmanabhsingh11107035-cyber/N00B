@@ -131,12 +131,12 @@ export const PrivacyPage: React.FC<PageProps> = ({ ctx, back }) => {
     <PageShell title="Account privacy" onBack={back}>
       {flash}
       <Section>
-        <ToggleRow icon={Lock} label="Private account" sub="Only people you approve can follow you and see your posts" on={isPrivate} disabled={busy || business} onChange={(v) => apply({ accountType: v ? 'private' : 'public' }, v ? 'Your account is private now.' : 'Your account is public now.')} testId="privacy-private" />
+        <ToggleRow icon={Lock} label="Private account" sub="Only people you approve can noob you and see your posts" on={isPrivate} disabled={busy || business} onChange={(v) => apply({ accountType: v ? 'private' : 'public' }, v ? 'Your account is private now.' : 'Your account is public now.')} testId="privacy-private" />
       </Section>
       {business && <Note>Business accounts are always public. Switch to a personal account (Account type and tools) to make it private.</Note>}
       {isPrivate && (
-        <Section title="Follow requests" note="Anyone who asks to follow you is accepted straight away. You do not follow them back automatically.">
-          <ToggleRow label="Accept follow requests automatically" on={priv.autoAcceptFollowRequests ?? true} disabled={busy} onChange={(v) => apply({ privacySettings: { ...priv, autoAcceptFollowRequests: v } }, v ? 'Follow requests are accepted automatically.' : 'You will approve follow requests yourself.')} />
+        <Section title="Noob requests" note="Anyone who asks to noob you is accepted straight away. You do not noob them back automatically.">
+          <ToggleRow label="Accept noob requests automatically" on={priv.autoAcceptFollowRequests ?? true} disabled={busy} onChange={(v) => apply({ privacySettings: { ...priv, autoAcceptFollowRequests: v } }, v ? 'Noob requests are accepted automatically.' : 'You will approve noob requests yourself.')} />
         </Section>
       )}
       <Section title="Hide your profile" note="People you hide your profile from cannot see you, your posts or your stories.">
@@ -160,10 +160,10 @@ export const CloseFriendsPage: React.FC<PageProps> = ({ back }) => {
   const count = (friends || []).filter((f) => f.isCloseFriend).length;
   return (
     <PageShell title="Close Friends" onBack={back} subtitle={friends ? `${count} selected` : undefined}>
-      <Note>Close Friends see the stories and Instants you share with them only. Nobody is told who is on the list. You can pick from people who follow each other with you.</Note>
+      <Note>Close Friends see the stories and Instants you share with them only. Nobody is told who is on the list. You can pick from people who noob each other with you.</Note>
       {error && <Note tone="bad">{error}</Note>}
       {friends === null ? <Spinner /> : friends.length === 0 ? (
-        <Section><Empty icon={Users} title="No friends to pick yet" text="Close Friends can be people who follow you and whom you follow back." /></Section>
+        <Section><Empty icon={Users} title="No friends to pick yet" text="Close Friends can be people who noob you and whom you noob back." /></Section>
       ) : (
         <Section>
           <div className="p-3"><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your friends" aria-label="Search your friends" className="w-full bg-zinc-900 border border-white/15 focus:border-white/50 rounded-full px-4 py-2.5 text-sm text-white outline-none placeholder:text-zinc-500" /></div>
@@ -200,7 +200,7 @@ export const BlockedPage: React.FC<PageProps> = ({ ctx, back }) => {
   return (
     <PageShell title="Blocked" onBack={back} subtitle={`${ids.length} account${ids.length === 1 ? '' : 's'}`}>
       {flash}
-      <Note>Blocked accounts cannot find you, see your posts and stories, follow you or message you. They are not told.</Note>
+      <Note>Blocked accounts cannot find you, see your posts and stories, noob you or message you. They are not told.</Note>
       <Section>
         {people === null ? <Spinner /> : (
           <PeopleList
@@ -261,7 +261,7 @@ export const StoryPrivacyPage: React.FC<PageProps> = (props) => {
         <Row icon={Ban} label="Hide story from" sub="People who will not see your stories" onClick={() => go('story-hide')} />
       </Section>
       <Section title="Replies">
-        <Row icon={UserPlus} label="Who can reply to your story" value={s['msg.storyReplies'] === 'everyone' ? 'Everyone' : s['msg.storyReplies'] === 'following' ? 'People you follow' : 'Off'} onClick={() => go('messages')} />
+        <Row icon={UserPlus} label="Who can reply to your story" value={s['msg.storyReplies'] === 'everyone' ? 'Everyone' : s['msg.storyReplies'] === 'following' ? 'People you noob' : 'Off'} onClick={() => go('messages')} />
       </Section>
     </PageShell>
   );

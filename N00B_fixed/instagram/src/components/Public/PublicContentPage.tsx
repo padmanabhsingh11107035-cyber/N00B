@@ -84,7 +84,7 @@ export const PublicContentPage: React.FC<Props> = ({ route, onLogin }) => {
         <footer className="fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/95 to-transparent pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] px-4">
           <div className="max-w-md mx-auto">
             <button onClick={onLogin} className="w-full py-3 rounded-full bg-white text-black text-sm font-black cursor-pointer" data-testid="public-cta">
-              {item.kind === 'profile' ? `Log in to follow @${item.username}` : `Log in to like, comment and follow @${item.username}`}
+              {item.kind === 'profile' ? `Log in to noob @${item.username}` : `Log in to like, comment and noob @${item.username}`}
             </button>
           </div>
         </footer>
@@ -183,12 +183,12 @@ const ProfileBody: React.FC<{ item: PublicItem; onLogin: () => void }> = ({ item
       </div>
     </div>
     {item.bio && <p className="px-4 text-sm leading-relaxed whitespace-pre-line break-words">{item.bio}</p>}
-    <div className="px-4"><button onClick={onLogin} className="w-full py-2.5 rounded-xl bg-white text-black text-sm font-black cursor-pointer" data-testid="public-follow">Follow</button></div>
+    <div className="px-4"><button onClick={onLogin} className="w-full py-2.5 rounded-xl bg-white text-black text-sm font-black cursor-pointer" data-testid="public-follow">Noob</button></div>
     {item.isPrivate ? (
       <div className="py-12 px-6 text-center border-t border-zinc-800 space-y-2" data-testid="public-private">
         <Lock className="w-8 h-8 mx-auto text-zinc-500" />
         <p className="text-sm font-bold">This account is private</p>
-        <p className="text-xs text-zinc-400">Log in and follow @{item.username} to see their posts.</p>
+        <p className="text-xs text-zinc-400">Log in and noob @{item.username} to see their posts.</p>
       </div>
     ) : (item.posts || []).length === 0 ? (
       <p className="py-12 text-center text-xs text-zinc-500 border-t border-zinc-800">No posts yet.</p>

@@ -1191,7 +1191,7 @@ export async function toggleFollowUser(userId: string): Promise<{ success: boole
   try {
     return await rpc('toggle_follow', { p_target: userId });
   } catch (err) {
-    return { success: false, isFollowing: false, isFollowRequested: false, followersCount: 0, message: errorText(err, 'Could not update follow.'), error: errorText(err, 'Could not update follow.') } as any;
+    return { success: false, isFollowing: false, isFollowRequested: false, followersCount: 0, message: errorText(err, 'Could not noob or unnoob. Please try again.'), error: errorText(err, 'Could not noob or unnoob. Please try again.') } as any;
   }
 }
 

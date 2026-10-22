@@ -825,8 +825,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 ? 'Your favourites have not posted anything here yet.'
                 : activeFeedFilter === 'following'
                 ? (currentUser.followingIds || []).length === 0
-                  ? 'Follow people to see their posts here.'
-                  : 'The people you follow haven’t posted anything here yet.'
+                  ? 'Noob people to see their posts here.'
+                  : 'The people you noob haven’t posted anything here yet.'
                 : 'Try selecting another topic filter or refreshing.'}
             </p>
           </div>

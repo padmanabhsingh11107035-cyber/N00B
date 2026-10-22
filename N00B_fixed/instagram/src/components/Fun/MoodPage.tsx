@@ -18,7 +18,7 @@ import type { FunPageProps } from './types';
 
 // Mood Status: pick how you feel, add a short note, choose who can see it (everyone, followers, only you), and let it clear itself after 24 hours if you like. Nothing is shared
 // until the "Share my mood" button is pressed, and the database decides who sees what (see migration 20261016000003): a mood that is "only me" never leaves your own screen, one
-// for followers is shown only to the people who follow you, and an expired one is gone for everybody. The lists below show the moods of the people you follow, and the moods
+// for followers is shown only to the people who noob you, and an expired one is gone for everybody. The lists below show the moods of the people you noob, and the moods
 // people chose to share with everyone.
 
 const PAGE_SIZE = 15;
@@ -99,8 +99,8 @@ const MoodList: React.FC<{ kind: 'friends' | 'community'; onOpenProfile?: (u: Us
       {status === 'ready' && items.length === 0 && (
         <EmptyState
           icon={kind === 'friends' ? <Users className="w-8 h-8" aria-hidden="true" /> : <Globe className="w-8 h-8" aria-hidden="true" />}
-          title={kind === 'friends' ? 'No moods from the people you follow' : 'No community moods right now'}
-          hint={kind === 'friends' ? 'When someone you follow shares how they feel with their followers, it shows up here.' : 'Moods shared with everyone show up here and clear after a day.'}
+          title={kind === 'friends' ? 'No moods from the people you noob' : 'No community moods right now'}
+          hint={kind === 'friends' ? 'When someone you noob shares how they feel with their followers, it shows up here.' : 'Moods shared with everyone show up here and clear after a day.'}
         />
       )}
       {status === 'ready' && items.map((p) => {

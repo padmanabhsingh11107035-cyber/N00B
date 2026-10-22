@@ -127,7 +127,7 @@ export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose, onOpenProfi
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  // "Follow on NOOB": the same follow as on a profile (a private account gets a request instead).
+  // "Noob": the same follow as on a profile (a private account gets a request instead).
   const toggleFollow = async (m: TeamMember) => {
     if (!m.userId || followBusy) return;
     setFollowBusy(m.id);
@@ -141,7 +141,7 @@ export const OurTeamPage: React.FC<Props> = ({ currentUser, onClose, onOpenProfi
     if (res?.success) {
       setTeam((cur) => (cur ? cur.map((x) => (x.id === m.id ? { ...x, following: !!res.isFollowing, requested: !!res.isFollowRequested } : x)) : cur));
     } else {
-      setFollowError({ id: m.id, text: String(res?.error || res?.message || 'Could not follow right now. Please try again.') });
+      setFollowError({ id: m.id, text: String(res?.error || res?.message || 'Could not noob right now. Please try again.') });
     }
   };
 

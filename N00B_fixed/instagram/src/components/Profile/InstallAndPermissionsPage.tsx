@@ -199,7 +199,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
               </div>
               <div>
                 <h2 className="text-sm font-bold text-white">Notifications</h2>
-                <p className="text-[11px] text-zinc-400">Likes, comments, messages &amp; follows</p>
+                <p className="text-[11px] text-zinc-400">Likes, comments, messages &amp; noobs</p>
               </div>
             </div>
 

@@ -26,11 +26,11 @@ export const OrdersPage: React.FC<PageProps> = ({ ctx, back }) => (
 const FAQ: Array<[string, string]> = [
   ['How do I change my username, picture or bio?', 'Open your profile and tap Edit profile (also under Settings and activity, Your NOOB account). Usernames have to be unique.'],
   ['Someone is bothering me. What can I do?', 'You can Restrict them (their comments are hidden from everyone else), Block them, hide your story from them, or use Limit interactions for a while. Go to Settings and activity, How others can interact with you. None of these tell them.'],
-  ['How do I make my account private?', 'Settings and activity, Account privacy. People must then ask to follow you and you decide.'],
+  ['How do I make my account private?', 'Settings and activity, Account privacy. People must then ask to noob you and you decide.'],
   ['How do I stop notifications for a while?', 'Settings and activity, Notifications. You can pause everything for an hour, a day or a week, and set quiet hours.'],
   ['I forgot my password.', 'On the log-in screen choose Forgot password. A code is sent to your email. When you are logged in you can change it under Your NOOB account, Change password.'],
   ['How do I delete my account?', 'Settings and activity, Your NOOB account, Delete account. This removes your account and everything on it for good, so download your information first if you want a copy.'],
-  ['Why can’t I message someone?', 'They may only allow chats from people they follow, or they have limited interactions for a while. Their settings are private.'],
+  ['Why can’t I message someone?', 'They may only allow chats from people they noob, or they have limited interactions for a while. Their settings are private.'],
   ['What is NOOB Pro?', 'A subscription with extras like a live profile picture and a badge. See Subscriptions in Settings and activity.']
 ];
 
@@ -72,9 +72,9 @@ export const PrivacyCentrePage: React.FC<PageProps> = ({ ctx, go, back }) => {
     <PageShell title="Privacy Centre" onBack={back}>
       <Section title="Privacy checkup" note="Where you stand right now. Tap a row to change it.">
         <Row icon={Lock} label="Who can see your posts" value={u.accountType === 'private' ? 'Only approved followers' : 'Everyone'} onClick={() => go('privacy')} testId="pc-privacy" />
-        <Row label="Who can start a chat" value={s['msg.who'] === 'connected' ? 'Followers and following' : s['msg.who'] === 'following' ? 'People you follow' : 'No one'} onClick={() => go('messages')} />
-        <Row label="Who can comment" value={{ everyone: 'Everyone', followers: 'Followers', following: 'People you follow', both: 'Followers and following', off: 'No one' }[s['comments.who']]} onClick={() => go('comments')} />
-        <Row label="Who can tag you" value={{ everyone: 'Everyone', following: 'People you follow', nobody: 'No one' }[s['tags.who']]} onClick={() => go('tags')} />
+        <Row label="Who can start a chat" value={s['msg.who'] === 'connected' ? 'Followers and following' : s['msg.who'] === 'following' ? 'People you noob' : 'No one'} onClick={() => go('messages')} />
+        <Row label="Who can comment" value={{ everyone: 'Everyone', followers: 'Followers', following: 'People you noob', both: 'Followers and following', off: 'No one' }[s['comments.who']]} onClick={() => go('comments')} />
+        <Row label="Who can tag you" value={{ everyone: 'Everyone', following: 'People you noob', nobody: 'No one' }[s['tags.who']]} onClick={() => go('tags')} />
         <Row label="Activity status" value={yesNo(s['activity.status'], 'Shown', 'Hidden')} onClick={() => go('activity-status')} />
         <Row label="Read receipts" value={yesNo(s['msg.readReceipts'], 'On', 'Off')} onClick={() => go('messages')} />
         <Row label="Blocked accounts" value={String(blocked)} onClick={() => go('blocked')} />

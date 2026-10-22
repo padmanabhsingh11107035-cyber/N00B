@@ -801,7 +801,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     // Private chats are limited to users with a follow relationship in
     // either direction (matches the "Connected Friends" list rules).
     if (!canStartChatWith(user)) {
-      setChatBlockedNotice(`You can only message @${user.username} if you follow them or they follow you.`);
+      setChatBlockedNotice(`You can only message @${user.username} if you noob them or they noob you.`);
       return;
     }
     setChatBlockedNotice('');

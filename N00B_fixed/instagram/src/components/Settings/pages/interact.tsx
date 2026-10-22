@@ -34,14 +34,14 @@ export const NotificationsPage: React.FC<PageProps> = ({ ctx, back }) => {
   const toggles: Array<[keyof AccountSettings, string, string]> = [
     ['notif.likes', 'Likes', 'When someone likes your post or reel'],
     ['notif.comments', 'Comments', 'Comments and replies on what you shared'],
-    ['notif.follows', 'Following and followers', 'New followers, follow requests and accepted requests'],
+    ['notif.follows', 'Following and followers', 'New followers, noob requests and accepted requests'],
     ['notif.messages', 'Messages and Instants', 'New messages and Instants from friends'],
     ['notif.mentions', 'Mentions', 'When someone @mentions you in a comment'],
     ['notif.live', 'Live and meetings', 'Live Lounge invites, meetings and gifts'],
     ['notif.games', 'Games and draws', 'Challenges from friends and NOOB Draw reminders'],
     ['notif.points', 'Points and payments', 'NOOB Points sent to you and payment requests'],
     ['notif.suggestions', 'Suggested people', 'People you may know'],
-    ['notif.birthdays', 'Birthdays', 'Birthdays of people you follow']
+    ['notif.birthdays', 'Birthdays', 'Birthdays of people you noob']
   ];
   return (
     <PageShell title="Notifications" onBack={back}>
@@ -90,15 +90,15 @@ export const MessagesPage: React.FC<PageProps> = ({ back }) => {
       {flash}
       <Section title="Who can start a chat with you" note="Chats you already have carry on. The NOOB team can always write to you.">
         <Choice value={s['msg.who']} onChange={(v) => save({ 'msg.who': v }, show)} options={[
-          { value: 'connected', label: 'People you follow and people who follow you' },
-          { value: 'following', label: 'Only people you follow' },
+          { value: 'connected', label: 'People you noob and people who noob you' },
+          { value: 'following', label: 'Only people you noob' },
           { value: 'nobody', label: 'No one', sub: 'Nobody new can start a chat with you' }
         ]} />
       </Section>
       <Section title="Who can reply to your stories">
         <Choice value={s['msg.storyReplies']} onChange={(v) => save({ 'msg.storyReplies': v }, show)} options={[
           { value: 'everyone', label: 'Everyone who can see your story' },
-          { value: 'following', label: 'People you follow' },
+          { value: 'following', label: 'People you noob' },
           { value: 'off', label: 'Off' }
         ]} />
       </Section>
@@ -114,7 +114,7 @@ export const TagsPage: React.FC<PageProps> = ({ back }) => {
   const [flash, show] = useFlash();
   const options = [
     { value: 'everyone' as const, label: 'Everyone' },
-    { value: 'following' as const, label: 'People you follow' },
+    { value: 'following' as const, label: 'People you noob' },
     { value: 'nobody' as const, label: 'No one' }
   ];
   return (
@@ -139,9 +139,9 @@ export const CommentsPage: React.FC<PageProps> = ({ go, back }) => {
       <Section title="Allow comments from" note="This applies to your posts, reels and videos. Anyone is still allowed to comment on posts where you turned comments off yourself: they cannot.">
         <Choice value={s['comments.who']} onChange={(v) => save({ 'comments.who': v }, show)} options={[
           { value: 'everyone', label: 'Everyone' },
-          { value: 'both', label: 'People you follow and your followers' },
+          { value: 'both', label: 'People you noob and your followers' },
           { value: 'followers', label: 'Your followers' },
-          { value: 'following', label: 'People you follow' },
+          { value: 'following', label: 'People you noob' },
           { value: 'off', label: 'Off' }
         ]} />
       </Section>
@@ -182,8 +182,8 @@ export const LimitPage: React.FC<PageProps> = ({ back }) => {
       <Note>Use this for a while when you get a lot of unwanted attention. People in the group you choose can still comment and reply, but only they see it, and they cannot start new chats with you. The NOOB team is never limited.</Note>
       <Section title="Who is limited">
         <Choice value={s['limit.audience']} onChange={(v) => save({ 'limit.audience': v }, show)} options={[
-          { value: 'non_followers', label: 'People who do not follow you' },
-          { value: 'recent_followers', label: 'People who do not follow you, and new followers', sub: 'Followers of less than 7 days' }
+          { value: 'non_followers', label: 'People who do not noob you' },
+          { value: 'recent_followers', label: 'People who do not noob you, and new followers', sub: 'Followers of less than 7 days' }
         ]} />
       </Section>
       {active ? (
@@ -269,7 +269,7 @@ export const InvitePage: React.FC<PageProps> = ({ ctx, back }) => {
   }, [me.id]);
   const copy = async () => { try { await navigator.clipboard.writeText(link); show('Link copied.'); } catch { show('Could not copy. Press and hold the link to copy it.', 'bad'); } };
   const share = async () => {
-    const data = { title: 'NOOB Socials', text: `Follow me on NOOB Socials: @${me.username}`, url: link };
+    const data = { title: 'NOOB Socials', text: `Noob me on NOOB Socials: @${me.username}`, url: link };
     try { if (navigator.share) await navigator.share(data); else await copy(); } catch { /* cancelled */ }
   };
   const follow = async (u: User) => {
@@ -282,10 +282,10 @@ export const InvitePage: React.FC<PageProps> = ({ ctx, back }) => {
       if (r.success && r.isFollowing) next[u.id] = 'following'; else if (r.success && r.isFollowRequested) next[u.id] = 'requested'; else delete next[u.id];
       return next;
     });
-    if (!r.success) show(r.message || 'Could not follow that account.', 'bad');
+    if (!r.success) show(r.message || 'Could not noob that account.', 'bad');
   };
   return (
-    <PageShell title="Follow and invite friends" onBack={back}>
+    <PageShell title="Noob and invite friends" onBack={back}>
       {flash}
       <Section title="Invite friends" note="Anyone who opens your link lands on your profile and can join NOOB.">
         <div className="px-4 py-3.5"><p className="text-xs text-zinc-400">Your link</p><p className="text-sm font-bold text-white break-all" data-testid="invite-link">{link}</p></div>
@@ -299,9 +299,9 @@ export const InvitePage: React.FC<PageProps> = ({ ctx, back }) => {
           <div key={u.id} className="flex items-center gap-3 px-4 py-3">
             <Avatar user={u} />
             <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white truncate">@{u.username}</span><span className="block text-xs text-zinc-400 truncate">{u.displayName}</span></span>
-            {state[u.id] === 'following' ? <span className="text-xs font-bold text-zinc-400">Following</span>
+            {state[u.id] === 'following' ? <span className="text-xs font-bold text-zinc-400">Noobed</span>
               : state[u.id] === 'requested' ? <span className="text-xs font-bold text-zinc-400">Requested</span>
-              : <SmallButton tone="solid" disabled={state[u.id] === 'busy'} onClick={() => follow(u)}>{state[u.id] === 'busy' ? '…' : u.accountType === 'private' ? 'Request' : 'Follow'}</SmallButton>}
+              : <SmallButton tone="solid" disabled={state[u.id] === 'busy'} onClick={() => follow(u)}>{state[u.id] === 'busy' ? '…' : u.accountType === 'private' ? 'Request' : 'Noob'}</SmallButton>}
           </div>
         ))}
       </Section>

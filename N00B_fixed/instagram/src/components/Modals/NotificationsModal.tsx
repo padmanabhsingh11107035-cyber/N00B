@@ -259,7 +259,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 : 'border-transparent text-zinc-400 hover:text-white'
             }`}
           >
-            <UserPlus className="w-3.5 h-3.5" /> Follow Requests
+            <UserPlus className="w-3.5 h-3.5" /> Noob Requests
             {followRequestsCount > 0 && (
               <span className="w-4 h-4 rounded-full bg-purple-500 text-black text-[10px] font-black flex items-center justify-center">
                 {followRequestsCount}
@@ -432,7 +432,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                                   className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 disabled:cursor-default text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 border border-zinc-700"
                                 >
                                   <UserPlus className="w-3.5 h-3.5" />
-                                  {currentUser.followingIds?.includes(notif.actorId) ? 'Following' : 'Follow Back'}
+                                  {currentUser.followingIds?.includes(notif.actorId) ? 'Noobed' : 'Noob Back'}
                                 </button>
                               )}
                               <button
@@ -449,7 +449,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
                           {notif.type === 'follow_request_received' && notif.actionStatus === 'accepted' && (
                             <div className="mt-1.5 flex items-center gap-1 text-[11px] text-noob font-bold">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Follow request approved
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Noob request approved
                             </div>
                           )}
 
@@ -475,7 +475,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                                 }}
                                 className="px-3 py-1 bg-noob hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
                               >
-                                <UserPlus className="w-3.5 h-3.5" /> Follow
+                                <UserPlus className="w-3.5 h-3.5" /> Noob
                               </button>
                               <button
                                 onClick={(e) => {
@@ -560,8 +560,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 {/* 1. Follow Requests & Approvals */}
                 <div className="flex items-center justify-between pt-1">
                   <div>
-                    <span className="text-xs font-bold text-white block">Follow Requests &amp; Approvals</span>
-                    <span className="text-[11px] text-zinc-500">When someone requests to follow your private account</span>
+                    <span className="text-xs font-bold text-white block">Noob Requests &amp; Approvals</span>
+                    <span className="text-[11px] text-zinc-500">When someone requests to noob your private account</span>
                   </div>
                   <input
                     type="checkbox"
@@ -575,7 +575,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
                   <div>
                     <span className="text-xs font-bold text-white block">New Followers</span>
-                    <span className="text-[11px] text-zinc-500">When someone starts following your profile</span>
+                    <span className="text-[11px] text-zinc-500">When someone noobs your profile</span>
                   </div>
                   <input
                     type="checkbox"

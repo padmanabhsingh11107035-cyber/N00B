@@ -1040,7 +1040,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
 
         {/* Right, lower: feature list */}
         <div className="absolute bottom-[18%] sm:bottom-[22%] right-[2%] sm:right-[5%] rotate-2 text-left">
-          <span className="font-script text-sm sm:text-xl text-zinc-50/80 leading-tight block whitespace-nowrap">Post • Reels<br />Chat • Follow</span>
+          <span className="font-script text-sm sm:text-xl text-zinc-50/80 leading-tight block whitespace-nowrap">Post • Reels<br />Chat • Noob</span>
           <svg viewBox="0 0 100 10" className="w-16 h-2.5 sm:w-24 sm:h-3 text-zinc-50/60 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6 Q 25 2 50 6 T 98 5" /></svg>
         </div>
 

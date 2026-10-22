@@ -16,7 +16,7 @@ export const MOODS: ReadonlyArray<{ id: MoodId; emoji: string; label: string }> 
 export const moodInfo = (id: string): { id: MoodId; emoji: string; label: string } => MOODS.find((m) => m.id === id) ?? { id: 'happy', emoji: '•', label: id };
 
 export const VISIBILITY_OPTIONS: ReadonlyArray<{ id: MoodVisibility; label: string; hint: string }> = [
-  { id: 'followers', label: 'Followers', hint: 'People who follow you' },
+  { id: 'followers', label: 'Followers', hint: 'People who noob you' },
   { id: 'everyone', label: 'Everyone', hint: 'Anyone who can see your profile' },
   { id: 'only_me', label: 'Only me', hint: 'A private note to yourself' }
 ];

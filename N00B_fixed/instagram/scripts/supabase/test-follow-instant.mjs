@@ -32,7 +32,7 @@ check(/const guess = predictFollowToggle\(before, person\);/.test(read('src/comp
 check(/predictFollowToggle\(\{ isFollowing: !!prev\?\.isFollowing, isFollowRequested: !!prev\?\.isFollowRequested \}, u\)/.test(read('src/components/Common/LikesViewsSheet.tsx')), 'the likes / views list (it used to say "Following" for a private account before "Requested")');
 check(/predictFollowToggle\(/.test(read('src/components/Stories/StoryTray.tsx')) && /predictFollowToggle\(/.test(read('src/components/Settings/pages/interact.tsx')) && /const wasOn = !!m\.following \|\| !!m\.requested;/.test(read('src/components/Team/OurTeamPage.tsx')), 'story suggestions, the invite page and the team page');
 const reels = read('src/components/Reels/ReelsView.tsx');
-check(/\{following \? 'Following' : requestedIds\.has\(reel\.userId\) \? 'Requested' : 'Follow'\}/.test(reels) && /if \(!isFollowingCreator\) setRequested\(id, !wasRequested\);/.test(reels), 'the Reels page now says "Requested" too (it only knew Follow / Following), at once');
+check(/\{following \? 'Noobed' : requestedIds\.has\(reel\.userId\) \? 'Requested' : 'Noob'\}/.test(reels) && /if \(!isFollowingCreator\) setRequested\(id, !wasRequested\);/.test(reels), 'the Reels page now says "Requested" too (it only knew Follow / Following), at once');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

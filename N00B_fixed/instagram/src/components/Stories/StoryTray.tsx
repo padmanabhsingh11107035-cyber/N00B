@@ -45,8 +45,8 @@ const FollowBadge: React.FC<{ username: string; state: 'none' | 'following' | 'r
     type="button"
     onClick={onFollow}
     disabled={state !== 'none' || busy || disabled}
-    title={state === 'following' ? 'Following' : state === 'requested' ? 'Requested' : `Follow ${username}`}
-    aria-label={state === 'following' ? `Following ${username}` : state === 'requested' ? `Follow requested for ${username}` : `Follow ${username}`}
+    title={state === 'following' ? 'Noobed' : state === 'requested' ? 'Requested' : `Noob ${username}`}
+    aria-label={state === 'following' ? `Noobed ${username}` : state === 'requested' ? `Noob requested for ${username}` : `Noob ${username}`}
     className={`absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border-2 border-black shadow-sm text-white transition-colors ${
       state === 'following' ? 'bg-emerald-500' : state === 'requested' ? 'bg-zinc-600' : 'bg-sky-500 hover:bg-sky-400 cursor-pointer'
     } ${busy ? 'opacity-60' : ''}`}

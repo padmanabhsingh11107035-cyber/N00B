@@ -45,7 +45,7 @@ export const ROWS: RowDef[] = [
   { id: 'saved', section: 'How you use NOOB', label: 'Saved', icon: Bookmark, action: 'showProfileTab', keywords: 'bookmarks collections saved posts' },
   { id: 'archive', section: 'How you use NOOB', label: 'Archive', icon: Archive, page: 'archive', keywords: 'archived posts stories old' },
   { id: 'activity', section: 'How you use NOOB', label: 'Your activity', icon: Activity, page: 'activity', keywords: 'likes comments time spent history interactions' },
-  { id: 'notifications', section: 'How you use NOOB', label: 'Notifications', icon: Bell, page: 'notifications', keywords: 'push alerts pause quiet mute likes comments follows messages' },
+  { id: 'notifications', section: 'How you use NOOB', label: 'Notifications', icon: Bell, page: 'notifications', keywords: 'push alerts pause quiet mute likes comments follows noobs messages' },
   { id: 'time', section: 'How you use NOOB', label: 'Time management', icon: Clock, page: 'time', keywords: 'daily limit sleep mode reminder screen time minutes' },
 
   // ---------------------------------------------------------------- Your insights and tools
@@ -57,7 +57,7 @@ export const ROWS: RowDef[] = [
   { id: 'pro', section: 'Subscriptions', label: 'NOOB Pro', icon: Crown, action: 'openPro', keywords: 'subscription premium plan upgrade', value: (c) => tierName(c.currentUser.proTier) || 'Not subscribed' },
 
   // ---------------------------------------------------------------- Who can see your content
-  { id: 'privacy', section: 'Who can see your content', label: 'Account privacy', icon: Lock, page: 'privacy', keywords: 'private public follow requests approve hide profile', value: (c) => (c.currentUser.accountType === 'private' ? 'Private' : 'Public') },
+  { id: 'privacy', section: 'Who can see your content', label: 'Account privacy', icon: Lock, page: 'privacy', keywords: 'private public follow noob requests approve hide profile', value: (c) => (c.currentUser.accountType === 'private' ? 'Private' : 'Public') },
   { id: 'close-friends', section: 'Who can see your content', label: 'Close Friends', icon: Star, page: 'close-friends', keywords: 'close friends list stories green' },
   { id: 'linked', section: 'Who can see your content', label: 'Linked profiles', sub: 'Instagram, YouTube and other links on your profile', icon: Link2, action: 'editProfile', keywords: 'crossposting social links instagram youtube twitter discord github spotify tiktok' },
   { id: 'blocked', section: 'Who can see your content', label: 'Blocked', icon: Ban, page: 'blocked', keywords: 'block unblock accounts', value: (c) => String((c.currentUser.blockedUserIds || []).length) },
@@ -73,7 +73,7 @@ export const ROWS: RowDef[] = [
   { id: 'restricted', section: 'How others can interact with you', label: 'Restricted', icon: UserX, page: 'restricted', keywords: 'restrict accounts bullying hide comments', value: () => countText('restricted') },
   { id: 'limit', section: 'How others can interact with you', label: 'Limit interactions', icon: Hourglass, page: 'limit', keywords: 'temporarily limit comments messages spam raid' },
   { id: 'hidden-words', section: 'How others can interact with you', label: 'Hidden words', icon: EyeOff, page: 'hidden-words', keywords: 'filter words offensive custom block comments' },
-  { id: 'invite', section: 'How others can interact with you', label: 'Follow and invite friends', icon: UserPlus, page: 'invite', keywords: 'invite link share qr contacts find friends suggested follow' },
+  { id: 'invite', section: 'How others can interact with you', label: 'Noob and invite friends', icon: UserPlus, page: 'invite', keywords: 'invite link share qr contacts find friends suggested follow noob' },
 
   // ---------------------------------------------------------------- What you see
   { id: 'favourites', section: 'What you see', label: 'Favourites', icon: Star, page: 'favourites', keywords: 'favorites see more posts feed', value: () => countText('favourite') },

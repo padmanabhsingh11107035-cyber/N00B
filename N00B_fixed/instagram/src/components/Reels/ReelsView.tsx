@@ -1266,7 +1266,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
                   following || requestedIds.has(reel.userId) ? 'bg-white/10 text-zinc-200' : 'bg-[#335fff] text-white'
                 }`}
               >
-                {following ? 'Following' : requestedIds.has(reel.userId) ? 'Requested' : 'Follow'}
+                {following ? 'Noobed' : requestedIds.has(reel.userId) ? 'Requested' : 'Noob'}
               </button>
             )}
           </div>

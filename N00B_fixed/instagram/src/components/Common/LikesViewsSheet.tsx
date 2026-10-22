@@ -298,7 +298,7 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
                       ) : (
                         <UserPlus className="w-3.5 h-3.5" />
                       )}
-                      {fs?.isFollowing ? 'Following' : fs?.isFollowRequested ? 'Requested' : 'Follow'}
+                      {fs?.isFollowing ? 'Noobed' : fs?.isFollowRequested ? 'Requested' : 'Noob'}
                     </button>
                   )}
                 </div>

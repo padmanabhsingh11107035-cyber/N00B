@@ -74,8 +74,8 @@ check(teamJoinRequested('?team=join') && teamJoinRequested('?x=1&team=join') && 
 
 section('8. "Follow on NOOB"');
 const card = (o = {}) => ({ userId: 'u1', isMe: false, blocked: false, following: false, requested: false, ...o });
-check(followState(card()) === 'follow' && followLabel('follow') === 'Follow on NOOB', 'a linked member you do not follow: "Follow on NOOB"');
-check(followState(card({ following: true })) === 'following' && followLabel('following') === 'Following', 'one you follow: "Following"');
+check(followState(card()) === 'follow' && followLabel('follow') === 'Noob', 'a linked member you do not noob: "Noob"');
+check(followState(card({ following: true })) === 'following' && followLabel('following') === 'Noobed', 'one you noob: "Noobed"');
 check(followState(card({ requested: true })) === 'requested' && followLabel('requested') === 'Requested', 'a private account you asked: "Requested"');
 check(followState(card({ following: true, requested: true })) === 'following', 'following wins over a leftover request');
 check(followState(card({ userId: null })) === 'none' && followLabel('none') === '', 'a card with no linked account has no button');
@@ -110,7 +110,7 @@ check(/Add new people to the page straight away/.test(panel2) && /Off: you appro
 check(/NOOB User ID/.test(panel2) && /username: draft\.username/.test(panel2), 'a member added by hand can be linked to a NOOB account by User ID');
 check(/fetchTeamApplications\(\)\.then/.test(read('src/components/Modals/AdminControlModal.tsx')) && /teamPendingCount > 0/.test(read('src/components/Modals/AdminControlModal.tsx')), 'the "Our Team" tab shows how many applications wait');
 const teamPage = read('src/components/Team/OurTeamPage.tsx');
-check(/toggleFollowUser\(m\.userId\)/.test(teamPage) && /followLabel\(fstate\)/.test(teamPage) && /@\{member\.username\}/.test(teamPage), 'each linked card shows the @User ID and a Follow on NOOB button that does the normal follow');
+check(/toggleFollowUser\(m\.userId\)/.test(teamPage) && /followLabel\(fstate\)/.test(teamPage) && /@\{member\.username\}/.test(teamPage), 'each linked card shows the @User ID and a Noob button that does the normal follow');
 check(/onOpenProfile=\{\(m\) =>/.test(feed) && /onNavigateToProfile\(known \|\|/.test(feed), 'tapping the @User ID opens their NOOB profile');
 const apiSrc2 = read('src/services/supabaseApi.ts');
 check(['team_my_application', 'team_apply', 'admin_team_page_applications', 'admin_team_decide', 'admin_team_settings', 'admin_team_application_erase'].every((f) => apiSrc2.includes(`rpc<any>('${f}'`)), 'the six new database functions are called by their real names');

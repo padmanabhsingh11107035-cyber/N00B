@@ -415,7 +415,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                           : 'bg-noob text-black'
                       }`}
                     >
-                      {user.isFollowing ? 'Following' : user.isFollowRequested ? 'Requested' : 'Follow'}
+                      {user.isFollowing ? 'Noobed' : user.isFollowRequested ? 'Requested' : 'Noob'}
                     </button>
                   )}
                 </div>
@@ -663,7 +663,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                             </button>
                           )}
 
-                          {/* Follow / Unfollow Button */}
+                          {/* Noob / Unnoob Button */}
                           <button
                             onClick={() => handleToggleFollow(user.id)}
                             disabled={followLoadingId === user.id}
@@ -679,8 +679,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                               <>
                                 <UserCheck className="w-3.5 h-3.5 text-emerald-400 group-hover/fbtn:hidden" />
                                 <X className="w-3.5 h-3.5 text-red-400 hidden group-hover/fbtn:inline" />
-                                <span className="group-hover/fbtn:hidden">Following</span>
-                                <span className="hidden group-hover/fbtn:inline">Unfollow</span>
+                                <span className="group-hover/fbtn:hidden">Noobed</span>
+                                <span className="hidden group-hover/fbtn:inline">Unnoob</span>
                               </>
                             ) : user.isFollowRequested ? (
                               <>
@@ -695,7 +695,7 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                             ) : (
                               <>
                                 <UserPlus className="w-3.5 h-3.5" />
-                                <span>Follow</span>
+                                <span>Noob</span>
                               </>
                             )}
                           </button>

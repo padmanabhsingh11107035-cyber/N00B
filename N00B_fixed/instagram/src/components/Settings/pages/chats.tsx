@@ -35,8 +35,8 @@ export const ChatSettingsPage: React.FC<{ back: () => void }> = ({ back }) => {
 
       <Section title="Who can see when you were last on" note="If you hide your last seen you will not see anybody else's either. People you are not connected to never see it.">
         <Choice value={s['chat.lastSeen']} onChange={pick('chat.lastSeen')} options={[
-          { value: 'everyone', label: 'Everyone you chat with or follow' },
-          { value: 'contacts', label: 'Only people you follow and people who follow you' },
+          { value: 'everyone', label: 'Everyone you chat with or noob' },
+          { value: 'contacts', label: 'Only people you noob and people who noob you' },
           { value: 'nobody', label: 'Nobody', sub: 'Your last seen is hidden' }
         ]} />
       </Section>
@@ -49,22 +49,22 @@ export const ChatSettingsPage: React.FC<{ back: () => void }> = ({ back }) => {
 
       <Section title="Who can contact you">
         <Choice value={s['msg.who']} onChange={pick('msg.who')} options={[
-          { value: 'connected', label: 'Start a chat: people you follow and people who follow you' },
-          { value: 'following', label: 'Start a chat: only people you follow' },
+          { value: 'connected', label: 'Start a chat: people you noob and people who noob you' },
+          { value: 'following', label: 'Start a chat: only people you noob' },
           { value: 'nobody', label: 'Start a chat: no one' }
         ]} />
       </Section>
       <Section title="Who can add you to groups" note="Someone who is not allowed to add you is simply not added; the rest of the group is made as usual.">
         <Choice value={s['chat.groupAdds']} onChange={pick('chat.groupAdds')} options={[
           { value: 'everyone', label: 'Everyone' },
-          { value: 'contacts', label: 'Only people you follow and people who follow you' },
+          { value: 'contacts', label: 'Only people you noob and people who noob you' },
           { value: 'nobody', label: 'Nobody', sub: 'You join groups only yourself' }
         ]} />
       </Section>
       <Section title="Who can reply to your stories">
         <Choice value={s['msg.storyReplies']} onChange={pick('msg.storyReplies')} options={[
           { value: 'everyone', label: 'Everyone who can see your story' },
-          { value: 'following', label: 'People you follow' },
+          { value: 'following', label: 'People you noob' },
           { value: 'off', label: 'Off' }
         ]} />
       </Section>

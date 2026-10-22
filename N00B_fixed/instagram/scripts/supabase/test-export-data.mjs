@@ -37,7 +37,7 @@ for (const needle of ['NOOB — your data', 'ACCOUNT', 'ABOUT YOU', 'NOOB\n', 'P
 section('2. The person\'s own details are there');
 for (const needle of ['Name: Ann Lee', 'Username: @ann', 'Email: ann@example.com', 'Mobile number: +91 9876543210', 'Date of birth: 2001-02-03', 'Gender: female', 'City: Pune', 'Website: https://ann.example', 'Bio: I make robots.', 'Account type: Private', 'Verified: Yes',
   'Interests: robots, music', 'Instagram: ann.makes', 'Portfolio: https://ann.example/work', 'NOOB Pro: Plus (yearly, renews automatically)', 'NOOB Points: 1,234,567', 'Followers: 321', 'Following: 45',
-  'Accept follow requests automatically: No', 'Hide tagged photos from my profile: Yes', 'Words that are filtered out: spam, scam', 'My first robot made today', 'at Pune', '#robots #tech', '5 likes · 2 comments', '1,500 views · 20 likes · 1 comments']) {
+  'Accept noob requests automatically: No', 'Hide tagged photos from my profile: Yes', 'Words that are filtered out: spam, scam', 'My first robot made today', 'at Pune', '#robots #tech', '5 likes · 2 comments', '1,500 views · 20 likes · 1 comments']) {
   check(text.includes(needle), `has "${needle}"`);
 }
 
@@ -54,7 +54,7 @@ const bare = buildDataExport({ username: 'zed' }, [], [], new Date('2026-10-12T1
 check(bare.includes('Username: @zed') && !bare.includes('undefined') && !bare.includes('null') && !bare.includes('YOUR POSTS'), 'a nearly empty account: just what exists, no "undefined"');
 check(buildDataExport({}, undefined, undefined).includes('NOOB — your data'), 'an empty record still gives a file');
 const pub = buildDataExport({ username: 'p', accountType: 'public', privacySettings: { autoAcceptFollowRequests: false } });
-check(!pub.includes('Accept follow requests automatically'), 'the follow-request line only appears for a private account');
+check(!pub.includes('Accept noob requests automatically'), 'the follow-request line only appears for a private account');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

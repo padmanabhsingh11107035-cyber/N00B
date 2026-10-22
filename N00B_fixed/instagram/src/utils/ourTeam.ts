@@ -76,7 +76,7 @@ export const teamJoinRequested = (search: string): boolean => {
   try { return new URLSearchParams(search).get('team') === 'join'; } catch { return false; }
 };
 
-// "Follow on NOOB" for a card: what the button says, whether there is one, and what a tap does.
+// "Noob" for a card: what the button says, whether there is one, and what a tap does.
 export type FollowState = 'none' | 'follow' | 'requested' | 'following';
 export function followState(m: Pick<TeamMember, 'userId' | 'isMe' | 'blocked' | 'following' | 'requested'>): FollowState {
   if (!m.userId || m.isMe || m.blocked) return 'none';
@@ -84,7 +84,7 @@ export function followState(m: Pick<TeamMember, 'userId' | 'isMe' | 'blocked' | 
   if (m.requested) return 'requested';
   return 'follow';
 }
-export const followLabel = (state: FollowState): string => (state === 'following' ? 'Following' : state === 'requested' ? 'Requested' : state === 'follow' ? 'Follow on NOOB' : '');
+export const followLabel = (state: FollowState): string => (state === 'following' ? 'Noobed' : state === 'requested' ? 'Requested' : state === 'follow' ? 'Noob' : '');
 
 // ---- applications (the person's own, and what the administrator sees)
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected';

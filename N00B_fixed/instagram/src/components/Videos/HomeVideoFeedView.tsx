@@ -78,7 +78,7 @@ const TOPICS: [string, string][] = [['🎵', 'Music'], ['😂', 'Comedy'], ['�
 const FILTER_LABEL: Record<FilterChip, string> = { all: 'All', live: 'Live', trending: 'Trending', following: 'Following', newest: 'Newest', liked: 'Most liked', saved: 'Saved', mine: 'Your videos' };
 const EMPTY_TEXT: Record<FilterChip, string> = {
   all: 'No videos yet — be the first to upload one.', live: 'Nobody is live right now.', trending: 'Nothing is trending yet.',
-  following: 'Videos from the people you follow will show up here.', newest: 'No videos yet.', liked: 'No videos yet.',
+  following: 'Videos from the people you noob will show up here.', newest: 'No videos yet.', liked: 'No videos yet.',
   saved: 'Videos you save will show up here.', mine: 'You have not uploaded a video yet. Tap Create to upload one.'
 };
 
@@ -737,7 +737,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
                 <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Discover</p>
                 {([
                   [<Flame key="i" className="w-4.5 h-4.5 text-orange-400" />, 'bg-orange-500/10 border-orange-500/30', 'Trending now', 'Most watched and liked lately', () => pickFilter('trending'), null],
-                  [<UserCheck key="i" className="w-4.5 h-4.5 text-emerald-300" />, 'bg-emerald-500/10 border-emerald-500/30', 'From people you follow', 'Their newest uploads', () => pickFilter('following'), videos.filter((v) => followingSet.has(v.userId)).length],
+                  [<UserCheck key="i" className="w-4.5 h-4.5 text-emerald-300" />, 'bg-emerald-500/10 border-emerald-500/30', 'From people you noob', 'Their newest uploads', () => pickFilter('following'), videos.filter((v) => followingSet.has(v.userId)).length],
                   [<Radio key="i" className="w-4.5 h-4.5 text-red-400" />, 'bg-red-500/10 border-red-500/30', 'Live now', liveStreams.length ? `${liveStreams.length} live right now` : 'Nobody is live right now', () => pickFilter('live'), liveStreams.length],
                   [<TrendingUp key="i" className="w-4.5 h-4.5 text-violet-300" />, 'bg-violet-500/10 border-violet-500/30', 'Newest uploads', 'Fresh from the community', () => pickFilter('newest'), null],
                   [<ThumbsUp key="i" className="w-4.5 h-4.5 text-pink-300" />, 'bg-pink-500/10 border-pink-500/30', 'Most liked', 'The crowd favourites', () => pickFilter('liked'), null]

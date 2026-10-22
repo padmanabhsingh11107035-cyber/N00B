@@ -78,7 +78,7 @@ export function buildDataExport(user: ExportUser, posts: ExportUser[] = [], reel
   const privacy = user.privacySettings && typeof user.privacySettings === 'object' ? user.privacySettings : {};
   parts.push(section('PRIVACY SETTINGS', [
     line('Account type', user.accountType),
-    user.accountType === 'private' ? line('Accept follow requests automatically', privacy.autoAcceptFollowRequests !== false) : '',
+    user.accountType === 'private' ? line('Accept noob requests automatically', privacy.autoAcceptFollowRequests !== false) : '',
     line('Hide tagged photos from my profile', !!privacy.hideTaggedPhotos),
     line('Words that are filtered out', Array.isArray(privacy.blockedWords) ? privacy.blockedWords : [])
   ]));

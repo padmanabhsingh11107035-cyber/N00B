@@ -114,7 +114,7 @@ export const MutualFollowersSheet: React.FC<MutualFollowersSheetProps> = ({
                         }`}
                       >
                         {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                        {pendingId === m.id ? '...' : isFollowing ? 'Following' : 'Follow'}
+                        {pendingId === m.id ? '...' : isFollowing ? 'Noobed' : 'Noob'}
                       </button>
                     )}
                   </div>

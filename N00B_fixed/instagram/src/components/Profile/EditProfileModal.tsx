@@ -560,7 +560,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <div className="flex items-center gap-1.5 font-bold text-xs">
                   <Globe className="w-3.5 h-3.5 text-indigo-400" /> Public
                 </div>
-                <span className="text-[10px] text-zinc-400 mt-1 block">Anyone can view your posts and follow</span>
+                <span className="text-[10px] text-zinc-400 mt-1 block">Anyone can view your posts and noob you</span>
               </button>
 
               <button

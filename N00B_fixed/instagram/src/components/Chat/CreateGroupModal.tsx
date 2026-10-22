@@ -276,7 +276,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
                     ? 'No users matched your search.'
                     : isMasterAdmin
                       ? 'No other users found.'
-                      : 'No friends found. Follow people to add them to groups!'}
+                      : 'No friends found. Noob people to add them to groups!'}
                 </div>
               ) : (
                 filteredFriends.map((u) => {

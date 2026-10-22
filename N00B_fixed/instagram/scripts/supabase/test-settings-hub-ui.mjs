@@ -43,7 +43,7 @@ check(exported.every((n) => new RegExp(`export const ${n}\\b`).test(allPages)), 
 section('2. All of Instagram’s settings that make sense here, in NOOB’s own look');
 const labels = rows.map((r) => r.label.toLowerCase());
 for (const want of ['your noob account', 'saved', 'archive', 'your activity', 'notifications', 'time management', 'account privacy', 'close friends', 'blocked', 'story privacy', 'activity status',
-  'messages and story replies', 'tags and mentions', 'comments', 'sharing and reuse', 'restricted', 'limit interactions', 'hidden words', 'follow and invite friends', 'favourites', 'muted accounts',
+  'messages and story replies', 'tags and mentions', 'comments', 'sharing and reuse', 'restricted', 'limit interactions', 'hidden words', 'noob and invite friends', 'favourites', 'muted accounts',
   'content preferences', 'like and share counts', 'device permissions', 'archiving and downloading', 'accessibility', 'language and translations', 'media quality', 'app and website permissions',
   'orders and payments', 'help', 'privacy centre', 'account status', 'about', 'log out', 'add profile']) check(labels.includes(want), `"${want}" is there`);
 check(!/meta account|meta ai|threads|family cent|instagram for ipad|ads payments|meta one|more from meta/i.test(registry), 'the Meta items are not there');

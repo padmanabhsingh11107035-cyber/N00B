@@ -181,7 +181,7 @@ export const FollowListPage: React.FC<FollowListPageProps> = ({
                       }`}
                     >
                       {isFollowingRow ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                      {pendingId === u.id ? '...' : isFollowingRow ? 'Following' : 'Follow'}
+                      {pendingId === u.id ? '...' : isFollowingRow ? 'Noobed' : 'Noob'}
                     </button>
                   )}
 

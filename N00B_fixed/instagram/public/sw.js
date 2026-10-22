@@ -84,7 +84,13 @@ self.addEventListener('push', (event) => {
 // the tab was on a different page — every other notification just brings the app forward as-is.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
+  // only a page of NOOB itself is opened (an address on one of NOOB's own sites is turned into the same page here); anything else is the home page
+  const ownSite = /^(www\.)?(noobsocials\.com|nooob\.xyz)$/i;
+  let targetUrl = '/';
+  try {
+    const u = new URL(event.notification.data?.url || '/', self.location.origin);
+    if (u.origin === self.location.origin || ownSite.test(u.hostname)) targetUrl = u.pathname + u.search + u.hash;
+  } catch (err) { /* not an address: the home page */ }
   const isCallRing = !!event.notification.data?.isCallRing;
 
   event.waitUntil(

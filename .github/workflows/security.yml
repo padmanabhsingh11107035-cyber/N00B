@@ -28,6 +28,9 @@ jobs:
           cache-dependency-path: N00B_fixed/instagram/package-lock.json
       - run: npm ci --ignore-scripts
       - run: node scripts/security-audit-db.mjs
+      # a normal logged-in person cannot make themselves admin, verified or rich by editing their own rows
+      - run: node --liftoff-only scripts/supabase/test-privilege-escalation-db.mjs
+      - run: node scripts/supabase/test-security-config.mjs
 
   packages:
     name: Packages with known problems

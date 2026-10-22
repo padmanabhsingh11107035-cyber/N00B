@@ -57,6 +57,7 @@ import {
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
+import { safeExternalUrl } from '../../utils/safeUrl';
 import { ReelFriendsStrip } from './ReelFriendsStrip';
 import { contentUrl } from '../../utils/routes';
 import confetti from 'canvas-confetti';
@@ -1060,9 +1061,9 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
           )}
 
           {/* Outbound Web Link (Meta-Verified) */}
-          {reel.webLink && (
+          {safeExternalUrl(reel.webLink) && (
             <a
-              href={reel.webLink}
+              href={safeExternalUrl(reel.webLink) as string}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}

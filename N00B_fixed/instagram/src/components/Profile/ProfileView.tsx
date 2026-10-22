@@ -109,6 +109,7 @@ import { FollowUsModal } from './FollowUsModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { FollowListPage } from './FollowListPage';
 import { InstallAndPermissionsPage } from './InstallAndPermissionsPage';
+import { safeExternalUrl } from '../../utils/safeUrl';
 import { MutualFollowersSheet } from './MutualFollowersSheet';
 import { ShareToChatModal } from './ShareToChatModal';
 import { ProfileQrModal } from './ProfileQrModal';
@@ -989,9 +990,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </span>
             )}
 
-            {targetUser.website && (
+            {safeExternalUrl(targetUser.website) && (
               <a
-                href={targetUser.website.startsWith('http') ? targetUser.website : `https://${targetUser.website}`}
+                href={safeExternalUrl(targetUser.website) as string}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1 text-cyan-400 hover:underline font-semibold"

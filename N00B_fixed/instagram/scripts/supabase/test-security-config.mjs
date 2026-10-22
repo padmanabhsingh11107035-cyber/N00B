@@ -49,5 +49,18 @@ const tracked = read('.env.production');
 check(/VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_/.test(tracked) && !/service_role|sb_secret_|SECRET|PRIVATE/i.test(tracked.replace(/#.*$/gm, '')), 'the only key in the repository is the public one');
 check(!/sourcemap\s*:\s*true/.test(read('vite.config.ts')), 'the published files carry no source maps');
 
+section('6. Links people type, and where a notification leads');
+{
+  const src = read('src/utils/safeUrl.ts');
+  const fn = new Function(src.replace('export function', 'function').replace('(value?: string | null): string | null', '(value)').replace(/const MAX_LENGTH/, 'var MAX_LENGTH') + '\nreturn safeExternalUrl;')();
+  check(fn('https://example.com/page?a=1') === 'https://example.com/page?a=1' && fn('example.com') === 'https://example.com/' && fn('  http://example.com  ') === 'http://example.com/' && fn('example.com:8080/x') === 'https://example.com:8080/x', 'a normal web address stays a link (a bare one gets https://)');
+  check(fn('javascript:alert(1)') === null && fn('JaVaScRiPt:alert(1)') === null && fn('data:text/html,<script>1</script>') === null && fn('vbscript:x') === null && fn('file:///etc/passwd') === null && fn('ftp://example.com') === null, 'javascript:, data:, vbscript:, file: and ftp: are never links');
+  check(fn('https://trusted.com@evil.com') === null && fn('https://exa mple.com') === null && fn('https://a.com/\u0000') === null && fn('') === null && fn(null) === null && fn('https://' + 'a'.repeat(3000) + '.com') === null, 'no user-name tricks, no spaces or hidden characters, nothing empty or enormous');
+  const post = read('src/components/Feed/PostCard.tsx'), reel = read('src/components/Reels/ReelsView.tsx'), prof = read('src/components/Profile/ProfileView.tsx');
+  check(/href=\{safeExternalUrl\(post\.webLink\) as string\}/.test(post) && /href=\{safeExternalUrl\(reel\.webLink\) as string\}/.test(reel) && /href=\{safeExternalUrl\(targetUser\.website\) as string\}/.test(prof), 'the web link of a post, of a reel and the website of a profile all go through it');
+  const sw = read('public/sw.js');
+  check(/ownSite\.test\(u\.hostname\)/.test(sw) && /let targetUrl = '\/'/.test(sw), 'a notification only ever opens a page of NOOB itself');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

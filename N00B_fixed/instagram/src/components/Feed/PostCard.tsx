@@ -32,6 +32,7 @@ import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { FullscreenAvatarModal } from '../Common/FullscreenAvatarModal';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
 import { SharePostSheet } from '../Common/SharePostSheet';
+import { safeExternalUrl } from '../../utils/safeUrl';
 import { contentUrl } from '../../utils/routes';
 import { fetchPostLikers, fetchPostViewers, recordPostView, fetchUserById } from '../../services/api';
 import { likeCountHiddenFor, useSetting } from '../../services/settingsApi';
@@ -1074,9 +1075,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* Outbound Link for Meta-Verified Users */}
-        {post.webLink && (
+        {safeExternalUrl(post.webLink) && (
           <a
-            href={post.webLink}
+            href={safeExternalUrl(post.webLink) as string}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-[11px] text-noob hover:underline mt-1.5 font-medium"

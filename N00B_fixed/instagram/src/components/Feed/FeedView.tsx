@@ -63,6 +63,7 @@ import { SparkXApplicationModal } from './SparkXApplicationModal';
 import { JoinUsModal } from '../Explore/JoinUsModal';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
+import { MenuBanner } from './MenuBanner';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
@@ -1005,126 +1006,22 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   })}
                 </div>
               )}
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-noob/15 border border-noob/30 flex items-center justify-center shrink-0">
-                  <Flame className="w-4.5 h-4.5 text-noob" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Daily NOOB</span>
-                  <span className="text-[10px] text-zinc-400">Today's challenge — win real points</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowNoobRooms(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                  <Trophy className="w-4.5 h-4.5 text-red-400" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">NOOB Rooms</span>
-                  <span className="text-[10px] text-zinc-400">Live voice rooms — join, talk, play</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowGuessTheSong(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
-                  <Music2 className="w-4.5 h-4.5 text-cyan-400" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Guess the Song</span>
-                  <span className="text-[10px] text-zinc-400">A clip plays — pick the right title, score points</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowLiveLoungePage(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4.5 h-4.5 text-purple-400" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">NOOB Live Lounge{currentUser.hasLiveLounge ? ' — Unlocked' : ''}</span>
-                  <span className="text-[10px] text-zinc-400">Private meeting rooms — screen share, whiteboard & chat</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowStorePage(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center shrink-0">
-                  <ShoppingBag className="w-4.5 h-4.5 text-orange-400" />
-                </div>
-                <div>
-                  <span className="shop-wordmark text-base leading-none text-white block">Shop NOOB</span>
-                  <span className="text-[10px] text-zinc-400">Browse products & your cart</span>
-                </div>
-              </button>
+              {/* The rest of the menu, dressed like the banners above (see MenuBanner.tsx) */}
+              <MenuBanner tone="daily" icon={<Flame className="w-[18px] h-[18px]" />} title="Daily NOOB" blurb="Today's challenge — win real points" onClick={() => { setShowNoobMenu(false); setShowDailyNoob(true); }} />
+              <MenuBanner tone="rooms" icon={<Trophy className="w-[18px] h-[18px]" />} title="NOOB Rooms" blurb="Live voice rooms — join, talk, play" onClick={() => { setShowNoobMenu(false); setShowNoobRooms(true); }} />
+              <MenuBanner tone="song" icon={<Music2 className="w-[18px] h-[18px]" />} title="Guess the Song" blurb="A clip plays — pick the right title, score points" onClick={() => { setShowNoobMenu(false); setShowGuessTheSong(true); }} />
+              <MenuBanner tone="lounge" icon={<Sparkles className="w-[18px] h-[18px]" />} title={`NOOB Live Lounge${currentUser.hasLiveLounge ? ' — Unlocked' : ''}`} blurb="Private meeting rooms — screen share, whiteboard & chat" onClick={() => { setShowNoobMenu(false); setShowLiveLoungePage(true); }} />
+              <MenuBanner tone="shop" icon={<ShoppingBag className="w-[18px] h-[18px]" />} title={<span className="shop-wordmark text-base leading-none font-normal">Shop NOOB</span>} blurb="Browse products & your cart" onClick={() => { setShowNoobMenu(false); setShowStorePage(true); }} />
               {foodStallVisible && (
                 foodStallComingSoon ? (
-                  <div className="w-full p-3 rounded-xl flex items-center gap-3 text-left">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-base">
-                      🍔
-                    </div>
-                    <div className="flex items-center justify-between flex-1 min-w-0 gap-2">
-                      <span className="text-xs font-bold text-white block">NOOB Food Stall</span>
-                      <span className="shrink-0 text-[10px] font-black text-amber-400 bg-black/40 px-2 py-0.5 rounded-full border border-amber-400/40">Coming Soon</span>
-                    </div>
-                  </div>
+                  <MenuBanner tone="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" badge="Coming Soon" />
                 ) : (
-                  <button
-                    onClick={() => { setShowNoobMenu(false); setShowFoodStall(true); }}
-                    className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0 text-base">
-                      🍔
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-white block">NOOB Food Stall</span>
-                      <span className="text-[10px] text-zinc-400">Burgers, bhel, fries, manchurian &amp; coke</span>
-                    </div>
-                  </button>
+                  <MenuBanner tone="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" blurb="Burgers, bhel, fries, manchurian & coke" onClick={() => { setShowNoobMenu(false); setShowFoodStall(true); }} />
                 )
               )}
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowNoobAi(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <NoobAiLogo className="w-9 h-9 shrink-0" />
-                <div>
-                  <span className="text-xs font-bold text-white block">NOOB AI</span>
-                  <span className="text-[10px] text-zinc-400">Talk to your AI friend by voice</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowSupportModal(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center shrink-0">
-                  <MessageCircle className="w-4.5 h-4.5 text-sky-400" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Customer Support</span>
-                  <span className="text-[10px] text-zinc-400">Chat with the NOOB support team</span>
-                </div>
-              </button>
-              <button
-                onClick={() => { setShowNoobMenu(false); setShowSuggestionBox(true); }}
-                className="w-full p-3 rounded-xl hover:bg-zinc-900 flex items-center gap-3 text-left transition-colors cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
-                  <Lightbulb className="w-4.5 h-4.5 text-amber-400" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Suggestion Box</span>
-                  <span className="text-[10px] text-zinc-400">Share ideas, improvements or problems</span>
-                </div>
-              </button>
+              <MenuBanner tone="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { setShowNoobMenu(false); setShowNoobAi(true); }} />
+              <MenuBanner tone="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { setShowNoobMenu(false); setShowSupportModal(true); }} />
+              <MenuBanner tone="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { setShowNoobMenu(false); setShowSuggestionBox(true); }} />
             </div>
             {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
             </div>

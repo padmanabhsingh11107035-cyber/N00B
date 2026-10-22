@@ -319,7 +319,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
             {filteredGames.map((game, idx) => (
               <div
                 key={game.id}
-                className="bg-zinc-950 border border-zinc-800/90 hover:border-zinc-700 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col group"
+                className="game-card bg-zinc-950 border border-zinc-800/90 hover:border-zinc-700 rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col group"
               >
                 {/* Looping poster carousel — same slides as the game's own detail page, cycling on its own. The small gap around it keeps the picture's white outline whole: it used to sit on the card's own edge, where the card's rounder corners cut it off. */}
                 <div className="p-2 pb-0">

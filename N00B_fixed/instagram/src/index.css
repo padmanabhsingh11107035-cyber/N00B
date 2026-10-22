@@ -1092,3 +1092,15 @@ html[data-refresh="off"] body { overscroll-behavior-y: contain; }
 /* Game cards (Games page): the number badge (#1 NEW) and the players badge (Solo, Solo / Friend) are white with black text in Dark; Light keeps the look it had. */
 :root[data-theme="dark"] .game-badge { background-color: #ffffff !important; color: #000000 !important; border-color: rgba(255, 255, 255, 0.9) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
 :root[data-theme="dark"] .game-badge .game-badge-new { color: #b45309 !important; }
+
+/* The three-line menu's banners (components/Feed/MenuBanner.tsx): .force-dark paints a flat grey with !important inside @layer base, so each banner keeps its own deep colour
+   (set on the banner as --menu-banner-base) with one more class in the same layer. */
+@layer base {
+  .menu-banner.force-dark, body.light .menu-banner.force-dark { background-color: var(--menu-banner-base, #121216) !important; }
+}
+
+/* Games page: every game card and the outline of its picture are drawn thick and clear: white in Dark, a bold line in Light. */
+.game-card, .game-card:hover { border-width: 2px !important; }
+.game-card .game-poster-frame { border-width: 2px !important; }
+:root[data-theme="dark"] .game-card, :root[data-theme="dark"] .game-card:hover { border-color: #ffffff !important; }
+:root[data-theme="dark"] .game-card .game-poster-frame { border-color: #ffffff !important; }

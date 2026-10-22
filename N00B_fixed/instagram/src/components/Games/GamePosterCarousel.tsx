@@ -226,7 +226,7 @@ export const GamePosterCarousel: React.FC<GamePosterCarouselProps> = ({ game, au
   };
 
   return (
-    <div ref={rootRef} className="rounded-2xl overflow-hidden border border-zinc-800 shadow-inner relative">
+    <div ref={rootRef} className="game-poster-frame rounded-2xl overflow-hidden border border-zinc-800 shadow-inner relative">
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}

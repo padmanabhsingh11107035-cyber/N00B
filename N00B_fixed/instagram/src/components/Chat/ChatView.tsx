@@ -6,6 +6,7 @@ import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  Archive,
   ChevronDown,
   Search,
   Pin,
@@ -1608,7 +1609,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         {/* LEFT COLUMN: WhatsApp-style Chats List (Matching Screenshot) */}
         <aside
-          className={`w-full md:w-80 lg:w-96 shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex flex-col z-20 ${
+          className={`relative w-full md:w-80 lg:w-96 shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex flex-col z-20 ${
             mobileView === 'chat' ? 'hidden md:flex' : 'flex'
           }`}
         >
@@ -1684,6 +1685,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <button
                       onClick={() => {
                         setShowLeftMenu(false);
+                        setShowInstantsArchive(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+                      data-testid="instants-archive-open"
+                    >
+                      <Archive className="w-4 h-4 text-amber-300" /> Your Instants
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowLeftMenu(false);
                         setShowChatSettings(true);
                       }}
                       className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
@@ -1696,11 +1707,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
           </div>
 
+          {/* Instants: a small tab at the right edge of the list (Instagram style), it takes no room from the chats */}
           <InstantsStack
-            currentUser={currentUser}
             onOpenCamera={() => setShowInstantCamera(true)}
             onOpenViewer={(queue) => setInstantViewerQueue(queue)}
-            onOpenArchive={() => setShowInstantsArchive(true)}
             refreshKey={instantsRefreshKey}
           />
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { SocialLinkButtons } from './SocialLinkButtons';
 import { ProfileAskCard, ProfileMoodChip } from './ProfileFunCards';
 import type { FunLocation } from '../../utils/funRoutes';
 import { isStaff } from '../../adminAccess';
@@ -26,10 +27,6 @@ import {
   Globe,
   Briefcase,
   Check,
-  Twitter,
-  Instagram,
-  Youtube,
-  Github,
   MoreVertical,
   Monitor,
   MessageCircle,
@@ -1010,55 +1007,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
 
-          {/* Social Profiles Badges */}
-          {targetUser.socialLinks && Object.values(targetUser.socialLinks).some(Boolean) && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {targetUser.socialLinks.twitter && (
-                <a
-                  href={`https://twitter.com/${targetUser.socialLinks.twitter.replace('@', '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold text-sky-400 flex items-center gap-1.5"
-                >
-                  <Twitter className="w-3 h-3" />
-                  <span>@{targetUser.socialLinks.twitter.replace('@', '')}</span>
-                </a>
-              )}
-              {targetUser.socialLinks.instagram && (
-                <a
-                  href={`https://instagram.com/${targetUser.socialLinks.instagram.replace('@', '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold text-pink-400 flex items-center gap-1.5"
-                >
-                  <Instagram className="w-3 h-3" />
-                  <span>@{targetUser.socialLinks.instagram.replace('@', '')}</span>
-                </a>
-              )}
-              {targetUser.socialLinks.youtube && (
-                <a
-                  href={`https://youtube.com/${targetUser.socialLinks.youtube}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold text-red-400 flex items-center gap-1.5"
-                >
-                  <Youtube className="w-3 h-3" />
-                  <span>{targetUser.socialLinks.youtube}</span>
-                </a>
-              )}
-              {targetUser.socialLinks.github && (
-                <a
-                  href={`https://github.com/${targetUser.socialLinks.github}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2.5 py-1 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5"
-                >
-                  <Github className="w-3 h-3" />
-                  <span>{targetUser.socialLinks.github}</span>
-                </a>
-              )}
-            </div>
-          )}
+          {/* Social profiles: the apps' own icons as buttons (never the link itself); a button opens the link the person added */}
+          <SocialLinkButtons links={targetUser.socialLinks} />
 
           {/* Interests Tags */}
           {targetUser.interests && targetUser.interests.length > 0 && (

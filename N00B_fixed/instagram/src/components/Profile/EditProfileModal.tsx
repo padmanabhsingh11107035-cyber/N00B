@@ -661,12 +661,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           {/* 7. Social Links */}
           <div className="space-y-2.5">
             <span className="text-xs font-bold text-zinc-300 block">Connected Social Profiles</span>
+            <span className="text-[10px] text-zinc-500 block -mt-1.5">Paste the link or type the name. Visitors see the app's icon, and it opens your link.</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5">
                 <Twitter className="w-4 h-4 text-sky-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="X / Twitter handle"
+                  placeholder="X / Twitter link or handle"
                   value={socialTwitter}
                   onChange={(e) => setSocialTwitter(e.target.value)}
                   className="w-full bg-transparent text-xs text-white focus:outline-none"
@@ -677,7 +678,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <Instagram className="w-4 h-4 text-pink-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Instagram handle"
+                  placeholder="Instagram link or handle"
                   value={socialInstagram}
                   onChange={(e) => setSocialInstagram(e.target.value)}
                   className="w-full bg-transparent text-xs text-white focus:outline-none"
@@ -688,7 +689,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <Youtube className="w-4 h-4 text-red-500 shrink-0" />
                 <input
                   type="text"
-                  placeholder="YouTube channel"
+                  placeholder="YouTube link or channel"
                   value={socialYoutube}
                   onChange={(e) => setSocialYoutube(e.target.value)}
                   className="w-full bg-transparent text-xs text-white focus:outline-none"
@@ -699,7 +700,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <Github className="w-4 h-4 text-zinc-300 shrink-0" />
                 <input
                   type="text"
-                  placeholder="GitHub username"
+                  placeholder="GitHub link or username"
                   value={socialGithub}
                   onChange={(e) => setSocialGithub(e.target.value)}
                   className="w-full bg-transparent text-xs text-white focus:outline-none"

@@ -1094,7 +1094,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
               onClick={handleInstallClick}
               disabled={installBusy}
               style={{ background: 'linear-gradient(100deg, var(--color-noob) 0%, var(--color-noob-strong) 100%)', color: 'var(--on-accent)' }}
-              aria-label={installElsewhere ? 'Install the new NOOB app from noobsocials.com' : 'Install the NOOB app'}
+              aria-label={installElsewhere ? 'Install the new NOOB app from noobsocials.com' : 'Install NOOB'}
               className="dd-btn group relative z-[1] overflow-hidden w-[min(92vw,360px)] py-2.5 rounded-full cursor-pointer shadow-[0_3px_0_rgba(var(--doodle-rgb),.28),0_9px_18px_-8px_rgba(var(--doodle-rgb),.35)] transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[.99] disabled:opacity-70 disabled:hover:translate-y-0"
             >
               <span aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(135deg, rgba(128,128,128,.14) 0 5px, transparent 5px 13px)' }} />
@@ -1107,8 +1107,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                   {installBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 </span>
                 <span className="flex flex-col text-left leading-tight">
-                  <span className="text-[15px] font-extrabold tracking-tight">{installElsewhere ? 'Install the new NOOB app' : 'Install NOOB app'}</span>
-                  <span className="text-[10.5px] font-semibold opacity-90">{installElsewhere ? 'Now at noobsocials.com · free · 2 taps' : onSamsung ? 'Opens Chrome to install · free · 2 taps' : 'Free · opens like a real app · 2 taps'}</span>
+                  <span className="text-[15px] font-extrabold tracking-tight">{installElsewhere ? 'Install the new NOOB app' : 'Install NOOB'}</span>
+                  {installElsewhere && <span className="text-[10.5px] font-semibold opacity-90">Now at noobsocials.com · free · 2 taps</span>}
                 </span>
               </span>
             </button>

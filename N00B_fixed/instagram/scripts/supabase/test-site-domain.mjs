@@ -51,7 +51,7 @@ section('3. Links that are shown or shared');
 
 section('4. Where it is used');
 const sb = read('src/services/supabase.ts');
-check(/if \(value\.startsWith\('\/media\/'\)\) return mediaOrigin\(\) \+ value;/.test(sb) && /return `\$\{mediaOrigin\(\)\}\/media\//.test(sb), 'pictures and videos: a saved key or "/media/..." gets the full address inside the Android app');
+check(/if \(value\.startsWith\('\/m\/'\)\) return mediaOrigin\(\) \+ value;/.test(sb) && /return `\$\{mediaOrigin\(\)\}\/m\//.test(sb) && /value\.startsWith\('\/media\/'\)\) return `\$\{mediaOrigin\(\)\}\/m\//.test(sb), 'pictures and videos: a saved key, "/m/..." or the older "/media/..." gets the full address inside the Android app, through the cached /m/ route');
 const ib = read('src/utils/inAppBrowser.ts');
 check(/SITE_DOMAINS\.some/.test(ib) && !/'nooob\.xyz'/.test(ib), 'a link to either of NOOB\'s addresses opens normally, never in the in-app browser');
 const push = read('src/utils/pushSupport.ts');

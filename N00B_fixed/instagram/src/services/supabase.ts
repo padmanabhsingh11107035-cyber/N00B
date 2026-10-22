@@ -95,18 +95,20 @@ export const MEDIA_BUCKET = 'media';
 // a full https URL (outside links such as default avatars), a bundled "/path", or a "data:"/"blob:" preview.
 // Only bare keys need turning into a real address.
 //
-// Resolved through the same-origin Cloudflare Worker route (nooob.xyz/media/* -> little-term-d4e7),
-// not straight to Supabase Storage — Supabase Storage has no edge cache of its own on the Free plan,
-// so every view of every photo/video was re-downloaded from its slow origin and billed as fresh
-// Cached Egress. The Worker caches each object at Cloudflare's edge after its first fetch, which is
-// what actually stops the egress bleed (confirmed live: the Workers Route is connected and the
-// Worker is responding, not falling through to the app).
+// Resolved through the website's own Worker, at /m/<key> (worker/index.js), not straight to Supabase Storage.
+// Supabase's Free plan allows 5 GB a month of "Cached Egress" and NOOB used 11.6 GB with 0.3 GB of files: the route that served /media/<key> before (a Worker that only lives in
+// the Cloudflare dashboard) kept whole pictures but missed most pieces of videos and songs (a browser loads those in pieces), so each play went back to Supabase.
+// /m/ keeps the WHOLE file in the data centre's cache and answers every piece from it. The old /media/ address still works (an app that is open on the old version uses it).
+const DIRECT_PREFIX = url ? `${url}/storage/v1/object/public/${MEDIA_BUCKET}/` : '';
 export function resolveMedia(value?: string | null): string {
   if (!value) return '';
-  // inside the Android app the website's own /media/ route needs the full address (see utils/siteUrl.ts); on the website mediaOrigin() is empty
-  if (value.startsWith('/media/')) return mediaOrigin() + value;
+  // inside the Android app the website's own /m/ route needs the full address (see utils/siteUrl.ts); on the website mediaOrigin() is empty
+  if (value.startsWith('/m/')) return mediaOrigin() + value;
+  // an older saved address of the same file (/media/<key>, or Supabase's own address) goes through the same cached route
+  if (value.startsWith('/media/')) return `${mediaOrigin()}/m/${value.slice('/media/'.length)}`;
+  if (DIRECT_PREFIX && value.startsWith(DIRECT_PREFIX)) return `${mediaOrigin()}/m/${value.slice(DIRECT_PREFIX.length).split('?')[0]}`;
   if (/^(https?:|data:|blob:|\/)/i.test(value)) return value;
-  return `${mediaOrigin()}/media/${value.split('/').map(encodeURIComponent).join('/')}`;
+  return `${mediaOrigin()}/m/${value.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 // The reverse: what to SAVE when a screen hands back a display address. Storing the short key (not the
@@ -119,9 +121,11 @@ export function toStoredMedia(value?: string | null): string {
   if (value.startsWith(directPrefix)) {
     try { return decodeURIComponent(value.slice(directPrefix.length).split('?')[0]); } catch { return value.slice(directPrefix.length); }
   }
-  const proxyPrefix = '/media/';
-  if (value.startsWith(proxyPrefix)) {
-    try { return decodeURIComponent(value.slice(proxyPrefix.length).split('?')[0]); } catch { return value.slice(proxyPrefix.length); }
+  // the display address of the file (/m/<key>, the older /media/<key>, with or without NOOB's own address in front of it)
+  const own = /^(?:https?:\/\/(?:www\.)?(?:noobsocials\.com|nooob\.xyz))?\/(?:m|media)\//i.exec(value);
+  if (own) {
+    const rest = value.slice(own[0].length);
+    try { return decodeURIComponent(rest.split('?')[0]); } catch { return rest; }
   }
   return value;
 }

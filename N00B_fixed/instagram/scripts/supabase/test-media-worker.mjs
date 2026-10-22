@@ -160,5 +160,22 @@ section('7. Wiring');
 const wr = fs.readFileSync('wrangler.jsonc', 'utf8');
 check(/"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*"\]/.test(wr), 'the Worker runs first for /m/*');
 
+section('8. The addresses the app uses (src/services/supabase.ts)');
+{
+  const src = fs.readFileSync('src/services/supabase.ts', 'utf8').split(String.fromCharCode(13)).join('');
+  const grab = (name) => new RegExp('export function ' + name + '[\\s\\S]*?\\n}\\n').exec(src)[0].replace('export function', 'function').replace('(value?: string | null): string', '(value)');
+  const make = (origin) => new Function('mediaOrigin', 'DIRECT_PREFIX', 'url', 'MEDIA_BUCKET', grab('resolveMedia') + '\n' + grab('toStoredMedia') + '\nreturn { resolveMedia, toStoredMedia };')(() => origin, 'https://x.supabase.co/storage/v1/object/public/media/', 'https://x.supabase.co', 'media');
+  const web = make('');
+  const android = make('https://noobsocials.com');
+  check(web.resolveMedia('posts/1-a.jpg') === '/m/posts/1-a.jpg' && web.resolveMedia('posts/pic 1.jpg') === '/m/posts/pic%201.jpg', 'a saved key becomes /m/<key> (the file\'s own spaces and symbols encoded)');
+  check(web.resolveMedia('/media/reels/1-a.mp4') === '/m/reels/1-a.mp4' && web.resolveMedia('/m/reels/1-a.mp4') === '/m/reels/1-a.mp4', 'the older /media/<key> form and the new one both end up at /m/');
+  check(web.resolveMedia('https://x.supabase.co/storage/v1/object/public/media/posts/1-a.jpg?t=1') === '/m/posts/1-a.jpg', 'an old direct Supabase address goes through the cached route too');
+  check(web.resolveMedia('https://i.giphy.com/media/abc/giphy.gif') === 'https://i.giphy.com/media/abc/giphy.gif' && web.resolveMedia('data:image/png;base64,AA') === 'data:image/png;base64,AA' && web.resolveMedia('blob:https://a/b') === 'blob:https://a/b' && web.resolveMedia('/noob-logo-circle.png') === '/noob-logo-circle.png' && web.resolveMedia('') === '', 'other websites\' pictures, previews and the app\'s own files are left alone (a GIF address with /media/ in it is not ours)');
+  check(android.resolveMedia('posts/1-a.jpg') === 'https://noobsocials.com/m/posts/1-a.jpg' && android.resolveMedia('/media/posts/1-a.jpg') === 'https://noobsocials.com/m/posts/1-a.jpg', 'inside the Android app the address is complete');
+  check(web.toStoredMedia('/m/posts/pic%201.jpg') === 'posts/pic 1.jpg' && web.toStoredMedia('/media/posts/1-a.jpg') === 'posts/1-a.jpg' && web.toStoredMedia('https://noobsocials.com/m/posts/1-a.jpg') === 'posts/1-a.jpg' && web.toStoredMedia('https://www.nooob.xyz/media/posts/1-a.jpg') === 'posts/1-a.jpg', 'what is saved is always the short key, whichever display address the screen hands back');
+  check(web.toStoredMedia('https://i.giphy.com/media/abc/giphy.gif') === 'https://i.giphy.com/media/abc/giphy.gif' && web.toStoredMedia('https://evil.example/m/posts/a.jpg') === 'https://evil.example/m/posts/a.jpg' && web.toStoredMedia('posts/1-a.jpg') === 'posts/1-a.jpg', 'other websites\' addresses are never taken for NOOB files');
+  check(web.toStoredMedia(web.resolveMedia('posts/pic 1.jpg')) === 'posts/pic 1.jpg', 'a key goes out and comes back the same');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1649,8 +1649,9 @@ export default function App() {
         <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
       )}
       {/* 1. Left Desktop Sidebar (shown on xl: screens) */}
-      <aside className="hidden xl:flex flex-col w-[240px] 2xl:w-[272px] h-[92vh] sticky top-6 justify-between pb-4 shrink-0 select-none xl:h-screen xl:top-0 xl:-my-6 xl:py-6 xl:px-3 xl:border-r xl:border-white/5 xl:overflow-y-auto no-scrollbar" data-testid="desktop-side-menu">
-        <div className="space-y-7">
+      <aside className="hidden xl:flex flex-col w-[240px] 2xl:w-[272px] h-[92vh] sticky top-6 justify-between pb-4 shrink-0 select-none xl:h-screen xl:top-0 xl:-my-6 xl:py-6 xl:px-3 xl:border-r xl:border-white/5 xl:overflow-hidden" data-testid="desktop-side-menu">
+        {/* The menu scrolls inside itself on a short screen, the profile box under it never gets pushed out of sight */}
+        <div className="space-y-7 min-h-0 flex-1 overflow-y-auto no-scrollbar pb-3" data-testid="desktop-side-menu-scroll">
           {/* Logo & Brand Header */}
           <div className="flex items-center gap-3 px-2">
             <LogoLightbox className="w-10 h-10 rounded-[24%] overflow-hidden border border-white/15 shadow-[0_0_20px_rgba(255,255,255,0.12)] cursor-pointer hover:border-white/50 transition-colors" />
@@ -1830,7 +1831,7 @@ export default function App() {
         </div>
 
         {/* Profile Desk Widget */}
-        <div className="bg-zinc-900/60 hover:bg-zinc-900/90 border border-white/5 p-3 rounded-2xl transition-all shadow-lg">
+        <div className="shrink-0 bg-zinc-900/60 hover:bg-zinc-900/90 border border-white/5 p-3 rounded-2xl transition-all shadow-lg" data-testid="desktop-side-profile">
           <div className="flex items-center gap-3">
             <div
               onClick={() => handleSelectNavTab('profile')}

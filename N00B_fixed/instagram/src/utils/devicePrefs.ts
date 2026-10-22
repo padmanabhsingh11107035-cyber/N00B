@@ -14,7 +14,7 @@ export interface DevicePrefs {
   textSize: TextSize;
   highContrast: boolean;
   boldText: boolean;
-  /** The whole app in a classic bold serif (on by default). */
+  /** The whole app in a classic serif (off by default: the app is set in the bold sans). */
   serifText: boolean;
   dataSaver: boolean;
   uploadQuality: UploadQuality;
@@ -31,7 +31,7 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   textSize: 'default',
   highContrast: false,
   boldText: false,
-  serifText: true,
+  serifText: false,
   dataSaver: false,
   uploadQuality: 'standard',
   autoplay: 'always',
@@ -79,8 +79,19 @@ export const BREAK_CHOICES = BREAKS;
 let current: DevicePrefs = DEFAULT_DEVICE_PREFS;
 const listeners = new Set<() => void>();
 
+// The app used to start in the serif. Now everyone starts in the bold sans, also the people who had the serif on only because it was the default: once per device the serif is
+// switched off (the marker below remembers it); after that, whoever turns "Serif text" on again in Settings keeps it.
+const FONT_RESET_KEY = 'noob.fontReset.v1';
+
 function read(): DevicePrefs {
-  try { return cleanDevicePrefs(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch { return DEFAULT_DEVICE_PREFS; }
+  try {
+    const prefs = cleanDevicePrefs(JSON.parse(localStorage.getItem(KEY) || 'null'));
+    if (!localStorage.getItem(FONT_RESET_KEY)) {
+      localStorage.setItem(FONT_RESET_KEY, '1');
+      if (prefs.serifText) { prefs.serifText = false; localStorage.setItem(KEY, JSON.stringify(prefs)); }
+    }
+    return prefs;
+  } catch { return DEFAULT_DEVICE_PREFS; }
 }
 
 /** Puts the choices to work on the page itself (the root element carries them as attributes; see index.css). */

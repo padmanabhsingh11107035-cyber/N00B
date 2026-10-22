@@ -126,7 +126,7 @@ export const AccessibilityPage: React.FC<PageProps> = ({ back }) => {
         <Choice value={prefs.textSize} onChange={(v) => setDevicePrefs({ textSize: v })} options={TEXT_SIZES} />
       </Section>
       <Section title="Easier to see and use">
-        <ToggleRow icon={Type} label="Serif text" sub="Classic letters like a book, all over the app. Turn off for the rounded look" on={prefs.serifText} onChange={(v) => setDevicePrefs({ serifText: v })} testId="a11y-serif" />
+        <ToggleRow icon={Type} label="Serif text" sub="Classic letters like a book, all over the app. Off by default: NOOB uses the bold sans" on={prefs.serifText} onChange={(v) => setDevicePrefs({ serifText: v })} testId="a11y-serif" />
         <ToggleRow icon={Bold} label="Bold text" sub="Make all text heavier" on={prefs.boldText} onChange={(v) => setDevicePrefs({ boldText: v })} testId="a11y-bold" />
         <ToggleRow icon={Contrast} label="Higher contrast" sub="Brighter text and clearer borders" on={prefs.highContrast} onChange={(v) => setDevicePrefs({ highContrast: v })} testId="a11y-contrast" />
         <ToggleRow icon={MousePointerClick} label="Reduce motion" sub="Fewer animations and no moving backgrounds" on={prefs.reduceMotion} onChange={(v) => setDevicePrefs({ reduceMotion: v })} testId="a11y-motion" />

@@ -543,7 +543,7 @@ html[data-text-size="large"] { font-size: 17.5px; }
 html[data-text-size="xlarge"] { font-size: 19.5px; }
 html[data-bold="on"] body { font-weight: 600; }
 html[data-bold="on"] p, html[data-bold="on"] span, html[data-bold="on"] li { font-weight: 600; }
-/* Settings > Accessibility > "Serif text" (on by default): all the app's text is set in a classic serif, like the song title and the chips of the Music player.
+/* Settings > Accessibility > "Serif text" (off by default; NOOB is set in the bold sans): when someone turns it on, all the app's text is set in a classic serif, like the song title and the chips of the Music player.
    The script fonts of the logo and the code font stay as they are. */
 html[data-serif="on"] { --font-sans: "Times New Roman", Times, "Liberation Serif", "Noto Serif", Georgia, serif; }
 html[data-serif="on"] body, html[data-serif="on"] button, html[data-serif="on"] input, html[data-serif="on"] textarea, html[data-serif="on"] select,

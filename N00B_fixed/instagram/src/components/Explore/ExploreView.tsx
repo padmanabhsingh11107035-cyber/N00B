@@ -435,7 +435,9 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search registered people, handles, bios, posts & reels..."
+            placeholder="Search anything"
+            aria-label="Search people, handles, bios, posts and reels"
+            enterKeyHint="search"
             className="w-full bg-zinc-900/90 text-sm text-white pl-10 pr-9 py-3 rounded-2xl border border-white/10 focus:border-noob focus:ring-1 focus:ring-noob outline-none transition-all placeholder:text-zinc-500 shadow-inner"
           />
           {searchQuery && (
@@ -463,22 +465,22 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
       {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
 
-      {/* 2. Category & Section Switcher */}
-      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-900/80 rounded-2xl border border-white/5 shrink-0 w-max min-w-full">
+      {/* 2. Category & Section Switcher: the three tabs always fit the width of the screen, whatever the text size, and the row never slides sideways under a finger */}
+      <div className="pb-1" data-testid="explore-tabs">
+        <div className="grid grid-cols-[1fr_1.4fr_1fr] items-center gap-1.5 p-1 bg-zinc-900/80 rounded-2xl border border-white/5 w-full">
           <button
             onClick={() => {
               setActiveTab('posts');
               setVisibleCount(ITEMS_PER_PAGE);
             }}
-            className={`flex-1 justify-center whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`min-w-0 justify-center whitespace-nowrap px-1.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'posts'
                 ? 'bg-noob text-black shadow-md shadow-noob/20'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Post</span>
+            <Layers className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Post</span>
           </button>
 
           {/* Every registered account, not an algorithmic subset — "Suggested" just names what this
@@ -489,14 +491,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               setActiveTab('users');
               setVisibleCount(ITEMS_PER_PAGE);
             }}
-            className={`flex-1 justify-center whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`min-w-0 justify-center whitespace-nowrap px-1.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-noob text-black shadow-md shadow-noob/20'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>Suggested users for u</span>
+            <Users className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Suggested</span>
           </button>
 
           <button
@@ -504,14 +506,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               setActiveTab('reels');
               setVisibleCount(ITEMS_PER_PAGE);
             }}
-            className={`flex-1 justify-center whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`min-w-0 justify-center whitespace-nowrap px-1.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === 'reels'
                 ? 'bg-noob text-black shadow-md shadow-noob/20'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Film className="w-3.5 h-3.5" />
-            <span>Reel</span>
+            <Film className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Reel</span>
           </button>
         </div>
       </div>

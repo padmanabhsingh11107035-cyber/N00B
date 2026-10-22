@@ -1,13 +1,29 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { fetchActiveAds } from '../../services/api';
-import { nextAdIndex, type ActiveAd, type AdPage } from '../../utils/ads';
+import { AD_SLIDE_MS, adTurnMs, nextAdIndex, type ActiveAd, type AdPage } from '../../utils/ads';
 import { safeExternalUrl } from '../../utils/safeUrl';
 
 // An ad at the top of Home, Feed or Reels (NOOB Ads: a business account applies, the admin approves it and chooses the pages). It always says "Sponsored", shows the picture or
 // plays the video (muted, looping) and, when the advertiser gave a web link, opens it in a new tab. When no ad is running on the page it draws nothing at all, so the page looks
-// exactly as before. When several are running they take turns.
-const TURN_MS = 9000;
+// exactly as before. When several are running they take turns. An ad of several photos changes photo by itself (the next one after 1 second).
+
+/** the photos of one ad, one on top of the other: the next one fades in after 1 second, round and round (all of them are loaded at once, so there is no blank moment) */
+export const AdSlides: React.FC<{ urls: string[]; alt: string }> = ({ urls, alt }) => {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setShown((n) => (n + 1) % urls.length), AD_SLIDE_MS);
+    return () => window.clearInterval(t);
+  }, [urls.length]);
+  return (
+    <>
+      {urls.map((u, n) => (
+        <img key={u} src={u} alt={n === shown ? alt : ''} loading="eager" data-testid="ad-slide" data-shown={n === shown ? '1' : '0'}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${n === shown ? 'opacity-100' : 'opacity-0'}`} />
+      ))}
+    </>
+  );
+};
 
 export const AdBanner: React.FC<{ page: AdPage; compact?: boolean; className?: string }> = ({ page, compact = false, className = '' }) => {
   const [ads, setAds] = useState<ActiveAd[]>([]);
@@ -19,11 +35,12 @@ export const AdBanner: React.FC<{ page: AdPage; compact?: boolean; className?: s
     void fetchActiveAds(page).then((list) => { if (alive) { setAds(list); setIndex(0); } });
     return () => { alive = false; };
   }, [page]);
+  // the next ad takes its turn after a while (an ad of many photos stays until all of its photos have been shown once)
   useEffect(() => {
     if (ads.length < 2) return;
-    const t = window.setInterval(() => setIndex((i) => nextAdIndex(i, ads.length)), TURN_MS);
-    return () => window.clearInterval(t);
-  }, [ads.length]);
+    const t = window.setTimeout(() => setIndex((i) => nextAdIndex(i, ads.length)), adTurnMs(ads[index % ads.length]));
+    return () => window.clearTimeout(t);
+  }, [ads, index]);
 
   const ad = ads[index % Math.max(1, ads.length)];
   // on Reels the pager under the strip listens to touches itself: the strip keeps its own, so pressing it never turns the page
@@ -43,7 +60,9 @@ export const AdBanner: React.FC<{ page: AdPage; compact?: boolean; className?: s
 
   const media = ad.mediaType === 'video'
     ? <video key={ad.id} src={ad.mediaUrl} autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
-    : <img key={ad.id} src={ad.mediaUrl} alt={ad.title || 'Ad'} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />;
+    : ad.mediaUrls.length > 1
+      ? <AdSlides key={ad.id} urls={ad.mediaUrls} alt={ad.title || 'Ad'} />
+      : <img key={ad.id} src={ad.mediaUrl} alt={ad.title || 'Ad'} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />;
   const who = ad.advertiser.displayName || ad.advertiser.username;
 
   if (compact) {

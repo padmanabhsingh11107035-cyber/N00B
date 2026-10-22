@@ -108,5 +108,38 @@ check(/permission denied/i.test(await err(shop, `select * from public.ad_applica
 check(/permission denied/i.test(await err(shop, `insert into public.ad_applications (user_id, media_url, media_type, duration_days, requested_pages) values ('${shop}', 'ads/1-poster.jpg', 'image', 7, array['home'])`) || ''), 'not even by the advertiser');
 check((await db.query(`select policyname from pg_policies where tablename = 'storage.objects' or (schemaname = 'storage' and policyname = 'media_upload')`)).rows.length >= 1 && /'ads'/.test((await db.query(`select qual, with_check from pg_policies where schemaname='storage' and policyname='media_upload'`)).rows[0].with_check), 'people may upload into the ads folder');
 
+section('8. Photos: 1 to 10 of them, or one video (migration 20261022000007)');
+const bakery = await mkUser('bakery'), deli = await mkUser('deli');
+await db.query(`update public.profiles set account_type = 'business', is_business = true where id in ($1, $2)`, [bakery, deli]);
+const photos = Array.from({ length: 11 }, (_, n) => `ads/p${n + 1}-bake.jpg`);
+for (const name of photos) await file(bakery, name);
+await file(bakery, 'ads/v1-bake.mp4'); await file(bakery, 'ads/v2-bake.mp4'); await file(deli, 'ads/d1-deli.jpg');
+const send = (uid, over) => call(uid, `select public.submit_ad_application($1::jsonb) as r`, [JSON.stringify({ mediaType: 'image', durationDays: 7, pages: ['home'], ...over })]);
+const sendErr = (uid, over) => err(uid, `select public.submit_ad_application($1::jsonb) as r`, [JSON.stringify({ mediaType: 'image', durationDays: 7, pages: ['home'], ...over })]);
+check(/picture or video of your ad/i.test(await sendErr(bakery, { mediaUrls: [] }) || ''), 'at least 1 photo is needed');
+check(/up to 10 photos/i.test(await sendErr(bakery, { mediaUrls: photos }) || ''), 'more than 10 photos is refused');
+check(/one video/i.test(await sendErr(bakery, { mediaType: 'video', mediaUrls: ['ads/v1-bake.mp4', 'ads/v2-bake.mp4'] }) || ''), 'a video ad has one video');
+check(/twice/i.test(await sendErr(bakery, { mediaUrls: ['ads/p1-bake.jpg', 'ads/p1-bake.jpg'] }) || ''), 'the same photo cannot be added twice');
+check(/not found/i.test(await sendErr(bakery, { mediaUrls: ['ads/p1-bake.jpg', 'ads/d1-deli.jpg'] }) || ''), 'every photo must be one the sender uploaded');
+check(/picture or video of your ad/i.test(await sendErr(bakery, { mediaUrls: ['ads/p1-bake.jpg', 'posts/x.jpg'] }) || ''), 'every photo must be in the ads folder');
+const three = await send(bakery, { mediaUrls: ['ads/p3-bake.jpg', 'ads/p1-bake.jpg', 'ads/p2-bake.jpg'], title: 'Fresh bread' });
+const ten = await send(bakery, { mediaUrls: photos.slice(0, 10) });
+check(three.success && ten.success, '3 photos and 10 photos are both received');
+const vid1 = await send(bakery, { mediaType: 'video', mediaUrls: ['ads/v1-bake.mp4'], pages: ['feed'] });
+const mineB = await call(bakery, `select public.my_ad_applications() as r`);
+const r3 = mineB.find((a) => a.id === three.id);
+check(JSON.stringify(r3.mediaUrls) === '["ads/p3-bake.jpg","ads/p1-bake.jpg","ads/p2-bake.jpg"]' && r3.mediaUrl === 'ads/p3-bake.jpg', 'the photos keep the order the sender chose, the first one is the cover');
+check(mineB.find((a) => a.id === ten.id).mediaUrls.length === 10 && mineB.find((a) => a.id === vid1.id).mediaUrls.length === 1, 'ten photos stay ten; a video is one file');
+const adminList = await call(noob, `select public.admin_ad_applications('pending') as r`);
+check(JSON.stringify(adminList.rows.find((r) => r.id === three.id).mediaUrls) === JSON.stringify(r3.mediaUrls), 'the admin sees all the photos');
+await review(noob, three.id, 'approve', ['home']);
+const shown = (await active(ann, 'home')).find((a) => a.id === three.id);
+check(shown && JSON.stringify(shown.mediaUrls) === '["ads/p3-bake.jpg","ads/p1-bake.jpg","ads/p2-bake.jpg"]' && shown.mediaType === 'image' && !JSON.stringify(shown).includes('9999900000'), 'the page gets every photo in order, and no contact details');
+const old = await call(deli, `select public.submit_ad_application($1::jsonb) as r`, [JSON.stringify({ mediaUrl: 'ads/d1-deli.jpg', mediaType: 'image', durationDays: 3, pages: ['feed'] })]);
+check(old.success && JSON.stringify((await call(deli, `select public.my_ad_applications() as r`))[0].mediaUrls) === '["ads/d1-deli.jpg"]', 'an older copy of the app, which sends one file, still works');
+check(/ad_media_list/.test(await db.query(`update public.ad_applications set media_urls = '{}' where id = $1`, [three.id]).then(() => '', (e) => e.message) || ''), 'the database itself refuses an ad without a file');
+check(/ad_media_list/.test(await db.query(`update public.ad_applications set media_urls = $2 where id = $1`, [three.id, photos]).then(() => '', (e) => e.message) || ''), 'and an ad with 11 files');
+check(/ad_media_list/.test(await db.query(`update public.ad_applications set media_urls = array['ads/v1-bake.mp4','ads/v2-bake.mp4'], media_url = 'ads/v1-bake.mp4', media_type = 'video' where id = $1`, [vid1.id]).then(() => '', (e) => e.message) || ''), 'and a video ad with two files');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

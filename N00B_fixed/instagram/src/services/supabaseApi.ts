@@ -8,7 +8,7 @@ import type { PinnedFeedItem, Post, User, StatusNote, AppSettings, AppNotificati
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { INITIAL_SETTINGS } from '../data/mockData';
 import { compressMedia } from '../utils/mediaCompressor';
-import { pagesOf, type ActiveAd, type AdApplication, type AdminAdRow, type AdPage, type AdWhere } from '../utils/ads';
+import { AD_MAX_PHOTOS, pagesOf, type ActiveAd, type AdApplication, type AdMediaKind, type AdminAdRow, type AdPage, type AdWhere } from '../utils/ads';
 import { uploadWithRetry } from '../utils/xhrUpload';
 import { factsOf } from '../utils/videoTranscode';
 import { MAX_UPLOAD_BYTES } from '../utils/videoPlan';
@@ -6227,15 +6227,27 @@ export async function dismissPollReports(pollId: string): Promise<void> { await 
 // ----------------------------------------------------------------------------- NOOB Ads
 // A business account sends a request (free): the picture or video is uploaded first, then the request itself. The NOOB admin approves it, chooses the pages and the ad is shown
 // at the top of those pages. See supabase/migrations/20261022000006_ads.sql.
-const mapAdMedia = <T extends { mediaUrl: string }>(a: T): T => ({ ...a, mediaUrl: resolveMedia(a.mediaUrl) });
+const mapAdMedia = <T extends { mediaUrl: string; mediaUrls?: string[] }>(a: T): T & { mediaUrls: string[] } => ({
+  ...a,
+  mediaUrl: resolveMedia(a.mediaUrl),
+  mediaUrls: (a.mediaUrls && a.mediaUrls.length ? a.mediaUrls : [a.mediaUrl]).map((u) => resolveMedia(u))
+});
 
-export async function submitAdApplication(input: { file: File; where: AdWhere; durationDays: number; title: string; link: string; onProgress?: UploadOptions['onProgress'] }): Promise<{ success: boolean; error?: string }> {
+// An ad is ONE video or 1 to 10 photos (the sender chooses which first). The files go up one after the other, then the request itself.
+export async function submitAdApplication(input: { kind: AdMediaKind; files: File[]; where: AdWhere; durationDays: number; title: string; link: string; onProgress?: UploadOptions['onProgress'] }): Promise<{ success: boolean; error?: string }> {
   try {
-    const mime = (input.file.type || '').toLowerCase();
-    if (!/^(image|video)\//.test(mime)) return { success: false, error: 'An ad is a picture or a video.' };
-    const up = await uploadMediaFile(input.file, 'ads', { onProgress: input.onProgress });
+    const { kind, files } = input;
+    if (kind === 'video' && files.length !== 1) return { success: false, error: 'A video ad has one video.' };
+    if (kind === 'image' && files.length < 1) return { success: false, error: 'Please add at least 1 photo.' };
+    if (kind === 'image' && files.length > AD_MAX_PHOTOS) return { success: false, error: `You can add up to ${AD_MAX_PHOTOS} photos.` };
+    if (files.some((f) => !(f.type || '').toLowerCase().startsWith(`${kind}/`))) return { success: false, error: kind === 'video' ? 'Please choose a video.' : 'Please choose photos only.' };
+    const keys: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const up = await uploadMediaFile(files[i], 'ads', { onProgress: (p) => input.onProgress?.({ ...p, fraction: (i + (p.fraction || 0)) / files.length }) });
+      keys.push(up.objectKey);
+    }
     await rpc('submit_ad_application', { p: {
-      mediaUrl: up.objectKey, mediaType: mime.startsWith('video/') ? 'video' : 'image', durationDays: input.durationDays, pages: pagesOf(input.where),
+      mediaUrls: keys, mediaType: kind, durationDays: input.durationDays, pages: pagesOf(input.where),
       title: input.title.trim(), link: input.link.trim() || null
     } });
     return { success: true };

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, ExternalLink, Loader2, Mail, Phone, RefreshCw, Square, X } from 'lucide-react';
 import { adminFetchAdApplications, adminReviewAd, type AdminAdFilter } from '../../services/api';
-import { AD_DURATIONS, AD_PAGES, durationText, pagesText, statusText, type AdPage, type AdminAdRow } from '../../utils/ads';
+import { AD_DURATIONS, AD_PAGES, AD_SLIDE_MS, durationText, mediaText, pagesText, statusText, type AdPage, type AdminAdRow } from '../../utils/ads';
 import { safeExternalUrl } from '../../utils/safeUrl';
 
 // Admin panel → "Ads": the requests business accounts sent, with how to reach each advertiser. For each one the admin switches the pages it may appear on (Reels, Feed, Home: one
@@ -78,7 +78,18 @@ export const AdminAdsPanel: React.FC<{ onPendingChange?: (count: number) => void
             <div className="relative bg-black">
               {r.mediaType === 'video'
                 ? <video src={r.mediaUrl} controls muted playsInline preload="metadata" className="w-full max-h-64 object-contain" />
-                : <img src={r.mediaUrl} alt={r.title || 'Ad'} loading="lazy" className="w-full max-h-64 object-contain" />}
+                : r.mediaUrls.length > 1
+                  ? (
+                    <div className="grid grid-cols-5 gap-1 p-1" data-testid="ad-photos-admin">
+                      {r.mediaUrls.map((u, n) => (
+                        <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="relative block aspect-square overflow-hidden rounded-lg bg-zinc-900">
+                          <img src={u} alt={`Photo ${n + 1}`} loading="lazy" className="w-full h-full object-cover" />
+                          <span className="absolute top-0.5 left-0.5 min-w-4 h-4 px-1 rounded-full bg-white text-black text-[9px] font-black flex items-center justify-center">{n + 1}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )
+                  : <img src={r.mediaUrl} alt={r.title || 'Ad'} loading="lazy" className="w-full max-h-64 object-contain" />}
             </div>
             <div className="p-4 space-y-3">
               <div className="flex items-start gap-3">
@@ -95,7 +106,7 @@ export const AdminAdsPanel: React.FC<{ onPendingChange?: (count: number) => void
                 {r.businessPhone && <a href={`tel:${r.businessPhone}`} className="inline-flex items-center gap-1 text-sky-300 hover:underline"><Phone className="w-3 h-3" />{r.businessPhone}</a>}
                 {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 text-zinc-300 hover:underline break-all"><ExternalLink className="w-3 h-3 shrink-0" />{r.link}</a>}
               </div>
-              <p className="text-[11px] text-zinc-400" data-testid="ad-asked">Asked for: <span className="text-white font-bold">{pagesText(r.requestedPages)}</span> · <span className="text-white font-bold">{durationText(r.durationDays)}</span> · sent {when(r.createdAt)}</p>
+              <p className="text-[11px] text-zinc-400" data-testid="ad-asked">Asked for: <span className="text-white font-bold">{mediaText(r)}{r.mediaUrls.length > 1 && r.mediaType === 'image' ? ` (1 second each, ${(r.mediaUrls.length * AD_SLIDE_MS) / 1000} s round)` : ''}</span> · <span className="text-white font-bold">{pagesText(r.requestedPages)}</span> · <span className="text-white font-bold">{durationText(r.durationDays)}</span> · sent {when(r.createdAt)}</p>
               {r.status !== 'pending' && <p className="text-[11px] text-zinc-400">{statusText(r)}{r.endsAt ? ` (until ${when(r.endsAt)})` : ''}{r.adminNote ? ` · Note: ${r.adminNote}` : ''}</p>}
 
               <div>

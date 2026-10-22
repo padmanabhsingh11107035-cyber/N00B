@@ -21,6 +21,16 @@ export const AD_DURATIONS: ReadonlyArray<{ days: number; label: string }> = [
   { days: 30, label: '1 month' }
 ];
 
+/** an ad is either ONE video or 1 to 10 photos; the photos change by themselves, the next one after 1 second */
+export type AdMediaKind = 'image' | 'video';
+export const AD_MAX_PHOTOS = 10;
+export const AD_SLIDE_MS = 1000;
+/** how long one ad stays before the next ad takes its turn (an ad with many photos stays until all of them have been shown once) */
+export const AD_TURN_MS = 9000;
+export const adTurnMs = (a: { mediaType: AdMediaKind; mediaUrls: string[] }): number => (a.mediaType === 'image' ? Math.max(AD_TURN_MS, a.mediaUrls.length * AD_SLIDE_MS) : AD_TURN_MS);
+/** "3 photos", "1 photo" or "Video" */
+export const mediaText = (a: { mediaType: AdMediaKind; mediaUrls: string[] }): string => (a.mediaType === 'video' ? 'Video' : `${a.mediaUrls.length} photo${a.mediaUrls.length === 1 ? '' : 's'}`);
+
 export const pagesOf = (where: AdWhere): AdPage[] => (where === 'all' ? ['reels', 'feed', 'home'] : [where]);
 export const pageLabel = (p: string): string => AD_PAGES.find((x) => x.id === p)?.label || p;
 export const pagesText = (pages: string[]): string => (pages.length === 3 ? 'Reels, Feed and Home' : pages.map(pageLabel).join(' and ') || 'No page');
@@ -32,7 +42,9 @@ export interface AdApplication {
   title: string;
   link: string | null;
   mediaUrl: string;
-  mediaType: 'image' | 'video';
+  /** every file of the ad in order (the first one is mediaUrl): 1 to 10 photos, or one video */
+  mediaUrls: string[];
+  mediaType: AdMediaKind;
   durationDays: number;
   requestedPages: AdPage[];
   approvedPages: AdPage[];
@@ -59,7 +71,8 @@ export interface ActiveAd {
   title: string;
   link: string | null;
   mediaUrl: string;
-  mediaType: 'image' | 'video';
+  mediaUrls: string[];
+  mediaType: AdMediaKind;
   endsAt: string;
   advertiser: { username: string; displayName: string; avatar: string; isVerified: boolean };
 }

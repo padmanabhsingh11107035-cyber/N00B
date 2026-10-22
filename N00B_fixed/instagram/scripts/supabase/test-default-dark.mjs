@@ -83,7 +83,7 @@ for (const f of ['privacy', 'terms', 'data-deletion']) {
   const h = read(`public/${f}.html`);
   check(/:root\{color-scheme:dark;--bg:#0a0a0a/.test(h) && !/prefers-color-scheme/.test(h), `${f}.html is dark whatever the phone's setting is`);
 }
-check(/<meta name="theme-color" content="#0a0a0a"/.test(read('index.html')) && /theme-init\.js/.test(read('index.html')), 'the app page loads the dark-first start-up script');
+check(/<meta name="theme-color" content="#ffffff"/.test(read('index.html')) && /theme-init\.js/.test(read('index.html')), 'the app page loads the dark-first start-up script');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

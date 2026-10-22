@@ -326,13 +326,13 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   <GamePosterCarousel game={game} showDots={false} swipeEnabled={false} />
 
                   {/* Game Number Badge */}
-                  <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono font-black text-white border border-white/10">
+                  <span className="game-badge absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono font-black text-white border border-white/10">
                     #{idx + 1}
-                    {game.isNew && <span className="ml-1.5 text-amber-300">NEW</span>}
+                    {game.isNew && <span className="game-badge-new ml-1.5 text-amber-300">NEW</span>}
                   </span>
 
                   {/* Mode Player Indicator */}
-                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-noob border border-noob/30">
+                  <span className="game-badge absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-semibold text-noob border border-noob/30">
                     {game.players}
                   </span>
                 </div>

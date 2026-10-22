@@ -24,7 +24,8 @@ section('2. Nothing orange is left in the app');
 const walk = (d, out = []) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p, out); else if (/\.(tsx|ts|css|html|json|js)$/.test(f.name)) out.push(p); } return out; };
 const hits = [...walk('src'), 'index.html', 'public/theme-init.js', 'public/manifest.json'].filter((p) => /#d97757|rgba?\(\s*217\s*,\s*119\s*,\s*87/i.test(read(p)) && !/ChatView\.tsx$/.test(p));
 check(hits.length === 0, 'no file still draws the old orange (#d97757)', hits.join(', '));
-check(/theme-color" content="#0a0a0a"/.test(read('index.html')) && /"theme_color": "#0a0a0a"/.test(read('public/manifest.json')) && /'#0a0a0a' : '#ffffff'/.test(read('public/theme-init.js')) && /'#0a0a0a' : '#ffffff'/.test(read('src/utils/theme.ts')), 'the phone / browser bar colour follows the theme: near-black in Dark, white in Light');
+check(/theme-color" content="#ffffff"/.test(read('index.html')) && /"theme_color": "#ffffff"/.test(read('public/manifest.json')) && /setAttribute\('content', '#ffffff'\)/.test(read('public/theme-init.js')) && /=> '#ffffff'/.test(read('src/utils/theme.ts')), 'the strip above the app (title bar, phone status bar) is white in Dark and in Light, so its text is black');
+check(/:root\[data-theme="dark"\] \.game-badge \{ background-color: #ffffff !important; color: #000000 !important/.test(read('src/index.css')) && (read('src/components/Games/GamesView.tsx').match(/game-badge /g) || []).length === 2, 'the number and players badges on the game cards are white with black text in Dark only');
 check(/oldAccent\(activeChat\?\.themeColor\)/.test(read('src/components/Chat/ChatView.tsx')) && /toLowerCase\(\) === '#d97757'/.test(read('src/components/Chat/ChatView.tsx')), 'a chat colour saved in the old orange shows as white');
 
 section('3. The decorative hues are black-and-white');

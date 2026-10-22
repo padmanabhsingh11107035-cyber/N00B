@@ -1088,3 +1088,7 @@ html[data-refresh="off"] body { overscroll-behavior-y: contain; }
   .studio-grid > .studio-props { grid-area: props; }
   .studio-grid > .studio-tl { grid-area: tl; }
 }
+
+/* Game cards (Games page): the number badge (#1 NEW) and the players badge (Solo, Solo / Friend) are white with black text in Dark; Light keeps the look it had. */
+:root[data-theme="dark"] .game-badge { background-color: #ffffff !important; color: #000000 !important; border-color: rgba(255, 255, 255, 0.9) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
+:root[data-theme="dark"] .game-badge .game-badge-new { color: #b45309 !important; }

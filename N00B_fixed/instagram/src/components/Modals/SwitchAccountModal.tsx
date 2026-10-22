@@ -21,6 +21,8 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Switching ends with a full reload of the app, which takes a few seconds on a phone: from the first tap this says what is happening (a spinner and the name), so the button never looks dead.
+  const [switching, setSwitching] = useState<{ label: string } | null>(null);
 
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -40,9 +42,16 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  // The spinner is drawn first (one short pause), then the switch and the reload happen.
+  const goReload = (label: string, doSwitch: () => boolean) => {
+    setSwitching({ label });
+    window.setTimeout(() => { if (doSwitch()) window.location.reload(); else setSwitching(null); }, 80);
+  };
   const use = (id: string) => {
+    if (switching) return;
     if (id === currentId) return onClose();
-    if (tabSessions.switchTo(id)) window.location.reload();
+    const name = accounts.find((a) => a.id === id)?.username;
+    goReload(name ? `Switching to @${name}…` : 'Switching account…', () => tabSessions.switchTo(id));
   };
   const signIn = async (acct: LinkedAccount) => {
     if (busy) return;
@@ -52,12 +61,13 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
     setBusy(false);
     if (!res.success || !res.id) { setError(res.error || 'Could not sign in.'); return; }
     setPassword('');
-    if (tabSessions.switchTo(res.id)) window.location.reload();
+    const newId = res.id;
+    if (tabSessions.switchTo(newId)) { setSwitching({ label: `Switching to @${acct.username}…` }); window.setTimeout(() => window.location.reload(), 80); }
     else { setAccounts(tabSessions.savedAccounts()); setOpening(null); }
   };
   const addAnother = () => {
-    tabSessions.unbind();
-    window.location.reload();
+    if (switching) return;
+    goReload('Opening the log-in page…', () => { tabSessions.unbind(); return true; });
   };
   // Forgets a saved login on THIS browser only — the account itself is untouched and can be logged back into any time.
   const forget = (id: string) => {
@@ -75,9 +85,17 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md h-[60vh] flex flex-col bg-zinc-950 border-t border-x border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+        className="relative w-full max-w-md h-[60vh] flex flex-col bg-zinc-950 border-t border-x border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
         onClick={(e) => e.stopPropagation()}
+        aria-busy={!!switching}
       >
+        {switching && (
+          <div className="absolute inset-0 z-20 bg-zinc-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-center px-6" role="status" aria-live="polite" data-testid="switching-overlay">
+            <Loader2 className="w-9 h-9 text-cyan-300 animate-spin" />
+            <p className="text-sm font-black text-white" translate="no">{switching.label}</p>
+            <p className="text-[11px] text-zinc-400">This takes a few seconds. Please wait.</p>
+          </div>
+        )}
         <div className="pt-2.5 pb-1 flex items-center justify-center shrink-0">
           <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
         </div>
@@ -94,7 +112,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
                 key={a.id}
                 className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl transition-colors border ${here ? 'bg-cyan-500/15 border-cyan-400/40' : confirming ? 'bg-red-500/10 border-red-500/40' : 'border-transparent hover:bg-white/5'}`}
               >
-                <button type="button" onClick={() => use(a.id)} className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer">
+                <button type="button" onClick={() => use(a.id)} disabled={!!switching} className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer disabled:opacity-60">
                   <span className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-300 shrink-0" translate="no">
                     {a.username.slice(0, 1).toUpperCase()}
                   </span>
@@ -185,7 +203,7 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
                           className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-400"
                         />
                         {error && <p className="text-[11px] text-red-400" role="alert">{error}</p>}
-                        <button type="submit" disabled={busy || !password} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-cyan-500 text-black text-sm font-black disabled:opacity-50 cursor-pointer">
+                        <button type="submit" disabled={busy || !!switching || !password} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-cyan-500 text-black text-sm font-black disabled:opacity-50 cursor-pointer">
                           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                           {busy ? 'Signing in…' : 'Switch to this account'}
                         </button>
@@ -202,7 +220,8 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
           <button
             type="button"
             onClick={addAnother}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black text-sm font-black cursor-pointer hover:brightness-110 transition"
+            disabled={!!switching}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black text-sm font-black cursor-pointer hover:brightness-110 transition disabled:opacity-60"
           >
             <UserPlus className="w-4 h-4" />
             Add another account

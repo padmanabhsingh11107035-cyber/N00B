@@ -1841,30 +1841,30 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
 
       {/* Footer */}
       <footer className="w-full max-w-lg z-10 py-3 text-center border-t border-white/5 mt-auto">
-        <div className="flex items-center justify-center gap-4 text-xs text-zinc-500 mb-1">
+        <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 px-3 text-xs text-zinc-400 mb-1.5 [text-shadow:0_1px_6px_rgba(0,0,0,0.95)]" data-testid="login-footer-links">
           <a
             href="/terms.html"
             onClick={(e) => { e.preventDefault(); setShowTermsModal(true); }}
-            className="hover:text-zinc-300 transition-colors cursor-pointer"
+            className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer"
           >
             Terms & Conditions
           </a>
-          <span>•</span>
+          <span aria-hidden="true" className="hidden sm:inline">•</span>
           <a
             href="/privacy.html"
             onClick={(e) => { e.preventDefault(); setShowPrivacyModal(true); }}
-            className="hover:text-zinc-300 transition-colors cursor-pointer"
+            className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer"
           >
             Privacy Policy
           </a>
-          <span>•</span>
-          <a href="/about" className="hover:text-zinc-300 transition-colors cursor-pointer">About NOOB</a>
-          <span>•</span>
-          <a href="/screenshots" className="hover:text-zinc-300 transition-colors cursor-pointer">Screenshots</a>
+          <span aria-hidden="true" className="hidden sm:inline">•</span>
+          <a href="/about" className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer">About NOOB</a>
+          <span aria-hidden="true" className="hidden sm:inline">•</span>
+          <a href="/screenshots" className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer">Screenshots</a>
           {/android/i.test(navigator.userAgent) && !isNativeApp() && (
             <>
-              <span>•</span>
-              <a href={ANDROID_APK_URL} data-no-inapp className="hover:text-zinc-300 transition-colors cursor-pointer" data-testid="login-android-app">Get the Android app</a>
+              <span aria-hidden="true" className="hidden sm:inline">•</span>
+              <a href={ANDROID_APK_URL} data-no-inapp className="whitespace-nowrap hover:text-zinc-300 transition-colors cursor-pointer" data-testid="login-android-app">Get the Android app</a>
             </>
           )}
         </div>

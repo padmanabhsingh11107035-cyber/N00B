@@ -82,7 +82,7 @@ section('4. The Switch account screen');
 const sw = fs.readFileSync('src/components/Modals/SwitchAccountModal.tsx', 'utf8').split(String.fromCharCode(13)).join('');
 check(/fetchLinkedAccounts\(\)/.test(sw) && /data-testid="linked-accounts"/.test(sw) && /Your other accounts/.test(sw), 'it lists the other accounts');
 check(/linked\.filter\(\(l\) => !accounts\.some\(\(a\) => a\.id === l\.id\)\)/.test(sw), 'only the ones this device does not have yet need a password; the saved ones switch straight away');
-check(/type="password"/.test(sw) && /signInLinkedAccount\(acct\.username, password\)/.test(sw) && /tabSessions\.switchTo\(res\.id\)/.test(sw), 'the password is asked once, then the tab switches to the account');
+check(/type="password"/.test(sw) && /signInLinkedAccount\(acct\.username, password\)/.test(sw) && /tabSessions\.switchTo\(newId\)/.test(sw) && /const newId = res\.id;/.test(sw), 'the password is asked once, then the tab switches to the account');
 const api = fs.readFileSync('src/services/supabaseApi.ts', 'utf8').split(String.fromCharCode(13)).join('');
 const fn = api.slice(api.indexOf('export async function signInLinkedAccount'), api.indexOf('export async function verifyUsernameExists'));
 check(/createIsolatedClient\(\)/.test(fn) && /tabSessions\.write\(JSON\.stringify\(session\)\)/.test(fn), 'the sign-in uses a separate client, so the account in this tab is untouched, and the login is saved for good');

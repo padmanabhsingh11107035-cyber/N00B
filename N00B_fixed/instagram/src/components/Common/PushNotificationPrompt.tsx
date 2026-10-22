@@ -96,13 +96,15 @@ async function subscribeThisDevice(): Promise<PushOutcome> {
 }
 
 // Shared by the real on/off toggle in Install and Permissions (which waits for the answer and shows it); the soft-ask prompt below uses startEnablingPush instead.
-export async function enablePushNotifications(): Promise<{ status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason; message?: string }> {
+// onAllowed runs the moment the person has said yes to the browser's question, before the slow part (the phone's push service can take seconds), so a screen can already show "on".
+export async function enablePushNotifications(onAllowed?: () => void): Promise<{ status: PushEnableStatus; subscription?: PushSubscription; reason?: PushErrorReason; message?: string }> {
   // Not just "unsupported": say WHERE the person is and exactly what to do (iPhone Home Screen, in-app browser, ...)
   const support = getPushSupport();
   if (support.supported === false) return { status: 'unsupported', message: support.message };
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return { status: 'denied' };
+    try { onAllowed?.(); } catch { /* a screen's own problem: never stops the setup */ }
     return await subscribeThisDevice();
   } catch (err) {
     console.error('Failed to enable push notifications:', err);

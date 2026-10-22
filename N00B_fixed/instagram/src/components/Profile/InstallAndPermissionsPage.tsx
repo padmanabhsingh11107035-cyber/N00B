@@ -6,6 +6,7 @@ import {
   disablePushNotifications,
   getPushDeviceState,
   getPushSupport,
+  warmPushSetup,
   type PushDeviceState
 } from '../Common/PushNotificationPrompt';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
@@ -60,6 +61,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
   const pushSupport = useMemo(() => getPushSupport(), []);
 
   useEffect(() => {
+    warmPushSetup();   // the notification key and the helper are got ready while the page is read, so the button has nothing left to wait for
     let alive = true;
     getPushDeviceState().then((state) => {
       if (alive) setPushState(state);
@@ -73,25 +75,31 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
     if (notifBusy) return;
     setNotifBusy(true);
     setNotifMessage(null);
+    const before = pushState;
     try {
       if (pushState === 'on') {
+        setPushState('off');   // shown at once; goes back if switching off did not work
         const ok = await disablePushNotifications();
         if (ok) {
-          setPushState('off');
           onUserUpdated?.({ ...currentUser, pushSubscription: undefined });
         } else {
+          setPushState(before);
           setNotifMessage('Couldn’t switch notifications off. Check your connection and try again.');
         }
       } else {
-        const result = await enablePushNotifications();
+        // the moment the person allows it the page shows "on"; the phone's push service finishes the rest in the background, and the page goes back if that fails
+        const result = await enablePushNotifications(() => { setPushState('on'); setNotifMessage('Notifications are on. Finishing setting up this phone…'); });
         if (result.status === 'granted' && result.subscription) {
           setPushState('on');
+          setNotifMessage(null);
           onUserUpdated?.({ ...currentUser, pushSubscription: result.subscription });
         } else if (result.status === 'denied') {
+          setPushState(before);
           setNotifMessage('Notifications are blocked for this site. Tap the lock icon next to the address, allow Notifications for ' + window.location.hostname + ', then try again.');
         } else if (result.status === 'unsupported') {
           setNotifMessage(result.message || 'This browser cannot show notifications.');
         } else if (result.status === 'error') {
+          setPushState(before);   // it had been shown as "on" since the person allowed it
           setNotifMessage(
             result.reason === 'not-set-up'
               ? 'Notifications aren’t switched on at the server yet. The NOOB admin needs to finish setting them up.'
@@ -204,7 +212,7 @@ export const InstallAndPermissionsPage: React.FC<InstallAndPermissionsPageProps>
                   : 'bg-gradient-to-r from-noob to-noob-strong text-black hover:opacity-90'
               }`}
             >
-              {notifBusy ? 'Updating…' : pushState === 'on' ? 'Turn Off Notifications' : 'Turn on Notifications'}
+              {pushState === 'on' ? 'Turn Off Notifications' : 'Turn on Notifications'}
             </button>
 
             {notifHint && <p className="text-[11px] text-amber-300/90 leading-relaxed">{notifHint}</p>}

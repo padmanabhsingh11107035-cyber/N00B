@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Check, KeyRound, Loader2, Trash2, UserPlus } from 'lucide-react';
 import { tabSessions } from '../../services/supabase';
 import { fetchCurrentUser, fetchLinkedAccounts, fetchUserById, signInLinkedAccount, type LinkedAccount } from '../../services/supabaseApi';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { SheetGrip } from '../Common/SheetGrip';
 
 // What the saved accounts look like right now (picture and name). The saved login only knows the user name, so the pictures are asked for when the sheet opens; the last answer is kept on this
 // device, so the next time they show at once and are then refreshed.
@@ -32,6 +34,7 @@ interface SwitchAccountModalProps {
 // Below them: the person's OTHER accounts (the same email address or mobile number). The first time, the account's password is asked; the login is then
 // kept on this device, so switching to it never asks again (until it is removed from the list or logged out).
 export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose }) => {
+  const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   const [accounts, setAccounts] = useState(() => tabSessions.savedAccounts());
   const [removingId, setRemovingId] = useState<string | null>(null); // tap once to arm, tap again to confirm
   const currentId = tabSessions.currentAccount();
@@ -118,15 +121,15 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
 
   return (
     <div
-      className="fixed inset-0 z-[125] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+      className="fixed inset-0 z-[125] flex items-end justify-center"
       role="dialog"
       aria-modal="true"
       aria-label="Switch account"
-      onClick={onClose}
     >
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
+        ref={drag.sheetRef}
         className="relative w-full max-w-md h-[60vh] flex flex-col bg-zinc-950 border-t border-x border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
-        onClick={(e) => e.stopPropagation()}
         aria-busy={!!switching}
       >
         {switching && (
@@ -136,12 +139,11 @@ export const SwitchAccountModal: React.FC<SwitchAccountModalProps> = ({ onClose 
             <p className="text-[11px] text-zinc-400">This takes a few seconds. Please wait.</p>
           </div>
         )}
-        <div className="pt-2.5 pb-1 flex items-center justify-center shrink-0">
-          <div className="w-10 h-1.5 rounded-full bg-zinc-700" />
-        </div>
+        <SheetGrip drag={drag} alwaysBar barClassName="bg-zinc-700">
         <header className="px-4 pb-3 border-b border-zinc-800 shrink-0">
           <h3 className="text-sm font-black text-white text-center">Switch account</h3>
         </header>
+        </SheetGrip>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {accounts.map((a) => {

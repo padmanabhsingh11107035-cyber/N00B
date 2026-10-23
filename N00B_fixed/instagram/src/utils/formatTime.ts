@@ -10,7 +10,9 @@
 
 function parseTimestamp(value?: string | null): Date | null {
   if (!value) return null;
-  const date = new Date(value);
+  // The database writes microseconds ("…:26.87493+00:00"); some phone browsers (Safari) only read up to 3 digits and call the whole date invalid, which showed
+  // the raw text instead of "5h ago". Cut the fraction to 3 digits first.
+  const date = new Date(String(value).replace(/(\.\d{3})\d+/, '$1'));
   return isNaN(date.getTime()) ? null : date;
 }
 

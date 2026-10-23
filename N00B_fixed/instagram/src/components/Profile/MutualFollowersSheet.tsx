@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { X, UserPlus, UserCheck } from 'lucide-react';
+import { UserPlus, UserCheck } from 'lucide-react';
 import { User } from '../../types';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { type MutualFollower } from '../../services/api';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { SheetGrip } from '../Common/SheetGrip';
 
 interface MutualFollowersSheetProps {
   currentUser: User;
@@ -24,6 +26,7 @@ export const MutualFollowersSheet: React.FC<MutualFollowersSheetProps> = ({
   onToggleFollowUser,
   onNavigateToUserProfile
 }) => {
+  const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   const [unfollowedIds, setUnfollowedIds] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -52,22 +55,15 @@ export const MutualFollowersSheet: React.FC<MutualFollowersSheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-zinc-950 border-t border-zinc-800 rounded-t-3xl h-[70vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
-        <div className="shrink-0 flex flex-col items-center pt-2.5 pb-1">
-          <div className="w-10 h-1 rounded-full bg-zinc-700" />
-        </div>
-
-        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-zinc-900">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center">
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150" onClick={onClose} aria-hidden="true" />
+      <div ref={drag.sheetRef} className="relative w-full max-w-lg bg-zinc-950 border-t border-zinc-800 rounded-t-3xl h-[70vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
+        {/* Handle: the grey bar and the title (drag down to close) */}
+        <SheetGrip drag={drag} alwaysBar barClassName="bg-zinc-700">
+        <div className="flex items-center px-5 pb-3 border-b border-zinc-900">
           <h2 className="text-sm font-bold text-white">Followers you know</h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="p-1.5 -mr-1.5 rounded-full hover:bg-zinc-900 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-4.5 h-4.5" />
-          </button>
         </div>
+        </SheetGrip>
 
         <div className="flex-1 overflow-y-auto overscroll-contain">
           {mutuals.length === 0 ? (

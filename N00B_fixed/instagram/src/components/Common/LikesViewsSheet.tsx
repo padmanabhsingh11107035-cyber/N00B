@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, Eye, Search, UserPlus, UserCheck, Clock, Heart } from 'lucide-react';
 import { User } from '../../types';
 import { predictFollowToggle } from '../../utils/followPredict';
 import { VerifiedBadge } from './VerifiedBadge';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { SheetGrip, CLOSE_X_CLASS } from './SheetGrip';
 
 interface ListSource {
   label: string; // e.g. "Likes" / "Views" / "Seen By"
@@ -38,7 +40,6 @@ interface LikesViewsSheetProps {
 // How far down the sheet must be dragged (from its own drag handle/header,
 // not the scrollable list below) before releasing counts as "dismiss" —
 // short of that it springs back open.
-const DRAG_DISMISS_THRESHOLD = 90;
 
 // Shared bottom sheet for "who liked this" / "who viewed this" on a post, reel, or story — fixed
 // at 70% of the viewport height, drag-to-dismiss from the handle/header (the list itself scrolls
@@ -68,10 +69,7 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
   const [followState, setFollowState] = useState<Record<string, { isFollowing: boolean; isFollowRequested?: boolean }>>({});
   const [followBusy, setFollowBusy] = useState<string | null>(null);
 
-  const [dragY, setDragY] = useState(0);
-  const [hasDraggedOnce, setHasDraggedOnce] = useState(false);
-  const draggingRef = useRef(false);
-  const dragStartYRef = useRef(0);
+  const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
 
   useEffect(() => {
     if (!activeSource) return;
@@ -141,27 +139,6 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
     }
   };
 
-  const handleDragStart = (e: React.TouchEvent) => {
-    draggingRef.current = true;
-    dragStartYRef.current = e.touches[0].clientY;
-    setHasDraggedOnce(true);
-  };
-
-  const handleDragMove = (e: React.TouchEvent) => {
-    if (!draggingRef.current) return;
-    const delta = e.touches[0].clientY - dragStartYRef.current;
-    if (delta > 0) setDragY(delta);
-  };
-
-  const handleDragEnd = () => {
-    draggingRef.current = false;
-    if (dragY > DRAG_DISMISS_THRESHOLD) {
-      onClose();
-    } else {
-      setDragY(0);
-    }
-  };
-
   // Portalled straight to document.body: PostCard/ReelsView/StoryViewerModal
   // all render this inside ancestors that use backdrop-blur/filter classes,
   // and per spec a `filter`/`backdrop-filter` on ANY ancestor becomes the
@@ -169,45 +146,28 @@ export const LikesViewsSheet: React.FC<LikesViewsSheetProps> = ({
   // portal this "fullscreen" sheet gets trapped inside that ancestor's own
   // (much smaller) box instead of covering the viewport.
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} aria-hidden="true" />
       <div
-        onClick={(e) => e.stopPropagation()}
-        style={hasDraggedOnce ? { transform: `translateY(${dragY}px)` } : undefined}
-        className={`w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-2xl h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200 ${
-          hasDraggedOnce && !draggingRef.current ? 'transition-transform' : ''
-        }`}
+        ref={drag.sheetRef}
+        className="relative w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl rounded-t-3xl h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
       >
-        {/* Drag handle */}
-        <div
-          onTouchStart={handleDragStart}
-          onTouchMove={handleDragMove}
-          onTouchEnd={handleDragEnd}
-          className="pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing shrink-0 touch-none"
-        >
-          <div className="w-10 h-1.5 rounded-full bg-neutral-700" />
-        </div>
-
-        {/* Header */}
-        <div
-          onTouchStart={handleDragStart}
-          onTouchMove={handleDragMove}
-          onTouchEnd={handleDragEnd}
-          className="flex items-center justify-between px-4 pb-3 shrink-0"
-        >
+        {/* Handle: the grey bar and the title row (drag down to close) */}
+        <SheetGrip drag={drag} barClassName="bg-neutral-700">
+        <div className="flex items-center justify-between px-4 pb-3 sm:pt-3">
           <h3 className="text-sm font-bold text-white tracking-tight">
             {hasBoth ? 'Likes and views' : activeSource?.label}
             {!hasBoth && !loading && !error && <span className="text-xs text-gray-400 font-normal"> ({users.length})</span>}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer"
+            aria-label="Close"
+            className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 cursor-pointer`}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+        </SheetGrip>
 
         {/* View-count headline stat + privacy note (only when both likes & views are given) */}
         {hasBoth && typeof viewsCount === 'number' && (

@@ -29,7 +29,7 @@ check(/data-testid="menu-studio"/.test(feed) && /openStudio\(\)/.test(feed), 'th
 const chooser = read('src/components/PostCreation/CreateChooser.tsx');
 check(/kind: 'studio'/.test(chooser), 'the Create sheet has "Edit in Studio"');
 const app = read('src/App.tsx');
-check(/kind === 'studio'\) openStudio\(\)/.test(app), 'picking it opens the editor');
+check(/kind === 'studio'\) \{ if \(featOn\('studio'\)\) openStudio\(\); \}/.test(app), 'picking it opens the editor (unless the administrator switched the page off)');
 check(/<StudioHost onUse=/.test(app), 'the editor is drawn once, by StudioHost, in the app');
 check(/\^\\\/studio\\\/\?\$/.test(app), 'the address /studio opens the editor');
 check(/clean === '\/studio'/.test(read('src/utils/routes.ts')), '/studio is a real page (not "page not found")');

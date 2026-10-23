@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
+import { useSheetBox } from '../../utils/useVisualViewport';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import { flushSync } from 'react-dom';
 import { BurgerLoading } from '../Common/BurgerLoading';
 import { orderUnseenFirst } from '../../utils/seenContent';
@@ -111,7 +113,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   onNavigateToProfile,
   onUseSound
 }) => {
-  const visibleArea = useVisibleArea();   // the comments screen is exactly the part above the keyboard, opaque
+  const commentsBox = useSheetBox(0.45);   // a phone: the comments cover 45 % of the page (the reel stays in view above) and sit right above the keyboard; its glass shows black, never the page
+  const commentsDrag = useSheetDrag(() => setShowComments(false));   // drag the grey bar or the title down to close
   const hideOthersCounts = useSetting('likes.hideOthers');
   const [currentIndex, setCurrentIndex] = useState(0);
   // Sound: on unless the person switched it off. `soundBlocked` = the browser refused sound (no real tap yet), so the reel plays silently and
@@ -1331,17 +1334,22 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
       {/* 4. Sliding Comments Sheet Overlay */}
       {showComments && (
+        <div className="fixed inset-0 z-[60] sm:flex sm:items-center sm:justify-center sm:p-4" onClick={(e) => e.stopPropagation()} id="reel-comments-sheet-modal">
+        <div ref={commentsDrag.backdropRef} className="absolute inset-0 bg-black/40 sm:bg-black/80" onClick={() => setShowComments(false)} aria-hidden="true" />
         <div
-          className="fixed inset-x-0 top-0 bottom-0 z-[60] bg-zinc-950 p-4 flex flex-col animate-in slide-in-from-bottom duration-200"
-          style={visibleAreaStyle(visibleArea)}
-          onClick={(e) => e.stopPropagation()}
+          ref={commentsDrag.sheetRef}
+          style={commentsBox.style}
+          data-testid="comments-sheet"
+          className="relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl sm:rounded-2xl sm:h-[80vh] px-4 pb-4 flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
         >
-          <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+          <SheetGrip drag={commentsDrag} className="-mx-4 px-4">
+          <div className="flex items-center justify-between pb-2 sm:pt-3 border-b border-neutral-800">
             <h4 className="text-xs font-bold text-white">Reel Comments</h4>
-            <button onClick={() => setShowComments(false)} className="text-gray-400 hover:text-white cursor-pointer">
+            <button onClick={() => setShowComments(false)} aria-label="Close" className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white cursor-pointer`}>
               ✕
             </button>
           </div>
+          </SheetGrip>
           <div className="flex-1 overflow-y-auto py-3 space-y-1 text-xs text-gray-300">
             {isLoadingComments ? (
               <p className="text-center text-gray-500 py-6">Loading comments...</p>
@@ -1446,6 +1454,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
               </button>
             </div>
           </div>
+        </div>
         </div>
       )}
 

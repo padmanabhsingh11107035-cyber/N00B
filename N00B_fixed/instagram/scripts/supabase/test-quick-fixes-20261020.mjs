@@ -55,11 +55,11 @@ check(/font:900 28px\/1\.2 \$\{FONT\};letter-spacing:-\.5px;color:#000000;-webki
 check(/<meta name="color-scheme" content="light only">/.test(fn) && /supported-color-schemes/.test(fn), 'the email says "light only" to mail apps that listen');
 check(/bgcolor="#fbf6f3"/.test(fn), 'and the card has a plain colour under its gradient');
 
-section('3. Nothing behind the comment screens');
+section('3. Nothing behind the comment screens (changed 2026-10-24: they now cover 45 % of the page, and the sheet fills the glass of the keyboard with black)');
 const files = ['src/components/Feed/CommentsSheet.tsx', 'src/components/Videos/VideoCommentsSheet.tsx', 'src/components/Reels/ReelsView.tsx'].map(read);
-check(files.every((f) => /useVisibleArea\(\)/.test(f) && /visibleAreaStyle\(visibleArea\)/.test(f)), 'the post, video and reel comment screens fill exactly the part above the keyboard');
-check(/bg-black flex items-end/.test(files[0]) && /bg-black flex items-end/.test(files[1]) && !/bg-black\/80/.test(files[0] + files[1]), 'post and video: a solid black backdrop, not 80 %');
-check(/z-\[60\] bg-zinc-950 p-4/.test(files[2]) && !/z-\[60\] bg-zinc-950\/95/.test(files[2]), 'reel: a solid panel over the whole reel, not a see-through one');
+check(files.every((f) => /useSheetBox\(0\.45\)/.test(f) && /useSheetDrag\(/.test(f)), 'the post, video and reel comment sheets cover 45 % of the page and sit right above the keyboard (their box ends at the bottom of the page, so nothing of the page shows through the keyboard)');
+check(/absolute inset-0 bg-black\/40/.test(files[0]) && /absolute inset-0 bg-black\/40/.test(files[1]) && /bg-zinc-950/.test(files[0] + files[1]), 'post and video: the post stays visible above a light shade, the sheet itself is solid');
+check(/commentsBox\.style/.test(files[2]) && /relative mx-auto w-full max-w-lg bg-zinc-950/.test(files[2]), 'reel: the reel stays visible above, the comments sheet itself is solid, not see-through');
 const vv = await load('src/utils/useVisualViewport.ts');
 check(JSON.stringify(vv.visibleAreaStyle({ top: 12, height: 300 })) === JSON.stringify({ top: 12, height: 300, bottom: 'auto' }) && vv.visibleAreaStyle(null) === undefined, 'the helper fills the visible area, or the whole screen when the phone cannot say');
 

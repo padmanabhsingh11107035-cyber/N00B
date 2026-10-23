@@ -42,7 +42,7 @@ check(/Apply for ads/.test(entry) && /if \(!\(currentUser\.accountType === 'busi
 
 section('3. The admin\'s Ads page');
 const panel = read('src/components/Modals/AdminAdsPanel.tsx'), admin = read('src/components/Modals/AdminControlModal.tsx');
-check(/'daily' \| 'storage' \| 'ads' \| 'settings'/.test(admin) && /activeTab === 'ads' && main \? \(\s*<AdminAdsPanel/.test(admin) && /Megaphone className="w-4 h-4" \/> Ads/.test(admin), 'it is a page of its own in the admin panel (main admin only)');
+check(/'storage' \| 'ads' \| 'pages' \| 'settings'/.test(admin) && /activeTab === 'ads' && main \? \(\s*<AdminAdsPanel/.test(admin) && /Megaphone className="w-4 h-4" \/> Ads/.test(admin), 'it is a page of its own in the admin panel (main admin only)');
 check(['reels', 'feed', 'home'].every((p) => AdPagesLabelled(panel, p)) && /AD_PAGES\.map\(\(p\) => <PageSwitch/.test(panel), 'one switch for each page (Reels, Feed, Home), any mix');
 function AdPagesLabelled(src, p) { return new RegExp(`id: '${p}'`).test(read('src/utils/ads.ts')) && /testId=\{`ad-switch-\$\{p\.id\}`\}/.test(src); }
 check(/pages: d\.pages, days: d\.days, note: d\.note/.test(panel) && /disabled=\{busy === r\.id \|\| d\.pages\.length === 0\}/.test(panel), 'approving sends the pages that are switched on and the days, and needs at least one page');

@@ -6,6 +6,9 @@ import { fetchChats, sendMessage } from '../../services/api';
 import { copyText } from '../../utils/clipboard';
 import { contentUrl } from '../../utils/routes';
 import { AvatarMedia } from './AvatarMedia';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { useKeyboardMetrics } from '../../utils/useVisualViewport';
+import { SheetGrip, CLOSE_X_CLASS } from './SheetGrip';
 import { MAX_FRIENDS_AT_ONCE, appLink, filterFriends, friendsFromChats, shareText, toggleFriend, type Friend, type ShareApp } from '../../utils/shareTargets';
 
 // The Share sheet of a post, reel or video, laid out like Instagram's: a search box, the people you talk to as a grid of faces (tap to pick up to five, then Send), and under them a row of
@@ -45,6 +48,8 @@ const APP_ORDER: Array<{ id: ShareApp; label: string }> = [
 ];
 
 export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUser, itemId, ownerUsername, onClose }) => {
+  const drag = useSheetDrag(onClose);   // drag the grey bar down to close
+  const kbm = useKeyboardMetrics();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -114,22 +119,26 @@ export const SharePostSheet: React.FC<SharePostSheetProps> = ({ type, currentUse
     else window.open(link, '_blank', 'noopener,noreferrer');
   };
 
+  // On a phone the keyboard (the search box) lifts the sheet: it keeps its own colour all the way down behind the keyboard's glass, so the page never shows through it.
+  const sheetStyle = kbm.phone ? { maxHeight: Math.max(220, Math.min(Math.round(kbm.page * 0.82), kbm.visible - 12)) + kbm.keyboard, paddingBottom: kbm.keyboard || undefined } : undefined;
   const sheet = (
-    <div className="fixed inset-0 z-[95] bg-black/70 flex items-end sm:items-center justify-center animate-in fade-in duration-150" onClick={onClose} data-testid="share-sheet">
+    <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center" data-testid="share-sheet">
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/70 animate-in fade-in duration-150" onClick={onClose} aria-hidden="true" />
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md max-h-[82dvh] bg-zinc-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+        ref={drag.sheetRef}
+        style={sheetStyle}
+        className="relative w-full sm:max-w-md max-h-[82dvh] bg-zinc-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
         role="dialog"
         aria-label={`Share ${TYPE_LABEL[type]}`}
       >
-        <div className="pt-2 pb-1 flex justify-center shrink-0"><span className="w-10 h-1 rounded-full bg-zinc-600" /></div>
+        <SheetGrip drag={drag} className="pb-1" />
 
         <div className="px-3 pb-2 flex items-center gap-2 shrink-0">
           <label className="flex-1 flex items-center gap-2 rounded-full bg-zinc-800 px-3.5 py-2.5">
             <Search className="w-4 h-4 text-zinc-400 shrink-0" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search people" className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-zinc-400 outline-none" data-testid="share-search" />
           </label>
-          <button onClick={onClose} aria-label="Close" className="p-2.5 rounded-full bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer shrink-0"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} aria-label="Close" className={`${CLOSE_X_CLASS} p-2.5 rounded-full bg-zinc-800 text-zinc-300 hover:text-white cursor-pointer shrink-0`}><X className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 min-h-[9rem] overflow-y-auto px-2 pb-2" data-testid="share-friends">

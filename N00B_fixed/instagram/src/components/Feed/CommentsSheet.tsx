@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
+import { useSheetBox } from '../../utils/useVisualViewport';
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { formatRelativeTime } from '../../utils/formatTime';
+import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, PostComment, User } from '../../types';
 import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike, fetchUserById } from '../../services/api';
@@ -17,7 +20,8 @@ interface CommentsSheetProps {
 }
 
 export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser, onClose, onNavigateToProfile }) => {
-  const visibleArea = useVisibleArea();   // the screen is exactly the part above the keyboard, opaque: nothing of the page behind shows
+  const box = useSheetBox(0.45);   // a phone: the sheet covers 45 % of the page (the post stays in view above it) and sits right above the keyboard; the keyboard's glass shows black, never the page
+  const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   const openProfile = async (userId?: string) => {
     if (!userId || !onNavigateToProfile) return;
     const user = await fetchUserById(userId);
@@ -189,7 +193,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
                   <Pin className="w-2.5 h-2.5" /> Pinned
                 </span>
               )}
-              <span className="text-[10px] text-gray-400">{c.createdAt}</span>
+              <span className="text-[10px] text-gray-400">{formatRelativeTime(c.createdAt)}</span>
             </div>
             <p translate="no" className="text-xs text-gray-200 mt-1 whitespace-pre-line leading-relaxed break-words">
               {isReply && c.replyToUsername && c.replyToUsername !== c.username && (
@@ -240,14 +244,17 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   };
 
   return (
-    <div
-      id="comments-sheet-modal"
-      className="fixed inset-x-0 top-0 bottom-0 z-50 bg-black flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={visibleAreaStyle(visibleArea)}
-    >
-      <div className="w-full max-w-lg bg-zinc-950 border border-neutral-800 sm:rounded-2xl h-full sm:h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+    <div id="comments-sheet-modal" className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center sm:p-4">
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/40 sm:bg-black/80" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={drag.sheetRef}
+        style={box.style}
+        data-testid="comments-sheet"
+        className="relative mx-auto w-full max-w-lg bg-zinc-950 border border-neutral-800 rounded-t-3xl sm:rounded-2xl sm:h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200"
+      >
+        {/* Header: the grey bar and this row are the handle (drag down to close) */}
+        <SheetGrip drag={drag}>
+        <div className="flex items-center justify-between px-4 pb-3 sm:pt-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-bold text-white tracking-tight">Comments</h3>
             <span className="text-xs text-gray-400">({comments.length})</span>
@@ -266,12 +273,14 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
             )}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800"
+              aria-label="Close"
+              className={`${CLOSE_X_CLASS} text-gray-400 hover:text-white p-1 rounded-full hover:bg-neutral-800`}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
+        </SheetGrip>
 
         {/* Bulk Action Bar */}
         {isBulkMode && (
@@ -368,7 +377,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
             <div className="flex-1 flex items-center bg-black rounded-xl border border-neutral-700 px-3 py-1.5 focus-within:border-noob">
               <textarea
                 rows={1}
-                placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment (Enter line breaks as needed)...'}
+                placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment...'}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={(e) => {

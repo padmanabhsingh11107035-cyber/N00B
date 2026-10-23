@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Compass, Film, MessageSquare, Gamepad2, CirclePlus } from 'lucide-react';
 import { useFeatureOn } from '../../utils/featureFlags';
+import { useKeyboardOpen } from '../../utils/useVisualViewport';
 
 export type NavTab = 'feed' | 'explore' | 'post' | 'reels' | 'chat' | 'games' | 'music' | 'profile' | 'videos';
 
@@ -54,13 +55,15 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   // a page that the administrator has switched off for users has no button (the others share the width)
   const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games');
   const columns = 2 + [showExplore, showReels, showCreate, showChat, showGames].filter(Boolean).length;
+  // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
+  const keyboardOpen = useKeyboardOpen();
   return (
     <nav
       id="floating-bottom-nav"
       data-tab={activeTab}
       className={`fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:max-w-2xl pointer-events-auto xl:hidden ${
         hideOnMobile ? 'max-md:hidden' : ''
-      }`}
+      } ${keyboardOpen ? 'hidden' : ''}`}
     >
       <div
         className="nav-row grid grid-cols-7 items-stretch"

@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
 import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2 } from 'lucide-react';
 
+import { useSheetDrag } from '../../utils/sheetDrag';
+import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
+
 export type CreateKind = 'post' | 'reel' | 'story' | 'video' | 'live' | 'thought' | 'studio';
 
 interface CreateChooserProps {
@@ -23,6 +26,7 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
 ];
 
 export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, live }) => {
+  const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -32,23 +36,25 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
   return (
     <div
       id="create-chooser"
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center overscroll-contain"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-label="Create"
     >
+      <div ref={drag.backdropRef} className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-md bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom-6 duration-200 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        ref={drag.sheetRef}
+        className="relative w-full sm:max-w-md bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-in slide-in-from-bottom-6 duration-200 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
-        <div className="sm:hidden flex justify-center pt-2.5"><span className="w-10 h-1 rounded-full bg-zinc-700" aria-hidden="true" /></div>
-        <div className="relative flex items-center justify-center px-5 pt-3 pb-3 border-b border-zinc-800/80">
+        {/* Handle: the grey bar and the title (drag down to close; there is no cross on a phone) */}
+        <SheetGrip drag={drag} barClassName="bg-zinc-700">
+        <div className="relative flex items-center justify-center px-5 pt-1 sm:pt-3 pb-3 border-b border-zinc-800/80">
           <h2 className="text-base font-bold text-white">Create</h2>
-          <button onClick={onClose} className="absolute right-3 top-2.5 p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-900 cursor-pointer" aria-label="Close">
+          <button onClick={onClose} className={`${CLOSE_X_CLASS} absolute right-3 top-2.5 p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-900 cursor-pointer`} aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
+        </SheetGrip>
 
         {live && (
           <div className="mx-4 mt-3 rounded-2xl border border-red-500/50 bg-red-500/10 p-3" data-testid="create-live-now">

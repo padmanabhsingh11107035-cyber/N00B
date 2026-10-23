@@ -83,6 +83,16 @@ check(/rotate\(90deg\)/.test(frame) && /pointer: coarse/.test(frame) && /request
 check(/name="screen-orientation" content="landscape"/.test(html) && /viewport-fit=cover/.test(html), 'the page itself asks for landscape and the whole screen');
 check(/className=`touch`/.test(main) && /data-a="ultimate"/.test(main) && /data-a="dash"/.test(main) && /stick-move/.test(main) && /stick-aim/.test(main), 'the game has its own two sticks and buttons for touch screens');
 
+section('6b. Touch screens: hints, camera and prompts');
+const game = read(path.join(GAME, 'assets', fs.readdirSync(path.join(GAME, 'assets')).find((f) => /^game-.*\.js$/.test(f))));
+check(/method=matchMedia\(`\(pointer: coarse\)`\)\.matches\?`touch`:`keyboard`/.test(main), 'a phone or tablet starts as touch, so the first hints are USE / DASH / SPELL, not E / Space / Esc');
+check((main.match(/if\(this\.syn\(\)\)return;/g) || []).length === 2 && /syn\(\)\{return performance\.now\(\)-this\.lastTouch<1200\}/.test(main) && /addEventListener\(`touchstart`,mark/.test(main), 'mouse events made up by the browser within 1.2 s of a touch are ignored (they used to flip the hints back to key names and the camera back to the pointer)');
+check(/this\.look\.dx\+=\(p\.clientX-lx\)\*1\.8/.test(main) && /pointerType!==`touch`/.test(main) && /setPointerCapture/.test(main), 'dragging a finger on the picture turns the camera (and the character with it)');
+check(/\.locked\|\|[A-Za-z_$][\w$]*\.method===`touch`\?[A-Za-z_$][\w$]*\.look\.dx:0/.test(game) && /\.locked\|\|[A-Za-z_$][\w$]*\.method===`touch`\?[A-Za-z_$][\w$]*\.look\.dy:0/.test(game), 'the camera accepts that input on touch (sideways and up / down)');
+check(/closest\?\.\(`\.prompt`\)/.test(main) && /pressed_\.add\(`interact`\)/.test(main), 'the prompt over a chest, door or shrine can be tapped');
+const style = read(path.join(GAME, 'the-rogue.css'));
+check(/#game \{ touch-action: none; \}/.test(style) && /body\.has-touch \.prompt\.show \{ pointer-events: auto; cursor: pointer; \}/.test(style) && /body\.has-touch \.look-hint \{ display: none !important; \}/.test(style), 'the picture takes the finger (no scrolling or zooming), the prompt can be tapped, and the mouse hint is hidden on touch');
+
 section('7. The way it was made is in the repository');
 for (const f of ['NOOB-EMBED.md', 'make.mjs', 'art/logo.webp', 'art/icon-192.png']) check(fs.existsSync(path.join(SRC, f)), f);
 const make = read(path.join(SRC, 'make.mjs'));

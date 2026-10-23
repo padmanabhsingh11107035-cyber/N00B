@@ -1,2 +1,8 @@
 /* Online rooms and shared leaderboards need services that are not part of this site: their menu entries are not offered. */
 [data-act="nav"][data-arg="online"], [data-act="nav"][data-arg="board"] { display: none !important; }
+/* Touch screens: a finger dragged on the picture turns the camera (the page must not scroll or zoom meanwhile), and the prompt over a chest, door or shrine can be tapped. */
+html, body { overscroll-behavior: none; }
+#game { touch-action: none; }
+body.has-touch .prompt.show { pointer-events: auto; cursor: pointer; }
+/* "Click to take control of the camera · Esc releases the mouse" is for a computer with a mouse; a touch screen has no mouse to take or release. */
+body.has-touch .look-hint { display: none !important; }

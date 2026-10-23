@@ -19,7 +19,8 @@ The game is served from this site at `/games/the-rogue/` (folder `N00B_fixed/ins
 3. makes the leaderboard client's network call fail at once (there is no leaderboard service on this site; a run is simply not ranked) and hides the Online and Leaderboards menu entries (`the-rogue.css`);
 4. stops the game asking for the media files that are not there, and replaces every interface picture address except the title picture by an empty 1x1 picture, so the game loads with no failed requests and the loading bar fills at once;
 5. adds `ui/logo.webp` (the golden wordmark cut from the cover art) and `icon-192.png`;
-6. writes `warm.json`, the list of files the Games page fetches quietly in advance (the whole game is about 1.2 MB), and preloads all scripts from the page.
+6. **touch screens** (inside the game's input class): a phone or tablet starts as "touch", so the first hints are "USE", "DASH", "SPELL" and not "E", "Space", "Esc"; the mouse events the browser makes up after every tap or drag are ignored (they used to make the game think a mouse was in use: the hints went back to key names and the sticks seemed dead); dragging a finger on the picture turns the camera, and with it the character, like a mouse would (the camera code accepts that input on touch); the "E / Open" prompt over a chest, door or shrine can be tapped; the "Click to take control of the camera - Esc releases the mouse" hint is hidden on touch;
+7. writes `warm.json`, the list of files the Games page fetches quietly in advance (the whole game is about 1.2 MB), and preloads all scripts from the page.
 
 Every change is checked: the script stops if a text it must change is not found the expected number of times, and if the maker's name is still anywhere in the output.
 

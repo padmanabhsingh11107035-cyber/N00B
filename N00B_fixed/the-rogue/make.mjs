@@ -40,6 +40,23 @@ main = patch(main, 'leaderboard network call', /fetch:([A-Za-z_$][\w$]*)=globalT
 // 3. the game's pictures (interface frames, element badges...) were not in the supplied archive: every picture address except the title picture becomes an empty 1x1 picture, so nothing is asked of the server for them
 main = patch(main, 'picture address', /([A-Za-z_$][\w$]*)=`\.\/`,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)=>`\$\{\1\}ui\/\$\{\3\}\.webp`/g, 1,
   '$1=`./`,$2=$3=>$3===`logo`?`${$1}ui/logo.webp`:`data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7`');
+// 4. TOUCH SCREENS. The game decides what to show ("E", "Esc", "Left click" ... or "USE", "DASH" ...) and how to turn the camera from the kind of input it saw last. On a phone, the mouse events
+// that the browser makes up after every tap or drag made it believe a mouse was in use, so the hints went back to key names, the camera went back to following the pointer and the on-screen
+// sticks seemed dead. Changes (inside the game's input class):
+//   - a phone or tablet (coarse pointer) starts as "touch" instead of "keyboard", so the very first hints are the touch ones;
+//   - mouse events that come within 1.2 s of a touch are ignored (they are the browser's copies of the touch);
+//   - dragging a finger on the picture (anywhere that is not a stick or a button) turns the camera, and with it the character, like a mouse would;
+//   - the "E / Open" prompt over a chest, door or shrine can be tapped (it presses Use).
+main = patch(main, 'input method start', /zoom=0;method=`keyboard`;/g, 1, 'zoom=0;method=matchMedia(`(pointer: coarse)`).matches?`touch`:`keyboard`;lastTouch=0;');
+main = patch(main, 'touch listeners', /constructor\(([A-Za-z_$][\w$]*)\)\{this\.canvas=\1;/g, 1,
+  'constructor($1){this.canvas=$1;{const mark=()=>{this.lastTouch=performance.now()};window.addEventListener(`touchstart`,mark,{passive:!0,capture:!0});window.addEventListener(`touchend`,mark,{passive:!0,capture:!0});' +
+  'let id=null,lx=0,ly=0;$1.addEventListener(`pointerdown`,p=>{if(p.pointerType!==`touch`||id!==null)return;id=p.pointerId,lx=p.clientX,ly=p.clientY,this.method=`touch`;try{$1.setPointerCapture(id)}catch{}});' +
+  '$1.addEventListener(`pointermove`,p=>{if(p.pointerId!==id)return;this.look.dx+=(p.clientX-lx)*1.8,this.look.dy+=(p.clientY-ly)*1.8,lx=p.clientX,ly=p.clientY,this.method=`touch`});' +
+  'const end=p=>{p.pointerId===id&&(id=null)};$1.addEventListener(`pointerup`,end),$1.addEventListener(`pointercancel`,end);' +
+  'document.addEventListener(`pointerdown`,p=>{p.target?.closest?.(`.prompt`)&&(this.method=`touch`,this.pressed_.add(`interact`),p.preventDefault())},{capture:!0})}');
+main = patch(main, 'mouse copies of touches (press)', /`mousedown`,([A-Za-z_$][\w$]*)=>\{this\.method=`keyboard`,/g, 1, '`mousedown`,$1=>{if(this.syn())return;this.method=`keyboard`,');
+main = patch(main, 'mouse copies of touches (move)', /`mousemove`,([A-Za-z_$][\w$]*)=>\{if\(this\.locked\)/g, 1, '`mousemove`,$1=>{if(this.syn())return;if(this.locked)');
+main = patch(main, 'touch check', /setTouchMove\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{/g, 1, 'syn(){return performance.now()-this.lastTouch<1200}setTouchMove($1,$2){');
 fs.writeFileSync(path.join(OUT, 'assets', indexJs), main);
 
 // ---- the file loader: the supplied archive lacks the models, textures, pictures and sounds the game lists (92 files); the game has its own drawn world and characters and its own synthesised
@@ -50,8 +67,15 @@ loader = patch(loader, 'file loader', /async fetchEntry\(([A-Za-z_$][\w$]*)\)\{l
   'async fetchEntry($1){if($1.path!==`ui/logo.webp`)return;let $2=$3($1.path);');
 fs.writeFileSync(path.join(OUT, 'assets', assetsJs), loader);
 
+// ---- the game script: the camera turns by the look input (mouse movement) only while the mouse is locked; on a touch screen the dragged finger gives the same input
+const gameJs = find(/^game-.*\.js$/);
+let gameCode = read(`assets/${gameJs}`);
+gameCode = patch(gameCode, 'camera from dragged finger', /dx:([A-Za-z_$][\w$]*)\.locked\?\1\.look\.dx:0,dy:\1\.locked\?\1\.look\.dy:0,/g, 1,
+  'dx:$1.locked||$1.method===`touch`?$1.look.dx:0,dy:$1.locked||$1.method===`touch`?$1.look.dy:0,');
+fs.writeFileSync(path.join(OUT, 'assets', gameJs), gameCode);
+
 // ---- everything else is copied as it is
-const others = fs.readdirSync(path.join(SRC, 'assets')).filter((f) => f !== indexJs && f !== assetsJs);
+const others = fs.readdirSync(path.join(SRC, 'assets')).filter((f) => f !== indexJs && f !== assetsJs && f !== gameJs);
 for (const f of others) fs.copyFileSync(path.join(SRC, 'assets', f), path.join(OUT, 'assets', f));
 for (const f of fs.readdirSync(path.join(SRC, 'fonts'))) fs.copyFileSync(path.join(SRC, 'fonts', f), path.join(OUT, 'fonts', f));
 fs.copyFileSync(path.join(here, 'art', 'logo.webp'), path.join(OUT, 'ui', 'logo.webp'));
@@ -60,6 +84,12 @@ fs.copyFileSync(path.join(here, 'art', 'icon-192.png'), path.join(OUT, 'icon-192
 // ---- our own style additions: the online room and the leaderboard need services this site does not run, so their menu entries are not shown
 fs.writeFileSync(path.join(OUT, 'the-rogue.css'), `/* Online rooms and shared leaderboards need services that are not part of this site: their menu entries are not offered. */
 [data-act="nav"][data-arg="online"], [data-act="nav"][data-arg="board"] { display: none !important; }
+/* Touch screens: a finger dragged on the picture turns the camera (the page must not scroll or zoom meanwhile), and the prompt over a chest, door or shrine can be tapped. */
+html, body { overscroll-behavior: none; }
+#game { touch-action: none; }
+body.has-touch .prompt.show { pointer-events: auto; cursor: pointer; }
+/* "Click to take control of the camera · Esc releases the mouse" is for a computer with a mouse; a touch screen has no mouse to take or release. */
+body.has-touch .look-hint { display: none !important; }
 `);
 
 // ---- our own page (no tracking, no sharing parts of the supplied page)

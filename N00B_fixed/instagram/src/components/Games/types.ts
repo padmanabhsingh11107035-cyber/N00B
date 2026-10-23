@@ -58,6 +58,30 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: CRITTER KART (a 3D item kart racer on its own page, /games/critterkart/, shown in a frame — see minigames/HostedGameFrame and utils/critterWarmup) ---
+  {
+    id: 'critter_kart',
+    title: 'Critter Kart',
+    category: 'arcade',
+    description: 'Pick one of six critter drivers and race five rivals over three laps of Frosting Loop Valley. Drift for boosts, grab candy gift boxes for items (a bubble shield, a pepper jet, sticky taffy, a homing bee) and use the caramel shortcut. It always plays sideways: on a phone it goes full screen with a steering slider, a brake, a drift and an item button; on a computer use the keyboard or a gamepad.',
+    bannerBg: 'from-[#2b7fd6] to-[#1b1838]',
+    badgeColor: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Easy',
+    players: 'Solo',
+    iconType: 'critterkart',
+    tags: ['3D', 'Kart racing', 'Items'],
+    isNew: true,
+    ownSound: true,
+    embedLazy: true,
+    embedUrl: '/games/critterkart/',
+    posters: [
+      '/game-posters/critterkart/01-cover.webp',
+      '/game-posters/critterkart/02-driver.webp'
+    ]
+  },
+
   // --- NEW: CANYON RUSH CIRCUIT (a 3D racing game on its own page, /games/canyon-rush/, shown in a frame — see minigames/HostedGameFrame and utils/canyonWarmup) ---
   {
     id: 'canyon_rush_circuit',

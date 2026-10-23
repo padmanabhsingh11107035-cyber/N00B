@@ -123,13 +123,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Grand+Hotel&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body class="bg-page text-white antialiased selection:bg-noob selection:text-black">
-    <!-- Opening splash: a full black screen with the NOOB logo in the middle, drawn by the page itself so it shows the very first
-         moment the app is opened. src/main.tsx fades it away once the app has started (then the loading screen and the app follow). -->
+    <!-- Opening splash: a full black screen, drawn by the page itself so it shows the very first moment the app is opened. Normally public/opening/opening.js (loaded below)
+         takes it over and plays the 4-second opening animation on it (a pen draws NOOB, the camera dives into an eye, the app opens like an iris) and removes it at the end.
+         The logo in the middle is what shows if that script is not there (it only appears after a second, so it never flashes before the animation), when the device asks for
+         reduced motion, and on the coaching / editor addresses: then src/main.tsx fades the splash away once the app has started (then the loading screen and the app follow). -->
     <div id="noob-splash" aria-hidden="true" style="position:fixed;inset:0;z-index:2147483000;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .35s ease;">
       <style>
         @keyframes noob-splash-in { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
         @keyframes noob-splash-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.0), 0 0 40px 6px rgba(255,255,255,.22); } 50% { box-shadow: 0 0 0 0 rgba(255,255,255,.0), 0 0 70px 14px rgba(255,255,255,.38); } }
-        #noob-splash img { width: 116px; height: 116px; border-radius: 24%; object-fit: cover; animation: noob-splash-in .55s cubic-bezier(.2,.8,.2,1) both, noob-splash-glow 1.8s ease-in-out .5s infinite; }
+        #noob-splash img { width: 116px; height: 116px; border-radius: 24%; object-fit: cover; animation: noob-splash-in .55s cubic-bezier(.2,.8,.2,1) .9s both, noob-splash-glow 1.8s ease-in-out 1.4s infinite; }
         @media (prefers-reduced-motion: reduce) { #noob-splash img { animation: none; } }
       </style>
       <img src="/noob-logo-circle.png" alt="" width="116" height="116" />
@@ -139,6 +141,9 @@
     <script src="/coaching-init.js"></script>
     <!-- The editor address (editor.noobsocials.com, or ?editor=1) is NOOB Studio: its own tab name and a short opening screen. Nothing changes elsewhere. -->
     <script src="/editor-init.js"></script>
+    <!-- The opening animation (it must come after the two scripts above: they tell it to stay out of the way). The version number is in the address because the files are kept for a year. -->
+    <script src="/opening/opening-data.js?v=1"></script>
+    <script src="/opening/opening.js?v=1"></script>
     <div id="root"></div>
     <noscript>
       <style>#noob-splash { display: none !important; }</style>

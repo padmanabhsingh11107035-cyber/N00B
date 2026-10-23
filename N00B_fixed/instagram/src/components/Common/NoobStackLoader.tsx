@@ -20,7 +20,8 @@ const heart = (cx: number, cy: number, s: number) =>
 const sparkle = (cx: number, cy: number, r: number) =>
   `M${cx} ${cy - r}Q${cx} ${cy} ${cx + r} ${cy}Q${cx} ${cy} ${cx} ${cy + r}Q${cx} ${cy} ${cx - r} ${cy}Q${cx} ${cy} ${cx} ${cy - r}Z`;
 
-const splashGone = () => typeof document === 'undefined' || !document.getElementById('noob-splash');
+// the splash is gone, or the opening animation (public/opening/opening.js) has begun to open the app like an iris: from then on the screen below it is in view
+const splashGone = () => typeof document === 'undefined' || !document.getElementById('noob-splash') || (window as unknown as { __noobOpeningRevealed?: boolean }).__noobOpeningRevealed === true;
 
 interface NoobStackLoaderProps {
   title?: string;

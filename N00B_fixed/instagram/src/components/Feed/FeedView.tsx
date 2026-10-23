@@ -703,7 +703,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {unreadNotificationCount > 0 && !isTopBannerDismissed && latestNotification && (
         <div
           onClick={onOpenNotifications}
-          className="w-full max-w-[480px] px-3 pt-2 cursor-pointer group"
+          className="w-full max-w-[480px] xl:max-w-[640px] px-3 pt-2 cursor-pointer group"
         >
           <div className="p-2.5 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-zinc-950 border border-noob/40 flex items-center justify-between gap-2 shadow-lg shadow-noob/5 group-hover:border-noob transition-all">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -751,7 +751,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           just dismisses it; it quietly expires server-side and that next post earns the normal 25.
           Deliberately left out of the story/instant creation flows, which don't earn points. */}
       {onOpenPostCreation && !isEarnPointsBannerDismissed && bonusOfferAmount !== null && (
-        <div className="w-full max-w-[480px] px-3 pt-2">
+        <div className="w-full max-w-[480px] xl:max-w-[640px] px-3 pt-2">
           <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-noob/15 via-zinc-900/90 to-zinc-950 border border-noob/40 shadow-lg shadow-noob/10">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-noob/20 border border-noob/30 flex items-center justify-center shrink-0">
@@ -802,7 +802,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 3. Category Topic Filter Pills */}
-      <div className="w-full max-w-[480px] px-3 py-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <div className="w-full max-w-[480px] xl:max-w-[640px] px-3 py-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -819,7 +819,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       </div>
 
       {/* 4. Feed Posts Stack */}
-      <main ref={postListRef} className="w-full max-w-[480px] px-2 sm:px-3 mt-1 space-y-4">
+      <main ref={postListRef} className="w-full max-w-[480px] xl:max-w-[640px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 ? (
           <div className="text-center py-16 px-4 bg-zinc-900/40 rounded-2xl border border-white/5">
             <Sparkles className="w-10 h-10 text-noob mx-auto mb-2 opacity-60" />

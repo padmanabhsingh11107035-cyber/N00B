@@ -12,18 +12,23 @@ const app = read('src/App.tsx');
 const css = read('src/index.css');
 
 section('1. The menu touches the left edge');
-const page = /<div className="(min-h-screen bg-(?:black|page)[^"]*)">/.exec(app)?.[1] || '';
+const page = /<div className=\{`(min-h-screen bg-(?:black|page)[^`]*)`\}>/.exec(app)?.[1] || '';
 check(/xl:justify-start/.test(page) && /xl:pl-0/.test(page), 'from 1280 px wide the page starts at the left edge (no centring, no left padding)', page);
 const side = /<aside className="(hidden xl:flex[^"]*)" data-testid="desktop-side-menu">/.exec(app)?.[1] || '';
 check(/xl:h-screen/.test(side) && /xl:top-0/.test(side) && /xl:-my-6/.test(side), 'the menu is as tall as the window and stuck to its top', side);
-check(/xl:border-r/.test(side) && /xl:overflow-y-auto/.test(side) && /2xl:w-\[272px\]/.test(side), 'it has a dividing line, scrolls when the window is short, and is wider on big screens');
+check(/xl:border-r/.test(side) && /xl:overflow-hidden/.test(side) && /overflow-y-auto[^"]*"[^>]*data-testid="desktop-side-menu-scroll"|data-testid="desktop-side-menu-scroll"/.test(app) && /className="[^"]*overflow-y-auto[^"]*" data-testid="desktop-side-menu-scroll"/.test(app) && /2xl:w-\[272px\]/.test(side), 'it has a dividing line, the list inside it scrolls when the window is short, and it is wider on big screens');
 
 section('2. The feed and the people list share the rest');
-const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?\} xl:ml-auto bg-(?:black|page)/.exec(app)?.[0] || '';
-check(main.includes('xl:ml-auto') && /2xl:max-w-\[800px\] 3xl:max-w-\[880px\]/.test(main), 'the feed takes an equal share of the free space and grows on big screens (800 px, 880 px)');
+const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?\} \$\{[^}]*\} bg-(?:black|page)/.exec(app)?.[0] || '';
+check(main.includes("'xl:ml-auto'") && /2xl:max-w-\[800px\] 3xl:max-w-\[880px\]/.test(main), 'the other pages keep their share of the free space and grow on big screens (800 px, 880 px)');
 check(/2xl:max-w-5xl/.test(main), 'the chat page grows too');
-const people = /<aside className="(hidden lg:flex[^"]*)" data-testid="desktop-people-panel">/.exec(app)?.[1] || '';
-check(/xl:mr-auto/.test(people) && /2xl:w-\[340px\] 3xl:w-\[380px\]/.test(people), 'the people list takes the other equal share and grows on big screens');
+check(/pageTab === 'feed' \? 'xl:flex-1 xl:min-w-0 xl:max-w-\[1200px\] xl:mx-auto'/.test(main), 'on Home the middle page takes ALL the room between the menu and the people list (up to 1200 px), not just an equal share');
+check(/pageTab === 'feed' \? 'md:max-w-2xl'/.test(main), 'and the fixed 800 / 880 px limits do not apply to Home');
+check(/pageTab === 'feed' \? 'xl:pr-4' : ''/.test(page),'on Home the right edge of the window only has a small margin, so the people list sits at the far right');
+const people = /<aside className=\{`(hidden lg:flex[^`]*)`\} data-testid="desktop-people-panel">/.exec(app)?.[1] || '';
+check(/pageTab === 'feed' \? '' : 'xl:mr-auto'/.test(people) && /2xl:w-\[340px\] 3xl:w-\[380px\]/.test(people), 'the people list is at the far right on Home (no spare room after it), and takes its equal share elsewhere');
+const feed = read('src/components/Feed/FeedView.tsx');
+check((feed.match(/max-w-\[480px\] xl:max-w-\[640px\]/g) || []).length === 4 && !/max-w-\[480px\] px/.test(feed), 'the Home feed itself (banners, topic pills, posts) grows from 480 to 640 px on wide screens, to use the wider middle page');
 check(/--breakpoint-3xl: 112\.5rem/.test(css), 'the 3xl breakpoint (1800 px) is defined for very wide monitors');
 
 section('3. Smaller screens are unchanged');

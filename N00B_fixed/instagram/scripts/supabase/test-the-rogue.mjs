@@ -93,6 +93,8 @@ check(/closest\?\.\(`\.prompt`\)/.test(main) && /pressed_\.add\(`interact`\)/.te
 const style = read(path.join(GAME, 'the-rogue.css'));
 check(/#game \{ touch-action: none; \}/.test(style) && /body\.has-touch \.prompt\.show \{ pointer-events: auto; cursor: pointer; \}/.test(style) && /body\.has-touch \.look-hint \{ display: none !important; \}/.test(style), 'the picture takes the finger (no scrolling or zooming), the prompt can be tapped, and the mouse hint is hidden on touch');
 
+check(plan.shell.filter((f) => /\.(js|css)$/.test(f)).every((f) => /-[0-9a-f]{8}\.(js|css)$/.test(f)) && /make\.mjs/.test('make.mjs'), 'every script and style file has a code in its name, made from the whole set, so after a change browsers cannot go on using the old (they keep these files for a year)');
+
 section('7. The way it was made is in the repository');
 for (const f of ['NOOB-EMBED.md', 'make.mjs', 'art/logo.webp', 'art/icon-192.png']) check(fs.existsSync(path.join(SRC, f)), f);
 const make = read(path.join(SRC, 'make.mjs'));

@@ -6,6 +6,7 @@
 // (the supplied archive is NOT kept in the repository: its page carries the maker's tracking and sharing code)
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const SRC = process.argv[2];
 const OUT = process.argv[3] || path.resolve('../instagram/public/games/the-rogue');
@@ -77,6 +78,19 @@ fs.writeFileSync(path.join(OUT, 'assets', gameJs), gameCode);
 // ---- everything else is copied as it is
 const others = fs.readdirSync(path.join(SRC, 'assets')).filter((f) => f !== indexJs && f !== assetsJs && f !== gameJs);
 for (const f of others) fs.copyFileSync(path.join(SRC, 'assets', f), path.join(OUT, 'assets', f));
+
+// ---- file names: browsers keep the scripts and the style for a year under their file names, so after a change the old files would go on being used. Every script and style file therefore gets a short
+// code made from what is in the whole set (every name changes whenever anything changes), and the places that name them (the scripts import each other) are updated to match
+const assetDir = path.join(OUT, 'assets');
+const codeFiles = fs.readdirSync(assetDir).filter((f) => /\.(js|css)$/.test(f)).sort();
+const code = crypto.createHash('sha1').update(Buffer.concat(codeFiles.map((f) => fs.readFileSync(path.join(assetDir, f))))).digest('hex').slice(0, 8);
+const renamed = new Map(codeFiles.map((f) => [f, f.replace(/\.(js|css)$/, `-${code}.$1`)]));
+for (const f of codeFiles) {
+  let text = fs.readFileSync(path.join(assetDir, f), 'utf8');
+  for (const [from, to] of renamed) text = text.split(from).join(to);
+  fs.writeFileSync(path.join(assetDir, renamed.get(f)), text);
+  fs.rmSync(path.join(assetDir, f));
+}
 for (const f of fs.readdirSync(path.join(SRC, 'fonts'))) fs.copyFileSync(path.join(SRC, 'fonts', f), path.join(OUT, 'fonts', f));
 fs.copyFileSync(path.join(here, 'art', 'logo.webp'), path.join(OUT, 'ui', 'logo.webp'));
 fs.copyFileSync(path.join(here, 'art', 'icon-192.png'), path.join(OUT, 'icon-192.png'));
@@ -93,7 +107,7 @@ body.has-touch .look-hint { display: none !important; }
 `);
 
 // ---- our own page (no tracking, no sharing parts of the supplied page)
-const css = find(/^index-.*\.css$/);
+const css = renamed.get(find(/^index-.*\.css$/));
 const chunks = fs.readdirSync(path.join(OUT, 'assets')).filter((f) => /^(assets|game|renderer|combat|three\.core|three\.module)-.*\.js$/.test(f));
 const html = `<!doctype html>
 <html lang="en">
@@ -109,7 +123,7 @@ const html = `<!doctype html>
     <link rel="preload" href="./fonts/Sora-VF.subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="./fonts/Figtree-VF.subset.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="./ui/logo.webp" as="image" />
-    <script type="module" crossorigin src="./assets/${indexJs}"></script>
+    <script type="module" crossorigin src="./assets/${renamed.get(indexJs)}"></script>
 ${chunks.map((c) => `    <link rel="modulepreload" crossorigin href="./assets/${c}" />`).join('\n')}
     <link rel="stylesheet" crossorigin href="./assets/${css}" />
     <link rel="stylesheet" href="./the-rogue.css" />

@@ -36,6 +36,7 @@ import {
   fetchPublicPlatformSettings,
   inviteToLiveLoungeRoom
 } from '../../services/api';
+import { siteOrigin } from '../../utils/siteUrl';
 import { saveMeeting, clearMeeting } from '../../utils/pageResume';
 import { isIosStandalonePwa } from '../../utils/platformDetect';
 import { friendlyAgoraError } from '../../utils/agoraError';
@@ -820,7 +821,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
   // actually useful — sharing into WhatsApp etc.), clipboard copy as the desktop fallback.
   const shareRoomLink = () => {
     if (!roomCode) return '';
-    return `${window.location.origin}/?liveLounge=${roomCode}${isHost && settings?.passcode ? `&pwd=${encodeURIComponent(settings.passcode)}` : ''}`;
+    return `${siteOrigin()}/?liveLounge=${roomCode}${isHost && settings?.passcode ? `&pwd=${encodeURIComponent(settings.passcode)}` : ''}`;
   };
   const handleShareRoom = async () => {
     const link = shareRoomLink();
@@ -857,7 +858,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         <h2 className="text-white text-base font-semibold">Open NOOB in Safari for Live Lounge</h2>
         <p className="text-white/60 text-sm max-w-sm">
           iPhone blocks camera/microphone access for apps opened from the home screen icon. Open Safari, go to
-          <span className="text-white font-semibold"> {window.location.origin}</span>, and try again from there.
+          <span className="text-white font-semibold"> {siteOrigin()}</span>, and try again from there.
         </p>
       </div>
     );

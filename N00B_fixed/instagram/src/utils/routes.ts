@@ -2,6 +2,7 @@
 // profile has its own, and anything that is not one of them is a "page not found". Pure rules only (no React) so they can be tested on their own.
 import type { NavTab } from '../components/Navigation/FloatingNavBar';
 
+import { siteOrigin } from './siteUrl.ts';
 /** The path each bottom-bar page shows in the address bar. */
 export const TAB_PATHS: Record<NavTab, string> = {
   feed: '/',
@@ -58,8 +59,8 @@ export function parseContentPath(path: string): ContentRoute | null {
   return ID.test(id) ? { kind, id } : null;
 }
 
-/** "https://nooob.xyz/reel/abc" */
-export const contentUrl = (kind: ContentKind, id: string, origin = typeof window !== 'undefined' ? window.location.origin : 'https://nooob.xyz'): string => origin + contentPath(kind, id);
+/** "https://noobsocials.com/reel/abc": always NOOB's own address (never the phone's internal one inside the Android app, never the old address) */
+export const contentUrl = (kind: ContentKind, id: string, origin = siteOrigin()): string => origin + contentPath(kind, id);
 
 /** The old links that carry the thing as "?reel=<id>" (still opened, so links that were already shared keep working). */
 export function parseContentQuery(search: string): ContentRoute | null {

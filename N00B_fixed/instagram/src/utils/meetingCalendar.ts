@@ -1,6 +1,7 @@
 // Helpers for planned Live Lounge meetings: times in a chosen time zone, the invitation text, and "add to calendar" (an .ics file plus
 // Google and Outlook links). Pure functions, no screens, so they can be tested on their own.
 
+import { siteOrigin } from './siteUrl.ts';
 export interface MeetingLike {
   id: string;
   title: string;
@@ -94,7 +95,7 @@ export function recurrenceText(m: Pick<MeetingLike, 'recurrence' | 'recurrenceIn
   return every + end;
 }
 
-const origin = (o?: string) => (o || (typeof window !== 'undefined' ? window.location.origin : 'https://nooob.xyz')).replace(/\/+$/, '');
+const origin = (o?: string) => (o || siteOrigin()).replace(/\/+$/, '');
 
 export function joinUrl(m: Pick<MeetingLike, 'meetingCode' | 'passcode'>, o?: string): string {
   return `${origin(o)}/?liveLounge=${encodeURIComponent(m.meetingCode)}${m.passcode ? `&pwd=${encodeURIComponent(m.passcode)}` : ''}`;

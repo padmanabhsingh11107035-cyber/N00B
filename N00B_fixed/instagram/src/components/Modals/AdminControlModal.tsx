@@ -74,6 +74,7 @@ import { AdminSignInPanel } from './AdminSignInPanel';
 import { AdminTeamPanel } from './AdminTeamPanel';
 import { AdminStudyPanel } from './AdminStudyPanel';
 import { AdminAnalyticsPanel } from './AdminAnalyticsPanel';
+import { siteOrigin } from '../../utils/siteUrl';
 import { hasNativeApp } from '../../utils/appPlatform';
 import { AdminUserLogsPanel } from './AdminUserLogsPanel';
 import { AdminAccountsPanel } from './AdminAccountsPanel';
@@ -341,8 +342,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   // Shareable links: the app itself and the "apply to join us" form (Platform tab); each account's profile link
   // is copied from its own row in Account Moderation.
   const [copiedLinkKey, setCopiedLinkKey] = useState<string | null>(null);
-  const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '';
-  const appLink = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = `${siteOrigin()}/`;
+  const appLink = siteOrigin();
   const joinTeamLink = `${baseUrl}?join=team`;
   const profileLinkFor = (username: string) => `${baseUrl}?profile=${encodeURIComponent(username)}`;
 

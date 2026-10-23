@@ -1,4 +1,4 @@
-// A NOOB profile QR code (Profile > share > QR, see ProfileQrModal.tsx) holds a link like https://nooob.xyz/?profile=ann.
+// A NOOB profile QR code (Profile > share > QR, see ProfileQrModal.tsx) holds a link like https://noobsocials.com/?profile=ann.
 // This reads the username out of what a scanner decoded; null when it is not a NOOB profile code.
 export function parseProfileQr(decoded: string): string | null {
   const text = String(decoded ?? '').trim();

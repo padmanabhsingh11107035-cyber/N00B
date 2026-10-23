@@ -21,6 +21,7 @@ import {
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
 import { HostedGameFrame } from './minigames/HostedGameFrame';
+import { siteOrigin } from '../../utils/siteUrl';
 import { warmHostedGame } from '../../utils/hostedGameWarmup';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../utils/pageResume';
 import { User } from '../../types';
@@ -1025,9 +1026,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
 
   // Copy Match Link
   const handleCopyLink = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-    const shareUrl = `${origin}${pathname}?playGame=${game.id}&challenger=${currentUser.username}&room=${generatedRoomCode}`;
+    const shareUrl = `${siteOrigin()}/?playGame=${game.id}&challenger=${currentUser.username}&room=${generatedRoomCode}`;
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(shareUrl);
     }

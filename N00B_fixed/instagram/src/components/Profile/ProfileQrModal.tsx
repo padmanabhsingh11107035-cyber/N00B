@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { siteOrigin } from '../../utils/siteUrl';
 import { X, MessageCircle, Copy, Check } from 'lucide-react';
 import { User } from '../../types';
 
@@ -15,7 +16,7 @@ interface ProfileQrModalProps {
 export const ProfileQrModal: React.FC<ProfileQrModalProps> = ({ targetUser, onSendInChat, onClose }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const shareUrl = `${window.location.origin}${window.location.pathname}?profile=${encodeURIComponent(targetUser.username)}`;
+  const shareUrl = `${siteOrigin()}/?profile=${encodeURIComponent(targetUser.username)}`;
 
   useEffect(() => {
     let alive = true;

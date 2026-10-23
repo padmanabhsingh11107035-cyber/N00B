@@ -3,6 +3,7 @@ import { AdBanner } from '../Ads/AdBanner';
 import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon } from 'lucide-react';
 import { User, LongVideo, LongVideoPlaylist } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
+import { siteOrigin } from '../../utils/siteUrl';
 import { formatRelativeTime } from '../../utils/formatTime';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import { LikesViewsSheet } from '../Common/LikesViewsSheet';
@@ -231,7 +232,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
   const pickFilter = (f: FilterChip) => { setFilter(f); setShowFeedMenu(false); };
 
   const copyLiveLink = async (streamId: string) => {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(streamId)}`;
+    const shareUrl = `${siteOrigin()}/?live=${encodeURIComponent(streamId)}`;
     try {
       if (!navigator.clipboard || !window.isSecureContext) throw new Error('Clipboard API unavailable');
       await navigator.clipboard.writeText(shareUrl);

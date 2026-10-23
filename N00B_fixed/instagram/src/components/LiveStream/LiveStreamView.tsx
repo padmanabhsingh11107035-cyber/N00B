@@ -4,6 +4,7 @@ import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack, ILocalV
 import { User } from '../../types';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { LikeReactionBurst } from '../Common/LikeReactionBurst';
+import { siteOrigin } from '../../utils/siteUrl';
 import { formatNoobPoints } from '../../utils/formatPoints';
 import {
   LiveStreamSummary,
@@ -325,7 +326,7 @@ export const LiveStreamView: React.FC<LiveStreamViewProps> = ({ currentUser, mod
         <h2 className="text-white text-base font-semibold">Open NOOB in Safari to go live</h2>
         <p className="text-white/60 text-sm max-w-sm">
           iPhone blocks camera/microphone access for apps opened from the home screen icon. Open Safari, go to
-          <span className="text-white font-semibold"> {window.location.origin}</span>, and go live from there instead.
+          <span className="text-white font-semibold"> {siteOrigin()}</span>, and go live from there instead.
         </p>
       </div>
     );

@@ -1,6 +1,7 @@
 // Copying is switched off everywhere in NOOB (see contentProtection.ts), apart from text boxes and the explicit "Copy" options the app
 // offers itself: a chat message's Copy, and the copy-link / copy-invite buttons. They all come through here.
 
+import { siteOrigin } from './siteUrl.ts';
 // Puts text on the clipboard; true when it worked.
 export async function copyText(text: string): Promise<boolean> {
   const value = String(text ?? '');
@@ -40,7 +41,7 @@ interface CopyableMessage {
 
 // What the "Copy" option of a chat message puts on the clipboard: the text, or for a shared post / reel / profile / track the link or name.
 // Empty when there is nothing to copy (a picture, a voice note, a message that can not be opened on this device).
-export function messageCopyText(m: CopyableMessage, origin = typeof window !== 'undefined' ? window.location.origin : 'https://nooob.xyz'): string {
+export function messageCopyText(m: CopyableMessage, origin = siteOrigin()): string {
   if (!m || m.locked) return '';
   const text = String(m.text ?? '').trim();
   if (text) return text;

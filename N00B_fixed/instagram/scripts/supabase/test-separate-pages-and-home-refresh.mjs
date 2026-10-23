@@ -21,7 +21,7 @@ const pollsPage = read('src/components/Fun/PollsPage.tsx');
 const funPages = ['ThisOrThatPage', 'AskPage', 'MoodPage', 'PollsPage'].map((n) => read(`src/components/Fun/${n}.tsx`));
 
 section('1. The pages of the three-line menu are separate pages');
-check(/const menuPageOpen = !!\(showAnonymous \|\| showOurTeam \|\| openPage \|\| drawOpen \|\| studyOpen\);/.test(feed), 'one flag knows when any of them is open: Anonymous Messages, Our Team, Daily NOOB, Rooms, Guess the Song, Live Lounge, the shop, the food stall, NOOB AI, Suggestion Box, Support, NOOB Draw, NOOB Study');
+check(/const menuPageOpen = !!\(showAnonymous \|\| showOurTeam \|\| showCreations \|\| openPage \|\| drawOpen \|\| studyOpen\);/.test(feed), 'one flag knows when any of them is open: Anonymous Messages, Our Team, More of our creations, Daily NOOB, Rooms, Guess the Song, Live Lounge, the shop, the food stall, NOOB AI, Suggestion Box, Support, NOOB Draw, NOOB Study');
 check(/openPage = showDailyNoob \? 'daily' : showNoobRooms \? 'rooms' : showGuessTheSong \? 'song' : showLiveLoungePage \? 'lounge'\s*:\s*showStorePage \? 'store' : showFoodStall \? 'food' : showNoobAi \? 'ai' : showSupportModal \? 'support' : showSuggestionBox \? 'suggestions' : null;/.test(feed), '... including every page the menu opens');
 check(/<div data-home-content style=\{\{ display: menuPageOpen \? 'none' : 'contents' \}\}>/.test(feed), 'while one is open the Home page is HIDDEN (display: none), not just covered: nothing of it can show through when the keyboard pushes the screen up or a finger drags past the end');
 check(/<\/div>\s*\{showAnonymous && \(/.test(feed), 'the pages themselves sit outside that hidden part, so they stay visible');

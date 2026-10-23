@@ -26,6 +26,7 @@ import {
   ShoppingBag,
   Music2,
   Lightbulb,
+  Layers,
   Gift,
   GraduationCap,
   Youtube,
@@ -66,7 +67,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { MenuBanner } from './MenuBanner';
 import { AdBanner } from '../Ads/AdBanner';
-import { MoreCreations } from './MoreCreations';
+import { MoreCreationsPage } from './MoreCreationsPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
@@ -210,6 +211,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showSuggestionBox, setShowSuggestionBox] = useState(restoredPage === 'suggestions');
   const [showDailyNoob, setShowDailyNoob] = useState(restoredPage === 'daily');
   const [showOurTeam, setShowOurTeam] = useState(false);
+  const [showCreations, setShowCreations] = useState(false);
   // Anonymous Messages has its own address (/anonymous) so it can be opened and shared directly; the menu entry opens it, closing goes back to the home address.
   const [showAnonymous, setShowAnonymous] = useState(() => typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/anonymous');
   const openAnonymous = () => {
@@ -294,7 +296,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // comes back exactly as it was: same posts, same place (the scroll is noted when the menu is opened, which is always before any of its pages).
   const drawOpen = useNoobDrawOpen();
   const studyOpen = useStudyNav().open;
-  const menuPageOpen = !!(showAnonymous || showOurTeam || openPage || drawOpen || studyOpen);
+  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || openPage || drawOpen || studyOpen);
   useFullPage(menuPageOpen);
   const homeSnapshot = useRef<ScrollSnapshot | null>(null);
   useEffect(() => { if (showNoobMenu) homeSnapshot.current = captureScroll(containerRef.current, 'feed'); }, [showNoobMenu]);
@@ -815,9 +817,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
         ))}
       </div>
 
-      {/* The other things we have made (links to their websites): on the Home page itself, above the posts, because the posts never end */}
-      <MoreCreations className="pt-1 pb-2" />
-
       {/* 4. Feed Posts Stack */}
       <main ref={postListRef} className="w-full max-w-[480px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 ? (
@@ -1017,6 +1016,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <MenuBanner tone="ai" entryId="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { markMenuEntry('ai'); setShowNoobMenu(false); setShowNoobAi(true); }} />
               <MenuBanner tone="support" entryId="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { markMenuEntry('support'); setShowNoobMenu(false); setShowSupportModal(true); }} />
               <MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />
+              <MenuBanner tone="creations" entryId="creations" icon={<Layers className="w-[18px] h-[18px]" />} title="More of our creations" blurb="Other websites we made — visit and explore" onClick={() => { markMenuEntry('creations'); setShowNoobMenu(false); setShowCreations(true); }} />
               </div>
             </div>
             {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
@@ -1046,6 +1046,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
           />
         </React.Suspense>
       )}
+      {showCreations && <MoreCreationsPage onClose={() => setShowCreations(false)} />}
       {showDailyNoob && (
         <React.Suspense fallback={<LazyFallback />}>
           <DailyNoobView currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} onClose={() => setShowDailyNoob(false)} />

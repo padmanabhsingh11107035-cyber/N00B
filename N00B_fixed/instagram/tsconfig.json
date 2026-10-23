@@ -27,6 +27,9 @@
   "exclude": [
     "node_modules",
     "dist",
+    "dist-server",
+    "public",
+    "android",
     "supabase/functions"
   ]
 }

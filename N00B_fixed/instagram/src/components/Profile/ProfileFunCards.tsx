@@ -4,6 +4,7 @@ import type { User } from '../../types';
 import { fetchAskProfile, fetchAskPublicAnswers, fetchAskInbox, fetchMyMood, fetchUserMood, type AskPublicAnswer, type MoodStatus } from '../../services/api';
 import { moodInfo } from '../../utils/moods';
 import { funShareUrl, type FunLocation } from '../../utils/funRoutes';
+import { useFeatureOn } from '../../utils/featureFlags';
 
 // The two small cards the Fun pages put on a profile:
 //   * someone else's profile: "Ask <name> anything" (anonymously), with the answers that person chose to publish. It shows nothing at all when the person is not taking questions
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export const ProfileAskCard: React.FC<Props> = ({ profileUser, isOwnProfile, onOpenFunPage }) => {
+  const pageOn = useFeatureOn('fun-ask');   // the administrator can switch the Ask Me Anything page off for users
   const [enabled, setEnabled] = useState(false);
   const [answers, setAnswers] = useState<AskPublicAnswer[]>([]);
   const [waiting, setWaiting] = useState(0);
@@ -47,7 +49,7 @@ export const ProfileAskCard: React.FC<Props> = ({ profileUser, isOwnProfile, onO
     return () => { alive = false; };
   }, [profileUser.id, profileUser.username, isOwnProfile]);
 
-  if (!ready || !onOpenFunPage) return null;
+  if (!pageOn || !ready || !onOpenFunPage) return null;
 
   if (isOwnProfile) {
     const link = funShareUrl({ feature: 'ask', target: profileUser.username });
@@ -100,6 +102,7 @@ export const ProfileAskCard: React.FC<Props> = ({ profileUser, isOwnProfile, onO
 // The mood on a profile, under the name: only when the database says this person may see it (the owner's own setting: everyone, followers or only them, and not expired).
 // On my own profile, when I have none, a quiet "Set your mood" pill opens the Mood page.
 export const ProfileMoodChip: React.FC<{ userId: string; isOwnProfile: boolean; onOpenFunPage?: (loc: FunLocation) => void }> = ({ userId, isOwnProfile, onOpenFunPage }) => {
+  const pageOn = useFeatureOn('fun-mood');   // the administrator can switch the Mood Status page off for users
   const [mood, setMood] = useState<MoodStatus | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -112,7 +115,7 @@ export const ProfileMoodChip: React.FC<{ userId: string; isOwnProfile: boolean; 
     return () => { alive = false; };
   }, [userId, isOwnProfile]);
 
-  if (!ready) return null;
+  if (!pageOn || !ready) return null;
   if (!mood) {
     if (!isOwnProfile || !onOpenFunPage) return null;
     return (

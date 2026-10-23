@@ -68,6 +68,8 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { MenuBanner } from './MenuBanner';
 import { AdBanner } from '../Ads/AdBanner';
+import { useFeaturesOff } from '../../utils/featureFlags';
+import { funFeatureKey } from '../../utils/features';
 import { MoreCreationsPage } from './MoreCreationsPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
@@ -203,6 +205,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [isTopBannerDismissed, setIsTopBannerDismissed] = useState(false);
   const [isEarnPointsBannerDismissed, setIsEarnPointsBannerDismissed] = useState(false);
   const [bonusOfferAmount, setBonusOfferAmount] = useState<number | null>(null);
+  // the pages the administrator has switched off for users have no entry in the menu
+  const featuresOff = useFeaturesOff();
+  const featOn = (key: string) => !featuresOff.has(key);
   const [showNoobMenu, setShowNoobMenu] = useState(false);
   // the "Scroll for more" doodle at the bottom of the three-line menu, while the list is cut off
   const menuScroll = useScrollMore(showNoobMenu);
@@ -897,45 +902,49 @@ export const FeedView: React.FC<FeedViewProps> = ({
             <div className="relative flex-1 min-h-0">
             <div ref={menuScroll.ref} className="space-y-1 h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] no-scrollbar">
               {/* The pages that are not on the bottom bar (computers have them all in the side menu) */}
-              {onOpenTab && (
+              {onOpenTab && featOn('videos') && (
                 <div className="pb-1 xl:hidden" role="group" aria-label="More pages" data-testid="noob-menu-more-pages">
                   <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More pages</p>
                   <MenuBanner tone="videos" icon={<Youtube className="w-[18px] h-[18px]" aria-hidden="true" />} title="Feed" blurb="Long videos and live streams" ariaLabel="Feed" onClick={() => { setShowNoobMenu(false); onOpenTab('videos'); }} />
                 </div>
               )}
               {/* NOOB Draw: the weekly free prize spins, at the very top of the menu */}
-              <button
-                onClick={() => { markMenuEntry('draw'); setShowNoobMenu(false); openNoobDraw(); }}
-                data-menu-entry="draw"
-                onPointerDown={preloadNoobDraw}
-                className="force-dark draw-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#9e9cff]/40 active:scale-[0.99] transition-transform"
-                style={{ background: 'linear-gradient(120deg, rgba(158,156,255,0.30), rgba(236,72,153,0.22) 60%, rgba(251,191,36,0.2))' }}
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c9c6ff] to-[#f0abfc] flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(201,198,255,0.6)]">
-                  <Gift className="w-[18px] h-[18px] text-black" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Draw <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
-                  <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
-                </div>
-              </button>
+              {featOn('draw') && (
+                <button
+                  onClick={() => { markMenuEntry('draw'); setShowNoobMenu(false); openNoobDraw(); }}
+                  data-menu-entry="draw"
+                  onPointerDown={preloadNoobDraw}
+                  className="force-dark draw-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-[#9e9cff]/40 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(158,156,255,0.30), rgba(236,72,153,0.22) 60%, rgba(251,191,36,0.2))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c9c6ff] to-[#f0abfc] flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(201,198,255,0.6)]">
+                    <Gift className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Draw <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Free weekly spins: win Pro, the tick and millions</span>
+                  </div>
+                </button>
+              )}
               {/* NOOB Studio: the photo and video editor (everything is edited on the device, nothing is uploaded) */}
-              <button
-                onClick={() => { markMenuEntry('studio'); setShowNoobMenu(false); openStudio(); }}
-                data-menu-entry="studio"
-                onPointerDown={preloadStudio}
-                data-testid="menu-studio"
-                className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-fuchsia-400/40 active:scale-[0.99] transition-transform"
-                style={{ background: 'linear-gradient(120deg, rgba(217,70,239,0.28), rgba(56,189,248,0.2) 60%, rgba(251,191,36,0.14))' }}
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-300 to-sky-300 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(217,70,239,0.5)]">
-                  <Wand2 className="w-[18px] h-[18px] text-black" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Studio <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
-                  <span className="text-[10px] text-zinc-300 block truncate">Edit photos and videos: filters, text, music, export</span>
-                </div>
-              </button>
+              {featOn('studio') && (
+                <button
+                  onClick={() => { markMenuEntry('studio'); setShowNoobMenu(false); openStudio(); }}
+                  data-menu-entry="studio"
+                  onPointerDown={preloadStudio}
+                  data-testid="menu-studio"
+                  className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-fuchsia-400/40 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(217,70,239,0.28), rgba(56,189,248,0.2) 60%, rgba(251,191,36,0.14))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-300 to-sky-300 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(217,70,239,0.5)]">
+                    <Wand2 className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Studio <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Edit photos and videos: filters, text, music, export</span>
+                  </div>
+                </button>
+              )}
               {/* NOOB STUDY: the student's personal learning space (for everyone once it is switched on; until then for the main administrator) */}
               {(isMainAdmin(currentUser) || studyStatus?.mode === 'on' || studyStatus?.mode === 'coming_soon') && (
                 <button
@@ -955,33 +964,35 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 </button>
               )}
               {/* Our Team: the people behind NOOB */}
-              <button
-                onClick={() => { markMenuEntry('team'); setShowNoobMenu(false); setShowOurTeam(true); }}
-                data-menu-entry="team"
-                onPointerDown={preloadOurTeam}
-                className="force-dark team-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-amber-300/35 active:scale-[0.99] transition-transform"
-                style={{ background: 'linear-gradient(120deg, rgba(251,191,36,0.24), rgba(244,114,182,0.18) 62%, rgba(167,139,250,0.2))' }}
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-pink-400 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(251,191,36,0.5)]">
-                  <Users className="w-[18px] h-[18px] text-black" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-black text-white block">Our Team</span>
-                  <span className="text-[10px] text-zinc-300 block truncate">Meet the people behind NOOB</span>
-                </div>
-              </button>
+              {featOn('team') && (
+                <button
+                  onClick={() => { markMenuEntry('team'); setShowNoobMenu(false); setShowOurTeam(true); }}
+                  data-menu-entry="team"
+                  onPointerDown={preloadOurTeam}
+                  className="force-dark team-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-amber-300/35 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(251,191,36,0.24), rgba(244,114,182,0.18) 62%, rgba(167,139,250,0.2))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-pink-400 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(251,191,36,0.5)]">
+                    <Users className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white block">Our Team</span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Meet the people behind NOOB</span>
+                  </div>
+                </button>
+              )}
               {/* The two "join us" forms; on a wide screen they are also icons in the top bar */}
               {joinTeamOpen && (
                 <MenuBanner tone="join" entryId="join" icon={<Handshake className="w-[18px] h-[18px]" aria-hidden="true" />} title="Join the NOOB team" blurb="Apply to help build NOOB" onClick={() => { markMenuEntry('join'); setShowNoobMenu(false); setShowJoinUsModal(true); }} />
               )}
               <MenuBanner tone="spark" entryId="spark" icon={<Rocket className="w-[18px] h-[18px]" aria-hidden="true" />} title="Join our SparkX team" blurb="IIT Bombay Techfest" onClick={() => { markMenuEntry('spark'); setShowNoobMenu(false); setShowSparkXModal(true); }} />
               {/* Anonymous Messages: a public feed of messages with no author shown */}
-              <MenuBanner tone="mask" entryId="anonymous" icon={<VenetianMask className="w-[18px] h-[18px]" aria-hidden="true" />} title="Anonymous Messages" blurb="Your words, without your name" ariaLabel="Anonymous Messages" onPointerDown={() => { void loadAnonymousPage(); }} onClick={() => { markMenuEntry('anonymous'); setShowNoobMenu(false); openAnonymous(); }} />
+              {featOn('anonymous') && (<MenuBanner tone="mask" entryId="anonymous" icon={<VenetianMask className="w-[18px] h-[18px]" aria-hidden="true" />} title="Anonymous Messages" blurb="Your words, without your name" ariaLabel="Anonymous Messages" onPointerDown={() => { void loadAnonymousPage(); }} onClick={() => { markMenuEntry('anonymous'); setShowNoobMenu(false); openAnonymous(); }} />)}
               {/* The Fun pages: This or That, Ask Me Anything, Mood Status, Public Polls */}
-              {onOpenFunPage && (
+              {onOpenFunPage && FUN_FEATURES.some((f) => featOn(funFeatureKey(f.id))) && (
                 <div className="pt-2 pb-1" role="group" aria-label="Fun and community">
                   <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">Fun &amp; community</p>
-                  {FUN_FEATURES.map((f) => {
+                  {FUN_FEATURES.filter((f) => featOn(funFeatureKey(f.id))).map((f) => {
                     const Icon = FUN_MENU_ICONS[f.id];
                     return (
                       <MenuBanner
@@ -1002,11 +1013,11 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {/* The rest of the menu, dressed like the banners above (see MenuBanner.tsx), under a heading of its own */}
               <div className="pt-2 pb-1" role="group" aria-label="More from NOOB">
               <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More from NOOB</p>
-              <MenuBanner tone="daily" entryId="daily" icon={<Flame className="w-[18px] h-[18px]" />} title="Daily NOOB" blurb="Today's challenge — win real points" onClick={() => { markMenuEntry('daily'); setShowNoobMenu(false); setShowDailyNoob(true); }} />
-              <MenuBanner tone="rooms" entryId="rooms" icon={<Trophy className="w-[18px] h-[18px]" />} title="NOOB Rooms" blurb="Live voice rooms — join, talk, play" onClick={() => { markMenuEntry('rooms'); setShowNoobMenu(false); setShowNoobRooms(true); }} />
-              <MenuBanner tone="song" entryId="song" icon={<Music2 className="w-[18px] h-[18px]" />} title="Guess the Song" blurb="A clip plays — pick the right title, score points" onClick={() => { markMenuEntry('song'); setShowNoobMenu(false); setShowGuessTheSong(true); }} />
-              <MenuBanner tone="lounge" entryId="lounge" icon={<Sparkles className="w-[18px] h-[18px]" />} title={`NOOB Live Lounge${currentUser.hasLiveLounge ? ' — Unlocked' : ''}`} blurb="Private meeting rooms — screen share, whiteboard & chat" onClick={() => { markMenuEntry('lounge'); setShowNoobMenu(false); setShowLiveLoungePage(true); }} />
-              <MenuBanner tone="shop" entryId="shop" icon={<ShoppingBag className="w-[18px] h-[18px]" />} title={<span className="shop-wordmark text-base leading-none font-normal">Shop NOOB</span>} blurb="Browse products & your cart" onClick={() => { markMenuEntry('shop'); setShowNoobMenu(false); setShowStorePage(true); }} />
+              {featOn('daily') && (<MenuBanner tone="daily" entryId="daily" icon={<Flame className="w-[18px] h-[18px]" />} title="Daily NOOB" blurb="Today's challenge — win real points" onClick={() => { markMenuEntry('daily'); setShowNoobMenu(false); setShowDailyNoob(true); }} />)}
+              {featOn('rooms') && (<MenuBanner tone="rooms" entryId="rooms" icon={<Trophy className="w-[18px] h-[18px]" />} title="NOOB Rooms" blurb="Live voice rooms — join, talk, play" onClick={() => { markMenuEntry('rooms'); setShowNoobMenu(false); setShowNoobRooms(true); }} />)}
+              {featOn('song') && (<MenuBanner tone="song" entryId="song" icon={<Music2 className="w-[18px] h-[18px]" />} title="Guess the Song" blurb="A clip plays — pick the right title, score points" onClick={() => { markMenuEntry('song'); setShowNoobMenu(false); setShowGuessTheSong(true); }} />)}
+              {featOn('lounge') && (<MenuBanner tone="lounge" entryId="lounge" icon={<Sparkles className="w-[18px] h-[18px]" />} title={`NOOB Live Lounge${currentUser.hasLiveLounge ? ' — Unlocked' : ''}`} blurb="Private meeting rooms — screen share, whiteboard & chat" onClick={() => { markMenuEntry('lounge'); setShowNoobMenu(false); setShowLiveLoungePage(true); }} />)}
+              {featOn('shop') && (<MenuBanner tone="shop" entryId="shop" icon={<ShoppingBag className="w-[18px] h-[18px]" />} title={<span className="shop-wordmark text-base leading-none font-normal">Shop NOOB</span>} blurb="Browse products & your cart" onClick={() => { markMenuEntry('shop'); setShowNoobMenu(false); setShowStorePage(true); }} />)}
               {foodStallVisible && (
                 foodStallComingSoon ? (
                   <MenuBanner tone="food" entryId="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" badge="Coming Soon" />
@@ -1014,12 +1025,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <MenuBanner tone="food" entryId="food" icon={<span className="text-base">🍔</span>} title="NOOB Food Stall" blurb="Burgers, bhel, fries, manchurian & coke" onClick={() => { markMenuEntry('food'); setShowNoobMenu(false); setShowFoodStall(true); }} />
                 )
               )}
-              <MenuBanner tone="ai" entryId="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { markMenuEntry('ai'); setShowNoobMenu(false); setShowNoobAi(true); }} />
-              <MenuBanner tone="support" entryId="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { markMenuEntry('support'); setShowNoobMenu(false); setShowSupportModal(true); }} />
-              <MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />
+              {featOn('ai') && (<MenuBanner tone="ai" entryId="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { markMenuEntry('ai'); setShowNoobMenu(false); setShowNoobAi(true); }} />)}
+              {featOn('support') && (<MenuBanner tone="support" entryId="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { markMenuEntry('support'); setShowNoobMenu(false); setShowSupportModal(true); }} />)}
+              {featOn('suggestions') && (<MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />)}
               {/* NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app) */}
-              <MenuBanner tone="drinks" entryId="drinks" icon={<CupSoda className="w-[18px] h-[18px]" />} title="NOOB Cold Drinks" blurb="Ten cans, ten flavours — scroll to explore in 3D" onClick={() => { markMenuEntry('drinks'); setShowNoobMenu(false); window.location.assign('/cold-drinks/'); }} />
-              <MenuBanner tone="creations" entryId="creations" icon={<Layers className="w-[18px] h-[18px]" />} title="More of our creations" blurb="Other websites we made — visit and explore" onClick={() => { markMenuEntry('creations'); setShowNoobMenu(false); setShowCreations(true); }} />
+              {featOn('drinks') && (<MenuBanner tone="drinks" entryId="drinks" icon={<CupSoda className="w-[18px] h-[18px]" />} title="NOOB Cold Drinks" blurb="Ten cans, ten flavours — scroll to explore in 3D" onClick={() => { markMenuEntry('drinks'); setShowNoobMenu(false); window.location.assign('/cold-drinks/'); }} />)}
+              {featOn('creations') && (<MenuBanner tone="creations" entryId="creations" icon={<Layers className="w-[18px] h-[18px]" />} title="More of our creations" blurb="Other websites we made — visit and explore" onClick={() => { markMenuEntry('creations'); setShowNoobMenu(false); setShowCreations(true); }} />)}
               </div>
             </div>
             {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}

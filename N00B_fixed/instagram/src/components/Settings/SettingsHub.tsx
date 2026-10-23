@@ -4,6 +4,7 @@ import { useFullPage } from '../../utils/fullPage';
 import { PageLoading, Row, Section } from './kit';
 import { LoginApprovalRow } from './LoginApprovalRow';
 import { ROWS, SECTIONS, searchRows, type RowDef } from './registry';
+import { useFeaturesOff } from '../../utils/featureFlags';
 import { PAGES } from './pages';
 import { loadSettings, useAccountSettings, warmLists } from '../../services/settingsApi';
 import type { SettingsContext } from './types';
@@ -85,7 +86,8 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
     return () => window.removeEventListener('keydown', onKey);
   }, [back]);
 
-  const rows = useMemo(() => ROWS.filter((r) => (!r.page || PAGES[r.page]) && (!r.show || r.show(ctx))), [ctx]);
+  const featuresOff = useFeaturesOff();   // the support assistant is not listed (or found by search) while the administrator has it switched off
+  const rows = useMemo(() => ROWS.filter((r) => (!r.page || PAGES[r.page]) && (!r.show || r.show(ctx)) && !(r.action === 'openSupport' && featuresOff.has('support')) && !(r.action === 'openSuggestionBox' && featuresOff.has('suggestions'))), [ctx, featuresOff]);
   const found = useMemo(() => searchRows(rows, query.trim()), [rows, query]);
 
   const valueOf = (r: RowDef): string | undefined => {

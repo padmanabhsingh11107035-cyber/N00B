@@ -4780,6 +4780,8 @@ export interface PlatformSettings {
   noobRoomsDisabledMessage?: string;
   // The Music page is hidden from everyone (bottom bar, side menu) by the administrator — migration 20261015000001
   musicPageHidden?: boolean;
+  // The pages the administrator has switched OFF for users (utils/features.ts has the names) — migration 20261023000001
+  disabledFeatures?: string[];
 }
 
 export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
@@ -4788,7 +4790,7 @@ export async function fetchPublicPlatformSettings(): Promise<PlatformSettings> {
   } catch {
     return {
       signupsEnabled: true, maintenanceEnabled: false, maintenanceMessage: '', noobAiMaintenance: false, sparkxOpen: true, joinTeamOpen: true,
-      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: '', noobRoomsEnabled: true, noobRoomsDisabledMessage: '', musicPageHidden: false
+      liveLoungeMaintenance: false, liveLoungeMaintenanceMessage: '', noobRoomsEnabled: true, noobRoomsDisabledMessage: '', musicPageHidden: false, disabledFeatures: []
     };
   }
 }
@@ -4831,6 +4833,18 @@ export async function adminSetMusicPageHidden(hidden: boolean): Promise<{ succes
     return { success: true, settings };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not change the Music page. If this keeps happening, the latest SQL (20261015000001_music_page_toggle) has not been run yet.') };
+  }
+}
+
+// Switch one page of the app on or off for users (the main administrator only) — migration 20261023000001.
+export async function adminSetFeature(key: string, on: boolean): Promise<{ success: boolean; settings?: PlatformSettings; error?: string }> {
+  try {
+    const settings = await rpc<PlatformSettings>('admin_set_feature', { p_key: key, p_on: on });
+    return { success: true, settings };
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err ?? '');
+    if (/could not find the function|schema cache/i.test(raw)) return { success: false, error: 'The page switches need the latest SQL (20261023000001_feature_switches), which has not been run yet.' };
+    return { success: false, error: errorText(err, 'Could not change the page. Please try again.') };
   }
 }
 

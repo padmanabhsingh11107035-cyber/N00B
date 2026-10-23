@@ -337,6 +337,7 @@ export {
   fetchPublicPlatformSettings,
   adminSetPlatformSettings,
   adminSetMusicPageHidden,
+  adminSetFeature,
   fetchAdminExplorePins,
   requestNoobAiWake,
   adminSetExplorePin,

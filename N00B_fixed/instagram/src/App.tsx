@@ -103,6 +103,7 @@ import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
 import { StudioHost } from './components/Studio/StudioHost';
 import { closeStudio, openStudio } from './components/Studio/studioStore';
+import { closeNoobDraw } from './components/Draw/drawStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { StudyHost } from './components/Study/StudyHost';
 import { isCoachingHost, openStudy } from './components/Study/studyStore';
@@ -114,6 +115,8 @@ import { lazyTab } from './utils/lazyTab';
 import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './utils/pageLayers';
 import { LogoLightbox } from './components/Common/LogoLightbox';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
+import { FeatureFlagsContext } from './utils/featureFlags';
+import { TAB_FEATURE, disabledFeatureSet, funFeatureKey } from './utils/features';
 import { TAB_PATHS, cleanPath, contentPath, parseContentPath, parseContentQuery, tabFromPath, FEATURE_PAGES, type ContentRoute } from './utils/routes';
 import { afterHistoryIdle } from './utils/historyGate';
 import { showTabAddress, tabFromHistoryEntry } from './utils/addressBar';
@@ -298,6 +301,16 @@ export default function App() {
   useEffect(() => {
     if (musicHidden && activeTab === 'music') setActiveTab('feed');
   }, [musicHidden, activeTab]);
+  // The pages the administrator has switched OFF for users (Admin Control Panel -> Pages). The administrator always sees everything; for everyone else a page that is off leaves the
+  // bottom bar, the side menu, the menu on Home and every button that opens it, and anyone who is on it when it goes off is taken Home.
+  const adminSeesAll = isMainAdmin(currentUser);
+  const offList = platformSettings?.disabledFeatures?.join(',') ?? '';
+  const featuresOff = useMemo<ReadonlySet<string>>(() => (adminSeesAll ? new Set<string>() : disabledFeatureSet(offList ? offList.split(',') : [])), [adminSeesAll, offList]);
+  const featOn = (key: string) => !featuresOff.has(key);
+  useEffect(() => {
+    const key = TAB_FEATURE[activeTab];
+    if (key && featuresOff.has(key)) setActiveTab('feed');
+  }, [featuresOff, activeTab]);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -411,6 +424,8 @@ export default function App() {
   const [studioStoryFile, setStudioStoryFile] = useState<File | null>(null);
   // the address /studio opens NOOB Studio
   useEffect(() => { try { if (/^\/studio\/?$/i.test(window.location.pathname)) openStudio(); } catch { /* the app opens as usual */ } }, []);
+  // (the settings arrive a moment after the address opens it: if Studio or Draw is switched off for this person it closes again)
+  useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); }, [featuresOff]);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
@@ -971,6 +986,7 @@ export default function App() {
 
   // The Fun pages of the three-line menu open on top of the page that is showing, like a profile: closing them (or the phone's back button) returns to that page exactly as it was.
   const openFun = (loc: FunLocation) => {
+    if (featuresOff.has(funFeatureKey(loc.feature))) return;   // that fun page is switched off for users
     const top = pageLayers.layers[pageLayers.layers.length - 1]?.data;
     if (top && top.kind === 'fun') pageLayers.update({ id: 'fun', kind: 'fun', loc });   // already on a Fun page: move within it
     else pageLayers.push({ id: 'fun', kind: 'fun', loc });
@@ -995,6 +1011,7 @@ export default function App() {
   // A Fun page opened from its own address: once someone is logged in it opens on top of Home.
   useEffect(() => {
     if (!currentUser || !bootFun) return;
+    if (featuresOff.has(funFeatureKey(bootFun.feature))) { setBootFun(null); return; }
     pageLayers.push({ id: 'fun', kind: 'fun', loc: bootFun });
     setBootFun(null);
   }, [currentUser?.id, bootFun]);
@@ -1433,6 +1450,8 @@ export default function App() {
   };
 
   const handleSelectNavTab = (tab: NavTab) => {
+    const offKey = TAB_FEATURE[tab];
+    if (offKey && featuresOff.has(offKey)) return;   // the page is switched off for users
     if (tab === 'post') {
       setShowPostCreationModal(true);
     } else if (pageLayers.layers.length > 0 && tab === activeTab) {
@@ -1643,6 +1662,7 @@ export default function App() {
   );
 
   return (
+    <FeatureFlagsContext.Provider value={featuresOff}>
     <div className={`min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
       {isUpdateAvailable && <UpdateAvailableBanner />}
       {incomingCall && (
@@ -1677,49 +1697,57 @@ export default function App() {
               <span>Home</span>
             </button>
 
-            <button
-              onClick={() => handleSelectNavTab('explore')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'explore'
-                  ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <Compass className={`w-4 h-4 ${activeTab === 'explore' ? 'stroke-red-500' : 'stroke-current'}`} />
-              <span>Explore People</span>
-            </button>
+            {featOn('explore') && (
+              <button
+                onClick={() => handleSelectNavTab('explore')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'explore'
+                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+                }`}
+              >
+                <Compass className={`w-4 h-4 ${activeTab === 'explore' ? 'stroke-red-500' : 'stroke-current'}`} />
+                <span>Explore People</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleSelectNavTab('reels')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'reels'
-                  ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <Film className={`w-4 h-4 ${activeTab === 'reels' ? 'stroke-red-500' : 'stroke-current'}`} />
-              <span>Reels</span>
-            </button>
+            {featOn('reels') && (
+              <button
+                onClick={() => handleSelectNavTab('reels')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'reels'
+                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+                }`}
+              >
+                <Film className={`w-4 h-4 ${activeTab === 'reels' ? 'stroke-red-500' : 'stroke-current'}`} />
+                <span>Reels</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleSelectNavTab('videos')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'videos'
-                  ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <Youtube className={`w-4 h-4 ${activeTab === 'videos' ? 'stroke-red-500' : 'stroke-current'}`} />
-              <span>Feed</span>
-            </button>
+            {featOn('videos') && (
+              <button
+                onClick={() => handleSelectNavTab('videos')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'videos'
+                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+                }`}
+              >
+                <Youtube className={`w-4 h-4 ${activeTab === 'videos' ? 'stroke-red-500' : 'stroke-current'}`} />
+                <span>Feed</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => handleSelectNavTab('post')}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-noob hover:bg-noob/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.25)]"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Create</span>
-            </button>
+            {featOn('create') && (
+              <button
+                onClick={() => handleSelectNavTab('post')}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-black bg-noob hover:bg-noob/90 transition-all cursor-pointer shadow-[0_0_15px_rgba(255,255,255,0.25)]"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Create</span>
+              </button>
+            )}
 
             <button
               onClick={handleOpenNotifications}
@@ -1738,36 +1766,40 @@ export default function App() {
               )}
             </button>
 
-            <button
-              onClick={() => handleSelectNavTab('chat')}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'chat'
-                  ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <div className="flex items-center gap-3.5">
-                <MessageSquare className={`w-4 h-4 ${activeTab === 'chat' ? 'stroke-red-500' : 'stroke-current'}`} />
-                <span>Direct Chat</span>
-              </div>
-              {unreadChatCount > 0 && (
-                <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-red-600 text-white animate-bounce">
-                  {unreadChatCount}
-                </span>
-              )}
-            </button>
+            {featOn('chat') && (
+              <button
+                onClick={() => handleSelectNavTab('chat')}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'chat'
+                    ? 'bg-zinc-900/90 text-white border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+                }`}
+              >
+                <div className="flex items-center gap-3.5">
+                  <MessageSquare className={`w-4 h-4 ${activeTab === 'chat' ? 'stroke-red-500' : 'stroke-current'}`} />
+                  <span>Direct Chat</span>
+                </div>
+                {unreadChatCount > 0 && (
+                  <span className="px-2 py-0.5 text-[9px] font-black rounded-full bg-red-600 text-white animate-bounce">
+                    {unreadChatCount}
+                  </span>
+                )}
+              </button>
+            )}
 
-            <button
-              onClick={() => handleSelectNavTab('games')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'games'
-                  ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
-              }`}
-            >
-              <Gamepad2 className={`w-4 h-4 ${activeTab === 'games' ? 'stroke-noob' : 'stroke-current'}`} />
-              <span>Mini-Games</span>
-            </button>
+            {featOn('games') && (
+              <button
+                onClick={() => handleSelectNavTab('games')}
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'games'
+                    ? 'bg-zinc-900/90 text-noob border border-noob/30 shadow-[0_0_15px_rgba(255,255,255,0.15)] font-bold'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/40'
+                }`}
+              >
+                <Gamepad2 className={`w-4 h-4 ${activeTab === 'games' ? 'stroke-noob' : 'stroke-current'}`} />
+                <span>Mini-Games</span>
+              </button>
+            )}
 
             {!musicHidden && (
               <button
@@ -1785,21 +1817,25 @@ export default function App() {
 
             {/* Desktop/tablet-only shortcuts (this whole sidebar is hidden below the xl breakpoint) —
                 same destinations the Profile ⋮ menu already opens, just reachable directly here too. */}
-            <button
-              onClick={() => setShowLiveLoungeUpsell(true)}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-            >
-              <Radio className="w-4 h-4 stroke-current" />
-              <span>Meetings</span>
-            </button>
+            {featOn('lounge') && (
+              <button
+                onClick={() => setShowLiveLoungeUpsell(true)}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+              >
+                <Radio className="w-4 h-4 stroke-current" />
+                <span>Meetings</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => setShowNoobAiPage(true)}
-              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
-            >
-              <Bot className="w-4 h-4 stroke-current" />
-              <span>NOOB AI</span>
-            </button>
+            {featOn('ai') && (
+              <button
+                onClick={() => setShowNoobAiPage(true)}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900/40 transition-all cursor-pointer"
+              >
+                <Bot className="w-4 h-4 stroke-current" />
+                <span>NOOB AI</span>
+              </button>
+            )}
 
             <button
               onClick={() => setShowWalletModal(true)}
@@ -2076,12 +2112,14 @@ export default function App() {
               <Users className="w-4 h-4 text-red-500" />
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">NOOB Members</h3>
             </div>
-            <button
-              onClick={() => setActiveTab('explore')}
-              className="text-[10px] font-semibold text-red-400 hover:underline cursor-pointer"
-            >
-              Explore all
-            </button>
+            {featOn('explore') && (
+              <button
+                onClick={() => setActiveTab('explore')}
+                className="text-[10px] font-semibold text-red-400 hover:underline cursor-pointer"
+              >
+                Explore all
+              </button>
+            )}
           </div>
 
           <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar pr-1">
@@ -2143,10 +2181,14 @@ export default function App() {
           <button onClick={() => setShowTermsModal(true)} className="hover:underline cursor-pointer">
             Terms & Conditions
           </button>
-          <span>•</span>
-          <span onClick={() => setActiveTab('explore')} className="hover:underline cursor-pointer">
-            Explore People
-          </span>
+          {featOn('explore') && (
+            <>
+              <span>•</span>
+              <span onClick={() => setActiveTab('explore')} className="hover:underline cursor-pointer">
+                Explore People
+              </span>
+            </>
+          )}
           <div className="w-full text-zinc-600 text-[9px] mt-1">
             © 2026 NOOB • Fun & Connecting People
           </div>
@@ -2164,7 +2206,7 @@ export default function App() {
       />
 
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}
-      {activeTab !== 'chat' && activeTab !== 'reels' && (
+      {activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
         <button
           onClick={() => setShowCustomerSupportModal(true)}
           className="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-14 h-14 hover:scale-105 transition-all cursor-pointer group"
@@ -2258,7 +2300,7 @@ export default function App() {
             setShowPostCreationModal(false);
             if (kind === 'post' || kind === 'reel' || kind === 'thought') setCreateKind(kind);
             else if (kind === 'story') setShowCreateStoryModal(true);
-            else if (kind === 'studio') openStudio();
+            else if (kind === 'studio') { if (featOn('studio')) openStudio(); }
             else if (kind === 'video') setShowUploadVideoModal(true);
             else if (kind === 'live') handleGoLiveTap();
           }}
@@ -2453,6 +2495,6 @@ export default function App() {
         </React.Suspense>
       )}
     </div>
+    </FeatureFlagsContext.Provider>
   );
 }
-

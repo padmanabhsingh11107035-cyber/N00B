@@ -7,6 +7,7 @@ import { fetchAccountStatus, useAccountSettings } from '../../../services/settin
 import { openTeamJoin } from '../../Team/teamJoinStore';
 import { openInApp } from '../../../utils/inAppBrowser';
 import { getDevicePrefs } from '../../../utils/devicePrefs';
+import { useFeatureOn } from '../../../utils/featureFlags';
 
 declare const __BUILD_ID__: string;
 
@@ -36,12 +37,15 @@ const FAQ: Array<[string, string]> = [
 
 export const HelpPage: React.FC<PageProps> = ({ ctx, back }) => {
   const [open, setOpen] = useState<number | null>(null);
+  const supportOn = useFeatureOn('support'), ideasOn = useFeatureOn('suggestions');   // the administrator can switch either off for users
   return (
     <PageShell title="Help" onBack={back}>
-      <Section title="Ask for help">
-        <Row icon={Sparkles} label="NOOB support assistant" sub="Ask the AI helper, or talk to a person from the team" onClick={ctx.actions.openSupport} testId="help-assistant" />
-        <Row icon={MessageSquarePlus} label="Report a problem or send an idea" sub="Goes straight to the NOOB team" onClick={ctx.actions.openSuggestionBox} testId="help-feedback" />
-      </Section>
+      {(supportOn || ideasOn) && (
+        <Section title="Ask for help">
+          {supportOn && <Row icon={Sparkles} label="NOOB support assistant" sub="Ask the AI helper, or talk to a person from the team" onClick={ctx.actions.openSupport} testId="help-assistant" />}
+          {ideasOn && <Row icon={MessageSquarePlus} label="Report a problem or send an idea" sub="Goes straight to the NOOB team" onClick={ctx.actions.openSuggestionBox} testId="help-feedback" />}
+        </Section>
+      )}
       <Section title="Common questions">
         {FAQ.map(([q, a], i) => (
           <div key={q}>
@@ -99,6 +103,7 @@ const day = (iso?: string) => { if (!iso) return undefined; try { return new Dat
 
 export const AccountStatusPage: React.FC<PageProps> = ({ ctx, back }) => {
   const [st, setSt] = useState<Status | null>(null);
+  const supportOn = useFeatureOn('support');
   useEffect(() => { void fetchAccountStatus().then(setSt); }, []);
   return (
     <PageShell title="Account Status" onBack={back}>
@@ -116,10 +121,12 @@ export const AccountStatusPage: React.FC<PageProps> = ({ ctx, back }) => {
             <Row label="Member since" value={day(st.memberSince) || 'Unknown'} />
             <Row label="Last login" value={day(st.lastLogin) || 'Unknown'} />
           </Section>
-          <Note>If something was removed by mistake, or your account is limited, ask the NOOB support assistant and a person from the team will look at it.</Note>
-          <Section>
-            <Row icon={Sparkles} label="Ask the support assistant" onClick={ctx.actions.openSupport} />
-          </Section>
+          {supportOn && <Note>If something was removed by mistake, or your account is limited, ask the NOOB support assistant and a person from the team will look at it.</Note>}
+          {supportOn && (
+            <Section>
+              <Row icon={Sparkles} label="Ask the support assistant" onClick={ctx.actions.openSupport} />
+            </Section>
+          )}
         </>
       )}
     </PageShell>

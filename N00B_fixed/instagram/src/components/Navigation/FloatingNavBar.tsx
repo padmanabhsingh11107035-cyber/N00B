@@ -1,5 +1,6 @@
 import React from 'react';
 import { Home, Compass, Film, MessageSquare, Gamepad2, CirclePlus } from 'lucide-react';
+import { useFeatureOn } from '../../utils/featureFlags';
 
 export type NavTab = 'feed' | 'explore' | 'post' | 'reels' | 'chat' | 'games' | 'music' | 'profile' | 'videos';
 
@@ -50,6 +51,9 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   hideOnMobile = false,
   onPressTab
 }) => {
+  // a page that the administrator has switched off for users has no button (the others share the width)
+  const showExplore = useFeatureOn('explore'), showReels = useFeatureOn('reels'), showCreate = useFeatureOn('create'), showChat = useFeatureOn('chat'), showGames = useFeatureOn('games');
+  const columns = 2 + [showExplore, showReels, showCreate, showChat, showGames].filter(Boolean).length;
   return (
     <nav
       id="floating-bottom-nav"
@@ -60,6 +64,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
     >
       <div
         className="nav-row grid grid-cols-7 items-stretch"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         onPointerDown={(e) => {
           const id = (e.target as HTMLElement).closest('button')?.id || '';
           if (id.startsWith('nav-item-')) onPressTab?.(id.slice('nav-item-'.length) as NavTab);
@@ -69,33 +74,43 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           <Home className="nav-ico w-6 h-6" />
         </NavButton>
 
-        <NavButton id="nav-item-explore" label="Explore" title="Explore" active={activeTab === 'explore'} onClick={() => onSelectTab('explore')}>
-          <Compass className="nav-ico w-6 h-6" />
-        </NavButton>
+        {showExplore && (
+          <NavButton id="nav-item-explore" label="Explore" title="Explore" active={activeTab === 'explore'} onClick={() => onSelectTab('explore')}>
+            <Compass className="nav-ico w-6 h-6" />
+          </NavButton>
+        )}
 
-        <NavButton id="nav-item-reels" label="Reels" title="Reels" active={activeTab === 'reels'} onClick={() => onSelectTab('reels')}>
-          <Film className="nav-ico w-6 h-6" />
-        </NavButton>
+        {showReels && (
+          <NavButton id="nav-item-reels" label="Reels" title="Reels" active={activeTab === 'reels'} onClick={() => onSelectTab('reels')}>
+            <Film className="nav-ico w-6 h-6" />
+          </NavButton>
+        )}
 
         {/* Create: opens the post / reel / story picker, never a page of its own, so it is never the "open" one */}
-        <NavButton id="nav-item-post" title="Create a post, reel or story" onClick={() => onSelectTab('post')}>
-          <CirclePlus className="nav-ico nav-create w-10 h-10" />
-        </NavButton>
+        {showCreate && (
+          <NavButton id="nav-item-post" title="Create a post, reel or story" onClick={() => onSelectTab('post')}>
+            <CirclePlus className="nav-ico nav-create w-10 h-10" />
+          </NavButton>
+        )}
 
-        <NavButton id="nav-item-chat" label="Chat" title="Direct Messages" active={activeTab === 'chat'} onClick={() => onSelectTab('chat')}>
-          <div className="relative">
-            <MessageSquare className="nav-ico w-6 h-6" />
-            {unreadChatCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 px-1 min-w-[15px] h-[15px] bg-red-500 text-white font-black text-[8px] rounded-full flex items-center justify-center shadow-sm animate-pulse">
-                {unreadChatCount}
-              </span>
-            )}
-          </div>
-        </NavButton>
+        {showChat && (
+          <NavButton id="nav-item-chat" label="Chat" title="Direct Messages" active={activeTab === 'chat'} onClick={() => onSelectTab('chat')}>
+            <div className="relative">
+              <MessageSquare className="nav-ico w-6 h-6" />
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 px-1 min-w-[15px] h-[15px] bg-red-500 text-white font-black text-[8px] rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                  {unreadChatCount}
+                </span>
+              )}
+            </div>
+          </NavButton>
+        )}
 
-        <NavButton id="nav-item-games" label="Games" title="Mini-Games Arena" active={activeTab === 'games'} onClick={() => onSelectTab('games')}>
-          <Gamepad2 className="nav-ico w-6 h-6" />
-        </NavButton>
+        {showGames && (
+          <NavButton id="nav-item-games" label="Games" title="Mini-Games Arena" active={activeTab === 'games'} onClick={() => onSelectTab('games')}>
+            <Gamepad2 className="nav-ico w-6 h-6" />
+          </NavButton>
+        )}
 
         <NavButton id="nav-item-profile" label="You" title="My Profile" active={activeTab === 'profile'} onClick={() => onSelectTab('profile')}>
           <span className="nav-ava block w-6 h-6 rounded-full overflow-hidden">

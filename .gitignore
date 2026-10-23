@@ -1,1 +1,3 @@
-.claude/
+# personal tool settings stay private; the preview shortcuts (launch.json) are shared
+.claude/*
+!.claude/launch.json

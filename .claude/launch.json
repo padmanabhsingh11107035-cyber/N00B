@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "n00b-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "N00B_fixed/instagram",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "n00b-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "N00B_fixed/instagram",
+        "run",
+        "dev:web"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "n00b-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "N00B_fixed/instagram",
+        "run",
+        "preview",
+        "--",
+        "--port",
+        "4173"
+      ],
+      "port": 4173
+    }
+  ]
+}

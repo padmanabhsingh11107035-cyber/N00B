@@ -84,6 +84,10 @@ jobs:
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" /> <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />#' android/app/src/main/AndroidManifest.xml
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
           grep -q UPDATE_PACKAGES_WITHOUT_USER_ACTION android/app/src/main/AndroidManifest.xml
+          # Without these the WebView cannot hand camera or microphone access to the app at all (Go Live, Live Lounge): the Android permission has to exist before the WebView can ask for it
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.CAMERA" /> <uses-permission android:name="android.permission.RECORD_AUDIO" /> <uses-feature android:name="android.hardware.camera" android:required="false" /> <uses-feature android:name="android.hardware.microphone" android:required="false" />#' android/app/src/main/AndroidManifest.xml
+          grep -q android.permission.CAMERA android/app/src/main/AndroidManifest.xml
+          grep -q android.permission.RECORD_AUDIO android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icon & splash screen from the NOOB logo
         # Installed here rather than as a committed devDependency: it pulls in
@@ -91,7 +95,7 @@ jobs:
         # affect this Android build, never the Railway web deploy.
         run: |
           npm install --no-save @capacitor/assets
-          npx capacitor-assets generate --android
+          npx capacitor-assets generate --android --iconBackgroundColor '#000000'
 
       - name: Sync web build into the native project
         run: npx cap sync android

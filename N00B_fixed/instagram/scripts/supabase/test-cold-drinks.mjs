@@ -23,15 +23,20 @@ check(FLAVORS.every((f) => Number.isFinite(f.price) && f.price > 0 && f.sweet >=
 const hex = /^#[0-9a-f]{6}$/i;
 check(FLAVORS.every((f) => ['a', 'b', 'bg1', 'bg2'].every((k) => hex.test(f.colors[k]))), 'each has its page colours');
 const paintSrc = read(path.join(SRC, 'src', 'paint.js'));
-check(FLAVORS.every((f) => hex.test(f.design.color) && hex.test(f.design.ink) && hex.test(f.design.word) && f.design.metalness > 0 && f.design.metalness <= 1), 'each can is plain: one colour, the colour of its doodles, the colour of the logo, how metallic it is');
+check(FLAVORS.every((f) => hex.test(f.design.color) && hex.test(f.design.ink) && hex.test(f.design.word) && hex.test(f.design.ring) && f.design.metalness > 0 && f.design.metalness <= 1), 'each can is plain: one colour, the colour of its doodles, of the logo lines and of the ring at the top, how metallic it is');
 const lum = (h) => { const n = parseInt(h.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
 check(new Set(FLAVORS.map((f) => f.design.color)).size === 10, 'ten different colours');
 check(FLAVORS.some((f) => lum(f.design.color) > 240) && FLAVORS.some((f) => lum(f.design.color) < 40), 'one white can and one black can among them');
-check(FLAVORS.every((f) => Math.abs(lum(f.design.word) - lum(f.design.color)) > 90), 'the logo can be read on every can (it is much lighter or darker than the can)');
+check(FLAVORS.every((f) => Math.abs(lum(f.design.word) - lum(f.design.color)) > 60 && f.design.ink === f.design.word), 'the logo lines and the doodles are one colour and can be read on every can (much lighter or darker than the can)');
+const black = '#0b0b0d';
+check(FLAVORS.filter((f) => f.design.word === black).length === 9 && FLAVORS.filter((f) => f.design.ring === black).length === 9, 'the NOOB logo and the ring at the top are black on nine cans');
+const blackCan = FLAVORS.find((f) => lum(f.design.color) < 40);
+check(blackCan.design.word === '#ffffff' && blackCan.design.ring !== black && lum(blackCan.design.ring) > 100, 'on the black can the lines are white and the ring is gold');
 check(!/halftone|stripes|waves|flake|glitter|brushed|barcode|STAY NOOB/i.test(paintSrc), 'the cans are kept plain: no extra patterns, glitter, bar code or slogans');
+check(/function blockWord/.test(paintSrc) && /depth/.test(paintSrc) && /hatch/i.test(paintSrc) && /d\.ring/.test(paintSrc), 'the logo is a block-letter sticker (thick outline, a 3D side shaded with pen hatching) and the top has its ring');
 const icons = [...paintSrc.matchAll(/function (\w+)\(c, s\)/g)].map((m) => m[1]);
-check(['chat', 'star', 'heart', 'moon', 'bolt', 'notes', 'code', 'plus', 'spiral', 'camera', 'headphones', 'squiggle'].every((n) => icons.includes(n)), 'the doodles are the ones of the app\'s own wallpaper (chat bubble, star, heart, moon, bolt, music notes, < >, plus, swirl, camera, headphones, squiggle)');
-check(/NOOB/.test(read(path.join(SRC, 'src', 'main.js'))) && /noob-wordmark/.test(read(path.join(SRC, 'src', 'main.js'))) && /tint\(logo, d\.word\)/.test(paintSrc), 'the NOOB logo is printed big on every can');
+check(['plane', 'ghost', 'loops', 'curlArrow', 'xo', 'gem', 'chili', 'smiley', 'star', 'heart', 'bolt', 'spiral', 'chat', 'notes', 'headphones', 'camera', 'moon'].every((n) => icons.includes(n)), 'hand-drawn doodles: paper plane, ghost, loops, curly arrow, x and o, gem, chilli, smiley, star, heart, bolt, swirl, and the icons of the app\'s wallpaper (chat bubble, notes, headphones, camera, moon)');
+check(/NOOB/.test(read(path.join(SRC, 'src', 'main.js'))) && /noob-wordmark/.test(read(path.join(SRC, 'src', 'main.js'))) && /blockWord\(logo, len, th, d\.word, d\.color/.test(paintSrc) && /len = H \* 0\.8/.test(paintSrc), 'the NOOB logo is printed big on every can, in the colour of the can with black (or white) lines');
 
 section('2. How it is made');
 const main = read(path.join(SRC, 'src', 'main.js'));

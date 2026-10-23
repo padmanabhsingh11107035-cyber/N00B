@@ -21,11 +21,11 @@ function bodyGeometry() {
 }
 // the bottom: the ring the can stands on, and the dome inside it
 const bottomGeometry = () => new THREE.LatheGeometry(v2([[0.0001, 0.22], [0.38, 0.215], [0.55, 0.15], [0.66, 0.07], [0.74, 0.015], [0.8, 0.0], [0.86, 0.02], [0.92, 0.1], [0.97, 0.22], [0.995, 0.34], [1, BODY_FROM]]), 192);
-// the top: a short neck, the rolled rim (a little wider than the neck, as on a real can), the flat ring, and the lid sunk inside it
+// the top: a short neck and the rolled rim (a little wider than the neck, as on a real can) with its flat ring: this is the ring that has its own colour; then the lid, sunk inside it
 const neckGeometry = () => new THREE.LatheGeometry(v2([
-  [0.9, BODY_TO], [0.896, 4.66], [0.905, 4.7], [0.925, 4.74], [0.935, 4.79], [0.925, 4.84], [0.9, 4.865], [0.87, 4.87],
-  [0.84, 4.865], [0.82, 4.835], [0.8, 4.775], [0.77, 4.735], [0.735, 4.715], [0.0001, 4.71]
+  [0.9, BODY_TO], [0.896, 4.66], [0.905, 4.7], [0.925, 4.74], [0.935, 4.79], [0.925, 4.84], [0.9, 4.865], [0.87, 4.87], [0.84, 4.865]
 ]), 192);
+const lidGeometry = () => new THREE.LatheGeometry(v2([[0.84, 4.865], [0.82, 4.835], [0.8, 4.775], [0.77, 4.735], [0.735, 4.715], [0.0001, 4.71]]), 192);
 
 function tabGeometry() {
   // a rounded pull tab with a finger hole
@@ -106,7 +106,7 @@ export function studioEnvironment(renderer) {
 export function makeCanKit() {
   const bare = new THREE.MeshPhysicalMaterial({ color: 0xdfe2e6, metalness: 1, roughness: 0.3, roughnessMap: brushedMap(), side: THREE.DoubleSide, envMapIntensity: 1.15 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x777b82, metalness: 1, roughness: 0.42 });
-  return { body: bodyGeometry(), bottom: bottomGeometry(), neck: neckGeometry(), tab: tabGeometry(), bare, dark, droplets: dropletNormalMap(), shadow: shadowTexture() };
+  return { body: bodyGeometry(), bottom: bottomGeometry(), neck: neckGeometry(), lid: lidGeometry(), tab: tabGeometry(), bare, dark, droplets: dropletNormalMap(), shadow: shadowTexture() };
 }
 
 // one can: { group (move this one), spin (turn this one), paint (its paint material), shadow }
@@ -120,7 +120,10 @@ export function makeCan(kit, flavor) {
     color: 0xffffff, metalness: flavor.design.metalness, roughness: 0.27, clearcoat: 1, clearcoatRoughness: 0.035,
     clearcoatNormalMap: kit.droplets, clearcoatNormalScale: new THREE.Vector2(1.2, 1.2), envMapIntensity: 1.2
   });
-  inner.add(new THREE.Mesh(kit.body, paint), new THREE.Mesh(kit.bottom, kit.bare), new THREE.Mesh(kit.neck, kit.bare));
+  // the bottom is the colour of the can (no dark band); the ring at the top has its own colour: black, or gold on the black can
+  const bottomMat = new THREE.MeshPhysicalMaterial({ color: flavor.design.color, metalness: flavor.design.metalness, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide, envMapIntensity: 1.2 });
+  const ringMat = new THREE.MeshPhysicalMaterial({ color: flavor.design.ring, metalness: 0.85, roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.04, side: THREE.DoubleSide, envMapIntensity: 1.2 });
+  inner.add(new THREE.Mesh(kit.body, paint), new THREE.Mesh(kit.bottom, bottomMat), new THREE.Mesh(kit.neck, ringMat), new THREE.Mesh(kit.lid, kit.bare));
 
   // the lid: a dark oval where it opens, and the tab fixed by its rivet
   const opening = new THREE.Mesh(new THREE.CircleGeometry(1, 48), kit.dark); opening.scale.set(0.3, 0.19, 1); opening.rotation.x = -Math.PI / 2; opening.position.set(-0.28, 4.716, 0.0); inner.add(opening);

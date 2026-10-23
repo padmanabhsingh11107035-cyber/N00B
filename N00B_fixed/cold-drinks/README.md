@@ -6,10 +6,10 @@ turns, the page takes its colour, and the text beside it (under it, on an uprigh
 Everything is made in code, there is no 3D model or picture to download (only the NOOB wordmark, 22 KB):
 
 - `src/flavors.js` — the ten cans: name, tagline, notes, price, sweet / fizz, the colours of the page and the colour of the can. **This is the file to change a name, a price or a colour.**
-- `src/paint.js` — draws the printed artwork of a can on a canvas wrapped round it: one plain colour, the thin doodles of the app's own wallpaper (chat bubble, heart, star, moon, bolt, notes,
-  camera, headphones ...) and the big NOOB logo. Kept plain on purpose.
+- `src/paint.js` — draws the printed artwork of a can on a canvas wrapped round it: ONE colour all the way down, a ring at the top (black, gold on the black can), the big NOOB logo as a block-letter
+  sticker (thick outline, a 3D side shaded with pen hatching) and hand-drawn doodles (paper plane, ghost, hearts, arrows ... and the icons of the app's wallpaper), all in one line colour.
 - `src/can.js` — the can itself: a sleek 330 ml can with a body that curves smoothly into the lid (the top never bends inwards), a rolled rim, a sunk lid with the opening and the pull tab,
-  brushed aluminium, coloured metal under a glossy clear coat, droplets, and `studioEnvironment` (the light of a photo studio: tall soft boxes that the metal reflects). Sizes in `src/dims.js`.
+  coloured metal under a glossy clear coat, droplets, and `studioEnvironment` (the light of a photo studio: tall soft boxes that the metal reflects). Sizes in `src/dims.js`.
 - `src/main.js` — the scene, the scrolling, the text panels.
 
 ## Build

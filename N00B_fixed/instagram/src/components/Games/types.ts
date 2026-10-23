@@ -32,6 +32,31 @@ export interface MiniGameMeta {
 // games felt repeated. Add a new entry here only alongside a real,
 // distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
+  // --- NEW: CANYON RUSH CIRCUIT (a 3D racing game on its own page, /games/canyon-rush/, shown in a frame — see minigames/HostedGameFrame and utils/canyonWarmup) ---
+  {
+    id: 'canyon_rush_circuit',
+    title: 'Canyon Rush Circuit',
+    category: 'arcade',
+    description: 'Drift, boost and jump through a sunlit 3D canyon. Race AI rivals for three laps, or take a friend on in split-screen. Every car is equal, only your line matters. Paint your own car in Car Forge and shape your own circuits in Track Lab. On a phone it plays sideways with an on-screen steering pad.',
+    bannerBg: 'from-[#5b2410] to-[#1b1030]',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'canyon',
+    tags: ['3D', 'Racing', 'Track Lab'],
+    isNew: true,
+    ownSound: true,
+    embedLazy: true,
+    embedUrl: '/games/canyon-rush/',
+    posters: [
+      '/game-posters/canyon-rush/01-cover.webp',
+      '/game-posters/canyon-rush/02-race.webp',
+      '/game-posters/canyon-rush/03-garage.webp'
+    ]
+  },
+
   // --- NEW: HELIX FALL (a real 3D game, runs in its own frame — see minigames/HelixFallGame) ---
   {
     id: 'helix_fall',

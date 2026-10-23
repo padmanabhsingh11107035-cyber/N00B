@@ -26,6 +26,7 @@ import { MiniGameMeta, ALL_50_MINI_GAMES, GameCategory } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
 import { warmHelixFilesWhenIdle } from '../../utils/helixWarmup';
 import { warmUnderhallFilesWhenIdle } from '../../utils/underhallWarmup';
+import { warmCanyonFilesWhenIdle } from '../../utils/canyonWarmup';
 // Lazy-loaded: ~1700 lines nobody needs until they actually open a game — shares the same chunk as
 // App.tsx's own dynamic import() of this component.
 const GamePlayModal = React.lazy(() => import('./GamePlayModal').then((m) => ({ default: m.GamePlayModal })));
@@ -57,7 +58,7 @@ export const GamesView: React.FC<GamesViewProps> = ({
     return () => clearResumePageIf(uid, 'games');
   }, [uid]);
   // Helix Fall's files (about 0.7 MB) are fetched quietly while the Games page is open, so the game starts at once when Play is pressed.
-  useEffect(() => { warmHelixFilesWhenIdle(); warmUnderhallFilesWhenIdle(); }, []);
+  useEffect(() => { warmHelixFilesWhenIdle(); warmUnderhallFilesWhenIdle(); warmCanyonFilesWhenIdle(); }, []);
   const [activeTab, setActiveTab] = useResumeState<'games' | 'leaderboard'>(uid, 'games', 'tab', 'games');
   const [selectedCategory, setSelectedCategory] = useResumeState<GameCategory>(uid, 'games', 'category', 'all');
   const [searchQuery, setSearchQuery] = useResumeState(uid, 'games', 'search', '');

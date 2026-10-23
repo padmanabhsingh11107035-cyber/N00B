@@ -62,6 +62,23 @@
   Cache-Control: public, max-age=86400
 /games/underhall/fonts/*
   Cache-Control: public, max-age=604800
+# Canyon Rush Circuit (a 3D racing game made with Three.js) runs in a frame of its own, from this same site, like Underhall: only its own scripts, models, pictures, sounds and fonts, no network,
+# no frames, no WebAssembly. Its scripts and style are fingerprinted (build/), so they are kept for ever; the models, sounds and pictures keep their names, so they are kept for a day.
+/games/canyon-rush/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/canyon-rush/index.html
+  Cache-Control: no-cache
+/games/canyon-rush/warm.json
+  Cache-Control: no-cache
+/games/canyon-rush/build/*
+  Cache-Control: public, max-age=31536000, immutable
+/games/canyon-rush/assets/*
+  Cache-Control: public, max-age=86400
+/games/canyon-rush/fonts/*
+  Cache-Control: public, max-age=604800
 /games/neon-alley/index.html
   Cache-Control: no-cache
 /games/helix-fall/index.html

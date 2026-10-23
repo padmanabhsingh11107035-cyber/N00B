@@ -21,7 +21,7 @@ import {
 import { MiniGameMeta } from './types';
 import { GamePosterCarousel } from './GamePosterCarousel';
 import { HostedGameFrame } from './minigames/HostedGameFrame';
-import { warmUnderhallFiles } from '../../utils/underhallWarmup';
+import { warmHostedGame } from '../../utils/hostedGameWarmup';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../utils/pageResume';
 import { User } from '../../types';
 import {
@@ -143,7 +143,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   onPointsUpdated
 }) => {
   // a big hosted game: its files are fetched quietly as soon as its page opens, so Play starts it at once
-  useEffect(() => { if (game.embedLazy) void warmUnderhallFiles(); }, [game.embedLazy]);
+  useEffect(() => { if (game.embedLazy) warmHostedGame(game.id); }, [game.embedLazy, game.id]);
   // Chess Blitz is capped at one round a week for free accounts (its real
   // stakes make it something worth grinding otherwise). The check/consume
   // call fires once on mount for every entry path — bot, pass & play,

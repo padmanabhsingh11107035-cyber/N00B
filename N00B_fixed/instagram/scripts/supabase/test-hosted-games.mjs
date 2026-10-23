@@ -48,7 +48,7 @@ check(!/(?:src|href)="https?:|url\(https?:/.test(noData(read(`${dir}/index.html`
 check(!/rel="manifest"|rel="canonical"|og:|twitter:/.test(noData(read(`${dir}/index.html`))), 'no sharing or app-install metadata of its own');
 const worker = read('worker/index.js');
 check(/github\.com\/padmanabhsingh11107035-cyber\/N00B\/releases\/download\/game-data\//.test(worker) && /hasOwnProperty\.call\(FILES, name\)/.test(worker), 'its two big files come from our own release, through an allow-list');
-check(/"main": "worker\/index\.js"/.test(read('wrangler.jsonc')) && /"run_worker_first": \["\/games\/neon-alley\/data\/\*"\]/.test(read('wrangler.jsonc')), 'and only those two addresses go through the small script, everything else is plain files');
+check(/"main": "worker\/index\.js"/.test(read('wrangler.jsonc')) && /"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*"\]/.test(read('wrangler.jsonc')), 'and only those addresses (the big game files, and the cached pictures, videos and songs at /m/) go through the small script, everything else is plain files');
 const own = ['src/components/Games/types.ts', 'src/components/Games/minigames/HostedGameFrame.tsx', 'src/components/Games/GamePlayModal.tsx', 'src/components/Games/GamesView.tsx', 'src/components/Store/FoodHeroMount.tsx', 'scripts/supabase/test-hosted-games.mjs', 'worker/index.js', 'wrangler.jsonc', 'public/_headers'];
 check(own.every((f) => !read(f).toLowerCase().includes(word)), 'and our own files do not name it either');
 

@@ -22,7 +22,7 @@ check(/ownSound: true/.test(entry) && /embedLazy: true/.test(entry) && /isNew: t
 const posters = [...entry.matchAll(/'(\/game-posters\/underhall\/[^']+)'/g)].map((m) => m[1]);
 check(posters.length >= 4 && posters.every((p) => fs.existsSync('public' + p)), `${posters.length} posters, every one is a real file`);
 check(/lazy=\{game\.embedLazy\}/.test(read('src/components/Games/GamePlayModal.tsx')) && /\(visible \|\| !lazy\) && <iframe/.test(read('src/components/Games/minigames/HostedGameFrame.tsx')), 'the frame is only created when Play is pressed (the big game is not started out of sight)');
-check(/warmUnderhallFiles\(\)/.test(read('src/components/Games/GamePlayModal.tsx')) && /warmUnderhallFilesWhenIdle\(\)/.test(read('src/components/Games/GamesView.tsx')), 'its opening files are fetched quietly while the Games page or its own page is open');
+check(/warmHostedGame\(game\.id\)/.test(read('src/components/Games/GamePlayModal.tsx')) && /underhall_after_curfew/.test(read('src/utils/hostedGameWarmup.ts')) && /warmUnderhallFiles\(\)/.test(read('src/utils/hostedGameWarmup.ts')) && /warmUnderhallFilesWhenIdle\(\)/.test(read('src/components/Games/GamesView.tsx')), 'its opening files are fetched quietly while the Games page or its own page is open');
 const warm = read('src/utils/underhallWarmup.ts');
 check(/\/games\/underhall\//.test(warm) && /dataSaver/.test(warm), 'the quiet fetch finds the script and style by reading the page, and skips data saver / 2G');
 

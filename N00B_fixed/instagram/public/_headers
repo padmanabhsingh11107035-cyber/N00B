@@ -62,6 +62,25 @@
   Cache-Control: public, max-age=86400
 /games/underhall/fonts/*
   Cache-Control: public, max-age=604800
+# The Rogue: Shadowfall (a dark-fantasy 3D game made with Three.js) runs in a frame of its own, from this same site, the same way: only its own files, no network, no frames; WebAssembly may only be compiled (the model reader's decoder, unused as no model files are shipped).
+# Its scripts and style have a fingerprint in their names (assets/), so they are kept for ever.
+/games/the-rogue/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/the-rogue/index.html
+  Cache-Control: no-cache
+/games/the-rogue/warm.json
+  Cache-Control: no-cache
+/games/the-rogue/the-rogue.css
+  Cache-Control: no-cache
+/games/the-rogue/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/games/the-rogue/ui/*
+  Cache-Control: public, max-age=86400
+/games/the-rogue/fonts/*
+  Cache-Control: public, max-age=604800
 # Canyon Rush Circuit (a 3D racing game made with Three.js) runs in a frame of its own, from this same site, like Underhall: only its own scripts, models, pictures, sounds and fonts, no network,
 # no frames, no WebAssembly. Its scripts and style are fingerprinted (build/), so they are kept for ever; the models, sounds and pictures keep their names, so they are kept for a day.
 /games/canyon-rush/*

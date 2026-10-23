@@ -1,0 +1,18 @@
+{
+ "shell": [
+  "assets/assets-Ck3l0iMC.js",
+  "assets/combat-X-fP1dS8.js",
+  "assets/game-CZTAgG5l.js",
+  "assets/index-B5N4HLzB.css",
+  "assets/index-bGxCDlqY.js",
+  "assets/renderer-DeMpsGq8.js",
+  "assets/three.core-E0KtS4bf.js",
+  "assets/three.module-CAyVqIPk.js",
+  "ui/logo.webp",
+  "the-rogue.css",
+  "icon-192.png",
+  "fonts/Figtree-VF.subset.woff2",
+  "fonts/Sora-VF.subset.woff2"
+ ],
+ "race": []
+}

@@ -32,6 +32,32 @@ export interface MiniGameMeta {
 // games felt repeated. Add a new entry here only alongside a real,
 // distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
+  // --- NEW: THE ROGUE: SHADOWFALL (a dark-fantasy 3D roguelite on its own page, /games/the-rogue/, shown in a frame — see minigames/HostedGameFrame and utils/rogueWarmup) ---
+  {
+    id: 'the_rogue_shadowfall',
+    title: 'The Rogue: Shadowfall',
+    category: 'arcade',
+    description: 'A dark-fantasy 3D roguelite. Forge a four-slot, seven-element spell build at the Sigil Forge, choose relics that transform your spells, then Descend through warden-sealed depths or survive the endless Crucible arena. On a phone it plays sideways with two on-screen sticks and buttons.',
+    bannerBg: 'from-[#2b1a4d] to-[#120a1f]',
+    badgeColor: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Hard',
+    players: 'Solo',
+    iconType: 'rogue',
+    tags: ['3D', 'Roguelite', 'Spells'],
+    isNew: true,
+    ownSound: true,
+    embedLazy: true,
+    embedUrl: '/games/the-rogue/',
+    posters: [
+      '/game-posters/the-rogue/01-cover.webp',
+      '/game-posters/the-rogue/04-title.webp',
+      '/game-posters/the-rogue/03-forge.webp',
+      '/game-posters/the-rogue/02-run.webp'
+    ]
+  },
+
   // --- NEW: CANYON RUSH CIRCUIT (a 3D racing game on its own page, /games/canyon-rush/, shown in a frame — see minigames/HostedGameFrame and utils/canyonWarmup) ---
   {
     id: 'canyon_rush_circuit',

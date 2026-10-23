@@ -1,0 +1,2 @@
+/* Online rooms and shared leaderboards need services that are not part of this site: their menu entries are not offered. */
+[data-act="nav"][data-arg="online"], [data-act="nav"][data-arg="board"] { display: none !important; }

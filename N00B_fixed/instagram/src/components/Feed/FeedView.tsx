@@ -815,6 +815,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
         ))}
       </div>
 
+      {/* The other things we have made (links to their websites): on the Home page itself, above the posts, because the posts never end */}
+      <MoreCreations className="pt-1 pb-2" />
+
       {/* 4. Feed Posts Stack */}
       <main ref={postListRef} className="w-full max-w-[480px] px-2 sm:px-3 mt-1 space-y-4">
         {filteredPosts.length === 0 ? (
@@ -854,9 +857,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </>
         )}
       </main>
-
-      {/* The last thing on Home: the other things we have made (links to their websites) */}
-      <MoreCreations className="mt-6 mb-6" />
 
       {/* 5. Comments Sheet Modal */}
       {selectedPostForComments && (

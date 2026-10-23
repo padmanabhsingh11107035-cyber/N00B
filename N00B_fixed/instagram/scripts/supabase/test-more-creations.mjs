@@ -1,5 +1,6 @@
-// Tests the "More of our creations" section at the very bottom of Home: one button (name, and logo when it has one) per creation that opens its website in a new tab, three to a line,
-// a note that the websites are not functional, empty places while no link is added, and an address that is not a plain web address is never made into a link. Bundled on the fly with esbuild: no browser needed.
+// Tests the "More of our creations" block on the Home page, above the posts (the feed never ends, so a block under it could not be found): three lines (heading, one row of buttons,
+// a note that the websites are not functional), one button per creation that opens its website in a new tab, nothing drawn while the list is empty, and an address that is not a plain web
+// address is never made into a link. Bundled on the fly with esbuild: no browser needed.
 //
 // Usage: node scripts/supabase/test-more-creations.mjs
 import path from 'node:path';
@@ -20,42 +21,37 @@ const React = (await import('react')).default;
 const { renderToStaticMarkup } = await import('react-dom/server');
 const draw = (items) => renderToStaticMarkup(React.createElement(MoreCreations, { items }));
 const make = (n) => Array.from({ length: n }, (_, i) => ({ name: `Site ${i + 1}`, url: `https://site${i + 1}.example.com/`, logo: `site-${i + 1}.png` }));
+const NOTE = 'Note: these websites are not functional. You can only visit and explore them.';
 
-section('1. Nothing added yet: the section is there, with three lines of empty places');
-const none = draw([]);
-check(none.includes('More of our creations'), 'the heading is "More of our creations"');
-check(count(none, /data-testid="creation-empty"/g) === 9 && count(none, /data-testid="creation-link"/g) === 0, 'nine empty places (three lines of three), no link');
-check(/grid-cols-3/.test(none), 'three to a line');
-check(none.includes('More coming soon'), 'a small "More coming soon" line tells that links are on the way');
+section('1. Nothing in the list: nothing is drawn');
+check(draw([]) === '', 'an empty list leaves no heading and no empty boxes on Home');
+check(draw([{ name: 'Bad', url: 'javascript:alert(1)' }]) === '', 'a list with no usable address draws nothing either');
 
-section('2. Creations are shown as buttons that open their website');
+section('2. Three lines: heading, the buttons, the note');
 const four = draw(make(4));
-check(count(four, /data-testid="creation-link"/g) === 4 && count(four, /data-testid="creation-empty"/g) === 0, 'four buttons, no empty places once there are links');
+check(four.includes('More of our creations') && /<h2[^>]*>More of our creations<\/h2>/.test(four), 'line 1: the heading "More of our creations"');
+check(count(four, /data-testid="creation-link"/g) === 4 && /flex flex-wrap justify-center/.test(four), 'line 2: one row with the four buttons (a row too wide for the phone goes on to a second line)');
+check(four.includes(NOTE) && /data-testid="creations-note"/.test(four), 'line 3: the note that the websites are not functional and can only be visited and explored');
+
+section('3. Each button opens its website');
 check(/href="https:\/\/site1\.example\.com\/"/.test(four) && /target="_blank"/.test(four) && /rel="noopener noreferrer"/.test(four), 'a button is a link to the website, in a new tab, without handing our page to it');
-check(/src="\/creations\/site-1\.png"/.test(four) && four.includes('Site 1'), 'it shows the logo from /creations/ and the name');
-check(!four.includes('More coming soon'), 'the "More coming soon" line goes once there is a link');
-const ten = draw(make(10));
-check(count(ten, /data-testid="creation-link"/g) === 10, 'more than nine: another line is added, no creation is cut off');
+check(/src="\/creations\/site-1\.png"/.test(four) && four.includes('Site 1'), 'it shows the name, and the logo from /creations/ when it has one');
 const nameOnly = draw([{ name: 'Only a name', url: 'https://example.com/' }]);
 check(nameOnly.includes('Only a name') && !/<img/.test(nameOnly) && /href="https:\/\/example\.com\/"/.test(nameOnly), 'a creation without a logo is a button with its name alone (no broken picture)');
-check(/w-\[calc\(\(100%-1\.25rem\)\/3\)\]/.test(four) && /flex-wrap justify-center/.test(four), 'a third of the line each, three to a line, a shorter last line is centred');
+check(count(draw(make(12)), /data-testid="creation-link"/g) === 12, 'a long list is not cut off');
 
-section('2b. The note that the websites are not functional');
-check(four.includes('Note: these websites are not functional. You can only visit and explore them.') && /data-testid="creations-note"/.test(four), 'under the buttons a note says the websites are not functional and can only be visited and explored');
-check(!none.includes('not functional'), 'no note while there is nothing to visit');
-
-section('3. Only plain web addresses become links');
-const bad = draw([{ name: 'Bad', url: 'javascript:alert(1)', logo: 'x.png' }, { name: 'Good', url: 'example.com/page', logo: 'y.png' }]);
+section('4. Only plain web addresses become links');
+const bad = draw([{ name: 'Bad', url: 'javascript:alert(1)' }, { name: 'Good', url: 'example.com/page' }]);
 check(!bad.includes('javascript:') && !bad.includes('Bad'), 'a javascript: address is not shown at all');
 check(/href="https:\/\/example\.com\/page"/.test(bad), 'an address without https:// gets it in front');
 
-section('4. It is the last thing on Home, and the list file is in place');
+section('5. It is on the Home page above the posts, and the four websites are in the list');
 const feed = fs.readFileSync(path.resolve('src/components/Feed/FeedView.tsx'), 'utf8');
-const mainEnd = feed.indexOf('</main>', feed.indexOf('4. Feed Posts Stack'));
+const pills = feed.indexOf('3. Category Topic Filter Pills');
+const posts = feed.indexOf('4. Feed Posts Stack');
 const here = feed.indexOf('<MoreCreations');
-const sheet = feed.indexOf('{/* 5. Comments Sheet Modal */}');
-check(here > mainEnd && here < sheet && mainEnd > 0, 'FeedView draws it right after the posts');
-check(/import \{ MoreCreations \} from '\.\/MoreCreations'/.test(feed), 'FeedView imports it');
+check(pills > 0 && here > pills && here < posts, 'FeedView draws it under the stories and topic pills and above the posts (not under the endless posts)');
+check(count(feed, /<MoreCreations/g) === 1 && /import \{ MoreCreations \} from '\.\/MoreCreations'/.test(feed), 'it is drawn once, and imported');
 const data = fs.readFileSync(path.resolve('src/data/moreCreations.ts'), 'utf8');
 check(/export const MORE_CREATIONS: Creation\[\]/.test(data), 'the list of creations is in src/data/moreCreations.ts');
 const wanted = [

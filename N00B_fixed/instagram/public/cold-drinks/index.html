@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>NOOB Cold Drinks</title>
+  <meta name="description" content="Ten cans, ten flavours. Scroll to meet NOOB Cold Drinks in 3D." />
+  <meta name="theme-color" content="#0b0b10" />
+  <link rel="icon" type="image/png" href="/favicon-48.png" />
+  <script type="module" crossorigin src="./assets/index-bBofMEDd.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-NT0lDVdv.css">
+</head>
+<body>
+  <canvas id="stage" aria-hidden="true"></canvas>
+
+  <header class="top">
+    <a class="brand" href="/" aria-label="NOOB home"><img id="brand-logo" alt="NOOB" /><span>Cold Drinks</span></a>
+    <div class="counter" aria-hidden="true">
+      <svg viewBox="0 0 44 44" width="44" height="44"><circle class="ring-bg" cx="22" cy="22" r="19" /><circle class="ring" id="ring" cx="22" cy="22" r="19" /></svg>
+      <span id="count">01</span><i>/ 10</i>
+    </div>
+  </header>
+
+  <div id="panels" class="panels"></div>
+  <nav id="dots" class="dots" aria-label="Flavours"></nav>
+  <div id="hint" class="hint" aria-hidden="true"><span class="mouse"><i></i></span>Scroll</div>
+
+  <main id="track" class="track"></main>
+
+  <div id="loading" class="loading" role="status"><img id="load-logo" alt="" /><p>Chilling the cans&hellip;</p></div>
+  <div id="nogl" class="nogl" hidden><p>This page needs 3D (WebGL), and this browser cannot show it. Try another browser or device.</p><ul id="nogl-list"></ul></div>
+  <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;background:#0b0b10;color:#fff;font:16px system-ui;padding:24px;text-align:center">NOOB Cold Drinks needs JavaScript to show the 3D cans.</p></noscript>
+
+</body>
+</html>

@@ -81,6 +81,12 @@
   Cache-Control: public, max-age=86400
 /games/the-rogue/fonts/*
   Cache-Control: public, max-age=604800
+# NOOB Cold Drinks (the scrolling page of ten 3D cans, at /cold-drinks/) is a page of its own, not framed, under the strict rules of the whole site. Its scripts, style and picture have a
+# fingerprint in their names (assets/), so they are kept for ever; the page itself is asked for again every time.
+/cold-drinks/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/cold-drinks/index.html
+  Cache-Control: no-cache
 # Canyon Rush Circuit (a 3D racing game made with Three.js) runs in a frame of its own, from this same site, like Underhall: only its own scripts, models, pictures, sounds and fonts, no network,
 # no frames, no WebAssembly. Its scripts and style are fingerprinted (build/), so they are kept for ever; the models, sounds and pictures keep their names, so they are kept for a day.
 /games/canyon-rush/*

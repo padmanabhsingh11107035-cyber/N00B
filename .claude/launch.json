@@ -36,6 +36,17 @@
         "4173"
       ],
       "port": 4173
+    },
+    {
+      "name": "n00b-cold-drinks",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "N00B_fixed/cold-drinks",
+        "run",
+        "dev"
+      ],
+      "port": 5190
     }
   ]
 }

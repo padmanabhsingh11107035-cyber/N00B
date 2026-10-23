@@ -27,6 +27,7 @@ import {
   Music2,
   Lightbulb,
   Layers,
+  CupSoda,
   Gift,
   GraduationCap,
   Youtube,
@@ -801,7 +802,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 3. Category Topic Filter Pills */}
-      <div className="w-full max-w-[480px] px-3 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <div className="w-full max-w-[480px] px-3 py-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -1016,6 +1017,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
               <MenuBanner tone="ai" entryId="ai" bareIcon icon={<NoobAiLogo className="w-9 h-9 shrink-0" />} title="NOOB AI" blurb="Talk to your AI friend by voice" onClick={() => { markMenuEntry('ai'); setShowNoobMenu(false); setShowNoobAi(true); }} />
               <MenuBanner tone="support" entryId="support" icon={<MessageCircle className="w-[18px] h-[18px]" />} title="Customer Support" blurb="Chat with the NOOB support team" onClick={() => { markMenuEntry('support'); setShowNoobMenu(false); setShowSupportModal(true); }} />
               <MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />
+              {/* NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app) */}
+              <MenuBanner tone="drinks" entryId="drinks" icon={<CupSoda className="w-[18px] h-[18px]" />} title="NOOB Cold Drinks" blurb="Ten cans, ten flavours — scroll to explore in 3D" onClick={() => { markMenuEntry('drinks'); setShowNoobMenu(false); window.location.assign('/cold-drinks/'); }} />
               <MenuBanner tone="creations" entryId="creations" icon={<Layers className="w-[18px] h-[18px]" />} title="More of our creations" blurb="Other websites we made — visit and explore" onClick={() => { markMenuEntry('creations'); setShowNoobMenu(false); setShowCreations(true); }} />
               </div>
             </div>

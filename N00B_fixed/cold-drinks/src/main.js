@@ -22,6 +22,8 @@ $('#brand-logo').src = logoUrl; $('#load-logo').src = logoUrl;
   for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
   g.putImageData(im, 0, 0); $('#grain').style.backgroundImage = `url(${n.toDataURL()})`;
 }
+// the way back: to the page the person came from (the app), or to the app's home when the page was opened on its own
+$('#brand').addEventListener('click', (e) => { if (history.length > 1 && document.referrer.startsWith(location.origin)) { e.preventDefault(); history.back(); } });
 const bars = (n) => Array.from({ length: 5 }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
 FLAVORS.forEach((f, i) => {
   track.appendChild(document.createElement('section'));

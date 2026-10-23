@@ -115,9 +115,9 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
   const own = model.own;
 
   return (
-    <div id="stories-tray-container" className="w-full border-b border-white/5 bg-zinc-950/40 backdrop-blur-md py-3 px-3">
-      {/* Horizontal scrolling stories tray */}
-      <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
+    <div id="stories-tray-container" className="w-full border-b border-white/5 bg-zinc-950/40 backdrop-blur-md py-1.5 px-3">
+      {/* Horizontal scrolling stories tray (kept close: only the room the pictures and names need above and below them) */}
+      <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-0.5">
         {/* Current User Story & Status Note Item */}
         <div className="flex flex-col items-center flex-shrink-0 relative group">
           {/* Status Note Bubble */}
@@ -139,7 +139,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
                 onOpenStatusNoteModal();
               }
             }}
-            className="mb-1 max-w-[86px] bg-zinc-900/95 border border-noob/50 rounded-full px-2 py-0.5 text-[9px] text-noob font-semibold truncate shadow-md hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
+            className="mb-0.5 max-w-[86px] bg-zinc-900/95 border border-noob/50 rounded-full px-2 py-0.5 text-[9px] text-noob font-semibold truncate shadow-md hover:scale-105 transition-transform flex items-center gap-1 cursor-pointer"
             title={isMyNoteValid ? "Click to expand note & play song" : "Add Status Note (24-hour lifespan)"}
           >
             {isMyNoteValid && currentUser.statusNote ? (
@@ -189,7 +189,7 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
               </div>
             )}
           </div>
-          <span className="text-[10px] text-zinc-400 mt-1 font-medium tracking-tight">Your story</span>
+          <span className="text-[10px] text-zinc-400 mt-0.5 font-medium tracking-tight">Your story</span>
         </div>
 
         {/* Everyone else: people with a story (rainbow ring = new, grey ring = seen) and suggested accounts (plus badge) */}

@@ -24,6 +24,7 @@ body {
 .top { position: fixed; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: max(18px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 0 max(22px, env(safe-area-inset-left)); pointer-events: none; }
 .brand { display: flex; align-items: center; gap: 14px; color: #fff; text-decoration: none; pointer-events: auto; }
 .brand img { height: 24px; width: auto; display: block; }
+.brand .back { font: 300 34px/1 var(--font); margin: -4px -6px 0 0; opacity: .85; }
 .brand span { font: 600 11px/1 var(--font); letter-spacing: .24em; text-transform: uppercase; opacity: .75; padding-left: 14px; border-left: 1px solid rgba(255,255,255,.3); }
 .counter { font: 600 14px/1 var(--font); letter-spacing: .08em; font-variant-numeric: tabular-nums; }
 .counter i { font-style: normal; opacity: .5; margin-left: 6px; }

@@ -52,7 +52,7 @@ section('3. The wiring');
 const feed = read('src/components/Feed/FeedView.tsx');
 const layers = read('src/utils/pageLayers.tsx');
 const banner = read('src/components/Feed/MenuBanner.tsx');
-const ids = ['draw', 'studio', 'study', 'team', 'join', 'spark', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'food', 'ai', 'support', 'idea', 'creations'];
+const ids = ['draw', 'studio', 'study', 'team', 'join', 'spark', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'food', 'ai', 'support', 'idea', 'drinks', 'creations'];
 check(ids.every((id) => new RegExp(`markMenuEntry\\('${id}'\\)`).test(feed) && new RegExp(`data-menu-entry="${id}"|entryId="${id}"`).test(feed)), 'every button of the menu (Draw ... More of our creations) remembers itself when pressed and can be found again');
 check(/markMenuEntry\('fun-' \+ f\.id\)/.test(feed) && /entryId=\{'fun-' \+ f\.id\}/.test(feed), 'so do the four Fun pages');
 check(/data-menu-entry=\{entryId\}/.test(banner), 'a banner carries its id on the page');

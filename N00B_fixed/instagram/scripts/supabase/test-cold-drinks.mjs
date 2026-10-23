@@ -78,6 +78,13 @@ check(/<title>NOOB Cold Drinks<\/title>/.test(html) && /name="description"/.test
 const all = [html, ...assets.filter((f) => /\.(js|css)$/.test(f)).map((f) => read(path.join(OUT, 'assets', f))), srcFiles, read(path.join(SRC, 'src', 'style.css')), read(path.join(SRC, 'index.html')), read(path.join(SRC, 'README.md'))].join('\n').toLowerCase();
 check(!all.includes(MAKER), 'the name of the maker platform is nowhere (page, scripts, style, source, notes)');
 
+section('3b. Reached from the three-line menu of Home, with a way back');
+const feedSrc = read(path.resolve('src', 'components', 'Feed', 'FeedView.tsx'));
+const drinksEntry = feedSrc.match(/<MenuBanner tone="drinks"[^\n]*/)?.[0] || '';
+check(/title="NOOB Cold Drinks"/.test(drinksEntry) && /entryId="drinks"/.test(drinksEntry) && /markMenuEntry\('drinks'\)/.test(drinksEntry) && /setShowNoobMenu\(false\)/.test(drinksEntry) && /window\.location\.assign\('\/cold-drinks\/'\)/.test(drinksEntry), 'the three-line menu has an entry "NOOB Cold Drinks" that closes the menu and opens /cold-drinks/');
+check(/drinks: \{ border:/.test(read(path.resolve('src', 'components', 'Feed', 'MenuBanner.tsx'))) && /CupSoda/.test(feedSrc), 'the entry has its own colours and a can-of-drink icon');
+check(/id="brand"/.test(html) && /class="back"/.test(html) && /history\.back\(\)/.test(srcFiles), 'the page has a ‹ NOOB arrow at its top-left that goes back to the app');
+
 section('4. Served the right way');
 const headers = read(path.resolve('public', '_headers'));
 check(/\/cold-drinks\/assets\/\*\s+Cache-Control: public, max-age=31536000, immutable/.test(headers), 'its fingerprinted files are kept for a year');

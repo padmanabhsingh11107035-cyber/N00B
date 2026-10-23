@@ -21,7 +21,7 @@ jobs:
         working-directory: N00B_fixed/instagram
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -44,7 +44,7 @@ jobs:
         working-directory: N00B_fixed/instagram
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       # the packages the website is built from; a problem in a package that only runs on a developer's computer is not a hole in the site

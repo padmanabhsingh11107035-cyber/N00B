@@ -77,7 +77,7 @@ export const ProfileAskCard: React.FC<Props> = ({ profileUser, isOwnProfile, onO
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full border border-zinc-700 flex items-center justify-center shrink-0 text-zinc-200"><MessageCircleQuestion className="w-5 h-5" aria-hidden="true" /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black truncate">Ask {name} anything</p>
+          <p className="text-sm font-black leading-snug break-words [overflow-wrap:anywhere] line-clamp-2">Ask {name} anything</p>
           <p className="text-[11px] text-zinc-400">{enabled ? 'Anonymous: they will not see who asked.' : 'Not taking questions right now.'}</p>
         </div>
         {enabled && (

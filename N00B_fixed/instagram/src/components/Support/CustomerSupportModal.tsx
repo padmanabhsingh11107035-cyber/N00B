@@ -987,16 +987,16 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
         {/* User Context Bar */}
         <div className={`bg-zinc-900/60 border-b border-zinc-800/80 px-4 py-2.5 items-center justify-between text-xs shrink-0 ${activeSupportTab === 'ai_chat' ? 'hidden sm:flex' : 'flex'}`}>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
               alt={currentUser.username}
-              className="w-6 h-6 rounded-full object-cover ring-1 ring-noob"
+              className="w-6 h-6 rounded-full object-cover ring-1 ring-noob shrink-0"
               referrerPolicy="no-referrer"
             />
-            <div className="flex items-center gap-1.5 truncate">
+            <div className="flex items-center gap-1.5 min-w-0 truncate">
               <span className="font-bold text-white truncate">{currentUser.displayName || currentUser.username}</span>
-              <span className="text-[11px] text-zinc-400">(@{currentUser.username})</span>
+              <span className="text-[11px] text-zinc-400 truncate">(@{currentUser.username})</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 capitalize border border-zinc-700">
                 {currentUser.gender || 'Member'}
               </span>

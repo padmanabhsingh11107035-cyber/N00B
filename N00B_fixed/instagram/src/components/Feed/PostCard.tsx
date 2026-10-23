@@ -554,9 +554,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     >
       {/* 1. Post Header (Dual Overlapping Avatars for Tagged / Collab Posts - Instagram Style) */}
       <header className="flex items-center justify-between px-3.5 py-3 border-b border-white/5">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
           {/* Dual Overlapping Avatars Container */}
-          <div className="relative flex items-center">
+          <div className="relative flex items-center shrink-0">
             <div
               onClick={() => setShowFullscreenAvatar(true)}
               className="w-9 h-9 rounded-full p-[1.5px] bg-gradient-to-tr from-green-500 via-blue-500 to-purple-500 cursor-pointer hover:scale-105 transition-transform"
@@ -587,11 +587,11 @@ export const PostCard: React.FC<PostCardProps> = ({
             )}
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
                 onClick={() => goToProfile(post.userId)}
-                className="text-xs font-bold text-white tracking-tight underline decoration-1 underline-offset-[3px] decoration-zinc-50/70 cursor-pointer"
+                className="min-w-0 text-xs font-bold text-white tracking-tight underline decoration-1 underline-offset-[3px] decoration-zinc-50/70 cursor-pointer break-words [overflow-wrap:anywhere]"
               >
                 {post.displayName || post.username}
               </span>
@@ -630,7 +630,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
 
         {/* Options Menu Toggle */}
-        <div className="relative">
+        <div className="relative shrink-0 ml-2">
           <button
             id={`post-options-btn-${post.id}`}
             onClick={() => setShowOptionsMenu(!showOptionsMenu)}

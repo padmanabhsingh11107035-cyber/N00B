@@ -488,25 +488,25 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               onClose();
             }}
             disabled={!onNavigateToProfile}
-            className={`flex items-center gap-2.5 text-left ${onNavigateToProfile ? 'cursor-pointer' : ''}`}
+            className={`flex items-center gap-2.5 text-left min-w-0 ${onNavigateToProfile ? 'cursor-pointer' : ''}`}
           >
             <AvatarMedia
               src={story.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
               isLiveAvatar={story.authorIsLiveAvatar}
               liveAvatarVideoUrl={story.authorLiveAvatarVideoUrl}
               alt={story.username}
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-noob"
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-noob shrink-0"
             />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-white tracking-tight">{story.username}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-semibold text-white tracking-tight truncate">{story.username}</span>
                 {story.isVerified && (
-                  <span className="w-3.5 h-3.5 bg-[#00E5FF] text-black text-[9px] font-extrabold rounded-full flex items-center justify-center">
+                  <span className="w-3.5 h-3.5 bg-[#00E5FF] text-black text-[9px] font-extrabold rounded-full flex items-center justify-center shrink-0">
                     ✓
                   </span>
                 )}
                 {story.isCloseFriendsOnly && (
-                  <span className="bg-noob/20 border border-noob/50 text-noob text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                  <span className="bg-noob/20 border border-noob/50 text-noob text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap">
                     ★ Close Friends
                   </span>
                 )}
@@ -515,7 +515,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0 ml-2">
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="p-1.5 rounded-full bg-black/40 text-white/80 hover:text-white"

@@ -581,13 +581,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <button
             onClick={onGoBack}
             aria-label="Go to previous page"
-            className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer group"
+            className="flex items-center gap-2 text-xs font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer group shrink-0"
           >
             <ArrowLeft className="w-4 h-4 text-noob group-hover:-translate-x-0.5 transition-transform" />
             <span>Go to previous page</span>
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-400 font-medium">@{targetUser.username}</span>
+          <div className="flex items-center gap-2 min-w-0 ml-3">
+            <span className="text-xs text-zinc-400 font-medium truncate min-w-0">@{targetUser.username}</span>
             {isTargetBlocked && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
                 Blocked
@@ -822,10 +822,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* 3. Display Name in Perfect Line */}
-          <div className="flex items-center justify-center gap-1.5 text-sm text-zinc-300 font-bold -mt-2">
-            <span>{targetUser.displayName || targetUser.username}</span>
+          <div className="flex items-center justify-center gap-1.5 text-sm text-zinc-300 font-bold -mt-2 max-w-full">
+            <span className="min-w-0 text-center break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</span>
             {targetUser.pronouns && (
-              <span className="text-xs text-zinc-500 font-normal">({targetUser.pronouns})</span>
+              <span className="text-xs text-zinc-500 font-normal shrink-0">({targetUser.pronouns})</span>
             )}
           </div>
 
@@ -951,7 +951,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           {mutualFollowers.length > 0 && (
             <button
               onClick={() => setShowMutualFollowersSheet(true)}
-              className="flex items-center gap-2 text-left cursor-pointer group"
+              className="flex items-center gap-2 text-left cursor-pointer group max-w-full min-w-0"
+              data-testid="mutual-followers-line"
             >
               <div className="flex -space-x-2 shrink-0">
                 {mutualFollowers.slice(0, 3).map((m) => (
@@ -964,7 +965,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   />
                 ))}
               </div>
-              <p className="text-[11px] text-zinc-400 truncate group-hover:text-zinc-300 transition-colors">
+              <p className="min-w-0 text-[11px] leading-snug text-zinc-400 break-words [overflow-wrap:anywhere] group-hover:text-zinc-300 transition-colors">
                 Followed by{' '}
                 <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[0].username}</span>
                 {mutualFollowers.length === 2 && (
@@ -1822,11 +1823,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
                   <Flag className="w-4.5 h-4.5 text-amber-400" />
                 </div>
-                <h2 className="text-base font-bold text-white tracking-tight">Report @{targetUser.username}</h2>
+                <h2 className="min-w-0 text-base font-bold text-white tracking-tight break-words [overflow-wrap:anywhere]">Report @{targetUser.username}</h2>
               </div>
               <button
                 onClick={() => {

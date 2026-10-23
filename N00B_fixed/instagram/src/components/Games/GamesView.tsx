@@ -443,8 +443,8 @@ export const GamesView: React.FC<GamesViewProps> = ({
                     : 'bg-zinc-900/60 border border-zinc-800/80 hover:bg-zinc-900'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <span className={`w-6 text-center font-mono font-bold text-xs ${
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`w-6 shrink-0 text-center font-mono font-bold text-xs ${
                     idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-700' : 'text-zinc-500'
                   }`}>
                     #{idx + 1}
@@ -453,28 +453,28 @@ export const GamesView: React.FC<GamesViewProps> = ({
                   <img
                     src={player.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                     alt={player.username}
-                    className="w-9 h-9 rounded-full object-cover"
+                    className="w-9 h-9 rounded-full object-cover shrink-0"
                     referrerPolicy="no-referrer"
                   />
 
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-xs font-bold text-white truncate">
                         {player.displayName || player.username}
                       </span>
                       {player.username === currentUser.username && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-noob/20 text-noob font-bold">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-noob/20 text-noob font-bold shrink-0">
                           YOU
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-zinc-400">
+                    <span className="text-[10px] text-zinc-400 block truncate">
                       @{player.username} • {player.gamesWon || 0} Wins
                     </span>
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right shrink-0 ml-2">
                   <span className="text-xs font-black text-noob block">
                     {formatNoobPoints(player.noobPoints || 0)} <span className="text-[9px]">noobs</span>
                   </span>

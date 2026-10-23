@@ -3399,7 +3399,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         ringColor: isSelected ? t.hex : undefined
                       }}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span
                           className="w-3.5 h-3.5 rounded-full ring-2 ring-black shrink-0"
                           style={{ backgroundColor: t.hex }}
@@ -3495,8 +3495,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     }}
                     className="flex items-center justify-between p-2.5 rounded-2xl hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0">
                         <img
                           src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                           alt={u.username}
@@ -3504,18 +3504,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         />
                         <span className="w-2.5 h-2.5 rounded-full bg-noob ring-2 ring-black absolute bottom-0 right-0" />
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-white flex items-center gap-1">
-                          <span>{u.displayName || u.username}</span>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white flex items-center gap-1 min-w-0">
+                          <span className="truncate">{u.displayName || u.username}</span>
                           {u.isVerified && <VerifiedBadge size="xs" />}
                         </div>
-                        <div className="text-[11px] text-zinc-400">@{u.username}</div>
+                        <div className="text-[11px] text-zinc-400 truncate">@{u.username}</div>
                       </div>
                     </div>
 
                     <button
                       type="button"
-                      className="px-3.5 py-1.5 bg-noob/15 group-hover:bg-noob text-noob group-hover:text-black rounded-xl text-xs font-bold transition-all"
+                      className="shrink-0 ml-2 px-3.5 py-1.5 bg-noob/15 group-hover:bg-noob text-noob group-hover:text-black rounded-xl text-xs font-bold transition-all"
                     >
                       Chat
                     </button>

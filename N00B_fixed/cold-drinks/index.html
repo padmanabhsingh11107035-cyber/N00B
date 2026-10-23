@@ -10,13 +10,12 @@
 </head>
 <body>
   <canvas id="stage" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" id="grain" aria-hidden="true"></div>
 
   <header class="top">
     <a class="brand" href="/" aria-label="NOOB home"><img id="brand-logo" alt="NOOB" /><span>Cold Drinks</span></a>
-    <div class="counter" aria-hidden="true">
-      <svg viewBox="0 0 44 44" width="44" height="44"><circle class="ring-bg" cx="22" cy="22" r="19" /><circle class="ring" id="ring" cx="22" cy="22" r="19" /></svg>
-      <span id="count">01</span><i>/ 10</i>
-    </div>
+    <div class="counter" aria-hidden="true"><span id="count">01</span><i>/ 10</i></div>
   </header>
 
   <div id="panels" class="panels"></div>

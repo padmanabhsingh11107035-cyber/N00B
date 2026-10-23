@@ -1,14 +1,16 @@
 # NOOB Cold Drinks
 
 A scrolling page of ten 3D cans (three.js), served by the app at **/cold-drinks/** (`N00B_fixed/instagram/public/cold-drinks/` is the built copy). Scroll and the cans slide up one by one, the one in front
-turns, the colours of the page change, and the text beside it (under it, on an upright phone) follows. A link can open on one can: `/cold-drinks/#cherry-blaze` (or `#8`).
+turns, the page takes its colour, and the text beside it (under it, on an upright phone) follows. A link can open on one can: `/cold-drinks/#cherry-blaze` (or `#8`).
 
 Everything is made in code, there is no 3D model or picture to download (only the NOOB wordmark, 22 KB):
 
-- `src/flavors.js` — the ten cans: name, tagline, notes, price, sweet / fizz, the colours of the page and the look of the can. **This is the file to change a name, a price or a colour.**
-- `src/paint.js` — draws the printed artwork of a can on a canvas (gradient colour, a pattern, doodles all over, glitter, the huge NOOB logo, the little print), wrapped round the can.
-- `src/can.js` — the can itself: a sleek 330 ml can (body, bottom, neck, rim, pull tab), glossy paint or shiny metal, droplets, glow and shadow. Sizes in `src/dims.js`.
-- `src/main.js` — the scene, the lights, the scrolling, the text panels.
+- `src/flavors.js` — the ten cans: name, tagline, notes, price, sweet / fizz, the colours of the page and the colour of the can. **This is the file to change a name, a price or a colour.**
+- `src/paint.js` — draws the printed artwork of a can on a canvas wrapped round it: one plain colour, the thin doodles of the app's own wallpaper (chat bubble, heart, star, moon, bolt, notes,
+  camera, headphones ...) and the big NOOB logo. Kept plain on purpose.
+- `src/can.js` — the can itself: a sleek 330 ml can with a body that curves smoothly into the lid (the top never bends inwards), a rolled rim, a sunk lid with the opening and the pull tab,
+  brushed aluminium, coloured metal under a glossy clear coat, droplets, and `studioEnvironment` (the light of a photo studio: tall soft boxes that the metal reflects). Sizes in `src/dims.js`.
+- `src/main.js` — the scene, the scrolling, the text panels.
 
 ## Build
 

@@ -23,24 +23,43 @@ check(FLAVORS.every((f) => Number.isFinite(f.price) && f.price > 0 && f.sweet >=
 const hex = /^#[0-9a-f]{6}$/i;
 check(FLAVORS.every((f) => ['a', 'b', 'bg1', 'bg2'].every((k) => hex.test(f.colors[k]))), 'each has its page colours');
 const paintSrc = read(path.join(SRC, 'src', 'paint.js'));
-check(FLAVORS.every((f) => f.design.base.length === 3 && f.design.base.every((c) => hex.test(c)) && hex.test(f.design.ink) && hex.test(f.design.word) && hex.test(f.design.accent)), 'each has the colours of its can (three steps of colour, doodles, logo, accent)');
-check(FLAVORS.every((f) => ['gloss', 'metal'].includes(f.design.finish) && f.design.flake >= 0 && f.design.flake <= 1 && new RegExp(`\\b${f.design.deco}\\(`).test(paintSrc)), 'each is glossy paint or shiny metal, with a pattern that exists');
-const bases = FLAVORS.map((f) => f.design.base[1]);
-check(new Set(bases).size === 10, 'ten different colours');
+check(FLAVORS.every((f) => hex.test(f.design.color) && hex.test(f.design.ink) && hex.test(f.design.word) && f.design.metalness > 0 && f.design.metalness <= 1), 'each can is plain: one colour, the colour of its doodles, the colour of the logo, how metallic it is');
 const lum = (h) => { const n = parseInt(h.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
-check(FLAVORS.some((f) => lum(f.design.base[1]) > 225) && FLAVORS.some((f) => lum(f.design.base[1]) < 30), 'one white can and one black can among them');
-check(FLAVORS.filter((f) => f.design.finish === 'metal').length >= 4 && FLAVORS.filter((f) => f.design.finish === 'gloss').length >= 3, 'both finishes are used: glossy paint and metal');
+check(new Set(FLAVORS.map((f) => f.design.color)).size === 10, 'ten different colours');
+check(FLAVORS.some((f) => lum(f.design.color) > 240) && FLAVORS.some((f) => lum(f.design.color) < 40), 'one white can and one black can among them');
+check(FLAVORS.every((f) => Math.abs(lum(f.design.word) - lum(f.design.color)) > 90), 'the logo can be read on every can (it is much lighter or darker than the can)');
+check(!/halftone|stripes|waves|flake|glitter|brushed|barcode|STAY NOOB/i.test(paintSrc), 'the cans are kept plain: no extra patterns, glitter, bar code or slogans');
+const icons = [...paintSrc.matchAll(/function (\w+)\(c, s\)/g)].map((m) => m[1]);
+check(['chat', 'star', 'heart', 'moon', 'bolt', 'notes', 'code', 'plus', 'spiral', 'camera', 'headphones', 'squiggle'].every((n) => icons.includes(n)), 'the doodles are the ones of the app\'s own wallpaper (chat bubble, star, heart, moon, bolt, music notes, < >, plus, swirl, camera, headphones, squiggle)');
 check(/NOOB/.test(read(path.join(SRC, 'src', 'main.js'))) && /noob-wordmark/.test(read(path.join(SRC, 'src', 'main.js'))) && /tint\(logo, d\.word\)/.test(paintSrc), 'the NOOB logo is printed big on every can');
 
 section('2. How it is made');
 const main = read(path.join(SRC, 'src', 'main.js'));
 check(/scrollY \/ sectionH\(\)/.test(main) && /rotation\.y = -d \* Math\.PI \* 1\.5/.test(main), 'scrolling moves the cans and turns the one in front');
-check(/--bg1/.test(main) && /rimA\.color\.copy\(colA\)/.test(main), 'the page and the lights take the colours of the can in front');
+check(/--bg1/.test(main) && /mixColors\(p, \(f\) => f\.colors\.bg1/.test(main), 'the page takes the colour of the can in front');
 check(/FLAVORS\.findIndex\(\(f, i\) => f\.id === want/.test(main), 'a link can open on one can (#cherry-blaze or #8)');
 check(/aspect < 1\.05/.test(main) && /body\.stacked/.test(read(path.join(SRC, 'src', 'style.css'))), 'an upright phone gets its own layout (text under the can)');
 check(/prefers-reduced-motion/.test(read(path.join(SRC, 'src', 'style.css'))) && /reduceMotion/.test(main), 'people who ask for less motion get it');
 const srcFiles = ['main.js', 'can.js', 'paint.js', 'flavors.js', 'dims.js'].map((f) => read(path.join(SRC, 'src', f))).join('\n');
 check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|https?:\/\//.test(srcFiles), 'the page never reaches out to the network and names no other site');
+
+section('2b. A real can: the shape and the metal');
+const canSrc = read(path.join(SRC, 'src', 'can.js'));
+const neckBlock = canSrc.slice(canSrc.indexOf('const neckGeometry'), canSrc.indexOf('function tabGeometry'));
+const radii = [...neckBlock.matchAll(/\[([0-9.]+), ([0-9.]+|BODY_TO)\]/g)].map((m) => ({ r: parseFloat(m[1]), y: m[2] === 'BODY_TO' ? 4.6 : parseFloat(m[2]) }));
+const bodyEndR = 1 - 0.1;   // the body ends at 1 - 0.1 s s with s = 1 (see bodyGeometry)
+check(/r = 1 - 0\.1 \* s \* s/.test(canSrc) && radii.length >= 10 && Math.abs(radii[0].r - bodyEndR) < 0.011, 'the body ends in a smooth rounded shoulder and the neck starts exactly where it ends');
+const outer = radii.slice(0, radii.findIndex((p) => p.y === Math.max(...radii.map((q) => q.y))) + 1);   // the outside of the neck and the rim, up to the top of the ring
+const upToRim = outer.filter((p) => p.y <= 4.79);
+check(upToRim.length >= 4 && upToRim.every((p) => p.r >= bodyEndR - 0.01), 'the top never bends inwards: from the shoulder to the rim nothing is narrower than where the body ends');
+const rim = Math.max(...radii.map((p) => p.r));
+check(rim > radii[0].r && rim < 1, 'the rolled rim is a little wider than the neck and narrower than the body, as on a real can');
+check(radii[radii.length - 1].y < Math.max(...radii.map((p) => p.y)), 'the lid is sunk inside the rim');
+check(/studioEnvironment/.test(main) && /box\(2\.2, 16/.test(canSrc) && !/RoomEnvironment/.test(main + canSrc), 'the metal reflects the light of a photo studio (tall soft boxes), which gives the long bright lines down the can');
+check(/clearcoat: 1/.test(canSrc) && /clearcoatNormalMap/.test(canSrc) && /roughnessMap: brushedMap\(\)/.test(canSrc), 'a glossy clear coat with droplets over coloured metal; brushed aluminium for the rim and the bottom');
+check(/rotation\.order = 'ZXY'/.test(main) && /rotation\.x = 0\.3/.test(main), 'the can leans towards us a little so the lid and the pull tab show');
+check(!/bubble|BUBBLES|glow/i.test(main + canSrc), 'no floating bubbles and no glow sprites (a calm, photographic look)');
+check(/vignette/.test(read(path.join(SRC, 'index.html'))) && /grain/.test(read(path.join(SRC, 'index.html'))), 'a soft dark edge and a little film grain, like a photograph');
 
 section('3. The built page');
 const html = read(path.join(OUT, 'index.html'));

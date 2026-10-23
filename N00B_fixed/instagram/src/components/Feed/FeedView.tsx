@@ -66,6 +66,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { NoobAiPage } from '../Profile/NoobAiPage';
 import { MenuBanner } from './MenuBanner';
 import { AdBanner } from '../Ads/AdBanner';
+import { MoreCreations } from './MoreCreations';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
@@ -853,6 +854,9 @@ export const FeedView: React.FC<FeedViewProps> = ({
           </>
         )}
       </main>
+
+      {/* The last thing on Home: the other things we have made (links to their websites) */}
+      <MoreCreations className="mt-6 mb-6" />
 
       {/* 5. Comments Sheet Modal */}
       {selectedPostForComments && (

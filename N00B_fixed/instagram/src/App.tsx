@@ -386,8 +386,7 @@ export default function App() {
   const notificationSettingsRef = useRef(notificationSettings);
   notificationSettingsRef.current = notificationSettings;
   const [loading, setLoading] = useState(true);
-  // The loading screen plays its WHOLE burger animation once, when the app is opened (even if the data arrives sooner); after that, any loading screen inside the app is the quick version.
-  const [openingDone, setOpeningDone] = useState(false);
+  // The loading screen (the burger, NoobStackLoader) shows only while the app is really loading: when the app is opened, the opening animation (public/opening) plays and the app opens straight out of it.
   // /anonymous: the Anonymous Messages feed can be read by anyone, before logging in (it asks them to log in only to share or report).
   const [anonPublic, setAnonPublic] = useState(() => window.location.pathname.replace(/\/+$/, '') === '/anonymous');
   // A Fun page opened from its own address (/polls/<id>, /ask/<username>, /mood ...): shown to a visitor who is not logged in (they can look; the page asks them to log in for the
@@ -1504,12 +1503,12 @@ export default function App() {
     return res;
   };
 
-  if (loading || !openingDone) {
+  if (loading) {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
         <div className="doodle-wallpaper-feed w-full h-screen flex flex-col items-center justify-center text-white">
-          <NoobStackLoader mode={openingDone ? 'quick' : 'opening'} ready={!loading} onDone={() => setOpeningDone(true)} />
+          <NoobStackLoader mode="quick" />
         </div>
       </>
     );

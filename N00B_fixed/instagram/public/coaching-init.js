@@ -5,6 +5,8 @@
   try {
     if (!/^coaching\./i.test(location.hostname) && !/[?&]coaching=1/.test(location.search)) return;
     window.__splashSeconds = 3;
+    var splash = document.getElementById('noob-splash');
+    if (splash) splash.className = 'logo';
     var img = document.querySelector('#noob-splash img');
     if (img) { img.src = '/noob-study-logo.svg'; img.setAttribute('width', '260'); img.setAttribute('height', '260'); img.style.cssText = 'width:min(62vw,260px);height:auto;aspect-ratio:1/1;border-radius:0;object-fit:contain'; }
     document.title = 'NOOB STUDY';

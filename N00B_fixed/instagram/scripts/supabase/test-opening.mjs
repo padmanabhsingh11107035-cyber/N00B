@@ -17,12 +17,13 @@ const iData = html.indexOf('<script src="/opening/opening-data.js?v='), iCode = 
 check(iData > 0 && iCode > iData, 'the shapes come before the animation');
 check(html.indexOf('/coaching-init.js') < iData && html.indexOf('/editor-init.js') < iData && html.indexOf('id="noob-splash"') < html.indexOf('/coaching-init.js'), 'both come after the splash and after the two scripts that give the coaching / editor addresses their own opening screen');
 check(!/<script>\s*\(function/.test(html) && !/<script>[^<]*opening/.test(html), 'no script is written inside the page (the security policy does not allow it)');
-check(/noob-splash-in \.55s cubic-bezier\(\.2,\.8,\.2,1\) \.9s both/.test(html), 'the logo of the old splash only appears after a second (so it does not flash before the animation, and is still there if the script is missing)');
-check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=1/.test(code) && /opening\.js\?v=1/.test(html), 'the files are kept for a year, their address carries a version number');
+check(/#noob-splash img \{ display: none; \}/.test(html) && /#noob-splash\.logo img \{ display: block;/.test(html), 'the splash has no logo (no glow, nothing before the animation); only an address that asks for it shows one');
+check(/splash\.className = 'logo'/.test(read('public/coaching-init.js')) && /splash\.className = 'logo'/.test(read('public/editor-init.js')), 'the coaching (NOOB STUDY) and editor (Studio) addresses ask for their logo');
+check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=2/.test(html), 'the files are kept for a year, their address carries a version number');
 
-section('2. The app waits for it');
+section('2. The app opens straight out of it');
 check(/__noobOpening\?: unknown/.test(main) && /if \(splash && !\(window as unknown as \{ __noobOpening\?: unknown \}\)\.__noobOpening\)/.test(main), 'src/main.tsx leaves the splash to the animation when it is running (and removes it as before when it is not)');
-check(/__noobOpeningRevealed === true/.test(loader) && /getElementById\('noob-splash'\)/.test(loader) && /useState\(!opening \|\| splashGone\(\)\)/.test(loader), 'the loading screen (burger) starts when the iris opens, not after the splash is gone');
+check(!/noob-splash|opening/.test(loader.replace(/\/\/.*$/gm, '')) && /if \(loading\) \{/.test(read('src/App.tsx')) && !/openingDone/.test(read('src/App.tsx')), 'the app opens straight out of the animation: the burger is only the loading page (shown while the app is really loading), with no show of its own');
 check(/window\.__splashSeconds\) return/.test(code) && /prefers-reduced-motion: reduce/.test(code), 'it stays out of the way on the coaching / editor addresses and for reduced motion');
 check(/window\.setTimeout\(function \(\) \{ if \(!over\) finish\(\); \}, \(T \+ 0\.5\) \* 1000\)/.test(code), 'a page that gets no animation frames (a tab in the background) still has its splash removed');
 
@@ -58,15 +59,15 @@ vm.runInContext(code, sandbox);
 const api = sandbox.__noobOpening;
 check(!!api && api.duration === 4 && canvas.width === 780 && canvas.height === 1688, 'it starts at once, on a canvas the size of the screen (at most 2 pixels per pixel)');
 check(timers.length === 1 && timers[0][1] === 4500, 'and sets its safety timer');
-let revealedAt = null;
+let removedAt = null;
 for (let i = 1; i <= 240 && !splashRemoved; i++) {
   now = 100 + (i / 60) * 1000;
   const f = frames.pop();
   if (f) f();
-  if (revealedAt === null && sandbox.__noobOpeningRevealed) revealedAt = i / 60;
+  if (removedAt === null && splashRemoved) removedAt = i / 60;
 }
 check(splashRemoved && frames.length === 0, 'it runs to the end by itself and removes the splash');
-check(revealedAt !== null && revealedAt > 3.1 && revealedAt < 3.4, `the loading screen is told to start at ${revealedAt?.toFixed(2)} s, as the iris opens`);
+check(removedAt !== null && removedAt >= 3.95 && removedAt <= 4.05, `the splash goes at ${removedAt?.toFixed(2)} s, when the iris is wide open`);
 check(badNumber === null, 'every number given to the canvas is a real number (none is NaN or infinite)', badNumber || '');
 check(calls.fill > 500 && calls.stroke > 100 && calls.arc > 300 && calls.ellipse > 50, `it drew ${calls.fill} fills, ${calls.stroke} strokes, ${calls.arc} arcs, ${calls.ellipse} ellipses over the 4 seconds`);
 // every frame of the animation, including the ones it never reaches at 60 fps, in a small and a wide window

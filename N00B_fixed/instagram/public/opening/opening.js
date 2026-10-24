@@ -4,8 +4,8 @@
 //
 // It replaces the logo splash of index.html: it must stay a plain script placed after coaching-init.js and editor-init.js (those two keep their own opening screen: they set
 // window.__splashSeconds, and then this script does nothing). It does nothing either when the device asks for reduced motion (the logo splash stays). While it plays, src/main.tsx leaves the
-// splash alone (window.__noobOpening is set) and this script removes it at the end; window.__noobOpeningRevealed turns true as the iris opens, which is when the loading screen below
-// (NoobStackLoader) may start building its burger.
+// splash alone (window.__noobOpening is set) and this script removes it at the end, so the app opens straight out of the animation (the burger loading screen only shows if the app is
+// still loading by then).
 (function () {
   'use strict';
   var D = window.__NOOB_OPENING_DATA;
@@ -274,16 +274,14 @@
   var t0 = performance.now(), raf = 0, over = false;
   function finish() {
     over = true;
-    window.__noobOpeningRevealed = true;
     if (splash.parentNode) splash.parentNode.removeChild(splash);
   }
   function tick() {
     if (over) return;
-    if (!splash.parentNode) { over = true; window.__noobOpeningRevealed = true; return; }
+    if (!splash.parentNode) { over = true; return; }
     var t = (performance.now() - t0) / 1000;
     if (t >= T) { finish(); return; }
     drawFrame(t);
-    if (t >= REVEAL_A + 0.1) window.__noobOpeningRevealed = true;
     raf = requestAnimationFrame(tick);
   }
 
@@ -304,7 +302,7 @@
 
   // the sound: it plays only where the browser lets a page make a sound on its own (an installed app, a visited site); where it does not, the picture plays in silence
   try {
-    var sound = new Audio('/opening/opening.mp3?v=1');
+    var sound = new Audio('/opening/opening.mp3?v=2');
     sound.volume = 0.9;
     sound.addEventListener('playing', function () {
       var late = (performance.now() - t0) / 1000;

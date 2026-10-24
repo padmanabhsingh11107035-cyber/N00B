@@ -4,6 +4,8 @@
   try {
     if (!/^editor\./i.test(location.hostname) && !/[?&]editor=1/.test(location.search)) return;
     window.__splashSeconds = 1;
+    var splash = document.getElementById('noob-splash');
+    if (splash) splash.className = 'logo';
     document.title = 'NOOB Studio';
     var set = function (sel, attr, val) { var el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
     set('meta[name="theme-color"]', 'content', '#09090b');

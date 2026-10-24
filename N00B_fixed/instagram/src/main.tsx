@@ -93,10 +93,10 @@ if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
 // what makes the Install and Permissions page's one-tap install button actually appear.
 registerServiceWorkerForInstallability();
 
-// The opening splash (index.html): the logo stays for 4 seconds from the moment the app is opened, then fades out and is removed. The loading
-// screen and the app are already underneath it by then. Normally the opening animation (public/opening/opening.js) has taken the splash over: it plays for 4 seconds, opens the
-// app like an iris and removes the splash itself, so there is nothing to do here (the logo splash below stays for reduced motion, the coaching / editor addresses and a missing script).
-const SPLASH_SECONDS = Number((window as unknown as { __splashSeconds?: number }).__splashSeconds) || 4;   // 3 seconds on the coaching address (see index.html), 4 on NOOB
+// The opening splash (index.html): a black screen that the opening animation (public/opening/opening.js) takes over: it plays for 4 seconds, opens the app like an iris and removes
+// the splash itself, so there is nothing to do here. Where it does not run (reduced motion, a missing script) the plain black screen fades away as soon as the app has started; the
+// coaching and editor addresses keep their logo on it for 3 and 1 seconds. The app is already underneath the splash by then.
+const SPLASH_SECONDS = Number((window as unknown as { __splashSeconds?: number }).__splashSeconds) || 0.4;   // 3 seconds with the logo on the coaching address, 1 on the editor address (see index.html); on NOOB the plain black screen goes as soon as the app has started
 const splash = document.getElementById('noob-splash');
 if (splash && !(window as unknown as { __noobOpening?: unknown }).__noobOpening) {
   const wait = Math.max(0, SPLASH_SECONDS * 1000 - (typeof performance !== 'undefined' ? performance.now() : 0));

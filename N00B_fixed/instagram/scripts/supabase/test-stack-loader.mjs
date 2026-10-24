@@ -1,5 +1,5 @@
 // The loading screen: a burger made of social media that builds itself, layer by layer (src/components/Common/NoobStackLoader.tsx).
-// When the app is OPENED the whole animation plays (after the opening splash, until the burger is finished); inside the app it is the quick version.
+// It is the loading page of the whole app and it is quick; opening the app has no burger show (the opening animation plays and the app opens straight out of it).
 // Usage: node scripts/supabase/test-stack-loader.mjs
 import fs from 'node:fs';
 
@@ -18,20 +18,17 @@ check(layers.join(',') === '1,2,3,4,5,6', 'six layers, built from the bottom up:
 check(/Setting up your chats/.test(src) && /Counting the likes/.test(src) && /Writing the comments/.test(src) && /Hanging the photos/.test(src) && /Meeting your people/.test(src) && /Toasting the NOOB bun/.test(src), 'each layer has its own line of text, in the same order');
 check(/>NOOB<\/text>/.test(src) && /stroke="currentColor"/.test(src) && !/#[0-9a-fA-F]{3,6}/.test(src.replace(/<!--[\s\S]*?-->/g, '')), 'drawn in the theme colour (white on black, black on white), no colour of its own');
 
-section('2. Opening the app: the whole show');
-const layerMs = Number(/OPENING_LAYER_MS = (\d+)/.exec(src)[1]), hold = Number(/OPENING_HOLD_MS = (\d+)/.exec(src)[1]), quick = Number(/QUICK_LAYER_MS = (\d+)/.exec(src)[1]);
-check(layerMs >= 350 && layerMs <= 700 && hold >= 500, `a layer lands every ${layerMs} ms and the finished burger is held ${hold} ms`);
-check(/getElementById\('noob-splash'\)/.test(src) && /if \(!go \|\| reduce\) return;/.test(src) && /useState\(!opening \|\| splashGone\(\)\)/.test(src), 'the show starts only when the opening splash has gone, so none of it plays behind the splash');
-check(/if \(!opening \|\| !go \|\| n < 6 \|\| !ready \|\| doneRef\.current\) return;/.test(src) && /onDoneRef\.current\?\.\(\)/.test(src), 'it hands over only when the burger is finished AND the app is ready (a slow app just waits with the finished burger)');
-check(/n >= 6 && opening && !ready \? 'Almost ready…'/.test(src), 'and says "Almost ready…" while it waits');
+section('2. Opening the app: no show of its own');
+check(!/opening|OPENING|noob-splash|splashGone|onDone|ready/.test(src.replace(/\/\/.*$/gm, '')), 'the loader has no opening mode any more: it does not wait for the splash and does not hold the app back');
+check(/const \[loading, setLoading\] = useState\(true\);/.test(app) && /if \(loading\) \{/.test(app) && !/openingDone/.test(app) && /<NoobStackLoader mode="quick" \/>/.test(app), 'the app shows the loading page only while it is really loading, and opens directly when it is ready (the opening animation comes first)');
 check(/prefers-reduced-motion: reduce/.test(src) && /useState\(reduce \? 6 : 0\)/.test(src), 'with "reduce motion" the finished burger is just shown');
-check(/clearTimeout/.test(src) && /alive = false/.test(src) && /clearInterval/.test(src), 'its timers are cleaned up');
-check(/const \[openingDone, setOpeningDone\] = useState\(false\);/.test(app) && /if \(loading \|\| !openingDone\) \{/.test(app) && /mode=\{openingDone \? 'quick' : 'opening'\} ready=\{!loading\} onDone=\{\(\) => setOpeningDone\(true\)\}/.test(app), 'the app keeps the loading screen until the opening show is done, even if its data came sooner');
+check(/clearTimeout/.test(src) && /alive = false/.test(src), 'its timers are cleaned up');
 
-section('3. Inside the app: the quick version');
-check(quick <= 100 && /mode = 'quick'/.test(src), `inside the app the whole burger is up in about ${quick * 6} ms, and that is the default`);
-check(/\.nsl-fast \.nsl-in \{ animation-duration: \.2s; \}/.test(css) && /\$\{opening \? '' : 'nsl-fast'\}/.test(src), 'each layer just snaps in');
-check(/mode=\{openingDone \? 'quick' : 'opening'\}/.test(app) && /<NoobStackLoader mode="quick" subtitle="Signing you in…" \/>/.test(auth), 'any loading screen after the opening (signing in again, the Google / Facebook / Discord check) is the quick one');
+section('3. The loading page of the whole app: the quick version');
+const quick = Number(/QUICK_LAYER_MS = (\d+)/.exec(src)[1]);
+check(quick <= 100, `the whole burger is up in about ${quick * 6} ms`);
+check(/\.nsl-fast \.nsl-in \{ animation-duration: \.2s; \}/.test(css) && /nsl-fast/.test(src), 'each layer just snaps in');
+check(/<NoobStackLoader mode="quick" subtitle="Signing you in…" \/>/.test(auth), 'any loading screen after the opening (signing in again, the Google / Facebook / Discord check) is the same one');
 
 section('4. The motion (CSS)');
 check(/@keyframes nsl-drop \{ 0% \{ opacity: 0; transform: translateY\(-150px\); \}/.test(css) && /\.nsl-in \{ animation: nsl-drop \.55s cubic-bezier\(\.3, 1\.5, \.5, 1\) both; \}/.test(css), 'each layer drops in with a little bounce');

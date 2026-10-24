@@ -1,78 +1,46 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 // The loading screen: a "burger" made of social media that builds itself. A chat bar, a row of likes, a comment, a photo and a profile header drop onto each other one
 // by one and a NOOB bun lands on top. Drawn in the black-and-white doodle look (it follows the theme: white line art on black, black on white in Light mode).
 //
-// Two ways to play, because opening the app and waiting inside the app are different moments:
-//   mode "opening"  - when the app is opened: it waits for the opening splash to go, then the WHOLE burger is built, layer by layer, even if the app is ready sooner;
-//                     once the burger is finished AND the app is ready it holds a moment and calls onDone. (If the app is slower, the finished burger just waits.)
-//   mode "quick"    - anywhere inside the app (signing in again, a retry): no show; the burger appears in a fraction of a second and stays until the app is ready.
-// With "reduce motion" on, the finished burger is simply shown. The motion of each layer is in index.css (.nsl-*).
+// It is the loading page of the whole app, and it is quick: the burger appears in a fraction of a second and stays until the app is ready (nothing is held back, so when the
+// app is ready at once, nothing shows). When the app is opened, the opening animation (public/opening/opening.js) plays first and the app opens straight out of it: there is no
+// separate burger show any more. With "reduce motion" on, the finished burger is simply shown. The motion of each layer is in index.css (.nsl-*).
 
 const MESSAGES = ['Setting up your chats…', 'Counting the likes…', 'Writing the comments…', 'Hanging the photos…', 'Meeting your people…', 'Toasting the NOOB bun…'];
-export const OPENING_LAYER_MS = 430;    // opening: one layer lands every 0.43 s
-export const OPENING_START_MS = 250;    // opening: a short beat after the splash, then the first layer
-export const OPENING_HOLD_MS = 700;     // opening: the finished burger is held this long once the app is ready
-export const QUICK_LAYER_MS = 55;       // quick: the whole burger is up in about a third of a second
+export const QUICK_LAYER_MS = 55;       // the whole burger is up in about a third of a second
 
 const heart = (cx: number, cy: number, s: number) =>
   `M${cx} ${cy + s * 0.9}C${cx - s * 1.9} ${cy - s * 0.2} ${cx - s * 0.8} ${cy - s * 1.5} ${cx} ${cy - s * 0.5}C${cx + s * 0.8} ${cy - s * 1.5} ${cx + s * 1.9} ${cy - s * 0.2} ${cx} ${cy + s * 0.9}Z`;
 const sparkle = (cx: number, cy: number, r: number) =>
   `M${cx} ${cy - r}Q${cx} ${cy} ${cx + r} ${cy}Q${cx} ${cy} ${cx} ${cy + r}Q${cx} ${cy} ${cx - r} ${cy}Q${cx} ${cy} ${cx} ${cy - r}Z`;
 
-// the splash is gone, or the opening animation (public/opening/opening.js) has begun to open the app like an iris: from then on the screen below it is in view
-const splashGone = () => typeof document === 'undefined' || !document.getElementById('noob-splash') || (window as unknown as { __noobOpeningRevealed?: boolean }).__noobOpeningRevealed === true;
-
 interface NoobStackLoaderProps {
   title?: string;
   subtitle?: string;
-  mode?: 'opening' | 'quick';
-  /** opening mode: the app has finished loading (the burger still finishes first) */
-  ready?: boolean;
-  /** opening mode: the whole burger was built and the app is ready */
-  onDone?: () => void;
+  /** the only way to play it now (kept so every place that asks for the quick one still reads the same) */
+  mode?: 'quick';
 }
 
-export const NoobStackLoader: React.FC<NoobStackLoaderProps> = ({ title = 'NOOB', subtitle, mode = 'quick', ready = true, onDone }) => {
-  const opening = mode === 'opening';
+export const NoobStackLoader: React.FC<NoobStackLoaderProps> = ({ title = 'NOOB', subtitle }) => {
   const reduce = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [n, setN] = useState(reduce ? 6 : 0);          // how many layers have landed
-  const [go, setGo] = useState(!opening || splashGone());   // opening: the splash is gone, the show may start
-  const doneRef = useRef(false);
-  const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
-
-  // opening: wait for the opening splash (index.html) to leave, so none of the show is played behind it
-  useEffect(() => {
-    if (go) return;
-    const t = window.setInterval(() => { if (splashGone()) setGo(true); }, 80);
-    return () => window.clearInterval(t);
-  }, [go]);
 
   // build the burger
   useEffect(() => {
-    if (!go || reduce) return;
+    if (reduce) return;
     let alive = true;
     const timers: number[] = [];
-    const every = opening ? OPENING_LAYER_MS : QUICK_LAYER_MS;
-    const start = opening ? OPENING_START_MS : 0;
-    for (let k = 1; k <= 6; k++) timers.push(window.setTimeout(() => { if (alive) setN(k); }, start + k * every));
+    for (let k = 1; k <= 6; k++) timers.push(window.setTimeout(() => { if (alive) setN(k); }, k * QUICK_LAYER_MS));
     return () => { alive = false; timers.forEach((t) => window.clearTimeout(t)); };
-  }, [go, reduce, opening]);
-
-  // opening: the burger is finished and the app is ready -> hold a moment, then hand over
-  useEffect(() => {
-    if (!opening || !go || n < 6 || !ready || doneRef.current) return;
-    const t = window.setTimeout(() => { doneRef.current = true; onDoneRef.current?.(); }, reduce ? 400 : OPENING_HOLD_MS);
-    return () => window.clearTimeout(t);
-  }, [opening, go, n, ready, reduce]);
+  }, [reduce]);
 
   const box = 'fill-zinc-900 stroke-current';
   const L = (k: number, children: React.ReactNode) => (n >= k ? <g key={k} className="nsl-in">{children}</g> : null);
-  const message = subtitle ?? (n === 0 ? 'Warming up…' : n >= 6 && opening && !ready ? 'Almost ready…' : MESSAGES[Math.min(n, 6) - 1]);
+  const message = subtitle ?? (n === 0 ? 'Warming up…' : MESSAGES[Math.min(n, 6) - 1]);
 
   return (
-    <div role="status" aria-live="polite" aria-label="Loading NOOB" className={`flex flex-col items-center text-zinc-50 select-none ${opening ? '' : 'nsl-fast'}`}>
+    <div role="status" aria-live="polite" aria-label="Loading NOOB" className="flex flex-col items-center text-zinc-50 select-none nsl-fast">
       <svg viewBox="0 0 220 250" className="w-[210px] h-[238px] overflow-visible" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {/* the shadow it lands on grows as the stack does */}
         <ellipse cx="110" cy="234" rx="84" ry="7" fill="currentColor" stroke="none" className="nsl-shadow" style={{ transform: `scaleX(${0.45 + n * 0.092})`, opacity: n === 0 ? 0.04 : 0.13 }} />

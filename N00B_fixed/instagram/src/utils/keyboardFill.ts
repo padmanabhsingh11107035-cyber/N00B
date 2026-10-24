@@ -23,11 +23,24 @@ export function flatten(layers: Rgba[], base: Rgba): string {
   return `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
 }
 
-/** How much of the bottom of the page the keyboard covers (0 for the few pixels of an address bar) */
-export function keyboardHeight(page: number, offsetTop: number, visible: number): number {
+/**
+ * How much of the bottom of the page the keyboard covers (0 for the few pixels of an address bar). Normally the page is taller than the visible part by the height of the keyboard.
+ * If a typing box has the focus and the page was made as short as the visible part anyway (a browser that resizes the page for the keyboard), the height of the screen is used instead.
+ */
+export function keyboardHeight(page: number, offsetTop: number, visible: number, screenHeight?: number, editing = false): number {
   const gap = Math.max(0, page - (offsetTop + visible));
-  return gap < 120 ? 0 : gap;
+  if (gap >= 120) return gap;
+  if (editing && screenHeight) {
+    const viaScreen = Math.min(Math.max(0, screenHeight - (offsetTop + visible)), 460);   // a keyboard is never taller than that
+    if (viaScreen >= 120) return viaScreen;
+  }
+  return 0;
 }
+
+const isEditing = (): boolean => {
+  const el = document.activeElement as HTMLElement | null;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+};
 
 interface ViewportLike { offsetTop: number; height: number; addEventListener: (type: string, fn: () => void) => void }
 
@@ -53,12 +66,12 @@ export function installKeyboardFill(viewport?: ViewportLike): void {
   const bar = document.createElement('div');
   bar.setAttribute('aria-hidden', 'true');
   bar.dataset.keyboardFill = '';
-  bar.style.cssText = 'position:fixed;left:0;right:0;display:none;pointer-events:none;z-index:2147482000;background:#0a0a0a';
+  bar.style.cssText = 'position:fixed;left:0;right:0;display:none;pointer-events:none;z-index:2147482000;background:#0a0a0a;transform:translateZ(0);-webkit-transform:translateZ(0)';
   document.body.appendChild(bar);
 
   const update = () => {
     const top = Math.round(vv.offsetTop), visible = Math.round(vv.height);
-    const kb = keyboardHeight(window.innerHeight, top, visible);
+    const kb = keyboardHeight(window.innerHeight, top, visible, window.screen ? window.screen.height : undefined, isEditing());
     if (!kb) { bar.style.display = 'none'; return; }
     const y = top + visible;
     bar.style.top = `${y}px`;
@@ -73,6 +86,6 @@ export function installKeyboardFill(viewport?: ViewportLike): void {
   vv.addEventListener('scroll', soon);
   document.addEventListener('focusin', soon);
   document.addEventListener('focusout', soon);
-  window.setInterval(() => { if (bar.style.display !== 'none') update(); }, 400);
+  window.setInterval(() => { if (bar.style.display !== 'none' || isEditing()) update(); }, 400);
   update();
 }

@@ -25,6 +25,8 @@ check(K.keyboardHeight(844, 0, 844) === 0 && K.keyboardHeight(844, 0, 800) === 0
 check(K.keyboardHeight(844, 0, 480) === 364, 'a keyboard: the page minus what is visible');
 check(K.keyboardHeight(844, 60, 420) === 364, 'also when the page has been pushed up (the visible part starts lower)');
 check(K.keyboardHeight(600, 0, 700) === 0, 'never negative');
+check(K.keyboardHeight(480, 0, 480, 844, true) === 364 && K.keyboardHeight(480, 0, 480, 844, false) === 0, 'if a browser made the page as short as the visible part, a typing box that has the focus still means a keyboard (the height of the screen is used)');
+check(K.keyboardHeight(844, 0, 800, 844, true) === 0 && K.keyboardHeight(900, 0, 900, 1000, true) === 0, 'but a focus alone, with no room under the page for a keyboard, does nothing');
 
 section('3. The bar (run against a stand-in page)');
 {
@@ -38,6 +40,7 @@ section('3. The bar (run against a stand-in page)');
   const listeners = {}, vvListeners = {};
   globalThis.document = {
     body, documentElement: html,
+    activeElement: null,
     createElement: () => bar, elementFromPoint: (x, y) => { globalThis.__asked = [x, y]; return under; },
     addEventListener: (n, f) => { listeners[n] = f; },
   };

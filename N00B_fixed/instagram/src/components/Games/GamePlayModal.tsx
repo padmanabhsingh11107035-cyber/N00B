@@ -1115,7 +1115,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <>
           {/* A hosted game (its own page) is added here, out of sight, as soon as its page opens, and shown when Play is pressed */}
           {game.embedUrl && (currentMode === 'select_mode' || currentMode === 'play_bot') && (
-            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} lazy={game.embedLazy} />
+            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} lazy={game.embedLazy} portrait={game.embedPortrait} />
           )}
 
           {/* 1. SELECT MODE VIEW */}
@@ -1139,7 +1139,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {game.embedUrl ? (
                 <div className="pt-2 space-y-2.5">
                   <div className="px-3 py-2 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/30 text-center text-[11px] font-bold text-fuchsia-300">
-                    It starts loading now, so it is ready when you press Play. The first time it is a big download.
+                    {game.embedPortrait ? 'It is already loading (it is a small game), so it is ready when you press Play.' : 'It starts loading now, so it is ready when you press Play. The first time it is a big download.'}
                   </div>
                   <button
                     onClick={startBotGameNow}
@@ -1147,7 +1147,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   >
                     Play {game.title}
                   </button>
-                  <p className="text-[10px] text-zinc-500 text-center">Keyboard: arrows to move, the on-screen buttons on a phone. It has its own music; no NOOBs for this one, it is just for fun.</p>
+                  <p className="text-[10px] text-zinc-500 text-center">{game.embedControls ?? 'Keyboard: arrows to move, the on-screen buttons on a phone. It has its own music; no NOOBs for this one, it is just for fun.'}</p>
                 </div>
               ) : game.id === 'helix_fall' ? (
                 <div className="pt-2 space-y-2.5">

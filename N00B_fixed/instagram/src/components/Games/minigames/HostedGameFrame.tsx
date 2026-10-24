@@ -15,6 +15,8 @@ interface HostedGameFrameProps {
   visible: boolean;
   /** true: the frame is only created when Play is pressed (a big game whose files were already fetched quietly), instead of being kept out of sight from the start. */
   lazy?: boolean;
+  /** true: the game is made to be held upright (a puzzle): full screen on a phone, but it is never turned on its side and the screen is not locked sideways. */
+  portrait?: boolean;
 }
 
 const useUpright = (): boolean => {
@@ -28,7 +30,7 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
@@ -40,7 +42,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     try {
       const root = document.documentElement;
       if (root.requestFullscreen && !document.fullscreenElement) {
-        void root.requestFullscreen().then(() => (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })?.lock?.('landscape')).catch(() => undefined);
+        void root.requestFullscreen().then(() => (portrait ? undefined : (screen.orientation as unknown as { lock?: (o: string) => Promise<void> })?.lock?.('landscape'))).catch(() => undefined);
       }
     } catch { /* not allowed here: the game still fills the screen */ }
   };
@@ -70,7 +72,7 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
   }, [full]);
 
   // upright phone in full screen: the game is laid on its side and fills the screen
-  const rotated = full && upright;
+  const rotated = full && upright && !portrait;
   const boxStyle: React.CSSProperties = !visible
     ? { height: '100%' }
     : full

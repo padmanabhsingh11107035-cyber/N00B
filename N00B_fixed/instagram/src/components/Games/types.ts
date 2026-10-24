@@ -23,6 +23,9 @@ export interface MiniGameMeta {
   ownSound?: boolean;
   // A big hosted game: its frame is only created when Play is pressed (its files are fetched quietly beforehand), instead of being kept out of sight from the moment its page opens.
   embedLazy?: boolean;
+  // A hosted game made to be held upright (a puzzle): it is not turned on its side on a phone. Its page is small, so the page of the game says so, and gives its own controls line.
+  embedPortrait?: boolean;
+  embedControls?: string;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -55,6 +58,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
       '/game-posters/the-rogue/04-title.webp',
       '/game-posters/the-rogue/03-forge.webp',
       '/game-posters/the-rogue/02-run.webp'
+    ]
+  },
+
+  // --- NEW: COLOR SORT (a pouring puzzle on its own page, /games/color-sort/, shown in a frame; the source is the page itself, public/games/color-sort, and the solver that checked its levels is in color-sort/) ---
+  {
+    id: 'color_sort',
+    title: 'Color Sort',
+    category: 'puzzle',
+    description: 'Pour the colours from bottle to bottle, with the big tube to help, until every bottle holds just one colour. 30 levels, from a handful of bottles to a full board of 24, and every one can be won. Undo as often as you like.',
+    bannerBg: 'from-[#2e86ee] to-[#1b1838]',
+    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'colorsort',
+    tags: ['Puzzle', 'Pouring', 'Relaxing'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Tap a bottle, then tap where its colour should go. Undo and Restart are at the top. It has its own sounds (the speaker button turns them off); no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/color-sort/',
+    posters: [
+      '/game-posters/color-sort/01-cover.webp',
+      '/game-posters/color-sort/02-pour.webp',
+      '/game-posters/color-sort/03-small.webp'
     ]
   },
 

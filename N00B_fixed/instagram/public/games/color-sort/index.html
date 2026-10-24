@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Color Sort: pour the colours until every bottle holds just one. A calm puzzle from NOOB Games." />
+    <title>Color Sort</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='7' y='3' width='10' height='18' rx='4' fill='%232e86ee'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./game.css?v=1" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="bar">
+        <div class="stat"><span>Level</span><b id="level">1</b></div>
+        <div class="stat"><span>Moves</span><b id="moves">0</b></div>
+        <div class="tools">
+          <button id="undo" type="button" aria-label="Undo the last pour" title="Undo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M5 12h9a5 5 0 0 1 0 10h-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -3)"/></svg>
+          </button>
+          <button id="restart" type="button" aria-label="Start this level again" title="Start again">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="sound" type="button" aria-label="Sound on or off" title="Sound">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path id="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </header>
+      <main id="stage">
+        <svg id="scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bottles of coloured liquid"></svg>
+      </main>
+      <p id="hint">Tap a bottle, then tap where to pour it.</p>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="win" hidden>
+        <div class="card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+          <h2 id="winTitle">Sorted!</h2>
+          <p id="winText"></p>
+          <button id="next" type="button" class="primary">Next level</button>
+          <button id="again" type="button" class="plain">Play this level again</button>
+        </div>
+      </div>
+      <div id="confetti" aria-hidden="true"></div>
+    </div>
+    <script src="./rules.js?v=1"></script>
+    <script src="./levels.js?v=1"></script>
+    <script src="./game.js?v=1"></script>
+  </body>
+</html>

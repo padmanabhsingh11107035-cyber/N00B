@@ -1054,7 +1054,6 @@ export const FeedView: React.FC<FeedViewProps> = ({
             onOpenProfile={(m) => {
               if (!m.userId || !onNavigateToProfile) return;
               const known = allUsers.find((u) => u.id === m.userId);
-              setShowOurTeam(false);
               onNavigateToProfile(known || ({ id: m.userId, username: m.username || '', displayName: m.name, avatar: m.avatar || '' } as unknown as User));
             }}
           />

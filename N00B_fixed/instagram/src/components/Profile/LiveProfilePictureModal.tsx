@@ -147,10 +147,7 @@ export const LiveProfilePictureModal: React.FC<LiveProfilePictureModalProps> = (
               </p>
             </div>
             <button
-              onClick={() => {
-                onClose();
-                onUpgradeClick();
-              }}
+              onClick={onUpgradeClick}   // the upgrade page opens on top (it is drawn above this one), so closing it comes back here
               className="px-6 py-2.5 bg-gradient-to-r from-cyan-400 to-emerald-400 text-black font-bold text-sm rounded-2xl hover:scale-105 transition-transform cursor-pointer"
             >
               Upgrade to NOOB Pro

@@ -119,7 +119,7 @@ export const LongVideoPlaylistsView: React.FC<Props> = ({ onClose, onOpenVideo }
 
   if (openPlaylist) {
     return (
-      <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
+      <div className="fixed inset-0 z-[49] bg-zinc-950 flex flex-col">
         <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={() => setOpenPlaylist(null)} className="p-1.5 -ml-1 text-zinc-300 hover:text-white rounded-lg hover:bg-zinc-900 cursor-pointer shrink-0">
@@ -160,7 +160,7 @@ export const LongVideoPlaylistsView: React.FC<Props> = ({ onClose, onOpenVideo }
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
+    <div className="fixed inset-0 z-[49] bg-zinc-950 flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
         <h1 className="text-base font-black italic tracking-tighter text-white flex items-center gap-2">
           <ListVideo className="w-4.5 h-4.5" /> Playlist

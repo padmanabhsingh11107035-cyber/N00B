@@ -185,6 +185,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
     setPlacedOrderNo(res.order.orderNo);
     persistCart({});
     setShowCheckout(false);
+    setShowCart(false);
     confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: ['#ffffff', '#22d3ee', '#ffffff'], zIndex: 9999 });
   };
 
@@ -271,10 +272,7 @@ export const FoodStallView: React.FC<FoodStallViewProps> = ({ currentUser, onClo
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <button
-                  onClick={() => {
-                    setShowCart(false);
-                    setShowCheckout(true);
-                  }}
+                  onClick={() => setShowCheckout(true)}
                   disabled={!foodStallEnabled}
                   className="touch-manipulation w-full py-3 rounded-2xl bg-gradient-to-r from-noob to-noob-strong text-black text-sm font-black cursor-pointer hover:opacity-90 disabled:opacity-40"
                 >

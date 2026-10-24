@@ -3313,10 +3313,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               : activeChat?.customNickname || activeChat?.participants.find((p) => p.id !== currentUser.id)?.displayName || 'Chat'
           }
           onClose={() => setShowEncryption(false)}
-          onOpenSettings={() => {
-            setShowEncryption(false);
-            setShowEncryptionSettings(true);
-          }}
+          onOpenSettings={() => setShowEncryptionSettings(true)}
           onAcknowledge={async () => {
             if (chatCrypto?.peer) await e2ee.acknowledge(chatCrypto.peer.userId, chatCrypto.peer.fingerprint);
             setEncryptionTick((t) => t + 1);

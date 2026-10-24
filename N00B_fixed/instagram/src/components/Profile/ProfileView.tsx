@@ -1601,10 +1601,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showDevices && (
         <DevicesModal
           onClose={() => setShowDevices(false)}
-          onOpenEncryption={() => {
-            setShowDevices(false);
-            setShowEncryptionSettings(true);
-          }}
+          onOpenEncryption={() => setShowEncryptionSettings(true)}
         />
       )}
       {showEncryptionSettings && <EncryptionSettingsModal onClose={() => setShowEncryptionSettings(false)} />}
@@ -1662,10 +1659,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {showProfileQrModal && (
         <ProfileQrModal
           targetUser={targetUser}
-          onSendInChat={() => {
-            setShowProfileQrModal(false);
-            setShowShareToChatModal(true);
-          }}
+          onSendInChat={() => setShowShareToChatModal(true)}
           onClose={() => setShowProfileQrModal(false)}
         />
       )}
@@ -1677,7 +1671,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           post={watchVideoPost}
           currentUser={currentUser}
           onClose={() => setWatchVideoPost(null)}
-          onNavigateToProfile={(u) => { setWatchVideoPost(null); onNavigateToUserProfile?.(u); }}
+          onNavigateToProfile={(u) => onNavigateToUserProfile?.(u)}
         />
       )}
 
@@ -1727,14 +1721,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <CustomerSupportModal
             currentUser={currentUser}
             onClose={() => setShowSupportModal(false)}
-            onOpenTerms={() => {
-              setShowSupportModal(false);
-              setShowTermsModal(true);
-            }}
-            onOpenPrivacy={() => {
-              setShowSupportModal(false);
-              setShowPrivacyModal(true);
-            }}
           />
         </React.Suspense>
       )}

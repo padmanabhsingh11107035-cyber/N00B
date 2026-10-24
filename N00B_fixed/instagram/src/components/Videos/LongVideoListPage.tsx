@@ -37,7 +37,7 @@ export const LongVideoListPage: React.FC<LongVideoListPageProps> = ({ title, ico
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col">
+    <div className="fixed inset-0 z-[49] bg-zinc-950 flex flex-col">
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
         <h1 className="text-base font-black italic tracking-tighter text-white flex items-center gap-2">{icon} {title}</h1>
         <button onClick={onClose} className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer">

@@ -52,7 +52,7 @@ export const WatchHistoryPage: React.FC<{ onClose: () => void; onOpenVideo: (vid
   const togglePause = () => { void updateSettings({ 'history.paused': !paused }); };
 
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col" data-testid="watch-history">
+    <div className="fixed inset-0 z-[49] bg-zinc-950 flex flex-col" data-testid="watch-history">
       <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl">
         <h1 className="text-base font-black tracking-tight text-white flex items-center gap-2"><Clock className="w-4.5 h-4.5" /> Watch history</h1>
         <button onClick={onClose} className="p-1.5 text-zinc-400 hover:text-white rounded-full hover:bg-zinc-900 cursor-pointer" aria-label="Close"><X className="w-5 h-5" /></button>

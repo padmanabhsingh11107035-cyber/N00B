@@ -25,8 +25,6 @@ import confetti from 'canvas-confetti';
 interface CustomerSupportModalProps {
   currentUser: User;
   onClose: () => void;
-  onOpenTerms?: () => void;
-  onOpenPrivacy?: () => void;
 }
 
 interface ChatMessage {
@@ -41,12 +39,15 @@ interface ChatMessage {
   transactionDetail?: WalletTransferDetail;
 }
 
+// The Terms and the Privacy Policy open ON TOP of the help desk (which stays exactly as it was underneath), so the cross brings the person back to the help desk, not to the page it was opened from.
+const TermsAndConditions = React.lazy(() => import('../Legal/TermsAndConditions').then((m) => ({ default: m.TermsAndConditions })));
+const PrivacyPolicy = React.lazy(() => import('../Legal/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy })));
+
 export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   currentUser,
-  onClose,
-  onOpenTerms,
-  onOpenPrivacy
+  onClose
 }) => {
+  const [legal, setLegal] = useState<null | 'terms' | 'privacy'>(null);
   // Support is a page of its own: while it is open the page behind it is hidden (not just covered), and it fills exactly the visible part of the screen (also when the keyboard is up).
   useFullPage(true);
   const visibleArea = useVisibleArea();
@@ -915,7 +916,8 @@ ${description}`.slice(0, 2000));
     else if (t.action === 'report') setActiveSupportTab('safety_report');
     else if (t.prompt) openChatWith(t.prompt);
   };
-  const leaveTo = (open?: () => void) => () => { onClose(); open?.(); };
+  const openTerms = () => setLegal('terms');
+  const openPrivacy = () => setLegal('privacy');
 
   const endChatNow = () => { stopSpeaking(); setIsChatEnded(true); setShowReviewModal(true); };
   const startNewConversation = () => {
@@ -955,6 +957,7 @@ ${description}`.slice(0, 2000));
   const callActive = isSpeaking || (isListening && !isMuted) || isCallProcessing;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 sd-root" style={visibleAreaStyle(visibleArea)} data-testid="support-page">
       <div className="sd-panel">
         {/* The bar on top: back (to the options, or out of help from the options), and who is helping in the chat */}
@@ -991,8 +994,8 @@ ${description}`.slice(0, 2000));
             onOpen={setActiveSupportTab}
             onPayment={openPaymentHelp}
             onTopic={handleTopic}
-            onOpenTerms={onOpenTerms ? leaveTo(onOpenTerms) : undefined}
-            onOpenPrivacy={onOpenPrivacy ? leaveTo(onOpenPrivacy) : undefined}
+            onOpenTerms={openTerms}
+            onOpenPrivacy={openPrivacy}
           />
         )}
 
@@ -1021,7 +1024,7 @@ ${description}`.slice(0, 2000));
 
         {activeSupportTab === 'call_us' && <CallPage username={currentUser.username} onStart={handleStartCall} />}
 
-        {activeSupportTab === 'faq' && <FaqPage faqs={FAQs} onOpenTerms={onOpenTerms ? leaveTo(onOpenTerms) : undefined} onOpenPrivacy={onOpenPrivacy ? leaveTo(onOpenPrivacy) : undefined} />}
+        {activeSupportTab === 'faq' && <FaqPage faqs={FAQs} onOpenTerms={openTerms} onOpenPrivacy={openPrivacy} />}
 
         {activeSupportTab === 'safety_report' && (
           <ReportPage
@@ -1117,5 +1120,13 @@ ${description}`.slice(0, 2000));
         </div>
       )}
     </div>
+
+    {/* the Terms / the Privacy Policy: a page on top of this one (drawn after it), so closing it comes back here */}
+    {legal && (
+      <React.Suspense fallback={null}>
+        {legal === 'terms' ? <TermsAndConditions onClose={() => setLegal(null)} /> : <PrivacyPolicy onClose={() => setLegal(null)} />}
+      </React.Suspense>
+    )}
+    </>
   );
 };

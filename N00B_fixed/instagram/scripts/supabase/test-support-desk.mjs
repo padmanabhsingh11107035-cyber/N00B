@@ -42,13 +42,15 @@ check(/data-testid="support-speak"/.test(chat) && /speakText\(m\.text, m\.id\)/.
 check(/webkitSpeechRecognition/.test(chat) && /p\.setInputMessage\(\(baseRef\.current \+ said\)\.slice\(0, 600\)\)/.test(chat), 'the microphone in the typing bar really writes what is said into the box');
 check(/transactions/.test(chat) && /onSelectTransaction/.test(chat) && /transactionDetail/.test(chat) && /handleSelectTransaction/.test(modal), 'the payment list and a payment\'s details still show inside the chat');
 
-section('3. Rating: five colourful faces');
+section('3. Rating: five doodle faces');
 check(/How would you like to rate my assistance\?/.test(rating), 'it asks "How would you like to rate my assistance?"');
 const kinds = [...icons.matchAll(/value: (\d), kind: '(\w+)'/g)].map((m) => m[1] + m[2]);
 check(kinds.join() === '1angry,2sad,3okay,4happy,5love', 'five faces from angry to loves it', kinds.join());
-const faceFill = [...icons.matchAll(/^  (\w+): \['(#[0-9a-f]{6})', '(#[0-9a-f]{6})'\]/gm)].map((m) => m[3]);
-check(faceFill.length === 5 && new Set(faceFill).size === 5, 'each face has its own colour (red, orange, yellow, light green, green)');
-check(/sd-faces \$\{rating \? 'picked' : ''\}/.test(rating) && /\.sd-face\.sel \{ transform: scale\(1\.22\)/.test(css), 'the face you tap grows and the others fade');
+const faceBody = icons.slice(icons.indexOf('export const RatingFace'), icons.indexOf('export const FACES'));
+const faceHex = new Set([...faceBody.matchAll(/#[0-9a-fA-F]{3,6}/g)].map((m) => m[0].toLowerCase()));
+check([...faceHex].every((h) => ['#fff', '#a9a9a9'].includes(h)) && /currentColor/.test(faceBody) && /var\(--ring/.test(faceBody), 'drawn as grey doodle line art (a thin round outline, white face, drawn features): no fill colours of their own');
+check(['angry', 'sad', 'okay', 'happy', 'love'].every((k) => new RegExp("kind === '" + k + "'").test(faceBody)) && /HEART\(16\)/.test(faceBody) && /M16 36\.500Q24 28\.500 32 36\.500/.test(faceBody), 'angry (slanted brows), crying (a tear), neutral (a flat mouth), grinning, and heart eyes');
+check(/sd-faces \$\{rating \? 'picked' : ''\}/.test(rating) && /\.sd-face\.sel \{ --ring: #1c1c1c; color: #1c1c1c; transform: scale\(1\.22\)/.test(css), 'the face you tap turns dark and grows, the others fade');
 check(/disabled=\{!rating\}/.test(rating) && /onSubmit\(rating, feedback\)/.test(rating), 'you must choose a face to send, and can add words');
 check(/submitSupportReview\(rating, feedback\)/.test(modal) && /fetchSupportRatingSummary/.test(modal) && /setActiveSupportTab\('home'\)/.test(modal), 'the rating goes to the same place as before and you land on the options after');
 check(/flat=\{activeSupportTab === 'ai_chat'\}/.test(modal) && /\.sd-rate\.flat/.test(css) && /ratingOpen/.test(chat), 'inside the chat it replaces the typing bar; after a call it opens over the screen');

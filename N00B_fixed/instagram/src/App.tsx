@@ -2227,8 +2227,6 @@ export default function App() {
           <CustomerSupportModal
             currentUser={currentUser}
             onClose={() => setShowCustomerSupportModal(false)}
-            onOpenTerms={() => setShowTermsModal(true)}
-            onOpenPrivacy={() => setShowPrivacyModal(true)}
           />
         </React.Suspense>
       )}

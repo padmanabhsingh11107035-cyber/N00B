@@ -802,7 +802,7 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
       {showHistory && (
         <WatchHistoryPage
           onClose={() => setShowHistory(false)}
-          onOpenVideo={(v) => { setShowHistory(false); setOpenVideo(v); }}
+          onOpenVideo={(v) => setOpenVideo(v)}
         />
       )}
       {showLikedVideos && (
@@ -814,13 +814,13 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
           loadingText="Loading your liked videos…"
           fetcher={fetchLikedLongVideos}
           onClose={() => setShowLikedVideos(false)}
-          onOpenVideo={(v) => { setShowLikedVideos(false); setOpenVideo(v); }}
+          onOpenVideo={(v) => setOpenVideo(v)}
         />
       )}
       {showPlaylists && (
         <LongVideoPlaylistsView
           onClose={() => setShowPlaylists(false)}
-          onOpenVideo={(v) => { setShowPlaylists(false); setOpenVideo(v); }}
+          onOpenVideo={(v) => setOpenVideo(v)}
         />
       )}
 

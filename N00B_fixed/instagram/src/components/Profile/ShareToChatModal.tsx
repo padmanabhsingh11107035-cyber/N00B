@@ -56,7 +56,7 @@ export const ShareToChatModal: React.FC<ShareToChatModalProps> = ({ currentUser,
   };
 
   return (
-    <div className="fixed inset-0 z-[95] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[96] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-sm bg-zinc-950 border border-cyan-500/30 rounded-3xl shadow-2xl max-h-[80vh] flex flex-col overflow-hidden">
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between shrink-0">
           <div>

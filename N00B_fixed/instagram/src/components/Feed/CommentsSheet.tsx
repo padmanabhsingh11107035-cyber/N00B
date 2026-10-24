@@ -25,7 +25,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   const openProfile = async (userId?: string) => {
     if (!userId || !onNavigateToProfile) return;
     const user = await fetchUserById(userId);
-    if (user) { onClose(); onNavigateToProfile(user); }
+    if (user) onNavigateToProfile(user);   // the sheet stays open underneath: Back from the profile comes back to the comments
   };
   const [comments, setComments] = useState<PostComment[]>([]);
   const [inputText, setInputText] = useState('');

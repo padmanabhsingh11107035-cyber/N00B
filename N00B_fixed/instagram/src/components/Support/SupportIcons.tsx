@@ -75,54 +75,45 @@ export const IdeaTileIcon: React.FC<P> = ({ className }) => (
 );
 
 // ------------------------------------------------------------------ the five faces of the rating (1 = angry ... 5 = loves it)
+// Doodle line art: a thin round outline, a white face and grey drawn features (the way the rating of a delivery app's support chat looks). The face you pick turns dark.
+// Colours come from two CSS variables set by the button (--ring for the outline, currentColor for the features), see supportDesk.css (.sd-face).
 export type FaceKind = 'angry' | 'sad' | 'okay' | 'happy' | 'love';
-const FACE_FILL: Record<FaceKind, [string, string]> = {
-  angry: ['#ff7a6e', '#e93b2f'],
-  sad: ['#ffb468', '#f07f1a'],
-  okay: ['#ffe071', '#f5b800'],
-  happy: ['#cde87a', '#8fc83a'],
-  love: ['#6fe08f', '#22b455']
-};
-const INK = '#3a2a1c';
 
-export const RatingFace: React.FC<{ kind: FaceKind; className?: string }> = ({ kind, className }) => {
-  const [a, b] = FACE_FILL[kind];
-  const id = `sdf-${kind}`;
-  return (
-    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
-      <defs>
-        <radialGradient id={id} cx="35%" cy="28%" r="80%"><stop offset="0" stopColor={a} /><stop offset="1" stopColor={b} /></radialGradient>
-      </defs>
-      <circle cx="24" cy="24" r="22" fill={`url(#${id})`} />
+const HEART = (cx: number) => `M${cx} 26C${cx - 6} 21.500 ${cx - 7} 17.500 ${cx - 4.500} 15.500C${cx - 2.700} 14 ${cx - 0.700} 14.600 ${cx} 16.400C${cx + 0.700} 14.600 ${cx + 2.700} 14 ${cx + 4.500} 15.500C${cx + 7} 17.500 ${cx + 6} 21.500 ${cx} 26Z`;
+const OPEN_MOUTH = 'M13.500 28.500H34.500Q34.500 40.500 24 40.500Q13.500 40.500 13.500 28.500Z';
+
+export const RatingFace: React.FC<{ kind: FaceKind; className?: string }> = ({ kind, className }) => (
+  <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+    <circle cx="24" cy="24" r="21.800" fill="#fff" style={{ stroke: 'var(--ring, #a9a9a9)' }} strokeWidth="2.200" />
+    <g fill="currentColor" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       {kind === 'angry' && (<>
-        <path d="M11.500 14.500l10 4.500M36.500 14.500l-10 4.500" stroke={INK} strokeWidth="2.800" strokeLinecap="round" />
-        <circle cx="17" cy="23" r="2.300" fill={INK} /><circle cx="31" cy="23" r="2.300" fill={INK} />
-        <path d="M15.500 35c5-6 12-6 17 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+        <path d="M11.500 16.500L21 21.500M36.500 16.500L27 21.500" fill="none" strokeWidth="3" />
+        <ellipse cx="17" cy="24.500" rx="2.200" ry="2" stroke="none" /><ellipse cx="31" cy="24.500" rx="2.200" ry="2" stroke="none" />
+        <path d="M16.500 37C19 31.800 29 31.800 31.500 37Z" strokeWidth="1.600" />
       </>)}
       {kind === 'sad' && (<>
-        <path d="M12 17l8-2.500M36 17l-8-2.500" stroke={INK} strokeWidth="2.400" strokeLinecap="round" />
-        <circle cx="17" cy="22.500" r="2.300" fill={INK} /><circle cx="31" cy="22.500" r="2.300" fill={INK} />
-        <path d="M16.500 34.500c4.500-4.500 10.500-4.500 15 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
-        <path d="M34.500 27.500c1.800 2.600 2.400 4 .2 4.700-2.100-.7-2.100-2.100-.2-4.700z" fill="#6cb8ff" />
+        <path d="M11.500 20L19.500 16.500M36.500 20L28.500 16.500" fill="none" strokeWidth="2.400" />
+        <ellipse cx="16.500" cy="23" rx="2" ry="2.200" stroke="none" /><ellipse cx="31.500" cy="23" rx="2" ry="2.200" stroke="none" />
+        <path d="M16 36.500Q24 28.500 32 36.500" fill="none" strokeWidth="2.800" />
+        <path d="M38 26.500C40.800 30.200 41.400 32.700 38.400 33.800C35.400 32.700 36 30.200 38 26.500Z" stroke="none" />
       </>)}
       {kind === 'okay' && (<>
-        <circle cx="17" cy="21.500" r="2.300" fill={INK} /><circle cx="31" cy="21.500" r="2.300" fill={INK} />
-        <path d="M16.500 32.500h15" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+        <ellipse cx="17.500" cy="21.500" rx="2.200" ry="3.200" stroke="none" /><ellipse cx="30.500" cy="21.500" rx="2.200" ry="3.200" stroke="none" />
+        <path d="M16.500 33.500H31.500" fill="none" strokeWidth="2.800" />
       </>)}
       {kind === 'happy' && (<>
-        <circle cx="17" cy="21" r="2.300" fill={INK} /><circle cx="31" cy="21" r="2.300" fill={INK} />
-        <path d="M15.500 28.500c3.200 7.500 13.800 7.500 17 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
-        <circle cx="11.500" cy="29" r="2.800" fill="#ff8aa0" opacity=".45" /><circle cx="36.500" cy="29" r="2.800" fill="#ff8aa0" opacity=".45" />
+        <circle cx="16.500" cy="19.500" r="2.300" stroke="none" /><circle cx="31.500" cy="19.500" r="2.300" stroke="none" />
+        <path d={OPEN_MOUTH} strokeWidth="1.400" />
+        <path d="M15.500 31.200H32.500" fill="none" strokeWidth="1.800" style={{ stroke: '#fff' }} />
       </>)}
       {kind === 'love' && (<>
-        <path d="M17 26.500c-4.600-3.200-5.500-6.200-3.600-8.200 1.500-1.500 3.100-1 3.600.4.500-1.400 2.100-1.900 3.600-.4 1.900 2 1 5-3.600 8.200z" fill="#e5254a" />
-        <path d="M31 26.500c-4.600-3.200-5.500-6.200-3.600-8.200 1.500-1.500 3.100-1 3.600.4.500-1.400 2.100-1.900 3.600-.4 1.900 2 1 5-3.600 8.200z" fill="#e5254a" />
-        <path d="M14.500 30c1.200 8 17.800 8 19 0z" fill={INK} />
-        <path d="M19 35.500c2.800-2.200 7.200-2.200 10 0-2.800 2.400-7.200 2.400-10 0z" fill="#ff7a8a" />
+        <path d={HEART(16)} stroke="none" /><path d={HEART(32)} stroke="none" />
+        <path d={OPEN_MOUTH} strokeWidth="1.400" />
+        <path d="M15.500 31.200H32.500" fill="none" strokeWidth="1.800" style={{ stroke: '#fff' }} />
       </>)}
-    </svg>
-  );
-};
+    </g>
+  </svg>
+);
 
 export const FACES: Array<{ value: 1 | 2 | 3 | 4 | 5; kind: FaceKind; label: string }> = [
   { value: 1, kind: 'angry', label: 'Very bad' },

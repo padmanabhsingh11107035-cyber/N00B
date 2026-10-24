@@ -117,10 +117,10 @@
 .sd-rate h3 { font-size: 17px; line-height: 1.3; font-weight: 800; color: #1c1c1c; }
 .sd-rate p { margin-top: 4px; font-size: 13px; color: #7a828d; }
 .sd-faces { display: flex; justify-content: center; gap: 10px; margin: 18px 0 6px; }
-.sd-face { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; transition: transform .15s, opacity .15s, filter .15s; }
+.sd-face { --ring: #a9a9a9; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; color: #7d7d7d; transition: transform .15s, opacity .15s, color .15s; }
 .sd-face svg { width: 100%; height: 100%; display: block; }
-.sd-faces.picked .sd-face:not(.sel) { opacity: .45; filter: saturate(.6); }
-.sd-face.sel { transform: scale(1.22); }
+.sd-faces.picked .sd-face:not(.sel) { opacity: .5; }
+.sd-face.sel { --ring: #1c1c1c; color: #1c1c1c; transform: scale(1.22); }
 .sd-face:active { transform: scale(.9); }
 .sd-face-label { min-height: 20px; font-size: 14px; font-weight: 800; color: #1c1c1c; }
 .sd-say { width: 100%; margin-top: 12px; padding: 11px 14px; border-radius: 14px; border: 1.500px solid #e3e7ec; background: #f7f8fa; font-size: 14px; outline: 0; resize: none; font-weight: 500; color: #1c1c1c; }

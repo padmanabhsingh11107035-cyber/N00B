@@ -274,11 +274,12 @@
   var t0 = performance.now(), raf = 0, over = false;
   function finish() {
     over = true;
+    disarm();
     if (splash.parentNode) splash.parentNode.removeChild(splash);
   }
   function tick() {
     if (over) return;
-    if (!splash.parentNode) { over = true; return; }
+    if (!splash.parentNode) { over = true; disarm(); return; }
     var t = (performance.now() - t0) / 1000;
     if (t >= T) { finish(); return; }
     drawFrame(t);
@@ -300,17 +301,50 @@
     if (logo) logo.style.display = 'none';
   } catch (e) { window.__noobOpening = undefined; return; }
 
-  // the sound: it plays only where the browser lets a page make a sound on its own (an installed app, a visited site); where it does not, the picture plays in silence
+  // The sound. A laptop, an installed Android app and the NOOB app for Android let a page make a sound on its own, so it plays from the first moment. An iPhone (and a phone's
+  // browser tab) refuses until the person has touched the screen: then the picture plays on, a small "Tap for sound" shows, and the first touch starts the sound at the place the
+  // picture has reached (what is left of the 4 seconds is heard: the dive, the boom, the sparkle). Nothing else on the page happens with that touch.
+  var sound = null, armed = false, pill = null, pillTimer = 0;
+  var GESTURES = ['touchend', 'pointerup', 'click', 'keydown'];
+  function startSound() {
+    var t = (performance.now() - t0) / 1000;
+    if (!sound || t > T - 0.4) return Promise.resolve();
+    try { if (t > 0.25 && sound.readyState >= 1) sound.currentTime = t; } catch (e) { /* plays from the start */ }
+    var p = sound.play();
+    return p && p.then ? p : Promise.resolve();
+  }
+  function disarm() {
+    if (!armed && !pill) return;
+    armed = false;
+    GESTURES.forEach(function (n) { document.removeEventListener(n, unlock, true); });
+    window.clearTimeout(pillTimer);
+    if (pill && pill.parentNode) pill.parentNode.removeChild(pill);
+    pill = null;
+  }
+  function unlock() {
+    if (!armed || over) return;
+    startSound().then(disarm, function () { /* still refused: try again at the next touch */ });
+  }
+  function blocked() {
+    if (over || armed) return;
+    armed = true;
+    GESTURES.forEach(function (n) { document.addEventListener(n, unlock, true); });
+    try {
+      pill = document.createElement('div');
+      pill.setAttribute('aria-hidden', 'true');
+      pill.style.cssText = 'position:absolute;left:50%;bottom:calc(34px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;'
+        + 'background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font:600 14px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;pointer-events:none;opacity:0;transition:opacity .4s ease;white-space:nowrap';
+      pill.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Tap for sound</span>';
+      splash.appendChild(pill);
+      pillTimer = window.setTimeout(function () { if (pill) pill.style.opacity = '1'; }, 60);
+    } catch (e) { pill = null; }
+  }
   try {
-    var sound = new Audio('/opening/opening.mp3?v=2');
+    sound = new Audio('/opening/opening.mp3?v=2');
+    sound.preload = 'auto';
     sound.volume = 0.9;
-    sound.addEventListener('playing', function () {
-      var late = (performance.now() - t0) / 1000;
-      if (late > 0.3 && late < T - 0.3) { try { sound.currentTime = late; } catch (e) { /* plays from the start */ } }
-    }, { once: true });
-    var started = sound.play();
-    if (started && started.catch) started.catch(function () { /* silent */ });
-  } catch (e) { /* silent */ }
+    startSound().then(undefined, blocked);
+  } catch (e) { sound = null; }
 
   raf = requestAnimationFrame(tick);
   // a page that is not being drawn (a tab in the background) gets no animation frames: the splash must still go, so the app is never left behind it

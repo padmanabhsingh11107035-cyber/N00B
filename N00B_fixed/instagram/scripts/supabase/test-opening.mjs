@@ -19,7 +19,7 @@ check(html.indexOf('/coaching-init.js') < iData && html.indexOf('/editor-init.js
 check(!/<script>\s*\(function/.test(html) && !/<script>[^<]*opening/.test(html), 'no script is written inside the page (the security policy does not allow it)');
 check(/#noob-splash img \{ display: none; \}/.test(html) && /#noob-splash\.logo img \{ display: block;/.test(html), 'the splash has no logo (no glow, nothing before the animation); only an address that asks for it shows one');
 check(/splash\.className = 'logo'/.test(read('public/coaching-init.js')) && /splash\.className = 'logo'/.test(read('public/editor-init.js')), 'the coaching (NOOB STUDY) and editor (Studio) addresses ask for their logo');
-check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=2/.test(html), 'the files are kept for a year, their address carries a version number');
+check(/\/opening\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /opening\.mp3\?v=2/.test(code) && /opening\.js\?v=3/.test(html), 'the files are kept for a year, their address carries a version number');
 
 section('2. The app opens straight out of it');
 check(/__noobOpening\?: unknown/.test(main) && /if \(splash && !\(window as unknown as \{ __noobOpening\?: unknown \}\)\.__noobOpening\)/.test(main), 'src/main.tsx leaves the splash to the animation when it is running (and removes it as before when it is not)');
@@ -76,6 +76,44 @@ for (const [w, h, dpr] of [[390, 844, 3], [1280, 720, 1], [820, 1180, 2], [360, 
   badNumber = null; let thrown = null;
   try { for (let i = 0; i <= 240; i++) api.renderAt(i / 60); api.renderAt(3.999); } catch (e) { thrown = e; }
   check(!thrown && badNumber === null, `every frame draws without an error at ${w} x ${h}`, String(thrown || badNumber || ''));
+}
+
+section('3b. The sound where the browser refuses it (an iPhone, a phone\'s browser tab)');
+{
+  const listeners = {}, plays = [], created = [];
+  let refuse = true, removedListeners = 0, splashGone = false, now2 = 100;
+  const frames2 = [];
+  const canvas2 = { width: 0, height: 0, style: {}, getContext: () => ctx, setAttribute() {} };
+  const splash2 = { parentNode: { removeChild() { splashGone = true; splash2.parentNode = null; } }, style: {}, appendChild(c) { created.push(c); c.parentNode = splash2; }, removeChild(c) { c.parentNode = null; }, querySelector: () => ({ style: {} }) };
+  const sb = {
+    window: null,
+    document: {
+      getElementById: (id) => (id === 'noob-splash' ? splash2 : null),
+      createElement: (tag) => (tag === 'canvas' ? canvas2 : { style: {}, setAttribute() {}, set innerHTML(v) { this.html = v; }, get innerHTML() { return this.html; } }),
+      addEventListener: (n, f) => { listeners[n] = f; }, removeEventListener: (n, f) => { if (listeners[n] === f) { delete listeners[n]; removedListeners++; } },
+    },
+    performance: { now: () => now2 }, Path2D: class { moveTo() {} quadraticCurveTo() {} closePath() {} },
+    Audio: class { constructor() { this.volume = 1; this.readyState = 4; this.currentTime = 0; } play() { plays.push(this.currentTime); return refuse ? Promise.reject(new Error('NotAllowedError')) : Promise.resolve(); } },
+    requestAnimationFrame: (f) => { frames2.push(f); return frames2.length; }, cancelAnimationFrame() {}, Math, Number, Array, Object, Promise,
+  };
+  sb.window = Object.assign(sb, { innerWidth: 390, innerHeight: 844, devicePixelRatio: 3, matchMedia: () => ({ matches: false }), setTimeout: () => 1, clearTimeout() {} });
+  vm.createContext(sb);
+  vm.runInContext(data, sb);
+  vm.runInContext(code, sb);
+  await new Promise((r) => setTimeout(r, 0));
+  const pill = created.find((c) => c !== canvas2);
+  check(plays.length === 1 && !!pill && /Tap for sound/.test(pill.innerHTML || ''), 'it tries the sound at once; when the browser says no, a small "Tap for sound" shows and the picture goes on');
+  check(['touchend', 'pointerup', 'click', 'keydown'].every((n) => typeof listeners[n] === 'function'), 'the first touch (finger lifted, click or key) is waited for, anywhere on the screen');
+  now2 = 100 + 1500;   // the picture is 1.5 seconds on
+  listeners.touchend();   // refused again: it keeps waiting
+  await new Promise((r) => setTimeout(r, 0));
+  check(plays.length === 2 && Math.abs(plays[1] - 1.5) < 0.01 && !!listeners.touchend, 'a touch starts the sound at the place the picture has reached (1.5 s); if the browser still refuses, it waits for the next touch');
+  refuse = false;
+  now2 = 100 + 1800;
+  listeners.click();
+  await new Promise((r) => setTimeout(r, 0));
+  check(plays.length === 3 && Math.abs(plays[2] - 1.8) < 0.01, 'the next touch works, at 1.8 s');
+  check(Object.keys(listeners).length === 0 && removedListeners === 4 && splash2.parentNode !== null, 'and then it stops listening and the "Tap for sound" goes');
 }
 
 section('4. The drawn shapes and the sound');

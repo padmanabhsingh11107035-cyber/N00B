@@ -78,6 +78,7 @@ check(/:where\(\.sd-root\) button \{ cursor: pointer; border: 0; background: non
 const named = walk('src').filter((f) => /\.(tsx?|css)$/.test(f)).filter((f) => /blinkit/i.test(fs.readFileSync(f, 'utf8')));
 check(named.length === 0, 'no name or logo of another company in the app', named.join(', '));
 check(/<SupportHub/.test(modal) && /useFullPage\(true\)/.test(modal) && /visibleAreaStyle\(visibleArea\)/.test(modal), 'it is a page of its own that fits the visible screen (also with the keyboard up)');
+check(/<div className="fixed inset-0 z-50 sd-root" data-testid="support-page">/.test(modal) && /<div className="sd-stage" style=\{visibleAreaStyle\(visibleArea\)\}>/.test(modal) && /\.sd-stage \{ position: absolute; left: 0; right: 0; top: 0; bottom: 0;/.test(css), 'the page itself covers the whole screen (also under a see-through phone keyboard): only the inner stage is cut to the visible area, so nothing behind shows through the glass');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

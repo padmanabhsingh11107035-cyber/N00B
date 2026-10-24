@@ -958,7 +958,9 @@ ${description}`.slice(0, 2000));
 
   return (
     <>
-    <div className="fixed inset-0 z-50 sd-root" style={visibleAreaStyle(visibleArea)} data-testid="support-page">
+    <div className="fixed inset-0 z-50 sd-root" data-testid="support-page">
+      {/* the root covers the whole page (also the part under a phone's see-through keyboard); only this stage is cut to the visible area, so the chat sits above the keyboard and nothing of the page behind shows through the glass */}
+      <div className="sd-stage" style={visibleAreaStyle(visibleArea)}>
       <div className="sd-panel">
         {/* The bar on top: back (to the options, or out of help from the options), and who is helping in the chat */}
         {activeSupportTab === 'ai_chat' ? (
@@ -1119,6 +1121,7 @@ ${description}`.slice(0, 2000));
           </div>
         </div>
       )}
+      </div>
     </div>
 
     {/* the Terms / the Privacy Policy: a page on top of this one (drawn after it), so closing it comes back here */}

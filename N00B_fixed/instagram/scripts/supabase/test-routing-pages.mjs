@@ -110,7 +110,7 @@ check(/Visit Details \(also if you have no account\)/.test(read('public/privacy.
 
 section('6. The support help desk');
 const modal = read('src/components/Support/CustomerSupportModal.tsx');
-check(/useFullPage\(true\)/.test(modal) && /fixed inset-0 z-50 doodle-wallpaper-login/.test(modal) && !/bg-black\/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4 animate-in/.test(modal), 'support is a page of its own: solid, nothing of the page behind shows through');
+check(/useFullPage\(true\)/.test(modal) && /fixed inset-0 z-50 sd-root/.test(modal) && !/bg-black\/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-4 animate-in/.test(modal), 'support is a page of its own: solid, nothing of the page behind shows through');
 check(/<SupportChatPanel/.test(modal) && /onSend=\{handleSendMessage\}/.test(modal) && /onSelectTransaction=\{handleSelectTransaction\}/.test(modal) && /onPaymentIssue=\{handlePaymentIssueQuickAction\}/.test(modal), 'the chat screen is the new design and keeps every real function (the AI, voice, payment lookup, ending and rating)');
 check(/activeSupportTab === 'call_us'/.test(modal) && /activeSupportTab === 'safety_report'/.test(modal) && /activeSupportTab === 'ticket'/.test(modal) && /activeSupportTab === 'faq'/.test(modal), 'the call, safety, ticket and FAQ tabs are as they were');
 check(SUPPORT_TOPICS.length === 9 && STARTER_PROMPTS.length === 3 && filterTopics(SUPPORT_TOPICS, 'SHOP').length === 1 && filterTopics(SUPPORT_TOPICS, '').length === 9 && filterTopics(SUPPORT_TOPICS, 'zzz').length === 0, 'the topics can be searched');

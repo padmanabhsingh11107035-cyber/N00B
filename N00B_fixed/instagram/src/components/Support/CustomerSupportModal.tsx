@@ -1,52 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useResumeState } from '../../utils/useResumeState';
-import {
-  Headphones,
-  Bot,
-  MessageSquare,
-  Send,
-  Sparkles,
-  HelpCircle,
-  CheckCircle2,
-  X,
-  FileText,
-  ShieldCheck,
-  Check,
-  Zap,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  RotateCcw,
-  User as UserIcon,
-  ShieldAlert,
-  Loader2,
-  Search,
-  Crown,
-  Phone,
-  PhoneCall,
-  PhoneOff,
-  PhoneForwarded,
-  Clock,
-  Radio,
-  ExternalLink,
-  Star,
-  LogOut
-} from 'lucide-react';
+import { Loader2, Mic, MicOff, PhoneOff, Send, Volume2, VolumeX } from 'lucide-react';
 import { createSpeaker } from '../../utils/supportSpeech';
 import { useFullPage } from '../../utils/fullPage';
 import { useVisibleArea, visibleAreaStyle } from '../../utils/useVisualViewport';
+import './supportDesk.css';
 import { SupportChatPanel } from './SupportChatPanel';
+import { SupportHeader, SupportHub, type SupportScreen } from './SupportHub';
+import { SupportRatingSheet } from './SupportRatingSheet';
+import { CallPage, FaqPage, ReportPage, TicketPage } from './SupportPages';
+import type { Topic } from './supportTopics';
 
 declare const __BUILD_ID__: string;
 import { User } from '../../types';
 import {
   askAiSupportAssistant, submitSafetyReport, submitSupportReview, fetchSupportRatingSummary, fetchUsers,
-  fetchMyWalletTransfers, fetchWalletTransferDetail
+  fetchMyWalletTransfers, fetchWalletTransferDetail, submitAppSuggestion
 } from '../../services/api';
 import type { WalletTransferSummary, WalletTransferDetail } from '../../services/api';
 import { formatPaymentId } from '../../utils/formatPoints';
-import { ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
 import { wantsToEndSession, goodbyeMessage, goodbyeSpoken } from './supportIntents';
 import confetti from 'canvas-confetti';
 
@@ -78,8 +50,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   // Support is a page of its own: while it is open the page behind it is hidden (not just covered), and it fills exactly the visible part of the screen (also when the keyboard is up).
   useFullPage(true);
   const visibleArea = useVisibleArea();
-  // The tab, the conversation and anything half-typed survive closing the app or refreshing (see utils/pageResume.ts).
-  const [activeSupportTab, setActiveSupportTab] = useResumeState<'ai_chat' | 'call_us' | 'safety_report' | 'ticket' | 'faq'>(currentUser.id, 'support', 'tab', 'ai_chat');
+  // Opening support always shows the "Need help?" screen with its coloured options; the conversation and anything half-typed survive closing the app or refreshing (see utils/pageResume.ts).
+  const [activeSupportTab, setActiveSupportTab] = useState<SupportScreen>('home');
   
   // Voice & Speech Synthesis / Recognition State (Used exclusively for Live Voice Call)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -107,10 +79,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
 
   // Post-Chat Review & Rating State (Exclusively for Customer Support)
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [hoverRating, setHoverRating] = useState<number>(0);
   const [ratingSummary, setRatingSummary] = useState<{ average: number | null; count: number }>({ average: null, count: 0 });
-  const [reviewFeedback, setReviewFeedback] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [isChatEnded, setIsChatEnded] = useState(false);
 
@@ -209,7 +178,7 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
       {
         id: 'welcome_init',
         sender: 'bot',
-        text: `${greetingTone} I am your official NOOB AI Support Assistant. I have instant, complete knowledge of all our mini-games, leaderboard scoring, continuous background music, automated feed/reels routing, and our full Terms & Conditions & Privacy Policy. How can I help you today?`,
+        text: `${greetingTone} I am NoobBuddy, your NOOB AI support assistant. I know all about the feed, reels, chat, mini-games and points, music, your wallet, Shop NOOB, and our Terms & Privacy Policy. How can I help you today?`,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ];
@@ -230,7 +199,8 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
   const [ticketCategory, setTicketCategory] = useResumeState(currentUser.id, 'support', 'ticketCategory', 'Account & Verification');
   const [ticketDescription, setTicketDescription] = useResumeState(currentUser.id, 'support', 'ticketDescription', '');
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
-  const [ticketId, setTicketId] = useState('');
+  const [ticketSending, setTicketSending] = useState(false);
+  const [ticketError, setTicketError] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -871,12 +841,21 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     }, 450);
   };
 
-  const handleTicketSubmit = (e: React.FormEvent) => {
+  // A ticket is saved in the NOOB team's Suggestion Box (as an "issue"): the administrator reads it there and answers, and the answer shows in the person's Suggestion Box.
+  const handleTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ticketSubject.trim() || !ticketDescription.trim()) return;
+    const subject = ticketSubject.trim();
+    const description = ticketDescription.trim();
+    if (!subject || !description || ticketSending) return;
+    if (description.length < 5) { setTicketError('Please write a little more (at least 5 characters).'); return; }
+    setTicketSending(true);
+    setTicketError('');
+    const res = await submitAppSuggestion('issue', `[Support ticket - ${ticketCategory}]
+${subject}
 
-    const generatedId = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
-    setTicketId(generatedId);
+${description}`.slice(0, 2000));
+    setTicketSending(false);
+    if (!res.success) { setTicketError(res.error || 'Could not send that right now. Please try again.'); return; }
     setTicketSubmitted(true);
     confetti({ particleCount: 35, spread: 65, origin: { y: 0.6 } });
   };
@@ -922,840 +901,218 @@ export const CustomerSupportModal: React.FC<CustomerSupportModalProps> = ({
     }
   ];
 
+  // ---- what the person picks on the "Need help?" screen
+  const openChatWith = (prompt: string) => {
+    setActiveSupportTab('ai_chat');
+    window.setTimeout(() => handleQuickPrompt(prompt), 160);
+  };
+  const openPaymentHelp = () => {
+    setActiveSupportTab('ai_chat');
+    void handlePaymentIssueQuickAction();
+  };
+  const handleTopic = (t: Topic) => {
+    if (t.action === 'payment') openPaymentHelp();
+    else if (t.action === 'report') setActiveSupportTab('safety_report');
+    else if (t.prompt) openChatWith(t.prompt);
+  };
+  const leaveTo = (open?: () => void) => () => { onClose(); open?.(); };
+
+  const endChatNow = () => { stopSpeaking(); setIsChatEnded(true); setShowReviewModal(true); };
+  const startNewConversation = () => {
+    stopSpeaking();
+    setMessages(buildGreeting());
+    setInputMessage('');
+    setIsChatEnded(false);
+    setReviewSubmitted(false);
+    setShowReviewModal(false);
+    setActivePaymentContext(null);
+  };
+  const submitReview = (rating: number, feedback: string) => {
+    setReviewSubmitted(true);
+    if (rating >= 4) confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
+    submitSupportReview(rating, feedback)
+      .then((res) => { if (res && typeof res.average === 'number') setRatingSummary({ average: res.average, count: res.count }); })
+      .catch(() => {});
+    window.setTimeout(() => { setShowReviewModal(false); setActiveSupportTab('home'); }, 1600);
+  };
+
+  const onBack = () => { if (activeSupportTab === 'home') onClose(); else setActiveSupportTab('home'); };
+  const TITLES: Record<SupportScreen, string> = { home: 'Help & Support', ai_chat: 'NOOB Support', call_us: 'Call us', safety_report: 'Report someone', ticket: 'Raise a ticket', faq: 'FAQs' };
+
+  const callStatus2: { cls: string; icon: React.ReactNode; text: string } = !speechSupported
+    ? { cls: 'warn', icon: <MicOff />, text: 'Voice input is not available. Type below.' }
+    : isMuted
+    ? { cls: 'bad', icon: <MicOff />, text: 'Microphone is muted' }
+    : isSpeaking
+    ? { cls: 'ok', icon: <Volume2 />, text: 'Speaking...' }
+    : isCallProcessing
+    ? { cls: 'warn', icon: <Loader2 className="animate-spin" />, text: 'Thinking...' }
+    : isListening
+    ? { cls: 'ok', icon: <Mic />, text: 'Listening... speak now' }
+    : micStalled
+    ? { cls: 'warn', icon: <MicOff />, text: "Didn't catch that. Type your question below." }
+    : { cls: '', icon: <Mic />, text: 'Microphone ready' };
+  const callActive = isSpeaking || (isListening && !isMuted) || isCallProcessing;
+
   return (
-    <div className="fixed inset-0 z-50 doodle-wallpaper-login flex flex-col animate-in fade-in duration-150" style={visibleAreaStyle(visibleArea)} data-testid="support-page">
-      <div className={`bg-zinc-950 w-full ${activeSupportTab === 'ai_chat' ? 'max-w-6xl' : 'max-w-2xl'} mx-auto flex-1 min-h-0 flex flex-col sm:border-x border-zinc-800 overflow-hidden`}>
-        {/* Top Header */}
-        <header className="p-4 sm:p-5 pt-[max(1rem,env(safe-area-inset-top))] shrink-0 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-b border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-11 h-11 rounded-2xl overflow-hidden">
-                <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-noob border-2 border-black rounded-full animate-pulse" />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-white">
-                  NOOB Support &amp; Help Desk
-                </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1">
-                  <Zap className="w-2.5 h-2.5" /> Instant AI
-                </span>
-              </div>
-              <p className="hidden sm:block text-xs text-zinc-400">
-                24/7 AI Chat &amp; Community Support Specialist
-              </p>
-              {ratingSummary.average !== null && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                  <span className="text-[11px] font-bold text-amber-400">{ratingSummary.average}</span>
-                  <span className="text-[10px] text-zinc-500">
-                    average from {ratingSummary.count} review{ratingSummary.count === 1 ? '' : 's'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Voice Toggle */}
-            <button
-              onClick={() => {
-                if (voiceEnabled) interruptSpeech();
-                setVoiceEnabled(!voiceEnabled);
-              }}
-              title={voiceEnabled ? 'Mute AI Voice' : 'Enable AI Voice'}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                voiceEnabled
-                  ? 'bg-noob/10 border-noob/40 text-noob'
-                  : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
-
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* User Context Bar */}
-        <div className={`bg-zinc-900/60 border-b border-zinc-800/80 px-4 py-2.5 items-center justify-between text-xs shrink-0 ${activeSupportTab === 'ai_chat' ? 'hidden sm:flex' : 'flex'}`}>
-          <div className="flex items-center gap-2.5 min-w-0">
-            <img
-              src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-              alt={currentUser.username}
-              className="w-6 h-6 rounded-full object-cover ring-1 ring-noob shrink-0"
-              referrerPolicy="no-referrer"
-            />
-            <div className="flex items-center gap-1.5 min-w-0 truncate">
-              <span className="font-bold text-white truncate">{currentUser.displayName || currentUser.username}</span>
-              <span className="text-[11px] text-zinc-400 truncate">(@{currentUser.username})</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 capitalize border border-zinc-700">
-                {currentUser.gender || 'Member'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] text-yellow-400 font-bold flex items-center gap-1">
-              <Crown className="w-3 h-3 text-yellow-400" /> {currentUser.noobPoints || 100} NOOBs
-            </span>
-          </div>
-        </div>
-
-        {/* Tab Navigation (Differentiates Chat vs Call Us vs Safety vs Ticket vs FAQs) */}
-        <div className="grid grid-cols-5 border-b border-zinc-800 bg-zinc-900/40 px-2 pt-2 gap-1 text-center shrink-0">
-          <button
-            onClick={() => setActiveSupportTab('ai_chat')}
-            className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-              activeSupportTab === 'ai_chat'
-                ? 'text-noob border-noob'
-                : 'text-zinc-400 border-transparent hover:text-white'
-            }`}
-          >
-            <Bot className="w-3.5 h-3.5" /> <span className="hidden sm:inline">AI</span> Chat
-          </button>
-
-          <button
-            onClick={() => setActiveSupportTab('call_us')}
-            className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-              activeSupportTab === 'call_us'
-                ? 'text-cyan-400 border-cyan-400'
-                : 'text-zinc-400 border-transparent hover:text-white'
-            }`}
-          >
-            <PhoneCall className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Voice</span> Call
-          </button>
-
-          <button
-            onClick={() => setActiveSupportTab('safety_report')}
-            className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-              activeSupportTab === 'safety_report'
-                ? 'text-rose-400 border-rose-400'
-                : 'text-zinc-400 border-transparent hover:text-white'
-            }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Trust &</span> Safety
-          </button>
-
-          <button
-            onClick={() => setActiveSupportTab('ticket')}
-            className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-              activeSupportTab === 'ticket'
-                ? 'text-noob border-noob'
-                : 'text-zinc-400 border-transparent hover:text-white'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" /> Ticket
-          </button>
-
-          <button
-            onClick={() => setActiveSupportTab('faq')}
-            className={`pb-2.5 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-              activeSupportTab === 'faq'
-                ? 'text-noob border-noob'
-                : 'text-zinc-400 border-transparent hover:text-white'
-            }`}
-          >
-            <HelpCircle className="w-3.5 h-3.5" /> FAQs
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className={activeSupportTab === 'ai_chat' ? 'flex-1 min-h-0 overflow-hidden' : 'flex-1 overflow-y-auto p-4 sm:p-5 space-y-4'}>
-          {/* TAB 1: AI ASSISTANT CHAT (the screen itself is SupportChatPanel.tsx) */}
-          {activeSupportTab === 'ai_chat' && (
-            <SupportChatPanel
-              messages={messages}
-              isTyping={isTyping}
-              inputMessage={inputMessage}
-              setInputMessage={setInputMessage}
-              onSend={handleSendMessage}
-              onQuickPrompt={handleQuickPrompt}
-              onPaymentIssue={handlePaymentIssueQuickAction}
-              loadingTransactions={loadingTransactions}
-              onReport={() => setActiveSupportTab('safety_report')}
-              onEndChat={() => { stopSpeaking(); setIsChatEnded(true); setShowReviewModal(true); }}
-              isChatEnded={isChatEnded}
-              reviewSubmitted={reviewSubmitted}
-              onOpenReview={() => setShowReviewModal(true)}
-              onNewConversation={() => { setMessages(buildGreeting()); setInputMessage(''); setIsChatEnded(false); setActivePaymentContext(null); }}
-              onSelectTransaction={handleSelectTransaction}
-              speakText={speakText}
-              stopSpeaking={stopSpeaking}
-              speakingId={currentlySpeakingMsgId}
-              isListening={isListening}
-              onToggleListening={toggleListening}
-              userAvatar={currentUser.avatar}
-              username={currentUser.username}
-              onLeave={onClose}
-            />
-          )}
-
-          {/* TAB 2: CALL US (DIRECT VOICE CALL TO LOGGED-IN ACCOUNT) */}
-          {activeSupportTab === 'call_us' && (
-            <div className="space-y-5">
-              <div className="space-y-4">
-                {/* Option 1: Direct Instant Call to Logged-In User */}
-                <div className="p-5 rounded-3xl bg-gradient-to-br from-cyan-950/50 via-zinc-900 to-zinc-900 border border-cyan-500/30 shadow-xl space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-md">
-                        <PhoneCall className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                          Instant AI Voice Call
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30">
-                            Direct Account Call
-                          </span>
-                        </h4>
-                        <p className="text-xs text-zinc-400 mt-0.5">
-                          Connects directly to your logged-in account (@{currentUser.username})
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-black/60 rounded-2xl p-3.5 border border-zinc-800/80 text-xs text-zinc-300 space-y-1.5">
-                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
-                      <Sparkles className="w-3.5 h-3.5" /> Hands-Free Real-Time Voice:
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      Tap below to launch a full-screen live AI voice call. The AI Specialist actively listens to your microphone, transcribes your questions in real-time, and speaks answers aloud.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleStartCall}
-                    className="w-full py-3.5 bg-gradient-to-r from-cyan-400 via-teal-400 to-noob text-black font-black rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-lg shadow-cyan-500/20"
-                  >
-                    <PhoneCall className="w-4 h-4 stroke-[2.5]" /> Request Instant Call to @{currentUser.username}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: TRUST & SAFETY / CYBER BULLYING REPORT & BLOCK */}
-          {activeSupportTab === 'safety_report' && (
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-rose-950/40 via-zinc-900 to-rose-950/30 border border-rose-500/30 p-4 sm:p-5 rounded-2xl space-y-2">
-                <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
-                  <ShieldAlert className="w-5 h-5 text-rose-400" />
-                  Trust &amp; Safety: Cyber Bullying &amp; Harassment Defense
-                </div>
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  NOOB enforces zero tolerance against harassment, hate speech, bullying, toxicity, and impersonation. Submit the offender's username or ID below to take immediate action and block them from your profile.
-                </p>
-              </div>
-
-              {reportSuccessMsg ? (
-                <div className="p-6 text-center space-y-2 bg-rose-950/30 border border-rose-500/30 rounded-2xl">
-                  <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500 flex items-center justify-center mx-auto text-rose-400">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-sm font-bold text-white">Action Confirmed</h4>
-                  <p className="text-xs text-zinc-300 leading-relaxed">{reportSuccessMsg}</p>
-                  <button
-                    onClick={() => {
-                      setReportSuccessMsg('');
-                      setReportErrorMsg('');
-                      setReportTargetId('');
-                      setReportDetails('');
-                    }}
-                    className="mt-3 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-semibold cursor-pointer border border-zinc-700"
-                  >
-                    Submit Another Report
-                  </button>
-                </div>
-              ) : (
-                <form
-                  onSubmit={handleSafetyReportSubmit}
-                  className="space-y-3.5 bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl"
+    <div className="fixed inset-0 z-50 sd-root" style={visibleAreaStyle(visibleArea)} data-testid="support-page">
+      <div className="sd-panel">
+        {/* The bar on top: back (to the options, or out of help from the options), and who is helping in the chat */}
+        {activeSupportTab === 'ai_chat' ? (
+          <SupportHeader
+            title="NOOB Support"
+            subtitle="AI support executive"
+            avatar="/noob-support-logo.png"
+            onBack={onBack}
+            right={(
+              <>
+                <button
+                  type="button"
+                  className="sd-icon-btn"
+                  onClick={() => { if (voiceEnabled) interruptSpeech(); setVoiceEnabled(!voiceEnabled); }}
+                  aria-label={voiceEnabled ? 'Turn the assistant voice off' : 'Turn the assistant voice on'}
+                  title={voiceEnabled ? 'Voice on' : 'Voice off'}
+                  data-testid="support-voice-toggle"
                 >
-                  {reportErrorMsg && (
-                    <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-bold flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 shrink-0 text-red-400" />
-                      <span>{reportErrorMsg}</span>
-                    </div>
-                  )}
-
-                  <div className="relative" ref={reportFieldRef}>
-                    <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                      Offender User ID or @Username
-                    </label>
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                      <input
-                        type="text"
-                        required
-                        autoComplete="off"
-                        placeholder="Type or pick a name below"
-                        value={reportTargetId}
-                        onFocus={() => setReportSearchOpen(true)}
-                        onChange={(e) => {
-                          setReportTargetId(e.target.value);
-                          setReportSearchOpen(true);
-                          if (reportErrorMsg) setReportErrorMsg('');
-                        }}
-                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-rose-500 rounded-xl p-2.5 pl-8 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
-                      />
-                    </div>
-
-                    {reportSearchOpen && (
-                      <div className="absolute z-10 top-full left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl">
-                        {reportSearching && reportChoices.length === 0 ? (
-                          <div className="p-3 flex items-center justify-center">
-                            <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
-                          </div>
-                        ) : reportChoices.length === 0 ? (
-                          <p className="text-xs text-zinc-500 p-3 text-center">
-                            {reportTargetId.trim() ? 'Nobody found.' : 'No accounts to show.'}
-                          </p>
-                        ) : (
-                          reportChoices.map((u) => (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() => pickReportTarget(u)}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-zinc-900 text-left cursor-pointer border-b border-zinc-900 last:border-b-0"
-                            >
-                              {u.avatar ? (
-                                <img src={u.avatar} alt="" className="w-7 h-7 rounded-full object-cover bg-zinc-800 shrink-0" />
-                              ) : (
-                                <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
-                                  <UserIcon className="w-3.5 h-3.5 text-zinc-500" />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{u.displayName || u.username}</p>
-                                <p className="text-[10px] text-zinc-500 truncate">@{u.username}</p>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                      Violation Category
-                    </label>
-                    <select
-                      value={reportReason}
-                      onChange={(e) => setReportReason(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-rose-500 rounded-xl p-2.5 text-xs text-white focus:outline-none"
-                    >
-                      <option value="Cyber Bullying & Harassment">Cyber Bullying &amp; Harassment</option>
-                      <option value="Hate Speech & Toxicity">Hate Speech &amp; Toxicity</option>
-                      <option value="Threats & Intimidation">Threats &amp; Intimidation</option>
-                      <option value="Spam & Scam">Spam &amp; Scam</option>
-                      <option value="Impersonation">Impersonation</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                      Incident Details / Message Context
-                    </label>
-                    <textarea
-                      rows={3}
-                      required
-                      placeholder="Describe what occurred..."
-                      value={reportDetails}
-                      onChange={(e) => setReportDetails(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-rose-500 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={!reportTargetId.trim() || isSubmittingReport}
-                    className="w-full py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <ShieldAlert className="w-4 h-4" />
-                    {isSubmittingReport ? 'Verifying & Submitting...' : 'Submit Report & Block Account'}
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: SUBMIT TICKET */}
-          {activeSupportTab === 'ticket' && (
-            <div className="space-y-4">
-              {ticketSubmitted ? (
-                <div className="bg-emerald-950/40 border border-emerald-500/30 p-6 rounded-2xl text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-noob flex items-center justify-center mx-auto">
-                    <Check className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-bold text-white">Ticket Submitted Successfully!</h3>
-                  <p className="text-xs text-zinc-300 max-w-md mx-auto">
-                    Your issue has been logged under Reference ID:{' '}
-                    <span className="text-noob font-mono font-bold">{ticketId}</span>.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setTicketSubmitted(false);
-                      setTicketSubject('');
-                      setTicketDescription('');
-                    }}
-                    className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-semibold cursor-pointer border border-zinc-700"
-                  >
-                    Submit Another Ticket
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleTicketSubmit} className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={ticketCategory}
-                      onChange={(e) => setTicketCategory(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-noob focus:outline-none"
-                    >
-                      <option>Terms &amp; Copyright Inquiries</option>
-                      <option>Account Security &amp; Bot Defense</option>
-                      <option>Media Upload &amp; Automated MIME Routing</option>
-                      <option>Mini-Games Score &amp; Leaderboard</option>
-                      <option>Music Hub Track Uploads</option>
-                      <option>Other / General Support</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                      Subject
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Brief overview of your issue..."
-                      value={ticketSubject}
-                      onChange={(e) => setTicketSubject(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-noob focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
-                      Detailed Description
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      placeholder="Explain your issue in detail..."
-                      value={ticketDescription}
-                      onChange={(e) => setTicketDescription(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:border-noob focus:outline-none resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-3 bg-noob text-black font-bold rounded-xl hover:bg-emerald-400 transition-all text-xs cursor-pointer shadow-lg shadow-noob/20"
-                  >
-                    Submit Support Ticket
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: QUICK FAQS & RULES */}
-          {activeSupportTab === 'faq' && (
-            <div className="space-y-3">
-              {FAQs.map((f, i) => (
-                <div
-                  key={i}
-                  className="bg-zinc-900/80 border border-zinc-800/90 rounded-2xl p-3.5 space-y-1.5 hover:border-zinc-700 transition-colors"
-                >
-                  <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4 text-noob shrink-0" />
-                    {f.q}
-                  </h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed pl-6">{f.a}</p>
-                </div>
-              ))}
-
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-800 text-xs">
-                {onOpenTerms && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenTerms();
-                    }}
-                    className="text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-noob" /> View Terms &amp; Conditions
-                  </button>
-                )}
-                {onOpenPrivacy && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenPrivacy();
-                    }}
-                    className="text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" /> View Privacy Policy
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <footer className="p-3 bg-zinc-950 border-t border-zinc-900 flex items-center justify-between text-[11px] text-zinc-500">
-          <div className="flex items-center gap-3">
-            {onOpenTerms && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenTerms();
-                }}
-                className="hover:text-zinc-300 transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <FileText className="w-3 h-3 text-noob" /> Terms
-              </button>
+                  {voiceEnabled ? <Volume2 /> : <VolumeX />}
+                </button>
+                {!isChatEnded && <button type="button" className="sd-head-link red" onClick={endChatNow} data-testid="support-end">End chat</button>}
+              </>
             )}
-            {onOpenPrivacy && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenPrivacy();
-                }}
-                className="hover:text-zinc-300 transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <ShieldCheck className="w-3 h-3 text-cyan-400" /> Privacy
-              </button>
-            )}
-          </div>
-          <span>NOOB AI Support Engine v2.4</span>
-        </footer>
+          />
+        ) : (
+          <SupportHeader title={TITLES[activeSupportTab]} onBack={onBack} />
+        )}
+
+        {activeSupportTab === 'home' && (
+          <SupportHub
+            username={currentUser.username}
+            rating={ratingSummary}
+            onOpen={setActiveSupportTab}
+            onPayment={openPaymentHelp}
+            onTopic={handleTopic}
+            onOpenTerms={onOpenTerms ? leaveTo(onOpenTerms) : undefined}
+            onOpenPrivacy={onOpenPrivacy ? leaveTo(onOpenPrivacy) : undefined}
+          />
+        )}
+
+        {activeSupportTab === 'ai_chat' && (
+          <SupportChatPanel
+            messages={messages}
+            isTyping={isTyping}
+            inputMessage={inputMessage}
+            setInputMessage={setInputMessage}
+            onSend={handleSendMessage}
+            onQuickPrompt={handleQuickPrompt}
+            onPaymentIssue={handlePaymentIssueQuickAction}
+            loadingTransactions={loadingTransactions}
+            onReport={() => setActiveSupportTab('safety_report')}
+            isChatEnded={isChatEnded}
+            reviewSubmitted={reviewSubmitted}
+            onOpenReview={() => setShowReviewModal(true)}
+            onNewConversation={startNewConversation}
+            onSelectTransaction={handleSelectTransaction}
+            speakText={speakText}
+            stopSpeaking={stopSpeaking}
+            speakingId={currentlySpeakingMsgId}
+            ratingOpen={showReviewModal}
+          />
+        )}
+
+        {activeSupportTab === 'call_us' && <CallPage username={currentUser.username} onStart={handleStartCall} />}
+
+        {activeSupportTab === 'faq' && <FaqPage faqs={FAQs} onOpenTerms={onOpenTerms ? leaveTo(onOpenTerms) : undefined} onOpenPrivacy={onOpenPrivacy ? leaveTo(onOpenPrivacy) : undefined} />}
+
+        {activeSupportTab === 'safety_report' && (
+          <ReportPage
+            targetId={reportTargetId} setTargetId={setReportTargetId}
+            reason={reportReason} setReason={setReportReason}
+            details={reportDetails} setDetails={setReportDetails}
+            successMsg={reportSuccessMsg} errorMsg={reportErrorMsg} clearError={() => { if (reportErrorMsg) setReportErrorMsg(''); }} submitting={isSubmittingReport}
+            searchOpen={reportSearchOpen} setSearchOpen={setReportSearchOpen} searching={reportSearching} choices={reportChoices} onPick={pickReportTarget}
+            fieldRef={reportFieldRef}
+            onSubmit={handleSafetyReportSubmit}
+            onAnother={() => { setReportSuccessMsg(''); setReportErrorMsg(''); setReportTargetId(''); setReportDetails(''); }}
+          />
+        )}
+
+        {activeSupportTab === 'ticket' && (
+          <TicketPage
+            category={ticketCategory} setCategory={setTicketCategory}
+            subject={ticketSubject} setSubject={setTicketSubject}
+            description={ticketDescription} setDescription={setTicketDescription}
+            sending={ticketSending} error={ticketError} sent={ticketSubmitted}
+            onSubmit={handleTicketSubmit}
+            onAnother={() => { setTicketSubmitted(false); setTicketSubject(''); setTicketDescription(''); setTicketError(''); }}
+          />
+        )}
+
+        {/* "How would you like to rate my assistance?": the five faces, when a chat or a call ends */}
+        {showReviewModal && (
+          <SupportRatingSheet
+            flat={activeSupportTab === 'ai_chat'}
+            submitted={reviewSubmitted}
+            onSkip={() => setShowReviewModal(false)}
+            onSubmit={submitReview}
+          />
+        )}
       </div>
 
-      {/* Full Screen Live AI Voice Call Overlay */}
+      {/* The live voice call: a full screen of its own */}
       {isCallActive && (
-        <div className="fixed inset-0 z-[160] w-screen h-screen bg-black/98 sm:bg-black text-white flex flex-col justify-between p-4 sm:p-6 force-dark select-none overflow-hidden">
-          {/* Top Bar */}
-          <div className="w-full flex items-center justify-between pb-3 border-b border-zinc-800 shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full overflow-hidden">
-                <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm sm:text-base font-black text-white">NOOB AI Voice Specialist</h3>
-                  <span className="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />
-                </div>
-                <p className="text-[11px] text-cyan-300/80 font-medium">Connected to @{currentUser.username}</p>
-              </div>
+        <div className="sd-call" data-testid="support-call">
+          <div className="sd-call-top">
+            <div className="sd-call-who">
+              <img src="/noob-support-logo.png" alt="" />
+              <div><strong>NOOB AI voice support</strong><span>Connected to @{currentUser.username}</span></div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="text-xs font-mono font-bold text-white bg-zinc-900/90 px-3 py-1.5 rounded-full border border-zinc-700 shadow-inner">
-                ⏱️ {formatDuration(callDuration)}
-              </div>
-              <button
-                type="button"
-                onClick={handleEndCall}
-                className="px-3.5 py-1.5 rounded-full bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 hover:border-rose-500 text-rose-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                title="End Call & Rate"
-              >
-                <PhoneOff className="w-3.5 h-3.5" /> End Call
-              </button>
-            </div>
+            <span className="sd-call-time">{formatDuration(callDuration)}</span>
           </div>
 
-          {/* Center Stage: Glowing Visualizer + Status + Live Dialogue */}
-          <div className="flex-1 flex flex-col items-center justify-center max-w-2xl w-full mx-auto my-auto space-y-4 px-2 min-h-0">
-            {/* Center Avatar with dynamic pulse ripples */}
-            <div className="relative my-2">
-              <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden transition-transform ${
-                isSpeaking || isListening ? 'scale-105' : 'scale-100'
-              }`}>
-                <img src="/noob-support-logo.png" alt="" className="w-full h-full object-cover" />
-              </div>
-              {(isSpeaking || isListening) && (
-                <span className="absolute inset-0 rounded-full border-4 border-cyan-400/60 animate-ping" />
-              )}
-            </div>
+          <div className="sd-call-mid">
+            <div className={`sd-call-pic ${isSpeaking || isListening ? 'live' : ''}`}><img src="/noob-support-logo.png" alt="" /></div>
+            <div className={`sd-call-status ${callStatus2.cls}`}>{callStatus2.icon}{callStatus2.text}</div>
 
-            {/* Dynamic Status Indicator */}
-            <div className="text-center space-y-1">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-zinc-900/90 border border-zinc-700/80 text-xs font-bold shadow-md">
-                {!speechSupported ? (
-                  <span className="text-amber-400 flex items-center gap-1.5">
-                    <MicOff className="w-3.5 h-3.5" /> Voice input unavailable — type below
-                  </span>
-                ) : isMuted ? (
-                  <span className="text-rose-400 flex items-center gap-1.5">
-                    <MicOff className="w-3.5 h-3.5" /> Microphone Muted
-                  </span>
-                ) : isSpeaking ? (
-                  <span className="text-noob flex items-center gap-1.5">
-                    <Volume2 className="w-3.5 h-3.5 animate-pulse" /> Speaking Resolution...
-                  </span>
-                ) : isCallProcessing ? (
-                  <span className="text-yellow-400 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 animate-spin" /> Analyzing Issue...
-                  </span>
-                ) : isListening ? (
-                  <span className="text-cyan-400 flex items-center gap-1.5">
-                    <Mic className="w-3.5 h-3.5 animate-pulse" /> Listening to your microphone... (Speak now)
-                  </span>
-                ) : micStalled ? (
-                  <span className="text-amber-400 flex items-center gap-1.5">
-                    <MicOff className="w-3.5 h-3.5" /> Didn't catch that — type your question below
-                  </span>
-                ) : (
-                  <span className="text-zinc-400">Microphone Ready</span>
-                )}
-              </div>
-            </div>
-
-            {/* 18-bar Animated Voice Equalizer */}
-            <div className="flex items-center justify-center gap-1.5 h-8 w-full max-w-xs">
+            <div className={`sd-bars ${callActive ? '' : 'idle'}`} aria-hidden="true">
               {[12, 22, 10, 30, 16, 26, 12, 20, 32, 14, 28, 18, 24, 10, 22, 30, 14, 20].map((height, i) => (
-                <div
-                  key={i}
-                  className={`w-1.5 bg-gradient-to-t from-cyan-500 to-noob rounded-full transition-all duration-150 ${
-                    isSpeaking || (isListening && !isMuted) || isCallProcessing ? 'animate-pulse' : 'opacity-25'
-                  }`}
-                  style={{
-                    height: `${
-                      isSpeaking
-                        ? height
-                        : (isListening && !isMuted) || isCallProcessing
-                        ? Math.max(8, height * 0.7)
-                        : 4
-                    }px`
-                  }}
-                />
+                <i key={i} className={callActive ? 'animate-pulse' : ''} style={{ height: `${isSpeaking ? height : (isListening && !isMuted) || isCallProcessing ? Math.max(8, height * 0.7) : 4}px` }} />
               ))}
             </div>
 
-            {/* Live Caption: shows only what's being said right now — no persisted chat history */}
-            <div className="w-full min-h-[3.5rem] flex items-center justify-center text-center px-3">
-              {isSpeaking && lastAiReply ? (
-                <p className="max-w-md text-sm text-cyan-100 leading-relaxed line-clamp-3">
-                  {lastAiReply}
-                </p>
-              ) : callInputText && isListening ? (
-                <p className="max-w-md text-sm text-white font-medium leading-relaxed animate-pulse">
-                  🗣️ "{callInputText}"
-                </p>
-              ) : (
-                <p className="text-[11px] text-zinc-500">
-                  This call isn't recorded as a chat log — just speak naturally.
-                </p>
-              )}
+            {/* what is being said right now (a call is not kept as a chat log) */}
+            <div className={`sd-call-cap ${isSpeaking && lastAiReply ? '' : callInputText && isListening ? 'you' : 'small'}`}>
+              {isSpeaking && lastAiReply ? <p className="line-clamp-3">{lastAiReply}</p> : callInputText && isListening ? <p>"{callInputText}"</p> : <p>This call is not recorded as a chat log. Just speak naturally.</p>}
             </div>
-            <p className="text-[10px] text-zinc-600 text-center" data-testid="voice-info">
-              Voice: {voiceInfo || 'not used yet'}{appVersion ? ` · App version ${appVersion}` : ''}
-            </p>
-
+            <p className="sd-call-fine" data-testid="voice-info">Voice: {voiceInfo || 'not used yet'}{appVersion ? ` · App version ${appVersion}` : ''}</p>
           </div>
 
-          {/* Bottom Bar: Input Fallback + High-Visibility Call Controls */}
-          <div className="w-full max-w-xl mx-auto space-y-3 shrink-0 pt-2 border-t border-zinc-800/80">
-            {/* Fallback Text Input Bar */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
+          <div className="sd-call-bottom">
+            <div className="sd-call-type">
+              <div className="box">
                 <input
                   type="text"
                   value={callInputText}
                   onChange={(e) => setCallInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && callInputText.trim()) {
-                      e.preventDefault();
-                      handleAskCallQuestion(callInputText);
-                    }
-                  }}
-                  placeholder="Speak into microphone or type question..."
-                  className="w-full bg-zinc-900/90 border border-zinc-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none pr-9"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && callInputText.trim()) { e.preventDefault(); handleAskCallQuestion(callInputText); } }}
+                  placeholder="Speak, or type your question..."
+                  aria-label="Type your question"
                 />
-                <button
-                  type="button"
-                  onClick={toggleListening}
-                  disabled={!speechSupported}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed ${
-                    isListening ? 'text-cyan-400 animate-pulse' : 'text-zinc-400 hover:text-white'
-                  }`}
-                  title={!speechSupported ? 'Voice input not supported in this browser' : isListening ? 'Stop listening' : 'Start Voice Input'}
-                >
-                  {isListening ? <Mic className="w-3.5 h-3.5 text-cyan-400" /> : <MicOff className="w-3.5 h-3.5" />}
+                <button type="button" className={`micbtn ${isListening ? 'on' : ''}`} onClick={toggleListening} disabled={!speechSupported} aria-label={isListening ? 'Stop listening' : 'Start voice input'} title={!speechSupported ? 'Voice input is not supported here' : isListening ? 'Stop listening' : 'Start voice input'}>
+                  {isListening ? <Mic /> : <MicOff />}
                 </button>
               </div>
-
-              <button
-                type="button"
-                disabled={!callInputText.trim() || isCallProcessing}
-                onClick={() => handleAskCallQuestion(callInputText)}
-                className="px-3.5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl text-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <Send className="w-3.5 h-3.5" /> Solve
-              </button>
+              <button type="button" className="sd-call-solve" disabled={!callInputText.trim() || isCallProcessing} onClick={() => handleAskCallQuestion(callInputText)}><Send />Ask</button>
             </div>
 
-            {/* Bottom Call Action Buttons */}
-            <div className="flex items-center justify-center gap-5">
-              {/* Mic Mute / Unmute */}
-              <button
-                type="button"
-                onClick={() => setIsMuted(!isMuted)}
-                className={`p-3.5 rounded-full border transition-all cursor-pointer ${
-                  isMuted
-                    ? 'bg-rose-500/20 border-rose-500 text-rose-400 shadow-lg shadow-rose-500/20'
-                    : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300'
-                }`}
-                title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-              >
-                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            <div className="sd-call-btns">
+              <button type="button" className={`sd-round ${isMuted ? 'on' : ''}`} onClick={() => setIsMuted(!isMuted)} aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'} title={isMuted ? 'Unmute microphone' : 'Mute microphone'}>
+                {isMuted ? <MicOff /> : <Mic />}
               </button>
-
-              {/* End Call Button */}
-              <button
-                type="button"
-                onClick={handleEndCall}
-                className="px-7 py-3.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-black text-sm flex items-center gap-2 shadow-xl shadow-rose-600/40 transition-transform active:scale-95 cursor-pointer"
-                title="End Call and Rate Experience"
-              >
-                <PhoneOff className="w-5 h-5 stroke-[2.5]" /> End Call &amp; Rate
-              </button>
-
-              {/* Speaker On / Off */}
-              <button
-                type="button"
-                onClick={() => { const on = !isSpeakerOn; setIsSpeakerOn(on); if (!on) interruptSpeech(); }}
-                className={`p-3.5 rounded-full border transition-all cursor-pointer ${
-                  isSpeakerOn
-                    ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
-                    : 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-400'
-                }`}
-                title={isSpeakerOn ? 'Speaker On' : 'Speaker Off'}
-              >
-                {isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              <button type="button" className="sd-hang" onClick={handleEndCall} title="End the call and rate it" data-testid="support-end-call"><PhoneOff />End call</button>
+              <button type="button" className={`sd-round ${isSpeakerOn ? 'sp' : ''}`} onClick={() => { const on = !isSpeakerOn; setIsSpeakerOn(on); if (!on) interruptSpeech(); }} aria-label={isSpeakerOn ? 'Speaker on' : 'Speaker off'} title={isSpeakerOn ? 'Speaker on' : 'Speaker off'}>
+                {isSpeakerOn ? <Volume2 /> : <VolumeX />}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Post-Chat / Post-Call 1-5 Star Review Modal */}
-      {showReviewModal && (
-        <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 force-dark">
-          <div className="bg-zinc-950 border border-noob/50 w-full max-w-sm rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-noob/20 border border-noob/40 flex items-center justify-center mx-auto text-noob">
-              <Star className="w-6 h-6 fill-noob" />
-            </div>
-
-            <div>
-              <h3 className="text-base font-black text-white">How was your support experience?</h3>
-              <p className="text-xs text-zinc-400 mt-1">Please rate your AI support session out of 5 stars</p>
-            </div>
-
-            {reviewSubmitted ? (
-              <div className="p-4 rounded-2xl bg-noob/10 border border-noob/30 space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-noob mx-auto animate-bounce" />
-                <p className="text-xs font-bold text-white">Thank you for your review!</p>
-                <p className="text-[11px] text-zinc-400">Your feedback helps us continuously improve NOOB.</p>
-              </div>
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setReviewSubmitted(true);
-                  confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
-                  submitSupportReview(reviewRating, reviewFeedback)
-                    .then((res) => {
-                      if (res && typeof res.average === 'number') {
-                        setRatingSummary({ average: res.average, count: res.count });
-                      }
-                    })
-                    .catch(() => {});
-                  setTimeout(() => {
-                    setShowReviewModal(false);
-                    onClose();
-                  }, 1500);
-                }}
-                className="space-y-4"
-              >
-                {/* 5-Star Rating Buttons */}
-                <div className="flex items-center justify-center gap-2 py-1">
-                  {[1, 2, 3, 4, 5].map((star) => {
-                    const isFilled = (hoverRating || reviewRating) >= star;
-                    return (
-                      <button
-                        key={star}
-                        type="button"
-                        onMouseEnter={() => setHoverRating(star)}
-                        onMouseLeave={() => setHoverRating(0)}
-                        onClick={() => setReviewRating(star)}
-                        className="p-1 transition-transform hover:scale-125 cursor-pointer"
-                      >
-                        <Star
-                          className={`w-7 h-7 transition-colors ${
-                            isFilled ? 'text-amber-400 fill-amber-400' : 'text-zinc-700'
-                          }`}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-                <span className="text-xs font-bold text-noob">
-                  {reviewRating === 5
-                    ? '⭐⭐⭐⭐⭐ Excellent'
-                    : reviewRating === 4
-                    ? '⭐⭐⭐⭐ Great'
-                    : reviewRating === 3
-                    ? '⭐⭐⭐ Good'
-                    : reviewRating === 2
-                    ? '⭐⭐ Fair'
-                    : '⭐ Needs Improvement'}
-                </span>
-
-                <textarea
-                  rows={3}
-                  value={reviewFeedback}
-                  onChange={(e) => setReviewFeedback(e.target.value)}
-                  placeholder="Optional feedback: Did the AI pinpoint your issue accurately?"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
-                />
-
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowReviewModal(false);
-                      onClose();
-                    }}
-                    className="px-3 py-2 text-xs text-zinc-400 hover:text-white"
-                  >
-                    Skip
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 bg-noob hover:bg-emerald-400 text-black font-bold text-xs rounded-xl transition-all shadow-md shadow-noob/20 cursor-pointer"
-                  >
-                    Submit Review
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}

@@ -34,8 +34,8 @@ const chat = read('src/components/Chat/ChatView.tsx');
 check(/<span className="truncate">\{u\.displayName \|\| u\.username\}<\/span>/.test(chat) && /className="shrink-0 ml-2 px-3\.5 py-1\.5 bg-noob\/15/.test(chat), 'new chat list: the name shrinks, the Chat button stays');
 const games = read('src/components/Games/GamesView.tsx');
 check(/text-xs font-bold text-white truncate">\s*\{player\.displayName \|\| player\.username\}/.test(games) && /text-right shrink-0 ml-2/.test(games), 'leaderboard: the name shrinks, the points stay');
-const sup = read('src/components/Support/CustomerSupportModal.tsx');
-check(/flex items-center gap-2\.5 min-w-0">\s*<img[\s\S]{0,260}shrink-0/.test(sup) && /\(@\{currentUser\.username\}\)/.test(sup) && /text-\[11px\] text-zinc-400 truncate">\(@/.test(sup), 'support bar: the name and (@username) shrink');
+const supCss = read('src/components/Support/supportDesk.css');
+check(/\.sd-title \{ min-width: 0; flex: 1;/.test(supCss) && /\.sd-title strong \{[^}]*overflow: hidden; text-overflow: ellipsis/.test(supCss) && /\.sd-row-tx \{ min-width: 0; flex: 1; \}/.test(supCss) && /\.sd-txn-tx \{ min-width: 0; flex: 1; \}/.test(supCss), 'support: the title of the bar, the topic rows and the payment rows shrink (...) and the buttons beside them stay');
 
 section('4. The scan finds nothing left in src/');
 let out = '';

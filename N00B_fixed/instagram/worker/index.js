@@ -2,6 +2,7 @@
 //   1. the two big files of Neon Alley (too large for a website file, 25 MB each at most): they live in this repository's "game-data" release and are handed out from the website's own address
 //      (their names carry a fingerprint, so they never change);
 //   2. every picture, video and song of the app, at  /m/<key>  (the key of the file in the "media" bucket of Supabase Storage). See serveMedia() below for why this exists.
+//      The older address  /media/<key>  (what app versions from before the cache still ask for: an Android app that was not updated, a tab left open for days) is the same thing.
 // Every other address is served straight from the files, as before.
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 
@@ -38,11 +39,12 @@ const MEDIA_HEADERS = {
   'Cross-Origin-Resource-Policy': 'cross-origin',
 };
 
-/** "/m/posts/123-abc.jpg" -> "posts/123-abc.jpg"; null when it is not a plain file key (nothing with .., empty parts, control characters or backslashes) */
+/** "/m/posts/123-abc.jpg" (or the older "/media/posts/123-abc.jpg") -> "posts/123-abc.jpg"; null when it is not a plain file key (nothing with .., empty parts, control characters or backslashes) */
 export function mediaKey(pathname) {
-  if (!pathname.startsWith('/m/')) return null;
+  const skip = pathname.startsWith('/m/') ? 3 : pathname.startsWith('/media/') ? 7 : 0;
+  if (!skip) return null;
   let parts;
-  try { parts = pathname.slice(3).split('/').map((p) => decodeURIComponent(p)); } catch { return null; }
+  try { parts = pathname.slice(skip).split('/').map((p) => decodeURIComponent(p)); } catch { return null; }
   if (parts.length === 0 || parts.length > 8) return null;
   for (const p of parts) {
     if (p === '' || p === '.' || p === '..' || p.length > 200 || /[\u0000-\u001f\\]/.test(p) || p.includes('/')) return null;
@@ -78,14 +80,22 @@ function storable(up) {
   return new Response(up.body, { status: 200, headers: h });
 }
 
-/** download the whole file once and keep it (only one request at a time does this for a file) */
-async function fill(cache, key) {
+/** the right to download a whole file (only one request at a time does it for a file): true when this request has it, and must call inFlight.delete(key) when it is done */
+async function claim(cache, key) {
   const lock = new Request(`${CACHE_ORIGIN}/m-lock/${encodeURIComponent(key)}`);
-  if (inFlight.has(key)) return;
+  if (inFlight.has(key)) return false;
   inFlight.add(key);   // before anything is awaited, so two requests at the same moment cannot both start
   try {
-    if (await cache.match(lock)) return;   // another data-centre process is already doing it
+    if (await cache.match(lock)) { inFlight.delete(key); return false; }   // another data-centre process is already doing it
     await cache.put(lock, new Response('1', { headers: { 'Cache-Control': `public, max-age=${LOCK_SECONDS}` } }));
+    return true;
+  } catch { inFlight.delete(key); return false; }
+}
+
+/** download the whole file once and keep it (only one request at a time does this for a file) */
+async function fill(cache, key) {
+  if (!(await claim(cache, key))) return;
+  try {
     const up = await fetch(upstreamUrl(key));
     const length = Number(up.headers.get('Content-Length') || 0);
     if (up.status !== 200 || !up.body || !length || length > MAX_CACHED_BYTES) { await up.body?.cancel(); return; }
@@ -125,6 +135,24 @@ export async function serveMedia(request, ctx, cacheStorage = globalThis.caches)
     const head = await fetch(upstreamUrl(key), { method: 'HEAD' });
     return new Response(null, { status: head.status, headers: head.ok ? outHeaders(head.headers, 'MISS') : { 'Cache-Control': 'no-store' } });
   }
+  if (range && /^bytes=0-$/.test(range.trim()) && await claim(cache, key)) {
+    // "from the start to the end" (what a video or a song asks first): the whole file is fetched ONCE, handed over as it arrives and kept, instead of the piece from Supabase plus a second download of the same bytes
+    let kept = false;
+    try {
+      const up = await fetch(upstreamUrl(key));
+      if (!up.ok) { await up.body?.cancel(); return new Response('Not found', { status: up.status === 404 || up.status === 400 ? 404 : 502, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }); }
+      const length = Number(up.headers.get('Content-Length') || 0);
+      if (!up.body || !length || length > MAX_CACHED_BYTES || up.headers.get('Content-Encoding')) {
+        return new Response(up.body, { status: 200, headers: outHeaders(up.headers, 'BYPASS') });
+      }
+      const [toPerson, toCache] = up.body.tee();
+      kept = true;
+      ctx.waitUntil(cache.put(new Request(cacheUrl(key)), storable(new Response(toCache, { status: 200, headers: up.headers }))).catch(() => undefined).finally(() => inFlight.delete(key)));
+      const h = outHeaders(up.headers, 'MISS');
+      h.set('Content-Range', `bytes 0-${length - 1}/${length}`);
+      return new Response(toPerson, { status: 206, headers: h });
+    } finally { if (!kept) inFlight.delete(key); }
+  }
   if (range) {
     // a piece before the file is kept: the piece at once, the whole file in the background
     const piece = await fetch(upstreamUrl(key), { headers: { Range: range } });
@@ -147,7 +175,7 @@ export default {
   /** @param {Request} request @param {{ ASSETS: { fetch: (r: Request) => Promise<Response> } }} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/m/')) return serveMedia(request, ctx);
+    if (url.pathname.startsWith('/m/') || url.pathname.startsWith('/media/')) return serveMedia(request, ctx);
 
     const name = url.pathname.startsWith('/games/neon-alley/data/') ? url.pathname.slice('/games/neon-alley/data/'.length) : '';
     const entry = Object.prototype.hasOwnProperty.call(FILES, name) ? FILES[name] : null;

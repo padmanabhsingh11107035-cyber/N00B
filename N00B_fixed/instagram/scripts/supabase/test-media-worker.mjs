@@ -79,7 +79,7 @@ check(mediaKey('/m/posts/123-abc.jpg') === 'posts/123-abc.jpg' && mediaKey('/m/a
 check(mediaKey('/m/posts/pic%201.jpg') === 'posts/pic 1.jpg', 'an encoded space is read back');
 check(mediaKey('/m/../secret') === null && mediaKey('/m/a/../../b') === null && mediaKey('/m/a/%2e%2e/b') === null && mediaKey('/m/') === null && mediaKey('/m/a//b') === null, 'no climbing out of the folder, no empty parts');
 check(mediaKey('/m/a%5Cb') === null && mediaKey('/m/a%00b') === null && mediaKey('/m/a%2Fb') === null && mediaKey('/m/%E0%A4%A') === null, 'no backslashes, no control characters, no hidden slashes, no broken encoding');
-check(mediaKey('/media/posts/a.jpg') === null && mediaKey('/other') === null, 'other addresses are not this');
+check(mediaKey('/media/posts/a.jpg') === 'posts/a.jpg' && mediaKey('/media/../x') === null && mediaKey('/media/') === null && mediaKey('/other') === null && mediaKey('/medias/x') === null, 'the older /media/<key> address is a file too (app versions from before the cache still ask for it); other addresses are not');
 
 section('2. A whole file: fetched once, then kept');
 {
@@ -117,6 +117,35 @@ section('3. A piece of a video before the file is kept');
   check(calls.filter((c) => c.range === null && c.method === 'GET').length === 1, 'two pieces asked at the same time start only one download of the whole file');
 }
 
+section('3b. "From the start to the end" before the file is kept: one download, not two');
+{
+  calls = []; const caches = makeCache(); const ctx = ctxOf();
+  const r = await serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=0-' } }), ctx, caches);
+  check(r.status === 206 && (await text(r)) === '0123456789abcdefghij' && r.headers.get('Content-Range') === 'bytes 0-19/20' && r.headers.get('Content-Length') === '20', 'the browser gets all of it as a piece with its place in the file');
+  await ctx.done();
+  check(calls.length === 1 && calls[0].range === null && calls[0].method === 'GET', 'and Supabase was asked once, for the whole file (before: the piece, then the whole file again)');
+  check(caches.raw.has('https://noobsocials.com/m/reels/a.mp4'), 'the file is kept');
+  calls = [];
+  const r2 = await serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=4-7' } }), ctx, caches); await ctx.done();
+  check(r2.status === 206 && (await text(r2)) === '4567' && r2.headers.get('X-Media-Cache') === 'HIT' && calls.length === 0, 'the next piece comes from the cache');
+  // a second player at the same moment does not start a second download
+  calls = []; const caches2 = makeCache(); const ctx2 = ctxOf();
+  await Promise.all([
+    serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=0-' } }), ctx2, caches2),
+    serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=0-' } }), ctx2, caches2)
+  ]);
+  await ctx2.done();
+  check(calls.filter((c) => c.range === null && c.method === 'GET').length === 1, 'two players asking from the start at the same time start one whole download (the other gets its piece from Supabase)');
+  // a file that does not exist, and one that is too big to keep, leave nothing locked
+  calls = []; const caches3 = makeCache(); const ctx3 = ctxOf();
+  const missing = await serveMedia(get('/m/reels/none.mp4', { headers: { Range: 'bytes=0-' } }), ctx3, caches3);
+  check(missing.status === 404 && missing.headers.get('Cache-Control') === 'no-store', 'a missing file is a 404 for a ranged request too');
+  const big = await serveMedia(get('/m/' + BIG, { headers: { Range: 'bytes=0-' } }), ctx3, caches3); await ctx3.done();
+  check(big.status === 200 && big.headers.get('X-Media-Cache') === 'BYPASS' && !caches3.raw.has('https://noobsocials.com/m/' + BIG), 'a file over 60 MB is handed over, not kept');
+  const again = await serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=0-' } }), ctx3, caches3); await ctx3.done();
+  check(again.status === 206 && (await text(again)) === '0123456789abcdefghij', 'and the next file is not held up by an earlier failure');
+}
+
 section('4. If the cache cannot answer pieces');
 {
   calls = []; const caches = makeCache({ noRange: true }); const ctx = ctxOf();
@@ -143,7 +172,7 @@ section('5. Things that are not kept, and things that do not exist');
   check(head.status === 200 && head.headers.get('Content-Length') === '20' && (await head.arrayBuffer()).byteLength === 0, 'HEAD gives the size and no body');
 }
 
-section('6. The Worker sends only /m/ here');
+section('6. The Worker sends /m/ and the older /media/ here');
 {
   const env = { ASSETS: { fetch: async () => new Response('the app') } };
   globalThis.caches = makeCache();
@@ -152,13 +181,15 @@ section('6. The Worker sends only /m/ here');
   check((await text(app)) === 'the app', 'every other address is the app, as before');
   const media = await worker.fetch(get('/m/posts/pic%201.jpg'), env, ctx); await ctx.done();
   check(media.status === 200 && (await text(media)) === 'JPEGDATA', 'a /m/ address is a file');
+  const older = await worker.fetch(get('/media/posts/pic%201.jpg'), env, ctx); await ctx.done();
+  check(older.status === 200 && (await text(older)) === 'JPEGDATA' && ['HIT', 'MISS'].includes(older.headers.get('X-Media-Cache')), 'so is the older /media/ address');
   const na = await worker.fetch(get('/games/neon-alley/data/unknown.bin'), env, ctx);
   check((await text(na)) === 'the app', 'the Neon Alley rule is unchanged');
 }
 
 section('7. Wiring');
 const wr = fs.readFileSync('wrangler.jsonc', 'utf8');
-check(/"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*"\]/.test(wr), 'the Worker runs first for /m/*');
+check(/"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*", "\/media\/\*"\]/.test(wr), 'the Worker runs first for /m/* and /media/*');
 
 section('8. The addresses the app uses (src/services/supabase.ts)');
 {

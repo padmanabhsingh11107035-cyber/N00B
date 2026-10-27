@@ -1093,6 +1093,10 @@ AUTHORITATIVE TERMS & CONDITIONS KNOWLEDGE BASE:
 5. ACCOUNT SECURITY & TERMINATION: Users are responsible for maintaining confidentiality of credentials. NOOB reserves the right to suspend or terminate accounts that violate terms, manipulate game scores, or deploy unauthorized bot scrapers.
 6. LIMITATION OF LIABILITY: NOOB is provided on an "as is" and "as available" basis without warranties of uninterrupted service.
 
+VIDEO EDITING APPS (when somebody asks which app to edit videos with, or says CapCut did not work, answer with exactly this): Editor: CapCut is blocked in India as far as I know, which is probably why it failed for you. Use VN Video Editor or InShot (free phone apps), or the YouTube Shorts editor in the YouTube app.
+
+DEVICE AND LOCATION INFORMATION (told in the Terms and the Privacy Policy): NOOB reads the operating system of the device, the battery level (only where the browser or phone shares it; an iPhone does not) and the approximate location (city, region, country from the internet connection, plus the optional city typed at sign-up). It is used only to keep NOOB working and safe, it is never sold or shared, it is not used for any other activity, it is encrypted in transit and at rest, and only NOOB's administrators can see it.
+
 AUTHORITATIVE PRIVACY POLICY KNOWLEDGE BASE:
 1. DATA COLLECTION: NOOB collects account credentials (username, email, encrypted password), profile details (display name, bio, gender, pronouns, city, country dialing code, social handles), user-generated content (posts, reels, stories, audio tracks), direct messages, and gameplay statistics (scores, leaderboard rank).
 2. HOW DATA IS USED: Data is used strictly to operate social feeds, process real-time chats, calculate leaderboard standings, personalize user experiences, and maintain bot defense.

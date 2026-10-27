@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import { createTestDb } from './pg-test-env.mjs';
 import { callLine, clock, dayLabel, groupByDay } from '../../src/utils/callLogs.ts';
-import { bubbleAccent, bubbleStyle, lighten, DEFAULT_BUBBLE } from '../../src/utils/bubbleColor.ts';
+import { bubbleAccent, bubbleStyle, lighten, DEFAULT_BUBBLE, ownBubbleColor } from '../../src/utils/bubbleColor.ts';
 import { toggleList, continueList, styleSelection, toBold, toItalic, toUnderline, toPlain, splitNote, joinNote } from '../../src/utils/notepadFormat.ts';
 
 let passed = 0, failed = 0;
@@ -87,7 +87,9 @@ check(!/<SquarePen className="w-4 h-4" \/>\s*<\/button>\s*<button\s+onClick=\{\(
 check(/rounded-t-\[28px\]/.test(chatSrc) && /data-testid="messages-filters"/.test(chatSrc) && /\{count > 0 && \(/.test(chatSrc) && /overscroll-contain/.test(chatSrc), 'a rounded sheet with filter pills that show their counts, and a list that does not stretch');
 check(/<CallLogsPage/.test(chatSrc) && /fixed inset-0 z-\[80\]/.test(logs) && /data-testid="call-logs-back"/.test(logs) && /call-logs-delete-all/.test(logs) && /call-logs-select/.test(logs) && /call-logs-delete-selected/.test(logs) && /overscroll-none/.test(logs), 'Calls is a full page of its own with "<", select and delete chosen, delete all');
 check(/setRows\(gone \? before\.filter\(\(r\) => !gone\.has\(r\.id\)\) : \[\]\);\s*\/\/ at once/.test(logs) && /setRows\(before\)/.test(logs), 'deleting is instant and is put back if the server could not do it');
-check(/bubbleStyle\(oldAccent\(activeChat\?\.themeColor\) \|\| globalChatTheme\)/.test(chatSrc) && /rounded-\[22px\]/.test(chatSrc), 'sent messages are rounded gradient bubbles with white text');
+check(/bubbleStyle\(ownBubbleColor\(oldAccent\(activeChat\?\.themeColor\) \|\| globalChatTheme, ownOrder\.get\(m\.id\) \?\? 0\)\)/.test(chatSrc) && /rounded-\[22px\]/.test(chatSrc), 'sent messages are rounded gradient bubbles with white text, each in its own colour in turn');
+check(ownBubbleColor(null, 0) === '#f97316' && ownBubbleColor('#00FF66', 1) === '#9fc92b' && ownBubbleColor('#ffffff', 2) === '#10b981' && ownBubbleColor(undefined, 3) === '#0ea5e9' && ownBubbleColor(null, 4) === '#f97316' && ownBubbleColor('#8b5cf6', 7) === '#8b5cf6', 'orange, lime, green, blue, again; a colour somebody chose for the chat is kept for every message');
+check(['composer-plus', 'composer-camera', 'composer-gallery', 'composer-mic', 'composer-send', 'chat-composer'].every((t) => chatSrc.includes(`data-testid="${t}"`)) && /placeholder="Aa"/.test(chatSrc) && /handleSendMessage/.test(chatSrc) && /startRecordingVoice/.test(chatSrc) && /chatPhotoInputRef/.test(chatSrc) && /setShowEmojiPicker\(!showEmojiPicker\)/.test(chatSrc), 'the message bar is the pill from the picture (plus, camera, gallery, microphone, "Aa" with the emoji button inside, send) and still sends, records and attaches as before');
 check(/const wasPinned/.test(chatSrc) && /isPinned: !wasPinned/.test(chatSrc), 'pinning a chat shows at once (optimistic)');
 check(/const tmp = 'tmp-'/.test(pad) && /making\.current\.set\(tmp, p\)/.test(pad) && /setNotes\(before\);/.test(pad), 'a new note opens at once and a deleted one is gone at once (put back on failure)');
 check(/from-\[#0b4a37\]/.test(pad) && /bg-\[#faf7ee\]/.test(pad) && /placeholder="Title…"/.test(pad) && /Write your thoughts here…/.test(pad) && /data-testid="note-toolbar"/.test(pad) && /note-save/.test(pad) && /note-share/.test(pad) && /note-more/.test(pad) && /note-mic/.test(pad), 'the Notepad is the green page with a cream sheet, Title, Save, Share, More and the floating bar with the microphone');

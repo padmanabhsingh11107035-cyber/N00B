@@ -168,8 +168,8 @@ import { CreateGroupModal } from './CreateGroupModal';
 import { GroupDetailsModal } from './GroupDetailsModal';
 import { InstantsStack } from './InstantsStack';
 import { CallLogsPage } from './CallLogsPage';
-import { bubbleStyle } from '../../utils/bubbleColor';
-import { Phone as CallIcon } from 'lucide-react';
+import { bubbleStyle, ownBubbleColor } from '../../utils/bubbleColor';
+import { Phone as CallIcon, Camera } from 'lucide-react';
 import { InstantCamera } from './InstantCamera';
 import { InstantViewer } from './InstantViewer';
 import { InstantsArchive } from './InstantsArchive';
@@ -1607,6 +1607,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
       )
     : messages;
 
+  // the place of each of my messages among my messages (its colour comes from it)
+  const ownOrder = new Map<string, number>();
+  { let n = 0; for (const m of messages) if (m.senderId === currentUser.id || m.senderId === 'u_me') ownOrder.set(m.id, n++); }
+
   return (
     <div
       id="chat-view-container"
@@ -2369,7 +2373,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     }
                     style={
                       !isSticker && isMine
-                        ? bubbleStyle(oldAccent(activeChat?.themeColor) || globalChatTheme)
+                        ? bubbleStyle(ownBubbleColor(oldAccent(activeChat?.themeColor) || globalChatTheme, ownOrder.get(m.id) ?? 0))
                         : undefined
                     }
                   >
@@ -3150,33 +3154,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </button>
               </div>
             ) : (
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2 relative">
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
-                  showEmojiPicker
-                    ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(255,255,255,0.3)]'
-                    : 'bg-zinc-800 hover:bg-zinc-700 text-amber-400 border-zinc-700'
-                }`}
-                title="Emojis, GIFs & Stickers"
-              >
-                <Smile className="w-4 h-4" />
-              </button>
-
+            <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 relative rounded-full bg-zinc-900/90 border border-white/10 px-1.5 py-1.5" data-testid="chat-composer">
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowAttachMenu((v) => !v)}
                   disabled={isUploadingAttachment}
-                  className={`p-2.5 rounded-2xl border transition-all cursor-pointer disabled:opacity-50 ${
-                    showAttachMenu
-                      ? 'bg-noob text-black border-noob shadow-[0_0_12px_rgba(255,255,255,0.3)]'
-                      : 'bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border-zinc-700'
-                  }`}
+                  className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50 text-white shadow-md"
+                  style={{ background: bubbleStyle(oldAccent(activeChat?.themeColor) || globalChatTheme).background }}
                   title="Attach a photo or video"
+                  aria-label="Attach a photo or video"
+                  data-testid="composer-plus"
                 >
-                  {isUploadingAttachment ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                  {isUploadingAttachment ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                 </button>
                 {showAttachMenu && (
                   <div className="absolute bottom-full mb-2 left-0 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-1.5 flex flex-col gap-1 z-20 min-w-[150px]">
@@ -3200,39 +3190,49 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <input ref={chatVideoInputRef} type="file" accept="video/*" onChange={(e) => handleAttachFile(e, 'video')} className="sr-only" />
               </div>
 
-              <div className="flex-1 flex items-center bg-black/80 border border-zinc-700/80 rounded-2xl px-3.5 py-2 focus-within:border-noob transition-colors shadow-inner">
+              {!inputText.trim() && (
+                <>
+                  <button type="button" onClick={() => chatPhotoInputRef.current?.click()} disabled={isUploadingAttachment} className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer disabled:opacity-50 shrink-0" title="Take or choose a photo" aria-label="Photo" data-testid="composer-camera">
+                    <Camera className="w-[22px] h-[22px]" />
+                  </button>
+                  <button type="button" onClick={() => chatPhotoInputRef.current?.click()} disabled={isUploadingAttachment} className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer disabled:opacity-50 shrink-0" title="Choose a picture" aria-label="Picture" data-testid="composer-gallery">
+                    <Image className="w-[22px] h-[22px]" />
+                  </button>
+                  <button type="button" onClick={startRecordingVoice} disabled={isUploadingAttachment} className="w-9 h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer disabled:opacity-50 shrink-0" title="Record a voice message" aria-label="Voice message" data-testid="composer-mic">
+                    <Mic className="w-[22px] h-[22px]" />
+                  </button>
+                </>
+              )}
+
+              <div className="flex-1 min-w-0 flex items-center bg-black/60 border border-white/10 rounded-full pl-4 pr-1 py-1 focus-within:border-white/40 transition-colors">
                 <input
                   type="text"
-                  placeholder={
-                    activeChat?.vanishMode
-                      ? 'Send vanishing message...'
-                      : activeChat?.isGroup
-                      ? `Message ${activeChat.name || 'group'}...`
-                      : 'Type message...'
-                  }
+                  placeholder="Aa"
+                  aria-label="Message"
                   value={inputText}
                   onChange={handleInputChange}
-                  className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none"
+                  className="w-full min-w-0 bg-transparent text-[15px] text-white placeholder-zinc-500 focus:outline-none py-1.5"
                 />
-              </div>
-
-              {inputText.trim() ? (
-                <button
-                  type="submit"
-                  className="p-2.5 sm:px-4 bg-noob hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all shadow-md shadow-noob/20 cursor-pointer flex items-center gap-1.5"
-                >
-                  <Send className="w-4 h-4" />
-                  <span className="text-xs font-bold hidden sm:inline">Send</span>
-                </button>
-              ) : (
                 <button
                   type="button"
-                  onClick={startRecordingVoice}
-                  disabled={isUploadingAttachment}
-                  className="p-2.5 sm:px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-emerald-400 font-bold rounded-2xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                  title="Record a voice message"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors ${showEmojiPicker ? 'bg-white text-black' : 'text-amber-400 hover:bg-white/10'}`}
+                  title="Emojis, GIFs & Stickers"
+                  aria-label="Emojis, GIFs and stickers"
                 >
-                  {isUploadingAttachment ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                  <Smile className="w-[22px] h-[22px]" />
+                </button>
+              </div>
+
+              {inputText.trim() && (
+                <button
+                  type="submit"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md cursor-pointer shrink-0"
+                  style={{ background: bubbleStyle(oldAccent(activeChat?.themeColor) || globalChatTheme).background }}
+                  aria-label="Send"
+                  data-testid="composer-send"
+                >
+                  <Send className="w-[18px] h-[18px]" />
                 </button>
               )}
             </form>

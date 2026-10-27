@@ -27,3 +27,10 @@ export function bubbleStyle(color?: string | null): { background: string; boxSha
   const a = bubbleAccent(color);
   return { background: `linear-gradient(135deg, ${a} 0%, ${lighten(a, 0.28)} 100%)`, boxShadow: `0 6px 18px ${a}40` };
 }
+
+// The colours of the messages you send, one after another (orange, lime, green, blue), the way the chat picture shows them. A chat whose colour was chosen by somebody keeps that one colour.
+export const BUBBLE_CYCLE = ['#f97316', '#9fc92b', '#10b981', '#0ea5e9'];
+/** the colours a chat has before anybody chooses one (the old default green, white, nothing) */
+export const isDefaultAccent = (c?: string | null): boolean => !c || ['#00ff66', '#ffffff', '#fff'].includes(String(c).trim().toLowerCase());
+export const ownBubbleColor = (chosen: string | null | undefined, index: number): string =>
+  isDefaultAccent(chosen) ? BUBBLE_CYCLE[((index % BUBBLE_CYCLE.length) + BUBBLE_CYCLE.length) % BUBBLE_CYCLE.length] : String(chosen);

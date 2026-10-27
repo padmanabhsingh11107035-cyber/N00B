@@ -881,6 +881,10 @@ ${description}`.slice(0, 2000));
       a: 'When you upload files, our automated MIME analyzer checks format: Photos (.jpg, .png, .webp) route to the Feed & Profile, videos (.mp4, .mov, .webm) route to Reels, and audio (.mp3, .wav) routes to Music Hub.'
     },
     {
+      q: 'Which app can I use to edit my videos?',
+      a: 'Editor: CapCut is blocked in India as far as I know, which is probably why it failed for you. Use VN Video Editor or InShot (free phone apps), or the YouTube Shorts editor in the YouTube app.'
+    },
+    {
       q: 'How do Story Highlights work?',
       a: 'Click "+ New" on your Profile page. You can name your highlight, and the first uploaded photo automatically becomes its circular cover icon. You can edit existing highlights anytime to add more photos and videos.'
     },

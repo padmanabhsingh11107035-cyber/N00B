@@ -28,7 +28,7 @@ export const STORY_LINK_STICKER = { x: 50, y: 88, width: 66 } as const;
 
 const W = 1080;
 const H = 1920;
-const FONT = '"Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const FONT = 'Verdana, "DejaVu Sans", Geneva, "Segoe UI", Roboto, sans-serif';
 
 /** Breaks text into lines that fit `maxWidth` (a word that is too long for a line is broken). */
 export function wrapLines(measure: (s: string) => number, text: string, maxWidth: number): string[] {

@@ -5,7 +5,7 @@ on:
   # The app carries its own screens (the built website is inside the app file; it is not a window onto the website). Anything that changes the app's screens or code needs a new app file,
   # so every change to the app's source builds one (and publishes it for the "Update the app" button inside the app).
   push:
-    branches: [main, supabase-migration]
+    branches: [main]   # we push the same commit to both branches; one build is enough (two at once raced for the same release and sent "failed" mails)
     paths:
       - 'N00B_fixed/instagram/android-overrides/**'
       - 'N00B_fixed/instagram/capacitor.config.json'

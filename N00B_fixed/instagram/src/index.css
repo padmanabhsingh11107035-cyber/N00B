@@ -10,6 +10,10 @@
    scales, which follow it) re-colours the whole app at once. In light mode the scale is flipped: "zinc-900" is the
    card colour in both themes, "zinc-400" is muted text in both.
    ============================================================================================================ */
+/* The app's letters: Verdana-style (wide, open, easy to read), the same on every phone and computer. Verdana is used where it exists (iPhone, Mac, Windows); everywhere else the bundled DejaVu Sans,
+   which is drawn the same way. Bold is the only heavy weight (both fonts have regular and bold). */
+:root { --font-app: Verdana, 'DejaVu Sans', Geneva, 'Segoe UI', Roboto, sans-serif; --font-sans: var(--font-app); }
+
 @theme {
   --breakpoint-3xl: 112.5rem; /* 1800px: very wide monitors (the desktop layout gets a wider feed and people list) */
   --color-noob: #ffffff;          /* the accent: white (black in light mode) — the black-and-white doodle look */
@@ -193,7 +197,7 @@ body { min-height: 100vh; min-height: 100dvh; }
 
 @layer base {
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-app);
     background-color: var(--page);
     color: #ffffff;
     overflow-x: hidden;
@@ -698,7 +702,7 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
   .draw-banner.force-dark, body.light .draw-banner.force-dark { background-color: #15122b !important; }
 }
 /* the app sets titles in a serif; the Draw stays in the app's sans, heavy and italic */
-.draw-sans { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 900; }
+.draw-sans { font-family: var(--font-app); font-weight: 900; }
 
 /* Our Team: a warm, dark stage; each member sits in a card whose border has a slow sweep of their own two colours. */
 .team-stage {
@@ -742,7 +746,7 @@ html[data-reduce-motion="on"] *, html[data-reduce-motion="on"] *::before, html[d
   --st-shadow: 0 22px 44px -26px rgba(0, 0, 0, 0.65);
   position: fixed; inset: 0; z-index: 215; display: flex; flex-direction: column; overflow: hidden;
   background: var(--st-bg); color: var(--st-text);
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-app);
   -webkit-font-smoothing: antialiased;
 }
 body.light .st-root:not([data-st-theme]), .st-root[data-st-theme='light'] {

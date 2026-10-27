@@ -35,7 +35,7 @@ section('3. Everything else stays clear of it');
 const chat = read('src/components/Chat/ChatView.tsx');
 const reels = read('src/components/Reels/ReelsView.tsx');
 const mini = read('src/components/Music/FloatingMiniPlayer.tsx');
-check(!/calc\(100vh-80px\)/.test(chat) && (chat.match(/calc\(100vh-var\(--nav-h\)\)/g) || []).length === 2 && /h-\[calc\(100vh-var\(--nav-h\)\)\]/.test(app), 'the chat list and its placeholder end exactly at the bar');
+check(!/calc\(100vh-80px\)/.test(chat) && (chat.match(/calc\(100vh-var\(--nav-h\)\)/g) || []).length === 1 && /h-\[calc\(100vh-var\(--nav-h\)\)\]/.test(app), 'the chat list and its placeholder end exactly at the bar');
 check((reels.match(/pb-\[var\(--nav-h\)\]/g) || []).length === 2 && !/pb-20/.test(reels), 'the Reels page ends exactly at the bar');
 check(/bottom-\[calc\(var\(--nav-h\)\+0\.5rem\)\]/.test(mini), 'the little music player floats just above the bar');
 

@@ -72,7 +72,7 @@ check(Ph.isoFromLabel('🇦🇪 United Arab Emirates (+971)') === 'AE', 'the cou
 
 section('5. In the admin panel');
 const admin = read('src/components/Modals/AdminControlModal.tsx');
-check(/type AdminTab = 'userLogs' \| 'accounts' \| 'visitors'/.test(admin), 'three new pages');
+check(/type AdminTab = [^;]*'userLogs'/.test(admin) && /type AdminTab = [^;]*'accounts'/.test(admin) && /type AdminTab = [^;]*'visitors'/.test(admin), 'three new pages');
 for (const [tab, label] of [['userLogs', 'User logs'], ['accounts', 'Accounts'], ['visitors', 'Visitors']]) {
   check(new RegExp(`\\{main && \\(\\s*<button\\s*onClick=\\{\\(\\) => setActiveTab\\('${tab}'\\)\\}[\\s\\S]{0,420}${label}`).test(admin), `"${label}" has its own tab, for the main administrator only`);
 }

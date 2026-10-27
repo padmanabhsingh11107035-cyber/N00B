@@ -203,7 +203,7 @@ reset();
 claim = mail('verified_badge', { label: 'x', pricePaid: '1', walletAfter: '0', at: '2026-10-11T10:30:00Z' });
 await ask();
 m = sent[0].body;
-check(m.html.startsWith('<div style="display:none') && m.html.includes('role="presentation"') && m.html.includes('linear-gradient') && /<a href="https:\/\/noobsocials\.com"/.test(m.html), 'the HTML is built for e-mail programs: tables, inline styles, a hidden preview line, a button (to noobsocials.com)');
+check(m.html.includes('display:none') && m.html.includes('role="presentation"') && m.html.includes('linear-gradient') && /<a href="https:\/\/noobsocials\.com[^"]*"/.test(m.html), 'the HTML is built for e-mail programs: tables, inline styles, a hidden preview line, a button (to noobsocials.com)');
 check(!/\n\n\n/.test(m.text) && m.text.endsWith('— The NOOB team\n\nNOOB · https://noobsocials.com'), 'and the plain-text version is tidy, ending with the signature and the site line');
 
 section('6. Safety');

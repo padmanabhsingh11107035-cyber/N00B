@@ -10,7 +10,7 @@ const read = (p) => fs.readFileSync(p, 'utf8');
 
 section('1. Category chips, install button, vanish mode');
 const feed = read('src/components/Feed/FeedView.tsx');
-check(/flex flex-wrap items-center justify-center gap-2">\s*\{categories\.map/.test(feed), 'the topic chips wrap instead of running off the side, so every one shows on any screen');
+check(/data-testid="feed-topic-chips"/.test(feed) && /flex-nowrap[^"]*overflow-x-auto/.test(feed) && /\{categories\.map/.test(feed), 'the topic chips sit on ONE full-width line that scrolls sideways when the screen is narrow (2026-10-28)');
 const auth = read('src/components/Auth/AuthView.tsx');
 check(/const hideInstall = !installElsewhere && \(appInstalled \|\| isAppleMobile\(\)\)/.test(auth) && /\{hideInstall \? null :/.test(auth), 'the install button is hidden once the app is installed and on iPhone / iPad');
 const pd = read('src/utils/platformDetect.ts');

@@ -5,6 +5,8 @@ import { MusicPlayerProvider } from './context/MusicPlayerContext.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { MovedNotice, movedNoticeBlocksApp } from './components/Common/MovedNotice.tsx';
 import { InstallInvite } from './components/Common/InstallInvite.tsx';
+import '@fontsource/dejavu-sans/latin-400.css';
+import '@fontsource/dejavu-sans/latin-700.css';
 import './index.css';
 import { initTheme } from './utils/theme.ts';
 import { cleanReloadMark } from './utils/reloadApp.ts';

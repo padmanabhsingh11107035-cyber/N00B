@@ -1623,7 +1623,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       id="chat-view-container"
       className={`w-full max-w-6xl mx-auto bg-zinc-950 border-zinc-800/80 shadow-2xl overflow-hidden flex flex-col ${
         mobileView === 'chat'
-          ? 'fixed inset-0 z-50 h-[100dvh] rounded-none border-0 md:static md:z-auto md:h-[calc(100vh-var(--nav-h))] md:min-h-[580px] md:max-h-[880px] md:rounded-2xl md:border md:mb-0'
+          ? 'fixed inset-0 z-50 h-[100dvh] max-w-none rounded-none border-0'
           : 'relative h-[calc(100vh-var(--nav-h))] min-h-[580px] max-h-[880px] rounded-2xl border'
       }`}
     >
@@ -1638,8 +1638,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         {/* LEFT COLUMN: WhatsApp-style Chats List (Matching Screenshot) */}
         <aside
-          className={`relative w-full md:w-80 lg:w-96 shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex flex-col z-20 ${
-            mobileView === 'chat' ? 'hidden md:flex' : 'flex'
+          className={`relative w-full md:max-w-2xl md:mx-auto shrink-0 bg-zinc-950 md:border-x border-zinc-800/80 flex flex-col z-20 ${
+            mobileView === 'chat' ? 'hidden' : 'flex'
           }`}
         >
           {/* Messages header: back, the title with the number of chats, and one row of round icons (search, find a person, calls, new group) */}
@@ -2039,7 +2039,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         {/* RIGHT COLUMN: Active Conversation View */}
         <section
           className={`flex-1 flex flex-col bg-zinc-950 relative min-w-0 ${
-            mobileView === 'list' ? 'hidden md:flex' : 'flex'
+            mobileView === 'list' ? 'hidden' : 'flex'
           }`}
           style={{
             background: activeChat?.vanishMode
@@ -2050,10 +2050,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {/* Active Chat Header */}
           <div className="relative z-10 px-4 py-3 border-b border-zinc-800/80 bg-zinc-900/90 backdrop-blur-md flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              {/* Back to list on mobile */}
+              {/* Back to the list of chats (on every screen size: the list first, a chat opens full screen) */}
               <button
                 onClick={() => setMobileView('list')}
-                className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg md:hidden cursor-pointer mr-1"
+                className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg cursor-pointer mr-1"
                 title="Back to chats"
               >
                 <ChevronLeft className="w-5 h-5" />

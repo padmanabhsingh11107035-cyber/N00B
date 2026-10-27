@@ -25,7 +25,7 @@ check(funShareUrl({ feature: 'ask', target: 'ann_secret' }, 'https://noobsocials
 check(isUsername('a.b_c9') && !isUsername('') && !isUsername('x'.repeat(31)) && isPollId(pid) && !isPollId('123'), 'username and poll id checks');
 
 section('2. The three-line menu');
-check(/FUN_FEATURES\.map\(\(f\) => \{\s*const Icon = FUN_MENU_ICONS\[f\.id\];/.test(feed) && /ariaLabel=\{f\.label\}/.test(feed), 'the menu lists the four pages with their names and icons');
+check(/FUN_FEATURES\.filter\(\(f\) => featOn\(funFeatureKey\(f\.id\)\)\)\.map\(\(f\) => \{\s*const Icon = FUN_MENU_ICONS\[f\.id\];/.test(feed) && /ariaLabel=\{f\.label\}/.test(feed), 'the menu lists the four pages with their names and icons');
 check(/onClick=\{\(\) => \{ markMenuEntry\('fun-' \+ f\.id\); setShowNoobMenu\(false\); onOpenFunPage\(\{ feature: f\.id \}\); \}\}/.test(feed) && /onPointerDown=\{preloadFunHub\}/.test(feed), 'tapping one closes the menu and opens that page (its code starts loading on the touch)');
 check(/Fun &amp; community/.test(feed) && /\{onOpenFunPage && \(/.test(feed), 'they sit under their own heading, only where the app can open them');
 check(/Anonymous Messages/.test(feed) && /Our Team/.test(feed) && /Customer Support/.test(feed) && /NOOB Draw/.test(feed), 'every earlier menu entry is still there');
@@ -36,7 +36,7 @@ check(/type AppLayer =\s*\| \{ id: string; kind: 'profile'; user: User \}\s*\| \
 check(/const openFun = \(loc: FunLocation\) => \{[\s\S]{0,260}pageLayers\.update\(\{ id: 'fun', kind: 'fun', loc \}\);[\s\S]{0,120}pageLayers\.push\(\{ id: 'fun', kind: 'fun', loc \}\);/.test(app), 'opening a Fun page pushes a layer, or moves within the Fun page that is already open');
 check(/onBack=\{pageLayers\.back\}/.test(app) && /onHome=\{\(\) => setActiveTab\('feed'\)\}/.test(app), 'Back goes one step back (the phone\'s back button does the same); Home goes straight to the Home page');
 check(/const topLayerData = pageLayers\.layers\[pageLayers\.layers\.length - 1\]\?\.data;/.test(app) && /replaceState\(window\.history\.state, '', want \+ window\.location\.search\)/.test(app) && /else if \(parseFunPath\(here\) \|\| parseContentPath\(here\)\) \{\s*window\.history\.replaceState\(window\.history\.state, '', TAB_PATHS\[activeTabRef\.current\] \+ window\.location\.search\);/.test(app), 'the address follows the page that is showing, and goes back to the address of the page underneath when it closes');
-check(/const \[bootFun, setBootFun\] = useState<FunLocation \| null>\(\(\) => parseFunPath\(window\.location\.pathname\)\);/.test(app) && /if \(!currentUser \|\| !bootFun\) return;\s*pageLayers\.push\(\{ id: 'fun', kind: 'fun', loc: bootFun \}\);/.test(app), 'an address opened directly (a shared link) opens the page once someone is logged in');
+check(/const \[bootFun, setBootFun\] = useState<FunLocation \| null>\(\(\) => parseFunPath\(window\.location\.pathname\)\);/.test(app) && /if \(!currentUser \|\| !bootFun\) return;[\s\S]{0,160}pageLayers\.push\(\{ id: 'fun', kind: 'fun', loc: bootFun \}\);/.test(app), 'an address opened directly (a shared link) opens the page once someone is logged in');
 check(/if \(bootFun && publicFunOpen\) \{[\s\S]{0,700}<FunHub currentUser=\{null\}/.test(app), 'a visitor who is not logged in can look at it first, and is asked to log in only when it is time to send or vote');
 check(/onNavigate=\{setBootFun\}/.test(app) && /leaveFunPublic/.test(app), '... and can move between pages while looking, or leave to the login screen (the address is kept for after login)');
 

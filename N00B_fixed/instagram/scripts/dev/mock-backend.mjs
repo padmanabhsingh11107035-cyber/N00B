@@ -68,6 +68,15 @@ const authUser = { id: ME.id, aud: 'authenticated', role: 'authenticated', email
 const session = () => ({ access_token: jwt(), refresh_token: 'mock-refresh', token_type: 'bearer', expires_in: 86400 * 30, expires_at: Math.floor(Date.now() / 1000) + 86400 * 30, user: authUser });
 
 const rpcAnswers = {
+  // NOOB Forms preview: one made-up form at /f/abcdefgh12 (answers are not stored)
+  form_public_get: () => ({ state: 'open', title: 'Customer feedback', description: 'Tell us how we did. It takes one minute.', version: 1, theme: { id: 'noob' }, settings: { presentation: 'classic', showProgress: true, confirmMessage: 'We read every answer.' },
+    questions: [
+      { id: 'q1', type: 'short', title: 'Your name', required: true },
+      { id: 'q2', type: 'rating', title: 'How would you rate your experience?', required: true, min: 1, max: 5 },
+      { id: 'q3', type: 'multiple_choice', title: 'How did you hear about us?', options: [{ id: 'a', label: 'Friends' }, { id: 'b', label: 'Social media' }, { id: 'c', label: 'Search' }], allowOther: true },
+      { id: 'q4', type: 'nps', title: 'Would you recommend us?', min: 0, max: 10, minLabel: 'Not likely', maxLabel: 'Very likely' },
+      { id: 'q5', type: 'paragraph', title: 'Anything we can improve?' }] }),
+  form_public_submit: () => ({ ok: true, id: '00000000-0000-4000-8000-0000000000aa' }),
   resolve_login_email: () => 'noob@users.nooob.xyz',
   login_approval_needed: () => false,
   username_taken: () => true,

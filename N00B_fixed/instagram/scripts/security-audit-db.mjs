@@ -15,6 +15,8 @@ import { createTestDb, MIGRATIONS_DIR } from './supabase/pg-test-env.mjs';
 
 // Reviewed by hand: callable by a visitor who is not logged in, on purpose (function -> why it is safe).
 const OPEN_TO_VISITORS = {
+  form_public_get: 'NOOB Forms: a person opens a form link without an account; gives out only the PUBLISHED copy of a form that has an unguessable 14-character address (never the draft, never answers)',
+  form_public_submit: 'NOOB Forms: a person fills a form without an account; every answer is checked on the server, only the published copy counts, closed / dated / maximum forms refuse, at most 120 answers a minute per form, and nothing can be read back',
   resolve_login_email: 'the login screen: gives out only a made-up address (@users.nooob.xyz) or one of an account that has a password, otherwise a look-alike decoy',
   username_taken: 'sign-up: says whether a User ID is free (User IDs are public anyway)',
   check_signup: 'sign-up: checks the form before the account exists',

@@ -12,6 +12,7 @@ import type { FunPageProps } from './types';
 const ThisOrThatPage = React.lazy(() => import('./ThisOrThatPage'));
 const AskPage = React.lazy(() => import('./AskPage'));
 const MoodPage = React.lazy(() => import('./MoodPage'));
+const FormsHub = React.lazy(() => import('../Forms/FormsHub'));
 const PollsPage = React.lazy(() => import('./PollsPage'));
 
 const ICONS: Record<FunFeature, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>> = {
@@ -42,11 +43,20 @@ interface Props {
 export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onBack, onHome, onLogin, onOpenProfile }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const active = FUN_FEATURES.find((f) => f.id === location.feature) ?? FUN_FEATURES[0];
+  const isForms = location.feature === 'forms' || location.feature === 'form';
 
   // a new page starts at its top
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [location.feature, location.target]);
 
   const pageProps: FunPageProps = { currentUser, target: location.target, onLogin, onOpenProfile, onOpenFeature: onNavigate };
+  // NOOB Forms: its own full screens (my forms, the editor, the answers) and the public form anybody can fill
+  if (isForms) {
+    return (
+      <React.Suspense fallback={<div className="fixed inset-0 z-[96] bg-black" />}>
+        <FormsHub currentUser={currentUser} location={location} onNavigate={onNavigate} onBack={onBack} onHome={onHome} onLogin={onLogin} />
+      </React.Suspense>
+    );
+  }
   // Mood is one full screen of its own (no header, no tabs): it has its own way back
   if (active.id === 'mood') {
     return (

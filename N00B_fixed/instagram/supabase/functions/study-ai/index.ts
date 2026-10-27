@@ -134,7 +134,9 @@ export async function openCompletion(opts: { messages: Chat[]; vision?: boolean;
   const tried: string[] = [];
   let calls = 0;
   const want = opts.maxTokens ?? 1400;
-  for (const p of buildProviders()) {
+  // a photo question asks the providers that read pictures best first (Gemini, then the rest in their usual order)
+  const providers = opts.vision ? [...buildProviders()].sort((a, b) => (b.id === 'gemini' ? 1 : 0) - (a.id === 'gemini' ? 1 : 0)) : buildProviders();
+  for (const p of providers) {
     const base = opts.vision ? p.vision : opts.tier === 'strong' ? [...(p.strong || []), ...p.text] : p.text;
     const seen = new Set<string>();
     const list = base.filter((m) => { const id = modelId(m); if (seen.has(id)) return false; seen.add(id); return want <= 8000 || modelMax(m) >= Math.min(want, 16000); });
@@ -440,7 +442,7 @@ async function actionChat(body: any, userId: string, admin: any, req: Request): 
     const withPicture = imgs.parts.length > 0;
     return json({ error: withPicture
       ? 'I could not look at your picture just now. Your message is saved: please try again in a moment, or type the question out.'
-      : 'The tutor is busy right now. Your message is saved: please try again in a moment.', code: 'busy', conversationId: convId, userMessageId: saved?.id, tried: opened.tried.length, ...(withPicture ? { picture: true } : null) }, 503);
+      : 'The tutor is busy right now. Your message is saved: please try again in a moment.', code: 'busy', conversationId: convId, userMessageId: saved?.id, tried: opened.tried.length, attempts: opened.tried.slice(0, 12), ...(withPicture ? { picture: true } : null) }, 503);
   }
   // the numbered pieces of the student's own document that this answer was built from (so the screen can show [1], [2] as real sources)
   const sources = (ctx.chunks || []).map((c, i) => ({ n: c.n || i + 1, title: c.title || null, page: c.page ?? null }));

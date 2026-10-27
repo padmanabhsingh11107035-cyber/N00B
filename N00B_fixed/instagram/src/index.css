@@ -1145,3 +1145,12 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 .noob-buddy-btn:hover .noob-buddy { animation-duration: 1.4s, 9s; }
 .noob-buddy-btn:active .noob-buddy { transform: scale(0.92); }
 @media (prefers-reduced-motion: reduce) { .noob-buddy { animation: none; } }
+
+/* Pages of their own (utils/pageFrames.ts): a tall window that used to float over a dimmed page is a full page now (solid page colour, nothing of the page behind it), and the "X" of its
+   top row is a "<" at the left (the same button). On a computer the page keeps a readable width in the middle. Small pop-ups, sheets, and picture or video screens are not touched. */
+[data-noob-page='card'], [data-noob-page='page'] { background: var(--page) !important; background-image: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0 !important; align-items: stretch !important; justify-content: center !important; overscroll-behavior: contain; }
+[data-noob-page='card'] > [data-noob-card] { width: 100% !important; max-width: min(100%, 760px) !important; height: 100% !important; max-height: none !important; margin: 0 auto !important; border-radius: 0 !important; border-width: 0 !important; box-shadow: none !important; }
+[data-noob-close] { order: -1 !important; position: static !important; inset: auto !important; margin: 0 6px 0 0 !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; }
+[data-noob-close] > svg, [data-noob-close] > span { display: none !important; }
+[data-noob-close]::before { content: ''; display: block; width: 24px; height: 24px; background-color: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+[data-noob-row] { justify-content: flex-start !important; gap: 10px; }

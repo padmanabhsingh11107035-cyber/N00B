@@ -77,6 +77,7 @@ import { AdminAnalyticsPanel } from './AdminAnalyticsPanel';
 import { siteOrigin } from '../../utils/siteUrl';
 import { hasNativeApp } from '../../utils/appPlatform';
 import { AdminUserLogsPanel } from './AdminUserLogsPanel';
+import { AdminSignupSourcesPanel } from './AdminSignupSourcesPanel';
 import { AdminAccountsPanel } from './AdminAccountsPanel';
 import { AdminVisitorsPanel } from './AdminVisitorsPanel';
 import { AdminUserTransactions } from './AdminUserTransactions';
@@ -118,7 +119,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'pages' | 'settings';
+type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'pages' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1450,6 +1451,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('signupSources')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'signupSources'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+              data-testid="admin-tab-sources"
+            >
+              <Megaphone className="w-4 h-4" /> Where from
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('userLogs')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'userLogs'
@@ -2725,6 +2740,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             </div>
           ) : activeTab === 'team' && main ? (
             <AdminTeamPanel onPendingChange={setTeamPendingCount} />
+          ) : activeTab === 'signupSources' && main ? (
+            <AdminSignupSourcesPanel />
           ) : activeTab === 'userLogs' && main ? (
             <AdminUserLogsPanel />
           ) : activeTab === 'accounts' && main ? (

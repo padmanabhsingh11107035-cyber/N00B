@@ -9,6 +9,7 @@ import './index.css';
 import { initTheme } from './utils/theme.ts';
 import { cleanReloadMark } from './utils/reloadApp.ts';
 import { installOverlayScrollLock } from './utils/overlayScrollLock.ts';
+import { installPageFrames } from './utils/pageFrames.ts';
 import { installKeyboardFill } from './utils/keyboardFill.ts';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
@@ -68,6 +69,7 @@ console.log(
 // The language this device was last using is applied before the first screen is shown (see i18n/engine.ts).
 installHistoryGate();   // lets the address bar wait while the browser is still walking back through history (utils/historyGate.ts)
 installOverlayScrollLock();   // pages that cover the screen are pages of their own: the page behind them does not scroll (utils/overlayScrollLock.ts)
+installPageFrames();   // a tall window that floated over a dimmed page becomes a page of its own, with "<" to go back (utils/pageFrames.ts)
 installKeyboardFill();         // the phone's see-through keyboard shows the colour of the screen above it, never the page behind (utils/keyboardFill.ts)
 cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)
 initTheme();

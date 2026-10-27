@@ -36,3 +36,8 @@ export function clearAskSource(store: Store | null = local()): void {
   try { store?.removeItem(ASK_KEY); } catch { /* ignore */ }
 }
 export const cleanSource = (id: string): string => (SOURCE_OPTIONS.some((o) => o.id === id) ? id : 'other');
+
+// for the administrator's screen (Admin > Where from)
+export const labelOf = (id: string): string => SOURCE_OPTIONS.find((o) => o.id === id)?.label ?? id;
+export const emojiOf = (id: string): string => SOURCE_OPTIONS.find((o) => o.id === id)?.emoji ?? '✨';
+export const percent = (n: number, total: number): number => (total > 0 ? Math.round((n / total) * 100) : 0);

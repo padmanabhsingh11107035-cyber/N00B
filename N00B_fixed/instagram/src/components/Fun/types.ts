@@ -11,4 +11,6 @@ export interface FunPageProps {
   onOpenProfile?: (user: User) => void;
   /** move to another Fun page (or another person's Ask page / another poll) */
   onOpenFeature: (loc: FunLocation) => void;
+  /** the full-screen pages (Mood) have no header of the hub, so they carry their own way back */
+  onBack?: () => void;
 }

@@ -47,6 +47,14 @@ export const FunHub: React.FC<Props> = ({ currentUser, location, onNavigate, onB
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [location.feature, location.target]);
 
   const pageProps: FunPageProps = { currentUser, target: location.target, onLogin, onOpenProfile, onOpenFeature: onNavigate };
+  // Mood is one full screen of its own (no header, no tabs): it has its own way back
+  if (active.id === 'mood') {
+    return (
+      <React.Suspense fallback={<div className="fixed inset-0 z-[96] bg-page" />}>
+        <MoodPage {...pageProps} onBack={onBack} />
+      </React.Suspense>
+    );
+  }
   const Page = { 'this-or-that': ThisOrThatPage, ask: AskPage, mood: MoodPage, polls: PollsPage }[active.id];
 
   return (

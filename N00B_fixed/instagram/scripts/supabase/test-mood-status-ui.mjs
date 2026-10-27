@@ -8,7 +8,7 @@ let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
 const section = (t) => console.log(`\n${t}`);
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
-const page = read('src/components/Fun/MoodPage.tsx');
+const page = read('src/components/Fun/MoodClassic.tsx');
 const cards = read('src/components/Profile/ProfileFunCards.tsx');
 const profile = read('src/components/Profile/ProfileView.tsx');
 const api = read('src/services/supabaseApi.ts');

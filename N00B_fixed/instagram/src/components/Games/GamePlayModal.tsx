@@ -1139,7 +1139,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               {game.embedUrl ? (
                 <div className="pt-2 space-y-2.5">
                   <div className="px-3 py-2 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/30 text-center text-[11px] font-bold text-fuchsia-300">
-                    {game.embedPortrait ? 'It is already loading (it is a small game), so it is ready when you press Play.' : 'It starts loading now, so it is ready when you press Play. The first time it is a big download.'}
+                    {game.embedPortrait && !game.embedLazy ? 'It is already loading (it is a small game), so it is ready when you press Play.' : game.embedPortrait ? 'It starts loading now, so it is ready when you press Play.' : 'It starts loading now, so it is ready when you press Play. The first time it is a big download.'}
                   </div>
                   <button
                     onClick={startBotGameNow}

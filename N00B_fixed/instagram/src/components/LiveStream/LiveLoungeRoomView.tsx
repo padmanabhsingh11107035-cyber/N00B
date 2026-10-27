@@ -58,6 +58,9 @@ interface LiveLoungeRoomViewProps {
 
 type Phase = 'lobby' | 'waiting-room' | 'connecting' | 'live' | 'ended';
 
+// A meeting is ended by itself one hour after it started (migration 20261027000003): everybody in it is told why.
+const TIME_LIMIT_MESSAGE = 'This meeting reached the 1 hour limit and ended automatically. The host can start a new one.';
+
 interface RemoteEntry {
   uid: number;
   hasVideo: boolean;
@@ -350,7 +353,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
       if (status) { setSettings(status.settings || null); setRoomLocked(!!status.locked); }
       if (status?.status === 'admitted') { setPhase('connecting'); connectAgora(roomId); }
       else if (status?.status === 'removed' || status?.roomStatus === 'ended') {
-        setError(status?.roomStatus === 'ended' ? 'This room has ended.' : 'The host removed you from this room.');
+        setError(status?.roomStatus === 'ended' ? (status?.endedReason === 'time_limit' ? TIME_LIMIT_MESSAGE : 'This room has ended.') : 'The host removed you from this room.');
         setEndReason(status?.roomStatus === 'ended' ? 'ended' : 'removed');
         setPhase('ended');
       }
@@ -575,7 +578,7 @@ export const LiveLoungeRoomView: React.FC<LiveLoungeRoomViewProps> = ({ currentU
         const ended = status?.roomStatus === 'ended';
         const dropped = !ended && status?.status === 'left';
         await cleanup();
-        setError(ended ? 'The host ended this room.' : dropped ? 'You left this room. You can join again with the room code.' : 'The host removed you from this room.');
+        setError(ended ? (status?.endedReason === 'time_limit' ? TIME_LIMIT_MESSAGE : 'The host ended this room.') : dropped ? 'You left this room. You can join again with the room code.' : 'The host removed you from this room.');
         setEndReason(ended ? 'ended' : dropped ? 'dropped' : 'removed');
         setPhase('ended');
       }

@@ -41,7 +41,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
-import { loginUser, signupUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession, type LoginApprovalTicket } from '../../services/api';
+import { loginUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession, type LoginApprovalTicket } from '../../services/api';
 import { LoginApprovalWait } from './LoginApprovalWait';
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
 import { SocialLoginButtons } from './SocialLoginButtons';
@@ -448,7 +448,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
 
   // Email verification, the step between "Join NOOB" and the account actually being created: the
   // whole form is validated first (unchanged), then a code is emailed to it instead of signing up
-  // right away — signupUser() only runs after that code is entered correctly.
+  // right away — the account is only made after that code is entered correctly.
   const [signupStep, setSignupStep] = useState<'form' | 'otp'>('form');
   const [signupOtpCode, setSignupOtpCode] = useState('');
   const [signupOtpError, setSignupOtpError] = useState<string | null>(null);

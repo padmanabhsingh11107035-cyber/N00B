@@ -20,13 +20,14 @@ export function createClient(url, key, opts) {
       getUser: async (token) => globalThis.__fake.getUser(token),
       admin: {
         getUserById: async (id) => globalThis.__fake.getUserById(id),
+        createUser: async (opts) => globalThis.__fake.createUser(opts),
         generateLink: async (opts) => globalThis.__fake.generateLink(opts)
       }
     },
     rpc: async (fn, args) => globalThis.__fake.rpc(fn, args),
     from: (table) => {
       const f = { table, eq: {} };
-      const q = { select: () => q, eq: (k, v) => { f.eq[k] = v; return q; }, maybeSingle: async () => globalThis.__fake.select(f) };
+      const q = { select: () => q, eq: (k, v) => { f.eq[k] = v; return q; }, maybeSingle: async () => globalThis.__fake.select(f), insert: async (row) => globalThis.__fake.insert(table, row) };
       return q;
     }
   };
@@ -47,6 +48,10 @@ let tables = {};
 globalThis.__fake = {
   rpc: async (fn, args) => { rpcCalls.push({ fn, args }); return dbPlan[fn] ? dbPlan[fn](args) : { data: null, error: { message: 'unknown rpc ' + fn } }; },
   getUserById: async (id) => (id === 'u-ok' ? { data: { user: { email: `${id}@users.nooob.xyz` } }, error: null } : { data: { user: null }, error: { message: 'not found' } }),
+  createUser: async (opts) => { events.push(['createUser', opts.email]); return globalThis.__fake.createUserAnswer(opts); },
+  createUserAnswer: async () => ({ data: { user: { id: 'u-ok' } }, error: null }),
+  insert: async (table, row) => { events.push(['insert', table, row.auth_email]); return globalThis.__fake.insertAnswer(table, row); },
+  insertAnswer: async () => ({ error: null }),
   generateLink: async (opts) => (opts.type === 'magiclink' ? { data: { properties: { hashed_token: 'th-' + opts.email } }, error: null } : { data: null, error: { message: 'bad type' } }),
   getUser: async (token) => (tables.tokens?.[token] ? { data: { user: { id: tables.tokens[token] } } } : { data: { user: null } }),
   select: (f) => {
@@ -56,7 +61,16 @@ globalThis.__fake = {
   }
 };
 let resendCalls = [];
+let events = [];
+let dnsAsked = [];
+globalThis.__dns = null;   // (name, type) => the DNS answer, or throw for "the DNS service is down"
 globalThis.fetch = async (url, init = {}) => {
+  if (String(url).startsWith('https://cloudflare-dns.com/dns-query')) {
+    const u = new URL(String(url));
+    dnsAsked.push([u.searchParams.get('name'), u.searchParams.get('type')]);
+    const answer = globalThis.__dns ? globalThis.__dns(u.searchParams.get('name'), u.searchParams.get('type')) : { Status: 0, Answer: [{ type: 15, data: '10 mx.example.com.' }] };
+    return { ok: true, status: 200, json: async () => answer };
+  }
   if (String(url) === 'https://api.resend.com/emails') {
     resendCalls.push(JSON.parse(init.body));
     return globalThis.__resend ? globalThis.__resend() : { ok: true, status: 200, text: async () => '' };
@@ -64,7 +78,7 @@ globalThis.fetch = async (url, init = {}) => {
   throw new Error('unexpected fetch ' + url);
 };
 
-const reset = () => { rpcCalls = []; dbPlan = {}; resendCalls = []; globalThis.__resend = null; tables = {}; };
+const reset = () => { rpcCalls = []; dbPlan = {}; resendCalls = []; globalThis.__resend = null; tables = {}; events = []; dnsAsked = []; globalThis.__dns = null; globalThis.__fake.createUserAnswer = async () => ({ data: { user: { id: 'u-ok' } }, error: null }); globalThis.__fake.insertAnswer = async () => ({ error: null }); };
 const req = (body, headers = {}) => new Request('https://x.supabase.co/functions/v1/recover-account', {
   method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body)
 });
@@ -173,6 +187,75 @@ const nameWithHtml = { id: 'u-new', username: 'newbie', display_name: '<script>a
 tables.profiles = [nameWithHtml];
 r = await call({ action: 'welcome' }, { authorization: 'Bearer fresh-session-token' });
 check(!resendCalls.at(-1).html.includes('<script>'), 'a display name is never dropped into the email HTML unescaped');
+delete env.RESEND_API_KEY;
+
+// ================================================================= sign-up: an address a code can not reach, and the ticket
+section('4a. Sign-up: "email not found" before a code is made, and the ticket before the login');
+env.RESEND_API_KEY = 'rk_test_key';
+const okRpc = () => { dbPlan.signup_otp_request = () => ({ data: { status: 'ok', code: '654321' }, error: null }); };
+reset(); okRpc();
+r = await call({ action: 'signup-otp-request', email: 'ana@gmial.com' });
+check(r.status === 422 && r.json.code === 'email_not_found' && /Did you mean ana@gmail\.com/.test(r.json.error) && rpcCalls.length === 0 && resendCalls.length === 0, 'a typing slip of a big provider (gmial.com) is "email not found", the right address is suggested, no code is made and nothing is emailed');
+reset(); okRpc();
+r = await call({ action: 'signup-otp-request', email: 'x@mailinator.com' });
+check(r.status === 422 && /Temporary email addresses/.test(r.json.error) && rpcCalls.length === 0 && resendCalls.length === 0, 'a throw-away mailbox service is refused before anything is spent');
+reset(); okRpc();
+globalThis.__dns = () => ({ Status: 3 });
+r = await call({ action: 'signup-otp-request', email: 'ana@no-such-domain-xyz.com' });
+check(r.status === 422 && /email address was not found/i.test(r.json.error) && rpcCalls.length === 0 && resendCalls.length === 0 && dnsAsked.some(([, t]) => t === 'MX'), 'a domain that does not exist: "email not found, enter a correct one"');
+reset(); okRpc();
+globalThis.__dns = (n, t) => (t === 'MX' ? { Status: 0, Answer: [{ type: 15, data: '0 .' }] } : { Status: 0 });
+r = await call({ action: 'signup-otp-request', email: 'ana@takes-no-mail.com' });
+check(r.status === 422 && rpcCalls.length === 0, 'a domain whose mail record says "no mail here" (MX 0 .) and that has no address record is refused too');
+reset(); okRpc();
+globalThis.__dns = (n, t) => (t === 'MX' ? { Status: 0 } : t === 'A' ? { Status: 0, Answer: [{ type: 1, data: '1.2.3.4' }] } : { Status: 0 });
+r = await call({ action: 'signup-otp-request', email: 'ana@old-style-domain.com' });
+check(r.status === 200 && r.json.success, 'a domain with no MX but an address record can still take mail (the old rule): allowed');
+reset(); okRpc();
+r = await call({ action: 'signup-otp-request', email: 'ana@example.com' });
+check(r.status === 200 && r.json.success && rpcCalls[0].fn === 'signup_otp_request' && resendCalls.length === 1 && resendCalls[0].to[0] === 'ana@example.com' && !JSON.stringify(r.json).includes('654321'), 'a good address: the code is made and emailed, and never shown to the browser');
+reset(); okRpc();
+globalThis.__dns = () => { throw new Error('dns down'); };
+r = await call({ action: 'signup-otp-request', email: 'ana@example.com' });
+check(r.status === 200 && r.json.success, 'if the DNS service itself can not be asked, a real person is never blocked for it');
+reset(); okRpc();
+globalThis.__resend = () => ({ ok: false, status: 422, text: async () => 'invalid to' });
+r = await call({ action: 'signup-otp-request', email: 'ana@example.com' });
+check(r.status === 422 && r.json.code === 'email_not_found' && /not found/i.test(r.json.error), "the email provider saying the address itself is invalid (422) is shown as 'email not found'");
+reset(); okRpc();
+globalThis.__resend = () => ({ ok: false, status: 500, text: async () => 'boom' });
+r = await call({ action: 'signup-otp-request', email: 'ana@example.com' });
+check(r.status === 502 && /unavailable/.test(r.json.error), "a provider failure on our side stays a polite 'unavailable' (not 'email not found')");
+reset();
+r = await call({ action: 'signup-otp-request', email: 'not-an-email' });
+check(r.status === 400 || r.status === 500 || r.json.error, 'a text that is not even an address goes to the database check as before (its own message)');
+
+const signupBody = { action: 'signup-otp-verify', email: 'ana@example.com', code: '654321', signup: { username: 'ana', password: 'pw-123456', email: 'ana@example.com', firstName: 'Ana' } };
+const okVerify = () => { dbPlan.signup_otp_verify = () => ({ data: { status: 'ok' }, error: null }); dbPlan.check_signup = () => ({ data: { ok: true }, error: null }); };
+reset(); okVerify();
+r = await call(signupBody);
+const ev = events.map((e) => e[0] + ':' + e[1] + ':' + (e[2] || ''));
+check(r.status === 200 && r.json.success && r.json.tokenHash, 'the right code makes the account and hands back a one-time sign-in token');
+check(events.length === 2 && events[0][0] === 'insert' && events[0][1] === 'signup_tickets' && events[1][0] === 'createUser' && events[0][2] === events[1][1] && /^[0-9a-f-]{36}@users\.nooob\.xyz$/.test(events[1][1]), 'the ticket (the private login address) is written down FIRST, and the very same address is then used to create the login', ev.join(' | '));
+reset(); okVerify();
+globalThis.__fake.insertAnswer = async () => ({ error: { message: 'relation "signup_tickets" does not exist' } });
+r = await call(signupBody);
+check(r.status === 200 && r.json.success && events.some((e) => e[0] === 'createUser'), 'before the migration has been run the ticket can not be written: signing up still works (the rule is not on either)');
+reset(); okVerify();
+let attempts = 0;
+globalThis.__fake.createUserAnswer = async () => (++attempts === 1 ? { data: null, error: { message: 'Database error creating new user' } } : { data: { user: { id: 'u-ok' } }, error: null });
+r = await call(signupBody);
+const creates = events.filter((e) => e[0] === 'createUser').map((e) => e[1]);
+const inserts = events.filter((e) => e[0] === 'insert').map((e) => e[2]);
+check(r.status === 200 && creates.length === 2 && creates[0] !== creates[1] && inserts.length === 2 && inserts[0] === creates[0] && inserts[1] === creates[1], 'the one retry after a transient database error gets a NEW login address and its own new ticket');
+reset(); okVerify();
+dbPlan.signup_otp_verify = () => ({ data: { status: 'mismatch' }, error: null });
+r = await call(signupBody);
+check(r.status === 401 && events.length === 0, 'a wrong code: no ticket, no login');
+reset(); okVerify();
+dbPlan.check_signup = () => ({ data: { ok: false, error: 'User ID is already taken.' }, error: null });
+r = await call(signupBody);
+check(r.status === 400 && events.length === 0, 'a form that does not pass the checks: no ticket, no login');
 delete env.RESEND_API_KEY;
 
 section('4b. Odds and ends');

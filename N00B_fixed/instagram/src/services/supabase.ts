@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { makePatientFetch } from './authFetch';
 import { recordDiag } from './authDiag';
+import { makeServiceAwareFetch, reportServiceDown, reportServiceUp } from './serviceHealth';
 import { createTabSessions, type KV } from './tabSessions';
 import { mediaOrigin } from '../utils/siteUrl';
 
@@ -64,8 +65,10 @@ export const supabase = createClient(url || 'http://localhost:54321', key || 'mi
   // A rate-limited (or error-page) login renewal must not sign anyone out (see authFetch.ts); what happened is written to the
   // login recorder (authDiag.ts) so a sign-out can say why.
   global: {
+    // innermost: when the host has switched the project off (HTTP 402 "Service for this project is restricted ..."), the answer is relabelled 503 so a login is never
+    // deleted because of it, and the app is told to show its own "under maintenance" page (services/serviceHealth.ts)
     fetch: makePatientFetch(
-      (input, init) => fetch(input, init),
+      makeServiceAwareFetch((input, init) => fetch(input, init), reportServiceDown, reportServiceUp),
       (p) => recordDiag({ kind: p.temporary ? 'renewal-delayed' : 'renewal-failed', status: p.status, code: p.code })
     )
   },

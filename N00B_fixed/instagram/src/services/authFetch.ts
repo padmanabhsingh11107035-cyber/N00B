@@ -39,7 +39,6 @@ export function makePatientFetch(base: FetchLike, onProblem?: (p: RenewalProblem
     if (res.ok || !isTokenRenewal(input)) return res;
 
     const isJson = /json/i.test(res.headers.get('content-type') || '');
-    const temporary = res.status === 429 || (!isJson && res.status >= 400);
 
     let code: string | undefined;
     try {
@@ -47,6 +46,8 @@ export function makePatientFetch(base: FetchLike, onProblem?: (p: RenewalProblem
     } catch {
       // not JSON: no code to report
     }
+    // "service_restricted" is NOOB's own label for the host switching the project off (services/serviceHealth.ts): not about this login at all
+    const temporary = res.status === 429 || (!isJson && res.status >= 400) || code === 'service_restricted';
     try {
       onProblem?.({ status: res.status, code, temporary });
     } catch {

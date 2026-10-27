@@ -16,6 +16,7 @@ import type { UploadOptions } from '../utils/uploadProgress';
 import { uploadImageSettings } from '../utils/devicePrefs';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
+import { probeService } from './serviceHealth';
 import { mediaOrigin } from '../utils/siteUrl';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
@@ -306,83 +307,17 @@ async function uploadPendingSignupAvatar(pendingKey: string): Promise<string | n
   }
 }
 
-export async function signupUser(payload: SignupPayload): Promise<{ success: boolean; user?: User; error?: string; suspended?: boolean; message?: string }> {
-  try {
-    // Friendly, specific messages first (the old server's exact wording); Auth alone would just say "database error".
-    const check = await rpc<{ ok?: boolean; error?: string; suspended?: boolean; message?: string }>('check_signup', { p: payload });
-    if (!check?.ok) return { success: false, error: check?.error || 'Could not create the account.', suspended: check?.suspended, message: check?.message };
-
-    const { avatar, pendingKey } = prepareSignupAvatar(payload.avatar);
-
-    // Login addresses are private, random ones: the person's real email lives in their private profile
-    // (so one email can be used on many accounts) and they log in by username or real email via a lookup.
-    const signUpOnce = () => supabase.auth.signUp({
-      email: `${crypto.randomUUID()}@users.nooob.xyz`,
-      password: payload.password,
-      options: {
-        data: {
-          username: payload.username,
-          display_name: payload.displayName,
-          first_name: payload.firstName,
-          last_name: payload.lastName,
-          email: payload.email,
-          country_code: payload.countryCode,
-          mobile_number: payload.mobileNumber,
-          date_of_birth: payload.dateOfBirth,
-          gender: payload.gender,
-          avatar,
-          bio: payload.bio,
-          account_type: payload.accountType,
-          business_category: payload.businessCategory,
-          business_email: payload.businessEmail,
-          business_phone: payload.businessPhone,
-          business_address: payload.businessAddress,
-          agreed_to_terms: payload.agreedToTerms,
-          language: cleanLanguageCode(payload.language)
-        }
-      }
-    });
-    let { data, error } = await signUpOnce();
-    // A generic "Database error ..." from Supabase Auth wraps ANY failure inside our sign-up trigger — it is
-    // NOT necessarily a username clash (check_signup, just above, already confirmed the username was free a
-    // moment ago). It's most often just a transient hiccup, so retry the exact same sign-up once — a failure
-    // here rolls the whole insert back, so retrying never creates a duplicate or double-charges anything.
-    if (error && !/password/i.test(error.message) && /database error/i.test(error.message)) {
-      ({ data, error } = await signUpOnce());
-    }
-    if (error) {
-      const msg = /password/i.test(error.message)
-        ? error.message
-        : /database error/i.test(error.message)
-          ? await (async () => {
-              // Only claim "already taken" if a fresh check says it actually is — never guess that from a
-              // generic error string, which could just as easily be an unrelated, transient failure.
-              const recheck = await rpc<{ error?: string }>('check_signup', { p: payload }).catch(() => null);
-              return recheck?.error || 'Something went wrong creating your account. Please try again in a moment.';
-            })()
-          : error.message;
-      return { success: false, error: msg };
-    }
-    if (!data.session) {
-      return { success: false, error: 'Your account was created but needs confirmation before you can log in. Please contact support.' };
-    }
-
-    await uploadPendingSignupAvatar(pendingKey);
-    const user = await rpc<User>('get_my_user');
-    // Never awaited, never lets a slow or failed email hold up or fail the signup itself.
-    void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
-    return { success: true, user: startChatKeys(mapUser(user), payload.password) as User };
-  } catch (err) {
-    return { success: false, error: errorText(err, 'Could not create the account. Please try again.') };
-  }
-}
+// (There is no sign-up call that talks to the login service directly any more: an account can only be made by the emailed-code flow above, where the server checks the code and creates the
+// account itself. A direct call to the service's public sign-up address is refused by the database too: see migration 20261027000002_signup_tickets_turn_on.sql.)
 
 // -------------------------------------------------------- "Sign in with Google"
 // A full-page OAuth redirect (not a popup — far more reliable inside an installed PWA, which is how
 // most people actually use NOOB). Supabase creates the auth.users row itself on return; whether that
 // identity already has a NOOB profile is for checkPendingOAuthSignup, once the app reloads, to decide.
-export async function signInWithGoogle(): Promise<{ success: boolean; error?: string }> {
+export async function signInWithGoogle(): Promise<{ success: boolean; error?: string; unavailable?: boolean }> {
   try {
+    // Before leaving for Google: if NOOB's service is switched off (or does not answer) the redirect would land on the host's raw error text, so nothing is started
+    if ((await probeService()) !== 'up') return { success: false, unavailable: true, error: 'Sign-in is not available right now. Please try again in a moment.' };
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } }
@@ -458,8 +393,10 @@ export function fetchEnabledSocialProviders(): Promise<EnabledSocialProvider[]> 
   return socialProvidersPromise;
 }
 
-export async function signInWithProvider(provider: EnabledSocialProvider): Promise<{ success: boolean; error?: string }> {
+export async function signInWithProvider(provider: EnabledSocialProvider): Promise<{ success: boolean; error?: string; unavailable?: boolean }> {
   try {
+    // same check as for Google above: never send a person to the host's own error text
+    if ((await probeService()) !== 'up') return { success: false, unavailable: true, error: 'Sign-in is not available right now. Please try again in a moment.' };
     const options: Record<string, unknown> = { redirectTo: window.location.origin };
     if (provider.id === 'google') options.queryParams = { prompt: 'select_account' };
     if (provider.id === 'apple') options.scopes = 'name email';
@@ -728,6 +665,10 @@ export async function loginUser(payload: {
       }
       if (!identifier.includes('@') && !(await rpc<boolean>('username_taken', { candidate: identifier }))) {
         return { success: false, error: 'Account not found. Please click "Create Account" below.' };
+      }
+      // an email that is on no account: say so (the password is not the problem), instead of "incorrect password"
+      if (identifier.includes('@') && (await rpc<boolean>('email_in_use', { candidate: identifier }).catch(() => true)) === false) {
+        return { success: false, error: 'Email not found. Please enter the correct email.' };
       }
       return { success: false, error: 'Incorrect password. Please check your credentials.' };
     }
@@ -5417,7 +5358,7 @@ export interface LiveLoungeRoomSettings {
   myBreakoutRoom?: string | null;
 }
 
-export async function fetchLiveLoungeRoomMyStatus(roomId: string): Promise<{ status?: string; role?: string; roomStatus?: string; title?: string; roomCode?: string; locked?: boolean; meetingId?: string; settings?: LiveLoungeRoomSettings } | null> {
+export async function fetchLiveLoungeRoomMyStatus(roomId: string): Promise<{ status?: string; role?: string; roomStatus?: string; endedReason?: string; title?: string; roomCode?: string; locked?: boolean; meetingId?: string; settings?: LiveLoungeRoomSettings } | null> {
   try { return await rpc('live_lounge_room_my_status', { p_room_id: roomId }); } catch { return null; }
 }
 

@@ -140,9 +140,10 @@ function withSiteFooter(html: string, text: string): { html: string; text: strin
   };
 }
 
-async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
+// `status` is Resend's own answer (0 = nothing was sent: no key, or the network was down). 422 is Resend saying the address itself is not valid.
+async function sendEmailDetailed(to: string, subject: string, text: string, html: string): Promise<{ ok: boolean; status: number }> {
   const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
-  if (!key) return false;
+  if (!key) return { ok: false, status: 0 };
   const out = withSiteFooter(html, text);
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -152,11 +153,61 @@ async function sendEmail(to: string, subject: string, text: string, html: string
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) console.warn(`Resend: ${res.status} ${await res.text().catch(() => '')}`.slice(0, 300));
-    return res.ok;
+    return { ok: res.ok, status: res.status };
   } catch (err: any) {
     console.warn('Resend error:', err?.message || err);
-    return false;
+    return { ok: false, status: 0 };
   }
+}
+async function sendEmail(to: string, subject: string, text: string, html: string): Promise<boolean> {
+  return (await sendEmailDetailed(to, subject, text, html)).ok;
+}
+
+// ---- Is this an address a code can really reach? (asked BEFORE a code is made, so nothing is spent on an address that can not work)
+// Nobody can know from outside whether one particular mailbox exists, but three things are certain and are refused with "email not found": a domain that does not exist or takes no
+// mail (looked up in the public DNS, over HTTPS), a throw-away mailbox service, and the usual typing slips of the big providers (gmial.com ...), where the right address is suggested.
+// A mailbox on a real domain that does not exist is caught by the provider's own answer when the code is sent (Resend 422), and otherwise by the code never arriving: no code, no account.
+const EMAIL_NOT_FOUND = 'That email address was not found. Please enter a correct, working email.';
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'guerrillamail.org', 'sharklasers.com', 'grr.la', '10minutemail.com', '10minutemail.net', 'tempmail.com', 'temp-mail.org',
+  'temp-mail.io', 'tempmail.net', 'tempail.com', 'throwawaymail.com', 'yopmail.com', 'yopmail.net', 'yopmail.fr', 'trashmail.com', 'trashmail.net', 'getnada.com', 'nada.email',
+  'dispostable.com', 'maildrop.cc', 'fakeinbox.com', 'mintemail.com', 'mohmal.com', 'emailondeck.com', 'burnermail.io', 'mailnesia.com', 'spamgourmet.com', 'moakt.com',
+  'tmpmail.org', 'tmpmail.net', 'tempinbox.com', 'mytemp.email', 'inboxkitten.com', 'discard.email', 'spambox.us', 'mail.tm', 'minuteinbox.com', 'emailfake.com', 'fakemail.net',
+  'harakirimail.com', 'mailcatch.com', 'trbvm.com', 'dropmail.me', 'tempr.email', 'anonaddy.me', 'guerrillamailblock.com', 'cuvox.de', 'tmail.ws', 'mailpoof.com'
+]);
+const TYPO_DOMAINS: Record<string, string> = {
+  'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gamil.com': 'gmail.com', 'gmil.com': 'gmail.com', 'gmail.con': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.cm': 'gmail.com',
+  'gmaill.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmaul.com': 'gmail.com', 'hotmial.com': 'hotmail.com', 'hotmai.com': 'hotmail.com', 'hotmail.con': 'hotmail.com',
+  'yahooo.com': 'yahoo.com', 'yaho.com': 'yahoo.com', 'yahoo.con': 'yahoo.com', 'yhoo.com': 'yahoo.com', 'outlok.com': 'outlook.com', 'outlook.con': 'outlook.com', 'iclod.com': 'icloud.com', 'icloud.con': 'icloud.com'
+};
+type DnsAnswer = boolean | null;   // true: has records, false: has none (or the name does not exist), null: could not be asked
+async function dnsHas(name: string, type: 'MX' | 'A' | 'AAAA'): Promise<DnsAnswer> {
+  try {
+    const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`, { headers: { accept: 'application/dns-json' }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    const j: any = await res.json();
+    if (j?.Status === 3) return false;   // NXDOMAIN: the name does not exist
+    if (j?.Status !== 0) return null;
+    const wanted = type === 'MX' ? 15 : type === 'A' ? 1 : 28;
+    const answers = (Array.isArray(j.Answer) ? j.Answer : []).filter((a: any) => a?.type === wanted && !(type === 'MX' && /^\s*0\s+\.?\s*$/.test(String(a.data || ''))));   // an MX of "0 ." says "this domain takes no mail"
+    return answers.length > 0;
+  } catch {
+    return null;
+  }
+}
+async function checkEmailReachable(email: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const at = email.lastIndexOf('@');
+  const domain = at > 0 ? email.slice(at + 1).trim().toLowerCase() : '';
+  if (!domain || !domain.includes('.')) return { ok: false, error: EMAIL_NOT_FOUND };
+  if (TYPO_DOMAINS[domain]) return { ok: false, error: `${EMAIL_NOT_FOUND} Did you mean ${email.slice(0, at)}@${TYPO_DOMAINS[domain]}?` };
+  if (DISPOSABLE_DOMAINS.has(domain)) return { ok: false, error: 'Temporary email addresses can not be used. Please enter your real email.' };
+  const mx = await dnsHas(domain, 'MX');
+  if (mx === true || mx === null) return { ok: true };   // null: the DNS service could not be asked: never block a real person for that
+  // no mail server listed: a domain with only an address record can still take mail (the old rule), anything else can not
+  const a = await dnsHas(domain, 'A');
+  if (a === true || a === null) return { ok: true };
+  const aaaa = await dnsHas(domain, 'AAAA');
+  return aaaa === false ? { ok: false, error: EMAIL_NOT_FOUND } : { ok: true };
 }
 
 const sendOtpEmail = (email: string, code: string) =>
@@ -172,7 +223,7 @@ const sendOtpEmail = (email: string, code: string) =>
   );
 
 const sendSignupOtpEmail = (email: string, code: string) =>
-  sendEmail(
+  sendEmailDetailed(
     email,
     `${code} is your NOOB signup code`,
     `Your NOOB signup verification code is ${code}. Enter it in the app to finish creating your account. It expires in 10 minutes. If you did not try to create a NOOB account, you can ignore this email.`,
@@ -317,6 +368,12 @@ Deno.serve(async (req) => {
   if (body?.action === 'signup-otp-request') {
     const key = (Deno.env.get('RESEND_API_KEY') || '').trim();
     if (!key) return json({ error: 'Sign-ups are temporarily unavailable. Please try again later.', notConfigured: true }, 503);
+    // an address that can not take mail is refused here, before a code is made or the person's hourly allowance is spent
+    const typed = String(body?.email ?? '').trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(typed)) {
+      const reach = await checkEmailReachable(typed);
+      if (!reach.ok) return json({ error: reach.error, code: 'email_not_found' }, 422);
+    }
     const { data: check, error } = await admin.rpc('signup_otp_request', { p_ip: ip, p_email: String(body?.email ?? '') });
     if (error || !check) return json(unavailable, 500);
     switch (check.status) {
@@ -328,7 +385,11 @@ Deno.serve(async (req) => {
       default: return json(unavailable, 500);
     }
     const sent = await sendSignupOtpEmail(String(body.email), String(check.code));
-    if (!sent) return json(unavailable, 502);
+    if (!sent.ok) {
+      // Resend answers 422 when it finds the address itself invalid: that is "email not found", not a problem on our side
+      if (sent.status === 422) return json({ error: EMAIL_NOT_FOUND, code: 'email_not_found' }, 422);
+      return json(unavailable, 502);
+    }
     return json({ success: true });
   }
 
@@ -371,10 +432,17 @@ Deno.serve(async (req) => {
     // profile (so one email can be used on many accounts) — same as the client-side auth.signUp()
     // this replaces. email_confirm is set because this is a server-side admin creation, not the
     // normal signup flow Supabase's own "Confirm email" setting was written to gate.
-    const createOnce = () => admin.auth.admin.createUser({
-      email: `${crypto.randomUUID()}@users.nooob.xyz`, password: String(p.password ?? ''),
-      email_confirm: true, user_metadata: metadata
-    });
+    // The database only accepts a new email login that has a ticket (migration 20261027000001/2): the private address about to be created is written down first,
+    // with the service key, so that a call made straight to the login service's public sign-up address can never make an account without this code check.
+    const createOnce = async () => {
+      const authEmail = `${crypto.randomUUID()}@users.nooob.xyz`;
+      const { error: ticketErr } = await admin.from('signup_tickets').insert({ auth_email: authEmail });
+      if (ticketErr) console.warn('signup ticket:', String(ticketErr.message || ticketErr).slice(0, 200));   // the table is not there yet (migration not run): the rule is not on either, so go on
+      return admin.auth.admin.createUser({
+        email: authEmail, password: String(p.password ?? ''),
+        email_confirm: true, user_metadata: metadata
+      });
+    };
     let { data: created, error: createErr } = await createOnce();
     // Same reasoning as the client's old retry: a generic "Database error" wraps ANY failure inside
     // the sign-up trigger, most often a transient hiccup rather than a real conflict (check_signup,
@@ -471,7 +539,7 @@ Deno.serve(async (req) => {
     switch (check.status) {
       case 'missing': return json({ error: 'Username/Email and password are required' }, 400);
       case 'rate_limited': return json({ error: 'Too many attempts. Please wait a moment and try again.' }, 429);
-      case 'not_found': return json({ error: phone ? 'Incorrect phone number or password. Please check your details.' : ident.includes('@') ? 'Incorrect password. Please check your credentials.' : 'Account not found. Please click "Create Account" below.' }, 401);
+      case 'not_found': return json({ error: phone ? 'Incorrect phone number or password. Please check your details.' : ident.includes('@') ? 'Email not found. Please enter the correct email.' : 'Account not found. Please click "Create Account" below.' }, 401);
       case 'bad_password': return json({ error: phone ? 'Incorrect phone number or password. Please check your details.' : 'Incorrect password. Please check your credentials.' }, 401);
       case 'suspended': return json({ error: `This account has been suspended by NOOB Administrator.${check.reason ? ' Reason: ' + check.reason : ''}` }, 403);
       case 'ok': break;

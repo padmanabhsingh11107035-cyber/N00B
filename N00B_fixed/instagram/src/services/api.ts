@@ -8,7 +8,6 @@ export {
   searchGifs,
   recordSignupDevice,
   fetchHealth,
-  signupUser,
   requestSignupOtp,
   verifySignupOtp,
   signInWithGoogle,

@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { fetchEnabledSocialProviders, cachedSocialProviders, signInWithProvider, type EnabledSocialProvider, type SocialProvider } from '../../services/api';
 import { ButtonDoodles } from './ButtonDoodles';
 import { isOnOtherNoobAddress, MAIN_SITE } from '../../utils/siteUrl';
+import { SystemPage } from '../Common/SystemPage';
 
 // "Continue with …" buttons. Only the providers that are switched on in the sign-in settings are shown, so a button appears
 // by itself the moment its setup is finished — and never as a button that can only fail.
@@ -118,6 +119,8 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
   const [busy, setBusy] = useState<SocialProvider | null>(null);
   // "Continue with Apple" is not working yet: the button is there for everyone, and a tap opens a small square "coming soon" card
   const [appleSoon, setAppleSoon] = useState(false);
+  // "Continue with …" while NOOB's service is switched off or does not answer: the page NOOB's own "page not found" card is shown (never the host's raw error text, never a red message)
+  const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
     if (!appleSoon) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAppleSoon(false); };
@@ -162,6 +165,7 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
     const res = await signInWithProvider(p);
     if (!res.success) {
       setBusy(null);
+      if (res.unavailable) { setUnavailable(true); return; }
       onError(res.error || 'Could not start sign-in. Please try again.');
     }
     // on success the page is about to redirect away — nothing further to do here
@@ -242,6 +246,7 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
       {button({ id: 'apple', supabaseId: 'apple' }, () => setAppleSoon(true))}
       {appleCard}
       {others.map((p) => button(p))}
+      {unavailable && typeof document !== 'undefined' && createPortal(<SystemPage kind="not-found" onClose={() => setUnavailable(false)} />, document.body)}
     </div>
   );
 };

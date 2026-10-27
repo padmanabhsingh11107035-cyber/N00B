@@ -35,6 +35,33 @@ export interface MiniGameMeta {
 // games felt repeated. Add a new entry here only alongside a real,
 // distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
+  // --- NEW: COIL RUSH (a 3D worm arena on its own page, /games/coil-rush/, shown in a frame — see minigames/HostedGameFrame and utils/coilRushWarmup) ---
+  {
+    id: 'coil_rush',
+    title: 'Coil Rush',
+    category: 'arcade',
+    description: 'Steer a glowing cosmic worm, grow by eating energy and swallow planets, stars and comets for permanent powers. Dodge asteroids, energy gates and gravity wells, outgrow the AI worms and take the crown, in free-for-all or 6 v 6 team battles. It works with a mouse, a finger or a gamepad, and your best length is kept on your device.',
+    bannerBg: 'from-[#2a1060] to-[#07061a]',
+    badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'coilrush',
+    tags: ['3D', 'Worm arena', 'Powers'],
+    isNew: true,
+    ownSound: true,
+    embedLazy: true,
+    embedPortrait: true,
+    embedControls: 'Mouse to steer, hold click or Space to boost. On a phone: left thumb steers, right thumb boosts. It has its own music and sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/coil-rush/',
+    posters: [
+      '/game-posters/coil-rush/01-cover.webp',
+      '/game-posters/coil-rush/02-match.webp',
+      '/game-posters/coil-rush/03-skins.webp'
+    ]
+  },
+
   // --- NEW: THE ROGUE: SHADOWFALL (a dark-fantasy 3D roguelite on its own page, /games/the-rogue/, shown in a frame — see minigames/HostedGameFrame and utils/rogueWarmup) ---
   {
     id: 'the_rogue_shadowfall',

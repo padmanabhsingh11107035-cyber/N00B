@@ -20,6 +20,7 @@ import { parseFunPath } from './utils/funRoutes.ts';
 import { isNativeApp } from './utils/siteUrl.ts';
 import { isCoachingHost } from './components/Study/studyStore.ts';
 import { SystemPage } from './components/Common/SystemPage.tsx';
+import { ServiceGate } from './components/Common/ServiceGate.tsx';
 import { isEditorHost } from './components/Studio/studioStore.ts';
 
 // NOOB Studio as a page of its own (editor.noobsocials.com): fetched only on that address
@@ -132,6 +133,7 @@ createRoot(document.getElementById('root')!).render(
         <MusicPlayerProvider>
           <App />
           <InstallInvite />
+          <ServiceGate />
         </MusicPlayerProvider>
       )}
     </ErrorBoundary>

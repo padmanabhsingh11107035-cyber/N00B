@@ -18,6 +18,7 @@ const OPEN_TO_VISITORS = {
   resolve_login_email: 'the login screen: gives out only a made-up address (@users.nooob.xyz) or one of an account that has a password, otherwise a look-alike decoy',
   username_taken: 'sign-up: says whether a User ID is free (User IDs are public anyway)',
   check_signup: 'sign-up: checks the form before the account exists',
+  email_in_use: 'login: says whether an email is on an account, to answer "email not found" instead of "wrong password" (a yes or a no, like username_taken)',
   login_approval_needed: 'login: says whether a User ID asks for an approval by email (the login has to know)',
   get_ui_translations: 'the app\'s own translated words, public',
   public_platform_settings: 'the public switches (maintenance, sign-up open ...), public',

@@ -1885,7 +1885,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <img
                           src={c.avatar || '/noob-logo-circle.png'}
                           alt=""
-                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover ring-2 ring-purple-500/50`}
+                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover`}
                         />
                         <span className="absolute -bottom-0.5 -right-0.5 px-1 py-0.2 rounded bg-purple-600 text-white text-[7px] font-black uppercase tracking-tight shadow">
                           group
@@ -1899,7 +1899,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                           }
                           alt=""
-                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover ring-2 ring-emerald-400/30`}
+                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover`}
                         />
                         {isUserOnline(partner.id) && (
                           <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#0dedae] border-2 border-[var(--page)] rounded-full" />
@@ -1914,7 +1914,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Header: Title + Tag ('group' or 'chat') + Time */}
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[15px] font-extrabold text-white truncate transition-colors">
+                        <span className="text-[16.5px] font-bold text-white truncate transition-colors">
                           {displayName}
                         </span>
 
@@ -1929,7 +1929,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         {!c.isGroup && partner.isVerified && <VerifiedBadge size="xs" />}
                       </div>
 
-                      <span className="text-[11px] text-zinc-500 shrink-0 font-medium">
+                      <span className="text-[12px] text-zinc-500 shrink-0 font-medium">
                         {c.lastMessage?.createdAt ? fmtClock(c.lastMessage.createdAt) : 'Active'}
                       </span>
                     </div>

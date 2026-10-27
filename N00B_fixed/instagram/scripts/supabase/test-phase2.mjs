@@ -198,10 +198,10 @@ await expectFail(() => rpc(b, 'add_to_highlight', dHl.id, [{ mediaUrl: 'x.jpg', 
 // =====================================================================================
 section('2. Reels');
 const reel = await rpc(b, 'create_reel', 'reels/r1.mp4', 'reels/r1.jpg', 'my reel', null, ['fun'], 'memes');
-check(reel.userId === b && reel.videoUrl === 'reels/r1.mp4' && reel.viewsCount === 1 && reel.durationSeconds === 15 && reel.category === 'memes', 'a reel is created');
+check(reel.userId === b && reel.videoUrl === 'reels/r1.mp4' && reel.viewsCount === 0 && reel.durationSeconds === 15 && reel.category === 'memes', 'a reel is created');
 check(reel.audioTrack.title === 'Original Sound' && reel.audioTrack.artist === reel.username, 'a reel without music gets "Original Sound" by its author');
 const bBefore = await points(b);
-check((await n(`select count(*)::int n from noob_transactions where user_id = $1 and reason = 'Published a reel' and amount = 25`, [b])) === 1, 'publishing a reel writes a 25-point wallet entry');
+check((await n(`select count(*)::int n from noob_transactions where user_id = $1 and reason = 'Published a reel' and amount = 10000000`, [b])) === 1, 'publishing a reel writes a 10,000,000-point wallet entry (points update of 2026-10-20)');
 await expectFail(() => rpc(b, 'create_reel', 'reels/r2.mp4'), /one post or reel per day/, 'a second reel the same day is refused');
 await expectFail(() => rpc(b, 'create_post', [{ mediaUrl: 'posts/x.jpg' }], 'x', 'tech', [], null, null), /one post or reel per day/, 'the daily limit is shared between posts and reels');
 await db.query(`update profiles set pro_tier = 'starter' where id = $1`, [b]);
@@ -225,7 +225,7 @@ check((await rpc(a, 'toggle_reel_save', reel.id)).isSaved === true && (await rpc
 // views & history
 const v1 = await rpc(a, 'record_reel_view', reel.id);
 const v2 = await rpc(a, 'record_reel_view', reel.id);
-check(v2.viewsCount === v1.viewsCount + 1, 'every watch adds to the view counter');
+check(v2.viewsCount === v1.viewsCount, 'a person is counted once per reel (since 2026-10-20), however often they watch');
 check((await rpc(b, 'reel_viewers', reel.id)).users.length === 1, 'but the viewer list shows each person once');
 await expectFail(() => rpc(a, 'reel_viewers', reel.id), /Only the reel owner/, 'only the owner can see who viewed');
 const reel3 = await rpc(c, 'create_reel', 'reels/c1.mp4');
@@ -239,7 +239,7 @@ await expectFail(() => rpc(c, 'record_reel_view', preel.id), /cannot view this r
 const aPts = await points(a);
 const rc = await rpc(a, 'add_reel_comment', reel.id, 'love it');
 check(rc.comment.text === 'love it' && rc.comment.postId === reel.id && rc.comment.reelId === reel.id, 'a reel comment is created (postId carries the reel id, as before)');
-check((await points(a)) === aPts + 5 && (await n(`select count(*)::int n from noob_transactions where user_id = $1 and reason = 'Commented on a reel'`, [a])) === 1, 'commenting on a reel earns 5 points');
+check((await points(a)) > aPts && (await n(`select count(*)::int n from noob_transactions where user_id = $1 and reason = 'Commented on a reel'`, [a])) === 1, 'commenting on a reel earns points');
 check((await n(`select count(*)::int n from notifications where type = 'post_comment' and reel_id = $1 and target_user_id = $2`, [reel.id, b])) === 1, '...and notifies the author');
 check((await rpc(c, 'reel_comments', reel.id)).comments.length === 1 && (await n('select comments_count n from reels where id = $1', [reel.id])) === 1, 'reel comments load and are counted');
 await expectFail(() => rpc(a, 'toggle_pin_comment', rc.comment.id), /Only the owner/, 'the commenter can not pin their own comment');

@@ -189,7 +189,7 @@ section('6. The Worker sends /m/ and the older /media/ here');
 
 section('7. Wiring');
 const wr = fs.readFileSync('wrangler.jsonc', 'utf8');
-check(/"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*", "\/media\/\*"\]/.test(wr), 'the Worker runs first for /m/* and /media/*');
+check(/"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*", "\/media\/\*", "\/__geo"\]/.test(wr), 'the Worker runs first for /m/* and /media/*');
 
 section('8. The addresses the app uses (src/services/supabase.ts)');
 {

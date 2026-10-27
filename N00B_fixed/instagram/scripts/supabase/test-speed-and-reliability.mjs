@@ -70,7 +70,7 @@ check(/useTabScroll\(activeTab, KEEP_ALIVE_TABS, pageLayers\.layers\.length === 
 
 section('4. Every game is its own file');
 check(!/^import \{ (CyberSnakeGame|TicTacToeGame|ChessGame|LudoGame|MonopolyGame|SnakesAndLaddersGame|RockPaperScissorsGame|SpeedMathGame|MemoryMatchGame|ReactionTapGame|ColorRushGame|GenericArcadeGame|ChessOnlineMatch) \} from '\.\/minigames/m.test(modal), 'the game window no longer imports every game up front');
-check((modal.match(/lazyTab\(\(\) => import\('\.\/minigames\//g) || []).length === 13, 'all 13 game engines are loaded on demand');
+check((modal.match(/lazyTab\(\(\) => import\('\.\/minigames\//g) || []).length >= 13, 'every game engine is loaded on demand (13 when this was written, more now)');
 check(/for \(const load of GAME_PRELOADS\[game\.id\] \?\? \[preloadGeneric\]\) void load\(\)\.catch\(\(\) => undefined\);/.test(modal), "the chosen game's file starts loading as soon as its window opens");
 check(/<React\.Suspense fallback=\{<GameLoading \/>\}>\s*<div className="space-y-3">/.test(modal), "a small spinner covers the moment a game's file is on its way");
 check(['cyber_snake', 'snake', 'pac_grid', 'tictactoe', 'chess_blitz', 'snakes_ladders', 'ludo_classic', 'monopoly_noob', 'rps', 'speed_math', 'memory_match', 'reaction_tap', 'bubble_blitz'].every((id) => new RegExp('\\b' + id + ': \\[').test(modal)), 'every game id has its file(s) listed for preloading');

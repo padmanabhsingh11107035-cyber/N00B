@@ -29,7 +29,7 @@ check(/Google Play Protect/.test(P.SAMSUNG_INSTALL_HINT) && /Chrome/.test(P.SAMS
 section('3. Where it applies');
 const auth = read('src/components/Auth/AuthView.tsx');
 const prof = read('src/components/Profile/InstallAndPermissionsPage.tsx');
-check(/if \(onSamsung\) \{[\s\S]{0,200}window\.location\.href = chromeInstallUrl\(window\.location\.href\);/.test(auth) && /Opens Chrome to install/.test(auth), 'the Install button on the login screen opens Chrome on Samsung Internet (and says so)');
+check(/if \(onSamsung\) \{[\s\S]{0,420}window\.location\.href = chromeInstallUrl\(window\.location\.href\);/.test(auth) && /SAMSUNG_INSTALL_HINT/.test(auth), 'the Install button on the login screen opens Chrome on Samsung Internet (and says so)');
 check(/if \(isSamsungInternet\(\)\) \{[\s\S]{0,260}window\.location\.href = chromeInstallUrl\(window\.location\.href\);/.test(prof), 'and so does the Install button in Profile');
 check(!/promptInstall\(\)[\s\S]{0,40}isSamsungInternet/.test(prof) && prof.indexOf('isSamsungInternet()') < prof.indexOf('await promptInstall()'), 'Samsung Internet never reaches the browser\'s own install prompt');
 

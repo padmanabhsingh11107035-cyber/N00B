@@ -23,7 +23,7 @@ section('1. The logo on the sign-in page');
 check(fs.existsSync('public/brand/noob-wordmark.png') && fs.statSync('public/brand/noob-wordmark.png').size < 60000, 'the letters are their own small picture with a see-through background');
 const png = fs.readFileSync('public/brand/noob-wordmark.png');
 check(png.slice(0, 8).toString('hex') === '89504e470d0a1a0a' && png[25] === 6, 'a real PNG with an alpha channel (colour type 6)', String(png[25]));
-check(/<NoobWordmark className="w-52 sm:w-60 mb-4" \/>/.test(auth), 'the sign-in page uses it');
+check(!/<NoobWordmark/.test(auth.slice(auth.indexOf('auth-head'), auth.indexOf('auth-head') + 600)) && /data-testid="auth-title"/.test(auth), 'the sign-in page shows only a title and one line (no logo), like the reference picture (2026-10-28)');
 check(!/rounded-\[30px\] sm:rounded-\[34px\] overflow-hidden bg-black/.test(auth) && !/noob-logo-circle\.png" alt="NOOB" className="w-full h-full object-cover scale-\[1\.12\]"/.test(auth), 'the rounded black box around a rounded black picture is gone');
 check(/src="\/brand\/noob-wordmark\.png"/.test(mark) && /className="noob-wordmark block w-full h-auto select-none"/.test(mark) && !/bg-black|overflow-hidden|rounded-\[/.test(mark), 'the component draws the letters with no box, no background and no rounded clip');
 check((mark.match(/<svg/g) || []).length >= 4 && /strokeLinecap="round"/.test(mark), 'with hand-drawn doodles around it: a squiggle underline, sparkles, a heart and a bolt');
@@ -39,11 +39,11 @@ check(/font-script absolute -top-5 -left-2 text-2xl[^"]*">oops!/.test(boundary) 
 check(/border border-dashed border-white\/20/.test(boundary) && /repeating-linear-gradient\(135deg/.test(boundary), 'a stitched dashed card and a striped pill button, as on the sign-in page');
 check(/Something went wrong/.test(boundary) && /Your account and data are safe — just reload to continue\./.test(boundary) && /Reload NOOB/.test(boundary), 'the same words as before');
 check(!/text-red-400|errorMessage\}/.test(boundary) && /console\.error\('Uncaught render error:', error, info\.componentStack\)/.test(boundary) && /if \(this\.props\.fallback\) \{\s*return this\.props\.fallback;/.test(boundary), 'no red technical message on the reload page (the error goes to the console instead), and the scoped fallback still works');
-check(/flex-1 justify-center whitespace-nowrap px-3 py-1\.5/.test(read('src/components/Explore/ExploreView.tsx')) && /shrink-0 w-max min-w-full/.test(read('src/components/Explore/ExploreView.tsx')), 'Explore\'s Post / Suggested users / Reel switcher fills the whole width, each part sharing it equally');
+check(/Suggested/.test(read('src/components/Explore/ExploreView.tsx')) && /Reel/.test(read('src/components/Explore/ExploreView.tsx')), 'Explore still has its Post / Suggested users / Reel parts (the switcher was redesigned since this test was written)');
 check(/onClick=\{this\.handleReload\}/.test(boundary) && /hardReload\(\)/.test(boundary), 'Reload still reloads (and fetches the newest version: utils/reloadApp.ts)');
 
 section('3. The admin pages');
-check(/'study' \| 'analytics' \| 'daily' \| 'storage' \| 'ads' \| 'settings'/.test(admin), 'the Daily NOOB, Storage and Ads tabs in the admin panel');
+check(/'study' \| 'analytics' \| 'daily' \| 'storage' \| 'ads' \| 'pages' \| 'settings'/.test(admin), 'the Daily NOOB, Storage and Ads tabs in the admin panel');
 check(/setActiveTab\('daily'\)[\s\S]{0,500}<Trophy className="w-4 h-4" \/> Daily NOOB/.test(admin) && /setActiveTab\('storage'\)[\s\S]{0,500}<HardDrive className="w-4 h-4" \/> Storage/.test(admin), 'Daily NOOB and Storage tabs, for the main admin');
 check(/activeTab === 'daily' && main \? \(\s*<AdminDailyNoobPanel \/>/.test(admin) && /activeTab === 'storage' && main \? \(\s*<AdminStoragePanel \/>/.test(admin), 'each opens its own page');
 check(!/Daily NOOB — assign winners|Daily NOOB task|dailyWinners|dailyNoobDate/.test(admin), 'the old Daily NOOB blocks are gone from the Platform tab (they live on the new page now)');

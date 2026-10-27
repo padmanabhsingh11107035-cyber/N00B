@@ -1,3 +1,4 @@
+import { SignupSourceCard } from './components/Common/SignupSourceCard';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Home,
@@ -1664,6 +1665,7 @@ export default function App() {
     <FeatureFlagsContext.Provider value={featuresOff}>
     <div className={`min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
       {isUpdateAvailable && <UpdateAvailableBanner />}
+      <SignupSourceCard userId={currentUser.id} />
       {incomingCall && (
         <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
       )}

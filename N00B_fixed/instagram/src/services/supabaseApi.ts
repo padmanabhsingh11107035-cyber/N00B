@@ -17,6 +17,7 @@ import { uploadImageSettings } from '../utils/devicePrefs';
 import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
 import { probeService } from './serviceHealth';
+import { markAskSource } from '../utils/signupSource';
 import { mediaOrigin } from '../utils/siteUrl';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
@@ -243,6 +244,7 @@ export async function verifySignupOtp(code: string, payload: SignupPayload): Pro
     const user = await rpc<any>('get_my_user');
     const shown = mapUser(user);
     if (preview && shown) shown.avatar = preview;
+    markAskSource(shown?.id);   // "where did you hear about NOOB?" is asked once, for this new account only
     console.info('[sign-up] milliseconds: code and account', Math.round(t1 - t0), '| sign-in', Math.round(t2 - t1), '| profile', Math.round(performance.now() - t2));
     return { success: true, user: startChatKeys(shown, payload.password) as User };
   } catch (err) {
@@ -524,6 +526,7 @@ export async function completeOAuthSignup(code: string, payload: OAuthSignupPayl
     await uploadPendingSignupAvatar(pendingKey);
     const user = await rpc<any>('get_my_user');
     void supabase.functions.invoke('recover-account', { body: { action: 'welcome' } }).catch(() => undefined);
+    markAskSource(user?.id);   // "where did you hear about NOOB?" is asked once, for this new account only
     return { success: true, user: startChatKeys(mapUser(user)) as User };
   } catch (err) {
     return { success: false, error: errorText(err, unavailable) };

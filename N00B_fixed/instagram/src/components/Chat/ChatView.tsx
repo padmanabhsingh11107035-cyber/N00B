@@ -1890,13 +1890,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       <div className="flex items-center text-xs text-zinc-400 truncate min-w-0">
                         {isMine && (
                           <span className="inline-flex items-center mr-1 shrink-0">
-                            {lastMsg?.status === 'delivered' ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-zinc-400" title="Delivered" />
-                            ) : (
+                            {lastMsg?.status === 'read' ? (
                               <CheckCheck
                                 className="w-3.5 h-3.5 text-[#00E5FF] drop-shadow-[0_0_4px_rgba(0,229,255,0.7)]"
-                                title="Read"
+                                title="Seen"
                               />
+                            ) : (
+                              <CheckCheck className="w-3.5 h-3.5 text-zinc-400" title="Sent" />
                             )}
                           </span>
                         )}
@@ -2637,15 +2637,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       {/* Double Check Tick Icons for Outgoing Messages */}
                       {isMine && (
                         <div className="flex items-center shrink-0 ml-0.5">
-                          {m.status === 'sent' ? (
-                            <Check className="w-3.5 h-3.5 text-zinc-400" title="Sent" />
-                          ) : m.status === 'delivered' ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-zinc-400" title="Delivered" />
-                          ) : (
+                          {/* two grey ticks once it is sent, two blue ones only once somebody has seen it (the same in the chat list and after coming back to the chat) */}
+                          {m.status === 'read' ? (
                             <CheckCheck
                               className="w-3.5 h-3.5 text-[#00E5FF] drop-shadow-[0_0_5px_rgba(0,229,255,0.7)]"
-                              title="Read"
+                              title="Seen"
                             />
+                          ) : (
+                            <CheckCheck className="w-3.5 h-3.5 text-zinc-400" title="Sent" />
                           )}
                         </div>
                       )}

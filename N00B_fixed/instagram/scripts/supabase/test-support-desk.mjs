@@ -60,7 +60,7 @@ check(/This conversation has been closed/.test(chat) && /Start a new chat/.test(
 section('4. The other screens work');
 check(/export const CallPage/.test(pages) && /onClick=\{onStart\}/.test(pages) && /<CallPage username=\{currentUser\.username\} onStart=\{handleStartCall\}/.test(modal), 'Call us starts the live voice call');
 check(/handleStartCall/.test(modal) && /startVoiceListening/.test(modal) && /handleAskCallQuestion/.test(modal) && /data-testid="voice-info"/.test(modal), 'the voice call is as it was (listening, answering out loud, the voice shown in small print)');
-check(/<FaqPage faqs=\{FAQs\}/.test(modal) && (modal.match(/^\s+q: '/gm) || []).length === 8, 'FAQs show all eight questions, each opens its answer');
+check(/<FaqPage faqs=\{FAQs\}/.test(modal) && (modal.match(/^\s+q: '/gm) || []).length === 9, 'FAQs show all nine questions, each opens its answer');
 check(/handleSafetyReportSubmit/.test(modal) && /submitSafetyReport\(\{/.test(modal) && /fetchUsers\(q\)/.test(modal) && /<ReportPage/.test(modal), 'Report someone searches the accounts and reports and blocks, as before');
 check(/submitAppSuggestion\('issue'/.test(modal) && /<TicketPage/.test(modal) && !/TKT-/.test(modal), 'a ticket is really sent (to the NOOB team\'s Suggestion Box, where it is answered), not given a made-up number');
 

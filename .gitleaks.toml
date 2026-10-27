@@ -1,0 +1,13 @@
+# NOOB secret-scan settings. Everything is scanned EXCEPT the files below, which are not written by hand and hold no secrets:
+#  - the built game bundles (long runs of random-looking bytes that the scanner mistakes for keys), and
+#  - package lock files (long package fingerprints).
+# Source code, settings, workflows and the database files are all still scanned.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "built game bundles and lock files"
+paths = [
+  '''N00B_fixed/instagram/public/games/.*/build/.*''',
+  '''.*package-lock\.json''',
+]

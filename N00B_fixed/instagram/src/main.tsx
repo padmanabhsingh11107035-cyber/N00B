@@ -15,6 +15,7 @@ import './utils/devicePrefs.ts';   // reads this device's saved choices (text si
 import { initLanguage } from './i18n/engine.ts';
 import { startTextFit } from './utils/textFit.ts';
 import { registerServiceWorkerForInstallability } from './utils/pwaInstall.ts';
+import { listenForNativeAuthReturn } from './services/nativeAuth.ts';
 import { installHistoryGate } from './utils/historyGate.ts';
 import { cleanPath, isKnownPath } from './utils/routes.ts';
 import { parseFunPath } from './utils/funRoutes.ts';
@@ -97,6 +98,7 @@ if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
 // Chrome's "can this be installed?" check wants an active service worker present — this is
 // what makes the Install and Permissions page's one-tap install button actually appear.
 registerServiceWorkerForInstallability();
+listenForNativeAuthReturn();   // the Android app: finishes "Continue with Google ..." when the phone's browser tab hands back to NOOB (services/nativeAuth.ts)
 
 // The opening splash (index.html): a black screen that the opening animation (public/opening/opening.js) takes over: it plays for 4 seconds, opens the app like an iris and removes
 // the splash itself, so there is nothing to do here. Where it does not run (reduced motion, a missing script) the plain black screen fades away as soon as the app has started; the

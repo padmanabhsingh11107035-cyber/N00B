@@ -223,6 +223,9 @@ const BUSINESS_CATEGORIES = [
   'Local Business & Cafe'
 ];
 
+// the old hand-drawn doodles, glows and the phone demo behind the sign-in page: off since the page was redesigned (teal header, dark sheet); the pieces stay in the code
+const SHOW_AUTH_DOODLES = false;
+
 export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint }) => {
   const [mode, setMode] = useState<'signup' | 'login'>('login');
 
@@ -998,7 +1001,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   }
 
   return (
-    <div className="doodle-wallpaper-login min-h-screen w-full text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
+    <div className="doodle-wallpaper-login auth-v2 force-dark min-h-screen w-full text-white flex flex-col justify-between items-center p-3 sm:p-6 md:p-8 relative selection:bg-zinc-50 selection:text-zinc-950 overflow-x-hidden">
+      {SHOW_AUTH_DOODLES && (<>
       {/* Premium Gen Z Background glow accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[650px] h-[360px] bg-gradient-to-b from-indigo-600/25 via-violet-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[280px] bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />
@@ -1069,6 +1073,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
       <LoginMoreDoodles />
       {/* the phone: a small working demo of the app (reels, chat, games, live rooms...) */}
       <LoginPhoneDemo />
+      </>)}
 
       {/* Install to Home Screen: available before logging in or signing up, on any device. Not installed yet = the first thing the eye
           finds (a glowing button with a pulsing ring, a sweeping shine, a bobbing arrow and a hand-drawn "get the app!" note, all still when the
@@ -1134,21 +1139,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
       )}
 
       {/* Top Header: the NOOB logo written on the page (no box around it), centered */}
-      <header className="w-full max-w-lg flex flex-col items-center justify-center z-10 pt-2 pb-2">
-        <NoobWordmark className="w-52 sm:w-60 mb-4" />
-
-        {/* Tagline */}
-        <div className="flex items-center gap-2 mt-3 text-xs sm:text-sm font-bold tracking-wide">
-          <span className="text-noob">Connect</span>
-          <span className="text-zinc-600">•</span>
-          <span className="text-cyan-400">Share</span>
-          <span className="text-zinc-600">•</span>
-          <span className="text-violet-400">Grow</span>
-        </div>
+      <header className="auth-head w-full flex flex-col items-center justify-center z-10 pt-8 pb-14 px-6 text-center" data-testid="auth-head">
+        <h1 className="text-[28px] leading-tight font-extrabold tracking-tight text-white" data-testid="auth-title">{mode === 'signup' ? 'Create Account' : 'Log In'}</h1>
+        <p className="mt-1.5 text-[13px] leading-snug text-white/80 max-w-[17rem]">{mode === 'signup' ? 'Fill your information below or register with your social account.' : 'Fill your information below or log in with your social account.'}</p>
       </header>
 
       {/* Main Authentication Card */}
-      <main className="w-full max-w-lg my-auto z-10 py-3">
+      <main className="auth-sheet w-full -mt-8 z-10 px-5 sm:px-[max(1.75rem,calc((100%-28rem)/2))] pt-7 pb-6 rounded-t-[36px] flex-1">
         {mode === 'signup' && (
           <div className="mb-3">
             <button
@@ -1173,17 +1170,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
           </div>
         )}
 
-        <div key={mode} className="animate-in fade-in duration-200 bg-zinc-950/95 backdrop-blur-2xl border border-white/10 rounded-[32px] p-5 sm:p-8 shadow-2xl shadow-black relative overflow-hidden ring-1 ring-white/5">
+        <div key={mode} className="animate-in fade-in duration-200 relative">
           {/* Top Option: Only Log In indicator at top for login page */}
           {mode === 'login' ? (
-            <div className="flex items-center justify-center p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5">
+            <div className="!hidden items-center justify-center p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5">
               <div className="w-full py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-noob to-noob-strong text-black shadow-md shadow-indigo-500/25 flex items-center justify-center gap-1.5 select-none">
                 <Lock className="w-3.5 h-3.5" />
                 <span>Log In to Your Account</span>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5 px-3 py-2">
+            <div className="!hidden items-center justify-between p-1 bg-zinc-900/90 rounded-2xl border border-white/5 mb-5 px-3 py-2">
               <div className="flex items-center gap-2 text-xs font-extrabold text-white">
                 <Zap className="w-4 h-4 text-cyan-400" />
                 <span>Create New Account</span>
@@ -1191,12 +1188,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
             </div>
           )}
 
-          {mode === 'signup' && signupsEnabled && signupStep === 'form' && (
-            <p className="mb-4 text-center text-[11px] text-zinc-400 leading-relaxed">
-              Prefer Google, Apple, Facebook or Discord?{' '}
-              <button type="button" onClick={backToLogin} className="text-blue-400 font-bold hover:underline cursor-pointer">Go back</button>{' '}
-              and tap &ldquo;Continue with&hellip;&rdquo;.
-            </p>
+          {((mode === 'signup' && signupsEnabled && signupStep === 'form') || mode === 'login') && (
+            <div className="mb-5" data-testid="auth-social-top">
+              <SocialLoginButtons onError={setErrorMessage} variant="row" />
+              <div className="flex items-center gap-3 mt-5">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[12px] text-white/70 font-semibold">{mode === 'signup' ? 'Or sign up with' : 'Or log in with'}</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+            </div>
           )}
 
           {/* ================= SIGN UP FORM ================= */}
@@ -1846,16 +1846,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                     </>
                   )}
                 </button>
-              </div>
-
-              {/* "Continue with Google / Apple / …" sit below the Log In button */}
-              <div className="pt-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 h-px bg-white/10" />
-                  <span className="text-[11px] text-zinc-500 font-bold">OR</span>
-                  <div className="flex-1 h-px bg-white/10" />
-                </div>
-                <SocialLoginButtons onError={setErrorMessage} />
               </div>
 
               {/* Bottom "Create Account" Link strictly in Blue */}

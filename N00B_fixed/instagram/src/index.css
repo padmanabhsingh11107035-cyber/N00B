@@ -1154,3 +1154,34 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 [data-noob-close] > svg, [data-noob-close] > span { display: none !important; }
 [data-noob-close]::before { content: ''; display: block; width: 24px; height: 24px; background-color: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
 [data-noob-row] { justify-content: flex-start !important; gap: 10px; }
+
+/* The Messages page, Calls and the people row: the colours of the pictures (a deep green header, a near-black sheet in the dark theme and a warm cream sheet in the light one). */
+.msg-head { background: #01472b !important; }
+:root[data-theme="light"] .msg-head { background: #0e4331 !important; }
+.msg-sheet { background: #0a0b0f; }
+:root[data-theme="light"] .msg-sheet { background: #f4eee4; }
+.msg-pill { background: #1a2129; color: #a9b4c0; border: 0; }
+.msg-pill-on { background: #0a3d2c; color: #2ee6b1; border: 0; }
+:root[data-theme="light"] .msg-pill { background: #ebe5d9; color: #8b857a; }
+:root[data-theme="light"] .msg-pill-on { background: #d6eee4; color: #0e8a67; }
+
+/* The sign-in and sign-up pages (from the Create Account picture): a teal header that melts into a dark rounded sheet, round social buttons, grey inputs and a coral pill button. Always dark, in both themes. */
+.doodle-wallpaper-login.auth-v2 { background: #14171a !important; background-image: none !important; padding: 0 !important; justify-content: flex-start !important; }
+.auth-v2 .auth-head { background: linear-gradient(180deg, #2d8a7e 0%, #1f6a62 55%, #164a47 100%); }
+.auth-v2 .auth-sheet { background: #14171a; box-shadow: 0 -10px 30px rgba(0,0,0,.35); }
+.auth-v2 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .auth-v2 select, .auth-v2 textarea { background: #262b2a !important; border: 1px solid transparent !important; border-radius: 16px !important; color: #fff !important; }
+.auth-v2 input:focus, .auth-v2 select:focus, .auth-v2 textarea:focus { border-color: #ff856d !important; box-shadow: 0 0 0 3px rgba(255,133,109,.18) !important; outline: none; }
+.auth-v2 input::placeholder, .auth-v2 textarea::placeholder { color: #8e9896 !important; }
+.auth-v2 label { color: #fff; font-weight: 700; }
+.auth-v2 input[type="checkbox"] { accent-color: #ff856d; }
+.auth-v2 form button[type="submit"] { background: #ff856d !important; color: #b3201a !important; border-radius: 9999px !important; box-shadow: none !important; font-weight: 800; }
+.auth-v2 form button[type="submit"]:hover { background: #ff9680 !important; }
+.auth-v2 form button[type="submit"] * { color: #b3201a !important; }
+.auth-v2 form button[type="submit"] .animate-spin { border-color: #b3201a !important; border-top-color: transparent !important; }
+.auth-v2 .text-blue-400, .auth-v2 .text-blue-300 { color: #ff8a73 !important; text-decoration: underline; font-weight: 700; }
+.auth-v2 .force-white-text { color: #fff; }
+/* .force-dark paints a flat grey with !important inside @layer base (see the menu banners above), so the green header needs one more class in the same layer. */
+@layer base {
+  .msg-head.force-dark, body.light .msg-head.force-dark { background-color: #01472b !important; }
+  :root[data-theme="light"] .msg-head.force-dark { background-color: #0e4331 !important; }
+}

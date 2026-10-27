@@ -66,14 +66,14 @@ check(/run_worker_first[^\]]*"\/__geo"/.test(read('wrangler.jsonc')), 'the websi
 section('4. The Terms and the Privacy Policy say it');
 for (const f of ['src/components/Legal/PrivacyPolicy.tsx', 'src/components/Legal/TermsAndConditions.tsx', 'public/privacy.html', 'public/terms.html']) {
   const t = read(f);
-  check(/operating system/.test(t) && /battery level/.test(t) && /approximate location/.test(t) && /do not sell/.test(t) && /not used for any other activity/.test(t) && /encrypted/.test(t) && /optional/.test(t), `${f}: the system, the battery, the approximate location, "we do not sell", "not used for any other activity", "encrypted", the city is optional`);
+  check(/operating system/.test(t) && /battery level/.test(t) && /approximate (location|place)/.test(t) && /do not sell/.test(t) && /not used for any other activity/.test(t) && /encrypted/.test(t) && /optional/.test(t), `${f}: the system, the battery, the approximate location, "we do not sell", "not used for any other activity", "encrypted", the city is optional`);
 }
 
 section('5. The sign-up city, the character and the app icon');
 const auth = read('src/components/Auth/AuthView.tsx'), api = read('src/services/supabaseApi.ts'), app = read('src/App.tsx'), css = read('src/index.css');
 check(/data-testid="signup-city"/.test(auth) && /\(optional\)/.test(auth) && /city: city\.trim\(\) \|\| undefined/.test(auth) && !/required[^>]*signup-city|signup-city[^>]*required/.test(auth), 'the sign-up form asks for a city and it is optional');
 check(/saveMyLocation\(payload\.city, true\)/.test(api) && /sendDeviceInfo\(\)/.test(api) && /startLastSeenHeartbeat[\s\S]{0,400}saveMyLocation\(\)/.test(api), 'the city is saved right after sign-up, and the device and place on the usual heartbeat');
-check(/src="\/noob-support-character\.png"/.test(app) && /setShowCustomerSupportModal\(true\)/.test(app) && />NOOB<\/span>/.test(app) && /bg-black text-white/.test(app) && /data-testid="support-buddy"/.test(app), 'the corner button is the character, it opens the help page, and it carries a black "NOOB" badge');
+check(/src="\/noob-support-character\.png"/.test(app) && /setShowCustomerSupportModal\(true\)/.test(app) && !/>NOOB<\/span>/.test(app.slice(app.indexOf('data-testid="support-buddy"') - 900, app.indexOf('data-testid="support-buddy"') + 900)) && /data-testid="support-buddy"/.test(app), 'the corner button is the character, it opens the help page, and it is only her, with no badge');
 check(/\.noob-buddy \{ animation: noob-buddy-float/.test(css) && /prefers-reduced-motion: reduce\) \{ \.noob-buddy \{ animation: none/.test(css), 'it moves (floats, tilts, says hello now and then) and stands still for people who asked for less motion');
 const mk = (await import('node:module')).createRequire(import.meta.url);
 const manifest = JSON.parse(read('public/manifest.json'));

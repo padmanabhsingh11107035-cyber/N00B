@@ -57,7 +57,7 @@ check((css.match(/--doodle-login: url\(/g) || []).length === 3 && /\.doodle-wall
 const feedTile = decodeURIComponent((/--doodle-feed: url\("data:image\/svg\+xml,([^"]*)"\)/.exec(css) || [])[1] || '');
 const loginTile = decodeURIComponent((/--doodle-login: url\("data:image\/svg\+xml,([^"]*)"\)/.exec(css) || [])[1] || '');
 check((feedTile.match(/<path /g) || []).length === (loginTile.match(/<path /g) || []).length && (feedTile.match(/<path /g) || []).length >= 16 && /stroke-width='1\.4'/.test(loginTile), 'the same sixteen doodles, drawn at the same size and line weight');
-check(/className="doodle-wallpaper-login min-h-screen w-full text-white flex flex-col justify-between/.test(read('src/components/Auth/AuthView.tsx')), 'and the sign-in page uses it');
+check(/className="doodle-wallpaper-login auth-v2 force-dark min-h-screen w-full text-white flex flex-col justify-between/.test(read('src/components/Auth/AuthView.tsx')), 'and the sign-in page uses it');
 
 section('6. Names on a post can be seen to be tappable, and open a profile at once');
 const UL = 'underline decoration-1 underline-offset-[3px] decoration-zinc-50/70';

@@ -28,11 +28,11 @@ check(/pageTab === 'feed' \? 'xl:pr-4' : ''/.test(page),'on Home the right edge 
 const people = /<aside className=\{`(hidden lg:flex[^`]*)`\} data-testid="desktop-people-panel">/.exec(app)?.[1] || '';
 check(/pageTab === 'feed' \? '' : 'xl:mr-auto'/.test(people) && /2xl:w-\[340px\] 3xl:w-\[380px\]/.test(people), 'the people list is at the far right on Home (no spare room after it), and takes its equal share elsewhere');
 const feed = read('src/components/Feed/FeedView.tsx');
-check((feed.match(/max-w-\[480px\] xl:max-w-\[640px\]/g) || []).length === 4 && !/max-w-\[480px\] px/.test(feed), 'the Home feed itself (banners, topic pills, posts) grows from 480 to 640 px on wide screens, to use the wider middle page');
+check((feed.match(/max-w-\[480px\] xl:max-w-\[640px\]/g) || []).length === 3 && !/max-w-\[480px\] px/.test(feed) && /data-testid="feed-topic-chips"/.test(feed), 'the Home feed itself (banners, posts) grows from 480 to 640 px on wide screens, to use the wider middle page');
 check(/--breakpoint-3xl: 112\.5rem/.test(css), 'the 3xl breakpoint (1800 px) is defined for very wide monitors');
 
 section('3. Smaller screens are unchanged');
-check(/hidden xl:flex/.test(side) && /hidden lg:flex/.test(people) && /lg:p-6 lg:gap-8/.test(page), 'below 1280 px there is no side menu, below 1024 px no people list, and the spacing is as before');
+check(/hidden xl:flex/.test(side) && /hidden lg:flex/.test(people) && /lg:pb-0 lg:gap-8/.test(page), 'below 1280 px there is no side menu, below 1024 px no people list, and the spacing is as before');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

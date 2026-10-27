@@ -13,7 +13,7 @@ import { canRecognize, listen, type Listener } from '../../../utils/studyVoice';
 const SIZES = [14, 16, 18, 21];
 const when = (iso: string): string => { try { return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 const isTemp = (id: string | null): boolean => !!id && id.startsWith('tmp-');
-const round = 'w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0';
+const round = 'w-11 h-11 rounded-full bg-[#13523d] hover:bg-[#1a6249] text-white flex items-center justify-center cursor-pointer transition-colors shrink-0';
 
 export const NotepadPage: React.FC<PageProps> = ({ back }) => {
   const [notes, setNotes] = useState<Note[] | null>(null);
@@ -162,13 +162,13 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
 
   const shown = useMemo(() => filterNotes(notes || [], query), [notes, query]);
   const stats = noteStats(full());
-  const shell = 'min-h-full bg-gradient-to-b from-[#0b4a37] via-[#093a2c] to-[#06261c] text-white';
+  const shell = 'min-h-full bg-gradient-to-b from-[#0e4937] via-[#0b3d2e] to-[#093327] text-white';
 
   if (openId) {
     return (
       <div className={shell} data-testid="notepad-editor">
         <div className="max-w-2xl mx-auto px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-8">
-          <header className="flex items-center gap-2.5 mb-3.5">
+          <header className="flex items-center gap-3 mb-3.5">
             <button type="button" onClick={close} aria-label="Back" data-testid="settings-back" className={round}><ChevronLeft className="w-6 h-6" /></button>
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-black tracking-tight leading-none">Notepad</h1>
@@ -179,7 +179,7 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
             <div className="relative">
               <button type="button" onClick={() => setMenu((v) => !v)} aria-label="More" title="More" data-testid="note-more" className={round}><MoreVertical className="w-5 h-5" /></button>
               {menu && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#0c3a2d] border border-white/15 shadow-2xl p-1.5 z-20 text-sm font-semibold">
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[#0e4937] border border-white/15 shadow-2xl p-1.5 z-20 text-sm font-semibold">
                   {[
                     { icon: Copy, label: 'Copy all', run: copyAll }, { icon: Download, label: 'Save as .txt', run: download },
                     { icon: Type, label: 'Bigger text', run: () => resize(1) }, { icon: Type, label: 'Smaller text', run: () => resize(-1) },
@@ -193,24 +193,28 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
             </div>
           </header>
           {flash}
-          <div className="relative rounded-[32px] bg-[#faf7ee] text-[#1f3d33] shadow-2xl shadow-black/40 px-6 pt-6 pb-28 min-h-[78vh]">
+          <div className="relative rounded-[32px] bg-[#f9f7eb] text-[#1f3d33] shadow-2xl shadow-black/40 px-6 pt-6 pb-28 min-h-[78vh]">
             <input value={title} onChange={(e) => changeTitle(e.target.value)} placeholder="Title…" maxLength={120} data-testid="note-title"
               className="w-full bg-transparent outline-none text-[28px] font-extrabold text-[#37594b] placeholder:text-[#7d9a8d]" />
-            <div className="h-px bg-[#c9d8cf] my-3.5" />
+            <div className="h-px bg-[#d1dfd0] my-3.5" />
             <textarea ref={areaRef} value={body} onChange={(e) => changeBody(e.target.value)} onKeyDown={onKey} onBlur={() => void flush()} placeholder="Write your thoughts here…" spellCheck data-testid="note-text"
               style={{ fontSize: size }} className="w-full min-h-[48vh] bg-transparent outline-none resize-none leading-relaxed text-[#1f3d33] placeholder:text-[#7d9a8d]" />
             <p className="text-[11px] text-[#7d9a8d] mt-2" data-testid="note-stats">{stats.words} words · {stats.chars.toLocaleString()} characters · text only</p>
 
-            <div className="absolute left-3 right-3 bottom-3 rounded-full bg-[#fbf9f1] shadow-[0_10px_30px_rgba(0,0,0,0.18)] px-2 py-2 flex items-center justify-between" data-testid="note-toolbar">
+            <div className="absolute left-3 right-3 bottom-3 rounded-full bg-[#f8f9f3] shadow-[0_10px_30px_rgba(0,0,0,0.18)] px-2 py-2 flex items-center justify-between" data-testid="note-toolbar">
               {[
                 { icon: Bold, label: 'Bold', run: () => style('bold') }, { icon: Italic, label: 'Italic', run: () => style('italic') }, { icon: UnderlineIcon, label: 'Underline', run: () => style('underline') },
                 { icon: CheckSquare, label: 'Check list', run: () => list('check') }, { icon: List, label: 'Bullet list', run: () => list('bullet') }, { icon: ListOrdered, label: 'Numbered list', run: () => list('number') }
-              ].map(({ icon: Icon, label, run }) => (
-                <button key={label} type="button" onMouseDown={(e) => e.preventDefault()} onClick={run} aria-label={label} title={label}
-                  className="w-11 h-11 rounded-full text-[#4d6b5e] hover:bg-emerald-100 flex items-center justify-center cursor-pointer"><Icon className="w-5 h-5" /></button>
+              ].map(({ icon: Icon, label, run }, i) => (
+                <React.Fragment key={label}>
+                  {i > 0 && <span aria-hidden="true" className="w-px h-6 bg-[#dfe7df]" />}
+                  <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={run} aria-label={label} title={label}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer ${i === 0 ? 'bg-[#d3f3e4] text-[#16a374]' : 'text-[#597368] hover:bg-[#e3efe6]'}`}><Icon className="w-5 h-5" /></button>
+                </React.Fragment>
               ))}
+              <span aria-hidden="true" className="w-px h-6 bg-[#dfe7df]" />
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={speak} aria-label={listening ? 'Stop speaking' : 'Speak to write'} title={listening ? 'Stop' : 'Speak to write'} data-testid="note-mic"
-                className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer ${listening ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-100 text-emerald-600'}`}><Mic className="w-5 h-5" /></button>
+                className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer ${listening ? 'bg-red-500 text-white animate-pulse' : 'bg-[#c9f2e1] text-[#0f8f69]'}`}><Mic className="w-5 h-5" /></button>
             </div>
           </div>
         </div>
@@ -241,7 +245,7 @@ export const NotepadPage: React.FC<PageProps> = ({ back }) => {
             )}
             {notes.length > 0 && shown.length === 0 && <p className="py-10 text-center text-sm text-emerald-100/70">No note has that in it.</p>}
             {shown.map((n) => (
-              <div key={n.id} className="flex items-stretch rounded-3xl bg-[#faf7ee] text-[#1f3d33] shadow-lg shadow-black/20 overflow-hidden">
+              <div key={n.id} className="flex items-stretch rounded-3xl bg-[#f9f7eb] text-[#1f3d33] shadow-lg shadow-black/20 overflow-hidden">
                 <button type="button" onClick={() => open(n)} className="flex-1 min-w-0 text-left px-5 py-4 hover:bg-emerald-50 cursor-pointer" data-testid="note-row">
                   <span className="block text-[15px] font-extrabold truncate">{noteTitle(n.body)}</span>
                   <span className="block text-xs text-[#5f7a6d] truncate mt-0.5">{n.body.trim().split(/\r?\n/).slice(1).join(' ').slice(0, 90) || 'No more text'}</span>

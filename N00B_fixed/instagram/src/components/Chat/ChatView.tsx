@@ -1607,6 +1607,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
       )
     : messages;
 
+  // the people of the row under the icons: one-to-one chats, in the order of the list, up to 12
+  const recentPeople = sortedConversations
+    .filter((c) => !c.isGroup)
+    .map((c) => ({ chat: c, who: c.participants?.find((p) => p.id !== currentUser.id) as User | undefined }))
+    .filter((x): x is { chat: ChatConversation; who: User } => !!x.who)
+    .slice(0, 12);
+
   // the place of each of my messages among my messages (its colour comes from it)
   const ownOrder = new Map<string, number>();
   { let n = 0; for (const m of messages) if (m.senderId === currentUser.id || m.senderId === 'u_me') ownOrder.set(m.id, n++); }
@@ -1636,7 +1643,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           }`}
         >
           {/* Messages header: back, the title with the number of chats, and one row of round icons (search, find a person, calls, new group) */}
-          <div className="shrink-0 px-4 pt-3.5 pb-8 bg-gradient-to-b from-[#0d4a36] via-[#0a3a2b] to-[#082a20]" data-testid="messages-header">
+          <div className="msg-head force-dark shrink-0 px-4 pt-3.5 pb-8" data-testid="messages-header">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
@@ -1648,9 +1655,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <h1 className="text-[26px] leading-none font-black text-white tracking-tight flex items-center gap-2.5 min-w-0">
+              <h1 className="text-[28px] leading-none font-extrabold text-white tracking-tight flex items-center gap-2.5 min-w-0">
                 <span className="truncate">Messages</span>
-                <span className="text-[11px] font-black px-2.5 py-1 rounded-full bg-emerald-400 text-emerald-950 shrink-0">
+                <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-[#26d9a8] text-[#04382a] shrink-0">
                   {visibleConversations.length + friendsWithoutConversation.length}
                 </span>
               </h1>
@@ -1741,6 +1748,25 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </button>
             </div>
 
+            {/* the people you talk to, in a row (like the picture): "Your Instant" first (it opens the camera), then your friends, the ones who are online ringed in green */}
+            <div className="mt-4 -mx-4 px-4 flex items-start gap-3.5 overflow-x-auto no-scrollbar pb-0.5" data-testid="messages-people">
+              <button type="button" onClick={() => setShowInstantCamera(true)} aria-label="Your Instant" data-testid="messages-your-instant" className="shrink-0 w-[68px] text-center cursor-pointer">
+                <span className="relative block w-[62px] h-[62px] mx-auto">
+                  <img src={currentUser.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover ring-2 ring-white/70" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center border-2 border-[#01472b]"><Plus className="w-3 h-3" strokeWidth={3} /></span>
+                </span>
+                <span className="block mt-1.5 text-[11px] font-semibold text-white/85 truncate">Your Instant</span>
+              </button>
+              {recentPeople.map(({ chat, who }) => (
+                <button key={chat.id} type="button" onClick={() => { setActiveChatId(chat.id); setMobileView('chat'); }} data-testid="messages-person" className="shrink-0 w-[68px] text-center cursor-pointer">
+                  <span className={`block w-[62px] h-[62px] mx-auto rounded-full overflow-hidden ${isUserOnline(who.id) ? 'ring-[3px] ring-[#26d9a8]' : 'ring-2 ring-white/25'}`}>
+                    <img src={who.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full object-cover" />
+                  </span>
+                  <span className="block mt-1.5 text-[11px] font-semibold text-white/85 truncate">{(who.displayName || who.username || '').split(' ')[0]}</span>
+                </button>
+              ))}
+            </div>
+
             {showSearchField && (
               <div className="mt-3 flex items-center bg-black/25 border border-white/15 rounded-full px-4 py-2.5 focus-within:border-emerald-300 transition-colors relative">
                 <Search className="w-4 h-4 text-white/70 mr-2.5 shrink-0" />
@@ -1768,7 +1794,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           />
 
           {/* the rounded sheet that holds the filters and the chats, overlapping the header */}
-          <div className="relative -mt-5 flex-1 min-h-0 flex flex-col rounded-t-[28px] bg-zinc-950 overflow-hidden">
+          <div className="msg-sheet relative -mt-5 flex-1 min-h-0 flex flex-col rounded-t-[30px] overflow-hidden">
 
           {/* Filter Chips matching screenshot (All, Unread, Favourites, Groups) */}
           <div className="shrink-0 px-4 pt-4 pb-2 flex items-center gap-2 overflow-x-auto no-scrollbar" data-testid="messages-filters">
@@ -1796,15 +1822,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   onClick={() => setActiveFilterTab(tab.id)}
                   className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                     isActive
-                      ? 'bg-emerald-400/15 text-emerald-300 border border-emerald-400/40'
-                      : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 border border-transparent'
+                      ? 'msg-pill-on'
+                      : 'msg-pill'
                   }`}
                 >
                   <span>{tab.label}</span>
                   {count > 0 && (
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        isActive ? 'bg-emerald-400 text-emerald-950' : 'bg-zinc-800 text-zinc-400'
+                        isActive ? 'bg-[#26d9a8] text-[#04382a]' : 'bg-white/10 text-zinc-400'
                       }`}
                     >
                       {count}
@@ -1876,7 +1902,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover ring-2 ring-emerald-400/30`}
                         />
                         {isUserOnline(partner.id) && (
-                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-zinc-950 rounded-full" />
+                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#0dedae] border-2 border-[var(--page)] rounded-full" />
                         )}
                       </div>
                     )}
@@ -1937,7 +1963,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                         )}
                         {cs['chat.unreadBadges'] && c.unreadCount && c.unreadCount > 0 ? (
-                          <span className="min-w-[22px] h-[22px] px-1 rounded-full bg-emerald-400 text-emerald-950 text-[11px] font-black flex items-center justify-center shadow-sm">
+                          <span className="min-w-[22px] h-[22px] px-1 rounded-full bg-[#26d9a8] text-[#04382a] text-[11px] font-extrabold flex items-center justify-center shadow-sm">
                             {c.unreadCount}
                           </span>
                         ) : null}

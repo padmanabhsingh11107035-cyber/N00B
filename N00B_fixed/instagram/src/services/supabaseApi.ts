@@ -19,7 +19,8 @@ import { recordDiag } from './authDiag';
 import { probeService } from './serviceHealth';
 import { markAskSource } from '../utils/signupSource';
 import { dueNow, readApproxPlace, readDeviceInfo } from '../utils/deviceInfo';
-import { mediaOrigin } from '../utils/siteUrl';
+import { mediaOrigin, isNativeApp } from '../utils/siteUrl';
+import { oauthRedirectTo, openNativeAuthPage } from './nativeAuth';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
 import { getLanguage } from '../i18n/engine.ts';
@@ -323,10 +324,11 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
   try {
     // Before leaving for Google: if NOOB's service is switched off (or does not answer) the redirect would land on the host's raw error text, so nothing is started
     if ((await probeService()) !== 'up') return { success: false, unavailable: true, error: 'Sign-in is not available right now. Please try again in a moment.' };
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin, queryParams: { prompt: 'select_account' } }
+      options: { redirectTo: oauthRedirectTo(), skipBrowserRedirect: isNativeApp(), queryParams: { prompt: 'select_account' } }
     });
+    if (!error && isNativeApp() && data?.url) await openNativeAuthPage(data.url);
     return error ? { success: false, error: error.message } : { success: true };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not start Google sign-in. Please try again.') };
@@ -402,12 +404,13 @@ export async function signInWithProvider(provider: EnabledSocialProvider): Promi
   try {
     // same check as for Google above: never send a person to the host's own error text
     if ((await probeService()) !== 'up') return { success: false, unavailable: true, error: 'Sign-in is not available right now. Please try again in a moment.' };
-    const options: Record<string, unknown> = { redirectTo: window.location.origin };
+    const options: Record<string, unknown> = { redirectTo: oauthRedirectTo(), skipBrowserRedirect: isNativeApp() };
     if (provider.id === 'google') options.queryParams = { prompt: 'select_account' };
     if (provider.id === 'apple') options.scopes = 'name email';
     if (provider.id === 'discord') options.scopes = 'identify email';
     if (provider.id === 'microsoft') options.scopes = 'email';
-    const { error } = await supabase.auth.signInWithOAuth({ provider: provider.supabaseId as any, options });
+    const { data, error } = await supabase.auth.signInWithOAuth({ provider: provider.supabaseId as any, options });
+    if (!error && isNativeApp() && data?.url) await openNativeAuthPage(data.url);
     return error ? { success: false, error: error.message } : { success: true };
   } catch (err) {
     return { success: false, error: errorText(err, 'Could not start sign-in. Please try again.') };

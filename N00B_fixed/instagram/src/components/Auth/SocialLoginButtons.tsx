@@ -111,9 +111,11 @@ const META: Record<SocialProvider, { name: string; Icon: React.FC<IconProps>; cl
 
 interface Props {
   onError: (message: string | null) => void;
+  /** 'list' = a wide "Continue with ..." button for each provider; 'row' = round buttons side by side (Apple, Google, Facebook, ...) */
+  variant?: 'list' | 'row';
 }
 
-export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
+export const SocialLoginButtons: React.FC<Props> = ({ onError, variant = 'list' }) => {
   // right from the first moment: what this device read last time, or Google + Facebook + Discord (never Google alone while the settings load)
   const [providers, setProviders] = useState<EnabledSocialProvider[]>(() => cachedSocialProviders());
   const [busy, setBusy] = useState<SocialProvider | null>(null);
@@ -239,6 +241,37 @@ export const SocialLoginButtons: React.FC<Props> = ({ onError }) => {
     </div>,
     document.body
   ) : null;
+
+  // the round buttons of the sign-in and sign-up pages: Apple, Google, Facebook and then the others that are switched on
+  const roundButton = (p: EnabledSocialProvider, onTap?: () => void) => {
+    const m = META[p.id];
+    return (
+      <button
+        key={p.id}
+        type="button"
+        disabled={busy !== null}
+        onClick={() => (onTap ? onTap() : void start(p))}
+        aria-label={`Continue with ${m.name}`}
+        title={`Continue with ${m.name}`}
+        data-testid={`social-round-${p.id}`}
+        className="force-white-text w-14 h-14 rounded-full bg-[#2b302f] hover:bg-[#363c3b] ring-1 ring-white/10 flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-95 disabled:opacity-60 shrink-0"
+      >
+        {busy === p.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <m.Icon className="w-6 h-6" />}
+      </button>
+    );
+  };
+
+  if (variant === 'row') {
+    const ordered = [...(google ? [google] : []), ...providers.filter((p) => p.id === 'facebook'), ...providers.filter((p) => p.id !== 'google' && p.id !== 'apple' && p.id !== 'facebook')];
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-3.5" data-testid="social-row">
+        {roundButton({ id: 'apple', supabaseId: 'apple' }, () => setAppleSoon(true))}
+        {ordered.map((p) => roundButton(p))}
+        {appleCard}
+        {unavailable && typeof document !== 'undefined' && createPortal(<SystemPage kind="not-found" onClose={() => setUnavailable(false)} />, document.body)}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

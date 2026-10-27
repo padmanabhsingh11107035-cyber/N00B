@@ -53,7 +53,7 @@ export const CallLogsPage: React.FC<Props> = ({ chats, currentUserId, onClose, o
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-zinc-950 text-white overscroll-none" data-testid="call-logs-page">
-      <header className="shrink-0 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-6 bg-gradient-to-b from-[#0d4a36] via-[#0a3a2b] to-[#082a20]">
+      <header className="msg-head force-dark shrink-0 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-6">
         <div className="flex items-center gap-2.5 max-w-2xl mx-auto w-full">
           <button type="button" onClick={onClose} aria-label="Back" data-testid="call-logs-back" className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center cursor-pointer"><ChevronLeft className="w-6 h-6" /></button>
           <h1 className="text-2xl font-black tracking-tight">Calls</h1>
@@ -73,7 +73,7 @@ export const CallLogsPage: React.FC<Props> = ({ chats, currentUserId, onClose, o
         </div>
       </header>
 
-      <div className="relative -mt-4 flex-1 min-h-0 rounded-t-[28px] bg-zinc-950 overflow-y-auto overscroll-contain">
+      <div className="msg-sheet relative -mt-4 flex-1 min-h-0 rounded-t-[30px] overflow-y-auto overscroll-contain">
         <div className="max-w-2xl mx-auto w-full pb-24">
           {error && <p className="m-4 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-semibold">{error}</p>}
           {rows === null && <p className="p-10 text-center text-sm text-zinc-500">Loading…</p>}

@@ -1663,7 +1663,7 @@ export default function App() {
 
   return (
     <FeatureFlagsContext.Provider value={featuresOff}>
-    <div className={`min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:p-6 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
+    <div className={`min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
       {isUpdateAvailable && <UpdateAvailableBanner />}
       <SignupSourceCard userId={currentUser.id} />
       {incomingCall && (
@@ -1908,7 +1908,7 @@ export default function App() {
       <main
         className={`relative w-full max-w-[480px] ${
           pageTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : pageTab === 'feed' ? 'md:max-w-2xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
-        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : 'xl:ml-auto'} bg-page doodle-wallpaper lg:rounded-[40px] lg:border lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[92vh] ${
+        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : 'xl:ml-auto'} bg-page doodle-wallpaper lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
           // The chat tab reserves its own bottom-nav clearance internally (its container's height
           // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
           // same space, pushing the whole page taller than one viewport and creating a second,
@@ -2210,7 +2210,7 @@ export default function App() {
       {activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
         <button
           onClick={() => setShowCustomerSupportModal(true)}
-          className="noob-buddy-btn fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 h-16 flex items-end gap-1 cursor-pointer group"
+          className="noob-buddy-btn fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-16 h-16 flex items-end cursor-pointer group"
           title="Open NOOB Support"
           aria-label="Open NOOB Support"
           data-testid="support-buddy"
@@ -2224,7 +2224,6 @@ export default function App() {
             draggable={false}
             className="noob-buddy w-16 h-16 object-contain select-none pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.55)]"
           />
-          <span className="mb-1.5 px-2 py-0.5 rounded-md bg-black text-white text-[10px] font-black tracking-wider ring-1 ring-white/40 shadow-md">NOOB</span>
         </button>
       )}
 

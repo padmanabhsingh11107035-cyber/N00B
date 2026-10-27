@@ -807,12 +807,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 3. Category Topic Filter Pills */}
-      <div className="w-full max-w-[480px] xl:max-w-[640px] px-3 py-1.5 flex flex-wrap items-center justify-center gap-2">
+      <div className="w-full px-3 py-1.5 flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto" data-testid="feed-topic-chips">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeCategory === cat
                 ? 'bg-noob text-black shadow-[0_0_12px_rgba(255,255,255,0.35)] font-bold'
                 : 'bg-zinc-900/80 text-zinc-400 hover:text-white border border-white/5'

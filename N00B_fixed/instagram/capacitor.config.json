@@ -3,10 +3,8 @@
   "appName": "NOOB",
   "webDir": "dist",
   "server": {
-    "url": "https://noobsocials.com",
     "androidScheme": "https",
-    "allowNavigation": ["noobsocials.com", "*.noobsocials.com", "nooob.xyz", "*.nooob.xyz"],
-    "errorPath": "native-offline.html"
+    "allowNavigation": ["noobsocials.com", "*.noobsocials.com", "nooob.xyz", "*.nooob.xyz"]
   },
   "android": {
     "allowMixedContent": false

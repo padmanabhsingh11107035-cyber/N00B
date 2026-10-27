@@ -427,6 +427,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('🇮🇳 India (+91)'); // Default India with number, name & flag
   const [mobileNumber, setMobileNumber] = useState('');
+  const [city, setCity] = useState('');   // optional
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState('');   // nothing is selected until the person chooses
   const [password, setPassword] = useState('');
@@ -736,6 +737,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
       email: email.trim(),
       countryCode,
       mobileNumber: mobileNumber.trim(),
+      city: city.trim() || undefined,
       dateOfBirth,
       gender,
       password,
@@ -1460,6 +1462,25 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Row 5.4: City (optional) */}
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5" htmlFor="signup-city">
+                  City <span className="text-zinc-500 font-semibold">(optional)</span>
+                </label>
+                <input
+                  id="signup-city"
+                  type="text"
+                  autoComplete="address-level2"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value.replace(/[<>]/g, '').slice(0, 60))}
+                  maxLength={60}
+                  placeholder="Where do you live? You can leave this empty"
+                  data-testid="signup-city"
+                  className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
+                />
+                <p className="text-[11px] mt-1 text-zinc-500">Only NOOB&apos;s team can see it. Your device, battery level and approximate location are read as described in the Terms and the Privacy Policy.</p>
               </div>
 
               {/* Row 5.5: Date of Birth (must be 13+ to create an account) */}

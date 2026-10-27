@@ -108,6 +108,15 @@ export interface User {
   // live Presence-based online/offline status, which only ever reflects a connection right now).
   lastSeenAt?: string;
   lastSeenPlatform?: 'app' | 'pwa' | 'web';
+  // what the administrator sees about the device and the place (see the Terms): the system, the battery level, the city typed at sign-up and the approximate place of the connection
+  deviceOs?: string | null;
+  deviceBattery?: number | null;
+  deviceCharging?: boolean | null;
+  deviceInfoAt?: string | null;
+  signupCity?: string | null;
+  approxCity?: string | null;
+  approxRegion?: string | null;
+  approxCountry?: string | null;
   // Admin-only: has this person switched notifications on (a saved push registration exists), when that was last confirmed, and
   // roughly what kind of phone / browser it is. The registration itself never leaves the server.
   pushEnabled?: boolean;

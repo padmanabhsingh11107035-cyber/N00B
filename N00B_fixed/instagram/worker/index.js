@@ -176,6 +176,14 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/m/') || url.pathname.startsWith('/media/')) return serveMedia(request, ctx);
+    // The approximate place of the connection (city, region, country), as Cloudflare works it out from the internet address: told only to the person who asks, about their own
+    // connection, never stored here, never sent to anyone else (the Terms and the Privacy Policy say so). The app saves it on the person's account.
+    if (url.pathname === '/__geo' && (request.method === 'GET' || request.method === 'HEAD')) {
+      const cf = request.cf || {};
+      return new Response(JSON.stringify({ city: cf.city || '', region: cf.region || '', country: cf.country || '' }), {
+        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'access-control-allow-origin': '*' }
+      });
+    }
 
     const name = url.pathname.startsWith('/games/neon-alley/data/') ? url.pathname.slice('/games/neon-alley/data/'.length) : '';
     const entry = Object.prototype.hasOwnProperty.call(FILES, name) ? FILES[name] : null;

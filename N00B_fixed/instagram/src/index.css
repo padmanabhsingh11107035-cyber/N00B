@@ -1137,3 +1137,11 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 @keyframes menu-entry-flash { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } 25%, 60% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95), 0 0 24px rgba(255, 255, 255, 0.5); } }
 .menu-entry-flash { animation: menu-entry-flash 1.5s ease-out 1; }
 @media (prefers-reduced-motion: reduce) { .menu-entry-flash { animation: none; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95); } }
+
+/* The support character in the corner: it floats, tilts a little and now and then jumps to say hello. Nothing moves for people who asked their device for less motion. */
+@keyframes noob-buddy-float { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
+@keyframes noob-buddy-hello { 0%, 86%, 100% { transform: scale(1); } 90% { transform: scale(1.14) translateY(-8px); } 94% { transform: scale(0.96) translateY(0); } 97% { transform: scale(1.06) translateY(-3px); } }
+.noob-buddy { animation: noob-buddy-float 3.2s ease-in-out infinite, noob-buddy-hello 9s ease-in-out infinite; transform-origin: 50% 90%; }
+.noob-buddy-btn:hover .noob-buddy { animation-duration: 1.4s, 9s; }
+.noob-buddy-btn:active .noob-buddy { transform: scale(0.92); }
+@media (prefers-reduced-motion: reduce) { .noob-buddy { animation: none; } }

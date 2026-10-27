@@ -118,6 +118,11 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
               followers/following lists. This action cannot be undone and is not recoverable.
             </p>
           </section>
+
+          <section className="space-y-2" data-testid="legal-device-location">
+            <h3 className="text-sm font-bold text-white">Device and location information</h3>
+            <p dangerouslySetInnerHTML={{ __html: 'We read a few things about your device and where you are, so that NOOB works for you and stays safe: the <b>operating system</b> of your device (for example Android 14, iOS 17 or Windows), the <b>battery level</b> in per cent and whether it is charging (only where your browser or phone shares it with websites; an iPhone does not), and your <b>approximate location</b> (your city, region and country, worked out from your internet connection, plus the city you typed at sign-up, which is optional and can be left empty). We use this only to keep NOOB working well (to know which phones and systems NOOB must support, to find faults that only happen on some devices, and to protect accounts from suspicious log-ins) and so that NOOB&apos;s administrators can see it. <b>We do not sell this data, we do not share it with advertisers or any other company, and it is not used for any other activity.</b> It is kept encrypted: protected by HTTPS while it travels and encrypted at rest in our database provider&apos;s storage, and only NOOB&apos;s administrators can read it. Deleting your account deletes it.' }} />
+          </section>
         </div>
 
         {/* Footer Action */}

@@ -1653,6 +1653,14 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                   {(user.lastSeenPlatform === 'web' || user.lastSeenPlatform === 'pwa') && <Globe2 className="w-2.5 h-2.5" />}
                                 </span>
                               )}
+                              {(user.deviceOs || user.approxCity || user.signupCity) && (
+                                <span className="text-[10px] text-zinc-400 px-1.5 py-0.5 shrink-0 truncate max-w-[16rem]" data-testid="device-info"
+                                  title={`${user.deviceOs || 'Device unknown'}${typeof user.deviceBattery === 'number' ? `, battery ${user.deviceBattery}%${user.deviceCharging ? ' (charging)' : ''}` : ''}${user.signupCity ? `, typed city: ${user.signupCity}` : ''}${user.approxCity || user.approxRegion || user.approxCountry ? `, connection: ${[user.approxCity, user.approxRegion, user.approxCountry].filter(Boolean).join(', ')}` : ''}${user.deviceInfoAt ? ` (read ${formatExactDateTime(user.deviceInfoAt)})` : ''}`}>
+                                  {user.deviceOs ? `${user.deviceOs}` : ''}
+                                  {typeof user.deviceBattery === 'number' ? ` · 🔋${user.deviceBattery}%${user.deviceCharging ? '⚡' : ''}` : ''}
+                                  {(user.signupCity || user.approxCity) ? ` · 📍${user.signupCity || user.approxCity}` : ''}
+                                </span>
+                              )}
                               {isSuspended && (
                                 <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/30">
                                   Suspended

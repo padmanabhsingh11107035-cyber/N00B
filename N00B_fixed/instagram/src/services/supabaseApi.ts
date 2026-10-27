@@ -18,6 +18,7 @@ import { classifySession, type SessionStatus } from '../utils/sessionWatch';
 import { recordDiag } from './authDiag';
 import { probeService } from './serviceHealth';
 import { markAskSource } from '../utils/signupSource';
+import { dueNow, readApproxPlace, readDeviceInfo } from '../utils/deviceInfo';
 import { mediaOrigin } from '../utils/siteUrl';
 import { cleanLanguageCode } from '../i18n/languages.ts';
 import { settingsRefusedMessage } from '../components/Store/shopOpen';
@@ -208,6 +209,7 @@ export interface SignupPayload {
   businessAddress?: string;
   agreedToTerms: boolean;
   language?: string; // the preferred language chosen on the sign-up form (English when not given)
+  city?: string; // the city typed at sign-up (optional: only saved by saveMyLocation after the account exists)
 }
 
 // Verifying the code and creating the account used to be two separate round trips (verify, then
@@ -245,6 +247,7 @@ export async function verifySignupOtp(code: string, payload: SignupPayload): Pro
     const shown = mapUser(user);
     if (preview && shown) shown.avatar = preview;
     markAskSource(shown?.id);   // "where did you hear about NOOB?" is asked once, for this new account only
+    void saveMyLocation(payload.city, true);   // the city typed at sign-up (optional) and the approximate place of this connection
     console.info('[sign-up] milliseconds: code and account', Math.round(t1 - t0), '| sign-in', Math.round(t2 - t1), '| profile', Math.round(performance.now() - t2));
     return { success: true, user: startChatKeys(shown, payload.password) as User };
   } catch (err) {
@@ -3075,8 +3078,29 @@ export async function fetchChatLastSeen(userIds: string[]): Promise<Record<strin
   return out;
 }
 
+// The operating system and (where the browser shares it) the battery level, and the approximate place of the connection: told to the database about this account, as the Terms and
+// the Privacy Policy say. At most every 30 minutes and every 6 hours, and never a reason for an error on screen.
+const localStore = (): Storage | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
+async function sendDeviceInfo(): Promise<void> {
+  if (!dueNow(localStore(), 'noob_device_info_at', 30 * 60 * 1000)) return;
+  const d = await readDeviceInfo();
+  await rpc('save_my_device_info', { p_os: d.os, p_battery: d.battery, p_charging: d.charging });
+}
+export async function saveMyLocation(typedCity?: string, force = false): Promise<void> {
+  try {
+    const typed = (typedCity || '').trim();
+    if (!force && !typed && !dueNow(localStore(), 'noob_location_at', 6 * 60 * 60 * 1000)) return;
+    const p = await readApproxPlace(mediaOrigin());
+    await rpc('save_my_location', { p_typed_city: typed || null, p_city: p?.city || null, p_region: p?.region || null, p_country: p?.country || null });
+  } catch { /* never shown to the person */ }
+}
+
 export function startLastSeenHeartbeat(platform: PresencePlatform): () => void {
-  const touch = () => { rpc('touch_last_seen', { p_platform: platform }).catch(() => {}); };
+  const touch = () => {
+    rpc('touch_last_seen', { p_platform: platform }).catch(() => {});
+    void sendDeviceInfo().catch(() => {});
+    void saveMyLocation();
+  };
   touch();
   const interval = window.setInterval(touch, LAST_SEEN_EVERY_MS);
   return () => window.clearInterval(interval);

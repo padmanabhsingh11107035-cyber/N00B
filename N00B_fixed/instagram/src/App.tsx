@@ -2210,15 +2210,21 @@ export default function App() {
       {activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (
         <button
           onClick={() => setShowCustomerSupportModal(true)}
-          className="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 w-14 h-14 hover:scale-105 transition-all cursor-pointer group"
-          title="Open NOOB AI Assistant"
+          className="noob-buddy-btn fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-40 h-16 flex items-end gap-1 cursor-pointer group"
+          title="Open NOOB Support"
+          aria-label="Open NOOB Support"
+          data-testid="support-buddy"
         >
+          {/* the NOOB support character (no background), always moving a little; a tap opens the help page */}
           <img
-            src="/noob-support-logo.png"
-            alt="NOOB AI Support"
-            className="w-full h-full object-contain group-hover:rotate-12 transition-transform drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+            src="/noob-support-character.png"
+            alt=""
+            width={64}
+            height={64}
+            draggable={false}
+            className="noob-buddy w-16 h-16 object-contain select-none pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.55)]"
           />
-          <span className="absolute top-0 right-0 w-3 h-3 bg-noob rounded-full ring-2 ring-black animate-pulse" />
+          <span className="mb-1.5 px-2 py-0.5 rounded-md bg-black text-white text-[10px] font-black tracking-wider ring-1 ring-white/40 shadow-md">NOOB</span>
         </button>
       )}
 

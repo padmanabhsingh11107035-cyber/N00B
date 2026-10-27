@@ -17,6 +17,7 @@ Checked against Google Play's developer policies and India's rules (IT Rules 202
 | Only the permissions it really uses | Internet, camera and microphone (Go Live, Live Lounge, photos); notifications; contacts only on the owner's choice ("Find friends") |
 | Screenshots of chats blocked | `FLAG_SECURE` in `MainActivity` |
 | Data collected is told to people | Privacy Policy and Terms: account details, device system and battery level, approximate location and optional city, "we do not sell it, it is used for nothing else, it is encrypted" |
+| NOOB Forms: what people send to a form, files, signatures, AI and web hooks | Privacy Policy section "What you create" and "Who helps us run NOOB"; each public form page says that the answers go to the form's owner and links the Privacy Policy and the Terms |
 | Complaints, rights and the 24-hour / 15-day answer times | Terms and Privacy Policy: "Contact, complaints and your rights" |
 | Passwords found in public breach lists are refused | sign-up and change password (`pwnedPassword.ts`, only 5 characters of a fingerprint are sent) |
 | Secrets are never in the code | secret scan on every push; only public keys are committed |

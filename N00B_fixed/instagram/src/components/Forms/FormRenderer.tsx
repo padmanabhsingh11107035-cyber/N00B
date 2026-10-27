@@ -137,7 +137,10 @@ const Shell: React.FC<{ css: React.CSSProperties; t: ReturnType<typeof resolveTh
       <button type="button" onClick={onOpenNoob} aria-label="Open the NOOB app" data-testid="form-noob-button" className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-black tracking-wide cursor-pointer active:scale-95 transition-transform" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}>NOOB</button>
       <span className="text-[11px]" style={{ color: 'var(--f-muted)' }}>Forms by NOOB</span>
     </div>
-    <div className="mx-auto px-3 sm:px-4 py-5 pb-20" style={{ maxWidth: width ?? 680 }}>{children}</div>
+    <div className="mx-auto px-3 sm:px-4 py-5 pb-20" style={{ maxWidth: width ?? 680 }}>
+      {children}
+      <p className="mt-8 text-center text-[11px]" style={{ color: 'var(--f-muted)' }}>Your answers go to the owner of this form. NOOB does not sell them. <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="underline">Privacy</a> · <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="underline">Terms</a></p>
+    </div>
   </div>
 );
 

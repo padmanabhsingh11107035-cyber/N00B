@@ -5,21 +5,35 @@ export type QType =
   | 'short' | 'paragraph' | 'email' | 'phone' | 'url' | 'number'
   | 'multiple_choice' | 'checkboxes' | 'dropdown'
   | 'scale' | 'rating' | 'nps' | 'date' | 'time' | 'consent'
+  | 'image_choice' | 'ranking' | 'grid' | 'heart' | 'thumbs' | 'hidden' | 'signature' | 'calculated'
   | 'section' | 'text_block';
 
-export interface FormOption { id: string; label: string }
+export interface FormOption { id: string; label: string; img?: string }
 export interface ShowIf { q: string; op: 'eq' | 'neq' | 'contains' | 'empty' | 'notEmpty' | 'gt' | 'lt'; value?: string | number }
 export interface FormQuestion {
   id: string; type: QType; title: string; description?: string; required?: boolean;
   options?: FormOption[]; allowOther?: boolean;
   min?: number; max?: number; minLabel?: string; maxLabel?: string; placeholder?: string;
   showIf?: ShowIf | null;
+  /** the form ends after this question when the answer matches (nothing after it is asked) */
+  endIf?: { op: ShowIf['op']; value?: string | number } | null;
+  /** image_choice and grid: more than one answer; ranking: ranking only some of the options is fine */
+  multi?: boolean; partial?: boolean;
+  /** grid */
+  rows?: FormOption[]; cols?: FormOption[];
+  /** hidden: the name of the link parameter that fills it (?ref=...) */
+  param?: string;
+  /** calculated: a formula over other numeric questions, like  (a + b) * 2  where a and b are the numbers 1, 2 ... of the questions */
+  formula?: string;
+  /** quiz: the points, the right answer (an option id, a list of ids, a number, or the accepted words) and the explanation shown after sending */
+  points?: number; correct?: string | number | string[]; explanation?: string;
 }
 export type Presentation = 'classic' | 'pages' | 'conversational';
 export interface FormSettings {
   presentation?: Presentation; showProgress?: boolean; numbering?: boolean;
   confirmMessage?: string; redirectUrl?: string; closedMessage?: string;
   opensAt?: string | null; closesAt?: string | null; maxResponses?: number | null; collectCampaign?: boolean;
+  quiz?: { enabled?: boolean; passScore?: number | null; showScore?: 'after' | 'never'; showAnswers?: boolean };
 }
 export interface FormTheme { id?: string; primary?: string; background?: string; text?: string; font?: string; radius?: number }
 export interface FormDraft { questions: FormQuestion[]; settings: FormSettings; theme: FormTheme }
@@ -39,12 +53,22 @@ export const QTYPES: ReadonlyArray<{ type: QType; label: string; group: string; 
   { type: 'nps', label: 'Net Promoter Score', group: 'Rating', hint: '0 to 10: would you recommend us?' },
   { type: 'date', label: 'Date', group: 'Date and time', hint: 'A day' },
   { type: 'time', label: 'Time', group: 'Date and time', hint: 'A time of day' },
+  { type: 'image_choice', label: 'Image choice', group: 'Choice', hint: 'Pictures to pick from' },
+  { type: 'ranking', label: 'Ranking', group: 'Choice', hint: 'Put in order of preference' },
+  { type: 'grid', label: 'Grid', group: 'Choice', hint: 'Rows and columns (one or many per row)' },
+  { type: 'heart', label: 'Heart rating', group: 'Rating', hint: 'Hearts' },
+  { type: 'thumbs', label: 'Thumbs up / down', group: 'Rating', hint: 'Like or dislike' },
   { type: 'consent', label: 'Consent', group: 'More', hint: 'A box people must tick' },
+  { type: 'signature', label: 'Signature', group: 'More', hint: 'Drawn with finger or mouse' },
+  { type: 'hidden', label: 'Hidden field', group: 'More', hint: 'Filled from the link, not shown' },
+  { type: 'calculated', label: 'Calculated value', group: 'More', hint: 'A total or score from other answers' },
   { type: 'section', label: 'New page / section', group: 'Layout', hint: 'Starts a new page' },
   { type: 'text_block', label: 'Text block', group: 'Layout', hint: 'Words, no answer' }
 ];
-export const isAnswerable = (t: QType): boolean => t !== 'section' && t !== 'text_block';
-export const hasOptions = (t: QType): boolean => t === 'multiple_choice' || t === 'checkboxes' || t === 'dropdown';
+export const isAnswerable = (t: QType): boolean => t !== 'section' && t !== 'text_block' && t !== 'calculated';
+export const hasOptions = (t: QType): boolean => t === 'multiple_choice' || t === 'checkboxes' || t === 'dropdown' || t === 'image_choice' || t === 'ranking';
+/** the questions a quiz can give points for */
+export const canScore = (t: QType): boolean => ['multiple_choice', 'checkboxes', 'dropdown', 'image_choice', 'ranking', 'short', 'number', 'scale', 'rating', 'nps', 'heart', 'thumbs', 'email', 'phone', 'url', 'paragraph'].includes(t);
 
 export const newId = (): string => 'q' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3);
 
@@ -52,7 +76,11 @@ export function blankQuestion(type: QType): FormQuestion {
   const base: FormQuestion = { id: newId(), type, title: type === 'section' ? 'New page' : type === 'text_block' ? 'Text' : 'Untitled question', required: false };
   if (hasOptions(type)) base.options = [{ id: newId(), label: 'Option 1' }, { id: newId(), label: 'Option 2' }];
   if (type === 'scale') Object.assign(base, { min: 1, max: 5, minLabel: 'Not at all', maxLabel: 'Very much' });
-  if (type === 'rating') Object.assign(base, { min: 1, max: 5 });
+  if (type === 'rating' || type === 'heart') Object.assign(base, { min: 1, max: 5 });
+  if (type === 'grid') Object.assign(base, { rows: [{ id: newId(), label: 'Row 1' }, { id: newId(), label: 'Row 2' }], cols: [{ id: newId(), label: 'Column 1' }, { id: newId(), label: 'Column 2' }, { id: newId(), label: 'Column 3' }] });
+  if (type === 'hidden') Object.assign(base, { title: 'Hidden field', param: 'ref' });
+  if (type === 'calculated') Object.assign(base, { title: 'Total', formula: '' });
+  if (type === 'signature') base.title = 'Your signature';
   if (type === 'nps') Object.assign(base, { min: 0, max: 10, minLabel: 'Not likely', maxLabel: 'Very likely' });
   if (type === 'consent') base.title = 'I agree';
   return base;
@@ -66,7 +94,7 @@ export function changeType(q: FormQuestion, type: QType): FormQuestion {
   return keep;
 }
 export function losesSettings(q: FormQuestion, type: QType): boolean {
-  return (!!q.options?.length && !hasOptions(type)) || (q.min != null && !['scale', 'rating', 'nps', 'number', 'short', 'paragraph'].includes(type));
+  return (!!q.options?.length && !hasOptions(type)) || (q.min != null && !['scale', 'rating', 'heart', 'nps', 'number', 'short', 'paragraph', 'checkboxes'].includes(type)) || (q.correct != null && !canScore(type));
 }
 
 // ---------------------------------------------------------------- the "show if" rule (the same one the database uses)
@@ -101,7 +129,7 @@ export function logicProblems(qs: FormQuestion[]): string[] {
 // ---------------------------------------------------------------- checking answers in the browser (the database checks them again)
 export function checkAnswer(q: FormQuestion, a: unknown): string | null {
   if (!isAnswerable(q.type)) return null;
-  if (isEmptyAnswer(a) || (q.type === 'consent' && a !== true)) return q.required ? (q.type === 'consent' ? 'Please tick the box to continue' : 'This question is required') : null;
+  if (isEmptyAnswer(a) || (q.type === 'consent' && a !== true) || (q.type === 'grid' && typeof a === 'object' && a !== null && !Array.isArray(a) && Object.keys(a).length === 0)) return q.required ? (q.type === 'consent' ? 'Please tick the box to continue' : 'This question is required') : null;
   const text = typeof a === 'string' ? a : '';
   switch (q.type) {
     case 'short': case 'paragraph':
@@ -129,6 +157,22 @@ export function checkAnswer(q: FormQuestion, a: unknown): string | null {
       const lo = q.min ?? (q.type === 'nps' ? 0 : 1), hi = q.max ?? (q.type === 'nps' ? 10 : 5);
       return typeof a === 'number' && Number.isInteger(a) && a >= lo && a <= hi ? null : `Please choose from ${lo} to ${hi}`;
     }
+    case 'image_choice':
+      if (q.multi) return Array.isArray(a) && a.every((x) => q.options?.some((o) => o.id === x)) ? null : 'Please choose from the pictures';
+      return typeof a === 'string' && q.options?.some((o) => o.id === a) ? null : 'Please choose a picture';
+    case 'ranking':
+      if (!Array.isArray(a) || new Set(a).size !== a.length || !a.every((x) => q.options?.some((o) => o.id === x))) return 'Please put the options in order';
+      return !q.partial && a.length !== (q.options?.length ?? 0) ? 'Please rank every option' : null;
+    case 'grid': {
+      if (typeof a !== 'object' || a === null || Array.isArray(a)) return 'Please answer the rows';
+      const o = a as Record<string, unknown>;
+      if (q.required && !(q.rows ?? []).every((r) => !isEmptyAnswer(o[r.id]))) return 'Please answer every row';
+      return null;
+    }
+    case 'heart': return typeof a === 'number' && Number.isInteger(a) && a >= (q.min ?? 1) && a <= (q.max ?? 5) ? null : 'Please choose a number of hearts';
+    case 'thumbs': return a === 'up' || a === 'down' ? null : 'Please choose thumbs up or down';
+    case 'hidden': return typeof a === 'string' && a.length <= 300 ? null : null;
+    case 'signature': return /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(text) && text.length <= 60000 ? null : 'Please sign again';
     case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(text) ? null : 'Please choose a date';
     case 'time': return /^\d{2}:\d{2}$/.test(text) ? null : 'Please choose a time';
     default: return null;
@@ -136,15 +180,25 @@ export function checkAnswer(q: FormQuestion, a: unknown): string | null {
 }
 
 /** The questions that count for these answers (the visible ones), in the order of the form. */
-export const visibleQuestions = (qs: FormQuestion[], answers: Record<string, unknown>) => qs.filter((q) => isVisible(q, answers));
+export function visibleQuestions(qs: FormQuestion[], answers: Record<string, unknown>): FormQuestion[] {
+  const out: FormQuestion[] = [];
+  for (const q of qs) {
+    if (!isVisible(q, answers)) continue;
+    out.push(q);
+    // "end the form here": when this answer matches, nothing after it is asked (the database applies the same rule)
+    if (q.endIf && isAnswerable(q.type) && isVisible({ ...q, showIf: { q: q.id, ...q.endIf } as ShowIf }, answers)) break;
+  }
+  return out;
+}
 
 /** The pages of a form: all in one (classic), split at every "new page" (pages), or one question each (conversational). Hidden questions never make a page. */
 export function pagesOf(qs: FormQuestion[], answers: Record<string, unknown>, mode: Presentation): FormQuestion[][] {
   const vis = visibleQuestions(qs, answers);
-  if (mode === 'classic') return [vis.filter((q) => q.type !== 'section')];
-  if (mode === 'conversational') return vis.filter((q) => q.type !== 'section').map((q) => [q]);
+  if (mode === 'classic') return [vis.filter((q) => q.type !== 'section' && q.type !== 'hidden')];
+  if (mode === 'conversational') return vis.filter((q) => q.type !== 'section' && q.type !== 'hidden' && q.type !== 'calculated').map((q) => [q]);
   const pages: FormQuestion[][] = [[]];
-  for (const q of vis) { if (q.type === 'section' && pages[pages.length - 1].length) pages.push([q]); else pages[pages.length - 1].push(q); }
+  for (const q of vis) {
+    if (q.type === 'hidden') continue; if (q.type === 'section' && pages[pages.length - 1].length) pages.push([q]); else pages[pages.length - 1].push(q); }
   return pages.filter((p) => p.length);
 }
 
@@ -227,7 +281,7 @@ export function fixTemplateLogic(qs: FormQuestion[]): FormQuestion[] {
 }
 
 // ---------------------------------------------------------------- the numbers behind the charts
-export interface ResponseRow { id: string; created_at: string; answers: Record<string, unknown>; version?: number }
+export interface ResponseRow { id: string; created_at: string; answers: Record<string, unknown>; version?: number; score?: number | null; max_score?: number | null }
 export const optionLabel = (q: FormQuestion, v: unknown): string => {
   if (typeof v !== 'string') return String(v ?? '');
   if (v.startsWith('other:')) return 'Other: ' + v.slice(6);
@@ -285,20 +339,73 @@ const csvEscape = (v: string) => (/[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""
 export function answerText(q: FormQuestion, a: unknown): string {
   if (a == null || a === '') return '';
   if (q.type === 'consent') return a === true ? 'Yes' : '';
+  if (q.type === 'signature') return '[signature]';
+  if (q.type === 'thumbs') return a === 'up' ? 'Thumbs up' : a === 'down' ? 'Thumbs down' : '';
+  if (q.type === 'grid' && typeof a === 'object' && !Array.isArray(a)) {
+    const cell = (id: unknown) => q.cols?.find((c) => c.id === id)?.label ?? String(id);
+    return (q.rows ?? []).filter((r) => (a as Record<string, unknown>)[r.id] != null).map((r) => { const v = (a as Record<string, unknown>)[r.id]; return `${r.label}: ${Array.isArray(v) ? v.map(cell).join(' + ') : cell(v)}`; }).join('; ');
+  }
+  if (q.type === 'ranking' && Array.isArray(a)) return a.map((v) => optionLabel(q, v)).join(' > ');
   if (Array.isArray(a)) return a.map((v) => optionLabel(q, v)).join('; ');
   if (hasOptions(q.type)) return optionLabel(q, a);
   return String(a);
 }
-export function toCsv(qs: FormQuestion[], rows: ResponseRow[]): string {
-  const cols = qs.filter((q) => isAnswerable(q.type));
-  const head = ['Response ID', 'Submitted at', ...cols.map((q) => q.title)];
+const exportCols = (qs: FormQuestion[]) => qs.filter((q) => isAnswerable(q.type) || (q.type === 'calculated' && q.formula));
+const cellOf = (q: FormQuestion, qs: FormQuestion[], r: ResponseRow): string => {
+  if (q.type === 'calculated') { const v = evalFormula(q.formula ?? '', r.answers, qs); return v == null ? '' : String(v); }
+  return answerText(q, r.answers[q.id]);
+};
+export function toCsv(qs: FormQuestion[], rows: ResponseRow[], withScore = false): string {
+  const cols = exportCols(qs);
+  const head = ['Response ID', 'Submitted at', ...(withScore ? ['Score', 'Out of'] : []), ...cols.map((q) => q.title)];
   const lines = [head.map((h) => csvEscape(safeCell(h))).join(',')];
-  for (const r of rows) lines.push([r.id, r.created_at, ...cols.map((q) => answerText(q, r.answers[q.id]))].map((c) => csvEscape(safeCell(String(c)))).join(','));
-  return '﻿' + lines.join('\r\n');
+  for (const r of rows) lines.push([r.id, r.created_at, ...(withScore ? [r.score ?? '', r.max_score ?? ''] : []), ...cols.map((q) => cellOf(q, qs, r))].map((c) => csvEscape(safeCell(String(c)))).join(','));
+  return '\ufeff' + lines.join('\r\n');
 }
 export function toJson(title: string, qs: FormQuestion[], rows: ResponseRow[]): string {
-  const cols = qs.filter((q) => isAnswerable(q.type));
-  return JSON.stringify({ form: title, exportedAt: new Date().toISOString(), responses: rows.map((r) => ({ id: r.id, submittedAt: r.created_at, answers: Object.fromEntries(cols.map((q) => [q.title, answerText(q, r.answers[q.id])])) })) }, null, 2);
+  const cols = exportCols(qs);
+  return JSON.stringify({ form: title, exportedAt: new Date().toISOString(), responses: rows.map((r) => ({ id: r.id, submittedAt: r.created_at, ...(r.score != null ? { score: r.score, outOf: r.max_score } : {}), answers: Object.fromEntries(cols.map((q) => [q.title, cellOf(q, qs, r)])) })) }, null, 2);
+}
+/** Excel opens this (SpreadsheetML): one sheet, text cells, no formulas (a cell is never run as a formula). */
+export function toExcelXml(qs: FormQuestion[], rows: ResponseRow[], withScore = false): string {
+  const cols = exportCols(qs);
+  const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string)).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+  const cell = (v: string) => `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+  const head = ['Response ID', 'Submitted at', ...(withScore ? ['Score', 'Out of'] : []), ...cols.map((q) => q.title)];
+  const body = rows.map((r) => `<Row>${[r.id, r.created_at, ...(withScore ? [String(r.score ?? ''), String(r.max_score ?? '')] : []), ...cols.map((q) => cellOf(q, qs, r))].map(cell).join('')}</Row>`).join('');
+  return `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Responses"><Table><Row>${head.map(cell).join('')}</Row>${body}</Table></Worksheet></Workbook>`;
+}
+
+// ---------------------------------------------------------------- calculated values (a safe formula: numbers, + - * / ( ) and #1, #2 ... = the 1st, 2nd ... question; never run as code)
+export function evalFormula(formula: string, answers: Record<string, unknown>, qs: FormQuestion[]): number | null {
+  const numbered = qs.filter((q) => isAnswerable(q.type));
+  const toks = formula.match(/#\d+|\d+(?:\.\d+)?|[()+\-*/]/g);
+  if (!toks || toks.join('') !== formula.replace(/\s+/g, '')) return null;
+  let i = 0, bad = false;
+  const num = (): number => {
+    const t = toks[i++];
+    if (t === undefined) { bad = true; return 0; }
+    if (t === '(') { const v = expr(); if (toks[i++] !== ')') bad = true; return v; }
+    if (t === '-') return -num();
+    if (t[0] === '#') { const q = numbered[Number(t.slice(1)) - 1]; const v = q ? answers[q.id] : undefined; if (typeof v !== 'number') { bad = true; return 0; } return v; }
+    const n = Number(t); if (!Number.isFinite(n)) bad = true; return n;
+  };
+  const term = (): number => { let v = num(); while (toks[i] === '*' || toks[i] === '/') { const op = toks[i++]; const r = num(); if (op === '*') v = v * r; else if (r === 0) { bad = true; v = 0; } else v = v / r; } return v; };
+  const expr = (): number => { let v = term(); while (toks[i] === '+' || toks[i] === '-') { const op = toks[i++]; const r = term(); v = op === '+' ? v + r : v - r; } return v; };
+  const out = expr();
+  return bad || i !== toks.length || !Number.isFinite(out) ? null : Math.round(out * 1000) / 1000;
+}
+
+/** Grid: for every row, how many chose each column. */
+export function gridCounts(q: FormQuestion, rows: ResponseRow[]): Array<{ row: string; cells: Array<{ col: string; count: number }> }> {
+  return (q.rows ?? []).map((r) => ({ row: r.label, cells: (q.cols ?? []).map((c) => ({ col: c.label, count: rows.filter((x) => { const g = x.answers[q.id] as Record<string, unknown> | undefined; const v = g?.[r.id]; return Array.isArray(v) ? v.includes(c.id) : v === c.id; }).length })) }));
+}
+/** Ranking: the average place of every option (1 = first); the lower the better. */
+export function rankingAverages(q: FormQuestion, rows: ResponseRow[]): Array<{ label: string; avg: number; n: number }> {
+  return (q.options ?? []).map((o) => {
+    const places = rows.map((r) => { const a = r.answers[q.id]; return Array.isArray(a) ? a.indexOf(o.id) + 1 : 0; }).filter((p) => p > 0);
+    return { label: o.label, avg: places.length ? Math.round((places.reduce((sum, p) => sum + p, 0) / places.length) * 100) / 100 : 0, n: places.length };
+  }).sort((x, y) => (x.avg || 99) - (y.avg || 99));
 }
 
 /** What stops a form from being published (the database checks again). */
@@ -310,6 +417,44 @@ export function publishProblems(title: string, d: FormDraft): string[] {
   for (const q of d.questions) {
     if (isAnswerable(q.type) && !q.title.trim()) out.push('A question has no title');
     if (hasOptions(q.type) && !(q.options?.length)) out.push(`"${q.title}" needs at least one option`);
+    if (q.type === 'grid' && (!(q.rows?.length) || !(q.cols?.length))) out.push(`"${q.title}" needs rows and columns`);
+    if (d.settings.quiz?.enabled && (q.points ?? 0) > 0 && (q.correct == null || q.correct === '' || (Array.isArray(q.correct) && !q.correct.length))) out.push(`"${q.title}" has points but no right answer`);
   }
   return [...out, ...logicProblems(d.questions)];
 }
+
+// ---------------------------------------------------------------- the form as a file (export, and import of a file made by NOOB Forms)
+const ALL_TYPES = new Set<string>(QTYPES.map((t) => t.type));
+export function exportDefinition(title: string, description: string, d: FormDraft): string {
+  return JSON.stringify({ noobForms: 1, title, description, draft: d }, null, 2);
+}
+/** Reads a form file. Everything is checked and cleaned (known types only, text cut to length, links only http(s)); a damaged file is refused with a reason. */
+export function importDefinition(text: string): { title: string; description: string; draft: FormDraft } {
+  let j: any;
+  try { j = JSON.parse(text); } catch { throw new Error('This file is not a NOOB form (it is not readable).'); }
+  if (!j || j.noobForms !== 1 || !j.draft || !Array.isArray(j.draft.questions)) throw new Error('This file is not a NOOB form.');
+  if (j.draft.questions.length > 300) throw new Error('This form has too many questions (the most is 300).');
+  const str = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+  const opts = (v: unknown): FormOption[] | undefined => (Array.isArray(v) ? v.slice(0, 100).map((o: any) => ({ id: str(o?.id, 40) || newId(), label: str(o?.label, 200), ...(/^https?:\/\//i.test(o?.img ?? '') ? { img: str(o.img, 500) } : {}) })) : undefined);
+  const seen = new Set<string>();
+  const questions: FormQuestion[] = j.draft.questions.map((q: any) => {
+    if (!q || !ALL_TYPES.has(q.type)) throw new Error('This form uses a question type this version does not know.');
+    let id = str(q.id, 40).replace(/[^A-Za-z0-9_]/g, '') || newId();
+    if (seen.has(id)) id = newId();
+    seen.add(id);
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+    return { id, type: q.type, title: str(q.title, 300), description: str(q.description, 600) || undefined, required: !!q.required, options: opts(q.options), allowOther: !!q.allowOther,
+      min: num(q.min), max: num(q.max), minLabel: str(q.minLabel, 40) || undefined, maxLabel: str(q.maxLabel, 40) || undefined, placeholder: str(q.placeholder, 120) || undefined,
+      showIf: q.showIf && typeof q.showIf.q === 'string' ? { q: str(q.showIf.q, 40), op: q.showIf.op, value: q.showIf.value } : null,
+      endIf: q.endIf && typeof q.endIf.op === 'string' ? { op: q.endIf.op, value: q.endIf.value } : null,
+      multi: !!q.multi, partial: !!q.partial, rows: opts(q.rows), cols: opts(q.cols), param: str(q.param, 30).replace(/[^A-Za-z0-9_]/g, '') || undefined, formula: str(q.formula, 200) || undefined,
+      points: num(q.points), correct: q.correct, explanation: str(q.explanation, 400) || undefined } as FormQuestion;
+  });
+  const sIn = j.draft.settings ?? {};
+  const settings: FormSettings = { presentation: ['classic', 'pages', 'conversational'].includes(sIn.presentation) ? sIn.presentation : 'classic', showProgress: sIn.showProgress !== false, numbering: !!sIn.numbering,
+    confirmMessage: str(sIn.confirmMessage, 300) || undefined, quiz: sIn.quiz && typeof sIn.quiz === 'object' ? { enabled: !!sIn.quiz.enabled, passScore: num2(sIn.quiz.passScore), showScore: sIn.quiz.showScore === 'never' ? 'never' : 'after', showAnswers: !!sIn.quiz.showAnswers } : undefined };
+  const tIn = j.draft.theme ?? {};
+  const theme: FormTheme = { id: THEMES[tIn.id] ? tIn.id : 'classic', ...(/^#[0-9a-f]{6}$/i.test(tIn.primary ?? '') ? { primary: tIn.primary } : {}), ...(/^#[0-9a-f]{6}$/i.test(tIn.background ?? '') ? { background: tIn.background } : {}), ...(/^#[0-9a-f]{6}$/i.test(tIn.text ?? '') ? { text: tIn.text } : {}) };
+  return { title: str(j.title, 200) || 'Imported form', description: str(j.description, 2000), draft: { questions, settings, theme } };
+}
+const num2 = (v: unknown): number | null => (typeof v === 'number' && v >= 1 && v <= 100 ? Math.round(v) : null);

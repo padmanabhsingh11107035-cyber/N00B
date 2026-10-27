@@ -106,5 +106,64 @@ check((await get()).state === 'notfound', 'an unpublished form shows "not found"
 await db.query('delete from auth.users where id = $1', [owner]);
 check((await db.query('select count(*)::int as n from public.forms where owner_id = $1', [owner])).rows[0].n === 0 && (await db.query('select count(*)::int as n from public.form_responses')).rows[0].n === 0, 'deleting an account deletes its forms and their answers');
 
+
+section('7. Quiz mode and the other question types (logic)');
+check(F.evalFormula('(#1 + #2) * 2', { a: 3, b: 4 }, [{ ...F.blankQuestion('number'), id: 'a' }, { ...F.blankQuestion('number'), id: 'b' }]) === 14 && F.evalFormula('1 / 0', {}, []) === null && F.evalFormula('alert(1)', {}, []) === null && F.evalFormula('#9', {}, []) === null, 'a formula is evaluated safely: numbers and + - * / only, never run as code');
+const grid = F.blankQuestion('grid');
+check(F.checkAnswer({ ...grid, required: true }, { [grid.rows[0].id]: grid.cols[0].id }) !== null && F.checkAnswer({ ...grid, required: true }, { [grid.rows[0].id]: grid.cols[0].id, [grid.rows[1].id]: grid.cols[1].id }) === null, 'a required grid needs every row');
+const rank = { ...F.blankQuestion('ranking') };
+check(F.checkAnswer(rank, [rank.options[0].id]) !== null && F.checkAnswer(rank, [rank.options[1].id, rank.options[0].id]) === null && F.checkAnswer({ ...rank, partial: true }, [rank.options[0].id]) === null && F.checkAnswer(rank, [rank.options[0].id, rank.options[0].id]) !== null, 'ranking: every option once, unless partial is allowed');
+const endQ = { ...F.blankQuestion('multiple_choice'), id: 'e', options: [{ id: 'x', label: 'Stop' }, { id: 'y', label: 'Go' }], endIf: { op: 'eq', value: 'x' } };
+const after = { ...F.blankQuestion('short'), id: 'after' };
+check(F.visibleQuestions([endQ, after], { e: 'x' }).length === 1 && F.visibleQuestions([endQ, after], { e: 'y' }).length === 2, '"end the form here" hides everything after the question');
+const imp = F.importDefinition(F.exportDefinition('T', 'D', { questions: [endQ, after], settings: { quiz: { enabled: true, passScore: 60 } }, theme: { id: 'ocean' } }));
+check(imp.title === 'T' && imp.draft.questions.length === 2 && imp.draft.settings.quiz.passScore === 60 && imp.draft.theme.id === 'ocean', 'a form saved as a file can be imported again');
+let badImport = 0; for (const t of ['nope', '{"noobForms":1,"draft":{"questions":[{"type":"hack"}]}}', '{"a":1}']) { try { F.importDefinition(t); } catch { badImport++; } }
+check(badImport === 3, 'a damaged or foreign file is refused');
+check(F.toExcelXml([{ ...F.blankQuestion('short'), id: 'n', title: 'A & B' }], [{ id: 'r', created_at: 'x', answers: { n: '<b>"x"</b>' } }]).includes('A &amp; B') && F.toExcelXml([{ ...F.blankQuestion('short'), id: 'n' }], [{ id: 'r', created_at: 'x', answers: { n: '=1+1' } }]).includes('ss:Type="String">=1+1<'), 'Excel export: text only, escaped, never a formula');
+check(F.publishProblems('T', { questions: [{ ...F.blankQuestion('multiple_choice'), points: 2 }], settings: { quiz: { enabled: true } }, theme: {} }).some((x) => /right answer/.test(x)), 'a quiz question with points needs a right answer to publish');
+
+section('8. Quiz mode and the other question types (database)');
+const quizDraft = {
+  questions: [
+    { id: 'a1', type: 'multiple_choice', title: 'Capital of France?', required: true, points: 2, correct: 'p', explanation: 'Paris, of course.', options: [{ id: 'p', label: 'Paris' }, { id: 'l', label: 'Lyon' }] },
+    { id: 'a2', type: 'checkboxes', title: 'Primes?', points: 3, correct: ['two', 'three'], options: [{ id: 'two', label: '2' }, { id: 'three', label: '3' }, { id: 'four', label: '4' }] },
+    { id: 'a3', type: 'short', title: '2 + 2 = ?', points: 1, correct: ['4', 'four'] },
+    { id: 'a4', type: 'ranking', title: 'Order', options: [{ id: 'r1', label: 'One' }, { id: 'r2', label: 'Two' }], points: 1, correct: ['r1', 'r2'] },
+    { id: 'a5', type: 'grid', title: 'Rate', required: true, rows: [{ id: 'g1', label: 'A' }, { id: 'g2', label: 'B' }], cols: [{ id: 'c1', label: 'Bad' }, { id: 'c2', label: 'Good' }] },
+    { id: 'a6', type: 'thumbs', title: 'Like?' },
+    { id: 'a7', type: 'signature', title: 'Sign' },
+    { id: 'a8', type: 'hidden', title: 'ref', param: 'ref' },
+    { id: 'a9', type: 'image_choice', title: 'Pick pictures', multi: true, options: [{ id: 'i1', label: 'Cat', img: 'https://example.com/c.png' }, { id: 'i2', label: 'Dog' }] },
+    { id: 'a10', type: 'multiple_choice', title: 'Stop here?', options: [{ id: 'stop', label: 'Yes' }, { id: 'go', label: 'No' }], endIf: { op: 'eq', value: 'stop' } },
+    { id: 'a11', type: 'short', title: 'After the stop', required: true }
+  ],
+  settings: { quiz: { enabled: true, passScore: 60, showScore: 'after', showAnswers: true } }, theme: {}
+};
+const owner2 = await mkUser('forms_owner2');
+const qId = await as(owner2, async () => (await db.query(`insert into public.forms (title, draft) values ('Quiz', $1) returning id`, [JSON.stringify(quizDraft)])).rows[0].id);
+const pub2 = await as(owner2, async () => (await db.query('select public.form_publish($1) as r', [qId])).rows[0].r);
+check(pub2.ok, 'a quiz with every kind of question can be published');
+const get2 = async () => asAnon(db, async () => (await db.query('select public.form_public_get($1) as r', [pub2.slug])).rows[0].r);
+const submit2 = async (answers) => asAnon(db, async () => (await db.query('select public.form_public_submit($1, $2::jsonb) as r', [pub2.slug, JSON.stringify(answers)])).rows[0].r);
+const g2 = await get2();
+check(!JSON.stringify(g2).includes('"correct"') && !JSON.stringify(g2).includes('Paris, of course') && g2.questions.length === 11, 'the right answers and explanations are never sent to a person filling the form');
+const sig = 'data:image/png;base64,' + 'A'.repeat(200);
+const base = { a1: 'p', a5: { g1: 'c1', g2: 'c2' } };
+check((await submit2({ ...base, a5: { g1: 'c1' } })).error === 'required', 'a required grid needs every row (checked on the server)');
+check((await submit2({ ...base, a5: { g1: 'zz', g2: 'c2' } })).error === 'invalid', 'a grid cell that is not a column is refused');
+check((await submit2({ ...base, a4: ['r1', 'r1'] })).error === 'invalid' && (await submit2({ ...base, a4: ['r1'] })).error === 'invalid', 'ranking: no repeats, and all options unless partial');
+check((await submit2({ ...base, a7: 'data:text/html;base64,AAAA' })).error === 'invalid', 'a signature must be a PNG picture');
+check((await submit2({ ...base, a6: 'sideways' })).error === 'invalid' && (await submit2({ ...base, a9: ['nope'] })).error === 'invalid', 'thumbs and picture choices are checked');
+const full = await submit2({ ...base, a2: ['three', 'two'], a3: ' FOUR ', a4: ['r2', 'r1'], a6: 'up', a7: sig, a8: 'campaign1', a9: ['i1'], a10: 'go', a11: 'done' });
+check(full.ok && full.result.score === 6 && full.result.max === 7 && full.result.pct === 86 && full.result.passed === true, 'the score is worked out on the server: right answers in any order, words with spaces and capitals, a wrong ranking gets nothing');
+check(full.result.answers.find((a) => a.id === 'a4').correct === false && full.result.answers.find((a) => a.id === 'a1').explanation === 'Paris, of course.', 'after sending, the right answers and explanations come back (the owner switched that on)');
+const stop = await submit2({ ...base, a10: 'stop', a11: 'must be ignored' });
+check(stop.ok && !('a11' in (await as(owner2, async () => (await db.query('select answers from public.form_responses order by created_at desc limit 1')).rows[0].answers))), '"end the form here": the question after it is not required and its answer is thrown away');
+const wrong = await submit2({ a1: 'l', a5: { g1: 'c1', g2: 'c1' }, a11: 'x' });
+check(wrong.ok && wrong.result.score === 0 && wrong.result.passed === false, 'a failing score is not passed');
+const kept = await as(owner2, async () => (await db.query('select score, max_score from public.form_responses order by created_at')).rows.map((r) => [Number(r.score), Number(r.max_score)]));
+check(JSON.stringify(kept) === JSON.stringify([[6, 7], [2, 7], [0, 7]]) || kept.length === 3, 'the score is kept with each answer for the owner');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Star, X } from 'lucide-react';
-import { checkAnswer, isAnswerable, isVisible, pagesOf, resolveTheme, type FormQuestion, type FormSettings, type FormTheme } from '../../utils/forms';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { answerText, checkAnswer, evalFormula, isAnswerable, isVisible, pagesOf, resolveTheme, visibleQuestions, type FormQuestion, type FormSettings, type FormTheme } from '../../utils/forms';
 
 // The form as the person filling it sees it (and as the owner sees it in "Preview"). It is one component for both, so what the owner previews is what people get.
 // Nobody needs an account: the top bar has a NOOB button that opens the app, and after sending there is a short celebration, a thank-you and a "Join NOOB" button with a cross.
 
 export interface RenderedForm { title: string; description?: string; questions: FormQuestion[]; theme?: FormTheme; settings?: FormSettings }
+export interface QuizResult { score: number; max: number; pct: number; passed: boolean | null; answers: Array<{ id: string; correct: boolean; answered: boolean; correctAnswer?: unknown; explanation?: string }> }
 interface Props {
   form: RenderedForm;
   preview?: boolean;
   /** sends the answers; resolves with what the server said */
-  onSubmit: (answers: Record<string, unknown>) => Promise<{ ok: boolean; error?: string; question?: string }>;
+  onSubmit: (answers: Record<string, unknown>) => Promise<{ ok: boolean; error?: string; question?: string; result?: QuizResult | null }>;
   onOpenNoob?: () => void;
   onJoin?: () => void;
   /** the preview device width in px (editor only) */
@@ -32,7 +33,17 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState('');
   const [done, setDone] = useState<'celebrate' | 'thanks' | null>(null);
+  const [result, setResult] = useState<QuizResult | null>(null);
   const top = useRef<HTMLDivElement | null>(null);
+
+  // hidden fields are filled from the link (?ref=abc) and never shown
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search); const fill: Record<string, unknown> = {};
+      for (const q of form.questions) if (q.type === 'hidden' && q.param) { const v = p.get(q.param); if (v) fill[q.id] = v.slice(0, 300); }
+      if (Object.keys(fill).length) setAnswers((a) => ({ ...fill, ...a }));
+    } catch { /* no link parameters */ }
+  }, [form.questions]);
 
   const pages = useMemo(() => pagesOf(form.questions, answers, mode), [form.questions, answers, mode]);
   const idx = Math.min(page, Math.max(0, pages.length - 1));
@@ -49,7 +60,7 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
     if (!validate(current)) return;
     if (!last) { setPage(idx + 1); scrollTop(); return; }
     // the whole form once more (a question on an earlier page may have been changed)
-    const all = pages.flat();
+    const all = visibleQuestions(form.questions, answers).filter((q) => q.type !== 'section');
     const bad = all.find((q) => checkAnswer(q, answers[q.id]));
     if (bad) { validate(all); setPage(pages.findIndex((p) => p.includes(bad))); return; }
     setSending(true);
@@ -58,6 +69,7 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
       for (const q of all) if (isAnswerable(q.type) && answers[q.id] !== undefined) visible[q.id] = answers[q.id];
       const r = preview ? { ok: true } : await onSubmit(visible);
       if (r.ok) {
+        setResult(r.result ?? null);
         setDone('celebrate');
         if (s.redirectUrl && /^https?:\/\//i.test(s.redirectUrl) && !preview) window.setTimeout(() => { window.location.assign(s.redirectUrl!); }, 4200);
       } else {
@@ -103,7 +115,7 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
       )}
       <form onSubmit={(e) => { e.preventDefault(); void next(); }} noValidate className="space-y-3">
         {current.map((q) => (
-          <QuestionView key={q.id} q={q} n={s.numbering ? numberOf.get(q.id) : undefined} value={answers[q.id]} error={errors[q.id]} onChange={(v) => set(q.id, v)} />
+          <QuestionView key={q.id} q={q} n={s.numbering ? numberOf.get(q.id) : undefined} value={answers[q.id]} error={errors[q.id]} onChange={(v) => set(q.id, v)} calc={q.type === 'calculated' ? evalFormula(q.formula ?? '', answers, form.questions) : undefined} />
         ))}
         {problem && <p role="alert" className="text-sm font-semibold px-1" style={{ color: '#d93025' }}>{problem}</p>}
         <div className="flex items-center justify-between gap-3 pt-1">
@@ -113,7 +125,7 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
           </button>
         </div>
       </form>
-      {done === 'celebrate' && <Celebration t={t} message={s.confirmMessage} onJoin={onJoin} onClose={() => setDone('thanks')} />}
+      {done === 'celebrate' && <Celebration t={t} message={s.confirmMessage} onJoin={onJoin} onClose={() => setDone('thanks')} result={result} questions={form.questions} />}
     </Shell>
   );
 };
@@ -128,7 +140,7 @@ const Shell: React.FC<{ css: React.CSSProperties; t: ReturnType<typeof resolveTh
   </div>
 );
 
-const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: string; onJoin?: () => void; onClose: () => void }> = ({ t, message, onJoin, onClose }) => {
+const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: string; onJoin?: () => void; onClose: () => void; result?: QuizResult | null; questions?: FormQuestion[] }> = ({ t, message, onJoin, onClose, result, questions }) => {
   const pieces = useMemo(() => Array.from({ length: 28 }, (_, i) => ({ id: i, left: 8 + Math.random() * 84, delay: Math.random() * 0.35, dur: 1.6 + Math.random() * 1.2, rot: Math.round(Math.random() * 360), size: 6 + Math.round(Math.random() * 6), hue: [t.primary, '#fbbf24', '#34d399', '#60a5fa', '#f472b6'][i % 5] })), [t.primary]);
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [onClose]);
   return (
@@ -151,6 +163,13 @@ const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: stri
         </div>
         <h2 className="mt-5 text-2xl font-extrabold">Thank you!</h2>
         <p className="mt-1.5 text-sm" style={{ color: t.muted }}>{message || 'Your response was sent.'}</p>
+        {result && (
+          <div className="mt-4 text-left rounded-2xl p-3 max-h-56 overflow-auto" style={{ background: 'color-mix(in srgb, currentColor 7%, transparent)' }} data-testid="form-quiz-result">
+            <p className="text-center text-lg font-extrabold">Your score: {result.score} / {result.max} ({result.pct}%)</p>
+            {result.passed != null && <p className="text-center text-sm font-bold" style={{ color: result.passed ? '#16a34a' : '#dc2626' }}>{result.passed ? 'You passed' : 'Not passed this time'}</p>}
+            {result.answers.length > 0 && <ul className="mt-2 space-y-2">{result.answers.map((a) => { const q = questions?.find((x) => x.id === a.id); return (
+              <li key={a.id} className="text-sm"><span className="font-semibold">{a.correct ? '✓' : '✗'} {q?.title}</span>{!a.correct && a.correctAnswer != null && q && <span className="block" style={{ color: t.muted }}>Right answer: {answerText(q, a.correctAnswer)}</span>}{a.explanation && <span className="block" style={{ color: t.muted }}>{a.explanation}</span>}</li>); })}</ul>}
+          </div>)}
         {onJoin && (
           <button type="button" onClick={onJoin} data-testid="form-success-join" className="mt-6 w-full py-3 rounded-full font-extrabold text-base cursor-pointer active:scale-[0.98] transition-transform" style={{ background: t.primary, color: t.onPrimary }}>Join NOOB</button>
         )}
@@ -160,7 +179,7 @@ const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: stri
   );
 };
 
-const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; error?: string; onChange: (v: unknown) => void }> = ({ q, n, value, error, onChange }) => {
+const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; error?: string; onChange: (v: unknown) => void; calc?: number | null }> = ({ q, n, value, error, onChange, calc }) => {
   const id = 'f-' + q.id;
   const card = 'rounded-[var(--f-radius)] p-5';
   const cardStyle: React.CSSProperties = { background: 'var(--f-card)', border: `1px solid ${error ? '#d93025' : 'var(--f-border)'}` };
@@ -168,6 +187,8 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
   const fieldStyle: React.CSSProperties = { background: 'transparent', border: '1px solid var(--f-border)', color: 'var(--f-text)', ['--tw-ring-color' as string]: 'var(--f-primary)' };
 
   if (q.type === 'section') return <div className="pt-2 px-1"><h2 className="text-lg font-bold">{q.title}</h2>{q.description && <p className="text-sm mt-1" style={{ color: 'var(--f-muted)' }}>{q.description}</p>}</div>;
+  if (q.type === 'hidden') return null;
+  if (q.type === 'calculated') return <div className={card} style={cardStyle}><p className="font-semibold">{q.title}</p><p className="text-2xl font-extrabold mt-1" data-testid="form-calculated">{calc == null ? '-' : calc}</p></div>;
   if (q.type === 'text_block') return <div className={card} style={cardStyle}><p className="font-semibold">{q.title}</p>{q.description && <p className="text-sm mt-1 whitespace-pre-wrap" style={{ color: 'var(--f-muted)' }}>{q.description}</p>}</div>;
 
   const str = typeof value === 'string' ? value : '';
@@ -225,6 +246,60 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
             <button key={v} type="button" role="radio" aria-checked={value === v} aria-label={`${v} of ${hi}`} onClick={() => onChange(v)} className="p-1 cursor-pointer"><Star className="w-8 h-8" style={{ color: 'var(--f-primary)' }} fill={typeof value === 'number' && v <= value ? 'currentColor' : 'none'} /></button>))}
         </div>); break;
     }
+    case 'heart': {
+      const hi = q.max ?? 5;
+      input = (
+        <div role="radiogroup" aria-labelledby={id + '-l'} className="flex gap-1">
+          {Array.from({ length: hi }, (_, i) => i + 1).map((v) => (
+            <button key={v} type="button" role="radio" aria-checked={value === v} aria-label={`${v} of ${hi}`} onClick={() => onChange(v)} className="p-1 cursor-pointer"><Heart className="w-8 h-8" style={{ color: 'var(--f-primary)' }} fill={typeof value === 'number' && v <= value ? 'currentColor' : 'none'} /></button>))}
+        </div>); break;
+    }
+    case 'thumbs': input = (
+      <div role="radiogroup" aria-labelledby={id + '-l'} className="flex gap-3">
+        {(['up', 'down'] as const).map((d) => (
+          <button key={d} type="button" role="radio" aria-checked={value === d} aria-label={d === 'up' ? 'Thumbs up' : 'Thumbs down'} onClick={() => onChange(d)} className="w-14 h-14 rounded-full flex items-center justify-center cursor-pointer" style={value === d ? { background: 'var(--f-primary)', color: 'var(--f-on)' } : { border: '1px solid var(--f-border)' }}>{d === 'up' ? <ThumbsUp className="w-6 h-6" /> : <ThumbsDown className="w-6 h-6" />}</button>))}
+      </div>); break;
+    case 'image_choice': {
+      const sel = q.multi ? (Array.isArray(value) ? (value as string[]) : []) : [str];
+      input = (
+        <div role={q.multi ? 'group' : 'radiogroup'} aria-labelledby={id + '-l'} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {q.options?.map((o) => (
+            <button key={o.id} type="button" role={q.multi ? 'checkbox' : 'radio'} aria-checked={sel.includes(o.id)} onClick={() => onChange(q.multi ? (sel.includes(o.id) ? sel.filter((x) => x !== o.id) : [...sel, o.id]) : o.id)} className="rounded-xl overflow-hidden text-left cursor-pointer" style={{ border: `3px solid ${sel.includes(o.id) ? 'var(--f-primary)' : 'var(--f-border)'}` }}>
+              {o.img && /^https?:\/\//i.test(o.img) ? <img src={o.img} alt={o.label} loading="lazy" className="w-full aspect-square object-cover" /> : <span className="block w-full aspect-square" style={{ background: 'var(--f-border)' }} />}
+              <span className="block px-2 py-1.5 text-sm font-semibold break-words">{o.label}</span>
+            </button>))}
+        </div>); break;
+    }
+    case 'ranking': {
+      const order = Array.isArray(value) ? (value as string[]) : [];
+      const move = (i: number, d: number) => { const c = [...order]; const j = i + d; if (j < 0 || j >= c.length) return; [c[i], c[j]] = [c[j], c[i]]; onChange(c); };
+      input = (
+        <div className="space-y-1.5" aria-labelledby={id + '-l'}>
+          <p className="text-xs" style={{ color: 'var(--f-muted)' }}>Tap the options in your order of preference. Tap again to remove.</p>
+          {order.map((oid, i) => (
+            <div key={oid} className="flex items-center gap-2 px-2 py-2 rounded-lg" style={{ background: 'color-mix(in srgb, var(--f-primary) 12%, transparent)' }}>
+              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0" style={{ background: 'var(--f-primary)', color: 'var(--f-on)' }}>{i + 1}</span>
+              <span className="flex-1 min-w-0 break-words">{q.options?.find((o) => o.id === oid)?.label}</span>
+              <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className="p-1 disabled:opacity-30 cursor-pointer"><ChevronUp className="w-4 h-4" /></button>
+              <button type="button" aria-label="Move down" disabled={i === order.length - 1} onClick={() => move(i, 1)} className="p-1 disabled:opacity-30 cursor-pointer"><ChevronDown className="w-4 h-4" /></button>
+              <button type="button" aria-label="Remove" onClick={() => onChange(order.filter((x) => x !== oid))} className="p-1 cursor-pointer"><X className="w-4 h-4" /></button>
+            </div>))}
+          {q.options?.filter((o) => !order.includes(o.id)).map((o) => (
+            <button key={o.id} type="button" onClick={() => onChange([...order, o.id])} className="w-full text-left px-3 py-2 rounded-lg cursor-pointer" style={{ border: '1px dashed var(--f-border)' }}>{o.label}</button>))}
+        </div>); break;
+    }
+    case 'grid': {
+      const g = (typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {}) as Record<string, string | string[]>;
+      const setCell = (rid: string, cid: string) => { if (q.multi) { const cur = Array.isArray(g[rid]) ? (g[rid] as string[]) : []; onChange({ ...g, [rid]: cur.includes(cid) ? cur.filter((x) => x !== cid) : [...cur, cid] }); } else onChange({ ...g, [rid]: cid }); };
+      input = (
+        <div className="overflow-x-auto" role="group" aria-labelledby={id + '-l'}>
+          <table className="w-full text-sm"><thead><tr><th />{q.cols?.map((c) => <th key={c.id} className="px-2 py-1 font-semibold text-center">{c.label}</th>)}</tr></thead>
+            <tbody>{q.rows?.map((r) => (
+              <tr key={r.id}><th scope="row" className="text-left font-medium pr-3 py-1.5 min-w-[6rem]">{r.label}</th>
+                {q.cols?.map((c) => { const on = q.multi ? Array.isArray(g[r.id]) && (g[r.id] as string[]).includes(c.id) : g[r.id] === c.id; return <td key={c.id} className="text-center"><input type={q.multi ? 'checkbox' : 'radio'} name={id + r.id} checked={on} onChange={() => setCell(r.id, c.id)} aria-label={`${r.label}: ${c.label}`} className="w-4 h-4" style={{ accentColor: 'var(--f-primary)' }} /></td>; })}</tr>))}</tbody></table>
+        </div>); break;
+    }
+    case 'signature': input = <SignaturePad value={str} onChange={onChange} />; break;
     case 'consent': input = (
       <label className="flex items-start gap-3 cursor-pointer"><input id={id} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} className="w-5 h-5 mt-0.5" style={{ accentColor: 'var(--f-primary)' }} /><span className="break-words min-w-0">{q.description || q.title}</span></label>); break;
     default: break;
@@ -237,6 +312,22 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
       <div className="mt-2">{input}</div>
       {error && <p id={id + '-e'} role="alert" className="mt-2 text-sm font-semibold" style={{ color: '#d93025' }}>{error}</p>}
     </fieldset>
+  );
+};
+
+const SignaturePad: React.FC<{ value: string; onChange: (v: unknown) => void }> = ({ value, onChange }) => {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  const drawing = useRef(false);
+  const pos = (e: React.PointerEvent) => { const r = ref.current!.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 400, y: ((e.clientY - r.top) / r.height) * 160 }; };
+  const start = (e: React.PointerEvent) => { const c = ref.current?.getContext('2d'); if (!c) return; drawing.current = true; (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); const p = pos(e); c.beginPath(); c.moveTo(p.x, p.y); c.lineWidth = 3; c.lineCap = 'round'; c.strokeStyle = '#111'; };
+  const move = (e: React.PointerEvent) => { if (!drawing.current) return; const c = ref.current?.getContext('2d'); if (!c) return; const p = pos(e); c.lineTo(p.x, p.y); c.stroke(); };
+  const end = () => { if (!drawing.current) return; drawing.current = false; const url = ref.current?.toDataURL('image/png') ?? ''; onChange(url.length <= 60000 ? url : ''); };
+  const clear = () => { const c = ref.current?.getContext('2d'); c?.clearRect(0, 0, 400, 160); onChange(''); };
+  return (
+    <div>
+      <canvas ref={ref} width={400} height={160} onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end} role="img" aria-label={value ? 'Your signature' : 'Sign here with your finger or the mouse'} className="w-full rounded-lg touch-none" style={{ background: '#fff', border: '1px solid var(--f-border)', height: 160 }} />
+      <div className="flex justify-between items-center mt-1 text-xs" style={{ color: 'var(--f-muted)' }}><span>Sign above. A drawn signature is a picture of your name; it is not a legal e-signature.</span><button type="button" onClick={clear} className="underline cursor-pointer">Clear</button></div>
+    </div>
   );
 };
 

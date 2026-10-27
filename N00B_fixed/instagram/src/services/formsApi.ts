@@ -55,7 +55,7 @@ export async function publishForm(id: string): Promise<{ ok: boolean; slug?: str
 }
 
 export async function listResponses(formId: string, page: number, size = 25): Promise<{ rows: ResponseRow[]; total: number }> {
-  const { data, error, count } = await supabase.from('form_responses').select('id,created_at,answers,version', { count: 'exact' }).eq('form_id', formId).order('created_at', { ascending: false }).range(page * size, page * size + size - 1);
+  const { data, error, count } = await supabase.from('form_responses').select('*', { count: 'exact' }).eq('form_id', formId).order('created_at', { ascending: false }).range(page * size, page * size + size - 1);
   if (error) fail(error, 'Could not load the responses.');
   return { rows: (data ?? []) as ResponseRow[], total: count ?? 0 };
 }
@@ -63,7 +63,7 @@ export async function listResponses(formId: string, page: number, size = 25): Pr
 export async function allResponses(formId: string, limit = 20000): Promise<ResponseRow[]> {
   const out: ResponseRow[] = [];
   for (let from = 0; from < limit; from += 500) {
-    const { data, error } = await supabase.from('form_responses').select('id,created_at,answers,version').eq('form_id', formId).order('created_at', { ascending: false }).range(from, from + 499);
+    const { data, error } = await supabase.from('form_responses').select('*').eq('form_id', formId).order('created_at', { ascending: false }).range(from, from + 499);
     if (error) fail(error, 'Could not load the responses.');
     out.push(...((data ?? []) as ResponseRow[]));
     if ((data?.length ?? 0) < 500) break;
@@ -86,7 +86,7 @@ export async function getPublicForm(slug: string): Promise<PublicForm> {
   if (error) fail(error, 'This form could not be opened. Please try again.');
   return data as PublicForm;
 }
-export async function submitPublicForm(slug: string, answers: Record<string, unknown>, utm?: Record<string, string>): Promise<{ ok: boolean; error?: string; question?: string }> {
+export async function submitPublicForm(slug: string, answers: Record<string, unknown>, utm?: Record<string, string>): Promise<{ ok: boolean; error?: string; question?: string; result?: import('../components/Forms/FormRenderer').QuizResult | null }> {
   const { data, error } = await supabase.rpc('form_public_submit', { p_slug: slug, p_answers: answers, p_meta: utm ? { utm } : {} });
   if (error) fail(error, 'Your answers were not sent. Please check your connection and try again.');
   return data as { ok: boolean; error?: string; question?: string };

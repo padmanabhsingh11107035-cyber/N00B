@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, ChevronDown, ChevronUp, Copy, Eye, GripVertical, Link2, Palette, Plus, Redo2, Settings as Cog, Share2, Trash2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Download, ChevronDown, ChevronUp, Copy, Eye, GripVertical, Link2, Palette, Plus, Redo2, Settings as Cog, Share2, Trash2, Undo2, X } from 'lucide-react';
 import { getForm, saveDraft, publishForm, updateMeta, formLink, type FormRow } from '../../services/formsApi';
 import {
-  QTYPES, THEMES, THEME_FONTS, blankQuestion, changeType, contrastRatio, hasOptions, isAnswerable, losesSettings, newId, publishProblems, resolveTheme,
+  QTYPES, exportDefinition, THEMES, THEME_FONTS, blankQuestion, canScore, changeType, contrastRatio, hasOptions, isAnswerable, losesSettings, newId, publishProblems, resolveTheme,
   type FormDraft, type FormQuestion, type FormSettings, type FormTheme, type Presentation, type QType
 } from '../../utils/forms';
 import { FormRenderer } from './FormRenderer';
@@ -134,6 +134,7 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
           <span className={`hidden sm:inline text-[11px] ${save === 'saved' ? 'text-zinc-400' : save === 'saving' ? 'text-zinc-300' : 'text-amber-300'}`} role="status" data-testid="form-save-state">{saveText}</span>
           <button type="button" onClick={undo} disabled={!hist.current.past.length} aria-label="Undo" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-35 cursor-pointer"><Undo2 className="w-4 h-4" /></button>
           <button type="button" onClick={redo} disabled={!hist.current.future.length} aria-label="Redo" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-35 cursor-pointer"><Redo2 className="w-4 h-4" /></button>
+          <button type="button" onClick={() => { const u = URL.createObjectURL(new Blob([exportDefinition(state.title, state.description, draft)], { type: 'application/json' })); const a = document.createElement('a'); a.href = u; a.download = `${state.title.replace(/[^\w-]+/g, '-').slice(0, 40) || 'form'}.noobform.json`; document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(() => URL.revokeObjectURL(u), 1000); }} aria-label="Save the form as a file" title="Save the form as a file" className="hidden sm:flex w-9 h-9 rounded-full border border-zinc-700 items-center justify-center cursor-pointer"><Download className="w-4 h-4" /></button>
           <button type="button" onClick={() => setPreview(true)} aria-label="Preview" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><Eye className="w-4 h-4" /></button>
           <button type="button" onClick={() => void publish()} disabled={busy} className="px-4 h-9 rounded-full bg-white text-black text-sm font-bold cursor-pointer disabled:opacity-60" data-testid="form-publish">{live && !unpublished ? 'Published' : live ? 'Publish changes' : 'Publish'}</button>
         </div>
@@ -156,7 +157,7 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
               <textarea value={state.description} onChange={(e) => change((s) => ({ ...s, description: e.target.value }), true)} maxLength={2000} rows={2} placeholder="Form description" aria-label="Form description" className="w-full bg-transparent text-sm text-zinc-300 outline-none resize-y border-b border-transparent focus:border-zinc-600" />
             </div>
             {qs.map((q, i) => (
-              <QuestionCard key={q.id} q={q} i={i} all={qs} count={qs.length} open={open === q.id} onOpen={() => setOpen(open === q.id ? null : q.id)}
+              <QuestionCard key={q.id} q={q} i={i} all={qs} count={qs.length} quiz={!!draft.settings.quiz?.enabled} open={open === q.id} onOpen={() => setOpen(open === q.id ? null : q.id)}
                 onPatch={(p) => patchQ(q.id, p)} onChangeType={(t) => { if (losesSettings(q, t) && !window.confirm('Changing the type removes settings that do not fit the new type (the options). Continue?')) return; setQs((l) => l.map((x) => (x.id === q.id ? changeType(x, t) : x)), false); }}
                 onUp={() => move(i, i - 1)} onDown={() => move(i, i + 1)} onDup={() => dup(i)} onDel={() => del(q.id)} onDrop={(from) => move(from, i)} />
             ))}
@@ -202,8 +203,8 @@ const AddBar: React.FC<{ onAdd: (t: QType) => void }> = ({ onAdd }) => {
   );
 };
 
-interface QCProps { q: FormQuestion; i: number; all: FormQuestion[]; count: number; open: boolean; onOpen: () => void; onPatch: (p: Partial<FormQuestion>) => void; onChangeType: (t: QType) => void; onUp: () => void; onDown: () => void; onDup: () => void; onDel: () => void; onDrop: (from: number) => void }
-const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, open, onOpen, onPatch, onChangeType, onUp, onDown, onDup, onDel, onDrop }) => {
+interface QCProps { q: FormQuestion; i: number; all: FormQuestion[]; count: number; quiz: boolean; open: boolean; onOpen: () => void; onPatch: (p: Partial<FormQuestion>) => void; onChangeType: (t: QType) => void; onUp: () => void; onDown: () => void; onDup: () => void; onDel: () => void; onDrop: (from: number) => void }
+const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen, onPatch, onChangeType, onUp, onDown, onDup, onDel, onDrop }) => {
   const label = QTYPES.find((t) => t.type === q.type)?.label ?? q.type;
   const earlier = all.slice(0, i).filter((x) => isAnswerable(x.type));
   const dep = earlier.find((x) => x.id === q.showIf?.q);
@@ -230,6 +231,7 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, open, onOpen, onPat
               {q.options?.map((o, k) => (
                 <div key={o.id} className="flex items-center gap-1.5">
                   <input value={o.label} onChange={(e) => setOpt(o.id, e.target.value)} maxLength={200} aria-label={`Option ${k + 1}`} className={inp} />
+                  {q.type === 'image_choice' && <input value={o.img ?? ''} onChange={(e) => onPatch({ options: q.options?.map((x) => (x.id === o.id ? { ...x, img: e.target.value.trim() } : x)) })} maxLength={500} placeholder="Picture link (https://…)" aria-label={`Picture of option ${k + 1}`} className={inp} />}
                   <button type="button" aria-label="Move option up" disabled={k === 0} onClick={() => { const c = [...(q.options ?? [])]; [c[k - 1], c[k]] = [c[k], c[k - 1]]; onPatch({ options: c }); }} className="w-8 h-8 shrink-0 flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronUp className="w-4 h-4" /></button>
                   <button type="button" aria-label="Move option down" disabled={k === (q.options?.length ?? 0) - 1} onClick={() => { const c = [...(q.options ?? [])]; [c[k + 1], c[k]] = [c[k], c[k + 1]]; onPatch({ options: c }); }} className="w-8 h-8 shrink-0 flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronDown className="w-4 h-4" /></button>
                   <button type="button" aria-label="Delete option" onClick={() => onPatch({ options: q.options?.filter((x) => x.id !== o.id) })} className="w-8 h-8 shrink-0 flex items-center justify-center text-zinc-400 hover:text-red-400 cursor-pointer"><X className="w-4 h-4" /></button>
@@ -239,12 +241,19 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, open, onOpen, onPat
                 <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.allowOther} onChange={(e) => onPatch({ allowOther: e.target.checked })} />Add "Other"</label>
               </div>
             </div>)}
-          {(['short', 'paragraph', 'number', 'checkboxes', 'scale', 'rating'] as QType[]).includes(q.type) && (
+          {(['short', 'paragraph', 'number', 'checkboxes', 'scale', 'rating', 'heart'] as QType[]).includes(q.type) && (
             <div className="grid grid-cols-2 gap-3">
               <Row label={q.type === 'short' || q.type === 'paragraph' ? 'Fewest characters' : q.type === 'checkboxes' ? 'Choose at least' : q.type === 'number' ? 'Smallest number' : 'From'}><input type="number" value={q.min ?? ''} onChange={(e) => onPatch({ min: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>
               <Row label={q.type === 'short' || q.type === 'paragraph' ? 'Most characters' : q.type === 'checkboxes' ? 'Choose at most' : q.type === 'number' ? 'Largest number' : 'To'}><input type="number" value={q.max ?? ''} onChange={(e) => onPatch({ max: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>
             </div>)}
           {(q.type === 'scale' || q.type === 'nps') && <div className="grid grid-cols-2 gap-3"><Row label="Label at the low end"><input value={q.minLabel ?? ''} onChange={(e) => onPatch({ minLabel: e.target.value })} maxLength={40} className={inp} /></Row><Row label="Label at the high end"><input value={q.maxLabel ?? ''} onChange={(e) => onPatch({ maxLabel: e.target.value })} maxLength={40} className={inp} /></Row></div>}
+          {q.type === 'image_choice' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.multi} onChange={(e) => onPatch({ multi: e.target.checked, correct: undefined })} />People can pick more than one picture</label>}
+          {q.type === 'ranking' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.partial} onChange={(e) => onPatch({ partial: e.target.checked })} />People may rank only some of the options</label>}
+          {q.type === 'grid' && <GridEditor q={q} onPatch={onPatch} />}
+          {q.type === 'hidden' && <Row label="Link parameter: a link ending in ?ref=abc fills this field with abc (people never see it)"><input value={q.param ?? ''} onChange={(e) => onPatch({ param: e.target.value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 30) })} className={inp} /></Row>}
+          {q.type === 'calculated' && <Row label="Formula. #1, #2 … are the answers of the 1st, 2nd … question (numbers). For example (#1 + #2) * 2"><input value={q.formula ?? ''} onChange={(e) => onPatch({ formula: e.target.value.slice(0, 200) })} className={inp} /></Row>}
+          {quiz && canScore(q.type) && <QuizFields q={q} onPatch={onPatch} />}
+          {isAnswerable(q.type) && q.type !== 'hidden' && <EndRule q={q} onPatch={onPatch} />}
           {q.type !== 'section' && (
             <div className="rounded-xl border border-zinc-800 p-3 space-y-2">
               <p className="text-xs font-semibold text-zinc-300">Show this only if…</p>
@@ -262,6 +271,63 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, open, onOpen, onPat
             <button type="button" onClick={onDel} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full border border-red-500/50 text-red-300 text-sm cursor-pointer" data-testid="q-delete"><Trash2 className="w-4 h-4" />Delete</button>
           </div>
         </div>)}
+    </div>
+  );
+};
+
+const GridEditor: React.FC<{ q: FormQuestion; onPatch: (p: Partial<FormQuestion>) => void }> = ({ q, onPatch }) => {
+  const list = (key: 'rows' | 'cols', title: string) => (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold text-zinc-300">{title}</p>
+      {q[key]?.map((o, k) => (
+        <div key={o.id} className="flex items-center gap-1.5">
+          <input value={o.label} onChange={(e) => onPatch({ [key]: q[key]?.map((x) => (x.id === o.id ? { ...x, label: e.target.value } : x)) })} maxLength={120} aria-label={`${title} ${k + 1}`} className={inp} />
+          <button type="button" aria-label="Delete" onClick={() => onPatch({ [key]: q[key]?.filter((x) => x.id !== o.id) })} className="w-8 h-8 shrink-0 flex items-center justify-center text-zinc-400 hover:text-red-400 cursor-pointer"><X className="w-4 h-4" /></button>
+        </div>))}
+      <button type="button" onClick={() => onPatch({ [key]: [...(q[key] ?? []), { id: newId(), label: `${key === 'rows' ? 'Row' : 'Column'} ${(q[key]?.length ?? 0) + 1}` }] })} className="text-sm font-bold underline cursor-pointer">Add</button>
+    </div>);
+  return (
+    <div className="space-y-3">
+      {list('rows', 'Rows')}{list('cols', 'Columns')}
+      <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.multi} onChange={(e) => onPatch({ multi: e.target.checked })} />People can pick more than one column in a row (checkbox grid)</label>
+    </div>
+  );
+};
+
+const QuizFields: React.FC<{ q: FormQuestion; onPatch: (p: Partial<FormQuestion>) => void }> = ({ q, onPatch }) => {
+  const multi = q.type === 'checkboxes' || (q.type === 'image_choice' && q.multi);
+  const single = q.type === 'multiple_choice' || q.type === 'dropdown' || (q.type === 'image_choice' && !q.multi);
+  const list = Array.isArray(q.correct) ? q.correct : [];
+  return (
+    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2">
+      <p className="text-xs font-bold text-emerald-300">Quiz: points and the right answer</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Row label="Points for a right answer (0 = not scored)"><input type="number" min={0} max={100} value={q.points ?? ''} onChange={(e) => onPatch({ points: e.target.value === '' ? undefined : Math.max(0, Math.min(100, Number(e.target.value))) })} className={inp} data-testid="q-points" /></Row>
+        {single && <Row label="The right answer"><select value={typeof q.correct === 'string' ? q.correct : ''} onChange={(e) => onPatch({ correct: e.target.value || undefined })} className={inp} data-testid="q-correct"><option value="">Choose…</option>{q.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></Row>}
+        {q.type === 'thumbs' && <Row label="The right answer"><select value={typeof q.correct === 'string' ? q.correct : ''} onChange={(e) => onPatch({ correct: e.target.value || undefined })} className={inp}><option value="">Choose…</option><option value="up">Thumbs up</option><option value="down">Thumbs down</option></select></Row>}
+        {['number', 'scale', 'rating', 'nps', 'heart'].includes(q.type) && <Row label="The right number"><input type="number" value={typeof q.correct === 'number' ? q.correct : ''} onChange={(e) => onPatch({ correct: e.target.value === '' ? undefined : Number(e.target.value) })} className={inp} /></Row>}
+        {['short', 'paragraph', 'email', 'phone', 'url'].includes(q.type) && <Row label="Right answers (separate with commas)"><input value={Array.isArray(q.correct) ? q.correct.join(', ') : typeof q.correct === 'string' ? q.correct : ''} onChange={(e) => { const w = e.target.value.split(',').map((x) => x.trim()).filter(Boolean); onPatch({ correct: w.length > 1 ? w : w[0] }); }} className={inp} /></Row>}
+      </div>
+      {multi && (
+        <div className="space-y-1"><p className="text-xs text-zinc-300">Tick every right option</p>{q.options?.map((o) => <label key={o.id} className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={list.includes(o.id)} onChange={(e) => onPatch({ correct: e.target.checked ? [...list, o.id] : list.filter((x) => x !== o.id) })} />{o.label}</label>)}</div>)}
+      {q.type === 'ranking' && <button type="button" onClick={() => onPatch({ correct: q.options?.map((o) => o.id) })} className="text-sm underline cursor-pointer">{Array.isArray(q.correct) ? 'Right order: the order of the options above (tap to set again)' : 'Use the order of the options above as the right order'}</button>}
+      <Row label="Explanation shown after sending (optional)"><input value={q.explanation ?? ''} onChange={(e) => onPatch({ explanation: e.target.value })} maxLength={400} className={inp} /></Row>
+    </div>
+  );
+};
+
+const EndRule: React.FC<{ q: FormQuestion; onPatch: (p: Partial<FormQuestion>) => void }> = ({ q, onPatch }) => {
+  const e = q.endIf;
+  const choice = hasOptions(q.type) && q.type !== 'ranking';
+  return (
+    <div className="rounded-xl border border-zinc-800 p-3 space-y-2">
+      <p className="text-xs font-semibold text-zinc-300">End the form after this question if the answer…</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <select aria-label="End rule" value={e?.op ?? ''} onChange={(ev) => onPatch({ endIf: ev.target.value ? { op: ev.target.value as never, value: e?.value } : null })} className={inp}><option value="">Never (go on to the next question)</option>{[['eq', 'is'], ['neq', 'is not'], ['contains', 'contains'], ['gt', 'is more than'], ['lt', 'is less than']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+        {e && (choice
+          ? <select aria-label="End value" value={String(e.value ?? '')} onChange={(ev) => onPatch({ endIf: { ...e, value: ev.target.value } })} className={inp}><option value="">Choose…</option>{q.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select>
+          : <input aria-label="End value" value={String(e.value ?? '')} onChange={(ev) => onPatch({ endIf: { ...e, value: ['gt', 'lt'].includes(e.op) || ['scale', 'rating', 'nps', 'number', 'heart'].includes(q.type) ? Number(ev.target.value) : ev.target.value } })} className={inp} />)}
+      </div>
     </div>
   );
 };
@@ -304,6 +370,16 @@ const SettingsTab: React.FC<{ s: FormSettings; onChange: (p: Partial<FormSetting
       <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={!!s.numbering} onChange={(e) => onChange({ numbering: e.target.checked })} />Number the questions</label>
       <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={!!s.collectCampaign} onChange={(e) => onChange({ collectCampaign: e.target.checked })} />Keep campaign tags from the link (utm_source, utm_medium, utm_campaign)</label>
     </div>
+    <div className="rounded-xl border border-zinc-800 p-3 space-y-3">
+      <label className="flex items-center gap-2 text-sm font-bold cursor-pointer"><input type="checkbox" checked={!!s.quiz?.enabled} onChange={(e) => onChange({ quiz: { ...s.quiz, enabled: e.target.checked } })} data-testid="quiz-toggle" />This is a quiz (points and right answers)</label>
+      {s.quiz?.enabled && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Row label="Pass mark in % (optional)"><input type="number" min={1} max={100} value={s.quiz.passScore ?? ''} onChange={(e) => onChange({ quiz: { ...s.quiz, passScore: e.target.value === '' ? null : Math.max(1, Math.min(100, Number(e.target.value))) } })} className={inp} /></Row>
+          <Row label="After sending, people see"><select value={s.quiz.showScore ?? 'after'} onChange={(e) => onChange({ quiz: { ...s.quiz, showScore: e.target.value as 'after' | 'never' } })} className={inp}><option value="after">Their score</option><option value="never">Nothing (only you see the scores)</option></select></Row>
+          <label className="flex items-center gap-2 text-sm cursor-pointer sm:col-span-2"><input type="checkbox" checked={!!s.quiz.showAnswers} onChange={(e) => onChange({ quiz: { ...s.quiz, showAnswers: e.target.checked } })} />Also show the right answers and explanations (after sending, never before)</label>
+          <p className="text-xs text-zinc-400 sm:col-span-2">Set the points and the right answer inside each question. The right answers are never sent to people before they have sent their own.</p>
+        </div>)}
+    </div>
     <Row label="Message after sending"><input value={s.confirmMessage ?? ''} onChange={(e) => onChange({ confirmMessage: e.target.value })} maxLength={300} placeholder="Your response was sent." className={inp} /></Row>
     <Row label="Go to this address after sending (optional, https://…)"><input value={s.redirectUrl ?? ''} onChange={(e) => onChange({ redirectUrl: e.target.value.trim() })} maxLength={300} className={inp} /></Row>
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -318,6 +394,8 @@ const toLocal = (iso?: string | null) => { if (!iso) return ''; const d = new Da
 
 const ShareTab: React.FC<{ row: FormRow; unpublished: boolean; busy: boolean; onPublish: () => void; onStatus: (s: 'published' | 'closed' | 'draft') => void }> = ({ row, unpublished, busy, onPublish, onStatus }) => {
   const [copied, setCopied] = useState('');
+  const [qr, setQr] = useState('');
+  useEffect(() => { if (!row.slug || row.status === 'draft') return; let alive = true; void import('qrcode').then((m) => m.toDataURL(formLink(row.slug!), { width: 360, margin: 2 })).then((u) => alive && setQr(u)).catch(() => undefined); return () => { alive = false; }; }, [row.slug, row.status]);
   const link = row.slug ? formLink(row.slug) : '';
   const embed = link ? `<iframe src="${link}" width="100%" height="720" style="border:0;max-width:700px" title="${row.title.replace(/"/g, '&quot;')}" loading="lazy"></iframe>` : '';
   const copy = async (text: string, what: string) => { try { await navigator.clipboard.writeText(text); setCopied(what); window.setTimeout(() => setCopied(''), 1800); } catch { window.prompt('Copy this:', text); } };
@@ -331,6 +409,7 @@ const ShareTab: React.FC<{ row: FormRow; unpublished: boolean; busy: boolean; on
           <a href={link} target="_blank" rel="noopener noreferrer" className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold inline-flex items-center cursor-pointer">Open the form</a>
           {typeof navigator.share === 'function' && <button type="button" onClick={() => void navigator.share({ title: row.title, url: link }).catch(() => undefined)} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer">Share…</button>}
         </div>
+        {qr && <div className="flex items-center gap-3 pt-1"><img src={qr} alt="QR code of the form link" width={120} height={120} className="rounded-lg bg-white p-1" /><a href={qr} download={`${row.title.replace(/[^\w-]+/g, '-').slice(0, 30) || 'form'}-qr.png`} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold inline-flex items-center gap-1.5 cursor-pointer"><Download className="w-4 h-4" />Save the QR code</a></div>}
         <p className="text-xs font-semibold text-zinc-300 pt-1">Put it on a website</p>
         <textarea readOnly rows={3} value={embed} onFocus={(e) => e.currentTarget.select()} className={inp + ' font-mono text-xs'} aria-label="Embed code" />
         <button type="button" onClick={() => void copy(embed, 'embed')} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer">{copied === 'embed' ? 'Copied' : 'Copy embed code'}</button>

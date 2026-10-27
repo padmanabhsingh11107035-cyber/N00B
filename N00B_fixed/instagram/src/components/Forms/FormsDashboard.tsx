@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Archive, ArrowLeft, BarChart3, Copy, FileText, FolderInput, LayoutGrid, List, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
 import { createForm, deleteFormForever, duplicateForm, formLink, listForms, updateMeta, type FormRow } from '../../services/formsApi';
-import { BLANK_DRAFT, TEMPLATES, fixTemplateLogic } from '../../utils/forms';
+import { BLANK_DRAFT, TEMPLATES, fixTemplateLogic, importDefinition } from '../../utils/forms';
 
 // "My forms": search, filters, sort, grid or list, folders, stars, archive and trash (nothing is deleted for good until it is in the trash and you say so), templates and a blank form.
 
@@ -52,6 +52,7 @@ export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack })
         <div className="max-w-5xl mx-auto px-3 pt-2.5 pb-2 flex items-center gap-2">
           <button type="button" onClick={onBack} aria-label="Back" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
           <h1 className="font-extrabold text-lg flex-1">NOOB Forms</h1>
+          <label className="px-3.5 h-9 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer inline-flex items-center">Import<input type="file" accept="application/json,.json" className="sr-only" data-testid="forms-import" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; if (f.size > 1_000_000) { setNote('That file is too big for a form.'); return; } void f.text().then((t) => { const d = importDefinition(t); return create(d.title, d.description, d.draft); }).catch((err) => setNote(err instanceof Error ? err.message : 'Could not read the file.')); }} /></label>
           <button type="button" onClick={() => setGallery(true)} className="px-3.5 h-9 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer" data-testid="forms-templates">Templates</button>
           <button type="button" disabled={busy === 'new'} onClick={() => void create('Untitled form', '', BLANK_DRAFT())} className="px-4 h-9 rounded-full bg-white text-black text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60" data-testid="forms-new"><Plus className="w-4 h-4" />New form</button>
         </div>

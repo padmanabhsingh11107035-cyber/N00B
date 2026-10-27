@@ -1,4 +1,4 @@
-// A pretend Supabase for LOOKING at the app on this computer when the real one is switched off or should not be touched (a design preview, nothing more).
+﻿// A pretend Supabase for LOOKING at the app on this computer when the real one is switched off or should not be touched (a design preview, nothing more).
 //   node scripts/dev/mock-backend.mjs            (listens on 127.0.0.1:54399)
 //   VITE_SUPABASE_URL=http://127.0.0.1:54399 VITE_SUPABASE_PUBLISHABLE_KEY=mock npx vite --port 5173 --host 127.0.0.1
 // Log in with any User ID and any password. It answers only what the app asks for on its first screens: one person (you), a few chats with messages, call lines and notes.
@@ -6,7 +6,7 @@
 import http from 'node:http';
 
 const PORT = Number(process.env.MOCK_PORT || 54399);
-const HOST = '127.0.0.1';
+const HOST = process.env.MOCK_HOST || '127.0.0.1';
 const now = Date.now();
 const iso = (minsAgo) => new Date(now - minsAgo * 60_000).toISOString();
 
@@ -29,18 +29,18 @@ const C1 = 'c0000000-0000-4000-8000-000000000001', C2 = 'c0000000-0000-4000-8000
 const messages = {
   [C1]: [
     msg(C1, 1, ME, "Hey! I'm free tonight. What's everyone up to?", 190, 'read'),
-    msg(C1, 2, RIYA, 'Big test tomorrow! Anyone wanna study together tonight?', 186, 'read', { reactions: [{ emoji: '👍', count: 3, users: [ME.id, ARJUN.id, MEERA.id] }] }),
+    msg(C1, 2, RIYA, 'Big test tomorrow! Anyone wanna study together tonight?', 186, 'read', { reactions: [{ emoji: 'ðŸ‘', count: 3, users: [ME.id, ARJUN.id, MEERA.id] }] }),
     msg(C1, 3, ME, 'Yes! I just finished a study guide', 180, 'read'),
     msg(C1, 4, ARJUN, 'Meet at the library at 5?', 175, 'read'),
     msg(C1, 5, MEERA, "I'm in!", 174, 'read'),
     msg(C1, 6, ME, 'Great! What about Dev?', 170, 'read'),
     msg(C1, 7, ME, 'In the meantime, can anyone help with this question?', 169, 'sent'),
-    msg(C1, 8, DEV, 'Wait! What test?!', 160, 'read', { reactions: [{ emoji: '😳', count: 1, users: [RIYA.id] }] })
+    msg(C1, 8, DEV, 'Wait! What test?!', 160, 'read', { reactions: [{ emoji: 'ðŸ˜³', count: 1, users: [RIYA.id] }] })
   ],
-  [C2]: [msg(C2, 1, RIYA, 'Typing…', 8, 'read'), msg(C2, 2, ME, 'Sent you the notes 📒', 5, 'sent')],
-  [C3]: [msg(C3, 1, ARJUN, 'I believe that this is the best…', 130, 'read')],
+  [C2]: [msg(C2, 1, RIYA, 'Typingâ€¦', 8, 'read'), msg(C2, 2, ME, 'Sent you the notes ðŸ“’', 5, 'sent')],
+  [C3]: [msg(C3, 1, ARJUN, 'I believe that this is the bestâ€¦', 130, 'read')],
   [C4]: [msg(C4, 1, ME, 'See you tomorrow!', 700, 'read')],
-  [C5]: [msg(C5, 1, DEV, '😍😍😍', 1500, 'read')]
+  [C5]: [msg(C5, 1, DEV, 'ðŸ˜ðŸ˜ðŸ˜', 1500, 'read')]
 };
 const last = (id) => messages[id][messages[id].length - 1];
 const chats = [
@@ -58,8 +58,8 @@ let callLogs = [
   { id: 'cl5', chatId: C2, actorId: ME.id, actorUsername: 'you', kind: 'declined', durationSeconds: null, createdAt: iso(3000) }
 ];
 let notes = [
-  { id: 'n1', body: 'Study plan\n☐ Maths chapter 4\n☑ Physics notes\n☐ Chemistry lab file', created_at: iso(900), updated_at: iso(60) },
-  { id: 'n2', body: 'Shopping list\n• milk\n• eggs\n• bread', created_at: iso(3000), updated_at: iso(2000) }
+  { id: 'n1', body: 'Study plan\nâ˜ Maths chapter 4\nâ˜‘ Physics notes\nâ˜ Chemistry lab file', created_at: iso(900), updated_at: iso(60) },
+  { id: 'n2', body: 'Shopping list\nâ€¢ milk\nâ€¢ eggs\nâ€¢ bread', created_at: iso(3000), updated_at: iso(2000) }
 ];
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');

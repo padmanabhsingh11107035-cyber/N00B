@@ -89,7 +89,7 @@ function checkRateLimit(ip: string, limit: number = 60, windowMs: number = 60000
   return true;
 }
 
-// Railway (like any platform behind a load balancer/proxy) puts the real
+// A platform behind a load balancer/proxy puts the real
 // visitor address in x-forwarded-for, not req.socket.remoteAddress — that
 // header can carry a comma-separated "client, proxy1, proxy2" chain, so the
 // actual client is always the first entry.
@@ -331,7 +331,7 @@ async function startServer() {
   // (not even /api/health) could respond until every collection finished
   // loading. That's fine on a fast local connection, but on a free-tier
   // instance talking to a database in a different region it can take
-  // minutes, and cloud hosts like Render kill a service that doesn't open
+  // minutes, and cloud hosts kill a service that doesn't open
   // its port / answer health checks in time — restarting it, hitting the
   // exact same slow load again, and repeating forever. This now runs in
   // the background: the server opens immediately with default/seed data,

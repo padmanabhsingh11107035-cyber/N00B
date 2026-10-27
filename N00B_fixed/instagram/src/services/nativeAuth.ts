@@ -35,8 +35,17 @@ export function oauthRedirectTo(): string {
   return isNativeApp() ? NATIVE_AUTH_REDIRECT : window.location.origin;
 }
 
+const PENDING_KEY = 'noob_oauth_pending';
+const PENDING_MS = 10 * 60_000;
+/** A sign-in the app itself started is waiting for 10 minutes (kept on the phone, so it survives the app being closed while the browser tab is open). */
+export function markAuthPending(now = Date.now()): void { try { localStorage.setItem(PENDING_KEY, String(now + PENDING_MS)); } catch { /* the sign-in then simply is not accepted */ } }
+export function takeAuthPending(now = Date.now()): boolean {
+  try { const until = Number(localStorage.getItem(PENDING_KEY) || 0); localStorage.removeItem(PENDING_KEY); return until > now; } catch { return false; }
+}
+
 /** Opens the provider's page in the phone's secure browser tab (the app only; the website goes there by itself). */
 export async function openNativeAuthPage(url: string): Promise<void> {
+  markAuthPending();
   const { Browser } = await import('@capacitor/browser');
   await Browser.open({ url });
 }
@@ -54,6 +63,7 @@ export function listenForNativeAuthReturn(): void {
       await App.addListener('appUrlOpen', async ({ url }) => {
         const back = parseAuthReturn(url);
         if (back.kind === 'none') return;
+        if (!takeAuthPending()) return;   // nobody started a sign-in here: a link from another app or page is ignored
         try { await Browser.close(); } catch { /* already closed */ }
         try {
           if (back.kind === 'tokens') await supabase.auth.setSession({ access_token: back.accessToken, refresh_token: back.refreshToken });

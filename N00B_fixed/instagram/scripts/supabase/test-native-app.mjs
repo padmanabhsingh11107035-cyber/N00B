@@ -1,6 +1,6 @@
 // The Android app as a real app (its screens are inside the app file, not the website) and its sign-in link. Usage: node --liftoff-only scripts/supabase/test-native-app.mjs
 import fs from 'node:fs';
-import { parseAuthReturn, NATIVE_AUTH_REDIRECT } from '../../src/services/nativeAuth.ts';
+import { parseAuthReturn, NATIVE_AUTH_REDIRECT, markAuthPending, takeAuthPending } from '../../src/services/nativeAuth.ts';
 
 let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
@@ -22,6 +22,10 @@ check(parseAuthReturn('com.noob.social://auth?code=XYZ').kind === 'code', 'a cod
 check(parseAuthReturn('com.noob.social://auth?error=access_denied&error_description=Denied').kind === 'error', 'a refusal is told, not signed in');
 check(parseAuthReturn('https://evil.example/#access_token=A&refresh_token=B').kind === 'none' && parseAuthReturn('other.app://auth#access_token=A&refresh_token=B').kind === 'none', 'a link that is not NOOB\'s own signs nobody in');
 check(parseAuthReturn('garbage').kind === 'none', 'a damaged link is ignored');
+const store = new Map(); globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+check(takeAuthPending() === false, 'a sign-in link that arrives when the app started no sign-in is ignored');
+markAuthPending(1000); check(takeAuthPending(1000 + 5 * 60_000) === true && takeAuthPending(1000 + 5 * 60_000) === false, 'a sign-in the app started is accepted once');
+markAuthPending(1000); check(takeAuthPending(1000 + 11 * 60_000) === false, 'and only for 10 minutes');
 const api = read('src/services/supabaseApi.ts');
 check((api.match(/redirectTo: oauthRedirectTo\(\)/g) || []).length === 2 && (api.match(/openNativeAuthPage/g) || []).length >= 3, 'both sign-in starts use it, and open the phone\'s own browser tab in the app');
 

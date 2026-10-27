@@ -25,6 +25,12 @@
   ! Referrer-Policy
   Referrer-Policy: no-referrer
   Cache-Control: no-store
+# A form people fill (/f/<address>) may be shown inside other websites (the "embed code" of NOOB Forms). It is the only page that may; the rest of the policy is the same as everywhere.
+/f/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.pwnedpasswords.com https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz https://api.github.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors *; base-uri 'self'; object-src 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
+
 # Helix Fall (the 3D tower game on the Games page) runs inside the app in a frame of its own, from this same site. It is the one place the app is allowed to be framed (by itself only),
 # and its own scripts and ball model are the only things it loads. Everything else stays as strict as the rest of the site: no other site, no network, no frames.
 /games/helix-fall/*

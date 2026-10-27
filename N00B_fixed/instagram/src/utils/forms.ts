@@ -134,7 +134,7 @@ export function logicProblems(qs: FormQuestion[]): string[] {
 
 // ---------------------------------------------------------------- checking answers in the browser (the database checks them again)
 export function checkAnswer(q: FormQuestion, a: unknown): string | null {
-  if (!isAnswerable(q.type)) return null;
+  if (!isAnswerable(q.type) || q.type === 'hidden') return null;   // a hidden field is filled by the link, nobody can fix it on the page
   if (isEmptyAnswer(a) || (q.type === 'consent' && a !== true) || (q.type === 'grid' && typeof a === 'object' && a !== null && !Array.isArray(a) && Object.keys(a).length === 0)) return q.required ? (q.type === 'consent' ? 'Please tick the box to continue' : 'This question is required') : null;
   const text = typeof a === 'string' ? a : '';
   switch (q.type) {
@@ -177,7 +177,6 @@ export function checkAnswer(q: FormQuestion, a: unknown): string | null {
     }
     case 'heart': return typeof a === 'number' && Number.isInteger(a) && a >= (q.min ?? 1) && a <= (q.max ?? 5) ? null : 'Please choose a number of hearts';
     case 'thumbs': return a === 'up' || a === 'down' ? null : 'Please choose thumbs up or down';
-    case 'hidden': return typeof a === 'string' && a.length <= 300 ? null : null;
     case 'file_upload': {
       if (!Array.isArray(a) || !a.every((f) => f && typeof (f as { path?: unknown }).path === 'string')) return 'Please attach the file again';
       return a.length > (q.max ?? 5) ? `You can attach at most ${q.max ?? 5} files` : null;

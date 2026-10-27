@@ -275,7 +275,7 @@ begin
     pts := case when quiz and (q ->> 'points') ~ '^[0-9]+(\.[0-9]+)?$' then (q ->> 'points')::numeric else 0 end;
     if pts > 0 then maxs := maxs + pts; end if;
     if a is null or a = 'null'::jsonb or a = '""'::jsonb or a = '[]'::jsonb or a = '{}'::jsonb or (a = 'false'::jsonb and t = 'consent') then
-      if coalesce((q ->> 'required')::boolean, false) then return jsonb_build_object('ok', false, 'error', 'required', 'question', qid); end if;
+      if coalesce((q ->> 'required')::boolean, false) and t <> 'hidden' then return jsonb_build_object('ok', false, 'error', 'required', 'question', qid); end if;
       if pts > 0 then details := details || jsonb_build_array(jsonb_build_object('id', qid, 'correct', false, 'answered', false) || case when show_answers then jsonb_build_object('correctAnswer', q -> 'correct', 'explanation', q -> 'explanation') else '{}'::jsonb end); end if;
       continue;
     end if;

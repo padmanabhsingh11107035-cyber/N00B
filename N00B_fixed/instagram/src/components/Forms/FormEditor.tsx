@@ -41,44 +41,52 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
     getForm(formId).then((f) => {
       if (!alive) return;
       if (!f) { setLoadError('This form was not found.'); return; }
-      setRow(f); known.current = f.updated_at; setState({ title: f.title, description: f.description, draft: normalise(f.draft) });
+      const first = { title: f.title, description: f.description, draft: normalise(f.draft) };
+      setRow(f); known.current = f.updated_at; stateRef.current = first; setState(first);
     }).catch((e) => alive && setLoadError(e instanceof Error ? e.message : 'Could not open this form.'));
     return () => { alive = false; };
   }, [formId]);
 
+  const stateRef = useRef<Snap | null>(null);
+  const [tick, setTick] = useState(0);
+  const put = (next: Snap) => { stateRef.current = next; dirty.current = true; setState(next); setSave('saving'); bump((x) => x + 1); };
   const change = useCallback((fn: (s: Snap) => Snap, coalesce = false) => {
-    setState((cur) => {
-      if (!cur) return cur;
-      const next = fn(cur);
-      if (next === cur) return cur;
-      const h = hist.current, now = Date.now();
-      if (!coalesce || now - h.at > 800 || !h.past.length) { h.past.push(cur); if (h.past.length > 100) h.past.shift(); }
-      h.at = now; h.future = []; dirty.current = true; setSave('saving'); bump((x) => x + 1);
-      return next;
-    });
+    const cur = stateRef.current;
+    if (!cur) return;
+    const next = fn(cur);
+    if (next === cur) return;
+    const h = hist.current, now = Date.now();
+    if (!coalesce || now - h.at > 800 || !h.past.length) { h.past.push(cur); if (h.past.length > 100) h.past.shift(); }
+    h.at = now; h.future = [];
+    put(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const undo = () => setState((cur) => { const h = hist.current; const prev = h.past.pop(); if (!cur || !prev) return cur; h.future.push(cur); dirty.current = true; setSave('saving'); bump((x) => x + 1); return prev; });
-  const redo = () => setState((cur) => { const h = hist.current; const nxt = h.future.pop(); if (!cur || !nxt) return cur; h.past.push(cur); dirty.current = true; setSave('saving'); bump((x) => x + 1); return nxt; });
+  const undo = () => { const h = hist.current, cur = stateRef.current, prev = h.past.pop(); if (!cur || !prev) return; h.future.push(cur); put(prev); };
+  const redo = () => { const h = hist.current, cur = stateRef.current, nxt = h.future.pop(); if (!cur || !nxt) return; h.past.push(cur); put(nxt); };
 
   // saving: a moment after the last change; a failed save is tried again, and the screen keeps everything meanwhile
   const flush = useCallback(async (): Promise<boolean> => {
-    if (!state || !dirty.current || saving.current) return !dirty.current;
+    const sent = stateRef.current;
+    if (!sent || !dirty.current || saving.current) return !dirty.current;
     saving.current = true; setSave('saving');
-    const sent = state;
     try {
       if (!navigator.onLine) throw new Error('offline');
       const r = await saveDraft(formId, { title: sent.title.slice(0, 200), description: sent.description.slice(0, 2000), draft: sent.draft }, known.current);
       if (!r.ok) { setSave('conflict'); saving.current = false; return false; }
       known.current = r.updated_at;
-      if (state === sent) dirty.current = false;
-      setSave(dirty.current ? 'saving' : 'saved'); saving.current = false; return !dirty.current;
+      // only when nothing was typed while the save was under way is the form "saved"; otherwise the newer text is saved next
+      if (stateRef.current === sent) dirty.current = false;
+      saving.current = false;
+      setSave(dirty.current ? 'saving' : 'saved');
+      if (dirty.current) setTick((t) => t + 1);
+      return !dirty.current;
     } catch (e) { saving.current = false; setSave(!navigator.onLine ? 'offline' : 'failed'); return false; }
-  }, [state, formId]);
+  }, [formId]);
   useEffect(() => {
     if (!state || !dirty.current || save === 'conflict') return;
     const t = window.setTimeout(() => { void flush(); }, save === 'failed' || save === 'offline' ? 5000 : 1000);
     return () => window.clearTimeout(t);
-  }, [state, save, flush]);
+  }, [state, save, flush, tick]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => { if (dirty.current) { e.preventDefault(); e.returnValue = ''; } };
     const online = () => { if (dirty.current) void flush(); };
@@ -228,7 +236,7 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen,
           <Row label="Description (optional)"><input value={q.description ?? ''} onChange={(e) => onPatch({ description: e.target.value })} maxLength={600} className={inp} /></Row>
           <div className="grid grid-cols-2 gap-3">
             <Row label="Type"><select value={q.type} onChange={(e) => onChangeType(e.target.value as QType)} className={inp}>{QTYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select></Row>
-            {isAnswerable(q.type) && <label className="flex items-end gap-2 pb-2 text-sm font-semibold cursor-pointer"><input type="checkbox" checked={!!q.required} onChange={(e) => onPatch({ required: e.target.checked })} className="w-4 h-4" />Required</label>}
+            {isAnswerable(q.type) && q.type !== 'hidden' && <label className="flex items-end gap-2 pb-2 text-sm font-semibold cursor-pointer"><input type="checkbox" checked={!!q.required} onChange={(e) => onPatch({ required: e.target.checked })} className="w-4 h-4" />Required</label>}
           </div>
           {hasOptions(q.type) && (
             <div className="space-y-1.5">

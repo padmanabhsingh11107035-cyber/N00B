@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, Download, ChevronDown, ChevronUp, Copy, Eye, GripVertical, Link2, Palette, Plus, Redo2, Settings as Cog, Share2, Trash2, Undo2, X } from 'lucide-react';
-import { getForm, saveDraft, publishForm, updateMeta, formLink, type FormRow } from '../../services/formsApi';
+import { addCollaborator, addWebhook, aiCall, deleteWebhook, getForm, listCollaborators, listWebhooks, myRole, publishForm, removeCollaborator, saveDraft, sendWebhooksNow, setWebhook, updateMeta, formLink, type Collaborator, type Delivery, type FormRole, type FormRow, type Webhook } from '../../services/formsApi';
 import {
   QTYPES, exportDefinition, THEMES, THEME_FONTS, blankQuestion, canScore, changeType, contrastRatio, hasOptions, isAnswerable, losesSettings, newId, publishProblems, resolveTheme,
   type FormDraft, type FormQuestion, type FormSettings, type FormTheme, type Presentation, type QType
@@ -28,6 +28,8 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
   const [problems, setProblems] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [role, setRole] = useState<FormRole>('owner');
+  useEffect(() => { void myRole(formId).then(setRole).catch(() => undefined); }, [formId]);
   const hist = useRef<{ past: Snap[]; future: Snap[]; at: number }>({ past: [], future: [], at: 0 });
   const known = useRef('');
   const dirty = useRef(false);
@@ -110,6 +112,7 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
 
   if (loadError) return <div className="p-8 text-center"><p className="text-red-400 mb-3" role="alert">{loadError}</p><button type="button" onClick={onBack} className="px-4 py-2 rounded-full bg-zinc-800 cursor-pointer">Back to my forms</button></div>;
   if (!state || !row) return <div className="p-10 text-center text-zinc-400" role="status">Opening the form…</div>;
+  if (role === 'viewer') return <div className="p-10 text-center space-y-3"><p className="font-semibold">You can see the answers of this form, not change it.</p><button type="button" onClick={onResponses} className="px-5 h-10 rounded-full bg-white text-black font-bold cursor-pointer">Open the answers</button> <button type="button" onClick={onBack} className="px-5 h-10 rounded-full border border-zinc-700 cursor-pointer">Back</button></div>;
 
   const { draft } = state;
   const qs = draft.questions;
@@ -162,12 +165,13 @@ export const FormEditor: React.FC<Props> = ({ formId, onBack, onResponses }) => 
                 onUp={() => move(i, i - 1)} onDown={() => move(i, i + 1)} onDup={() => dup(i)} onDel={() => del(q.id)} onDrop={(from) => move(from, i)} />
             ))}
             <AddBar onAdd={(t) => addQ(t)} />
+            <AiReview qs={qs} />
           </>
         )}
 
         {tab === 'design' && <DesignTab theme={draft.theme} onTheme={setTheme} onReset={() => change((s) => ({ ...s, draft: { ...s.draft, theme: { id: s.draft.theme.id } } }))} onPickTheme={(id) => change((s) => ({ ...s, draft: { ...s.draft, theme: { id } } }))} preview={<div className="max-h-[430px] overflow-auto rounded-2xl border border-zinc-800"><FormRenderer form={{ title: state.title, description: state.description, questions: qs, theme: draft.theme, settings: draft.settings }} preview onSubmit={async () => ({ ok: true })} /></div>} />}
         {tab === 'settings' && <SettingsTab s={draft.settings} onChange={setSettings} />}
-        {tab === 'share' && <ShareTab row={row} unpublished={unpublished} busy={busy} onPublish={() => void publish()} onStatus={(st) => void setStatus(st)} />}
+        {tab === 'share' && <ShareTab row={row} role={role} unpublished={unpublished} busy={busy} onPublish={() => void publish()} onStatus={(st) => void setStatus(st)} />}
       </div>
 
       {preview && (
@@ -220,6 +224,7 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen,
       {open && (
         <div className="p-4 pt-2 space-y-3">
           <Row label={q.type === 'section' ? 'Page title' : 'Question'}><input value={q.title} onChange={(e) => onPatch({ title: e.target.value })} maxLength={300} className={inp} data-testid="q-title" /></Row>
+          {q.type !== 'section' && q.type !== 'hidden' && <AiTools q={q} onPatch={onPatch} />}
           <Row label="Description (optional)"><input value={q.description ?? ''} onChange={(e) => onPatch({ description: e.target.value })} maxLength={600} className={inp} /></Row>
           <div className="grid grid-cols-2 gap-3">
             <Row label="Type"><select value={q.type} onChange={(e) => onChangeType(e.target.value as QType)} className={inp}>{QTYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select></Row>
@@ -250,6 +255,13 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen,
           {q.type === 'image_choice' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.multi} onChange={(e) => onPatch({ multi: e.target.checked, correct: undefined })} />People can pick more than one picture</label>}
           {q.type === 'ranking' && <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!!q.partial} onChange={(e) => onPatch({ partial: e.target.checked })} />People may rank only some of the options</label>}
           {q.type === 'grid' && <GridEditor q={q} onPatch={onPatch} />}
+          {q.type === 'file_upload' && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Row label="Accepted kinds (pdf,png,jpg; empty = any)"><input value={q.accept ?? ''} onChange={(e) => onPatch({ accept: e.target.value.replace(/[^A-Za-z0-9,]/g, '').slice(0, 80) })} className={inp} /></Row>
+              <Row label="Most files"><input type="number" min={1} max={10} value={q.max ?? 3} onChange={(e) => onPatch({ max: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={inp} /></Row>
+              <Row label="Biggest file (MB, 10 at most)"><input type="number" min={1} max={10} value={q.maxSizeMb ?? 10} onChange={(e) => onPatch({ maxSizeMb: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} className={inp} /></Row>
+              <p className="sm:col-span-3 text-xs text-zinc-400">Files are private: only you and the people you share the form with can open them.</p>
+            </div>)}
           {q.type === 'hidden' && <Row label="Link parameter: a link ending in ?ref=abc fills this field with abc (people never see it)"><input value={q.param ?? ''} onChange={(e) => onPatch({ param: e.target.value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 30) })} className={inp} /></Row>}
           {q.type === 'calculated' && <Row label="Formula. #1, #2 … are the answers of the 1st, 2nd … question (numbers). For example (#1 + #2) * 2"><input value={q.formula ?? ''} onChange={(e) => onPatch({ formula: e.target.value.slice(0, 200) })} className={inp} /></Row>}
           {quiz && canScore(q.type) && <QuizFields q={q} onPatch={onPatch} />}
@@ -271,6 +283,103 @@ const QuestionCard: React.FC<QCProps> = ({ q, i, all, count, quiz, open, onOpen,
             <button type="button" onClick={onDel} className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full border border-red-500/50 text-red-300 text-sm cursor-pointer" data-testid="q-delete"><Trash2 className="w-4 h-4" />Delete</button>
           </div>
         </div>)}
+    </div>
+  );
+};
+
+const AiTools: React.FC<{ q: FormQuestion; onPatch: (p: Partial<FormQuestion>) => void }> = ({ q, onPatch }) => {
+  const [busy, setBusy] = useState('');
+  const [err, setErr] = useState('');
+  const text = async (mode: 'rewrite' | 'simplify' | 'translate') => {
+    const language = mode === 'translate' ? window.prompt('Translate into which language?', 'Hindi') : undefined;
+    if (mode === 'translate' && !language) return;
+    setBusy(mode); setErr('');
+    try { const r = await aiCall<{ text: string }>({ action: 'improve', text: q.title, mode, language }); if (r.text) onPatch({ title: r.text }); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'The AI helper could not answer.'); } finally { setBusy(''); }
+  };
+  const options = async () => {
+    setBusy('options'); setErr('');
+    try { const r = await aiCall<{ options: string[] }>({ action: 'options', question: q.title, count: 5 }); if (r.options.length) onPatch({ options: [...(q.options ?? []), ...r.options.map((label) => ({ id: newId(), label }))] }); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'The AI helper could not answer.'); } finally { setBusy(''); }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-zinc-400">AI:</span>
+      {([['rewrite', 'Rewrite'], ['simplify', 'Simplify'], ['translate', 'Translate']] as const).map(([m, l]) => <button key={m} type="button" disabled={!!busy || !q.title.trim()} onClick={() => void text(m)} className="px-2.5 h-7 rounded-full border border-emerald-400/40 text-emerald-300 font-bold disabled:opacity-40 cursor-pointer">{busy === m ? '…' : l}</button>)}
+      {(q.type === 'multiple_choice' || q.type === 'checkboxes' || q.type === 'dropdown') && <button type="button" disabled={!!busy || !q.title.trim()} onClick={() => void options()} className="px-2.5 h-7 rounded-full border border-emerald-400/40 text-emerald-300 font-bold disabled:opacity-40 cursor-pointer">{busy === 'options' ? '…' : 'Suggest options'}</button>}
+      {err && <span role="alert" className="text-red-300 w-full">{err}</span>}
+      <span className="w-full text-[11px] text-zinc-500">Only this question's words are sent to an AI service when you press one of these.</span>
+    </div>
+  );
+};
+
+const AiReview: React.FC<{ qs: FormQuestion[] }> = ({ qs }) => {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [res, setRes] = useState<{ issues: Array<{ question: number; problem: string; suggestion: string }>; advice: string } | null>(null);
+  const go = async () => {
+    setBusy(true); setErr('');
+    try { setRes(await aiCall({ action: 'review', questions: qs.filter((q) => isAnswerable(q.type)).map((q) => ({ title: q.title, type: q.type })) })); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'The AI helper could not answer.'); } finally { setBusy(false); }
+  };
+  const real = qs.filter((q) => isAnswerable(q.type));
+  return (
+    <div className="rounded-2xl border border-zinc-800 p-4 space-y-2">
+      <button type="button" disabled={busy || real.length < 2} onClick={() => void go()} className="px-4 h-9 rounded-full border border-emerald-400/40 text-emerald-300 text-sm font-bold disabled:opacity-40 cursor-pointer">{busy ? 'Reading your form…' : 'Check my form with AI'}</button>
+      <p className="text-[11px] text-zinc-500">Finds unclear, leading, double or repeated questions. The titles of your questions are sent to an AI service when you press this.</p>
+      {err && <p role="alert" className="text-sm text-red-300">{err}</p>}
+      {res && (<div className="space-y-2 text-sm">{res.issues.length === 0 ? <p>No problems found.</p> : <ul className="space-y-2">{res.issues.map((i, k) => <li key={k} className="rounded-lg bg-zinc-800/60 p-2"><b>{real[i.question - 1]?.title ?? `Question ${i.question}`}</b><br />{i.problem}<br /><span className="text-emerald-300">Try: {i.suggestion}</span></li>)}</ul>}{res.advice && <p className="text-zinc-300">{res.advice}</p>}</div>)}
+    </div>
+  );
+};
+
+const PeoplePanel: React.FC<{ formId: string }> = ({ formId }) => {
+  const [people, setPeople] = useState<Collaborator[] | null>(null);
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<'editor' | 'viewer'>('editor');
+  const [err, setErr] = useState('');
+  const load = useCallback(() => { listCollaborators(formId).then(setPeople).catch((e) => setErr(e instanceof Error ? e.message : 'Could not load the people.')); }, [formId]);
+  useEffect(() => { load(); }, [load]);
+  const add = async () => { setErr(''); try { await addCollaborator(formId, name, role); setName(''); load(); } catch (e) { setErr(e instanceof Error ? e.message : 'Could not add this person.'); } };
+  return (
+    <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 space-y-3" data-testid="form-people">
+      <p className="font-bold">Work on it together</p>
+      <p className="text-xs text-zinc-400">An editor changes the questions and the design and can publish. A viewer only reads the answers. Only you can close, delete or share the form.</p>
+      <div className="flex flex-wrap gap-2"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Their NOOB User ID" aria-label="User ID" className={inp + ' flex-1 min-w-[10rem]'} /><select value={role} onChange={(e) => setRole(e.target.value as 'editor' | 'viewer')} aria-label="Role" className={inp + ' w-32'}><option value="editor">Editor</option><option value="viewer">Viewer</option></select><button type="button" disabled={!name.trim()} onClick={() => void add()} className="px-4 h-10 rounded-lg bg-white text-black text-sm font-bold disabled:opacity-40 cursor-pointer">Add</button></div>
+      {err && <p role="alert" className="text-sm text-red-300">{err}</p>}
+      {people && people.length > 0 && <ul className="space-y-1">{people.map((p) => <li key={p.user_id} className="flex items-center gap-2 text-sm"><span className="flex-1 min-w-0 truncate">@{p.username}</span><span className="text-xs text-zinc-400 capitalize">{p.role}</span><button type="button" aria-label={`Remove ${p.username}`} onClick={() => void removeCollaborator(formId, p.user_id).then(load).catch((e) => setErr(e instanceof Error ? e.message : 'Could not remove.'))} className="p-1 text-zinc-400 hover:text-red-400 cursor-pointer"><X className="w-4 h-4" /></button></li>)}</ul>}
+    </div>
+  );
+};
+
+const WebhookPanel: React.FC<{ formId: string }> = ({ formId }) => {
+  const [data, setData] = useState<{ hooks: Webhook[]; deliveries: Delivery[] } | null>(null);
+  const [url, setUrl] = useState('');
+  const [err, setErr] = useState('');
+  const [info, setInfo] = useState('');
+  const [shown, setShown] = useState('');
+  const load = useCallback(() => { listWebhooks(formId).then(setData).catch((e) => setErr(e instanceof Error ? e.message : 'Could not load.')); }, [formId]);
+  useEffect(() => { load(); }, [load]);
+  const guard = async (fn: () => Promise<unknown>) => { setErr(''); try { await fn(); load(); } catch (e) { setErr(e instanceof Error ? e.message : 'That did not work.'); } };
+  return (
+    <div className="rounded-2xl bg-zinc-900 border border-zinc-800 p-4 space-y-3" data-testid="form-webhooks">
+      <p className="font-bold">Web hooks</p>
+      <p className="text-xs text-zinc-400">Every new answer is sent to your web address as JSON, signed with the secret in the header <code>X-NOOB-Signature</code> (HMAC-SHA256 of the body). Only https addresses on the public internet are allowed. A failed delivery is tried again up to 5 times.</p>
+      <div className="flex gap-2"><input value={url} onChange={(e) => setUrl(e.target.value.trim())} placeholder="https://example.com/hook" aria-label="Web hook address" className={inp} /><button type="button" disabled={!url} onClick={() => void guard(async () => { await addWebhook(formId, url); setUrl(''); })} className="px-4 h-10 shrink-0 rounded-lg bg-white text-black text-sm font-bold disabled:opacity-40 cursor-pointer">Add</button></div>
+      {err && <p role="alert" className="text-sm text-red-300">{err}</p>}
+      {data?.hooks.map((h) => (
+        <div key={h.id} className="rounded-lg bg-zinc-800/60 p-2.5 text-sm space-y-1">
+          <p className="break-all">{h.url}</p>
+          <div className="flex flex-wrap gap-2 items-center text-xs">
+            <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={h.active} onChange={(e) => void guard(() => setWebhook(h.id, { active: e.target.checked }))} />On</label>
+            <button type="button" onClick={() => setShown(shown === h.id ? '' : h.id)} className="underline cursor-pointer">{shown === h.id ? 'Hide the secret' : 'Show the secret'}</button>
+            <button type="button" onClick={() => { if (window.confirm('Delete this web hook?')) void guard(() => deleteWebhook(h.id)); }} className="underline text-red-300 cursor-pointer">Delete</button>
+          </div>
+          {shown === h.id && <p className="font-mono text-xs break-all">{h.secret}</p>}
+        </div>))}
+      {data && data.hooks.length > 0 && <button type="button" onClick={() => { setInfo(''); void sendWebhooksNow(formId).then((r) => { setInfo(`Sent ${r.sent}, failed ${r.failed}.`); load(); }).catch((e) => setErr(e instanceof Error ? e.message : 'Could not send.')); }} className="px-3 h-8 rounded-full border border-zinc-700 text-xs font-bold cursor-pointer">Send what is waiting now</button>}
+      {info && <p role="status" className="text-xs text-emerald-300">{info}</p>}
+      {data && data.deliveries.length > 0 && <ul className="text-xs space-y-0.5 text-zinc-400">{data.deliveries.map((d) => <li key={d.id}>{new Date(d.created_at).toLocaleString()} · {d.status}{d.http_status ? ` (${d.http_status})` : ''}{d.last_error ? ` · ${d.last_error}` : ''}</li>)}</ul>}
     </div>
   );
 };
@@ -392,7 +501,7 @@ const SettingsTab: React.FC<{ s: FormSettings; onChange: (p: Partial<FormSetting
 );
 const toLocal = (iso?: string | null) => { if (!iso) return ''; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ''; const p = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 
-const ShareTab: React.FC<{ row: FormRow; unpublished: boolean; busy: boolean; onPublish: () => void; onStatus: (s: 'published' | 'closed' | 'draft') => void }> = ({ row, unpublished, busy, onPublish, onStatus }) => {
+const ShareTab: React.FC<{ row: FormRow; role: FormRole; unpublished: boolean; busy: boolean; onPublish: () => void; onStatus: (s: 'published' | 'closed' | 'draft') => void }> = ({ row, role, unpublished, busy, onPublish, onStatus }) => {
   const [copied, setCopied] = useState('');
   const [qr, setQr] = useState('');
   useEffect(() => { if (!row.slug || row.status === 'draft') return; let alive = true; void import('qrcode').then((m) => m.toDataURL(formLink(row.slug!), { width: 360, margin: 2 })).then((u) => alive && setQr(u)).catch(() => undefined); return () => { alive = false; }; }, [row.slug, row.status]);
@@ -418,10 +527,12 @@ const ShareTab: React.FC<{ row: FormRow; unpublished: boolean; busy: boolean; on
         <p className="text-sm"><b>Status:</b> {row.status === 'closed' ? 'Closed: new answers are refused' : 'Open: taking answers'} · version {row.version}{unpublished && ' · you have changes that are not published'}</p>
         <div className="flex flex-wrap gap-2">
           {unpublished && <button type="button" disabled={busy} onClick={onPublish} className="px-4 h-9 rounded-full bg-white text-black text-sm font-bold cursor-pointer">Publish changes</button>}
-          {row.status === 'published' ? <button type="button" disabled={busy} onClick={() => onStatus('closed')} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer" data-testid="form-close">Stop taking answers</button> : <button type="button" disabled={busy} onClick={() => onStatus('published')} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer">Open it again</button>}
-          <button type="button" disabled={busy} onClick={() => { if (window.confirm('Unpublish? The link will show "not found". Your answers are kept.')) onStatus('draft'); }} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer">Unpublish</button>
+          {role === 'owner' && (row.status === 'published' ? <button type="button" disabled={busy} onClick={() => onStatus('closed')} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer" data-testid="form-close">Stop taking answers</button> : <button type="button" disabled={busy} onClick={() => onStatus('published')} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer">Open it again</button>)}
+          {role === 'owner' && <button type="button" disabled={busy} onClick={() => { if (window.confirm('Unpublish? The link will show "not found". Your answers are kept.')) onStatus('draft'); }} className="px-4 h-9 rounded-full border border-zinc-700 text-sm font-semibold cursor-pointer">Unpublish</button>}
         </div>
       </div>
+      {role === 'owner' && <PeoplePanel formId={row.id} />}
+      {role === 'owner' && <WebhookPanel formId={row.id} />}
     </div>
   );
 };

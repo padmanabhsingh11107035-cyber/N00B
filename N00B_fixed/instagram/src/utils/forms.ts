@@ -5,7 +5,7 @@ export type QType =
   | 'short' | 'paragraph' | 'email' | 'phone' | 'url' | 'number'
   | 'multiple_choice' | 'checkboxes' | 'dropdown'
   | 'scale' | 'rating' | 'nps' | 'date' | 'time' | 'consent'
-  | 'image_choice' | 'ranking' | 'grid' | 'heart' | 'thumbs' | 'hidden' | 'signature' | 'calculated'
+  | 'image_choice' | 'ranking' | 'grid' | 'heart' | 'thumbs' | 'hidden' | 'signature' | 'calculated' | 'file_upload'
   | 'section' | 'text_block';
 
 export interface FormOption { id: string; label: string; img?: string }
@@ -21,6 +21,8 @@ export interface FormQuestion {
   multi?: boolean; partial?: boolean;
   /** grid */
   rows?: FormOption[]; cols?: FormOption[];
+  /** file_upload: the kinds of files that are accepted ("pdf,png,jpg"; empty = any) and the biggest size of one file in MB (the most is 10); max = how many files */
+  accept?: string; maxSizeMb?: number;
   /** hidden: the name of the link parameter that fills it (?ref=...) */
   param?: string;
   /** calculated: a formula over other numeric questions, like  (a + b) * 2  where a and b are the numbers 1, 2 ... of the questions */
@@ -60,12 +62,15 @@ export const QTYPES: ReadonlyArray<{ type: QType; label: string; group: string; 
   { type: 'thumbs', label: 'Thumbs up / down', group: 'Rating', hint: 'Like or dislike' },
   { type: 'consent', label: 'Consent', group: 'More', hint: 'A box people must tick' },
   { type: 'signature', label: 'Signature', group: 'More', hint: 'Drawn with finger or mouse' },
+  { type: 'file_upload', label: 'File upload', group: 'More', hint: 'People attach files (private)' },
   { type: 'hidden', label: 'Hidden field', group: 'More', hint: 'Filled from the link, not shown' },
   { type: 'calculated', label: 'Calculated value', group: 'More', hint: 'A total or score from other answers' },
   { type: 'section', label: 'New page / section', group: 'Layout', hint: 'Starts a new page' },
   { type: 'text_block', label: 'Text block', group: 'Layout', hint: 'Words, no answer' }
 ];
 export const isAnswerable = (t: QType): boolean => t !== 'section' && t !== 'text_block' && t !== 'calculated';
+/** accepted file kinds written as a list of extensions */
+export const acceptList = (q: FormQuestion): string[] => (q.accept ?? '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
 export const hasOptions = (t: QType): boolean => t === 'multiple_choice' || t === 'checkboxes' || t === 'dropdown' || t === 'image_choice' || t === 'ranking';
 /** the questions a quiz can give points for */
 export const canScore = (t: QType): boolean => ['multiple_choice', 'checkboxes', 'dropdown', 'image_choice', 'ranking', 'short', 'number', 'scale', 'rating', 'nps', 'heart', 'thumbs', 'email', 'phone', 'url', 'paragraph'].includes(t);
@@ -81,6 +86,7 @@ export function blankQuestion(type: QType): FormQuestion {
   if (type === 'hidden') Object.assign(base, { title: 'Hidden field', param: 'ref' });
   if (type === 'calculated') Object.assign(base, { title: 'Total', formula: '' });
   if (type === 'signature') base.title = 'Your signature';
+  if (type === 'file_upload') Object.assign(base, { title: 'Attach a file', max: 3, maxSizeMb: 10, accept: 'pdf,png,jpg,jpeg' });
   if (type === 'nps') Object.assign(base, { min: 0, max: 10, minLabel: 'Not likely', maxLabel: 'Very likely' });
   if (type === 'consent') base.title = 'I agree';
   return base;
@@ -172,6 +178,10 @@ export function checkAnswer(q: FormQuestion, a: unknown): string | null {
     case 'heart': return typeof a === 'number' && Number.isInteger(a) && a >= (q.min ?? 1) && a <= (q.max ?? 5) ? null : 'Please choose a number of hearts';
     case 'thumbs': return a === 'up' || a === 'down' ? null : 'Please choose thumbs up or down';
     case 'hidden': return typeof a === 'string' && a.length <= 300 ? null : null;
+    case 'file_upload': {
+      if (!Array.isArray(a) || !a.every((f) => f && typeof (f as { path?: unknown }).path === 'string')) return 'Please attach the file again';
+      return a.length > (q.max ?? 5) ? `You can attach at most ${q.max ?? 5} files` : null;
+    }
     case 'signature': return /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(text) && text.length <= 60000 ? null : 'Please sign again';
     case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(text) ? null : 'Please choose a date';
     case 'time': return /^\d{2}:\d{2}$/.test(text) ? null : 'Please choose a time';
@@ -340,6 +350,7 @@ export function answerText(q: FormQuestion, a: unknown): string {
   if (a == null || a === '') return '';
   if (q.type === 'consent') return a === true ? 'Yes' : '';
   if (q.type === 'signature') return '[signature]';
+  if (q.type === 'file_upload' && Array.isArray(a)) return a.map((f) => String((f as { name?: string }).name ?? 'file')).join('; ');
   if (q.type === 'thumbs') return a === 'up' ? 'Thumbs up' : a === 'down' ? 'Thumbs down' : '';
   if (q.type === 'grid' && typeof a === 'object' && !Array.isArray(a)) {
     const cell = (id: unknown) => q.cols?.find((c) => c.id === id)?.label ?? String(id);
@@ -444,6 +455,7 @@ export function importDefinition(text: string): { title: string; description: st
     seen.add(id);
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
     return { id, type: q.type, title: str(q.title, 300), description: str(q.description, 600) || undefined, required: !!q.required, options: opts(q.options), allowOther: !!q.allowOther,
+      accept: str(q.accept, 80).replace(/[^A-Za-z0-9,]/g, '') || undefined, maxSizeMb: num(q.maxSizeMb),
       min: num(q.min), max: num(q.max), minLabel: str(q.minLabel, 40) || undefined, maxLabel: str(q.maxLabel, 40) || undefined, placeholder: str(q.placeholder, 120) || undefined,
       showIf: q.showIf && typeof q.showIf.q === 'string' ? { q: str(q.showIf.q, 40), op: q.showIf.op, value: q.showIf.value } : null,
       endIf: q.endIf && typeof q.endIf.op === 'string' ? { op: q.endIf.op, value: q.endIf.value } : null,
@@ -458,3 +470,29 @@ export function importDefinition(text: string): { title: string; description: st
   return { title: str(j.title, 200) || 'Imported form', description: str(j.description, 2000), draft: { questions, settings, theme } };
 }
 const num2 = (v: unknown): number | null => (typeof v === 'number' && v >= 1 && v <= 100 ? Math.round(v) : null);
+
+// ---------------------------------------------------------------- AI: what the AI writes is only ever a description; this turns it into a form and throws away everything that does not fit
+const AI_TYPES = new Set<string>(['short', 'paragraph', 'email', 'phone', 'url', 'number', 'multiple_choice', 'checkboxes', 'dropdown', 'scale', 'rating', 'nps', 'date', 'time', 'consent', 'ranking', 'grid', 'thumbs', 'heart', 'section']);
+export function fromAiForm(raw: any): { title: string; description: string; draft: FormDraft } {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.questions) || raw.questions.length === 0) throw new Error('The AI did not return a usable form.');
+  const t = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+  const strs = (v: unknown, max: number): string[] => (Array.isArray(v) ? v.map((x) => t(x, 120)).filter(Boolean).slice(0, max) : []);
+  const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const questions: FormQuestion[] = raw.questions.slice(0, 40).map((q: any) => {
+    const type = (AI_TYPES.has(q?.type) ? q.type : 'short') as QType;
+    const base = blankQuestion(type);
+    base.title = t(q?.title, 300) || base.title;
+    const d = t(q?.description, 300); if (d) base.description = d;
+    base.required = type !== 'section' && !!q?.required;
+    if (hasOptions(type)) { const o = strs(q?.options, 20); base.options = (o.length ? o : ['Option 1', 'Option 2']).map((label) => ({ id: newId(), label })); }
+    if (type === 'grid') { const r = strs(q?.rows, 12), c = strs(q?.cols, 8); if (r.length) base.rows = r.map((label) => ({ id: newId(), label })); if (c.length) base.cols = c.map((label) => ({ id: newId(), label })); }
+    if (type === 'scale') { const lo = num(q?.min), hi = num(q?.max); if (lo != null && hi != null && lo >= 0 && hi <= 10 && hi > lo) { base.min = Math.round(lo); base.max = Math.round(hi); } const a = t(q?.minLabel, 40), b = t(q?.maxLabel, 40); if (a) base.minLabel = a; if (b) base.maxLabel = b; }
+    if (type === 'number') { base.min = num(q?.min); base.max = num(q?.max); }
+    return base;
+  });
+  const hasSection = questions.some((q) => q.type === 'section');
+  return {
+    title: t(raw.title, 200) || 'New form', description: t(raw.description, 2000),
+    draft: { questions, settings: { presentation: hasSection ? 'pages' : 'classic', showProgress: true, confirmMessage: t(raw.confirmMessage, 300) || undefined }, theme: { id: THEMES[raw.theme] ? raw.theme : 'classic' } }
+  };
+}

@@ -353,6 +353,28 @@ function renderEventEmail(kind: string, d: any, name: string, emailId: string, a
     }, hi, acct);
   }
 
+  // NOOB Forms: new answers on a form (at most one mail an hour per form, decided by the database) and a form shared with you
+  if (kind === 'form_response') {
+    const n = Number(d.count) || 1;
+    return composeEmail({
+      subject: `New answer on "${String(d.title).slice(0, 80)}"`,
+      preheader: `Your form has ${n} ${n === 1 ? 'answer' : 'answers'} now.`,
+      kicker: 'NOOB Forms', emoji: '📝', title: 'New answer on your form', intro: `Your form "${String(d.title).slice(0, 120)}" has ${n} ${n === 1 ? 'answer' : 'answers'} now. We send at most one of these mails an hour for a form.`,
+      sections: [],
+      button: { label: 'See the answers', href: `${SITE_URL}/forms/${encodeURIComponent(String(d.form))}/responses` }
+    }, hi, acct);
+  }
+  if (kind === 'form_shared') {
+    const edit = d.role === 'editor';
+    return composeEmail({
+      subject: `A form was shared with you: "${String(d.title).slice(0, 80)}"`,
+      preheader: edit ? 'You can edit it in NOOB Forms.' : 'You can see its answers in NOOB Forms.',
+      kicker: 'NOOB Forms', emoji: '🤝', title: 'A form was shared with you', intro: `You can now ${edit ? 'edit' : 'see the answers of'} the form "${String(d.title).slice(0, 120)}".`,
+      sections: [],
+      button: open
+    }, hi, acct);
+  }
+
   if (kind === 'pro_ended') {
     const insufficient = d.reason === 'insufficient_points';
     const word = d.billing === 'yearly' ? 'Yearly' : 'Monthly';

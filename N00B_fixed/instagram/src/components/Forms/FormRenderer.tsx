@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { answerText, checkAnswer, evalFormula, isAnswerable, isVisible, pagesOf, resolveTheme, visibleQuestions, type FormQuestion, type FormSettings, type FormTheme } from '../../utils/forms';
+import { uploadFormFile, type UploadedFile } from '../../services/formsApi';
+import { acceptList, answerText, checkAnswer, evalFormula, isAnswerable, isVisible, pagesOf, resolveTheme, visibleQuestions, type FormQuestion, type FormSettings, type FormTheme } from '../../utils/forms';
 
 // The form as the person filling it sees it (and as the owner sees it in "Preview"). It is one component for both, so what the owner previews is what people get.
 // Nobody needs an account: the top bar has a NOOB button that opens the app, and after sending there is a short celebration, a thank-you and a "Join NOOB" button with a cross.
 
-export interface RenderedForm { title: string; description?: string; questions: FormQuestion[]; theme?: FormTheme; settings?: FormSettings }
+export interface RenderedForm { id?: string; title: string; description?: string; questions: FormQuestion[]; theme?: FormTheme; settings?: FormSettings }
 export interface QuizResult { score: number; max: number; pct: number; passed: boolean | null; answers: Array<{ id: string; correct: boolean; answered: boolean; correctAnswer?: unknown; explanation?: string }> }
 interface Props {
   form: RenderedForm;
@@ -115,7 +116,7 @@ export const FormRenderer: React.FC<Props> = ({ form, preview, onSubmit, onOpenN
       )}
       <form onSubmit={(e) => { e.preventDefault(); void next(); }} noValidate className="space-y-3">
         {current.map((q) => (
-          <QuestionView key={q.id} q={q} n={s.numbering ? numberOf.get(q.id) : undefined} value={answers[q.id]} error={errors[q.id]} onChange={(v) => set(q.id, v)} calc={q.type === 'calculated' ? evalFormula(q.formula ?? '', answers, form.questions) : undefined} />
+          <QuestionView key={q.id} q={q} n={s.numbering ? numberOf.get(q.id) : undefined} value={answers[q.id]} error={errors[q.id]} onChange={(v) => set(q.id, v)} formId={form.id} preview={preview} calc={q.type === 'calculated' ? evalFormula(q.formula ?? '', answers, form.questions) : undefined} />
         ))}
         {problem && <p role="alert" className="text-sm font-semibold px-1" style={{ color: '#d93025' }}>{problem}</p>}
         <div className="flex items-center justify-between gap-3 pt-1">
@@ -179,7 +180,7 @@ const Celebration: React.FC<{ t: ReturnType<typeof resolveTheme>; message?: stri
   );
 };
 
-const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; error?: string; onChange: (v: unknown) => void; calc?: number | null }> = ({ q, n, value, error, onChange, calc }) => {
+const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; error?: string; onChange: (v: unknown) => void; calc?: number | null; formId?: string; preview?: boolean }> = ({ q, n, value, error, onChange, calc, formId, preview }) => {
   const id = 'f-' + q.id;
   const card = 'rounded-[var(--f-radius)] p-5';
   const cardStyle: React.CSSProperties = { background: 'var(--f-card)', border: `1px solid ${error ? '#d93025' : 'var(--f-border)'}` };
@@ -300,6 +301,7 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
         </div>); break;
     }
     case 'signature': input = <SignaturePad value={str} onChange={onChange} />; break;
+    case 'file_upload': input = <FileInput q={q} value={value} onChange={onChange} formId={formId} preview={preview} />; break;
     case 'consent': input = (
       <label className="flex items-start gap-3 cursor-pointer"><input id={id} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} className="w-5 h-5 mt-0.5" style={{ accentColor: 'var(--f-primary)' }} /><span className="break-words min-w-0">{q.description || q.title}</span></label>); break;
     default: break;
@@ -312,6 +314,43 @@ const QuestionView: React.FC<{ q: FormQuestion; n?: number; value: unknown; erro
       <div className="mt-2">{input}</div>
       {error && <p id={id + '-e'} role="alert" className="mt-2 text-sm font-semibold" style={{ color: '#d93025' }}>{error}</p>}
     </fieldset>
+  );
+};
+
+const FileInput: React.FC<{ q: FormQuestion; value: unknown; onChange: (v: unknown) => void; formId?: string; preview?: boolean }> = ({ q, value, onChange, formId, preview }) => {
+  const files = Array.isArray(value) ? (value as UploadedFile[]) : [];
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const allowed = acceptList(q);
+  const pick = async (list: FileList | null) => {
+    if (!list || !list.length) return;
+    if (preview || !formId) { setErr('Files can be attached in the published form (not in the preview).'); return; }
+    setErr(''); setBusy(true);
+    let cur = files;
+    try {
+      for (const f of Array.from(list)) {
+        if (cur.length >= (q.max ?? 5)) { setErr(`You can attach at most ${q.max ?? 5} files.`); break; }
+        cur = [...cur, await uploadFormFile(formId, f, allowed, q.maxSizeMb ?? 10)];
+        onChange(cur);
+      }
+    } catch (e) { setErr(e instanceof Error ? e.message : 'The file could not be uploaded.'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="space-y-2">
+      {files.map((f) => (
+        <div key={f.path} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ border: '1px solid var(--f-border)' }}>
+          <span className="flex-1 min-w-0 truncate">{f.name}</span><span className="text-xs shrink-0" style={{ color: 'var(--f-muted)' }}>{Math.max(1, Math.round(f.size / 1024))} KB</span>
+          <button type="button" aria-label={`Remove ${f.name}`} onClick={() => onChange(files.filter((x) => x.path !== f.path))} className="p-1 cursor-pointer"><X className="w-4 h-4" /></button>
+        </div>))}
+      {files.length < (q.max ?? 5) && (
+        <label className="block px-3 py-3 rounded-lg text-sm text-center cursor-pointer" style={{ border: '1px dashed var(--f-border)' }}>
+          {busy ? 'Uploading…' : files.length ? 'Attach another file' : 'Choose a file'}
+          <input type="file" multiple={(q.max ?? 5) > 1} accept={allowed.map((x) => '.' + x).join(',') || undefined} disabled={busy} className="sr-only" onChange={(e) => { const l = e.target.files; void pick(l).then(() => { e.target.value = ''; }); }} />
+        </label>)}
+      <p className="text-xs" style={{ color: 'var(--f-muted)' }}>{allowed.length ? `Accepted: ${allowed.join(', ')}. ` : ''}Up to {Math.min(10, q.maxSizeMb ?? 10)} MB each. Only the owner of the form can open your files.</p>
+      {err && <p role="alert" className="text-sm font-semibold" style={{ color: '#d93025' }}>{err}</p>}
+    </div>
   );
 };
 

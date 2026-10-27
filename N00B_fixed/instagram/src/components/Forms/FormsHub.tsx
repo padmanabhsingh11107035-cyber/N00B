@@ -26,7 +26,7 @@ export const FormsHub: React.FC<Props> = ({ currentUser, location, onNavigate, o
   }
   if (location.target && location.sub === 'responses') return <Page><FormResponses formId={location.target} onBack={() => onNavigate({ feature: 'forms' })} /></Page>;
   if (location.target) return <Page><FormEditor formId={location.target} onBack={() => onNavigate({ feature: 'forms' })} onResponses={() => onNavigate({ feature: 'forms', target: location.target, sub: 'responses' })} /></Page>;
-  return <Page><FormsDashboard onBack={onBack} onOpen={(id) => onNavigate({ feature: 'forms', target: id })} onResponses={(id) => onNavigate({ feature: 'forms', target: id, sub: 'responses' })} /></Page>;
+  return <Page><FormsDashboard meId={currentUser.id} onBack={onBack} onOpen={(id) => onNavigate({ feature: 'forms', target: id })} onResponses={(id) => onNavigate({ feature: 'forms', target: id, sub: 'responses' })} /></Page>;
 };
 
 const PublicFormPage: React.FC<{ slug: string; signedIn: boolean; onHome: () => void; onJoin: () => void }> = ({ slug, signedIn, onHome, onJoin }) => {
@@ -59,7 +59,7 @@ const PublicFormPage: React.FC<{ slug: string; signedIn: boolean; onHome: () => 
   return (
     <div className="fixed inset-0 z-[96] overflow-y-auto overscroll-contain" data-testid="public-form">
       <FormRenderer
-        form={{ title: form.title ?? '', description: form.description, questions: form.questions ?? [], theme: form.theme, settings: form.settings }}
+        form={{ id: form.id, title: form.title ?? '', description: form.description, questions: form.questions ?? [], theme: form.theme, settings: form.settings }}
         onSubmit={(answers) => submitPublicForm(slug, answers, form.settings?.collectCampaign ? utm() : undefined)}
         onOpenNoob={onHome}
         onJoin={signedIn ? undefined : onJoin}

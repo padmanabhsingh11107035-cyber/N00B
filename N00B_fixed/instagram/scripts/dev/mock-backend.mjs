@@ -67,7 +67,11 @@ const jwt = () => `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: ME.id, role
 const authUser = { id: ME.id, aud: 'authenticated', role: 'authenticated', email: 'noob@users.nooob.xyz', app_metadata: { provider: 'email' }, user_metadata: {}, created_at: iso(100000) };
 const session = () => ({ access_token: jwt(), refresh_token: 'mock-refresh', token_type: 'bearer', expires_in: 86400 * 30, expires_at: Math.floor(Date.now() / 1000) + 86400 * 30, user: authUser });
 
+let forms = [];
 const rpcAnswers = {
+  form_role: () => 'owner',
+  form_collab_list: () => [],
+  form_publish: (a) => { const f = forms.find((x) => x.id === a.p_id); if (!f) return { ok: false, problems: ['Form not found'] }; f.published = f.draft; f.status = 'published'; f.slug = f.slug || 'abcdefgh12'; f.version += 1; return { ok: true, slug: f.slug, version: f.version }; },
   // NOOB Forms preview: one made-up form at /f/abcdefgh12 (answers are not stored)
   form_public_get: () => ({ state: 'open', title: 'Customer feedback', description: 'Tell us how we did. It takes one minute.', version: 1, theme: { id: 'noob' }, settings: { presentation: 'classic', showProgress: true, confirmMessage: 'We read every answer.' },
     questions: [
@@ -113,6 +117,19 @@ const server = http.createServer(async (req, res) => {
     const args = (await readBody(req)) || {};
     const h = rpcAnswers[fn];
     return send(200, h ? h(args) : listLike.test(fn) ? [] : null);
+  }
+  // NOOB Forms preview: the "forms" table in memory (made-up, gone when the mock stops)
+  if (p === '/rest/v1/forms') {
+    const wantsObject = /pgrst\.object/.test(String(req.headers.accept || ''));
+    const idEq = (url.searchParams.get('id') || '').replace('eq.', '');
+    if (req.method === 'GET') { const list = idEq ? forms.filter((f) => f.id === idEq) : forms; return send(200, wantsObject ? (list[0] ?? null) : list); }
+    const body = (await readBody(req)) || {};
+    if (req.method === 'POST') {
+      const f = { owner_id: ME.id, id: 'f0000000-0000-4000-8000-' + String(forms.length + 1).padStart(12, '0'), title: body.title || 'Untitled form', description: body.description || '', slug: null, status: 'draft', draft: body.draft, published: null, version: 0, response_count: 0, starred: false, folder: null, archived_at: null, deleted_at: null, published_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      forms.push(f); return send(201, wantsObject ? f : [f]);
+    }
+    if (req.method === 'PATCH') { const f = forms.find((x) => x.id === idEq); if (f) { Object.assign(f, body, { updated_at: new Date(Date.now() + forms.length).toISOString() }); } return send(200, f ? [f] : []); }
+    if (req.method === 'DELETE') { const i = forms.findIndex((x) => x.id === idEq); if (i >= 0) forms.splice(i, 1); return send(204); }
   }
   if (p === '/rest/v1/profile_notes') {
     if (req.method === 'GET') return send(200, notes);

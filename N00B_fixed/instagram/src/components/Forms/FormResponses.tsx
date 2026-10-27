@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Trash2, X } from 'lucide-react';
-import { allResponses, clearResponses, deleteResponse, getForm, listResponses, type FormRow } from '../../services/formsApi';
+import { aiCall, allResponses, clearResponses, fileLink, myRole, type FormRole, deleteResponse, getForm, listResponses, type FormRow } from '../../services/formsApi';
 import { answerText, countChoices, evalFormula, gridCounts, hasOptions, isAnswerable, npsOf, numericStats, perDay, rankingAverages, toCsv, toExcelXml, toJson, wordFrequency, type FormQuestion, type ResponseRow } from '../../utils/forms';
 
 // The answers of a form: totals and charts made from the real stored answers (nothing is invented; a chart only appears when its question has answers), every answer one by one
@@ -19,6 +19,8 @@ export const FormResponses: React.FC<{ formId: string; onBack: () => void }> = (
   const [tab, setTab] = useState<Tab>('summary');
   const [range, setRange] = useState(0);
   const [msg, setMsg] = useState('');
+  const [role, setRole] = useState<FormRole>('owner');
+  useEffect(() => { void myRole(formId).then(setRole).catch(() => undefined); }, [formId]);
 
   const load = useCallback(async () => {
     setError('');
@@ -65,8 +67,8 @@ export const FormResponses: React.FC<{ formId: string; onBack: () => void }> = (
         {msg && <p role="status" className="p-3 rounded-xl bg-zinc-800 text-sm">{msg}</p>}
         {tab === 'summary' && <Summary rows={filtered} all={rows} qs={qs} />}
         {tab === 'questions' && <Questions rows={filtered} qs={qs} />}
-        {tab === 'responses' && <Individual formId={formId} qs={qs} total={form.response_count} onChanged={load} />}
-        {rows.length > 0 && <button type="button" onClick={() => void clearAll()} className="text-xs text-red-300 underline cursor-pointer">Delete all answers…</button>}
+        {tab === 'responses' && <Individual formId={formId} qs={qs} total={form.response_count} onChanged={load} canDelete={role === 'owner'} />}
+        {rows.length > 0 && role === 'owner' && <button type="button" onClick={() => void clearAll()} className="text-xs text-red-300 underline cursor-pointer">Delete all answers…</button>}
       </div>
     </div>
   );
@@ -137,6 +139,24 @@ const ChoiceChart: React.FC<{ items: Array<{ label: string; count: number; pct: 
   );
 };
 
+const AiSummary: React.FC<{ texts: string[] }> = ({ texts }) => {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [res, setRes] = useState<{ summary: string; themes: Array<{ theme: string; mentions: number }> } | null>(null);
+  const go = async () => {
+    if (!window.confirm(`The ${Math.min(texts.length, 200)} written answers of this question will be sent to an AI service to be summarised. Your respondents did not write them for that. Send?`)) return;
+    setBusy(true); setErr('');
+    try { setRes(await aiCall({ action: 'summarize', texts: texts.slice(0, 200) })); } catch (e) { setErr(e instanceof Error ? e.message : 'The AI helper could not answer.'); } finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 space-y-2">
+      <button type="button" disabled={busy || texts.length < 3} onClick={() => void go()} className="px-3 h-8 rounded-full border border-emerald-400/40 text-emerald-300 text-xs font-bold disabled:opacity-40 cursor-pointer">{busy ? 'Reading…' : 'Summarise with AI'}</button>
+      {err && <p role="alert" className="text-sm text-red-300">{err}</p>}
+      {res && <div className="text-sm rounded-lg bg-zinc-800/60 p-3 space-y-1"><p className="whitespace-pre-wrap break-words">{res.summary}</p>{res.themes.length > 0 && <ul className="list-disc pl-5">{res.themes.map((t, i) => <li key={i}>{t.theme} ({t.mentions})</li>)}</ul>}<p className="text-[11px] text-zinc-500">Written by an AI from the answers. Check it against the answers above.</p></div>}
+    </div>
+  );
+};
+
 const Questions: React.FC<{ rows: ResponseRow[]; qs: FormQuestion[] }> = ({ rows, qs }) => {
   const [q2, setQ2] = useState('');
   return (
@@ -158,7 +178,7 @@ const Questions: React.FC<{ rows: ResponseRow[]; qs: FormQuestion[] }> = ({ rows
           const texts = rows.map((r) => answerText(q, r.answers[q.id])).filter(Boolean);
           const shown = (q2 ? texts.filter((t) => t.toLowerCase().includes(q2.toLowerCase())) : texts).slice(0, 30);
           const words = q.type === 'paragraph' || q.type === 'short' ? wordFrequency(texts) : [];
-          body = <>{words.length > 2 && <p className="text-xs text-zinc-400 mb-2">Common words: {words.map((w) => `${w.word} (${w.count})`).join(', ')}</p>}<input value={q2} onChange={(e) => setQ2(e.target.value)} placeholder="Search the answers" aria-label="Search the answers" className="w-full bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm mb-2" /><ul className="space-y-1 max-h-64 overflow-auto">{shown.map((t, i) => <li key={i} className="text-sm bg-zinc-800/50 rounded-lg px-3 py-1.5 break-words whitespace-pre-wrap">{t}</li>)}</ul>{texts.length > 30 && !q2 && <p className="text-[11px] text-zinc-500 mt-1">The first 30 of {texts.length}. Search, or open "Individual".</p>}</>;
+          body = <>{words.length > 2 && <p className="text-xs text-zinc-400 mb-2">Common words: {words.map((w) => `${w.word} (${w.count})`).join(', ')}</p>}<input value={q2} onChange={(e) => setQ2(e.target.value)} placeholder="Search the answers" aria-label="Search the answers" className="w-full bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm mb-2" />{texts.length >= 3 && q.type === 'paragraph' && <AiSummary texts={texts} />}<ul className="space-y-1 max-h-64 overflow-auto mt-2">{shown.map((t, i) => <li key={i} className="text-sm bg-zinc-800/50 rounded-lg px-3 py-1.5 break-words whitespace-pre-wrap">{t}</li>)}</ul>{texts.length > 30 && !q2 && <p className="text-[11px] text-zinc-500 mt-1">The first 30 of {texts.length}. Search, or open "Individual".</p>}</>;
         }
         return <Card key={q.id} title={q.title}><p className="text-[11px] text-zinc-400 -mt-1 mb-2">{answered} {answered === 1 ? 'answer' : 'answers'}</p>{body}</Card>;
       })}
@@ -166,7 +186,12 @@ const Questions: React.FC<{ rows: ResponseRow[]; qs: FormQuestion[] }> = ({ rows
   );
 };
 
-const Individual: React.FC<{ formId: string; qs: FormQuestion[]; total: number; onChanged: () => void }> = ({ formId, qs, total, onChanged }) => {
+const FileLinks: React.FC<{ files: Array<{ path: string; name: string }> }> = ({ files }) => {
+  const [err, setErr] = useState('');
+  return (<span className="flex flex-col items-start gap-1">{files.map((f) => <button key={f.path} type="button" onClick={() => { setErr(''); void fileLink(f.path).then((u) => window.open(u, '_blank', 'noopener')).catch((e) => setErr(e instanceof Error ? e.message : 'Could not open.')); }} className="underline text-emerald-300 cursor-pointer break-all text-left">{f.name || 'file'}</button>)}{err && <span role="alert" className="text-red-300 text-xs">{err}</span>}</span>);
+};
+
+const Individual: React.FC<{ formId: string; qs: FormQuestion[]; total: number; onChanged: () => void; canDelete: boolean }> = ({ formId, qs, total, onChanged, canDelete }) => {
   const [page, setPage] = useState(0);
   const [data, setData] = useState<{ rows: ResponseRow[]; total: number } | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -176,7 +201,7 @@ const Individual: React.FC<{ formId: string; qs: FormQuestion[]; total: number; 
   const cols = qs.filter((q) => isAnswerable(q.type)).slice(0, 3);
   const rows = (data?.rows ?? []).filter((r) => !find || qs.some((q) => answerText(q, r.answers[q.id]).toLowerCase().includes(find.toLowerCase())));
   const cur = open != null ? data?.rows[open] : null;
-  const remove = async (id: string) => { if (!window.confirm('Delete this answer for good?')) return; try { await deleteResponse(id); setOpen(null); onChanged(); } catch (e) { setErr(e instanceof Error ? e.message : 'Could not delete.'); } };
+  const remove = async (id: string, answers?: Record<string, unknown>) => { if (!window.confirm('Delete this answer for good?')) return; try { await deleteResponse(id, answers); setOpen(null); onChanged(); } catch (e) { setErr(e instanceof Error ? e.message : 'Could not delete.'); } };
   if (err) return <p role="alert" className="text-red-400">{err}</p>;
   if (!data) return <p className="text-zinc-400" role="status">Loading…</p>;
   if (!data.total) return <Card><p className="text-center text-zinc-400 py-6">No answers yet.</p></Card>;
@@ -190,8 +215,8 @@ const Individual: React.FC<{ formId: string; qs: FormQuestion[]; total: number; 
         <div className="fixed inset-0 z-[130] bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="One response">
           <div className="w-full sm:max-w-lg max-h-[90vh] overflow-auto rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-5 space-y-3 text-white">
             <div className="flex items-center justify-between"><p className="text-xs text-zinc-400">{new Date(cur.created_at).toLocaleString()} · {cur.id.slice(0, 8)}</p><button type="button" onClick={() => setOpen(null)} aria-label="Close" className="w-8 h-8 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button></div>
-            {qs.filter((q) => isAnswerable(q.type)).map((q) => <div key={q.id}><p className="text-xs text-zinc-400">{q.title}</p><p className="break-words whitespace-pre-wrap">{answerText(q, cur.answers[q.id]) || <span className="text-zinc-600">No answer</span>}</p></div>)}
-            <div className="flex items-center justify-between pt-2"><span className="flex gap-2"><button type="button" disabled={open === 0} onClick={() => setOpen((open ?? 1) - 1)} aria-label="Previous response" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"><ChevronLeft className="w-4 h-4" /></button><button type="button" disabled={open === data.rows.length - 1} onClick={() => setOpen((open ?? 0) + 1)} aria-label="Next response" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"><ChevronRight className="w-4 h-4" /></button></span><span className="flex gap-2"><button type="button" onClick={() => window.print()} className="px-3 h-9 rounded-full border border-zinc-700 text-sm cursor-pointer">Print</button><button type="button" onClick={() => void remove(cur.id)} className="px-3 h-9 rounded-full border border-red-500/50 text-red-300 text-sm inline-flex items-center gap-1.5 cursor-pointer"><Trash2 className="w-4 h-4" />Delete</button></span></div>
+            {qs.filter((q) => isAnswerable(q.type)).map((q) => <div key={q.id}><p className="text-xs text-zinc-400">{q.title}</p>{q.type === 'file_upload' && Array.isArray(cur.answers[q.id]) ? <FileLinks files={cur.answers[q.id] as Array<{ path: string; name: string }>} /> : q.type === 'signature' && typeof cur.answers[q.id] === 'string' ? <img src={cur.answers[q.id] as string} alt="Signature" className="bg-white rounded-lg max-w-full h-auto" /> : <p className="break-words whitespace-pre-wrap">{answerText(q, cur.answers[q.id]) || <span className="text-zinc-600">No answer</span>}</p>}</div>)}
+            <div className="flex items-center justify-between pt-2"><span className="flex gap-2"><button type="button" disabled={open === 0} onClick={() => setOpen((open ?? 1) - 1)} aria-label="Previous response" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"><ChevronLeft className="w-4 h-4" /></button><button type="button" disabled={open === data.rows.length - 1} onClick={() => setOpen((open ?? 0) + 1)} aria-label="Next response" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center disabled:opacity-40 cursor-pointer"><ChevronRight className="w-4 h-4" /></button></span><span className="flex gap-2"><button type="button" onClick={() => window.print()} className="px-3 h-9 rounded-full border border-zinc-700 text-sm cursor-pointer">Print</button>{canDelete && <button type="button" onClick={() => void remove(cur.id, cur.answers)} className="px-3 h-9 rounded-full border border-red-500/50 text-red-300 text-sm inline-flex items-center gap-1.5 cursor-pointer"><Trash2 className="w-4 h-4" />Delete</button>}</span></div>
           </div>
         </div>)}
     </>

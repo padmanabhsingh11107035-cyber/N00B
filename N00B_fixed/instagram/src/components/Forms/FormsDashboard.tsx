@@ -1,17 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Archive, ArrowLeft, BarChart3, Copy, FileText, FolderInput, LayoutGrid, List, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
-import { createForm, deleteFormForever, duplicateForm, formLink, listForms, updateMeta, type FormRow } from '../../services/formsApi';
-import { BLANK_DRAFT, TEMPLATES, fixTemplateLogic, importDefinition } from '../../utils/forms';
+import { aiCall, createForm, deleteFormForever, duplicateForm, formLink, listForms, myRoles, updateMeta, type FormRow } from '../../services/formsApi';
+import { BLANK_DRAFT, QTYPES, TEMPLATES, fixTemplateLogic, fromAiForm, importDefinition, type FormDraft } from '../../utils/forms';
 
 // "My forms": search, filters, sort, grid or list, folders, stars, archive and trash (nothing is deleted for good until it is in the trash and you say so), templates and a blank form.
 
-type Filter = 'all' | 'draft' | 'published' | 'starred' | 'archived' | 'trash';
+type Filter = 'all' | 'draft' | 'published' | 'starred' | 'shared' | 'archived' | 'trash';
 type Sort = 'modified' | 'created' | 'name' | 'responses';
-const FILTERS: Array<[Filter, string]> = [['all', 'All'], ['draft', 'Drafts'], ['published', 'Published'], ['starred', 'Starred'], ['archived', 'Archived'], ['trash', 'Trash']];
+const FILTERS: Array<[Filter, string]> = [['all', 'All'], ['draft', 'Drafts'], ['published', 'Published'], ['starred', 'Starred'], ['shared', 'Shared with me'], ['archived', 'Archived'], ['trash', 'Trash']];
 
-interface Props { onOpen: (id: string) => void; onResponses: (id: string) => void; onBack: () => void }
+interface Props { meId: string; onOpen: (id: string) => void; onResponses: (id: string) => void; onBack: () => void }
 
-export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack }) => {
+export const FormsDashboard: React.FC<Props> = ({ meId, onOpen, onResponses, onBack }) => {
+  const [roles, setRoles] = useState<Record<string, 'editor' | 'viewer'>>({});
+  useEffect(() => { void myRoles().then(setRoles).catch(() => undefined); }, []);
   const [forms, setForms] = useState<FormRow[] | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
@@ -20,6 +22,7 @@ export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack })
   const [sort, setSort] = useState<Sort>('modified');
   const [grid, setGrid] = useState(() => { try { return localStorage.getItem('noob_forms_view') !== 'list'; } catch { return true; } });
   const [gallery, setGallery] = useState(false);
+  const [ai, setAi] = useState(false);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
 
@@ -37,6 +40,7 @@ export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack })
       if (filter === 'draft' && f.status !== 'draft') return false;
       if (filter === 'published' && f.status === 'draft') return false;
       if (filter === 'starred' && !f.starred) return false;
+      if (filter === 'shared' && f.owner_id === meId) return false;
       if (folder && f.folder !== folder) return false;
       return !term || f.title.toLowerCase().includes(term) || f.description.toLowerCase().includes(term);
     });
@@ -53,6 +57,7 @@ export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack })
           <button type="button" onClick={onBack} aria-label="Back" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><ArrowLeft className="w-4 h-4" /></button>
           <h1 className="font-extrabold text-lg flex-1">NOOB Forms</h1>
           <label className="px-3.5 h-9 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer inline-flex items-center">Import<input type="file" accept="application/json,.json" className="sr-only" data-testid="forms-import" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; if (f.size > 1_000_000) { setNote('That file is too big for a form.'); return; } void f.text().then((t) => { const d = importDefinition(t); return create(d.title, d.description, d.draft); }).catch((err) => setNote(err instanceof Error ? err.message : 'Could not read the file.')); }} /></label>
+          <button type="button" onClick={() => setAi(true)} className="px-3.5 h-9 rounded-full border border-emerald-400/60 text-emerald-300 text-sm font-bold cursor-pointer" data-testid="forms-ai">Create with AI</button>
           <button type="button" onClick={() => setGallery(true)} className="px-3.5 h-9 rounded-full border border-zinc-700 text-sm font-bold cursor-pointer" data-testid="forms-templates">Templates</button>
           <button type="button" disabled={busy === 'new'} onClick={() => void create('Untitled form', '', BLANK_DRAFT())} className="px-4 h-9 rounded-full bg-white text-black text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60" data-testid="forms-new"><Plus className="w-4 h-4" />New form</button>
         </div>
@@ -75,14 +80,14 @@ export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack })
         <div className={grid ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : 'space-y-2'}>
           {shown.map((f) => (
             <article key={f.id} className={`rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden ${grid ? '' : 'flex'}`} data-testid="forms-card">
-              <button type="button" onClick={() => (f.deleted_at ? undefined : onOpen(f.id))} className={`text-left cursor-pointer min-w-0 ${grid ? 'block w-full' : 'flex-1'}`}>
+              <button type="button" onClick={() => (f.deleted_at ? undefined : roles[f.id] === 'viewer' ? onResponses(f.id) : onOpen(f.id))} className={`text-left cursor-pointer min-w-0 ${grid ? 'block w-full' : 'flex-1'}`}>
                 <span className="block h-2" style={{ background: 'linear-gradient(90deg,#22f23c,#22f5a8)' }} />
                 <span className="block p-4">
                   <span className="block font-bold truncate">{f.title || 'Untitled form'}</span>
                   {grid && <span className="block text-xs text-zinc-400 line-clamp-2 min-h-[2rem] mt-0.5">{f.description || 'No description'}</span>}
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-zinc-400">
                     <span className={`px-2 py-0.5 rounded-full font-bold ${f.status === 'published' ? 'bg-emerald-500/15 text-emerald-300' : f.status === 'closed' ? 'bg-amber-500/15 text-amber-300' : 'bg-zinc-800 text-zinc-300'}`}>{f.status === 'published' ? 'Open' : f.status === 'closed' ? 'Closed' : 'Draft'}</span>
-                    <span>{f.response_count} {f.response_count === 1 ? 'answer' : 'answers'}</span><span>Changed {new Date(f.updated_at).toLocaleDateString()}</span>{f.folder && <span>📁 {f.folder}</span>}
+                    <span>{f.response_count} {f.response_count === 1 ? 'answer' : 'answers'}</span><span>Changed {new Date(f.updated_at).toLocaleDateString()}</span>{f.folder && <span>📁 {f.folder}</span>}{f.owner_id !== meId && <span className="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-bold">Shared with you · {roles[f.id] ?? 'editor'}</span>}
                   </span>
                 </span>
               </button>
@@ -91,20 +96,55 @@ export const FormsDashboard: React.FC<Props> = ({ onOpen, onResponses, onBack })
                   <IconBtn label="Restore" onClick={() => void run(f.id, () => updateMeta(f.id, { deleted_at: null }), 'Restored.')}><RotateCcw className="w-4 h-4" /></IconBtn>
                   <IconBtn label="Delete for good" danger onClick={() => { if (window.confirm(`Delete "${f.title}" and its ${f.response_count} answers for good? This cannot be undone.`)) void run(f.id, () => deleteFormForever(f.id), 'Deleted for good.'); }}><Trash2 className="w-4 h-4" /></IconBtn>
                 </>) : (<>
-                  <IconBtn label={f.starred ? 'Remove star' : 'Star'} on={f.starred} onClick={() => void run(f.id, () => updateMeta(f.id, { starred: !f.starred }))}><Star className="w-4 h-4" fill={f.starred ? 'currentColor' : 'none'} /></IconBtn>
+                  {f.owner_id === meId && <IconBtn label={f.starred ? 'Remove star' : 'Star'} on={f.starred} onClick={() => void run(f.id, () => updateMeta(f.id, { starred: !f.starred }))}><Star className="w-4 h-4" fill={f.starred ? 'currentColor' : 'none'} /></IconBtn>}
                   <IconBtn label="Answers" onClick={() => onResponses(f.id)}><BarChart3 className="w-4 h-4" /></IconBtn>
                   <IconBtn label="Duplicate" onClick={() => void run(f.id, () => duplicateForm(f), 'Copied: the questions, theme and settings (not the answers).')}><Copy className="w-4 h-4" /></IconBtn>
-                  <IconBtn label="Move to a folder" onClick={() => { const v = window.prompt('Folder name (empty to remove)', f.folder ?? ''); if (v !== null) void run(f.id, () => updateMeta(f.id, { folder: v.trim().slice(0, 60) || null })); }}><FolderInput className="w-4 h-4" /></IconBtn>
+                  {f.owner_id === meId && <IconBtn label="Move to a folder" onClick={() => { const v = window.prompt('Folder name (empty to remove)', f.folder ?? ''); if (v !== null) void run(f.id, () => updateMeta(f.id, { folder: v.trim().slice(0, 60) || null })); }}><FolderInput className="w-4 h-4" /></IconBtn>}
                   {f.slug && f.status !== 'draft' && <IconBtn label="Copy link" onClick={() => { void navigator.clipboard?.writeText(formLink(f.slug!)).then(() => setNote('Link copied.')).catch(() => window.prompt('Copy this link:', formLink(f.slug!))); }}><span className="text-[11px] font-bold px-1">Link</span></IconBtn>}
-                  <IconBtn label={f.archived_at ? 'Unarchive' : 'Archive'} onClick={() => void run(f.id, () => updateMeta(f.id, { archived_at: f.archived_at ? null : new Date().toISOString() }), f.archived_at ? 'Unarchived.' : 'Archived.')}><Archive className="w-4 h-4" /></IconBtn>
-                  <IconBtn label="Move to trash" danger onClick={() => void run(f.id, () => updateMeta(f.id, { deleted_at: new Date().toISOString() }), 'Moved to the trash. You can restore it from the Trash tab.')}><Trash2 className="w-4 h-4" /></IconBtn>
+                  {f.owner_id === meId && <IconBtn label={f.archived_at ? 'Unarchive' : 'Archive'} onClick={() => void run(f.id, () => updateMeta(f.id, { archived_at: f.archived_at ? null : new Date().toISOString() }), f.archived_at ? 'Unarchived.' : 'Archived.')}><Archive className="w-4 h-4" /></IconBtn>}
+                  {f.owner_id === meId && <IconBtn label="Move to trash" danger onClick={() => void run(f.id, () => updateMeta(f.id, { deleted_at: new Date().toISOString() }), 'Moved to the trash. You can restore it from the Trash tab.')}><Trash2 className="w-4 h-4" /></IconBtn>}
                 </>)}
               </div>
             </article>))}
         </div>
       </div>
 
+      {ai && <AiCreate onClose={() => setAi(false)} onUse={(t, d, draft) => { setAi(false); void create(t, d, draft); }} />}
       {gallery && <Gallery onClose={() => setGallery(false)} onPick={(t) => { const b = t.build(); setGallery(false); void create(b.title, b.description, { ...b.draft, questions: fixTemplateLogic(b.draft.questions) }); }} />}
+    </div>
+  );
+};
+
+const AiCreate: React.FC<{ onClose: () => void; onUse: (title: string, description: string, draft: FormDraft) => void }> = ({ onClose, onUse }) => {
+  const [prompt, setPrompt] = useState('');
+  const [count, setCount] = useState(10);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [made, setMade] = useState<ReturnType<typeof fromAiForm> | null>(null);
+  const go = async () => {
+    setBusy(true); setErr(''); setMade(null);
+    try { const r = await aiCall<{ form: unknown }>({ action: 'generate', prompt, count }); setMade(fromAiForm(r.form)); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'The AI helper could not answer right now.'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-[120] bg-black/75 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Create a form with AI">
+      <div className="w-full sm:max-w-xl max-h-[92vh] overflow-auto rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-4 text-white space-y-3">
+        <div className="flex items-center gap-2"><h2 className="font-extrabold text-lg flex-1">Create with AI</h2><button type="button" onClick={onClose} aria-label="Close" className="w-9 h-9 rounded-full border border-zinc-700 flex items-center justify-center cursor-pointer"><X className="w-4 h-4" /></button></div>
+        {!made ? (<>
+          <label className="block text-xs font-semibold text-zinc-300">Describe the form you need
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={1500} rows={5} placeholder="A customer satisfaction survey for an online clothing store, with product quality, delivery, and an optional final comment" className="mt-1 w-full bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-normal outline-none focus-visible:ring-2 ring-white/40" data-testid="ai-prompt" /></label>
+          <label className="block text-xs font-semibold text-zinc-300">About how many questions: {count}<input type="range" min={3} max={30} value={count} onChange={(e) => setCount(Number(e.target.value))} className="w-full" /></label>
+          <p className="text-[11px] text-zinc-400">Only what you type here is sent to an AI service. Nothing from your other forms or answers is sent. You will see the form first and nothing is created until you say so.</p>
+          {err && <p role="alert" className="text-sm text-red-300">{err}</p>}
+          <button type="button" disabled={busy || prompt.trim().length < 5} onClick={() => void go()} className="w-full h-11 rounded-full bg-white text-black font-bold cursor-pointer disabled:opacity-50">{busy ? 'Writing your form…' : 'Make the form'}</button>
+        </>) : (<>
+          <div className="rounded-2xl bg-zinc-800/60 p-3"><p className="font-bold">{made.title}</p><p className="text-xs text-zinc-400">{made.description}</p>
+            <ol className="mt-2 space-y-1 text-sm list-decimal pl-5">{made.draft.questions.map((q, i) => <li key={i} className={q.type === 'section' ? 'font-bold list-none -ml-5 mt-2' : ''}>{q.title} <span className="text-[11px] text-zinc-500">{q.type === 'section' ? 'new page' : QTYPES.find((t) => t.type === q.type)?.label}{q.required ? ' · required' : ''}</span></li>)}</ol></div>
+          <div className="flex gap-2"><button type="button" onClick={() => setMade(null)} className="flex-1 h-11 rounded-full border border-zinc-700 font-bold cursor-pointer">Try again</button><button type="button" onClick={() => onUse(made.title, made.description, made.draft)} className="flex-1 h-11 rounded-full bg-white text-black font-bold cursor-pointer" data-testid="ai-use">Use this form</button></div>
+          <p className="text-[11px] text-zinc-400">You can change everything in the editor. Read it before you publish: the AI can make mistakes.</p>
+        </>)}
+      </div>
     </div>
   );
 };

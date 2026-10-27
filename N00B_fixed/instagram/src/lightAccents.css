@@ -57,7 +57,10 @@
 :root[data-theme="light"] .text-cyan-300\/80:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #111111 80%, transparent) !important; }
 :root[data-theme="light"] .text-cyan-400:not(.force-dark *):not(.media-dark *) { color: #111111 !important; }
 :root[data-theme="light"] .text-emerald-100:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
+:root[data-theme="light"] .text-emerald-100\/70:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #047857 70%, transparent) !important; }
 :root[data-theme="light"] .text-emerald-200:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
+:root[data-theme="light"] .text-emerald-200\/60:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #047857 60%, transparent) !important; }
+:root[data-theme="light"] .text-emerald-200\/70:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #047857 70%, transparent) !important; }
 :root[data-theme="light"] .text-emerald-300:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
 :root[data-theme="light"] .text-emerald-400:not(.force-dark *):not(.media-dark *) { color: #047857 !important; }
 :root[data-theme="light"] .text-emerald-400\/70:not(.force-dark *):not(.media-dark *) { color: color-mix(in srgb, #047857 70%, transparent) !important; }

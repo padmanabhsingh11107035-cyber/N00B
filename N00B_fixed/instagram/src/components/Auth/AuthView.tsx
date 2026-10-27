@@ -41,6 +41,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { User, AccountType } from '../../types';
+import { breachCount, BREACHED_PASSWORD_MESSAGE } from '../../utils/pwnedPassword';
 import { loginUser, requestSignupOtp, verifySignupOtp, verifyUsernameExists, recoverAccountAccess, requestLoginOtp, verifyLoginOtp, uploadMediaFile, fetchPublicPlatformSettings, recordSignupDevice, checkAndRegisterDevice, revokeDeviceSession, logoutUser, checkOAuthSignIn, signInToExistingOAuthAccount, type OAuthAccountChoice, type ActiveDeviceSession, type LoginApprovalTicket } from '../../services/api';
 import { LoginApprovalWait } from './LoginApprovalWait';
 import { CompleteOAuthProfile } from './CompleteOAuthProfile';
@@ -700,6 +701,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
     // account itself is only created once the code sent to it is entered correctly, in
     // handleVerifySignupOtp below.
     setLoading(true);
+    // a password that is in a public breach list is refused (Google would warn about it later); only 5 characters of its fingerprint are sent, never the password
+    if ((await breachCount(password)) > 0) {
+      setLoading(false);
+      setErrorMessage(BREACHED_PASSWORD_MESSAGE);
+      return;
+    }
     const otpRes = await requestSignupOtp(email.trim());
     setLoading(false);
     if (!otpRes.success) {
@@ -1516,6 +1523,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    name="new-password"
                     placeholder="Create a strong password"
                     className="w-full bg-zinc-900 text-sm text-white px-3.5 pr-16 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                   />
@@ -1776,6 +1785,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                     required
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
+                    autoComplete="username"
+                    name="username"
                     placeholder="Enter your @user_id, email or phone number"
                     className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                   />
@@ -1800,6 +1811,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
+                  autoComplete="current-password"
+                  name="password"
                   placeholder="Enter your password"
                   className="w-full bg-zinc-900 text-sm text-white px-3.5 py-3 rounded-2xl border border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-all placeholder:text-zinc-600"
                 />

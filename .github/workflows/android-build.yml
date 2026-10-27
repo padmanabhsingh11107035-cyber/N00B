@@ -88,6 +88,9 @@ jobs:
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#& <uses-permission android:name="android.permission.CAMERA" /> <uses-permission android:name="android.permission.RECORD_AUDIO" /> <uses-feature android:name="android.hardware.camera" android:required="false" /> <uses-feature android:name="android.hardware.microphone" android:required="false" />#' android/app/src/main/AndroidManifest.xml
           grep -q android.permission.CAMERA android/app/src/main/AndroidManifest.xml
           grep -q android.permission.RECORD_AUDIO android/app/src/main/AndroidManifest.xml
+          # the app's data (chat keys, saved logins) is not copied to a cloud backup
+          sed -i 's#android:allowBackup="true"#android:allowBackup="false"#' android/app/src/main/AndroidManifest.xml
+          grep -q 'allowBackup="false"' android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icon & splash screen from the NOOB logo
         # Installed here rather than as a committed devDependency: it pulls in
@@ -191,6 +194,9 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -f "app/release.keystore" ]; then
+            # Google Play does not allow an app to install apps or update itself outside Google Play (and keeps REQUEST_INSTALL_PACKAGES for installer apps only): the bundle for Play is built without them
+            sed -i 's# <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />##; s# <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />##' app/src/main/AndroidManifest.xml
+            if grep -q "REQUEST_INSTALL_PACKAGES\|UPDATE_PACKAGES_WITHOUT_USER_ACTION" app/src/main/AndroidManifest.xml; then echo "The Play bundle must not ask to install apps"; exit 1; fi
             ./gradlew bundleRelease --no-daemon
           else
             echo "No release keystore configured yet (ANDROID_KEYSTORE_BASE64 secret not set) — skipping signed AAB build."

@@ -9,7 +9,7 @@ import { isNativeApp } from '../utils/siteUrl.ts';
 // The newest app file is published as a release on GitHub by .github/workflows/android-build.yml, with its build number in the release notes ("Native build: 123").
 
 interface AppUpdaterPlugin {
-  getInfo(): Promise<{ versionCode: number; versionName: string; canInstall: boolean }>;
+  getInfo(): Promise<{ versionCode: number; versionName: string; canInstall: boolean; fromPlay?: boolean }>;
   getLatest(): Promise<{ build: number }>;
   downloadAndInstall(options: { url: string }): Promise<{ started?: boolean; needsPermission?: boolean }>;
   addListener(event: 'progress', cb: (p: { percent: number }) => void): Promise<{ remove: () => Promise<void> }>;
@@ -104,7 +104,12 @@ export async function checkNativeUpdate(): Promise<NativeUpdateInfo> {
   let installed: number | null = null;
   let supported = true;
   let canInstall = false;
-  try { const i = await AppUpdater.getInfo(); installed = i.versionCode || null; canInstall = !!i.canInstall; } catch { supported = false; }
+  try {
+    const i = await AppUpdater.getInfo();
+    installed = i.versionCode || null; canInstall = !!i.canInstall;
+    // Google Play's rules: a copy of the app that came from Google Play is updated by Google Play only. It never looks for, offers or installs an app file of its own.
+    if (i.fromPlay) return { supported: false, canInstall: false, installed, latest: installed, state: 'newest' };
+  } catch { supported = false; }
   // the app asks for the newest build itself; the release page (which has a request limit per address) is only the second way
   let latest: number | null = null;
   try { latest = (await AppUpdater.getLatest()).build || null; } catch { /* an older app, or no connection */ }

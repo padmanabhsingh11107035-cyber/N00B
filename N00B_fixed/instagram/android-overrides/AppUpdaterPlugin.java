@@ -55,6 +55,19 @@ public class AppUpdaterPlugin extends Plugin {
   private volatile boolean busy = false;
   private BroadcastReceiver resultReceiver;
 
+  /** Google Play's rules: an app that came from Google Play is updated by Google Play only, never by itself. */
+  private boolean installedFromPlay() {
+    try {
+      String pkg = getContext().getPackageName();
+      String source = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+          ? getContext().getPackageManager().getInstallSourceInfo(pkg).getInstallingPackageName()
+          : getContext().getPackageManager().getInstallerPackageName(pkg);
+      return "com.android.vending".equals(source);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
   private boolean canInstall() {
     return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getContext().getPackageManager().canRequestPackageInstalls();
   }
@@ -68,6 +81,7 @@ public class AppUpdaterPlugin extends Plugin {
       out.put("versionCode", code);
       out.put("versionName", info.versionName == null ? "" : info.versionName);
       out.put("canInstall", canInstall());
+      out.put("fromPlay", installedFromPlay());
       call.resolve(out);
     } catch (Exception e) {
       call.reject("Could not read the app version.");

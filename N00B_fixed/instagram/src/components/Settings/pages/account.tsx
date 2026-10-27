@@ -1,3 +1,4 @@
+import { breachCount, BREACHED_PASSWORD_MESSAGE } from '../../../utils/pwnedPassword';
 import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Download, Eye, KeyRound, Lock, Smartphone, Star, Trash2, UserPlus, Users, Briefcase, Ban } from 'lucide-react';
 import { LoginApprovalRow } from '../LoginApprovalRow';
@@ -48,6 +49,7 @@ export const PasswordPage: React.FC<PageProps> = ({ ctx, back }) => {
   const save = async () => {
     if (next.length < 6) { show('The new password must be at least 6 characters.', 'bad'); return; }
     if (next !== again) { show('The two passwords are not the same.', 'bad'); return; }
+    if ((await breachCount(next)) > 0) { show(BREACHED_PASSWORD_MESSAGE, 'bad'); return; }
     setBusy(true);
     try {
       const res = await updateCurrentUser({ password: next });

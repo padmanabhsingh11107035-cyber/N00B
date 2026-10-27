@@ -34,5 +34,7 @@ check(/--breakpoint-3xl: 112\.5rem/.test(css), 'the 3xl breakpoint (1800 px) is 
 section('3. Smaller screens are unchanged');
 check(/hidden xl:flex/.test(side) && /hidden lg:flex/.test(people) && /lg:pb-0 lg:gap-8/.test(page), 'below 1280 px there is no side menu, below 1024 px no people list, and the spacing is as before');
 
+check(/hidden lg:flex fixed/.test(read('src/components/Common/BackToTop.tsx')) && /window\.scrollY > 500/.test(read('src/components/Common/BackToTop.tsx')) && /<BackToTop \/>/.test(app) && /::-webkit-scrollbar \{ width: 12px/.test(read('src/index.css')), 'laptops get a scroll bar they can see and drag, and a Back to the top button after scrolling down');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

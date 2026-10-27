@@ -151,6 +151,7 @@ const { View: ReelsView, preload: preloadReels } = lazyTab(() => import('./compo
 const { View: GamesView, preload: preloadGames } = lazyTab(() => import('./components/Games/GamesView').then((m) => m.GamesView));
 const { View: MusicHubView, preload: preloadMusic } = lazyTab(() => import('./components/Music/MusicHubView').then((m) => m.MusicHubView));
 const { View: ProfileView, preload: preloadProfile } = lazyTab(() => import('./components/Profile/ProfileView').then((m) => m.ProfileView));
+import { BackToTop } from './components/Common/BackToTop';
 const FunHub = React.lazy(() => import('./components/Fun/FunHub'));
 const PublicContentPage = React.lazy(() => import('./components/Public/PublicContentPage').then((m) => ({ default: m.PublicContentPage })));
 const AnonymousMessagesPage = React.lazy(() => import('./components/Anonymous/AnonymousMessagesPage').then((m) => ({ default: m.AnonymousMessagesPage })));
@@ -2205,6 +2206,8 @@ export default function App() {
         unreadChatCount={unreadChatCount}
         hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers.layers.length === 0}
       />
+
+      {activeTab !== 'chat' && activeTab !== 'reels' && <BackToTop />}
 
       {/* Floating AI Customer Support Quick-Trigger Button (Bottom Right - hidden in Chat to prevent input overlap, hidden in Reels since it sits right on top of the mute/sound toggle there) */}
       {activeTab !== 'chat' && activeTab !== 'reels' && featOn('support') && (

@@ -1,8 +1,7 @@
 import {
   Activity, AtSign, Archive, Ban, BarChart3, Bell, Bookmark, BadgeCheck, Briefcase, Calculator, Clock, Crown, Download, Eye, EyeOff, Globe, HeartOff,
   Hourglass, Image as ImageIcon, Info, Languages, LifeBuoy, Link2, Lock, LogOut, MessageCircle, MessageSquare, Package, Repeat2, ScanLine, ShieldCheck, ShieldAlert,
-  RefreshCw, SlidersHorizontal, Smartphone, Sparkles, StickyNote, Star, UserCheck, UserCog, UserPlus, UserX, Video, Wallet, Accessibility, Share2, Users, VolumeX, Receipt, AudioLines
-} from 'lucide-react';
+  RefreshCw, SlidersHorizontal, Smartphone, Sparkles, StickyNote, Star, UserCheck, UserCog, UserPlus, UserX, Video, Wallet, Accessibility, Share2, Users, VolumeX, Receipt, AudioLines, UserRound } from 'lucide-react';
 import type React from 'react';
 import type { SettingsActions, SettingsContext } from './types';
 import { getListCount } from '../../services/settingsApi';
@@ -106,6 +105,7 @@ export const ROWS: RowDef[] = [
   { id: 'wallet', section: 'More from NOOB', label: 'Wallet', sub: 'NOOB Points and transactions', icon: Wallet, action: 'openWallet', keywords: 'points money transactions balance' },
   { id: 'qr', section: 'More from NOOB', label: 'Profile finder using QR', icon: ScanLine, action: 'openQrScanner', keywords: 'scan qr code profile' },
   { id: 'my-qr', section: 'More from NOOB', label: 'My QR code', icon: ScanLine, action: 'openProfileQr', keywords: 'share profile qr' },
+  { id: 'avatars', section: 'More from NOOB', label: 'Choose an avatar', sub: 'Free characters for your profile picture', icon: UserRound, action: 'openAvatars', keywords: 'avatar character profile picture free pick choose' },
   { id: 'live-avatar', section: 'More from NOOB', label: 'Live profile picture', sub: 'A moving picture (NOOB Pro)', icon: Video, action: 'openLiveAvatar', keywords: 'animated avatar video gif' },
   { id: 'verified', section: 'More from NOOB', label: 'Get verified', icon: BadgeCheck, action: 'openGetVerified', keywords: 'verification badge blue tick' },
   { id: 'calculator', section: 'More from NOOB', label: 'Calculator', icon: Calculator, action: 'openCalculator', keywords: 'math' },

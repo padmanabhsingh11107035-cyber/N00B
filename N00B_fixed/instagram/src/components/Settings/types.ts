@@ -27,6 +27,7 @@ export interface SettingsActions {
   openCalculator: () => void;
   openFollowUs: () => void;
   openLiveAvatar: () => void;
+  openAvatars: () => void;
   openAdmin: () => void;
   openSwitchAccount: () => void;
   openExport: () => void;

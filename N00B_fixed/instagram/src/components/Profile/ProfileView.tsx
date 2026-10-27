@@ -47,6 +47,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, Story, StoryHighlight, LongVideo } from '../../types';
+import { avatarStoredUrl } from '../../data/avatars';
 import {
   fetchCollections,
   fetchLikedPosts,
@@ -65,7 +66,8 @@ import {
   fetchMutualFollowers,
   fetchUserFeedVideos,
   fetchUserLongVideos,
-  type MutualFollower
+  type MutualFollower,
+  updateFullProfile
 } from '../../services/api';
 import confetti from 'canvas-confetti';
 import { EditProfileModal } from './EditProfileModal';
@@ -119,6 +121,7 @@ import { LazyVideo } from '../Common/LazyVideo';
 // the same underlying chunk, so this doesn't double-load anything.
 const CustomerSupportModal = React.lazy(() => import('../Support/CustomerSupportModal').then((m) => ({ default: m.CustomerSupportModal })));
 const SuggestionBoxModal = React.lazy(() => import('../Support/SuggestionBoxModal').then((m) => ({ default: m.SuggestionBoxModal })));
+const AvatarPicker = React.lazy(() => import('../Avatars/AvatarPicker'));
 const SettingsHub = React.lazy(() => import('../Settings/SettingsHub').then((m) => ({ default: m.SettingsHub })));
 const AdminControlModal = React.lazy(() => import('../Modals/AdminControlModal').then((m) => ({ default: m.AdminControlModal })));
 // While a window that is loaded on demand arrives: NOOB's burger, for exactly as long as it takes (no minimum, no maximum time).
@@ -214,6 +217,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showAccountsStatisticsModal, setShowAccountsStatisticsModal] = useState(false);
   const [showProFeaturesModal, setShowProFeaturesModal] = useState(false);
   const [showLiveAvatarModal, setShowLiveAvatarModal] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showBlockedAccountsModal, setShowBlockedAccountsModal] = useState(false);
   const [showHideProfileModal, setShowHideProfileModal] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -520,6 +524,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       openCalculator: () => setShowCalculatorPage(true),
       openFollowUs: () => setShowFollowUsModal(true),
       openLiveAvatar: () => setShowLiveAvatarModal(true),
+      openAvatars: () => { setShowSettingsHub(false); setShowAvatarPicker(true); },
       openAdmin: () => setShowAdminControlModal(true),
       openSwitchAccount: () => setShowSwitchAccount(true),
       openExport: () => {
@@ -1915,6 +1920,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onUserUpdated={onUserUpdated}
           allUsers={allUsers}
         />
+      )}
+
+      {showAvatarPicker && (
+        <React.Suspense fallback={<div className="fixed inset-0 z-[110] bg-black" />}>
+          <AvatarPicker
+            current={currentUser.avatar}
+            onClose={() => setShowAvatarPicker(false)}
+            onChoose={async (a) => {
+              const res = await updateFullProfile({ avatar: avatarStoredUrl(a.id) } as Partial<User>);
+              if (!res.success) throw new Error((res as { error?: string }).error || 'Could not save your avatar. Please try again.');
+              onUserUpdated?.({ ...currentUser, ...res.user, avatar: res.user?.avatar ?? avatarStoredUrl(a.id) });
+            }}
+          />
+        </React.Suspense>
       )}
 
       {showLiveAvatarModal && (

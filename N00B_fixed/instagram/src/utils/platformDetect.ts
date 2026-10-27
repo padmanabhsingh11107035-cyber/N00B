@@ -8,3 +8,9 @@ export function isIosStandalonePwa(): boolean {
   const isStandalone = (navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   return isIos && isStandalone;
 }
+
+/** An iPhone, iPad or iPod (an iPad that says it is a Mac is found by its touch screen). They can not install NOOB with a button: it is "Add to Home Screen" in the share menu. */
+export function isAppleMobile(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+}

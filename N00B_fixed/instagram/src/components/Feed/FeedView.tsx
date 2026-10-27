@@ -807,7 +807,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       />
 
       {/* 3. Category Topic Filter Pills */}
-      <div className="w-full max-w-[480px] xl:max-w-[640px] px-3 py-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <div className="w-full max-w-[480px] xl:max-w-[640px] px-3 py-1.5 flex flex-wrap items-center justify-center gap-2">
         {categories.map((cat) => (
           <button
             key={cat}

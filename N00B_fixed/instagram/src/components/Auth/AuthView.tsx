@@ -66,6 +66,7 @@ import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
 import { isIos, currentPushEnv } from '../../utils/pushSupport';
+import { isAppleMobile } from '../../utils/platformDetect';
 import { canInstallNow, isInstalled, onInstallStateChange, promptInstall, isSamsungInternet, chromeInstallUrl, SAMSUNG_INSTALL_HINT } from '../../utils/pwaInstall';
 import confetti from 'canvas-confetti';
 import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
@@ -363,6 +364,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   // On the old address (nooob.xyz) the button installs the NEW app: an app can only be installed from the address it is opened on, so it opens the main
   // address with ?install=1 — there the same button glows harder and says what to tap.
   const installElsewhere = useMemo(() => isOnOtherNoobAddress(), []);
+  // The install button is only for a device that can use it and has not installed NOOB yet: nothing at all once it is installed, and never on an iPhone or iPad (there it does nothing).
+  const hideInstall = !installElsewhere && (appInstalled || isAppleMobile());
   const installBtnRef = useRef<HTMLButtonElement>(null);
   const [installAttn, setInstallAttn] = useState(false);
   useEffect(() => {
@@ -1061,7 +1064,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
       {/* Install to Home Screen: available before logging in or signing up, on any device. Not installed yet = the first thing the eye
           finds (a glowing button with a pulsing ring, a sweeping shine, a bobbing arrow and a hand-drawn "get the app!" note, all still when the
           device asks for reduced motion); already installed = the small quiet pill. */}
-      {appInstalled && !installElsewhere ? (
+      {hideInstall ? null : appInstalled && !installElsewhere ? (
         <div className="w-full max-w-lg flex flex-col items-end z-10 pt-1 gap-1.5">
           <button
             type="button"

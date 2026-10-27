@@ -1507,6 +1507,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
+  // Vanish mode is gone from the app: a chat that still has it switched on gets it switched off the first time it is opened.
+  useEffect(() => {
+    if (activeChat?.vanishMode) {
+      void updateChatSettings(activeChat.id, { vanishMode: false });
+      setConversations((list) => list.map((c) => (c.id === activeChat.id ? { ...c, vanishMode: false } : c)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChat?.id, activeChat?.vanishMode]);
+
   const handleToggleVanishMode = async () => {
     if (!activeChat) return;
     const newVanish = !activeChat.vanishMode;
@@ -2189,25 +2198,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       {activeChat?.isPinned && (
                         <span className="text-[10px] text-amber-400 font-bold">Pinned</span>
                       )}
-                    </button>
-
-                    {/* Option: Vanish Mode Toggle */}
-                    <button
-                      onClick={() => {
-                        setShowChatActionsMenu(false);
-                        handleToggleVanishMode();
-                      }}
-                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center justify-between text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Flame className={`w-4 h-4 ${activeChat?.vanishMode ? 'text-pink-400' : 'text-zinc-400'}`} />
-                        Vanish Mode
-                      </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                        activeChat?.vanishMode ? 'bg-pink-500/20 text-pink-400' : 'text-zinc-500'
-                      }`}>
-                        {activeChat?.vanishMode ? 'On' : 'Off'}
-                      </span>
                     </button>
 
                     {/* Option: Theme & Nickname */}

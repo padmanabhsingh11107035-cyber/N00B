@@ -60,6 +60,12 @@ self.addEventListener('push', (event) => {
     // than showing nothing at all.
   }
 
+  // "@name" as the title with a body that does not say who it is about ("liked your post.") reads as "@name / from NOOB / liked your post." on a phone: say it as one sentence under NOOB instead.
+  if (/^@\S+$/.test(String(data.title || '')) && data.body && !String(data.body).startsWith('@')) {
+    data.body = `${data.title} ${data.body}`;
+    data.title = 'NOOB';
+  }
+
   const isCallRing = data.type === 'call_ring';
   const options = {
     body: data.body,

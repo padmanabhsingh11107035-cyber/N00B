@@ -559,7 +559,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="doodle-wallpaper-feed w-full flex flex-col items-center pb-24 relative select-none"
+      className="w-full flex flex-col items-center pb-24 relative select-none"
     >
       {/* the Home page itself: hidden while a page of the three-line menu is open (see above) */}
       <div data-home-content style={{ display: menuPageOpen ? 'none' : 'contents' }}>

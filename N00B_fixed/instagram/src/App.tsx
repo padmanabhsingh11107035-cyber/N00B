@@ -1908,7 +1908,7 @@ export default function App() {
       <main
         className={`relative w-full max-w-[480px] ${
           pageTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : pageTab === 'feed' ? 'md:max-w-2xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
-        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : 'xl:ml-auto'} bg-page doodle-wallpaper lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
+        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : 'xl:ml-auto'} bg-page ${pageTab === 'feed' ? 'doodle-wallpaper-feed' : 'doodle-wallpaper'} lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
           // The chat tab reserves its own bottom-nav clearance internally (its container's height
           // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
           // same space, pushing the whole page taller than one viewport and creating a second,

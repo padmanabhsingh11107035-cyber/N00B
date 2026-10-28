@@ -45,7 +45,7 @@ export const InstantsFloating: React.FC<{ groups: InstantGroup[]; onOpenCamera: 
           title="Take an instant"
           aria-label="Take an instant"
           data-testid="instants-add"
-          className="pointer-events-auto shrink-0 w-[74px] h-[84px] rounded-[26px] bg-zinc-700/90 backdrop-blur-md border border-white/10 shadow-xl flex items-center justify-start pl-[18px] rotate-[-7deg] hover:bg-zinc-600/90 active:scale-95 transition-all cursor-pointer"
+          className="pointer-events-auto shrink-0 w-[74px] h-[84px] rounded-[26px] bg-[#252b2f]/95 backdrop-blur-md border border-white/10 shadow-xl flex items-center justify-start pl-[18px] rotate-[-7deg] hover:bg-[#2f373c]/95 active:scale-95 transition-all cursor-pointer"
         >
           <Plus className="w-8 h-8 text-white" strokeWidth={2} />
         </button>

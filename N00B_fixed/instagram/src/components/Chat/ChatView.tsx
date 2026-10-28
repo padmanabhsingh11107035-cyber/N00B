@@ -1628,6 +1628,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const listRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const rowsKey = finalFilteredConversations.map((c) => c.id).join(',');
+  // Safety net for the fade-in: whatever an observer did or did not report (a page that loaded in the background, an odd web view), no row at or above the bottom edge of the list stays hidden.
+  const sweepRows = () => {
+    const box = listRef.current;
+    if (!box) return;
+    const bottom = box.getBoundingClientRect().bottom;
+    const left = box.querySelectorAll<HTMLElement>('.msg-row:not([data-in])');
+    for (let i = 0; i < left.length; i++) if (left[i].getBoundingClientRect().top < bottom) left[i].setAttribute('data-in', '1');
+  };
   useEffect(() => {
     const box = listRef.current;
     if (!box) return;
@@ -1651,7 +1659,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
       }, { root: box, threshold: 0.05 });
       rows.forEach((r) => io!.observe(r));
     }
-    return () => io?.disconnect();
+    const t1 = window.setTimeout(sweepRows, 700);
+    const t2 = window.setTimeout(sweepRows, 2000);
+    return () => { io?.disconnect(); window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [rowsKey, activeFilterTab, searchQuery, mobileView]);
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
   const setStrip = (green: boolean) => {
@@ -1683,6 +1693,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           h.style.opacity = String(Math.max(0, 1 - y / 220));
         }
         if (green !== y < 90) { green = y < 90; setStrip(green); }
+        sweepRows();
       });
     };
     box.addEventListener('scroll', onScroll, { passive: true });

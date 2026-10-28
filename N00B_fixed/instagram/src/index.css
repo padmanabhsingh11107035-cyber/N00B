@@ -1200,7 +1200,7 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
   padding-inline: clamp(10px, 3vw, 13px); column-gap: clamp(3px, 1.25vw, 5px); position: sticky;
 }
 @media (min-width: 768px) { .msg-page .msg-pills { justify-content: flex-start; column-gap: 8px; } }
-.msg-page .msg-pill, .msg-page .msg-pill-on { height: var(--ph); padding-left: var(--pl); padding-right: var(--pr); column-gap: var(--pg); font-size: var(--pf); z-index: 1; transition: background-color .3s ease, color .3s ease; }
+.msg-page .msg-pill, .msg-page .msg-pill-on { height: var(--ph); padding-left: var(--pl); padding-right: var(--pr); column-gap: var(--pg); font-size: var(--pf); z-index: 1; transition: background-color .3s ease, color .3s ease, transform .15s ease; }
 .msg-page .msg-pill-nocount { padding-right: var(--pl) !important; }
 .msg-page .msg-pill, :root[data-theme="light"] .msg-page .msg-pill { background: #181a1e !important; color: #d6dce4 !important; }
 .msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: transparent !important; color: var(--mint) !important; }
@@ -1210,6 +1210,11 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 .msg-page .msg-chip-on { background: var(--mint); color: #033b2a; }
 .msg-page .msg-row { transition: opacity .38s ease, transform .38s cubic-bezier(.22,.8,.3,1), background-color .15s; }
 .msg-page .msg-row:not([data-in]) { opacity: 0; transform: translateY(14px); }
+/* a soft press feedback (like a phone's own lists): the row darkens, pills and people shrink a little while a finger is on them */
+.msg-page .msg-row:active { background-color: rgba(255, 255, 255, .06); }
+.msg-page .msg-pill:active, .msg-page .msg-pill-on:active { transform: scale(.96); }
+.msg-page [data-testid="messages-people"] button { transition: transform .15s ease; }
+.msg-page [data-testid="messages-people"] button:active { transform: scale(.95); }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
 html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #02351f) !important; transition: background-color .25s ease; }
 @layer base {

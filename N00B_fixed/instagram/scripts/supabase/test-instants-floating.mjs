@@ -9,7 +9,7 @@ const stack = read('src/components/Chat/InstantsStack.tsx'), chat = read('src/co
 
 check(/data-testid="instants-floating"/.test(stack) && /absolute right-0 bottom-\[110px\] z-30/.test(stack) && /pointer-events-none/.test(stack), 'the Instants are a floating piece at the right edge, above the bottom of the list, and take no room from the chats');
 check(!/overflow-x-auto no-scrollbar/.test(stack) && !/border-b border-zinc-900 flex items-center gap-3/.test(stack), 'there is no strip across the top of the page any more');
-check(/w-\[54px\] overflow-hidden/.test(stack) && /w-\[74px\] h-\[84px\] rounded-\[26px\] bg-zinc-700\/90/.test(stack), 'the grey "+" tab is wider than its frame, so part of it is tucked behind the edge, like Instagram');
+check(/w-\[54px\] overflow-hidden/.test(stack) && /w-\[74px\] h-\[84px\] rounded-\[26px\] bg-\[#252b2f\]\/95/.test(stack), 'the grey "+" tab is wider than its frame, so part of it is tucked behind the edge, like Instagram');
 check(/data-testid="instants-add"/.test(stack) && /onClick=\{onOpenCamera\}/.test(stack) && /<Plus className="w-8 h-8 text-white"/.test(stack), 'the "+" tab opens the camera');
 check(/groups\.slice\(0, 3\)/.test(stack) && /onClick=\{\(\) => onOpenViewer\(group\.items\)\}/.test(stack) && /data-testid="instants-friend"/.test(stack) && /\+\{more\}/.test(stack), 'friends\' instants are stacked above the tab (three, then "+2"), a tap opens what that friend sent');
 check(/rotate\(\$\{i % 2 \? 7 : -5\}deg\)/.test(stack) && /rotate-\[-7deg\]/.test(stack), 'the pieces are tilted, alternately');

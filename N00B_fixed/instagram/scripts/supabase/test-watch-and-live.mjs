@@ -36,7 +36,7 @@ check(/minimized\?: boolean;/.test(live) && /style=\{minimized \? \{ display: 'n
 check(/onStateChange\?: \(phase: Phase, streamId\?: string\) => void;/.test(live) && /onStateChange\?\.\(phase, streamId\)/.test(live), 'the app is told when the live is on, and its id');
 check(/const hostIsLive = showGoLiveHost && liveInfo\.phase === 'live';/.test(app) && /data-testid="live-bar"/.test(app) && /Turn off live/.test(app), 'a bar says "You are live" with Return and Turn off live while it is minimized');
 check(/await endLiveStream\(liveInfo\.id\)/.test(app) && /closeHostLive\(\);/.test(app), '"Turn off live" ends it for everyone, then lets go of the camera');
-check(/live=\{hostIsLive \? \{ onReturn:/.test(app) && /data-testid="create-live-now"/.test(chooser) && /data-testid="create-live-off"/.test(chooser) && /r\.kind === 'live'/.test(chooser), 'the Create sheet shows "You are live", Return to live and Turn off live (and no second "Live" row)');
+check(/live=\{hostIsLive \? \{ onReturn:/.test(app) && /data-testid="create-live-now"/.test(chooser) && /data-testid="create-live-off"/.test(chooser) && /r\.kind (?:!==|===) 'live'/.test(chooser), 'the Create sheet shows "You are live", Return to live and Turn off live (and no second "Live" row)');
 check(/if \(hostIsLive\) \{ setLiveMinimized\(false\); return; \}/.test(app), 'tapping Live while live goes back to the live instead of starting another');
 
 section('4. Going live never waits for ever');

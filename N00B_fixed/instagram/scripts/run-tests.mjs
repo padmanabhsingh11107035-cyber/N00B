@@ -14,7 +14,7 @@ for (const [i, step] of steps.entries()) {
   const args = parts[0] === 'node' ? parts.slice(1) : null;
   if (!args) { console.log(`skip (not a node command): ${step}`); continue; }
   const t0 = Date.now();
-  const res = spawnSync(process.execPath, ['--max-old-space-size=3000', ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const res = spawnSync(process.execPath, ['--liftoff-only', '--max-old-space-size=3000', ...args.filter((a) => a !== '--liftoff-only')], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   const out = `${res.stdout || ''}${res.stderr || ''}`;
   const summary = out.split('\n').filter((l) => /\d+ passed|\d+ checks? |\bFAIL\b/i.test(l)).slice(-3).join(' | ');
   const ok = res.status === 0;

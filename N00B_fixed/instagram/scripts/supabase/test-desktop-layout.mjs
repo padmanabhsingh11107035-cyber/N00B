@@ -19,13 +19,13 @@ check(/xl:h-screen/.test(side) && /xl:top-0/.test(side) && /xl:-my-6/.test(side)
 check(/xl:border-r/.test(side) && /xl:overflow-hidden/.test(side) && /overflow-y-auto[^"]*"[^>]*data-testid="desktop-side-menu-scroll"|data-testid="desktop-side-menu-scroll"/.test(app) && /className="[^"]*overflow-y-auto[^"]*" data-testid="desktop-side-menu-scroll"/.test(app) && /2xl:w-\[272px\]/.test(side), 'it has a dividing line, the list inside it scrolls when the window is short, and it is wider on big screens');
 
 section('2. The feed and the people list share the rest');
-const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?\} \$\{[^}]*\} bg-(?:black|page)/.exec(app)?.[0] || '';
+const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?lg:rounded-t-\[40px\]/.exec(app)?.[0] || '';   // up to the rounded top: the Music page has its own colour and width in the middle
 check(main.includes("'xl:ml-auto'") && /2xl:max-w-\[800px\] 3xl:max-w-\[880px\]/.test(main), 'the other pages keep their share of the free space and grow on big screens (800 px, 880 px)');
 check(/2xl:max-w-5xl/.test(main), 'the chat page grows too');
 check(/pageTab === 'feed' \? 'xl:flex-1 xl:min-w-0 xl:max-w-\[1200px\] xl:mx-auto'/.test(main), 'on Home the middle page takes ALL the room between the menu and the people list (up to 1200 px), not just an equal share');
 check(/pageTab === 'feed' \? 'md:max-w-2xl'/.test(main), 'and the fixed 800 / 880 px limits do not apply to Home');
 check(/pageTab === 'feed' \? 'xl:pr-4' : ''/.test(page),'on Home the right edge of the window only has a small margin, so the people list sits at the far right');
-const people = /<aside className=\{`(hidden lg:flex[^`]*)`\} data-testid="desktop-people-panel">/.exec(app)?.[1] || '';
+const people = /<aside className=\{`([^`]*)`\} data-testid="desktop-people-panel">/.exec(app)?.[1] || '';   // (the Music page hides it)
 check(/pageTab === 'feed' \? '' : 'xl:mr-auto'/.test(people) && /2xl:w-\[340px\] 3xl:w-\[380px\]/.test(people), 'the people list is at the far right on Home (no spare room after it), and takes its equal share elsewhere');
 const feed = read('src/components/Feed/FeedView.tsx');
 check((feed.match(/max-w-\[480px\] xl:max-w-\[640px\]/g) || []).length === 3 && !/max-w-\[480px\] px/.test(feed) && /data-testid="feed-topic-chips"/.test(feed), 'the Home feed itself (banners, posts) grows from 480 to 640 px on wide screens, to use the wider middle page');

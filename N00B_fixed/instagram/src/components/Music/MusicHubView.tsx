@@ -310,18 +310,18 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const hasMenu = (t: MusicTrack) => isOwn(t) || isMasterAdmin;
 
   return (
-    <div className="w-full max-w-xl mx-auto pb-[calc(var(--nav-h,4rem)+6.5rem)] text-white" data-testid="music-hub" style={{ background: 'radial-gradient(120% 38% at 50% 78%, rgba(120,10,24,.28), transparent 70%)' }}>
+    <div className="w-full max-w-xl lg:max-w-none mx-auto pb-[calc(var(--nav-h,4rem)+6.5rem)] text-white" data-testid="music-hub" style={{ background: 'radial-gradient(120% 38% at 50% 78%, rgba(120,10,24,.28), transparent 70%)' }}>
       <MusicSplash />
       <input ref={coverEditFileRef} type="file" accept="image/*" onChange={handleCoverFileChosen} className="hidden" />
 
       {/* The spotlight: one big picture, the name over it */}
-      <section className="relative w-full aspect-[5/6] max-h-[80vh] overflow-hidden sm:rounded-b-[32px] bg-black" aria-label="NOOB Music">
-        <img src="/music/spotlight.webp" alt="" width={1000} height={1200} draggable={false} className="absolute inset-0 w-full h-full object-cover object-top" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050507] via-[#050507]/50 to-transparent" />
+      <section className="relative w-full aspect-[5/6] max-h-[80vh] overflow-hidden sm:rounded-b-[32px] bg-black lg:aspect-auto lg:h-[440px] lg:max-h-none lg:rounded-[30px] lg:mt-6 lg:w-[calc(100%-3rem)] lg:mx-auto lg:shadow-[0_30px_80px_rgba(0,0,0,.6)] lg:ring-1 lg:ring-white/[0.07]" aria-label="NOOB Music">
+        <img src="/music/spotlight.webp" alt="" width={1000} height={1200} draggable={false} className="absolute inset-0 w-full h-full object-cover object-top lg:left-auto lg:right-0 lg:w-[62%] lg:object-[50%_18%]" />
+        <div className="absolute inset-0 music-hero-fade" />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(90,6,16,.28), transparent 45%)' }} />
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
 
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-3">
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-3 lg:px-7 lg:pt-6">
           {/* NOOB Music's own picture: a chalk drawing of a disc player (public/noob-music-logo.jpg) */}
           <img
             src="/noob-music-logo.jpg"
@@ -345,16 +345,16 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-5">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-white/55">Spotlight</p>
-          <h1 className="mt-1 text-[44px] leading-[1.02] font-extrabold tracking-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,.5)]">NOOB Music</h1>
-          <p className="mt-1.5 text-[11px] text-white/50">
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-10 lg:pb-10">
+          <p className="text-[9px] lg:text-[11px] font-semibold uppercase tracking-[0.28em] text-white/55">Spotlight</p>
+          <h1 className="mt-1 text-[44px] lg:text-[76px] leading-[1.02] font-extrabold tracking-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,.5)]">NOOB Music</h1>
+          <p className="mt-1.5 text-[11px] lg:text-[13px] text-white/50">
             {tracks.length.toLocaleString()} {tracks.length === 1 ? 'song' : 'songs'}{totalPlays > 0 ? ` · ${totalPlays.toLocaleString()} plays` : ''}
           </p>
         </div>
       </section>
 
-      <div className="px-4">
+      <div className="px-4 lg:px-10">
         {showSearch && (
           <div className="relative mt-4">
             <Search className="w-4 h-4 text-white/45 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -400,7 +400,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             <p className="text-xs text-white/45">{likedOnly ? 'Tap the heart on a song to keep it here.' : tracks.length === 0 ? 'Tap + to upload the first one.' : 'Try another word or genre.'}</p>
           </div>
         ) : (
-          <ul className="mt-2">
+          <ul className="mt-2 lg:grid lg:grid-cols-2 lg:gap-x-10">
             {shownTracks.map((track, i) => {
               const isSelected = currentPlayingTrack?.id === track.id;
               return (

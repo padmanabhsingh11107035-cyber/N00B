@@ -1237,3 +1237,9 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 @keyframes music-slide-r { from { opacity: 0; transform: translateX(60px) scale(0.96); } to { opacity: 1; transform: none; } }
 @keyframes music-slide-l { from { opacity: 0; transform: translateX(-60px) scale(0.96); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .music-slide-from-right, .music-slide-from-left, .music-fade-up { animation: none; } }
+
+.music-hero-fade { background: linear-gradient(0deg, #050507 0%, rgba(5, 5, 7, 0.5) 50%, transparent 100%); }
+@media (min-width: 1024px) {
+  /* on a computer the picture sits on the right: the page colour stays solid under the words and melts into the picture, with no edge */
+  .music-hero-fade { background: linear-gradient(90deg, #050507 0%, #050507 37%, rgba(5, 5, 7, 0.55) 52%, rgba(5, 5, 7, 0) 80%), linear-gradient(0deg, rgba(5, 5, 7, 0.55), transparent 35%); }
+}

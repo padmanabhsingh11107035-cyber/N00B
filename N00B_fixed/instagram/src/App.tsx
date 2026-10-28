@@ -1909,8 +1909,8 @@ export default function App() {
       {/* 2. Center View / Main App Screen Container */}
       <main
         className={`relative w-full max-w-[480px] ${
-          pageTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : pageTab === 'feed' ? 'md:max-w-2xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
-        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : 'xl:ml-auto'} bg-page ${pageTab === 'feed' ? 'doodle-wallpaper-feed' : 'doodle-wallpaper'} lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
+          pageTab === 'chat' ? 'md:max-w-4xl 2xl:max-w-5xl' : pageTab === 'music' ? 'md:max-w-3xl lg:max-w-[980px] 2xl:max-w-[1120px]' : pageTab === 'feed' ? 'md:max-w-2xl' : 'md:max-w-2xl 2xl:max-w-[800px] 3xl:max-w-[880px]'
+        } ${pageTab === 'feed' ? 'xl:flex-1 xl:min-w-0 xl:max-w-[1200px] xl:mx-auto' : pageTab === 'music' ? 'xl:mx-auto' : 'xl:ml-auto'} ${pageTab === 'music' ? 'bg-[#050507]' : 'bg-page'} ${pageTab === 'feed' ? 'doodle-wallpaper-feed' : pageTab === 'music' ? '' : 'doodle-wallpaper'} lg:rounded-t-[40px] lg:rounded-b-none lg:border lg:border-b-0 lg:border-zinc-800/80 shadow-2xl flex flex-col min-h-screen lg:min-h-[calc(100vh-1.5rem)] ${
           // The chat tab reserves its own bottom-nav clearance internally (its container's height
           // is already calc(100vh-80px)) — adding this pb-24 on top of that double-reserved the
           // same space, pushing the whole page taller than one viewport and creating a second,
@@ -2107,7 +2107,7 @@ export default function App() {
       </main>
 
       {/* 3. Right Desktop Sidebar (Registered People & Community) */}
-      <aside className={`hidden lg:flex flex-col w-[280px] 2xl:w-[340px] 3xl:w-[380px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none ${pageTab === 'feed' ? '' : 'xl:mr-auto'}`} data-testid="desktop-people-panel">
+      <aside className={`${pageTab === 'music' ? 'hidden' : 'hidden lg:flex'} flex-col w-[280px] 2xl:w-[340px] 3xl:w-[380px] h-[92vh] sticky top-6 space-y-6 shrink-0 select-none ${pageTab === 'feed' ? '' : 'xl:mr-auto'}`} data-testid="desktop-people-panel">
         {/* Community People Directory: fills the sidebar from the top down to the footer links, and scrolls when there are more people */}
         <div className="bg-zinc-900/40 p-5 rounded-[28px] border border-white/5 shadow-xl backdrop-blur-md flex-1 min-h-0 flex flex-col">
           <div className="flex items-center justify-between mb-3.5 shrink-0">

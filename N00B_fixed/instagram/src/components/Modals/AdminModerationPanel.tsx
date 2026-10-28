@@ -9,7 +9,7 @@ import type { ModerationOverview, ModerationLogRow, ModerationMode, ModerationVe
 // It starts in "Watch only": it judges and writes down what it would have done, but touches nothing and tells nobody, so the administrator can see how it judges first.
 const quietBtn = 'px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-default';
 const card = 'p-4 bg-zinc-900/60 rounded-2xl border border-zinc-800 space-y-3';
-const KINDS: Record<string, string> = { post: 'Post', reel: 'Reel', comment: 'Comment', bio: 'Bio', name: 'Display name' };
+const KINDS: Record<string, string> = { post: 'Post', reel: 'Reel', comment: 'Comment', bio: 'Bio', name: 'Display name', video: 'Video', story: 'Story', daily: 'Daily NOOB', poll: 'Poll', live: 'Live comment', room: 'Room chat', note: 'Status note' };
 const FILTERS: Array<{ id: 'all' | 'removed' | 'flagged' | 'suspended' | 'watched'; label: string }> = [
   { id: 'all', label: 'Everything' }, { id: 'removed', label: 'Acted on' }, { id: 'flagged', label: 'Needs a look' }, { id: 'watched', label: 'Watch only' }, { id: 'suspended', label: 'Suspended' }
 ];

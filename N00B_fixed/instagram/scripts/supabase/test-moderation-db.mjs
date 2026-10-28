@@ -41,7 +41,7 @@ const notices = async (uid) => q(`select title, message from public.notification
 section('1. What is watched: only public things');
 const trg = (await q(`select c.relname from pg_trigger t join pg_class c on c.oid = t.tgrelid where t.tgname like 'zz_moderate%' and not t.tgisinternal`)).map((r) => r.relname);
 for (const t of ['posts', 'reels', 'comments', 'profiles']) check(trg.includes(t), `${t} is watched`);
-for (const t of ['messages', 'chats', 'anon_messages', 'noob_room_chat', 'call_logs', 'live_stream_comments']) check(!trg.includes(t), `${t} (private / not covered) is NOT watched`);
+for (const t of ['messages', 'chats', 'anon_messages', 'call_logs', 'live_lounge_room_chat']) check(!trg.includes(t), `${t} (private / not covered) is NOT watched`);
 const sets = await one(`select * from public.moderation_settings`);
 check(sets.mode === 'watch' && sets.strikes_to_suspend === 3 && sets.strike_window_days === 30 && Number(sets.min_confidence) === 0.85, 'it starts in WATCH mode: 3 warnings in 30 days, 85% sure');
 

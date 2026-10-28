@@ -34,4 +34,5 @@ Not visible to normal people. It judges only what is PUBLISHED: posts and reels 
 - The administrator can withdraw a warning (the person is told), suspend / restore from the log, and try the AI on any text or picture address without saving anything.
 - Never judged: the administrator, accounts marked admin, AI accounts.
 - Costs: one Groq call per published item (keys `GROQ_API_KEY` … `_6` are rotated); pictures are fetched by the AI through the cached `/m/` address, so Supabase storage is not charged again. Switch to Off to stop all of it.
-- Not covered: the video itself (only the reel's thumbnail and caption), stories, live comments, rooms, usernames.
+- Also watched (migration 20261030000002): stories (picture + the words on it; removed whole), NOOB Videos (title, description, thumbnail), Daily NOOB entries, public polls, live-stream comments, NOOB Rooms chat, the profile status note.
+- Not covered: the video files themselves (only thumbnails and text), usernames, anything private.

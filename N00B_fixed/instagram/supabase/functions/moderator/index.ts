@@ -9,6 +9,7 @@
 // The AI never deletes anything itself: it only answers with a verdict (data). The database decides what happens (mode off / watch / enforce, the confidence needed,
 // strikes, suspension) and does it. If the AI can not be reached the job simply waits and is tried again; nobody is ever punished because the AI was down.
 //
+// Places: post, reel, comment, bio, name (display name), video (NOOB Videos), story, daily (Daily NOOB entry), poll, live (live-stream comment), room (NOOB Rooms chat), note (status note).
 // Deploy with "Verify JWT" OFF (the database has no login token; the private password / the administrator's token is checked in the code below).
 // Secrets (already used by the other functions): GROQ_API_KEY, GROQ_API_KEY_2 … _6 (rotated), RESEND_API_KEY, SITE_URL. Optional: MODERATOR_TEXT_MODEL, MODERATOR_VISION_MODEL.
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -145,7 +146,7 @@ async function sendEmail(to: string, subject: string, text: string, html: string
   } catch (e) { return { ok: false, error: String((e as Error)?.message || e).slice(0, 300) }; }
 }
 
-const KIND_WORD: Record<string, string> = { post: 'post', reel: 'reel', comment: 'comment', bio: 'bio', name: 'display name' };
+const KIND_WORD: Record<string, string> = { post: 'post', reel: 'reel', comment: 'comment', bio: 'bio', name: 'display name', video: 'video', story: 'story', daily: 'Daily NOOB entry', poll: 'poll', live: 'live comment', room: 'room message', note: 'status note' };
 export function composeWarning(d: any): { subject: string; text: string; html: string } {
   const thing = KIND_WORD[String(d.kind)] || 'content';
   const deleted = d.action === 'deleted';
@@ -153,7 +154,7 @@ export function composeWarning(d: any): { subject: string; text: string; html: s
   const name = String(d.name || d.username || 'there');
   const what = deleted
     ? (d.kind === 'bio' || d.kind === 'name' ? `Your ${thing} was cleared` : `Your ${thing} was removed`)
-    : `Offensive language was removed from your ${d.kind === 'post' || d.kind === 'reel' ? thing + ' caption' : thing}`;
+    : `Offensive language was removed from your ${d.kind === 'post' || d.kind === 'reel' || d.kind === 'daily' ? thing + ' caption' : d.kind === 'video' ? 'video title or description' : thing}`;
   const subject = suspended ? 'Your NOOB account has been suspended' : `NOOB Safety: ${what}`;
   const warn = d.limit > 0 ? `This is warning ${d.strike} of ${d.limit}. At ${d.limit} warnings within the last few weeks the account is suspended.` : '';
   const lines = [`Hi ${name},`, '', `${what} by NOOB Safety because ${String(d.reason || 'it breaks the NOOB community rules').replace(/\.$/, '')}.`];

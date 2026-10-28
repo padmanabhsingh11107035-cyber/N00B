@@ -1012,7 +1012,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 </div>
               )}
               {/* NOOB Forms: build a form, send the link anywhere, anybody can fill it without an account */}
-              {onOpenFunPage && (<MenuBanner tone="polls" entryId="forms" icon={<FileText className="w-[18px] h-[18px]" aria-hidden={true} />} title="NOOB Forms" blurb="Build forms and surveys, share a link" ariaLabel="NOOB Forms" onPointerDown={preloadFunHub} onClick={() => { markMenuEntry('forms'); setShowNoobMenu(false); onOpenFunPage({ feature: 'forms' }); }} />)}
+              {onOpenFunPage && featOn('forms') && (<MenuBanner tone="polls" entryId="forms" icon={<FileText className="w-[18px] h-[18px]" aria-hidden={true} />} title="NOOB Forms" blurb="Build forms and surveys, share a link" ariaLabel="NOOB Forms" onPointerDown={preloadFunHub} onClick={() => { markMenuEntry('forms'); setShowNoobMenu(false); onOpenFunPage({ feature: 'forms' }); }} />)}
               {/* The rest of the menu, dressed like the banners above (see MenuBanner.tsx), under a heading of its own */}
               <div className="pt-2 pb-1" role="group" aria-label="More from NOOB">
               <p className="px-1 pb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400">More from NOOB</p>

@@ -62,6 +62,10 @@ Deno.serve(async (req) => {
 
   // The one place that decides "can this person watch/host this stream, or be in this room" —
   // reused as-is, never duplicated here. Also atomically counts a stream viewer / checks admission.
+  // A page the administrator switched off hands out no more call tokens (the main administrator is never blocked): the one door to every live, meeting and room minute.
+  const { data: off } = await asUser.rpc('feature_blocked', { p_key: streamId ? 'live' : roomId ? 'lounge' : 'rooms' });
+  if (off === true) return json({ error: 'This is switched off for now. Please try again later.' }, 403);
+
   const { data, error } = streamId
     ? await asUser.rpc('live_stream_join', { p_id: streamId })
     : roomId

@@ -1,3 +1,4 @@
+import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect } from 'react';
 import { X, LayoutGrid, Clapperboard, CirclePlus, MonitorPlay, Radio, Type, ChevronRight, Wand2 } from 'lucide-react';
 
@@ -26,6 +27,7 @@ const ROWS: { kind: CreateKind; title: string; blurb: string; Icon: React.Elemen
 ];
 
 export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, live }) => {
+  const liveOn = useFeatureOn('live');
   const drag = useSheetDrag(onClose);   // drag the grey bar or the title down to close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -77,7 +79,7 @@ export const CreateChooser: React.FC<CreateChooserProps> = ({ onClose, onPick, l
         )}
 
         <ul className="py-1.5">
-          {ROWS.filter((r) => !(live && r.kind === 'live')).map(({ kind, title, blurb, Icon, tint }) => (
+          {ROWS.filter((r) => r.kind !== 'live' || (liveOn && !live)).map(({ kind, title, blurb, Icon, tint }) => (
             <li key={kind}>
               <button
                 type="button"

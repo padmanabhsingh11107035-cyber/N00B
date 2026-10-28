@@ -1,3 +1,4 @@
+import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdBanner } from '../Ads/AdBanner';
 import { Plus, Radio, Users, Heart, X, Trash2, Search, MoreHorizontal, MessageCircle, Share2, Bookmark, EyeOff, Eye, MessageSquareOff, Pencil, Copy, Check, Menu, Clock, ListVideo, ListPlus, Pin, TrendingUp, UserCheck, Video as VideoIcon, Flame, ThumbsUp, History as HistoryIcon } from 'lucide-react';
@@ -144,13 +145,15 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
     return () => { alive = false; };
   }, [refreshKey]);
 
+  const liveOn = useFeatureOn('live');
   useEffect(() => {
+    if (!liveOn) { setLiveStreams([]); return; }   // switched off: nothing is asked of the server
     let alive = true;
     const load = () => fetchLiveStreams().then((res) => { if (alive && res.success) setLiveStreams(res.streams); });
     load();
     const stopInterval = setVisibleInterval(load, 15000);   // rests while the page is hidden
     return () => { alive = false; stopInterval(); };
-  }, []);
+  }, [liveOn]);
 
   // A deep link / shared-chat-card tap for a video that may not be in the freshly-loaded list yet.
   useEffect(() => {

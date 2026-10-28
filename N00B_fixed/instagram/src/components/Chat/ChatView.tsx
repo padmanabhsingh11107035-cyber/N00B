@@ -1,3 +1,4 @@
+import { useFeatureOn } from '../../utils/featureFlags';
 import { EmojiPanel } from './EmojiPanel';
 import { AnimatedStickerPanel, GifPanel } from './StickerGifPanels';
 import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals';
@@ -294,6 +295,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [editingText, setEditingText] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
+  const callsOn = useFeatureOn('calls');   // the administrator can switch calls off
   // True only when THIS person tapped "Start a call" themselves — false when the call screen was
   // opened by accepting someone else's ring (see the pendingCallChatId effect below). Controls
   // whether ChatCallModal rings the other chat members at all.
@@ -1739,10 +1741,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
                 <UserPlus className="w-5 h-5" />
               </button>
+              {callsOn && (
               <button type="button" onClick={() => setShowCallLogs(true)} aria-label="Calls" title="Calls" data-testid="messages-calls"
                 className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
                 <CallIcon className="w-5 h-5" />
               </button>
+              )}
               <button type="button" onClick={() => setShowCreateGroup(true)} aria-label="New group" title="New group" data-testid="messages-new-group"
                 className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
                 <Users className="w-5 h-5" />
@@ -2170,7 +2174,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               {/* Call — any real chat, 1:1 or group, except the AI chat, the Global Lounge, or while
                   a group's "only admins can send" restriction is on (that turns calling off for
                   everyone, admins included, same as it does typing) */}
-              {activeChat && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
+              {callsOn && activeChat && !activeChat.isGlobalDefault && !activeChat.isAi && !activeChat.onlyAdminsCanSend && (
                 <button
                   onClick={() => {
                     setCallIsOutgoing(true);

@@ -1427,6 +1427,7 @@ export default function App() {
 
   const handleGoLiveTap = () => {
     setShowPostCreationModal(false);
+    if (featuresOff.has('live')) return;   // switched off by the administrator
     if (hostIsLive) { setLiveMinimized(false); return; }   // already live: back to it
     if (currentUser.hasLiveLounge) setShowGoLiveHost(true);
     else setShowLiveLoungeUpsell(true);
@@ -1590,7 +1591,7 @@ export default function App() {
     return (
       <>
         {isUpdateAvailable && <UpdateAvailableBanner />}
-        {incomingCall && (
+        {incomingCall && featOn('calls') && (
           <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
         )}
         <React.Suspense fallback={<LazyFallback />}>
@@ -1668,7 +1669,7 @@ export default function App() {
     <div className={`min-h-screen bg-page text-white selection:bg-red-500 selection:text-white font-sans antialiased flex flex-row items-start justify-center p-0 lg:px-6 lg:pt-6 lg:pb-0 lg:gap-8 xl:justify-start xl:pl-0 ${pageTab === 'feed' ? 'xl:pr-4' : ''} overflow-x-hidden`}>
       {isUpdateAvailable && <UpdateAvailableBanner />}
       <SignupSourceCard userId={currentUser.id} />
-      {incomingCall && (
+      {incomingCall && featOn('calls') && (
         <IncomingCallModal ring={incomingCall} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} />
       )}
       {/* 1. Left Desktop Sidebar (shown on xl: screens) */}

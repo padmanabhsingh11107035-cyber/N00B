@@ -1,3 +1,4 @@
+import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect, useState } from 'react';
 import { AvatarMedia } from '../Common/AvatarMedia';
 import { fetchLiveStreams, LiveStreamSummary } from '../../services/api';
@@ -13,14 +14,16 @@ interface LiveStreamBarProps {
 // screen that's already carrying two preloaded videos.
 export const LiveStreamBar: React.FC<LiveStreamBarProps> = ({ onOpenLive }) => {
   const [streams, setStreams] = useState<LiveStreamSummary[]>([]);
+  const liveOn = useFeatureOn('live');
 
   useEffect(() => {
+    if (!liveOn) { setStreams([]); return; }   // switched off: nothing is asked of the server
     let alive = true;
     const load = () => fetchLiveStreams().then((res) => { if (alive && res.success) setStreams(res.streams); });
     load();
     const stopInterval = setVisibleInterval(load, 15000);   // rests while the page is hidden
     return () => { alive = false; stopInterval(); };
-  }, []);
+  }, [liveOn]);
 
   if (streams.length === 0) return null;
 

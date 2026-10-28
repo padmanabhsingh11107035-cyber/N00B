@@ -1178,7 +1178,8 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 :root[data-theme="light"] .msg-pill-on { background: #d6eee4; color: #0e8a67; }
 
 /* The Messages page (from the picture): always dark and premium in both themes - a deep green header that melts into a near-black sheet, one colour for the sheet, the sticky filter bar and the page behind it. */
-.msg-page { background: #0a0b0f !important; }
+.msg-page { background: #0a0b0f !important; font-family: 'Plus Jakarta Sans', -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.msg-page button, .msg-page input { font-family: inherit; }
 .msg-page .msg-sheet, .msg-page .msg-sticky, :root[data-theme="light"] .msg-page .msg-sheet { background: #0a0b0f !important; }
 .msg-page .msg-pill, :root[data-theme="light"] .msg-page .msg-pill { background: #171b1d !important; color: #9aa6a3 !important; }
 .msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: #0b3a2a !important; color: #2ee6b1 !important; }
@@ -1188,8 +1189,8 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
 @layer base {
   .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark {
-    background-color: #064a2c !important;
-    background-image: linear-gradient(165deg, #0b6038 0%, #07502f 45%, #053a22 100%) !important;
+    background-color: #08512b !important;
+    background-image: linear-gradient(160deg, #0a5a2f 0%, #08512b 50%, #064323 100%) !important;
   }
   .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0b0f !important; }
 }

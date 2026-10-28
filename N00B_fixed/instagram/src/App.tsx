@@ -2017,7 +2017,7 @@ export default function App() {
         )}
 
         {activeTab === 'chat' && (
-          <div className="py-2 px-2">
+          <div className="py-0 px-0 md:py-2 md:px-2">
             <ErrorBoundary
               fallback={
                 <div className="w-full max-w-6xl mx-auto h-[calc(100vh-var(--nav-h))] min-h-[580px] max-h-[880px] rounded-2xl border border-zinc-800/80 bg-zinc-950 flex items-center justify-center p-6">

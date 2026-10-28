@@ -46,7 +46,7 @@ section('4. Each setting does what it says');
 check(/cs\['chat\.typing'\]\)/.test(view) && /e\.target\.value\.trim\(\) && cs\['chat\.typing'\]/.test(view), 'Typing indicator: off, nobody is told you are typing');
 check(/cs\['chat\.confirmDelete'\] && !window\.confirm\('Delete this message for everyone\?'\)/.test(view) && /cs\['chat\.confirmDelete'\] && !window\.confirm\('Delete this message for you\?'\)/.test(view), 'Ask before deleting: both kinds of delete');
 check(/cs\['chat\.encryptionNotice'\] && \(/.test(view), 'Encryption notice can be hidden');
-check(/formatClockTime\(iso, cs\['chat\.timeFormat'\] !== '24h'\)/.test(view) && /fmtClock\(m\.createdAt\)/.test(view) && /fmtClock\(c\.lastMessage\.createdAt\)/.test(view) && !/formatClockTime\(m\.createdAt\)/.test(view), 'Time in chats: messages and the list use the chosen clock');
+check(/formatClockTime\(iso, cs\['chat\.timeFormat'\] !== '24h'\)/.test(view) && /fmtClock\(m\.createdAt\)/.test(view) && /listTime\(c\.lastMessage\?\.createdAt\)/.test(view) && /cs\['chat\.timeFormat'\] === '24h'/.test(view) && !/formatClockTime\(m\.createdAt\)/.test(view), 'Time in chats: messages and the list use the chosen clock');
 const T = await U('src/utils/formatTime.ts');
 const t1 = T.formatClockTime(at(18, 17, 42), false), t2 = T.formatClockTime(at(18, 17, 42), true);
 check(t1 === '17:42' && /5:42\s?PM/i.test(t2) && T.formatClockTime(at(18, 17, 42)) === T.formatClockTime(at(18, 17, 42)), 'the clock itself: 17:42 or 5:42 PM', `${t1} | ${t2}`);

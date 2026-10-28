@@ -380,6 +380,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const activityStatusOn = useSetting('activity.status');
   // Settings > Chats: how the chat list and the chats look, sound and behave (the account's own choices, kept by the server)
   const cs = useAccountSettings();
+  const listTime = (iso?: string | null) => {
+    const d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) return 'Active';
+    const now = new Date();
+    const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((day(now) - day(d)) / 86400000);
+    if (diff <= 0) return d.toLocaleTimeString('en-US', cs['chat.timeFormat'] === '24h' ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } : { hour: 'numeric', minute: '2-digit', hour12: true });
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  };
   const fmtClock = (iso?: string | null) => formatClockTime(iso, cs['chat.timeFormat'] !== '24h');   // 2nd argument: 12-hour clock?
   const [loadedMedia, setLoadedMedia] = useState<Set<string>>(new Set());   // received pictures / videos the person tapped to load
   const [lastSeenMap, setLastSeenMap] = useState<Record<string, string | null>>({});
@@ -1676,7 +1687,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       className={`w-full max-w-6xl mx-auto bg-zinc-950 border-zinc-800/80 shadow-2xl overflow-hidden flex flex-col ${
         mobileView === 'chat'
           ? 'fixed inset-0 z-50 h-[100dvh] max-w-none rounded-none border-0'
-          : 'relative h-[calc(100vh-var(--nav-h))] min-h-[580px] max-h-[880px] rounded-2xl border'
+          : 'relative h-[calc(100dvh-var(--nav-h))] min-h-[580px] max-h-[880px] rounded-2xl border max-md:max-h-none max-md:rounded-none max-md:border-0 max-md:shadow-none'
       }`}
     >
       {chatBlockedNotice && (
@@ -1704,7 +1715,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* ONE scroller: the green header scrolls away with the page, the filters stay on top, the chats appear line by line */}
           <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
-          <div ref={headRef} className="msg-head force-dark px-5 pt-3 pb-10 will-change-transform" data-testid="messages-header">
+          <div ref={headRef} className="msg-head force-dark px-5 pt-[max(env(safe-area-inset-top),14px)] pb-10 will-change-transform" data-testid="messages-header">
             {/* title row: back, "Messages" with the number of chats, and the menu (calls, new group, chat settings ...) at the right */}
             <div className="flex items-center gap-2">
               <button
@@ -1747,6 +1758,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </button>
                     <button onClick={() => { setShowLeftMenu(false); setShowInstantsArchive(true); }} data-testid="instants-archive-open" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Archive className="w-4 h-4 text-amber-300" /> Your Instants
+                    </button>
+                    <button onClick={() => { setShowLeftMenu(false); setShowE2eePage(true); }} data-testid="messages-e2ee" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
+                      <Lock className="w-4 h-4 text-zinc-400" /> End-to-end encryption
                     </button>
                     <button onClick={() => { setShowLeftMenu(false); setShowChatSettings(true); }} data-testid="chat-settings-button" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
                       <Settings className="w-4 h-4 text-sky-400" /> Chat Settings
@@ -1900,9 +1914,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           alt=""
                           className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-[54px] h-[54px]'} rounded-full object-cover`}
                         />
-                        <span className="absolute -bottom-0.5 -right-0.5 px-1 py-0.2 rounded bg-purple-600 text-white text-[7px] font-black uppercase tracking-tight shadow">
-                          group
-                        </span>
+                        <span className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full bg-[#1d2224] border-2 border-[#0a0b0f] text-white/80 flex items-center justify-center"><Users className="w-2.5 h-2.5" /></span>
                       </div>
                     ) : (
                       <div className="relative">
@@ -1933,17 +1945,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
                         {/* Only groups carry a tag. A normal chat has none, and no row shows "encrypted" any more, so the
                             name gets the whole line (one line only: a very long name is cut with "…", the row never grows). */}
-                        {c.isGroup && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold uppercase border border-purple-500/30 shrink-0">
-                            group
-                          </span>
-                        )}
+
 
                         {!c.isGroup && partner.isVerified && <VerifiedBadge size="xs" />}
                       </div>
 
                       <span className="text-[12px] text-zinc-500 shrink-0 font-medium tabular-nums">
-                        {c.lastMessage?.createdAt ? fmtClock(c.lastMessage.createdAt) : 'Active'}
+                        {listTime(c.lastMessage?.createdAt)}
                       </span>
                     </div>
 
@@ -2031,28 +2039,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
 
-          {/* Bottom Security Note */}
-          <div className="p-3 text-center flex items-center justify-center gap-1.5 text-[10px] text-zinc-500 font-medium">
-            <Lock className="w-3 h-3 text-noob" />
-            <span>
-              Your personal messages are{' '}
-              <button
-                type="button"
-                onClick={() => setShowE2eePage(true)}
-                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 decoration-blue-400/70 font-semibold cursor-pointer"
-                aria-label="About end-to-end encryption"
-              >
-                end-to-end encrypted
-              </button>
-            </span>
           </div>
           </div>
-          </div>
-          {/* the round green "new chat" button floating at the bottom right (like the design) */}
-          <button type="button" onClick={() => setShowNewChatModal(true)} aria-label="New chat" title="New chat" data-testid="messages-fab"
-            className="absolute right-5 bottom-5 z-20 w-14 h-14 rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center shadow-[0_10px_24px_rgba(38,217,168,.35)] active:scale-95 transition-transform cursor-pointer">
-            <SquarePen className="w-6 h-6" strokeWidth={2.2} />
-          </button>
         </aside>
 
         {/* RIGHT COLUMN: Active Conversation View */}

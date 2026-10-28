@@ -30,7 +30,7 @@ export const MusicSplash: React.FC = () => {
       onClick={skip}
       role="presentation"
       className={`fixed inset-0 z-[120] overflow-hidden cursor-pointer select-none ${leaving ? 'music-splash-out' : ''}`}
-      style={{ background: 'radial-gradient(120% 80% at 50% 38%, #b3121d 0%, #6a0a12 46%, #1c0407 100%)' }}
+      style={{ background: 'radial-gradient(120% 80% at 50% 38%, #8c0d18 0%, #4a060e 46%, #0e0204 100%)' }}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="relative w-[150px] h-[150px] music-splash-sleeve">

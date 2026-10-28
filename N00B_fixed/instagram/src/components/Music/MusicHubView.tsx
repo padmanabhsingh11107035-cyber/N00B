@@ -25,7 +25,7 @@ import { isVideoFile, extractAudioFromVideoFile, MAX_MUSIC_UPLOAD_SECONDS } from
 import { isMainAdmin } from '../../adminAccess';
 import confetti from 'canvas-confetti';
 import { MusicSplash } from './MusicSplash';
-import { NowPlaying } from './NowPlaying';
+import { NowPlaying, useSongKeys } from './NowPlaying';
 import { coverTint, fallbackTint, type CoverTint } from '../../utils/coverColor';
 
 interface MusicHubViewProps {
@@ -305,18 +305,20 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
 
   const genres = ['all', 'Synthwave', 'Lo-Fi', 'EDM', 'Hip Hop', 'Phonk', 'Cyberpunk', 'Ambient'];
 
+  useSongKeys(!showPlayer && !showUploadModal);   // (the full player has its own)
   const isOwn = (t: MusicTrack) => t.uploaderId === currentUser.id;
   const hasMenu = (t: MusicTrack) => isOwn(t) || isMasterAdmin;
 
   return (
-    <div className="w-full max-w-xl mx-auto pb-[calc(var(--nav-h,4rem)+6.5rem)] text-white" data-testid="music-hub">
+    <div className="w-full max-w-xl mx-auto pb-[calc(var(--nav-h,4rem)+6.5rem)] text-white" data-testid="music-hub" style={{ background: 'radial-gradient(120% 38% at 50% 78%, rgba(120,10,24,.28), transparent 70%)' }}>
       <MusicSplash />
       <input ref={coverEditFileRef} type="file" accept="image/*" onChange={handleCoverFileChosen} className="hidden" />
 
       {/* The spotlight: one big picture, the name over it */}
       <section className="relative w-full aspect-[5/6] max-h-[80vh] overflow-hidden sm:rounded-b-[32px] bg-black" aria-label="NOOB Music">
         <img src="/music/spotlight.webp" alt="" width={1000} height={1200} draggable={false} className="absolute inset-0 w-full h-full object-cover object-top" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0d] via-[#0b0b0d]/45 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050507] via-[#050507]/50 to-transparent" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(90,6,16,.28), transparent 45%)' }} />
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
 
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-3">
@@ -513,8 +515,8 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       {currentPlayingTrack && !showPlayer && (
         <div
           data-testid="music-mini"
-          className="fixed left-3 right-[5.25rem] sm:right-auto sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(var(--nav-h,4rem)+0.6rem)] z-40 sm:w-[calc(100%-1.5rem)] max-w-[460px] rounded-2xl overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,.55)] border border-white/10"
-          style={{ background: `linear-gradient(90deg, hsl(${tint.hue} ${Math.round(Math.min(0.8, tint.sat + 0.1) * 100)}% 22%), hsl(${tint.hue} ${Math.round(Math.min(0.8, tint.sat + 0.1) * 80)}% 13%))` }}
+          className="fixed left-3 right-[5.25rem] sm:right-auto sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(var(--nav-h,4rem)+0.6rem)] z-40 sm:w-[calc(100%-1.5rem)] max-w-[460px] rounded-2xl overflow-hidden shadow-[0_16px_44px_rgba(0,0,0,.7)] border border-white/[0.08] backdrop-blur-xl"
+          style={{ background: `linear-gradient(90deg, hsl(${tint.hue} ${Math.round(Math.min(0.9, tint.sat + 0.2) * 100)}% 15%), hsl(${tint.hue} ${Math.round(Math.min(0.9, tint.sat + 0.2) * 85)}% 8%))` }}
         >
           <div className="flex items-center gap-3 p-2.5 pr-3">
             <button type="button" onClick={() => setShowPlayer(true)} className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer" aria-label="Open the player">

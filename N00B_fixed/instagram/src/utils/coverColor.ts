@@ -52,8 +52,13 @@ export function coverTint(url: string | undefined, seed: string): Promise<CoverT
   });
 }
 
-/** the colours of the Now Playing screen, top to bottom */
+/** the colours of the Now Playing screen, top to bottom: deep, rich, nearly black at the bottom */
 export function tintGradient(t: CoverTint): string {
-  const s = Math.round(Math.min(0.85, t.sat + 0.1) * 100);
-  return `linear-gradient(180deg, hsl(${t.hue} ${s}% 30%) 0%, hsl(${t.hue} ${Math.round(s * 0.9)}% 17%) 55%, #0b0b0d 100%)`;
+  const s = Math.round(Math.min(0.9, t.sat + 0.2) * 100);
+  return `linear-gradient(180deg, hsl(${t.hue} ${s}% 21%) 0%, hsl(${t.hue} ${Math.round(s * 0.92)}% 11%) 52%, #050507 100%)`;
+}
+
+/** the soft light behind the sleeve */
+export function tintGlow(t: CoverTint): string {
+  return `hsl(${t.hue} ${Math.round(Math.min(0.95, t.sat + 0.25) * 100)}% 46% / 0.55)`;
 }

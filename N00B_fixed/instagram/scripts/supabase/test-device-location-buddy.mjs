@@ -87,5 +87,15 @@ check(/ACCURACY: before you send an answer, check it once/.test(fn) && /SPEAKING
 check(/mode === 'teach' \? 0\.4 : 0\.35/.test(fn), 'it answers with less guesswork (lower temperature)');
 check(/I could not look at your picture just now/.test(fn) && /picture: true/.test(fn), 'a picture that could not be read gets its own plain message');
 
+section('6. The battery at the last visit, in the admin panel');
+const { batteryBadge } = await import('../../src/utils/deviceInfo.ts');
+check(JSON.stringify(batteryBadge({ deviceOs: 'Android 14', deviceBattery: 63, deviceCharging: true })) === JSON.stringify({ text: '63% charging', tone: 'ok', level: 63 }), 'a level shows as a percentage, with "charging" when it is');
+check(batteryBadge({ deviceOs: 'Android', deviceBattery: 18 }).tone === 'low' && batteryBadge({ deviceOs: 'Android', deviceBattery: 35 }).tone === 'mid' && batteryBadge({ deviceOs: 'Android', deviceBattery: 0 }).level === 0, 'red up to 20, amber up to 50, green above (and 0 is a level, not "nothing")');
+check(batteryBadge({ deviceOs: 'iOS 17.5', deviceBattery: null }).text === 'hidden by iPhone' && batteryBadge({ deviceOs: 'Windows', deviceBattery: null }).text === 'not shared by this browser', 'no level: it says why (an iPhone hides it, some browsers do not share it)');
+check(batteryBadge({}) === null, 'a person whose device was never reported has no chip');
+const adminSrc = read('src/components/Modals/AdminControlModal.tsx');
+check(/data-testid="battery-chip"/.test(adminSrc) && /Battery at their last visit/.test(adminSrc) && /batteryBadge\(user\)/.test(adminSrc), 'the admin list shows the battery chip with the time it was read');
+check(/dueNow\(localStore\(\), 'noob_device_info_at', 2 \* 60 \* 1000\)/.test(api) && /visibilitychange', onHide/.test(api) && /sendDeviceInfo\(true\)/.test(api), 'the battery is sent every few minutes and once more the moment the app is left, so it is the battery of the last visit');
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

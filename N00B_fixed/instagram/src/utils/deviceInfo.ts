@@ -25,6 +25,17 @@ export function batteryPercent(level: unknown): number | null {
   return Number.isFinite(n) && n >= 0 && n <= 1 ? Math.round(n * 100) : null;
 }
 
+/** What the administrator sees as the battery of a person at their last visit: the level (with a charging mark), how low it is, or why there is no level. null when no device was ever reported. */
+export interface BatteryBadge { text: string; tone: 'low' | 'mid' | 'ok' | 'none'; level: number | null }
+export function batteryBadge(u: { deviceOs?: string | null; deviceBattery?: number | null; deviceCharging?: boolean | null; deviceInfoAt?: string | null }): BatteryBadge | null {
+  if (typeof u.deviceBattery === 'number' && u.deviceBattery >= 0 && u.deviceBattery <= 100) {
+    const lv = Math.round(u.deviceBattery);
+    return { text: `${lv}%${u.deviceCharging ? ' charging' : ''}`, tone: lv <= 20 ? 'low' : lv <= 50 ? 'mid' : 'ok', level: lv };
+  }
+  if (!u.deviceOs && !u.deviceInfoAt) return null;
+  return { text: /^iOS/i.test(u.deviceOs || '') ? 'hidden by iPhone' : 'not shared by this browser', tone: 'none', level: null };
+}
+
 /** When something is due again: never more often than `everyMs`, remembered in `store` under `key`. */
 export function dueNow(store: Pick<Storage, 'getItem' | 'setItem'> | null, key: string, everyMs: number, now = Date.now()): boolean {
   try {

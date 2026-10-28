@@ -3082,10 +3082,11 @@ export async function fetchChatLastSeen(userIds: string[]): Promise<Record<strin
 }
 
 // The operating system and (where the browser shares it) the battery level, and the approximate place of the connection: told to the database about this account, as the Terms and
-// the Privacy Policy say. At most every 30 minutes and every 6 hours, and never a reason for an error on screen.
+// the Privacy Policy say. The device (battery included) at every sign of life (about every 3 minutes) and again the moment the app is left, so the administrator sees the battery of the
+// LAST visit; the place at most every 6 hours; never a reason for an error on screen.
 const localStore = (): Storage | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
-async function sendDeviceInfo(): Promise<void> {
-  if (!dueNow(localStore(), 'noob_device_info_at', 30 * 60 * 1000)) return;
+async function sendDeviceInfo(force = false): Promise<void> {
+  if (!force && !dueNow(localStore(), 'noob_device_info_at', 2 * 60 * 1000)) return;
   const d = await readDeviceInfo();
   await rpc('save_my_device_info', { p_os: d.os, p_battery: d.battery, p_charging: d.charging });
 }
@@ -3106,7 +3107,10 @@ export function startLastSeenHeartbeat(platform: PresencePlatform): () => void {
   };
   touch();
   const interval = window.setInterval(touch, LAST_SEEN_EVERY_MS);
-  return () => window.clearInterval(interval);
+  // leaving the app (or switching to another one): the battery as it is at that moment is what the administrator should see for the last visit
+  const onHide = () => { if (document.visibilityState === 'hidden') void sendDeviceInfo(true).catch(() => {}); };
+  document.addEventListener('visibilitychange', onHide);
+  return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', onHide); };
 }
 
 // Admin-only read side: calls `onChange` with the full live map (userId -> one entry per open tab/

@@ -105,6 +105,7 @@ import type { AdminStaffMember, AdminAuditEntry, TeamApplication, SparkXApplicat
 import { ADMIN_PERMISSIONS, can, isMainAdmin, permissionLabel } from '../../adminAccess';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { formatExactDateTime, formatRelativeTime } from '../../utils/formatTime';
+import { batteryBadge } from '../../utils/deviceInfo';
 
 interface AdminControlModalProps {
   currentUser: User;
@@ -1672,10 +1673,23 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                                 <span className="text-[10px] text-zinc-400 px-1.5 py-0.5 shrink-0 truncate max-w-[16rem]" data-testid="device-info"
                                   title={`${user.deviceOs || 'Device unknown'}${typeof user.deviceBattery === 'number' ? `, battery ${user.deviceBattery}%${user.deviceCharging ? ' (charging)' : ''}` : ''}${user.signupCity ? `, typed city: ${user.signupCity}` : ''}${user.approxCity || user.approxRegion || user.approxCountry ? `, connection: ${[user.approxCity, user.approxRegion, user.approxCountry].filter(Boolean).join(', ')}` : ''}${user.deviceInfoAt ? ` (read ${formatExactDateTime(user.deviceInfoAt)})` : ''}`}>
                                   {user.deviceOs ? `${user.deviceOs}` : ''}
-                                  {typeof user.deviceBattery === 'number' ? ` · 🔋${user.deviceBattery}%${user.deviceCharging ? '⚡' : ''}` : ''}
                                   {(user.signupCity || user.approxCity) ? ` · 📍${user.signupCity || user.approxCity}` : ''}
                                 </span>
                               )}
+                              {(() => {
+                                const b = batteryBadge(user);
+                                if (!b) return null;
+                                const tone = b.tone === 'low' ? 'bg-red-500/15 text-red-300 border-red-500/30' : b.tone === 'mid' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : b.tone === 'ok' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-zinc-800/60 text-zinc-500 border-zinc-700/60';
+                                return (
+                                  <span
+                                    data-testid="battery-chip"
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${tone}`}
+                                    title={`Battery at their last visit: ${b.text}${user.deviceInfoAt ? ` (read ${formatExactDateTime(user.deviceInfoAt)})` : ''}`}
+                                  >
+                                    {`🔋 ${b.text}`}{user.deviceInfoAt && b.level !== null ? ` · ${formatRelativeTime(user.deviceInfoAt)}` : ''}
+                                  </span>
+                                );
+                              })()}
                               {isSuspended && (
                                 <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/30">
                                   Suspended

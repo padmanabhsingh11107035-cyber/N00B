@@ -18,14 +18,14 @@ const person = (id, username, displayName, a, b, extra = {}) => ({
 const ME = person('00000000-0000-4000-8000-000000000001', 'you', 'You', '#10b981', '#0ea5e9', { email: 'me@example.com', isAdmin: false, language: 'en' });
 
 const RIYA = person('00000000-0000-4000-8000-000000000002', 'riya', 'Riya Shah', '#f97316', '#ec4899', { isVerified: true });
-const ARJUN = person('00000000-0000-4000-8000-000000000003', 'arjun', 'Arjun Mehta', '#6366f1', '#0ea5e9');
-const MEERA = person('00000000-0000-4000-8000-000000000004', 'meera', 'Meera Patel', '#84cc16', '#10b981');
-const DEV = person('00000000-0000-4000-8000-000000000005', 'dev', 'Dev Joshi', '#f43f5e', '#f59e0b');
+const ARJUN = person('00000000-0000-4000-8000-000000000003', 'arjun', 'Arjun Mehta', '#6366f1', '#0ea5e9', { isVerified: true });
+const MEERA = person('00000000-0000-4000-8000-000000000004', 'meera', 'Meera Patel', '#84cc16', '#10b981', { isVerified: true });
+const DEV = person('00000000-0000-4000-8000-000000000005', 'dev', 'Dev Joshi', '#f43f5e', '#f59e0b', { isVerified: true });
 // the people in the chats follow each other with you, so their one-to-one chats show in the list
 ME.following = [RIYA.id, ARJUN.id, MEERA.id, DEV.id]; ME.followers = [...ME.following]; ME.followingIds = [...ME.following];
 
 const msg = (chatId, id, from, text, minsAgo, status = 'read', extra = {}) => ({ id: `m-${chatId}-${id}`, chatId, senderId: from.id, senderUsername: from.username, senderDisplayName: from.displayName, senderAvatar: from.avatar, text, createdAt: iso(minsAgo), status, ...extra });
-const C1 = 'c0000000-0000-4000-8000-000000000001', C2 = 'c0000000-0000-4000-8000-000000000002', C3 = 'c0000000-0000-4000-8000-000000000003', C4 = 'c0000000-0000-4000-8000-000000000004', C5 = 'c0000000-0000-4000-8000-000000000005';
+const C1 = 'c0000000-0000-4000-8000-000000000001', C2 = 'c0000000-0000-4000-8000-000000000002', C3 = 'c0000000-0000-4000-8000-000000000003', C4 = 'c0000000-0000-4000-8000-000000000004', C5 = 'c0000000-0000-4000-8000-000000000005', C6 = 'c0000000-0000-4000-8000-000000000006';
 const messages = {
   [C1]: [
     msg(C1, 1, ME, "Hey! I'm free tonight. What's everyone up to?", 190, 'read'),
@@ -39,7 +39,8 @@ const messages = {
   ],
   [C2]: [msg(C2, 1, RIYA, 'Typingâ€¦', 8, 'read'), msg(C2, 2, ME, 'Sent you the notes ðŸ“’', 5, 'sent')],
   [C3]: [msg(C3, 1, ARJUN, 'I believe that this is the bestâ€¦', 130, 'read')],
-  [C4]: [msg(C4, 1, ME, 'See you tomorrow!', 700, 'read')],
+  [C4]: [msg(C4, 1, MEERA, '📞 Missed call from @meera', 700, 'read')],
+  [C6]: [msg(C6, 1, DEV, 'Hey! How was your day?', 40, 'read')],
   [C5]: [msg(C5, 1, DEV, 'ðŸ˜ðŸ˜ðŸ˜', 1500, 'read')]
 };
 const last = (id) => messages[id][messages[id].length - 1];
@@ -48,6 +49,7 @@ const chats = [
   { id: C2, isGroup: false, participants: [ME, RIYA], lastMessage: last(C2), unreadCount: 1, themeColor: '#00FF66', isEncryptable: false },
   { id: C3, isGroup: false, participants: [ME, ARJUN], lastMessage: last(C3), unreadCount: 0, themeColor: '#00FF66', isEncryptable: false },
   { id: C4, isGroup: false, participants: [ME, MEERA], lastMessage: last(C4), unreadCount: 0, themeColor: '#00FF66', isEncryptable: false },
+  { id: C6, isGroup: false, participants: [ME, DEV], lastMessage: last(C6), unreadCount: 3, isPinned: true, themeColor: '#00FF66', isEncryptable: false },
   { id: C5, isGroup: true, name: 'Weekend Trip', avatar: svg('W', '#06b6d4', '#6366f1'), participants: [ME, DEV, ARJUN], lastMessage: last(C5), unreadCount: 0, themeColor: '#00FF66', isEncryptable: false }
 ];
 let callLogs = [

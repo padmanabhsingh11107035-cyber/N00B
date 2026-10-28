@@ -1177,22 +1177,29 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 :root[data-theme="light"] .msg-pill { background: #ebe5d9; color: #8b857a; }
 :root[data-theme="light"] .msg-pill-on { background: #d6eee4; color: #0e8a67; }
 
-/* The Messages page (from the picture): always dark and premium in both themes - a deep green header that melts into a near-black sheet, one colour for the sheet, the sticky filter bar and the page behind it. */
-.msg-page { background: #0a0b0f !important; font-family: 'Plus Jakarta Sans', -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+/* The Messages page (from the picture, in its measured sizes): always dark and premium in both themes - a flat deep-green header that meets a near-black sheet with big rounded
+   corners, one mint accent, the phone's own font (San Francisco on an iPhone). The bottom bar is not touched. */
+.msg-page {
+  --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e; --head: #00482c;
+  /* the app makes its small fixed text 1.38 times bigger (--tx); the picture's sizes are the plain ones, so here that factor is 1 at the normal setting and still follows Settings > Text size */
+  --tx: calc(1 + (var(--tx0) - 1.38) * 0.6);
+  background: var(--panel) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
 .msg-page button, .msg-page input { font-family: inherit; }
-.msg-page .msg-sheet, .msg-page .msg-sticky, :root[data-theme="light"] .msg-page .msg-sheet { background: #0a0b0f !important; }
-.msg-page .msg-pill, :root[data-theme="light"] .msg-page .msg-pill { background: #171b1d !important; color: #9aa6a3 !important; }
-.msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: #0b3a2a !important; color: #2ee6b1 !important; }
-.msg-page .msg-sheet { box-shadow: 0 -14px 28px rgba(0,0,0,.28); }
+.msg-page .msg-head { padding-top: 16px; }
+@media (display-mode: standalone) { .msg-page .msg-head { padding-top: 6px; } }
+.msg-page .msg-sheet, .msg-page .msg-sticky, :root[data-theme="light"] .msg-page .msg-sheet { background: var(--panel) !important; }
+.msg-page .msg-pill, :root[data-theme="light"] .msg-page .msg-pill { background: #181a1e !important; color: #d6dce4 !important; }
+.msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: #0d3e2d !important; color: var(--mint) !important; }
 .msg-page .msg-row { transition: opacity .38s ease, transform .38s cubic-bezier(.22,.8,.3,1), background-color .15s; }
 .msg-page .msg-row:not([data-in]) { opacity: 0; transform: translateY(14px); }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
+html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #00482c) !important; transition: background-color .25s ease; }
 @layer base {
-  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark {
-    background-color: #08512b !important;
-    background-image: linear-gradient(160deg, #0a5a2f 0%, #08512b 50%, #064323 100%) !important;
-  }
-  .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0b0f !important; }
+  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #00482c !important; background-image: none !important; }
+  .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }
 }
 
 /* The sign-in and sign-up pages (from the Create Account picture): a teal header that melts into a dark rounded sheet, round social buttons, grey inputs and a coral pill button. Always dark, in both themes. */

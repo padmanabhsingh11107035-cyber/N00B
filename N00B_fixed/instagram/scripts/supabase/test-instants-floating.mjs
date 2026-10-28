@@ -7,7 +7,7 @@ const check = (cond, label) => { if (cond) { passed++; console.log(`  ok   ${lab
 const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
 const stack = read('src/components/Chat/InstantsStack.tsx'), chat = read('src/components/Chat/ChatView.tsx');
 
-check(/data-testid="instants-floating"/.test(stack) && /absolute right-0 bottom-14 z-30/.test(stack) && /pointer-events-none/.test(stack), 'the Instants are a floating piece at the right edge, above the bottom of the list, and take no room from the chats');
+check(/data-testid="instants-floating"/.test(stack) && /absolute right-0 bottom-\[110px\] z-30/.test(stack) && /pointer-events-none/.test(stack), 'the Instants are a floating piece at the right edge, above the bottom of the list, and take no room from the chats');
 check(!/overflow-x-auto no-scrollbar/.test(stack) && !/border-b border-zinc-900 flex items-center gap-3/.test(stack), 'there is no strip across the top of the page any more');
 check(/w-\[54px\] overflow-hidden/.test(stack) && /w-\[74px\] h-\[84px\] rounded-\[26px\] bg-zinc-700\/90/.test(stack), 'the grey "+" tab is wider than its frame, so part of it is tucked behind the edge, like Instagram');
 check(/data-testid="instants-add"/.test(stack) && /onClick=\{onOpenCamera\}/.test(stack) && /<Plus className="w-8 h-8 text-white"/.test(stack), 'the "+" tab opens the camera');

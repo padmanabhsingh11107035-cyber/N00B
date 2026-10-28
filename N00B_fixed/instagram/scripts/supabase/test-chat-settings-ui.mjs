@@ -50,7 +50,7 @@ check(/formatClockTime\(iso, cs\['chat\.timeFormat'\] !== '24h'\)/.test(view) &&
 const T = await U('src/utils/formatTime.ts');
 const t1 = T.formatClockTime(at(18, 17, 42), false), t2 = T.formatClockTime(at(18, 17, 42), true);
 check(t1 === '17:42' && /5:42\s?PM/i.test(t2) && T.formatClockTime(at(18, 17, 42)) === T.formatClockTime(at(18, 17, 42)), 'the clock itself: 17:42 or 5:42 PM', `${t1} | ${t2}`);
-check(/cs\['chat\.compactList'\] \? 'px-5 py-1\.5' : 'px-5 py-\[10px\]'/.test(view) && /cs\['chat\.compactList'\] \? 'w-9 h-9' : 'w-\[54px\] h-\[54px\]'/.test(view), 'Compact list: smaller rows and pictures');
+check(/cs\['chat\.compactList'\] \? 'px-\[14px\] py-1\.5' : 'px-\[14px\] py-\[11\.5px\]'/.test(view) && /cs\['chat\.compactList'\] \? 'w-9 h-9' : 'w-\[56px\] h-\[56px\]'/.test(view), 'Compact list: smaller rows and pictures');
 check(/!cs\['chat\.previewInList'\] && lastMsg/.test(view), 'Message previews can be hidden');
 check(/cs\['chat\.listAvatars'\] && \(/.test(view), 'Profile pictures in the list can be hidden');
 check(/if \(cs\['chat\.pinnedOnTop'\]\) \{/.test(view) && /pinned chats are not kept on top: the newest chat is first/.test(view), 'Pinned chats on top: off, newest first');

@@ -19,7 +19,7 @@ export const InstantsFloating: React.FC<{ groups: InstantGroup[]; onOpenCamera: 
   const more = groups.length - shown.length;
   return (
     // the wrapper is narrower than the tab, so the right part of every piece is tucked behind the edge of the list, like Instagram's
-    <div className="absolute right-0 bottom-14 z-30 w-[54px] overflow-hidden pointer-events-none py-3" data-testid="instants-floating">
+    <div className="absolute right-0 bottom-[110px] z-30 w-[54px] overflow-hidden pointer-events-none py-3" data-testid="instants-floating">
       <div className="flex flex-col items-start gap-2.5 pl-1.5">
         {shown.map((group, i) => (
           <button

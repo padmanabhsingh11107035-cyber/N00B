@@ -179,7 +179,6 @@ export const AvatarPicker: React.FC<Props> = ({ current, onChoose, onClose }) =>
       <div key={av.id} className="av-in absolute inset-x-0 top-[max(1.1rem,env(safe-area-inset-top))] flex flex-col items-center pointer-events-none z-10" style={{ animation: calm ? 'none' : 'av-in .35s ease both' }} aria-live="polite">
         <h1 className="font-black uppercase" style={{ fontSize: 'clamp(30px, 9vw, 40px)', letterSpacing: '.22em', paddingLeft: '.22em', textShadow: av.light ? 'none' : '0 3px 14px rgba(0,0,0,.28)' }} data-testid="avatar-name">{av.name}</h1>
         <p className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: soft }}><Sparkles className="w-3.5 h-3.5" aria-hidden="true" />{av.role}</p>
-        <p className="mt-1 text-[11px]" style={{ color: soft }}>{idx + 1} / {AVATARS.length}</p>
       </div>
 
       {/* the bottom: the arrow, the button and the small pictures of everyone */}

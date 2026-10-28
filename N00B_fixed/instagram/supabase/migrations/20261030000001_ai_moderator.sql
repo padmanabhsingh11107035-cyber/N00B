@@ -186,6 +186,9 @@ drop trigger if exists zz_moderate_profile_edit on public.profiles;
 create trigger zz_moderate_profile_edit after update of bio, display_name on public.profiles for each row
   when (old.bio is distinct from new.bio or old.display_name is distinct from new.display_name) execute function public.mod_trg_profile();
 
+-- trigger functions are never called by a person: nobody (visitor or member) may run them directly
+revoke execute on function public.mod_trg_post(), public.mod_trg_reel(), public.mod_trg_comment(), public.mod_trg_profile() from public, anon, authenticated;
+
 -- ============================================================================================================ the Edge Function's door
 -- Every function below checks the private password (internal_config.push_secret), exactly like email_claim: only the Edge Function knows it.
 create or replace function public.mod_check_secret(p_secret text) returns void

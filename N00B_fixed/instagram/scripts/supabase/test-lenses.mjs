@@ -10,11 +10,12 @@ const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).jo
 const near = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
 
 // a pretend canvas: every call works and answers with another pretend object (lets the lenses run in Node without drawing anything)
-const fake = () => new Proxy(function () {}, { get: (_t, k) => (k === Symbol.toPrimitive ? () => 0 : fake()), apply: () => fake(), set: () => true });
+const fake = () => new Proxy(function () {}, { get: (_t, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'getImageData' ? (_x, _y, w, h) => ({ data: new Uint8ClampedArray(Math.max(0, w * h * 4)), width: w, height: h }) : fake()), apply: () => fake(), set: () => true });
 globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => fake() }) };
 
 const M = await import('../../src/lenses/faceMath.ts');
 const X = await import('../../src/lenses/exportPhoto.ts');
+const R = await import('../../src/lenses/frame.ts');
 const C = await import('../../src/lenses/catalog.ts');
 const S = await import('../../src/lenses/scene.ts');
 
@@ -26,11 +27,15 @@ const points = (dx = 0.1, tiltB = 0) => {
   set([33, 133, 159, 145], 0.4, 0.4); set([362, 263, 386, 374], 0.6, 0.4 + tiltB);
   set([10], 0.5, 0.25); set([152], 0.5, 0.75); set([234], 0.3, 0.45); set([454], 0.7, 0.45); set([1], 0.5, 0.5);
   set([105], 0.4, 0.34); set([334], 0.6, 0.34); set([13], 0.5, 0.62); set([14], 0.5, 0.64); set([61], 0.44, 0.63); set([291], 0.56, 0.63);
+  set([33], 0.36, 0.4); set([133], 0.44, 0.4); set([362], 0.56, 0.4 + tiltB); set([263], 0.64, 0.4 + tiltB);   // the corners of the eyes (an eye is 0.4 wide)
+  set([2], 0.5, 0.55); set([0], 0.5, 0.6); set([127], 0.28, 0.42); set([356], 0.72, 0.42);                    // under the nose, the lip's edge, the temples
   return L;
 };
 const f = M.faceFromLandmarks(points(), 1, false);
 check(f && near(f.u, 0.2) && near(f.cx, 0.6) && near(f.cy, 0.4) && near(f.roll, 0), 'the eyes give the middle (the spot between them), the size and the tilt');
 check(f && near(f.top, -0.75) && near(f.chin, 1.75) && near(f.halfW, 1.0) && near(f.nose.y, 0.5) && near(f.mouthW, 0.6), 'forehead, chin, face width, nose and mouth are measured in eye distances');
+check(f && near(f.base, 0.75) && near(f.lipTop, 1.0) && near(f.temple, 1.1) && near(f.eyeW, 0.4) && near(f.lipUp, 1.1) && near(f.lipLow, 1.2), 'under the nose, the lip, the temples, the width of an eye and the inner lips are measured too');
+check(f && f.skull < f.hair && f.hair < f.top && near(f.hair, -0.75 - 0.31 * (2.5 / 2.79), 1e-3) && near(f.skull, -0.75 - 0.64 * (2.5 / 2.79), 1e-3), "the hairline and the top of the head are worked out from this face's own length (the finder's forehead point is lower than the hairline)");
 const mir = M.faceFromLandmarks(points(), 1, true);
 check(mir && near(mir.cx, 0.4) && near(mir.u, f.u), 'a mirror picture (the front camera) puts the face on the other side, the same size');
 const tilt = M.faceFromLandmarks(points(0.1, 0.05), 1, false);
@@ -68,9 +73,13 @@ check(near(M.scaleFace(f, 1000, 500).cx, 600) && near(M.scaleFace(f, 1000, 500).
 
 section('3. The lens list');
 const ids = C.LENSES.map((l) => l.id);
-check(C.LENSES.length === 20 && new Set(ids).size === 20, 'twenty lenses, none twice');
+check(C.LENSES.length === 33 && new Set(ids).size === 33, 'thirty-three lenses, none twice');
+check(['bts', 'blackpink', 'idol'].every((i) => ids.includes(i)) && ['strawhat', 'swordsman', 'saiyan', 'dragonballs', 'ninja', 'animeeyes', 'kawaii', 'sakura', 'manga', 'cartoon'].every((i) => ids.includes(i)), 'the K-pop (BTS, Blackpink, stage) and anime (One Piece, Dragon Ball, Naruto style, eyes, kawaii, sakura, manga, drawing look) lenses are there');
+check(C.GROUPS.map((g) => g.id).join() === 'all,fun,kpop,anime,looks' && C.lensesIn('kpop').map((l) => l.id).join() === 'none,bts,blackpink,idol' && C.lensesIn('all').length === 33 && C.lensesIn('anime').length === 11 && C.lensesIn('looks')[0].id === 'none', 'groups: All, Fun, K-Pop, Anime, Looks ("Normal" first in each)');
+const find = (q) => C.LENSES.filter((l) => C.lensMatches(l, q)).map((l) => l.id);
+check(find('one piece').join() === 'strawhat,swordsman' && find('dragon ball').join() === 'saiyan,dragonballs' && find('bts').join() === 'bts' && find('blackpink').join() === 'blackpink' && find('k-pop').join() === 'bts,blackpink,idol' && find('naruto').join() === 'ninja' && find('  ').length === 33, 'the search finds lenses by the words people use (One Piece, Dragon Ball, BTS, Blackpink, K-pop, Naruto)');
 check(C.lensById(C.DEFAULT_LENS).id === C.DEFAULT_LENS && C.lensById('nonsense').id === 'none', 'the one it opens with exists; an unknown name is "Normal"');
-check(C.LENSES.every((l) => l.name.length >= 3 && l.name.length <= 12 && /^#[0-9a-f]{6}$/i.test(l.color)), 'every lens has a short name and a colour for its glow');
+check(C.LENSES.every((l) => l.name.length >= 3 && l.name.length <= 12 && /^#[0-9a-f]{6}$/i.test(l.color) && ['fun', 'kpop', 'anime', 'looks'].includes(l.group)), 'every lens has a short name, a group and a colour for its glow');
 check(C.LENSES.filter((l) => l.kind === 'face').every((l) => l.face || l.base) && C.LENSES.filter((l) => l.kind === 'look').every((l) => l.id === 'none' || l.base), 'every lens does something');
 
 section('4. Every lens draws, on every kind of face, without a single error');
@@ -82,11 +91,27 @@ const faces = [
 let drawn = 0, broke = '';
 for (const lens of C.LENSES) {
   for (const t of [0, 0.37, 2.2, 91.3]) {
-    try { S.renderScene(fake(), 540, 960, {}, t > 1, faces, lens, t); S.renderScene(fake(), 540, 960, {}, false, [], lens, t); drawn += 2; }
+    try { S.renderScene(fake(), 540, 960, {}, 720, 1280, t > 1, faces, lens, t); S.renderScene(fake(), 960, 540, {}, 640, 640, false, [], lens, t); drawn += 2; }
     catch (e) { broke = `${lens.id}: ${e && e.message}`; }
   }
 }
 check(!broke && drawn === C.LENSES.length * 8, 'all lenses x faces x moments x with / without a face', broke);
+
+section('4b. The shape of the picture');
+check(R.RATIOS.length === 8 && R.RATIOS[0].id === 'orig' && ['9:16', '4:5', '1:1', '3:4', '2:3', '4:3', '16:9'].every((id) => R.RATIOS.some((r) => r.id === id && near(r.ar, Number(id.split(':')[0]) / Number(id.split(':')[1])))), 'the shapes: as the camera gives it, 9:16, 4:5, 1:1, 3:4, 2:3, 4:3 and 16:9');
+check(/Stories/.test(R.ratioById('9:16').apps) && /TikTok/.test(R.ratioById('9:16').apps) && /Instagram/.test(R.ratioById('4:5').apps) && /YouTube/.test(R.ratioById('16:9').apps) && R.ratioById('nonsense').id === 'orig', 'each says which apps it is for; an unknown shape is "as the camera gives it"');
+const size = (o, w, h) => o.w === w && o.h === h;
+check(size(R.outputSize(1080, 1440, 0, 1080, 1920), 1080, 1440) && size(R.outputSize(1080, 1440, 4 / 5, 1080, 1920), 1080, 1350) && size(R.outputSize(1080, 1440, 1, 1080, 1920), 1080, 1080) && size(R.outputSize(1080, 1440, 9 / 16, 1080, 1920), 810, 1440), 'a 3:4 camera picture: kept, or cut to 4:5, square or 9:16 (the biggest of that shape that fits, never stretched)');
+check(size(R.outputSize(1920, 1080, 9 / 16, 1080, 1920), 608, 1080) && size(R.outputSize(1280, 720, 1, 1080, 1920), 720, 720) && size(R.outputSize(720, 1280, 16 / 9, 1080, 1920), 720, 405), 'a wide camera picture can be cut to portrait or square, a tall one to landscape');
+check(size(R.outputSize(4000, 3000, 0, 1080, 1920), 1440, 1080) && size(R.outputSize(3000, 4000, 0, 1080, 1920), 1080, 1440) && size(R.outputSize(2160, 3840, 9 / 16, 1080, 1920), 1080, 1920), 'a big camera picture is made smaller, to 1080 x 1920 at most');
+const cr = R.coverRect(1080, 1440, 810, 1440), cr2 = R.coverRect(1080, 1440, 1080, 1080), cr3 = R.coverRect(1080, 1440, 1080, 1440);
+check(near(cr.dh, 1440) && near(cr.dw, 1080) && near(cr.dx, -135) && near(cr.dy, 0), 'cut at the sides: the middle is kept');
+check(near(cr2.dw, 1080) && near(cr2.dh, 1440) && near(cr2.dx, 0) && near(cr2.dy, -360 * 0.45), 'cut at the top and bottom: a little more of the top is kept (a head is near the top)');
+check(near(cr3.dx, 0) && near(cr3.dy, 0) && near(cr3.dw, 1080), "no cut when the shape is the camera's own");
+const pf = M.placeFace({ ...M.MANNEQUIN, cx: 0.5, cy: 0.5, u: 0.2 }, cr);
+check(near(pf.cx, -135 + 0.5 * 1080) && near(pf.cy, 720) && near(pf.u, 216), 'a face is placed on the cut picture where it really is');
+const m = M.MANNEQUIN;
+check(m.skull < m.hair && m.hair < m.top && m.top < m.brow && m.brow < 0 && 0 < m.nose.y && m.nose.y < m.base && m.base < m.lipTop && m.lipTop < m.lipUp && m.lipUp < m.lipLow && m.lipLow < m.chin && m.halfW > 1.1 && m.temple > 1.1, "the pretend face has the proportions of Google's average face (forehead point -0.9, nose 0.6, mouth 1.1, chin 1.9)");
 
 section('5. The NOOB tag and the saved file');
 const sizes = [[720, 1280], [1080, 1920], [1280, 720], [640, 640], [4000, 3000], [320, 480]];
@@ -96,7 +121,7 @@ check(/^NOOB-devil-20261028-143005\.jpg$/.test(X.photoName('devil', new Date(202
 const exp = read('src/lenses/exportPhoto.ts');
 check(/export function drawTag/.test(exp) && /\/brand\/noob-wordmark\.png/.test(exp) && fs.existsSync('public/brand/noob-wordmark.png'), 'the tag is the NOOB logo, burned into the picture itself');
 const app = read('src/lenses/LensApp.tsx');
-check(/drawTag\(c, ew, eh, logoRef\.current\);\s*try \{\s*const blob = await canvasToBlob\(cv\)/.test(app), 'the tag is drawn before the file is made: no picture leaves without it');
+check(/drawTag\(c, o\.w, o\.h, logoRef\.current\);\s*try \{\s*const blob = await canvasToBlob\(cv\)/.test(app) && /outputSize\(sw, sh, ratioById\(ratioRef\.current\)\.ar, EXPORT_SHORT, EXPORT_LONG\)/.test(app), 'the picture is cut to the chosen shape and the tag is drawn before the file is made: no picture leaves without it');
 check(/nav\.share\(\{ files: \[file\] \}\)/.test(exp) && /canShare/.test(exp) && /files: \[file\]/.test(exp) && /a\.download = file\.name/.test(exp), 'a picture can be shared to other apps (the share sheet) or saved as a file');
 
 section('6. Nothing leaves the device');

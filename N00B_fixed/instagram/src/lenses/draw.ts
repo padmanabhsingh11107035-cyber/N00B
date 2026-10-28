@@ -80,10 +80,10 @@ export function hash(i: number): number {
 // ---------------------------------------------------------------- looks that change the whole picture (kept free of ctx.filter: Safari does not have it)
 const spare: HTMLCanvasElement[] = [];
 /** a spare canvas of the given size (cleared) to draw on for a moment */
-export function scratch(n: number, w: number, h: number): Ctx {
+export function scratch(n: number, w: number, h: number, readBack = false): Ctx {
   const cv = spare[n] || (spare[n] = document.createElement('canvas'));
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-  const x = cv.getContext('2d') as Ctx;
+  const x = cv.getContext('2d', readBack ? { willReadFrequently: true } : undefined) as Ctx;   // (a spare that is read back pixel by pixel says so the first time it is used)
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.globalCompositeOperation = 'source-over';
   x.globalAlpha = 1;

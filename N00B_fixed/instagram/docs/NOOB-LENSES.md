@@ -2,6 +2,16 @@
 
 A camera with face filters, like Snapchat's lenses: pick a lens, take a picture, save it or share it to any app. Every saved picture has the NOOB tag (the logo in a dark pill) burned into its bottom right corner.
 
+**33 lenses in four groups** (All, Fun, K-Pop, Anime, Looks; the search box also finds them by words like BTS, One Piece, Dragon Ball, Naruto):
+- Fun: Devil, Shades, Puppy, Kitty, Bunny, Royal, Bloom, Angel, Crush, Gentleman, Clown, Robo, Pirate, Glitter, Wide Eyes.
+- K-Pop (fan-style: colours, hearts, a stage headset): BTS Purple, Blackpink (heart sunglasses, pink bow), K-Pop Stage.
+- Anime (fan-style hats, hair, headbands): Straw Hat and Swordsman (One Piece style), Super Saiyan and Dragon Balls (Dragon Ball style), Ninja (Naruto style), Anime Eyes, Kawaii, Sakura, Manga (black and white, screentone, speed lines) and Anime Look (flat colours with outlines, like a drawing).
+- Looks: Golden Hour, Noir, Neon, Dreamy.
+
+No logo, no artwork and no real person is copied: they are small drawings in code, so the names can be changed freely.
+
+**Picture size:** the button at the top ("Auto" / "9:16") opens the list: Auto (as the camera gives it), 9:16 (Stories, Reels, TikTok, Shorts, WhatsApp status), 4:5 (Instagram and Facebook posts), 1:1, 3:4, 2:3 (Pinterest), 4:3 and 16:9 (YouTube, X). The preview and the saved file have exactly that shape (cut at the sides, or a little more of the top kept when cut at the top and bottom; never stretched, never made bigger than the camera gave). `src/lenses/frame.ts`.
+
 ## Where it is
 
 - **`/lenses`** (the file `lenses.html`) is a page of its own. It works without an account and without the app being loaded, so it also works while the app itself is switched off (for example while Supabase is restricted).
@@ -15,8 +25,8 @@ Everything happens on the device: the camera picture, the face finder, the drawi
 ## How it works
 
 - `src/lenses/faceTracker.ts` loads Google's **MediaPipe Face Landmarker** (`@mediapipe/tasks-vision` 0.10.35, Apache 2.0). Its WebAssembly program (`public/lenses/mediapipe/vision_wasm_internal.*`) and model (`public/lenses/face_landmarker.task`, 3.7 MB) are files of this site and are fetched only when the camera opens. It starts on the graphics chip and falls back to the processor.
-- `src/lenses/faceMath.ts` turns the 478 points of a face into a few numbers (middle between the eyes, size, tilt, turn, forehead / chin / cheeks, nose, mouth, expressions) and smooths them (One Euro filter). Pure functions, tested in Node.
-- `src/lenses/catalog.ts` holds the 20 lenses. Each is drawn from scratch on a canvas, in "eye distances" around the face, so one drawing fits every face. Colour looks (Golden Hour, Noir, Neon, Dreamy) use canvas blend modes, not `ctx.filter` (Safari does not have it).
+- `src/lenses/faceMath.ts` turns the 478 points of a face into a few numbers (middle between the eyes, size, tilt, turn, forehead / hairline / top of the head, chin, cheeks, temples, nose, under the nose, lips, expressions) and smooths them (One Euro filter). Pure functions, tested in Node. The proportions come from Google's published average face (measured in eye distances: hairline -1.2, the finder's forehead point -0.9, brows -0.4, nose tip 0.6, under the nose 0.75, upper lip 0.95, mouth 1.1, chin 1.9, half face width 1.2), and the pretend face of the list pictures uses the same numbers, so a lens that sits right on it sits right on a real face. The hairline and top of the head are worked out from each face's own length (the finder's forehead point is lower than the hairline).
+- `src/lenses/catalog.ts` holds the 33 lenses. Each is drawn from scratch on a canvas, in "eye distances" around the face, so one drawing fits every face. Colour looks (Golden Hour, Noir, Neon, Dreamy) use canvas blend modes, not `ctx.filter` (Safari does not have it).
 - `src/lenses/scene.ts` draws a picture (`renderScene`) and the little round pictures of the lens list (the same code on a made-up face).
 - `src/lenses/exportPhoto.ts` draws the tag, makes the JPEG, and shares (Web Share with the file) or saves it.
 - `src/lenses/LensApp.tsx` is the page: phone = a strip of lenses (the ring in the middle is the shutter, X = no lens); computer = a grid with search and a shutter button. "Use a photo" runs a lens on a picture from the phone (also the way in when there is no camera).

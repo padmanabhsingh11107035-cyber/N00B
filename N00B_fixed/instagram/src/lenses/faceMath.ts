@@ -9,6 +9,9 @@ export interface Landmark { x: number; y: number; z?: number }
 
 // the numbers of the points of MediaPipe's face mesh that are used
 const FOREHEAD = 10, CHIN = 152, CHEEK_A = 234, CHEEK_B = 454, NOSE = 1, BROW_A = 105, BROW_B = 334, LIP_TOP = 13, LIP_BOTTOM = 14, MOUTH_A = 61, MOUTH_B = 291;
+const UNDER_NOSE = 2, LIP_EDGE = 0, TEMPLE_A = 127, TEMPLE_B = 356, EYE_IN_A = 133, EYE_OUT_A = 33, EYE_IN_B = 362, EYE_OUT_B = 263;
+// on Google's average face the finder's forehead point is 0.89 above the eyes and the chin 1.90 below them: the face is 2.79 long. The hairline is 0.31 above that point, the top of the head 0.64.
+const AVERAGE_LENGTH = 2.79;
 const EYE_A = [33, 133, 159, 145];    // the four points around one eye ...
 const EYE_B = [362, 263, 386, 374];   // ... and around the other
 
@@ -40,6 +43,10 @@ export function faceFromLandmarks(L: ReadonlyArray<Landmark>, aspect: number, mi
   const mouthW = Math.abs(loc(P(MOUTH_B)).x - loc(P(MOUTH_A)).x);
   const brow = (loc(P(BROW_A)).y + loc(P(BROW_B)).y) / 2;
   const gap = Math.hypot(lipA.x - lipB.x, lipA.y - lipB.y);
+  const top = loc(P(FOREHEAD)).y, chin = loc(P(CHIN)).y;
+  const size = clamp((chin - top) / AVERAGE_LENGTH, 0.8, 1.25);   // this face compared with the average one
+  const tA = loc(P(TEMPLE_A)), tB = loc(P(TEMPLE_B));
+  const eyeW = (Math.abs(loc(P(EYE_IN_A)).x - loc(P(EYE_OUT_A)).x) + Math.abs(loc(P(EYE_OUT_B)).x - loc(P(EYE_IN_B)).x)) / 2;
 
   const s = shapes;
   const sc = (k: string): number => (s && typeof s[k] === 'number' ? s[k] : 0);
@@ -53,14 +60,20 @@ export function faceFromLandmarks(L: ReadonlyArray<Landmark>, aspect: number, mi
 
   return {
     cx: mid.x, cy: mid.y / ar, u: ipd, roll, yaw,
-    top: loc(P(FOREHEAD)).y, chin: loc(P(CHIN)).y, halfW, brow,
-    nose, mouth, mouthW, mouthOpen, smile, browUp, blinkL, blinkR, seen: 1
+    top, chin, hair: top - 0.31 * size, skull: top - 0.64 * size, halfW, temple: Math.abs(tB.x - tA.x) / 2, brow, eyeW,
+    nose, base: loc(P(UNDER_NOSE)).y, lipTop: loc(P(LIP_EDGE)).y, lipUp: lipA.y, lipLow: lipB.y,
+    mouth, mouthW, mouthOpen, smile, browUp, blinkL, blinkR, seen: 1
   };
 }
 
-/** a face of the picture's fractions (cx, cy, u) turned into pixels of a picture that is w x h */
+/** a face of the picture's fractions (cx, cy, u) turned into pixels of the rectangle the picture is drawn into */
+export function placeFace(f: FaceFrame, r: { dx: number; dy: number; dw: number; dh: number }): FaceFrame {
+  return { ...f, cx: r.dx + f.cx * r.dw, cy: r.dy + f.cy * r.dh, u: f.u * r.dw };
+}
+
+/** ... or of a picture that fills a w x h canvas */
 export function scaleFace(f: FaceFrame, w: number, h: number): FaceFrame {
-  return { ...f, cx: f.cx * w, cy: f.cy * h, u: f.u * w };
+  return placeFace(f, { dx: 0, dy: 0, dw: w, dh: h });
 }
 
 // ---------------------------------------------------------------- smoothing
@@ -84,15 +97,16 @@ class OneEuro {
 type Kind = 'pos' | 'ang' | 'loc' | 'expr';
 const FIELDS: ReadonlyArray<readonly [string, Kind]> = [
   ['cx', 'pos'], ['cy', 'pos'], ['u', 'pos'], ['roll', 'ang'], ['yaw', 'ang'],
-  ['top', 'loc'], ['chin', 'loc'], ['halfW', 'loc'], ['brow', 'loc'], ['noseX', 'loc'], ['noseY', 'loc'], ['mouthX', 'loc'], ['mouthY', 'loc'], ['mouthW', 'loc'],
+  ['top', 'loc'], ['chin', 'loc'], ['hair', 'loc'], ['skull', 'loc'], ['halfW', 'loc'], ['temple', 'loc'], ['brow', 'loc'], ['eyeW', 'loc'], ['noseX', 'loc'], ['noseY', 'loc'],
+  ['base', 'loc'], ['lipTop', 'loc'], ['lipUp', 'loc'], ['lipLow', 'loc'], ['mouthX', 'loc'], ['mouthY', 'loc'], ['mouthW', 'loc'],
   ['mouthOpen', 'expr'], ['smile', 'expr'], ['browUp', 'expr'], ['blinkL', 'expr'], ['blinkR', 'expr']
 ];
 const SETTINGS: Record<Kind, readonly [number, number]> = { pos: [1.0, 80], ang: [1.2, 6], loc: [1.2, 12], expr: [4, 14] };   // [slowest cut-off in Hz, how much a fast move opens it]
 
 const flatten = (f: FaceFrame): Record<string, number> => ({ ...f, noseX: f.nose.x, noseY: f.nose.y, mouthX: f.mouth.x, mouthY: f.mouth.y }) as unknown as Record<string, number>;
 const unflatten = (v: Record<string, number>, seen: number): FaceFrame => ({
-  cx: v.cx, cy: v.cy, u: v.u, roll: v.roll, yaw: v.yaw, top: v.top, chin: v.chin, halfW: v.halfW, brow: v.brow,
-  nose: { x: v.noseX, y: v.noseY }, mouth: { x: v.mouthX, y: v.mouthY }, mouthW: v.mouthW,
+  cx: v.cx, cy: v.cy, u: v.u, roll: v.roll, yaw: v.yaw, top: v.top, chin: v.chin, hair: v.hair, skull: v.skull, halfW: v.halfW, temple: v.temple, brow: v.brow, eyeW: v.eyeW,
+  nose: { x: v.noseX, y: v.noseY }, base: v.base, lipTop: v.lipTop, lipUp: v.lipUp, lipLow: v.lipLow, mouth: { x: v.mouthX, y: v.mouthY }, mouthW: v.mouthW,
   mouthOpen: v.mouthOpen, smile: v.smile, browUp: v.browUp, blinkL: v.blinkL, blinkR: v.blinkR, seen
 });
 
@@ -135,9 +149,9 @@ export class FaceSmoother {
   }
 }
 
-/** A made-up face with ordinary proportions: the lens pictures in the list are drawn on it, and the tests use it. cx / cy / u are for the caller to set. */
+/** A made-up face with the proportions of Google's average face (measured on its published model): the lens pictures in the list are drawn on it, and the tests use it. cx / cy / u are for the caller to set. */
 export const MANNEQUIN: FaceFrame = {
-  cx: 0, cy: 0, u: 1, roll: 0, yaw: 0, top: -1.12, chin: 1.66, halfW: 1.04, brow: -0.34,
-  nose: { x: 0, y: 0.66 }, mouth: { x: 0, y: 1.12 }, mouthW: 0.66,
+  cx: 0, cy: 0, u: 1, roll: 0, yaw: 0, top: -0.89, chin: 1.9, hair: -1.2, skull: -1.53, halfW: 1.21, temple: 1.22, brow: -0.39, eyeW: 0.41,
+  nose: { x: 0, y: 0.59 }, base: 0.75, lipTop: 0.95, lipUp: 1.05, lipLow: 1.29, mouth: { x: 0, y: 1.17 }, mouthW: 0.78,
   mouthOpen: 0.55, smile: 0.6, browUp: 0, blinkL: 0, blinkR: 0, seen: 1
 };

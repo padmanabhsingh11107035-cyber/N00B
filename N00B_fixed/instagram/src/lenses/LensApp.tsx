@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Download, ImagePlus, RotateCcw, Search, Send, Share2, SwitchCamera, X, Camera as CameraIcon } from 'lucide-react';
 import type { FaceLandmarker } from '@mediapipe/tasks-vision';
-import { DEFAULT_LENS, LENSES, lensById, needsFace } from './catalog.ts';
+import { DEFAULT_LENS, GROUPS, LENSES, lensById, lensMatches, lensesIn, needsFace } from './catalog.ts';
+import type { Group } from './catalog.ts';
 import { FaceSmoother, clamp } from './faceMath.ts';
+import { RATIOS, outputSize, ratioById } from './frame.ts';
 import { findInPhoto, findInVideo, loadTracker, reloadTrackerOnCpu } from './faceTracker.ts';
 import { renderScene, lensThumb } from './scene.ts';
 import { canvasToBlob, drawTag, loadLogo, photoName, savePhoto, sharePhoto } from './exportPhoto.ts';
@@ -13,11 +15,11 @@ import type { FaceFrame } from './types.ts';
 
 type Phase = 'camera' | 'review';
 type Cam = 'starting' | 'live' | 'denied' | 'nocam' | 'insecure' | 'failed';
-interface Shot { file: File; url: string }
+interface Shot { file: File; url: string; w: number; h: number }
 
-const PREVIEW_SHORT = 800;                      // the live picture is drawn with at most this many pixels on its short side; the saved picture is sharper
-const EXPORT_SHORT = 1080, EXPORT_LONG = 1920; // the largest size of the saved picture
-const STRIDE = 84;                              // the distance between two lens pictures in the strip (68 wide + 16 apart, see lens.css)
+const PREVIEW_SHORT = 800, PREVIEW_LONG = 1400;   // the live picture is drawn with at most this many pixels on its short / long side; the saved picture is sharper
+const EXPORT_SHORT = 1080, EXPORT_LONG = 1920;    // the largest size of the saved picture
+const STRIDE = 84;                                // the distance between two lens pictures in the strip (68 wide + 16 apart, see lens.css)
 
 const CAM_MESSAGE: Record<Exclude<Cam, 'starting' | 'live'>, string> = {
   denied: 'NOOB needs your camera for lenses. Allow the camera for this page in your browser settings, then try again. You can also use a photo instead.',
@@ -29,6 +31,9 @@ const CAM_MESSAGE: Record<Exclude<Cam, 'starting' | 'live'>, string> = {
 export const LensApp: React.FC = () => {
   const embed = useMemo(() => { try { return new URLSearchParams(window.location.search).get('embed') === '1'; } catch { return false; } }, []);
   const [lensId, setLensId] = useState(DEFAULT_LENS);
+  const [group, setGroup] = useState<Group | 'all'>('all');
+  const [ratioId, setRatioId] = useState(() => (typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? '9:16' : 'orig'));
+  const [sheet, setSheet] = useState(false);
   const [phase, setPhase] = useState<Phase>('camera');
   const [cam, setCam] = useState<Cam>('starting');
   const [tries, setTries] = useState(0);
@@ -42,9 +47,10 @@ export const LensApp: React.FC = () => {
   const [flash, setFlash] = useState(false);
   const [noFace, setNoFace] = useState(false);
   const [fit, setFit] = useState({ w: 0, h: 0 });
-  const [ratio, setRatio] = useState(9 / 16);
+  const [ratio, setRatio] = useState(9 / 16);          // the shape of the picture on the screen
+  const [srcAr, setSrcAr] = useState(3 / 4);           // the shape the camera gives
   const [cameras, setCameras] = useState(0);
-  const [taught, setTaught] = useState(false);   // the first-time tip goes away after the first lens change or picture
+  const [taught, setTaught] = useState(false);         // the first-time tip goes away after the first lens change or picture
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,13 +66,17 @@ export const LensApp: React.FC = () => {
   const lastFace = useRef(0);
   const fromRail = useRef(false);
   const cpuTried = useRef(false);
+  const srcAspect = useRef(0);
 
   const lens = lensById(lensId);
   const lensRef = useRef(lens); lensRef.current = lens;
   const stillRef = useRef(still); stillRef.current = still;
+  const ratioRef = useRef(ratioId); ratioRef.current = ratioId;
   const mirror = !still && facing === 'user';
   const mirrorRef = useRef(mirror); mirrorRef.current = mirror;
-  const index = Math.max(0, LENSES.findIndex((l) => l.id === lensId));
+  const visible = useMemo(() => lensesIn(group), [group]);
+  const visibleRef = useRef(visible); visibleRef.current = visible;
+  const index = Math.max(0, visible.findIndex((l) => l.id === lensId));
 
   // ---- the face finder (starts at once; the camera does not wait for it)
   useEffect(() => {
@@ -76,14 +86,18 @@ export const LensApp: React.FC = () => {
     return () => { live = false; };
   }, []);
 
-  // ---- the little pictures of the lenses (drawn after the first screen is up)
+  // ---- the little pictures of the lenses: drawn a few at a time after the first screen is up
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      const out: Record<string, string> = {};
-      for (const l of LENSES) { try { out[l.id] = lensThumb(l); } catch { /* the lens shows as a coloured circle */ } }
-      setThumbs(out);
-    }, 40);
-    return () => window.clearTimeout(id);
+    let i = 0, live = true;
+    const out: Record<string, string> = {};
+    const step = (): void => {
+      if (!live) return;
+      for (const end = Math.min(LENSES.length, i + 4); i < end; i++) { try { out[LENSES[i].id] = lensThumb(LENSES[i]); } catch { /* the lens shows as a coloured circle */ } }
+      setThumbs({ ...out });
+      if (i < LENSES.length) window.setTimeout(step, 16);
+    };
+    const id = window.setTimeout(step, 40);
+    return () => { live = false; window.clearTimeout(id); };
   }, []);
 
   useEffect(() => { if (!note) return; const id = window.setTimeout(() => setNote(''), 2600); return () => window.clearTimeout(id); }, [note]);
@@ -161,9 +175,9 @@ export const LensApp: React.FC = () => {
       let src: CanvasImageSource | null = null, sw = 0, sh = 0;
       if (st) { src = st; sw = st.width; sh = st.height; } else if (v && v.readyState >= 2 && v.videoWidth) { src = v; sw = v.videoWidth; sh = v.videoHeight; }
       if (!src) return;
-      const k = Math.min(1, PREVIEW_SHORT / Math.min(sw, sh));
-      const cw = Math.round(sw * k), ch = Math.round(sh * k);
-      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; setRatio(cw / ch); }
+      if (Math.abs(srcAspect.current - sw / sh) > 0.002) { srcAspect.current = sw / sh; setSrcAr(sw / sh); }
+      const o = outputSize(sw, sh, ratioById(ratioRef.current).ar, PREVIEW_SHORT, PREVIEW_LONG);
+      if (cv.width !== o.w || cv.height !== o.h) { cv.width = o.w; cv.height = o.h; setRatio(o.w / o.h); }
       const t = ms / 1000, L = lensRef.current;
       if (needsFace(L)) {
         const tr = trackerRef.current;
@@ -192,7 +206,7 @@ export const LensApp: React.FC = () => {
         if (noFaceRef.current) { noFaceRef.current = false; setNoFace(false); }
       }
       const c = cv.getContext('2d');
-      if (c) renderScene(c, cw, ch, src, mirrorRef.current, faces.current, L, t);
+      if (c) renderScene(c, o.w, o.h, src, sw, sh, mirrorRef.current, faces.current, L, t);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -227,8 +241,9 @@ export const LensApp: React.FC = () => {
     const rail = railRef.current;
     if (!rail) return;
     grow();
-    const i = clamp(Math.round(rail.scrollLeft / STRIDE), 0, LENSES.length - 1);
-    if (LENSES[i].id !== lensRef.current.id) { fromRail.current = true; setLensId(LENSES[i].id); setTaught(true); }
+    const list = visibleRef.current;
+    const l = list[clamp(Math.round(rail.scrollLeft / STRIDE), 0, list.length - 1)];
+    if (l && l.id !== lensRef.current.id) { fromRail.current = true; setLensId(l.id); setTaught(true); }
   }, [grow]);
   useLayoutEffect(() => {
     const rail = railRef.current;
@@ -236,7 +251,13 @@ export const LensApp: React.FC = () => {
     if (fromRail.current) { fromRail.current = false; return; }
     if (Math.abs(rail.scrollLeft - index * STRIDE) > 2) rail.scrollTo({ left: index * STRIDE, behavior: phase === 'camera' && thumbs.none ? 'smooth' : 'auto' });
     grow();
-  }, [index, phase, grow, thumbs.none]);
+  }, [index, visible, phase, grow, thumbs.none]);
+
+  const pickGroup = (g: Group | 'all'): void => {
+    setGroup(g);
+    const list = lensesIn(g);
+    if (!list.some((l) => l.id === lensRef.current.id)) setLensId(list.length > 1 ? list[1].id : 'none');   // the first lens of that group shows at once
+  };
 
   // ---- taking the picture
   const capture = useCallback(async () => {
@@ -244,18 +265,17 @@ export const LensApp: React.FC = () => {
     let src: CanvasImageSource, sw: number, sh: number;
     if (st) { src = st; sw = st.width; sh = st.height; } else if (v && v.videoWidth) { src = v; sw = v.videoWidth; sh = v.videoHeight; } else return;
     setFlash(true); setTaught(true); window.setTimeout(() => setFlash(false), 200);
-    const k = Math.min(1, EXPORT_SHORT / Math.min(sw, sh), EXPORT_LONG / Math.max(sw, sh));
-    const ew = Math.round(sw * k), eh = Math.round(sh * k);
+    const o = outputSize(sw, sh, ratioById(ratioRef.current).ar, EXPORT_SHORT, EXPORT_LONG);
     const cv = document.createElement('canvas');
-    cv.width = ew; cv.height = eh;
+    cv.width = o.w; cv.height = o.h;
     const c = cv.getContext('2d');
     if (!c) return;
-    renderScene(c, ew, eh, src, mirrorRef.current, faces.current, lensRef.current, performance.now() / 1000);
-    drawTag(c, ew, eh, logoRef.current);
+    renderScene(c, o.w, o.h, src, sw, sh, mirrorRef.current, faces.current, lensRef.current, performance.now() / 1000);
+    drawTag(c, o.w, o.h, logoRef.current);
     try {
       const blob = await canvasToBlob(cv);
       const file = new File([blob], photoName(lensRef.current.id), { type: 'image/jpeg' });
-      setShot((old) => { if (old) URL.revokeObjectURL(old.url); return { file, url: URL.createObjectURL(file) }; });
+      setShot((old) => { if (old) URL.revokeObjectURL(old.url); return { file, url: URL.createObjectURL(file), w: o.w, h: o.h }; });
       setPhase('review');
     } catch { setNote('The picture could not be made. Please try again.'); }
   }, []);
@@ -268,7 +288,7 @@ export const LensApp: React.FC = () => {
     if (r === 'unsupported') { savePhoto(shot.file); setNote('Saved. Open it from your downloads or photos to share it.'); }
   };
   const onSave = (): void => { if (shot) { savePhoto(shot.file); setNote('Saved to your device'); } };
-  const toApp = (message: { type: 'use'; file: File; target: 'post' | 'story' } | { type: 'close' }): void => { try { window.parent.postMessage({ noobLens: true, ...message }, window.location.origin); } catch { /* not in the app */ } };
+  const toApp = useCallback((message: { type: 'use'; file: File; target: 'post' | 'story' } | { type: 'close' }): void => { try { window.parent.postMessage({ noobLens: true, ...message }, window.location.origin); } catch { /* not in the app */ } }, []);
 
   const pickPhoto = (file: File | undefined): void => {
     if (!file) return;
@@ -289,22 +309,30 @@ export const LensApp: React.FC = () => {
 
   useEffect(() => () => { if (shot) URL.revokeObjectURL(shot.url); }, [shot]);
 
-  // Escape: back to the camera from a finished picture, or out of the lenses when they are shown inside the app
+  // Escape: back to the camera from a finished picture, or out of the lenses when they are shown inside the app (and the size list closes first)
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return;
-      if (phase === 'review') retake();
+      if (sheet) setSheet(false);
+      else if (phase === 'review') retake();
       else if (embed) toApp({ type: 'close' });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, [sheet, phase, embed, retake, toApp]);
 
-  const q = query.trim().toLowerCase();
-  const shown = q ? LENSES.filter((l) => l.name.toLowerCase().includes(q)) : LENSES;
+  const q = query.trim();
+  const shown = q ? LENSES.filter((l) => lensMatches(l, q)) : visible;
   const failed = !still && cam !== 'starting' && cam !== 'live';
   const wait = needsFace(lens) && finder === 'loading';
   const canFlip = !still && (cameras > 1 || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches));
+  const chosen = ratioById(ratioId);
+
+  const tabs = (
+    <div className="lz-tabs" role="tablist" aria-label="Lens groups">
+      {GROUPS.map((g) => <button key={g.id} role="tab" aria-selected={g.id === group} data-on={g.id === group} onClick={() => { setQuery(''); pickGroup(g.id); }}>{g.label}</button>)}
+    </div>
+  );
 
   return (
     <div className="lz" data-phase={phase}>
@@ -319,6 +347,7 @@ export const LensApp: React.FC = () => {
         <div className="lz-actions">
           {phase === 'camera' && (
             <>
+              <button className="lz-pill" aria-label="Picture size" data-testid="lens-size" onClick={() => setSheet(true)}>{chosen.id === 'orig' ? 'Auto' : chosen.label}</button>
               {still && <button className="lz-round" aria-label="Use the camera" onClick={() => setStill(null)}><CameraIcon size={20} /></button>}
               <button className="lz-round" aria-label="Use a photo" onClick={() => fileRef.current?.click()}><ImagePlus size={20} /></button>
               {canFlip && <button className="lz-round" aria-label="Switch camera" onClick={() => { smoother.current.reset(); setFacing((f) => (f === 'user' ? 'environment' : 'user')); }}><SwitchCamera size={20} /></button>}
@@ -353,12 +382,13 @@ export const LensApp: React.FC = () => {
 
           {/* a phone: the strip of lenses; the ring in the middle is the shutter */}
           <div className="lz-strip">
+            {tabs}
             <div className="lz-name">{lens.name}</div>
             {!taught && <div className="lz-tip">Swipe for more lenses · tap the circle to take a picture</div>}
             <div className="lz-railbox">
               <div className="lz-ring" aria-hidden="true" />
               <div className="lz-rail" ref={railRef} onScroll={onRail} role="listbox" aria-label="Lenses">
-                {LENSES.map((l, i) => (
+                {visible.map((l, i) => (
                   <button
                     key={l.id}
                     className="lz-lens"
@@ -379,12 +409,12 @@ export const LensApp: React.FC = () => {
             <button className="lz-clear" aria-label="No lens" onClick={() => setLensId('none')}><X size={20} /></button>
           </div>
 
-          {/* a computer: the picture of every lens in a grid, with a search box, and a shutter button */}
+          {/* a computer: the picture of every lens in a grid, with groups and a search box, and a shutter button */}
           <div className="lz-panel">
             <button className="lz-shutter" aria-label="Take a picture" onClick={() => void capture()}><span /></button>
             <div className="lz-panelhead">
-              <b>Featured</b>
-              <label className="lz-search"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search lenses" aria-label="Search lenses" /></label>
+              {tabs}
+              <label className="lz-search"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search lenses (BTS, One Piece ...)" aria-label="Search lenses" /></label>
             </div>
             <div className="lz-grid">
               {shown.map((l) => (
@@ -411,9 +441,27 @@ export const LensApp: React.FC = () => {
               {embed && <button className="lz-btn" onClick={() => toApp({ type: 'use', file: shot.file, target: 'story' })}><Send size={18} /> Story</button>}
               {embed && <button className="lz-btn" onClick={() => toApp({ type: 'use', file: shot.file, target: 'post' })}><Send size={18} /> Post</button>}
             </div>
-            <p className="lz-foot">Share it to any app, or touch and hold the picture to save it. The NOOB tag stays on it.</p>
+            <p className="lz-foot">{shot.w} × {shot.h} · Share it to any app, or touch and hold the picture to save it. The NOOB tag stays on it.</p>
           </>
         )
+      )}
+
+      {sheet && (
+        <div className="lz-sheetback" onClick={() => setSheet(false)}>
+          <div className="lz-sheet" role="dialog" aria-label="Picture size" onClick={(e) => e.stopPropagation()}>
+            <h3>Picture size</h3>
+            <p>Pick the shape that fits the app you will post it in.</p>
+            {RATIOS.map((r) => {
+              const a = r.ar || srcAr;
+              return (
+                <button key={r.id} className="lz-size" data-on={r.id === ratioId} onClick={() => { setRatioId(r.id); setSheet(false); }}>
+                  <i style={{ width: Math.round(clamp(30 * a, 14, 54)), height: 30 }} />
+                  <span><b>{r.id === 'orig' ? 'Auto' : r.label}</b><em>{r.apps}</em></span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );

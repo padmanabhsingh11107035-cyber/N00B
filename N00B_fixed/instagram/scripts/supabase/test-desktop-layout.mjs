@@ -21,7 +21,7 @@ check(/xl:border-r/.test(side) && /xl:overflow-hidden/.test(side) && /overflow-y
 section('2. The feed and the people list share the rest');
 const main = /<main\s+className=\{`relative w-full max-w-\[480px\] \$\{[\s\S]*?lg:rounded-t-\[40px\]/.exec(app)?.[0] || '';   // up to the rounded top: the Music page has its own colour and width in the middle
 check(main.includes("'xl:ml-auto'") && /2xl:max-w-\[800px\] 3xl:max-w-\[880px\]/.test(main), 'the other pages keep their share of the free space and grow on big screens (800 px, 880 px)');
-check(/2xl:max-w-5xl/.test(main), 'the chat page grows too');
+check(!/2xl:max-w-5xl/.test(main) && !/pageTab === 'chat' \? 'md:max-w-4xl/.test(main), 'the chat page has the same widths as the other pages (a wider one pushed the people list off the screen between 1280 and 1720 px)');
 check(/pageTab === 'feed' \? 'xl:flex-1 xl:min-w-0 xl:max-w-\[1200px\] xl:mx-auto'/.test(main), 'on Home the middle page takes ALL the room between the menu and the people list (up to 1200 px), not just an equal share');
 check(/pageTab === 'feed' \? 'md:max-w-2xl'/.test(main), 'and the fixed 800 / 880 px limits do not apply to Home');
 check(/pageTab === 'feed' \? 'xl:pr-4' : ''/.test(page),'on Home the right edge of the window only has a small margin, so the people list sits at the far right');

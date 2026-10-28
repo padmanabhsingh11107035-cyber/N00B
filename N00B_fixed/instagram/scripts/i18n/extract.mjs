@@ -79,7 +79,8 @@ function visit(node, file) {
       let pattern = node.head.text;
       node.templateSpans.forEach((sp, i) => { pattern += `{${i}}` + sp.literal.text; });
       const staticOnly = normalizeText(pattern.replace(/\{\d+\}/g, ' '));
-      if (looksLikeUiText(staticOnly, how === 'permissive') && looksLikeUiText(pattern, true)) add(pattern, file);
+      // a date or number format such as `${y}-${m}-${d}T${h}:${min}` has no word of its own: not something to translate
+      if (/\p{L}{2}/u.test(staticOnly) && looksLikeUiText(staticOnly, how === 'permissive') && looksLikeUiText(pattern, true)) add(pattern, file);
     }
   }
   ts.forEachChild(node, (c) => visit(c, file));

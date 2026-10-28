@@ -566,6 +566,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     <button
                       onClick={() => {
                         setShowStoryOptionsMenu(false);
+                        if (!window.confirm('Delete this story? It cannot be brought back.')) return;
                         onDeleteStory?.(story.id);
                         onClose();
                       }}

@@ -661,6 +661,7 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
 
   const handleDeleteReel = async () => {
     if (!currentReel) return;
+    if (!window.confirm('Delete this reel? It will be removed for good and cannot be brought back.')) return;
     const deletedId = currentReel.id;
     try {
       const success = await deleteReel(deletedId);

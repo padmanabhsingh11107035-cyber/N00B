@@ -2,7 +2,7 @@
 
 Take a photo with a **buddy** standing next to you, like the "take a photo with a character" camera in the Pokémon GO video, but with characters that belong to NOOB. Pick a buddy, the camera opens with a "stand here" box for the person, press the shutter, and the picture comes out in a premium frame with a name tag and the NOOB wordmark at the bottom right. The stickers made earlier (K-Drama, K-Movie, Anime, K-Pop Purple / Pink, Flair) are still there, as optional **Filters**.
 
-**Address:** `https://noobsocials.com/booth` opens the booth directly (after the login, if there is none yet). Closing it takes `/booth` out of the address bar.
+**Address:** `https://noobsocials.com/booth` is the booth as **a page of its own** (`booth.html`, built like NOOB Lenses): the app, the login and the database are not loaded, so it opens without an account and **still works when NOOB itself is down** (the database restriction of 28 Oct 2026 shows "NOOB is down" on every address of the app, but not here). Everything the booth does happens on the device. On that page the finished picture is saved or shared; the Story / Post / Reel buttons only exist in the app (profile button), where the picture goes into the normal creators.
 
 **Look:** the whole page is ONE flat colour, **#111184** (dark blue), with white for words, icons and outlines: no gradients, no patterns, no shadows, no see-through layers (`src/components/Booth/booth.css`; `test-booth.mjs` fails if any other colour, gradient, shadow or blur appears there). The pictures themselves (frames, buddies, stickers, name tag) keep their own colours: they are what the page makes, not the page.
 

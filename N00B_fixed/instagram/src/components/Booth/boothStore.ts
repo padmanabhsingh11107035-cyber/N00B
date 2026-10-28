@@ -6,8 +6,7 @@ const listeners = new Set<() => void>();
 const set = (next: boolean) => { if (open === next) return; open = next; listeners.forEach((l) => l()); };
 
 export const openBooth = (): void => set(true);
-/** closing also takes /booth (the address that opens the booth) out of the address bar, so a refresh does not open it again */
-export const closeBooth = (): void => { set(false); try { if (/^\/booth\/?$/i.test(window.location.pathname)) window.history.replaceState(null, '', '/'); } catch { /* the address bar stays as it was */ } };
+export const closeBooth = (): void => set(false);
 export function useBoothOpen(): boolean {
   return useSyncExternalStore((cb) => { listeners.add(cb); return () => { listeners.delete(cb); }; }, () => open, () => open);
 }

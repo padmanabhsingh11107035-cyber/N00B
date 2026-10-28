@@ -22,9 +22,12 @@ export default defineConfig(() => {
         name: 'lenses-page-address',
         configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
           server.middlewares.use((req, _res, next) => { if (req.url && /^\/lenses(\?|$)/.test(req.url)) req.url = '/lenses.html' + req.url.slice('/lenses'.length); next(); });
+          // the Buddy Booth is a page of its own too (booth.html, the address /booth)
+          server.middlewares.use((req, _res, next) => { if (req.url && /^\/booth(\?|$)/.test(req.url)) req.url = '/booth.html' + req.url.slice('/booth'.length); next(); });
         },
         configurePreviewServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
           server.middlewares.use((req, _res, next) => { if (req.url && /^\/lenses(\?|$)/.test(req.url)) req.url = '/lenses.html' + req.url.slice('/lenses'.length); next(); });
+          server.middlewares.use((req, _res, next) => { if (req.url && /^\/booth(\?|$)/.test(req.url)) req.url = '/booth.html' + req.url.slice('/booth'.length); next(); });
         }
       },
       {
@@ -40,8 +43,8 @@ export default defineConfig(() => {
     },
     build: {
       rollupOptions: {
-        // two pages: the app (index.html) and NOOB Lenses (lenses.html)
-        input: { main: path.resolve(__dirname, 'index.html'), lenses: path.resolve(__dirname, 'lenses.html') }
+        // three pages: the app (index.html), NOOB Lenses (lenses.html) and the Buddy Booth (booth.html)
+        input: { main: path.resolve(__dirname, 'index.html'), lenses: path.resolve(__dirname, 'lenses.html'), booth: path.resolve(__dirname, 'booth.html') }
       }
     },
     resolve: {

@@ -8,7 +8,7 @@ import type { BoothTarget } from './BoothHost';
 interface Made { file: File; url: string }
 
 /** The finished picture (and its moving version): look at it, save it, share it, or hand it to the Story / Post / Reel creator. Nothing is published from here. */
-export const ResultSheet: React.FC<{ scene: Scene; logo: Logo | null; onClose: () => void; onUse: (file: File, target: BoothTarget) => void }> = ({ scene, logo, onClose, onUse }) => {
+export const ResultSheet: React.FC<{ scene: Scene; logo: Logo | null; onClose: () => void; onUse?: (file: File, target: BoothTarget) => void }> = ({ scene, logo, onClose, onUse }) => {
   const [tab, setTab] = useState<'picture' | 'moving'>('picture');
   const [pic, setPic] = useState<Made | null>(null);
   const [vid, setVid] = useState<Made | null>(null);
@@ -90,10 +90,10 @@ export const ResultSheet: React.FC<{ scene: Scene; logo: Logo | null; onClose: (
         <div className="bb-actions">
           <button type="button" className="bb-act" disabled={!made} onClick={onSave} data-testid="booth-save"><Download size={18} /> Save</button>
           <button type="button" className="bb-act" disabled={!made} onClick={() => void onShare()} data-testid="booth-share"><Share2 size={18} /> Share</button>
-          <button type="button" className="bb-act main" disabled={!made} onClick={() => made && onUse(made.file, 'story')} data-testid="booth-to-story">Story</button>
-          {tab === 'picture'
+          {onUse && <button type="button" className="bb-act main" disabled={!made} onClick={() => made && onUse(made.file, 'story')} data-testid="booth-to-story">Story</button>}
+          {onUse && (tab === 'picture'
             ? <button type="button" className="bb-act main" disabled={!made} onClick={() => made && onUse(made.file, 'post')} data-testid="booth-to-post">Post</button>
-            : <button type="button" className="bb-act main" disabled={!made} onClick={() => made && onUse(made.file, 'reel')} data-testid="booth-to-reel">Reel</button>}
+            : <button type="button" className="bb-act main" disabled={!made} onClick={() => made && onUse(made.file, 'reel')} data-testid="booth-to-reel">Reel</button>)}
         </div>
       </div>
     </div>

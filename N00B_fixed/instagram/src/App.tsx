@@ -107,7 +107,7 @@ import { closeStudio, openStudio } from './components/Studio/studioStore';
 import { LensHost } from './components/Lenses/LensHost';
 import { closeLenses, openLenses } from './components/Lenses/lensStore';
 import { BoothHost } from './components/Booth/BoothHost';
-import { closeBooth, openBooth } from './components/Booth/boothStore';
+import { closeBooth } from './components/Booth/boothStore';
 import { closeNoobDraw } from './components/Draw/drawStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { StudyHost } from './components/Study/StudyHost';
@@ -429,8 +429,6 @@ export default function App() {
   const [studioStoryFile, setStudioStoryFile] = useState<File | null>(null);
   // the address /studio opens NOOB Studio
   useEffect(() => { try { if (/^\/studio\/?$/i.test(window.location.pathname)) openStudio(); } catch { /* the app opens as usual */ } }, []);
-  // the address /booth opens the Buddy Booth (after the login, if there is none yet; it closes again when the page is switched off)
-  useEffect(() => { try { if (/^\/booth\/?$/i.test(window.location.pathname)) openBooth(); } catch { /* the app opens as usual */ } }, []);
   // (the settings arrive a moment after the address opens it: if Studio or Draw is switched off for this person it closes again)
   useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); }, [featuresOff]);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel

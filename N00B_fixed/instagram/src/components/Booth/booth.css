@@ -1,6 +1,9 @@
 /* The Buddy Booth page: ONE flat colour, #111184 (dark blue), and white for words, icons and lines. No gradients, no patterns, no shadows, no see-through layers.
    Every class starts with bb- so nothing else in the app is touched. */
 .bb-root { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; overflow: hidden; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); background: #111184; color: #fff; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+.bb-root, .bb-root * { box-sizing: border-box; }
+:where(.bb-root) :is(h2, h3, p) { margin: 0; }
+:where(.bb-root) :is(button, input) { margin: 0; padding: 0; font: inherit; }
 .bb-root button { font-family: inherit; color: #fff; }
 .bb-root svg { flex-shrink: 0; }
 
@@ -116,7 +119,7 @@
 .bb-bar i { display: block; height: 100%; background: #fff; }
 .bb-hint, .bb-note { text-align: center; font-size: 12px; font-weight: 700; color: #fff; margin: 0; }
 .bb-note { font-weight: 900; }
-.bb-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.bb-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
 .bb-act { height: 48px; border-radius: 14px; border: 2px solid #fff; background: #111184; color: #fff; font-weight: 900; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; min-width: 0; }
 .bb-root .bb-act.main { background: #fff; color: #111184; }
 .bb-act:disabled { border-style: dashed; cursor: default; }

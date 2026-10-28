@@ -94,7 +94,7 @@ export function isKnownPath(path: string, extra: ReadonlyArray<(clean: string) =
   if (tabFromPath(clean)) return true;
   if (parseContentPath(path)) return true;
   if (STATIC_PAGES.includes(clean)) return true;
-  if (clean === '/studio' || clean === '/booth' || clean === '/login-approval' || clean === '/anonymous' || clean === '/login' || clean === '/signup' || clean === '/join' || clean === '/index.html') return true;
+  if (clean === '/studio' || clean === '/login-approval' || clean === '/anonymous' || clean === '/login' || clean === '/signup' || clean === '/join' || clean === '/index.html') return true;
   if (FEATURE_PAGES.some((f) => clean === `/features/${f.slug}`) || clean === '/features') return true;
   return extra.some((fn) => fn(clean));
 }

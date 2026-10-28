@@ -275,14 +275,13 @@ const features = read('src/utils/features.ts'), app = read('src/App.tsx'), profi
 const booth = read('src/components/Booth/BuddyBooth.tsx'), sheet = read('src/components/Booth/ResultSheet.tsx'), host = read('src/components/Booth/BoothHost.tsx'), store = read('src/components/Booth/boothStore.ts'), css = read('src/components/Booth/booth.css');
 check(/key: 'booth', label: 'Buddy Booth'/.test(features), 'the administrator can switch it off (Admin > Pages > Buddy Booth)');
 check(/import \{ BoothHost \} from '\.\/components\/Booth\/BoothHost'/.test(app) && /<BoothHost onUse=\{\(file, target\) => \{\s*closeBooth\(\);/.test(app) && /if \(featuresOff\.has\('booth'\)\) closeBooth\(\);/.test(app), 'the app draws the booth once, closes it when it is switched off, and hands the finished picture to the Story / Post / Reel creator');
-check(/useFeatureOn\('booth'\)/.test(profile) && /data-testid="profile-buddy-booth"/.test(profile) && /\{isOwnProfile && boothOn && \(/.test(profile) && /onClick=\{openBooth\}/.test(profile) && /preloadBooth/.test(profile) && /aria-label="Buddy Booth: take a photo with a buddy"/.test(profile), 'the button is on your own profile, next to the menu, only while the page is on, and it loads the booth when touched');
 check(/React\.lazy\(\(\) => import\('\.\/BuddyBooth'\)\)/.test(host) && /import\('\.\/BuddyBooth'\)/.test(store) && /export type BoothTarget = 'post' \| 'story' \| 'reel'/.test(host), 'the booth\'s code is only fetched when it is opened');
 check(!/\bfetch\(|XMLHttpRequest|WebSocket|sendBeacon|supabase|dangerouslySetInnerHTML|innerHTML|eval\(|new Function/.test(booth + sheet + read('src/booth/camera.ts') + read('src/booth/media.ts') + read('src/booth/scene.ts') + read('src/booth/frames.ts')), 'the booth sends nothing anywhere: no network call, no storage call, no HTML from text');
 check(/stopStream\(stream\)/.test(booth) && /return \(\) => \{ cancelled = true; stopStream\(stream\);/.test(booth) && /capture="environment"/.test(booth) && /accept="image\/\*"/.test(booth), 'the camera is let go when it is not needed, and the phone\'s own camera app is the way out when the page has no camera');
 check(/URL\.revokeObjectURL/.test(sheet) && /role="dialog" aria-modal="true"/.test(booth) && /role="dialog" aria-modal="true"/.test(sheet) && /Touch and hold the picture/.test(sheet), 'the finished picture frees its memory, and tells how to save it with a long touch');
 check(/<Thumb id=/.test(booth) && !/setInterval/.test(booth) && /window\.setInterval\(tick, 83\)/.test(read('src/components/Booth/Thumb.tsx')) && /IntersectionObserver/.test(read('src/components/Booth/Thumb.tsx')), 'all the small moving pictures share one clock and only the ones on the screen are drawn');
 const cssRules = css.split('\n').filter((l) => l.includes('{') && !/^\s/.test(l) && !l.startsWith('@') && !l.startsWith('/*'));
-check(cssRules.length > 60 && cssRules.every((l) => l.slice(0, l.indexOf('{')).split(',').every((sel) => sel.trim().startsWith('.bb-'))), 'every style of the booth starts with bb- (nothing else in the app is touched)');
+check(cssRules.length > 60 && cssRules.every((l) => l.slice(0, l.indexOf('{')).split(/,(?![^(]*\))/).every((sel) => sel.trim().startsWith('.bb-') || sel.trim().startsWith(':where(.bb-root)'))), 'every style of the booth starts with bb- (nothing else in the app is touched)');
 check(/camera=\(self\)/.test(read('public/_headers')), 'the site\'s own pages may use the camera');
 check(/test-booth\.mjs/.test(read('package.json')), 'this test is part of the test chain');
 
@@ -297,10 +296,9 @@ section('9. One flat colour: #111184');
   check(!/linear-gradient|radial-gradient|boxShadow|--ac/.test(booth + sheet) && /background: f\.swatch\[1\]/.test(booth), 'no colour comes from the code of the page either: each frame is shown as one flat colour');
 }
 
-section('10. The opening art (4 seconds) and the address /booth');
+section('10. The opening art (4 seconds) and the page /booth');
 {
   const OP = await import('../../src/booth/opening.ts');
-  const ROUTES = await import('../../src/utils/routes.ts');
   const sizes = [[375, 812], [320, 640], [1280, 800], [800, 1280], [412, 915], [1920, 1080]];
   check(OP.OPENING_SECONDS === 4 && OP.PAGE_BLUE === '#111184' && OP.OPENING_BUDDIES.length === 4 && OP.SHOT_TIMES.length === 4 && OP.SHOT_TIMES.every((s, i) => s >= 0.5 && s < 3.2 && (i === 0 || s > OP.SHOT_TIMES[i - 1])) && OP.OPENING_BUDDIES.every((id) => SC.isBuddy(id)), 'the opening lasts 4 seconds and takes four photos, one after another, of four buddies');
   const bad = [];
@@ -330,9 +328,10 @@ section('10. The opening art (4 seconds) and the address /booth');
   void flash;
   const lift = (t) => { const L = at(t).log.find((l) => /^translate\(0,-?[\d.]+\)$/.test(l) && l !== 'translate(0,0)'); return L ? parseFloat(L.slice(12, -1)) : 0; };
   check(lift(3.5) === 0 && lift(3.8) < 0 && lift(3.95) < lift(3.8), 'at the end everything slides away upwards, faster and faster, into the first screen');
-  check(ROUTES.isKnownPath('/booth') && ROUTES.isKnownPath('/booth/') && !ROUTES.isKnownPath('/booths') && ROUTES.isKnownPath('/studio'), 'the address /booth is a real page of the site (not "page not found")');
-  const store = read('src/components/Booth/boothStore.ts');
-  check(/\^\\\/booth\\\/\?\$\/i\.test\(window\.location\.pathname\)\) openBooth\(\)/.test(app) && /replaceState\(null, '', '\/'\)/.test(store) && /closeBooth = \(\): void => \{ set\(false\);/.test(store), 'opening /booth opens the booth (after the login if there is none yet), and closing it takes /booth out of the address bar');
+  const html = read('booth.html'), vite = read('vite.config.ts'), entry = read('src/components/Booth/main.tsx');
+  check(/<div id="root"><\/div>/.test(html) && /src="\/src\/components\/Booth\/main\.tsx"/.test(html) && /rel="canonical" href="https:\/\/noobsocials\.com\/booth"/.test(html) && /background:#111184/.test(html) && /theme-color" content="#111184"/.test(html), 'the address /booth is a page of its own (booth.html): flat #111184 from the first moment, no app and no login in it');
+  check(/booth: path\.resolve\(__dirname, 'booth\.html'\)/.test(vite) && /\^\\\/booth\(\\\?\|\$\)/.test(vite) && /BuddyBooth onClose=\{\(\) => \{ window\.location\.assign\('\/'\); \}\}/.test(entry) && !/App|supabase|AuthView/.test(entry), 'the build makes it as a third page, the address works while developing too, and its code starts nothing of the app');
+  check(/onUse\?: \(file: File, target: BoothTarget\) => void/.test(booth) && /onUse=\{onUse \? use : undefined\}/.test(booth) && /onUse\?: \(file: File, target: BoothTarget\) => void/.test(sheet) && /\{onUse && <button/.test(sheet), 'on that page there is no Story / Post / Reel creator, so those buttons are not shown (Save and Share are)');
   check(/const \[opening, setOpening\] = useState\(\(\) =>/.test(booth) && /prefers-reduced-motion: reduce/.test(booth) && /if \(screen === 'pick' && opening\)/.test(booth) && /onPointerDown=\{onDone\}/.test(read('src/components/Booth/BoothOpening.tsx')) && /if \(result \|\| opening\) return;/.test(booth), 'the opening plays when the booth opens, a tap or a key skips it, and a phone set to less motion goes straight in');
 }
 

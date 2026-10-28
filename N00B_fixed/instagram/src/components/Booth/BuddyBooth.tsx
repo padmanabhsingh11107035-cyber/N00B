@@ -53,7 +53,7 @@ const CAM_TEXT: Record<Exclude<CamState, 'idle' | 'starting' | 'live'>, { title:
   failed: { title: 'The camera could not start', body: 'Try again, or pick a photo instead.' }
 };
 
-const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: BoothTarget) => void }> = ({ onClose, onUse }) => {
+const BuddyBooth: React.FC<{ onClose: () => void; onUse?: (file: File, target: BoothTarget) => void }> = ({ onClose, onUse }) => {
   const prefs = useRef<Prefs>(loadPrefs());
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const [screen, setScreen] = useState<'pick' | 'stage'>('pick');
@@ -326,7 +326,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
     toPick();
   };
   const done = (): void => { if (sceneRef.current.photo) { setSelected(null); setResult({ ...sceneRef.current }); } };
-  const use = (file: File, target: BoothTarget): void => { onUse(file, target); };
+  const use = (file: File, target: BoothTarget): void => { onUse?.(file, target); };
 
   // ---- fingers and the mouse on the picture
   const toCanvas = (e: { clientX: number; clientY: number }): Pt => {
@@ -620,7 +620,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
         <button type="button" className="bb-dk" onClick={() => fileRef.current?.click()} disabled={loading} data-testid="booth-gallery-2">{loading ? <Loader2 className="bb-spin" size={22} /> : <ImageIcon size={22} />}<span>Gallery</span></button>
       </div>
 
-      {result && <ResultSheet scene={result} logo={logoRef.current} onClose={() => setResult(null)} onUse={use} />}
+      {result && <ResultSheet scene={result} logo={logoRef.current} onClose={() => setResult(null)} onUse={onUse ? use : undefined} />}
       {photoInput}
     </div>
   );

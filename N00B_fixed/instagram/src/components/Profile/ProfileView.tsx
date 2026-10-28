@@ -103,6 +103,9 @@ import { useLanguage } from '../../i18n/useLanguage.ts';
 import { chooseLanguage } from '../../i18n/account.ts';
 import { findLanguage } from '../../i18n/languages.ts';
 import { CalculatorPage } from './CalculatorPage';
+import { useFeatureOn } from '../../utils/featureFlags';
+import { BoothIcon } from '../Booth/BoothIcon';
+import { openBooth, preloadBooth } from '../Booth/boothStore';
 import { QrScannerPage } from './QrScannerPage';
 import { TranslatorPage } from './TranslatorPage';
 import { ExportDataModal } from './ExportDataModal';
@@ -233,6 +236,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showDevices, setShowDevices] = useState(false);
   const language = useLanguage();
   const [showCalculatorPage, setShowCalculatorPage] = useState(false);
+  const boothOn = useFeatureOn('booth');   // the administrator can switch the Buddy Booth off for users
   const [showQrScannerPage, setShowQrScannerPage] = useState(false);
   // Export Data: the readable text of the person's own details (utils/exportMyData.ts); null while the window is closed
   const [exportText, setExportText] = useState<string | null>(null);
@@ -645,6 +649,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </button>
             )}
           </div>
+        {isOwnProfile && boothOn && (
+          <button
+            type="button"
+            onClick={openBooth}
+            onPointerDown={preloadBooth}
+            onMouseEnter={preloadBooth}
+            data-testid="profile-buddy-booth"
+            title="Buddy Booth"
+            aria-label="Buddy Booth: take a photo with a buddy"
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-fuchsia-600 via-purple-600 to-pink-500 hover:brightness-110 cursor-pointer shadow-[0_0_14px_rgba(168,85,247,.5)] transition active:scale-90"
+          >
+            <BoothIcon size={26} />
+          </button>
+        )}
         {isOwnProfile && onSwitchToAdminPanel && (
           <button
             onClick={onSwitchToAdminPanel}

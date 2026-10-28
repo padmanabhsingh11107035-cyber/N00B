@@ -2,6 +2,12 @@
 
 Take a photo with a **buddy** standing next to you, like the "take a photo with a character" camera in the Pokémon GO video, but with characters that belong to NOOB. Pick a buddy, the camera opens with a "stand here" box for the person, press the shutter, and the picture comes out in a premium frame with a name tag and the NOOB wordmark at the bottom right. The stickers made earlier (K-Drama, K-Movie, Anime, K-Pop Purple / Pink, Flair) are still there, as optional **Filters**.
 
+**Address:** `https://noobsocials.com/booth` opens the booth directly (after the login, if there is none yet). Closing it takes `/booth` out of the address bar.
+
+**Look:** the whole page is ONE flat colour, **#111184** (dark blue), with white for words, icons and outlines: no gradients, no patterns, no shadows, no see-through layers (`src/components/Booth/booth.css`; `test-booth.mjs` fails if any other colour, gradient, shadow or blur appears there). The pictures themselves (frames, buddies, stickers, name tag) keep their own colours: they are what the page makes, not the page.
+
+**Opening:** every time it opens, a 4-second flat 2D opening plays (`src/booth/opening.ts`, `BoothOpening.tsx`): the words BUDDY BOOTH drop in, four photo cards fall into place one after another, each is "taken" with a flash and a buddy pops in (Bunby, Kitsu, Coco, Ember), all four hop, one last flash, and everything slides up into the first screen. A tap, a click or a key skips it; a phone set to "reduce motion" goes straight in; a timer ends it after 4 seconds even if the screen is not being drawn. Only #111184 and white are used. See it as a contact sheet: `node scripts/booth/sheet.mjs <folder> opening`.
+
 Opens from the **profile page** (your own profile, the gradient button with the little photo-card icon beside the menu). Switch it off for users in **Admin > Pages > Buddy Booth** (key `booth`).
 
 ## What a person does
@@ -43,7 +49,7 @@ Unchanged (`src/booth/packs/`, `catalog.ts`): the same drawing kit (`kit.ts`), a
 - `src/booth/`: `kit.ts` (the drawing kit), `buddies/` and `packs/` (the art), `catalog.ts`, `frames.ts` (frames, wordmark, caption), `scene.ts` (the picture, the tag, the "stand here" box, handles), `gestures.ts` (fingers and mouse, as plain maths), `camera.ts`, `media.ts` (photo in, picture / video out).
 - `src/components/Booth/`: `BuddyBooth.tsx` (the page), `ResultSheet.tsx`, `Thumb.tsx` (one clock for all the small moving pictures), `BoothIcon.tsx`, `BoothHost.tsx` + `boothStore.ts` (opened from the profile, code fetched only then), `booth.css` (every class starts with `bb-`).
 - `scripts/booth/sheet.mjs`: draws contact sheets of the art (needs the `@napi-rs/canvas` package that is in `node_modules`).
-- `scripts/supabase/test-booth.mjs`: 79 checks (every buddy and sticker drawn at six moments, the loop seam, the name tag always inside the photo, the wordmark last, gestures, camera messages, the wiring and what the booth may not touch).
+- `scripts/supabase/test-booth.mjs`: 96 checks (every buddy and sticker drawn at six moments, the loop seam, the name tag always inside the photo, the wordmark last, gestures, camera messages, the wiring and what the booth may not touch).
 
 ## Safe by design
 

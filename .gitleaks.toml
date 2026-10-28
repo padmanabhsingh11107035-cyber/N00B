@@ -6,8 +6,16 @@
 useDefault = true
 
 [allowlist]
-description = "built game bundles and lock files"
+description = "built game bundles, lock files, and three plain words"
 paths = [
   '''N00B_fixed/instagram/public/games/.*/build/.*''',
   '''.*package-lock\.json''',
+]
+# The Buddy Booth saves its small settings in the browser under these three names (a frame / shape, the recently used stickers, a "tip was shown" mark). They are words, not secrets,
+# but in commit e3d9d76 they sat in lines called ..._KEY and the scan took 'noob_stickers_recent_v1' for a key; the lines were renamed in the next commit (0409548), and this entry
+# keeps the weekly scan of the whole history from failing on that one old commit. Only these exact words are skipped: every other value is still checked.
+regexes = [
+  '''^noob_stickers_recent_v1$''',
+  '''^noob_booth_prefs_v1$''',
+  '''^noob_booth_tip_v1$''',
 ]

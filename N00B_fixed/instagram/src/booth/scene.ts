@@ -175,19 +175,18 @@ function drawStandHere(c: Ctx, win: Win, g: Guide, t: number): void {
   let bh = win.h * g.hh, bw = bh * 0.56;
   if (bw > win.w * 0.42) { bw = win.w * 0.42; bh = bw / 0.56; }
   const m = win.w * 0.03, cx = Math.min(win.x + win.w - m - bw / 2, Math.max(win.x + m + bw / 2, win.x + win.w * g.cx));
-  const feet = win.y + win.h * g.fy, top = feet - bh, pulse = 0.8 + 0.2 * Math.sin((t / LOOP) * TAU * 2);
+  const feet = win.y + win.h * g.fy, top = feet - bh, breathe = 0.9 + 0.1 * Math.sin((t / LOOP) * TAU * 2);
   c.save();
   c.lineCap = 'round'; c.lineJoin = 'round';
-  c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 8;
-  // the corners of the box
-  c.strokeStyle = `rgba(255,255,255,${pulse})`; c.lineWidth = Math.max(2.5, win.w * 0.006);
-  const L = bw * 0.2, x0 = cx - bw / 2, x1 = cx + bw / 2, y0 = top - bh * 0.04, y1 = feet + bh * 0.03;
+  // the corners of the box: white, with a thin dark-blue line round them so they show on any photo (the corners breathe a little instead of fading)
+  const lw = Math.max(2.5, win.w * 0.006), L = bw * 0.2 * breathe, x0 = cx - bw / 2, x1 = cx + bw / 2, y0 = top - bh * 0.04, y1 = feet + bh * 0.03;
   c.beginPath();
   c.moveTo(x0, y0 + L); c.lineTo(x0, y0); c.lineTo(x0 + L, y0);
   c.moveTo(x1 - L, y0); c.lineTo(x1, y0); c.lineTo(x1, y0 + L);
   c.moveTo(x1, y1 - L); c.lineTo(x1, y1); c.lineTo(x1 - L, y1);
   c.moveTo(x0 + L, y1); c.lineTo(x0, y1); c.lineTo(x0, y1 - L);
-  c.stroke();
+  c.strokeStyle = '#111184'; c.lineWidth = lw * 2.6; c.stroke();
+  c.strokeStyle = '#ffffff'; c.lineWidth = lw; c.stroke();
   // the person: one white shape (a head, a body, two legs: drawn as one path so nothing is painted twice), in a box of 1 x 1 whose middle is the middle of the person
   c.translate(cx, top + bh / 2); c.scale(bh, bh);
   const rr = (x: number, y: number, w: number, h: number, r: number): void => {
@@ -198,7 +197,8 @@ function drawStandHere(c: Ctx, win: Win, g: Guide, t: number): void {
   rr(-0.17, -0.29, 0.34, 0.27, 0.07);
   rr(-0.145, -0.05, 0.135, 0.55, 0.05);
   rr(0.01, -0.05, 0.135, 0.55, 0.05);
-  c.fillStyle = 'rgba(255,255,255,.84)'; c.fill();
+  c.strokeStyle = '#111184'; c.lineWidth = 0.02; c.stroke();
+  c.fillStyle = '#ffffff'; c.fill();
   c.restore();
 }
 
@@ -263,24 +263,21 @@ export function handlesOf(p: Placed, W: number, H: number): Handles {
 export const handleRadius = (W: number, unit?: number): number => 11 * (unit ?? W / 360);
 
 function drawGuides(c: Ctx, p: Placed, W: number, H: number, unit?: number): void {
-  const h = handlesOf(p, W, H), r = handleRadius(W, unit), standing = isBuddy(p.id);
+  const h = handlesOf(p, W, H), r = handleRadius(W, unit), standing = isBuddy(p.id), u = unit ?? W / 360;
   c.save();
-  c.lineJoin = 'round';
-  const u = unit ?? W / 360;
-  c.setLineDash([6 * u, 4 * u]);
-  c.lineWidth = 1.6 * u;
-  c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 4;
-  c.strokeStyle = '#fff';
-  c.beginPath(); c.moveTo(h.tl.x, h.tl.y); c.lineTo(h.tr.x, h.tr.y); c.lineTo(h.br.x, h.br.y); c.lineTo(h.bl.x, h.bl.y); c.closePath(); c.stroke();
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  // the frame round it: a dark-blue line under a white dashed one (so it shows on any photo)
+  c.beginPath(); c.moveTo(h.tl.x, h.tl.y); c.lineTo(h.tr.x, h.tr.y); c.lineTo(h.br.x, h.br.y); c.lineTo(h.bl.x, h.bl.y); c.closePath();
+  c.strokeStyle = '#111184'; c.lineWidth = 3.6 * u; c.stroke();
+  c.setLineDash([6 * u, 4 * u]); c.strokeStyle = '#ffffff'; c.lineWidth = 1.6 * u; c.stroke();
   c.setLineDash([]);
-  c.shadowBlur = 6;
-  // delete (top left)
-  c.beginPath(); c.arc(h.tl.x, h.tl.y, r, 0, TAU); c.fillStyle = '#ff3b5c'; c.fill();
-  c.strokeStyle = '#fff'; c.lineWidth = r * 0.18; c.stroke();
-  c.beginPath(); c.moveTo(h.tl.x - r * 0.38, h.tl.y - r * 0.38); c.lineTo(h.tl.x + r * 0.38, h.tl.y + r * 0.38); c.moveTo(h.tl.x + r * 0.38, h.tl.y - r * 0.38); c.lineTo(h.tl.x - r * 0.38, h.tl.y + r * 0.38); c.stroke();
+  const disc = (pt: Pt): void => { c.beginPath(); c.arc(pt.x, pt.y, r, 0, TAU); c.fillStyle = '#ffffff'; c.fill(); c.strokeStyle = '#111184'; c.lineWidth = r * 0.16; c.stroke(); };
+  c.strokeStyle = '#111184'; c.lineWidth = r * 0.2;
+  // delete (top left): a cross
+  disc(h.tl);
+  c.beginPath(); c.moveTo(h.tl.x - r * 0.4, h.tl.y - r * 0.4); c.lineTo(h.tl.x + r * 0.4, h.tl.y + r * 0.4); c.moveTo(h.tl.x + r * 0.4, h.tl.y - r * 0.4); c.lineTo(h.tl.x - r * 0.4, h.tl.y + r * 0.4); c.stroke();
   // resize (a buddy) or turn + resize (a sticker), bottom right
-  c.beginPath(); c.arc(h.br.x, h.br.y, r, 0, TAU); c.fillStyle = '#7c3aed'; c.fill();
-  c.strokeStyle = '#fff'; c.lineWidth = r * 0.18; c.stroke();
+  disc(h.br);
   if (standing) {
     const a = r * 0.46;
     c.beginPath(); c.moveTo(h.br.x - a, h.br.y + a); c.lineTo(h.br.x + a, h.br.y - a);

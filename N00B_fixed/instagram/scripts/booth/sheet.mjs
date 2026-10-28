@@ -31,7 +31,13 @@ const room = (c, x, y, w, h) => {
 };
 const save = (cv, name) => { fs.writeFileSync(path.join(out, name), cv.toBuffer('image/png')); console.log('wrote', name); };
 
-if (only === 'buddies') {
+if (only === 'opening') {
+  const { drawOpening, OPENING_SECONDS } = await import('../../src/booth/opening.ts');
+  const times = [0.3, 1.0, 1.8, 2.6, 3.3, 3.55, 3.8], W = 375, H = 812, cv = createCanvas(W * times.length, H), c = cv.getContext('2d');
+  times.forEach((t, i) => { const f = createCanvas(W, H); drawOpening(f.getContext('2d'), W, H, t); c.drawImage(f, i * W, 0); });
+  save(cv, 'opening.png');
+  console.log('opening', OPENING_SECONDS, 'seconds, frames at', times.join(', '));
+} else if (only === 'buddies') {
   const S = 300, cols = 4, rows = Math.ceil(BUDDIES.length / cols), times = [0.3, 1.3];
   const cv = createCanvas(S * cols, S * rows * 2);
   const c = cv.getContext('2d');

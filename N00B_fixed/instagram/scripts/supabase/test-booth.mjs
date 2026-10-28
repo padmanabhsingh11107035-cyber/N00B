@@ -207,8 +207,14 @@ check(spotBad.length === 0, 'a buddy first stands with its feet on the floor of 
   const lastImg = imgs[imgs.length - 1];
   check(lastImg > lastText(withB) && withB.slice(lastImg + 1).every((l) => l === 'restore()' || l === 'save()' || l.startsWith('setTransform(')), 'the NOOB wordmark is the last thing drawn: nothing can cover it');
   check(draw(base({ mirror: true })).some((l) => l === 'scale(-1,1)') && !draw(base({ mirror: false })).some((l) => l === 'scale(-1,1)'), 'a selfie photo is shown as in a mirror');
-  check(draw(base({ stickers: [bud(1)] }), { guide: { cx: 0.72, fy: 0.94, hh: 0.62 } }).some((l) => l.includes('rgba(255,255,255,.84)')) && !draw(base({ stickers: [bud(1)] })).some((l) => l.includes('rgba(255,255,255,.84)')), 'the "stand here" box is drawn only when it is asked for (never in a saved picture)');
-  check(draw(base({ stickers: [bud(1)] }), { selected: 1, guides: true }).some((l) => l.includes('"#ff3b5c"')) && !draw(base({ stickers: [bud(1)] }), { selected: 1 }).some((l) => l.includes('"#ff3b5c"')), 'the handles of the picked one are drawn only in the live preview');
+  const plainLen = draw(base({ stickers: [bud(1)] })).length;
+  check(draw(base({ stickers: [bud(1)] }), { guide: { cx: 0.72, fy: 0.94, hh: 0.62 } }).length > plainLen + 15, 'the "stand here" box is drawn only when it is asked for (never in a saved picture)');
+  check(draw(base({ stickers: [bud(1)] }), { selected: 1, guides: true }).length > draw(base({ stickers: [bud(1)] }), { selected: 1 }).length + 20 && draw(base({ stickers: [bud(1)] }), { selected: 1 }).length === plainLen, 'the handles of the picked one are drawn only in the live preview');
+  const flatColours = (log) => new Set(log.filter((l) => /^(fillStyle|strokeStyle)=/.test(l)).map((l) => l.split('=')[1].replace(/"/g, '')));
+  const guideOnly = draw(base({ photo: null, stickers: [] }), { guide: { cx: 0.72, fy: 0.94, hh: 0.62 }, selected: null });
+  check(guideOnly.some((l) => l === 'strokeStyle="#111184"') && guideOnly.some((l) => l === 'fillStyle="#ffffff"'), 'the "stand here" box is flat white with a dark-blue line round it (no shadow, no see-through)');
+  check(!draw(base({ stickers: [bud(1)] }), { selected: 1, guides: true, unit: 2 }).slice(plainLen).some((l) => /shadow|rgba/.test(l)), 'and the handles of the picked one are flat too: white discs with dark-blue marks (no shadow, no see-through)');
+  void flatColours;
   check(draw(base({ photo: null })).some((l) => l.includes('"#1a1424"')), 'no photo yet: a dark window (never a crash)');
 }
 check(near(SC.handleRadius(1000, 2), 22) && near(SC.handleRadius(360), 11) && near(SC.handleRadius(720), 22), 'a handle is 11 screen pixels wide, on any picture size');
@@ -279,6 +285,56 @@ const cssRules = css.split('\n').filter((l) => l.includes('{') && !/^\s/.test(l)
 check(cssRules.length > 60 && cssRules.every((l) => l.slice(0, l.indexOf('{')).split(',').every((sel) => sel.trim().startsWith('.bb-'))), 'every style of the booth starts with bb- (nothing else in the app is touched)');
 check(/camera=\(self\)/.test(read('public/_headers')), 'the site\'s own pages may use the camera');
 check(/test-booth\.mjs/.test(read('package.json')), 'this test is part of the test chain');
+
+section('9. One flat colour: #111184');
+{
+  const colours = new Set([...css.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/g)].map((m) => m[0].toLowerCase()));
+  check([...colours].every((x) => x === '#111184' || x === '#fff') && colours.has('#111184') && colours.has('#fff'), 'the page uses only #111184 and white (no other colour anywhere in booth.css)', [...colours].join(' '));
+  // (two resets are fine: the search box turns the app's own input shadow off, and the placeholder is made fully white)
+  const cssBody = css.replace(/box-shadow: none( !important)?;/g, '').replace(/opacity: 1;/g, '');
+  check(!/gradient\(|box-shadow|text-shadow|drop-shadow|backdrop-filter|filter:|opacity|background-image|url\(|mask|blur/i.test(cssBody), 'no gradients, patterns, pictures, shadows, blurs or see-through layers in the page');
+  check(/\.bb-root \{[^}]*background: #111184;/.test(css) && /\.bb-sheet-back \{[^}]*background: #111184;/.test(css) && /\.bb-tray \{[^}]*background: #111184;/.test(css) && /\.bb-dock \{[^}]*background: #111184;/.test(css) && /\.bb-open \{[^}]*background: #111184;/.test(css), 'the page, the trays, the dock, the finished-picture sheet and the opening are all #111184');
+  check(!/linear-gradient|radial-gradient|boxShadow|--ac/.test(booth + sheet) && /background: f\.swatch\[1\]/.test(booth), 'no colour comes from the code of the page either: each frame is shown as one flat colour');
+}
+
+section('10. The opening art (4 seconds) and the address /booth');
+{
+  const OP = await import('../../src/booth/opening.ts');
+  const ROUTES = await import('../../src/utils/routes.ts');
+  const sizes = [[375, 812], [320, 640], [1280, 800], [800, 1280], [412, 915], [1920, 1080]];
+  check(OP.OPENING_SECONDS === 4 && OP.PAGE_BLUE === '#111184' && OP.OPENING_BUDDIES.length === 4 && OP.SHOT_TIMES.length === 4 && OP.SHOT_TIMES.every((s, i) => s >= 0.5 && s < 3.2 && (i === 0 || s > OP.SHOT_TIMES[i - 1])) && OP.OPENING_BUDDIES.every((id) => SC.isBuddy(id)), 'the opening lasts 4 seconds and takes four photos, one after another, of four buddies');
+  const bad = [];
+  for (const [W, H] of sizes) {
+    const L = OP.openingLayout(W, H);
+    const inside = L.cards.every((p) => p.x >= 0 && p.y >= L.titleY + L.titleSize * 0.5 && p.x + L.cw <= W && p.y + L.ch <= H) && L.titleY - L.titleSize / 2 >= 0 && L.cards[0].y + L.ch <= L.cards[2].y && L.cards[0].x + L.cw <= L.cards[1].x;
+    if (!inside) bad.push(`${W}x${H}`);
+  }
+  check(bad.length === 0, 'on every screen size the words and the four cards fit, in the middle, without touching', bad.join(' '));
+  let errs = '';
+  const sprites = [];
+  const stub = (c, id, cx, cy, size, rot, flip, t) => { sprites.push(id); };
+  const colourSet = new Set();
+  for (const [W, H] of sizes) for (let t = 0; t <= 4.2; t += 0.05) {
+    const r = recorder();
+    try { OP.drawOpening(r.ctx, W, H, t, stub); } catch (e) { errs = `${W}x${H}@${t.toFixed(2)}: ${e.message}`; }
+    for (const l of r.log) if (/^(fillStyle|strokeStyle)=/.test(l)) colourSet.add(l.split('=')[1].replace(/"/g, ''));
+  }
+  check(!errs, 'the opening is drawn at every moment, on every screen size, without a mistake', errs);
+  check([...colourSet].every((x) => x === '#111184' || x === '#ffffff') && colourSet.size === 2, 'the art itself is flat: only #111184 and white (the buddies bring their own colours)', [...colourSet].join(' '));
+  const at = (t, W = 375, H = 812) => { const r = recorder(), got = []; OP.drawOpening(r.ctx, W, H, t, (c, id) => got.push(id)); return { log: r.log, got }; };
+  check(at(0.5).got.length === 0 && at(1.2).got.join() === 'bd-bunby' && at(1.8).got.join() === 'bd-bunby,bd-kitsu' && at(3.2).got.join() === OP.OPENING_BUDDIES.join(), 'the buddies pop into their cards one by one, each after its own flash');
+  check(at(4).got.length === 0 && at(4).log.includes('fillRect(0,0,375,812)') && !at(4).log.some((l) => l.startsWith('fillText(') || l === 'fillStyle="#ffffff"') && at(2).log.filter((l) => l.startsWith('fillText(')).length >= 10, 'at 4 seconds only the page colour is left (the art has gone), and the words are there before that');
+  const flash = (t) => at(t).log.some((l) => l === 'fillRect(0,0,375,812)' && true) && at(t).log.filter((l) => l === 'fillStyle="#ffffff"').length > 0;
+  const fullFlash = (t) => { const L = at(t).log; const i = L.lastIndexOf('fillRect(0,0,375,812)'); return i > 1 && L[i - 1] === 'fillStyle="#ffffff"'; };
+  check(fullFlash(3.55) && !fullFlash(3.4) && !fullFlash(3.75), 'one last flash of the whole screen (a picture of all four), gone again in a blink');
+  void flash;
+  const lift = (t) => { const L = at(t).log.find((l) => /^translate\(0,-?[\d.]+\)$/.test(l) && l !== 'translate(0,0)'); return L ? parseFloat(L.slice(12, -1)) : 0; };
+  check(lift(3.5) === 0 && lift(3.8) < 0 && lift(3.95) < lift(3.8), 'at the end everything slides away upwards, faster and faster, into the first screen');
+  check(ROUTES.isKnownPath('/booth') && ROUTES.isKnownPath('/booth/') && !ROUTES.isKnownPath('/booths') && ROUTES.isKnownPath('/studio'), 'the address /booth is a real page of the site (not "page not found")');
+  const store = read('src/components/Booth/boothStore.ts');
+  check(/\^\\\/booth\\\/\?\$\/i\.test\(window\.location\.pathname\)\) openBooth\(\)/.test(app) && /replaceState\(null, '', '\/'\)/.test(store) && /closeBooth = \(\): void => \{ set\(false\);/.test(store), 'opening /booth opens the booth (after the login if there is none yet), and closing it takes /booth out of the address bar');
+  check(/const \[opening, setOpening\] = useState\(\(\) =>/.test(booth) && /prefers-reduced-motion: reduce/.test(booth) && /if \(screen === 'pick' && opening\)/.test(booth) && /onPointerDown=\{onDone\}/.test(read('src/components/Booth/BoothOpening.tsx')) && /if \(result \|\| opening\) return;/.test(booth), 'the opening plays when the booth opens, a tap or a key skips it, and a phone set to less motion goes straight in');
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

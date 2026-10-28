@@ -12,6 +12,7 @@ import type { CamState, Facing } from '../../booth/camera';
 import { loadLogo, loadPhoto, snapshot } from '../../booth/media';
 import { Thumb } from './Thumb';
 import { ResultSheet } from './ResultSheet';
+import { BoothOpening } from './BoothOpening';
 import type { BoothTarget } from './BoothHost';
 import './booth.css';
 
@@ -75,6 +76,9 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
   const [recent, setRecent] = useState<string[]>(loadRecent);
   const [guideOn, setGuideOn] = useState(true);
   const [tip, setTip] = useState('');
+  // the 4-second opening art plays every time the booth opens (a tap skips it; a person who asked their phone for less motion does not get it)
+  const [opening, setOpening] = useState(() => { try { return !window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return true; } });
+  const endOpening = useCallback(() => setOpening(false), []);
 
   const sceneRef = useRef<Scene>(emptyScene(prefs.current));
   const selectedRef = useRef<number | null>(null);
@@ -424,7 +428,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
   // the keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (result) return;
+      if (result || opening) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) { if (e.key === 'Escape') (t as HTMLInputElement).blur(); return; }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRef.current != null) { e.preventDefault(); removeSelected(); }
@@ -454,6 +458,14 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
   );
 
   // ================================================================== the first screen
+  if (screen === 'pick' && opening) {
+    return (
+      <div className="bb-root" role="dialog" aria-modal="true" aria-label="Buddy Booth" data-testid="booth-root">
+        <BoothOpening onDone={endOpening} />
+      </div>
+    );
+  }
+
   if (screen === 'pick') {
     const suggestions = BUDDIES.slice(0, 5);
     return (
@@ -476,18 +488,18 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
               <div className="bb-sugg">
                 <button type="button" className="bb-dice" onClick={randomBuddy} aria-label="A surprise buddy"><Shuffle size={22} /><span>Surprise</span></button>
                 {suggestions.map((b) => (
-                  <button type="button" key={b.id} className="bb-circle" onClick={() => startWith(b.id)} aria-label={b.name} style={{ ['--ac' as string]: b.buddy?.accent }}><Thumb id={b.id} size={50} /><span>{b.name}</span></button>
+                  <button type="button" key={b.id} className="bb-circle" onClick={() => startWith(b.id)} aria-label={b.name}><Thumb id={b.id} size={50} /><span>{b.name}</span></button>
                 ))}
               </div>
               <div className="bb-chips" role="tablist" aria-label="Fields">
                 <button type="button" role="tab" aria-selected={field === 'all'} className={field === 'all' ? 'on' : ''} onClick={() => setField('all')}>All</button>
-                {FIELDS.map((f) => <button type="button" role="tab" aria-selected={field === f.id} key={f.id} className={field === f.id ? 'on' : ''} onClick={() => setField(f.id)} style={{ ['--ac' as string]: f.accent }}>{f.name}</button>)}
+                {FIELDS.map((f) => <button type="button" role="tab" aria-selected={field === f.id} key={f.id} className={field === f.id ? 'on' : ''} onClick={() => setField(f.id)}>{f.name}</button>)}
               </div>
             </>
           )}
           <div className="bb-grid" data-testid="booth-grid">
             {visibleBuddies.map((b) => (
-              <button type="button" key={b.id} className="bb-card" onClick={() => startWith(b.id)} data-testid={`booth-buddy-${b.id}`} style={{ ['--ac' as string]: b.buddy?.accent }}>
+              <button type="button" key={b.id} className="bb-card" onClick={() => startWith(b.id)} data-testid={`booth-buddy-${b.id}`}>
                 <Thumb id={b.id} size={92} />
                 <b>{b.name}</b>
                 <small>{b.buddy?.tagline}</small>
@@ -556,11 +568,11 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
         <div className="bb-tray" data-testid="booth-tray-buddies">
           <div className="bb-chips">
             <button type="button" className={field === 'all' ? 'on' : ''} onClick={() => setField('all')}>All</button>
-            {FIELDS.map((f) => <button type="button" key={f.id} className={field === f.id ? 'on' : ''} onClick={() => setField(f.id)} style={{ ['--ac' as string]: f.accent }}>{f.name}</button>)}
+            {FIELDS.map((f) => <button type="button" key={f.id} className={field === f.id ? 'on' : ''} onClick={() => setField(f.id)}>{f.name}</button>)}
           </div>
           <div className="bb-row">
             {(field === 'all' ? [...BUDDIES] : buddiesIn(field)).map((b) => (
-              <button type="button" key={b.id} className="bb-mini" onClick={() => addBuddy(b.id)} aria-label={`Add ${b.name}`} data-testid={`booth-add-${b.id}`} style={{ ['--ac' as string]: b.buddy?.accent }}><Thumb id={b.id} size={64} /><span>{b.name}</span></button>
+              <button type="button" key={b.id} className="bb-mini" onClick={() => addBuddy(b.id)} aria-label={`Add ${b.name}`} data-testid={`booth-add-${b.id}`}><Thumb id={b.id} size={64} /><span>{b.name}</span></button>
             ))}
           </div>
         </div>
@@ -570,7 +582,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
           <div className="bb-chips">
             <button type="button" className={tab === 'featured' ? 'on' : ''} onClick={() => setTab('featured')}>Featured</button>
             {recent.length > 0 && <button type="button" className={tab === 'recent' ? 'on' : ''} onClick={() => setTab('recent')}>Recent</button>}
-            {PACKS.map((p) => <button type="button" key={p.id} className={tab === p.id ? 'on' : ''} onClick={() => setTab(p.id)} style={{ ['--ac' as string]: p.accent }}>{p.name}</button>)}
+            {PACKS.map((p) => <button type="button" key={p.id} className={tab === p.id ? 'on' : ''} onClick={() => setTab(p.id)}>{p.name}</button>)}
           </div>
           <div className="bb-row">
             {filterList.map((d) => (
@@ -587,7 +599,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
           <div className="bb-row frames" role="radiogroup" aria-label="Frame">
             {FRAMES.map((f) => (
               <button type="button" role="radio" aria-checked={sc.frame === f.id} key={f.id} className={`bb-frame${sc.frame === f.id ? ' on' : ''}`} onClick={() => setFrame(f.id)} aria-label={f.name} data-testid={`booth-frame-${f.id}`}>
-                <i style={{ background: `linear-gradient(135deg, ${f.swatch[0]}, ${f.swatch[1]} 55%, ${f.swatch[2]})` }} /><span>{f.name}</span>
+                <i style={{ background: f.swatch[1] }} /><span>{f.name}</span>
               </button>
             ))}
           </div>

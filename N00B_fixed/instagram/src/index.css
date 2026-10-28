@@ -1180,7 +1180,9 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 /* The Messages page (from the picture, in its measured sizes): always dark and premium in both themes - a flat deep-green header that meets a near-black sheet with big rounded
    corners, one mint accent, the phone's own font (San Francisco on an iPhone). The bottom bar is not touched. */
 .msg-page {
-  --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e; --head: #00482c;
+  --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e;
+  /* the green is the picture's (#02472b) taken a quarter darker; the round buttons and the gap inside a ring are lighter steps of it */
+  --head: #02351f; --head-btn: #164b32; --head-btn-hover: #1b5a3d; --head-gap: #023e25;
   /* the app makes its small fixed text 1.38 times bigger (--tx); the picture's sizes are the plain ones, so here that factor is 1 at the normal setting and still follows Settings > Text size */
   --tx: calc(1 + (var(--tx0) - 1.38) * 0.6);
   background: var(--panel) !important;
@@ -1191,14 +1193,27 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 .msg-page .msg-head { padding-top: 16px; }
 @media (display-mode: standalone) { .msg-page .msg-head { padding-top: 6px; } }
 .msg-page .msg-sheet, .msg-page .msg-sticky, :root[data-theme="light"] .msg-page .msg-sheet { background: var(--panel) !important; }
+/* the four filters always sit inside the sheet: everything about them grows and shrinks with the screen width, and a highlight slides to the chosen one */
+.msg-page .msg-pills {
+  --pf: clamp(12.5px, 3.5vw, 14px); --ph: clamp(31px, 8.4vw, 34px); --pl: clamp(8px, 2.75vw, 11px); --pr: clamp(4px, 1.5vw, 6px); --pg: clamp(3px, 1vw, 4px);
+  --chip: clamp(15px, 4.3vw, 17px); --chip-f: clamp(10px, 2.8vw, 11px);
+  padding-inline: clamp(10px, 3vw, 13px); column-gap: clamp(3px, 1.25vw, 5px); position: sticky;
+}
+@media (min-width: 768px) { .msg-page .msg-pills { justify-content: flex-start; column-gap: 8px; } }
+.msg-page .msg-pill, .msg-page .msg-pill-on { height: var(--ph); padding-left: var(--pl); padding-right: var(--pr); column-gap: var(--pg); font-size: var(--pf); z-index: 1; transition: background-color .3s ease, color .3s ease; }
+.msg-page .msg-pill-nocount { padding-right: var(--pl) !important; }
 .msg-page .msg-pill, :root[data-theme="light"] .msg-page .msg-pill { background: #181a1e !important; color: #d6dce4 !important; }
-.msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: #0d3e2d !important; color: var(--mint) !important; }
+.msg-page .msg-pill-on, :root[data-theme="light"] .msg-page .msg-pill-on { background: transparent !important; color: var(--mint) !important; }
+.msg-page .msg-pill-slide { position: absolute; left: 0; top: 0; z-index: 0; border-radius: 9999px; background: #0d3e2d; pointer-events: none; will-change: transform, width;
+  transition: transform .45s cubic-bezier(.22, 1, .36, 1), width .45s cubic-bezier(.22, 1, .36, 1), height .3s ease; }
+.msg-page .msg-chip { min-width: var(--chip); height: var(--chip); padding: 0 4px; font-size: var(--chip-f); line-height: var(--chip); background: #25282d; color: #979fa7; transition: background-color .3s ease, color .3s ease; }
+.msg-page .msg-chip-on { background: var(--mint); color: #033b2a; }
 .msg-page .msg-row { transition: opacity .38s ease, transform .38s cubic-bezier(.22,.8,.3,1), background-color .15s; }
 .msg-page .msg-row:not([data-in]) { opacity: 0; transform: translateY(14px); }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
-html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #00482c) !important; transition: background-color .25s ease; }
+html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #02351f) !important; transition: background-color .25s ease; }
 @layer base {
-  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #00482c !important; background-image: none !important; }
+  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #02351f !important; background-image: none !important; }
   .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }
 }
 

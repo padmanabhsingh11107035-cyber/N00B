@@ -5,7 +5,7 @@ import { ChatEncryptionModal, EncryptionSettingsModal } from './EncryptionModals
 import { EndToEndEncryption } from '../Legal/EndToEndEncryption';
 import { ChatCallModal } from './ChatCallModal';
 import { useChatCrypto } from './useChatCrypto';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   Archive,
   ChevronDown,
@@ -1656,8 +1656,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
   const setStrip = (green: boolean) => {
     const root = document.documentElement;
-    root.style.setProperty('--msg-strip', green ? '#00482c' : '#0a0c0e');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', green ? '#00482c' : '#0a0c0e');
+    root.style.setProperty('--msg-strip', green ? '#02351f' : '#0a0c0e');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', green ? '#02351f' : '#0a0c0e');
   };
   useEffect(() => {
     if (mobileView !== 'list') return;
@@ -1688,6 +1688,27 @@ export const ChatView: React.FC<ChatViewProps> = ({
     box.addEventListener('scroll', onScroll, { passive: true });
     return () => { box.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
   }, [mobileView]);
+
+  // The soft highlight under the chosen filter slides to the next one (its place is measured, also when the screen turns or the counts change).
+  const pillsRef = useRef<HTMLDivElement>(null);
+  const pillBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pillInd, setPillInd] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const pillCounts = `${visibleConversations.length}-${visibleConversations.filter((c) => (c.unreadCount || 0) > 0).length}-${visibleConversations.filter((c) => c.isPinned).length}-${visibleConversations.filter((c) => c.isGroup).length}`;
+  useLayoutEffect(() => {
+    if (mobileView !== 'list') return;
+    const place = () => {
+      const el = pillBtnRefs.current[activeFilterTab];
+      if (!el || !el.offsetWidth) return;
+      const next = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+      setPillInd((p) => (p && p.x === next.x && p.y === next.y && p.w === next.w && p.h === next.h ? p : next));
+    };
+    place();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(place);
+    if (pillsRef.current) ro.observe(pillsRef.current);
+    for (const k in pillBtnRefs.current) { const b = pillBtnRefs.current[k]; if (b) ro.observe(b); }
+    return () => ro.disconnect();
+  }, [activeFilterTab, pillCounts, mobileView]);
 
   // the people of the row under the icons: verified people you chat one-to-one with, pinned chats first, then the order of the list, up to 12
   const recentPeople = sortedConversations
@@ -1786,11 +1807,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {/* two round buttons under the title */}
             <div className="mt-[8px] ml-[9px] flex items-center gap-3" data-testid="messages-actions">
               <button type="button" onClick={() => setShowSearchField((v) => !v)} aria-label="Search" title="Search" data-testid="messages-search"
-                className={`w-[45px] h-[45px] rounded-full flex items-center justify-center cursor-pointer transition-colors ${showSearchField || searchQuery ? 'bg-[var(--mint)] text-[#033b2a]' : 'bg-[#156444] hover:bg-[#1a7350] text-white'}`}>
+                className={`w-[45px] h-[45px] rounded-full flex items-center justify-center cursor-pointer transition-colors ${showSearchField || searchQuery ? 'bg-[var(--mint)] text-[#033b2a]' : 'bg-[var(--head-btn)] hover:bg-[var(--head-btn-hover)] text-white'}`}>
                 <Search className="w-[21px] h-[21px]" strokeWidth={2.3} />
               </button>
               <button type="button" onClick={() => setShowNewChatModal(true)} aria-label="Find a person to chat with" title="Find a person to chat with" data-testid="messages-new-chat"
-                className="w-[45px] h-[45px] rounded-full bg-[#156444] hover:bg-[#1a7350] text-white flex items-center justify-center cursor-pointer transition-colors">
+                className="w-[45px] h-[45px] rounded-full bg-[var(--head-btn)] hover:bg-[var(--head-btn-hover)] text-white flex items-center justify-center cursor-pointer transition-colors">
                 <UserPlus className="w-[21px] h-[21px]" strokeWidth={2.1} />
               </button>
             </div>
@@ -1800,13 +1821,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <button type="button" onClick={() => setShowInstantCamera(true)} aria-label="Your Instant" data-testid="messages-your-instant" className="shrink-0 w-[65px] text-center cursor-pointer">
                 <span className="relative block w-[65px] h-[65px]">
                   <img src={currentUser.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" />
-                  <span className="absolute right-0 bottom-0 w-[19px] h-[19px] rounded-full bg-[var(--mint)] text-white flex items-center justify-center border-[2.5px] border-[#00482c]"><Plus className="w-[11px] h-[11px]" strokeWidth={4} /></span>
+                  <span className="absolute right-0 bottom-0 w-[19px] h-[19px] rounded-full bg-[var(--mint)] text-white flex items-center justify-center border-[2.5px] border-[var(--head)]"><Plus className="w-[11px] h-[11px]" strokeWidth={4} /></span>
                 </span>
                 <span className="block mt-2 -mx-[10px] text-[12px] leading-4 text-white/85 truncate">Your Instant</span>
               </button>
               {recentPeople.map(({ chat, who }) => (
                 <button key={chat.id} type="button" onClick={() => { setActiveChatId(chat.id); setMobileView('chat'); }} data-testid="messages-person" className="shrink-0 w-[65px] text-center cursor-pointer">
-                  <span className="block w-[65px] h-[65px] rounded-full p-[2.5px] border-[2.5px] border-[var(--mint-ring)] bg-[#005032]">
+                  <span className="block w-[65px] h-[65px] rounded-full p-[2.5px] border-[2.5px] border-[var(--mint-ring)] bg-[var(--head-gap)]">
                     <img src={who.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" />
                   </span>
                   <span className="block mt-2 -mx-[7px] text-[12px] leading-4 text-white/85 truncate">{(who.displayName || who.username || '').split(' ')[0]}</span>
@@ -1836,8 +1857,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {/* the big rounded sheet that holds the filters and the chats, overlapping the header */}
           <div className="msg-sheet relative z-[1] -mt-8 rounded-t-[32px] min-h-[70vh]">
 
-          {/* filters (All, Unread, Favourites, Groups) */}
-          <div className="msg-sticky sticky top-[-12px] z-10 rounded-t-[32px] px-[14px] pt-[22px] pb-[17px] flex items-center gap-[11px] overflow-x-auto no-scrollbar" data-testid="messages-filters">
+          {/* filters (All, Unread, Favourites, Groups): all four sit inside the sheet (they scale with the screen width), a soft highlight slides to the one you pick */}
+          <div ref={pillsRef} className="msg-sticky msg-pills sticky top-[-12px] z-10 rounded-t-[32px] pt-[22px] pb-[17px] flex items-center justify-between overflow-x-auto no-scrollbar" data-testid="messages-filters">
+            {pillInd && (
+              <span
+                aria-hidden
+                className="msg-pill-slide"
+                style={{ transform: `translate3d(${pillInd.x}px, ${pillInd.y}px, 0)`, width: pillInd.w, height: pillInd.h }}
+              />
+            )}
             {(
               [
                 { id: 'all', label: 'All' },
@@ -1859,8 +1887,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
               return (
                 <button
                   key={tab.id}
+                  ref={(el) => { pillBtnRefs.current[tab.id] = el; }}
                   onClick={() => setActiveFilterTab(tab.id)}
-                  className={`h-[35px] shrink-0 pl-4 ${count > 0 ? 'pr-3' : 'pr-4'} rounded-full text-[15px] leading-none whitespace-nowrap transition-colors flex items-center gap-2 cursor-pointer ${
+                  data-count={count}
+                  className={`relative shrink-0 rounded-full leading-none whitespace-nowrap flex items-center cursor-pointer ${count > 0 ? '' : 'msg-pill-nocount'} ${
                     isActive
                       ? 'msg-pill-on font-semibold'
                       : 'msg-pill font-medium'
@@ -1869,8 +1899,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   <span>{tab.label}</span>
                   {count > 0 && (
                     <span
-                      className={`min-w-[20px] h-5 px-[6px] rounded-full text-[12px] leading-5 text-center font-bold tabular-nums ${
-                        isActive ? 'bg-[var(--mint)] text-[#033b2a]' : 'bg-[#25282d] text-[#979fa7]'
+                      className={`msg-chip rounded-full text-center font-bold tabular-nums ${
+                        isActive ? 'msg-chip-on' : ''
                       }`}
                     >
                       {count}

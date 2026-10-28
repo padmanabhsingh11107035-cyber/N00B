@@ -18,22 +18,22 @@ import './booth.css';
 type Panel = null | 'buddies' | 'filters' | 'frame';
 type FilterTab = 'featured' | 'recent' | PackId;
 
-const PREFS_KEY = 'noob_booth_prefs_v1';
-const RECENT_KEY = 'noob_stickers_recent_v1';
-const TIP_KEY = 'noob_booth_tip_v1';
+const PREFS_SLOT = 'noob_booth_prefs_v1';
+const RECENT_SLOT = 'noob_stickers_recent_v1';
+const TIP_SLOT = 'noob_booth_tip_v1';
 
 interface Prefs { shape: ShapeId; frame: FrameId }
 function loadPrefs(): Prefs {
   try {
-    const p = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') as Partial<Prefs>;
+    const p = JSON.parse(localStorage.getItem(PREFS_SLOT) || '{}') as Partial<Prefs>;
     return { shape: shapeById(p.shape || '').id, frame: frameById(p.frame || '').id };
   } catch { return { shape: '4:5', frame: 'pearl' }; }
 }
-function savePrefs(p: Prefs): void { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* the choice is simply not remembered */ } }
+function savePrefs(p: Prefs): void { try { localStorage.setItem(PREFS_SLOT, JSON.stringify(p)); } catch { /* the choice is simply not remembered */ } }
 function loadRecent(): string[] {
-  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') as unknown; return Array.isArray(l) ? l.filter((id): id is string => typeof id === 'string' && !!stickerById(id) && !isBuddy(id)).slice(0, 16) : []; } catch { return []; }
+  try { const l = JSON.parse(localStorage.getItem(RECENT_SLOT) || '[]') as unknown; return Array.isArray(l) ? l.filter((id): id is string => typeof id === 'string' && !!stickerById(id) && !isBuddy(id)).slice(0, 16) : []; } catch { return []; }
 }
-function saveRecent(l: string[]): void { try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch { /* not remembered */ } }
+function saveRecent(l: string[]): void { try { localStorage.setItem(RECENT_SLOT, JSON.stringify(l)); } catch { /* not remembered */ } }
 
 const emptyScene = (p: Prefs): Scene => ({ shape: p.shape, frame: p.frame, photo: null, zoom: 1, panX: 0, panY: 0, stickers: [], mirror: false, tag: true });
 
@@ -148,7 +148,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse: (file: File, target: Bo
   useEffect(() => {
     if (screen !== 'stage' || mode !== 'camera' || cam !== 'live') return;
     let seen = false;
-    try { seen = sessionStorage.getItem(TIP_KEY) === '1'; sessionStorage.setItem(TIP_KEY, '1'); } catch { /* the tip may show again */ }
+    try { seen = sessionStorage.getItem(TIP_SLOT) === '1'; sessionStorage.setItem(TIP_SLOT, '1'); } catch { /* the tip may show again */ }
     if (seen) return;
     setTip('Ask a friend to stand in the box. For a selfie, switch the camera.');
     const id = window.setTimeout(() => setTip(''), 5200);

@@ -3,6 +3,8 @@
   // (made by "npx vite build"). Any address that is not a real file falls back to the app,
   // so links like /profile or /reels open correctly when a page is refreshed.
   "name": "n00b",
+  // the Worker's log lines (which files were fetched from Supabase) can be read in Cloudflare > Workers > n00b > Logs
+  "observability": { "enabled": true },
   "compatibility_date": "2026-09-01",
   // A small script answers only the two big files of Neon Alley (too large for a website file, kept in the repository's "game-data" release) and every picture, video and song
   // of the app (/m/<key>, kept in the data centre's cache so Supabase Storage is not asked for the same file again and again); and /__geo (the approximate place of the person who asks: city, region, country), every other address is served straight from the

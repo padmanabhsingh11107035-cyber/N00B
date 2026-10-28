@@ -152,7 +152,11 @@ section('4. If the cache cannot answer pieces');
   await serveMedia(get('/m/reels/a.mp4'), ctx, caches); await ctx.done();
   calls = [];
   const r = await serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=3-6' } }), ctx, caches);
-  check(r.status === 206 && (await text(r)) === '3456' && calls.length === 1 && calls[0].range === 'bytes=3-6', 'the piece is taken from Supabase instead (never a wrong answer)');
+  check(r.status === 206 && (await text(r)) === '3456' && calls.length === 0 && r.headers.get('X-Media-Cache') === 'HIT-SLICED' && r.headers.get('Content-Range') === 'bytes 3-6/20', 'the piece is cut out of the kept file here: Supabase is not asked at all');
+  const tail = await serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=-4' } }), ctx, caches);
+  check(tail.status === 206 && (await text(tail)) === 'ghij' && calls.length === 0, 'the last 4 bytes (a player looking for the end of an mp4) are cut out the same way');
+  const open = await serveMedia(get('/m/reels/a.mp4', { headers: { Range: 'bytes=15-' } }), ctx, caches);
+  check(open.status === 206 && (await text(open)) === 'fghij' && open.headers.get('Content-Length') === '5' && calls.length === 0, 'from byte 15 to the end too');
 }
 
 section('5. Things that are not kept, and things that do not exist');

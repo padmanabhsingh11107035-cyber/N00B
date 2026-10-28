@@ -24,7 +24,7 @@ const FILES = {
 const SUPABASE = 'https://abffssydapumuhwgzeck.supabase.co';
 const BUCKET = 'media';
 const CACHE_ORIGIN = 'https://noobsocials.com';   // one cache address per file, whichever site address the request came on
-const KEEP_SECONDS = 30 * 24 * 3600;              // how long the data centre keeps a file (a file the owner deleted is gone from here within this time)
+const KEEP_SECONDS = 90 * 24 * 3600;              // how long the data centre keeps a file (a file the owner deleted is gone from here within this time). Every refill is a whole file from Supabase, so: long
 const MAX_CACHED_BYTES = 60 * 1024 * 1024;        // bigger files are passed through and not kept (the bucket's own limit is 50 MB)
 const LOCK_SECONDS = 300;                         // while one request is filling the cache with a file, others do not start the same download
 const inFlight = new Set();
@@ -68,6 +68,35 @@ function outHeaders(from, cache) {
   return h;
 }
 
+/** every time Supabase Storage is asked for a file: one line in the Worker's logs (Cloudflare > Workers > n00b > Logs), so the files that really cost Supabase traffic can be seen */
+function logOrigin(why, key, bytes) {
+  try { console.log(JSON.stringify({ origin: why, key, bytes: Number(bytes) || 0 })); } catch { /* a log line is never a reason to fail */ }
+}
+
+/** "bytes=a-b" / "bytes=a-" / "bytes=-n" for a file of `total` bytes -> the first and last byte wanted, or null when it is not a single plain range */
+export function parseRange(range, total) {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(String(range || '').trim());
+  if (!m || (m[1] === '' && m[2] === '') || !(total > 0)) return null;
+  let start, end;
+  if (m[1] === '') { start = Math.max(0, total - Number(m[2])); end = total - 1; }
+  else { start = Number(m[1]); end = m[2] === '' ? total - 1 : Math.min(Number(m[2]), total - 1); }
+  return start <= end && start < total ? { start, end } : null;
+}
+
+/** only the bytes start..end (inclusive) of a stream, passed on as they arrive */
+function sliceBody(body, start, end) {
+  let pos = 0;
+  return body.pipeThrough(new TransformStream({
+    transform(chunk, controller) {
+      const from = pos, to = pos + chunk.byteLength;
+      pos = to;
+      if (to <= start) return;
+      if (from > end) { controller.terminate(); return; }
+      controller.enqueue(chunk.subarray(Math.max(0, start - from), Math.min(chunk.byteLength, end + 1 - from)));
+    }
+  }));
+}
+
 /** a copy of a whole file in the form the cache keeps it */
 function storable(up) {
   const h = new Headers();
@@ -99,6 +128,7 @@ async function fill(cache, key) {
     const up = await fetch(upstreamUrl(key));
     const length = Number(up.headers.get('Content-Length') || 0);
     if (up.status !== 200 || !up.body || !length || length > MAX_CACHED_BYTES) { await up.body?.cancel(); return; }
+    logOrigin('fill', key, length);
     await cache.put(new Request(cacheUrl(key)), storable(up));
   } catch { /* the next request tries again when the lock has run out */ }
   finally { inFlight.delete(key); }
@@ -124,9 +154,18 @@ export async function serveMedia(request, ctx, cacheStorage = globalThis.caches)
     return new Response(request.method === 'HEAD' ? null : hit.body, { status: hit.status, headers: outHeaders(hit.headers, 'HIT') });
   }
   if (hit && range && hit.status === 200) {
-    // the cache gave the whole file for a piece: not wanted here, hand the piece from Supabase and keep the file as it is
+    // the cache gave the whole file for a piece: the piece is cut out of it here (Supabase is never asked for something the cache already has)
+    const total = Number(hit.headers.get('Content-Length') || 0);
+    const want = parseRange(range, total);
+    if (want && hit.body) {
+      const h = outHeaders(hit.headers, 'HIT-SLICED');
+      h.set('Content-Range', `bytes ${want.start}-${want.end}/${total}`);
+      h.set('Content-Length', String(want.end - want.start + 1));
+      return new Response(request.method === 'HEAD' ? null : sliceBody(hit.body, want.start, want.end), { status: 206, headers: h });
+    }
     await hit.body?.cancel();
     const piece = await fetch(upstreamUrl(key), { headers: { Range: range } });
+    logOrigin('piece', key, piece.headers.get('Content-Length'));
     return new Response(request.method === 'HEAD' ? null : piece.body, { status: piece.status, headers: outHeaders(piece.headers, 'HIT-PIECE-FROM-SOURCE') });
   }
 
@@ -140,6 +179,7 @@ export async function serveMedia(request, ctx, cacheStorage = globalThis.caches)
     let kept = false;
     try {
       const up = await fetch(upstreamUrl(key));
+      logOrigin('whole-from-start', key, up.headers.get('Content-Length'));
       if (!up.ok) { await up.body?.cancel(); return new Response('Not found', { status: up.status === 404 || up.status === 400 ? 404 : 502, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }); }
       const length = Number(up.headers.get('Content-Length') || 0);
       if (!up.body || !length || length > MAX_CACHED_BYTES || up.headers.get('Content-Encoding')) {
@@ -156,11 +196,13 @@ export async function serveMedia(request, ctx, cacheStorage = globalThis.caches)
   if (range) {
     // a piece before the file is kept: the piece at once, the whole file in the background
     const piece = await fetch(upstreamUrl(key), { headers: { Range: range } });
+    logOrigin('piece', key, piece.headers.get('Content-Length'));
     if (!piece.ok) { await piece.body?.cancel(); return new Response('Not found', { status: piece.status === 416 ? 416 : 404, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }); }
     ctx.waitUntil(fill(cache, key));
     return new Response(piece.body, { status: piece.status, headers: outHeaders(piece.headers, 'MISS-FILLING') });
   }
   const up = await fetch(upstreamUrl(key));
+  logOrigin('whole', key, up.headers.get('Content-Length'));
   if (!up.ok) { await up.body?.cancel(); return new Response('Not found', { status: up.status === 404 || up.status === 400 ? 404 : 502, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }); }
   const length = Number(up.headers.get('Content-Length') || 0);
   if (!up.body || !length || length > MAX_CACHED_BYTES || up.headers.get('Content-Encoding')) {

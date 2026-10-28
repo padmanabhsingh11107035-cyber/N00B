@@ -1183,6 +1183,8 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
   --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e;
   /* the green is the picture's (#02472b) taken a quarter darker; the round buttons and the gap inside a ring are lighter steps of it */
   --head: #02351f; --head-btn: #164b32; --head-btn-hover: #1b5a3d; --head-gap: #023e25;
+  /* the big rounded top corners of the black sheet: 32 px on a phone, up to 52 px on a wide column; the green header goes exactly that far behind them */
+  --msg-r: clamp(32px, 8vw, 52px);
   /* the app makes its small fixed text 1.38 times bigger (--tx); the picture's sizes are the plain ones, so here that factor is 1 at the normal setting and still follows Settings > Text size */
   --tx: calc(1 + (var(--tx0) - 1.38) * 0.6);
   background: var(--panel) !important;

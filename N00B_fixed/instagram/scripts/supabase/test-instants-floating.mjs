@@ -15,7 +15,7 @@ check(/groups\.slice\(0, 3\)/.test(stack) && /onClick=\{\(\) => onOpenViewer\(gr
 check(/rotate\(\$\{i % 2 \? 7 : -5\}deg\)/.test(stack) && /rotate-\[-7deg\]/.test(stack), 'the pieces are tilted, alternately');
 check(/Group by sender/.test(stack) && /fetchInstantInbox\(\)\.then/.test(stack) && /\[refreshKey\]/.test(stack), 'the inbox is still read the same way, and again after an instant was sent or seen');
 
-check(/<aside\s+className=\{`msg-page force-dark relative w-full md:max-w-2xl/.test(chat), 'the list column is the frame the tab floats in');
+check(/<aside\s+className=\{`msg-page force-dark relative w-full shrink-0 flex flex-col/.test(chat), 'the list column is the frame the tab floats in');
 check(/<InstantsStack\s+onOpenCamera=\{\(\) => setShowInstantCamera\(true\)\}\s+onOpenViewer=\{\(queue\) => setInstantViewerQueue\(queue\)\}\s+refreshKey=\{instantsRefreshKey\}\s+\/>/.test(chat), 'the Chat page uses it');
 check(/setShowInstantsArchive\(true\);\s*\}\}[^>]*data-testid="instants-archive-open"/.test(chat) && /<Archive className="w-4 h-4 text-amber-300" \/> Your Instants/.test(chat), '"Your Instants" (your own history) is in the ⋮ menu of the page');
 check(/showInstantsArchive && \(\s*<InstantsArchive/.test(chat) && /showInstantCamera && \(\s*<InstantCamera/.test(chat) && /instantViewerQueue && \(\s*<InstantViewer/.test(chat), 'the camera, the viewer and the archive open as before');

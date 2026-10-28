@@ -1658,11 +1658,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => { box.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
   }, [mobileView]);
 
-  // the people of the row under the icons: one-to-one chats, in the order of the list, up to 12
+  // the people of the row under the icons: verified people you chat one-to-one with, pinned chats first, then the order of the list, up to 12
   const recentPeople = sortedConversations
     .filter((c) => !c.isGroup)
     .map((c) => ({ chat: c, who: c.participants?.find((p) => p.id !== currentUser.id) as User | undefined }))
-    .filter((x): x is { chat: ChatConversation; who: User } => !!x.who)
+    .filter((x): x is { chat: ChatConversation; who: User } => !!x.who && !!x.who.isVerified)
+    .sort((x, y) => Number(!!y.chat.isPinned) - Number(!!x.chat.isPinned))
     .slice(0, 12);
 
   // the place of each of my messages among my messages (its colour comes from it)
@@ -1703,134 +1704,91 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* ONE scroller: the green header scrolls away with the page, the filters stay on top, the chats appear line by line */}
           <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
-          <div ref={headRef} className="msg-head force-dark px-4 pt-3.5 pb-9 will-change-transform" data-testid="messages-header">
-            <div className="flex items-center gap-2.5">
+          <div ref={headRef} className="msg-head force-dark px-5 pt-3 pb-10 will-change-transform" data-testid="messages-header">
+            {/* title row: back, "Messages" with the number of chats, and the menu (calls, new group, chat settings ...) at the right */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => { if (window.history.length > 1) window.history.back(); }}
                 aria-label="Back"
                 title="Back"
                 data-testid="messages-back"
-                className="w-10 h-10 shrink-0 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+                className="-ml-2 w-8 h-8 shrink-0 rounded-full text-white/90 hover:bg-white/10 flex items-center justify-center cursor-pointer transition-colors"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <h1 className="text-[26px] leading-none font-extrabold text-white tracking-tight flex items-center gap-2.5 min-w-0">
+              <h1 className="text-[30px] leading-none font-extrabold text-white tracking-[-0.02em] flex items-center gap-2 min-w-0">
                 <span className="truncate">Messages</span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#26d9a8] text-[#04382a] shrink-0">
+                <span className="text-[11px] leading-none font-extrabold px-2 py-[5px] rounded-full bg-[#26d9a8] text-[#04382a] shrink-0 -translate-y-1.5">
                   {visibleConversations.length + friendsWithoutConversation.length}
                 </span>
               </h1>
-              <div className="ml-auto flex items-center gap-1.5 shrink-0">
+              <div className="ml-auto relative shrink-0" ref={leftMenuRef}>
                 <button
-                  onClick={() => setShowChatSettings(true)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                  title="Chat settings"
-                  aria-label="Chat settings"
-                  data-testid="chat-settings-button"
+                  onClick={() => setShowLeftMenu(!showLeftMenu)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer ${showLeftMenu ? 'bg-white/20 text-white' : 'text-white/90 hover:bg-white/10'}`}
+                  title="Chat Options"
+                  aria-label="Chat Options"
                 >
-                  <Settings className="w-4 h-4" />
+                  <MoreVertical className="w-[18px] h-[18px]" />
                 </button>
-                <div className="relative" ref={leftMenuRef}>
-                                <button
-                                  onClick={() => setShowLeftMenu(!showLeftMenu)}
-                                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
-                                    showLeftMenu
-                                      ? 'bg-white/25 text-white'
-                                      : 'bg-white/10 hover:bg-white/20 text-white'
-                                  }`}
-                                  title="Chat Options"
-                                >
-                                  <MoreVertical className="w-[15px] h-[15px]" />
-                                </button>
-                
-                                {showLeftMenu && (
-                                  <div className="absolute right-0 top-full mt-1.5 w-52 bg-zinc-950 border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
-                                    <button
-                                      onClick={() => {
-                                        setShowLeftMenu(false);
-                                        setShowCreateGroup(true);
-                                      }}
-                                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
-                                    >
-                                      <Plus className="w-4 h-4 text-noob" /> New Group Chat
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setShowLeftMenu(false);
-                                        setShowSettingsModal(true);
-                                      }}
-                                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
-                                    >
-                                      <Palette className="w-4 h-4 text-emerald-400" /> Chat Bubble Theme
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setShowLeftMenu(false);
-                                        setShowInstantsArchive(true);
-                                      }}
-                                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
-                                      data-testid="instants-archive-open"
-                                    >
-                                      <Archive className="w-4 h-4 text-amber-300" /> Your Instants
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setShowLeftMenu(false);
-                                        setShowChatSettings(true);
-                                      }}
-                                      className="w-full px-3 py-2 rounded-xl hover:bg-zinc-900 flex items-center gap-2.5 text-left text-xs font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
-                                    >
-                                      <Settings className="w-4 h-4 text-sky-400" /> Chat Settings
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                {showLeftMenu && (
+                  <div className="absolute right-0 top-full mt-1.5 w-56 bg-[#101314] border border-white/10 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {callsOn && (
+                      <button onClick={() => { setShowLeftMenu(false); setShowCallLogs(true); }} data-testid="messages-calls" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
+                        <CallIcon className="w-4 h-4 text-emerald-300" /> Calls
+                      </button>
+                    )}
+                    <button onClick={() => { setShowLeftMenu(false); setShowCreateGroup(true); }} data-testid="messages-new-group" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
+                      <Users className="w-4 h-4 text-[#2ee6b1]" /> New Group Chat
+                    </button>
+                    <button onClick={() => { setShowLeftMenu(false); setShowSettingsModal(true); }} className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
+                      <Palette className="w-4 h-4 text-emerald-400" /> Chat Bubble Theme
+                    </button>
+                    <button onClick={() => { setShowLeftMenu(false); setShowInstantsArchive(true); }} data-testid="instants-archive-open" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
+                      <Archive className="w-4 h-4 text-amber-300" /> Your Instants
+                    </button>
+                    <button onClick={() => { setShowLeftMenu(false); setShowChatSettings(true); }} data-testid="chat-settings-button" className="w-full px-3 py-2.5 rounded-xl hover:bg-white/5 flex items-center gap-2.5 text-left text-[13px] font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer">
+                      <Settings className="w-4 h-4 text-sky-400" /> Chat Settings
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-2" data-testid="messages-actions">
+            {/* two round buttons under the title (44 : 64 of the story pictures, like the design) */}
+            <div className="mt-3.5 flex items-center gap-2.5" data-testid="messages-actions">
               <button type="button" onClick={() => setShowSearchField((v) => !v)} aria-label="Search" title="Search" data-testid="messages-search"
-                className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${showSearchField || searchQuery ? 'bg-emerald-400 text-emerald-950' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
-                <Search className="w-[17px] h-[17px]" />
+                className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer transition-colors ${showSearchField || searchQuery ? 'bg-[#26d9a8] text-[#04382a]' : 'bg-white/[0.12] hover:bg-white/20 text-white'}`}>
+                <Search className="w-[19px] h-[19px]" strokeWidth={2.4} />
               </button>
               <button type="button" onClick={() => setShowNewChatModal(true)} aria-label="Find a person to chat with" title="Find a person to chat with" data-testid="messages-new-chat"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
-                <UserPlus className="w-[17px] h-[17px]" />
-              </button>
-              {callsOn && (
-              <button type="button" onClick={() => setShowCallLogs(true)} aria-label="Calls" title="Calls" data-testid="messages-calls"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
-                <CallIcon className="w-[17px] h-[17px]" />
-              </button>
-              )}
-              <button type="button" onClick={() => setShowCreateGroup(true)} aria-label="New group" title="New group" data-testid="messages-new-group"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
-                <Users className="w-[17px] h-[17px]" />
+                className="w-11 h-11 rounded-full bg-white/[0.12] hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
+                <UserPlus className="w-[19px] h-[19px]" strokeWidth={2.2} />
               </button>
             </div>
 
-            {/* the people you talk to, in a row (like the picture): "Your Instant" first (it opens the camera), then your friends, the ones who are online ringed in green */}
-            <div className="mt-4 -mx-4 px-4 flex items-start gap-3.5 overflow-x-auto no-scrollbar pb-0.5" data-testid="messages-people">
-              <button type="button" onClick={() => setShowInstantCamera(true)} aria-label="Your Instant" data-testid="messages-your-instant" className="shrink-0 w-[68px] text-center cursor-pointer">
-                <span className="relative block w-[62px] h-[62px] mx-auto">
-                  <img src={currentUser.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover ring-2 ring-white/80" />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center border-2 border-[#075030]"><Plus className="w-2.5 h-2.5" strokeWidth={3.5} /></span>
+            {/* the people you talk to, in a row: "Your Instant" first (it opens the camera), then the verified people you chat with - pinned ones first - ringed in green */}
+            <div className="mt-4 -mx-5 px-5 flex items-start gap-3 overflow-x-auto no-scrollbar" data-testid="messages-people">
+              <button type="button" onClick={() => setShowInstantCamera(true)} aria-label="Your Instant" data-testid="messages-your-instant" className="shrink-0 w-[66px] text-center cursor-pointer">
+                <span className="relative block w-[64px] h-[64px] mx-auto">
+                  <img src={currentUser.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover ring-[2.5px] ring-white/90" />
+                  <span className="absolute bottom-0 right-0 w-[20px] h-[20px] rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center border-[2.5px] border-[#06502e]"><Plus className="w-3 h-3" strokeWidth={3.5} /></span>
                 </span>
-                <span className="block mt-1.5 text-[10.5px] font-semibold text-white/80 truncate">Your Instant</span>
+                <span className="block mt-1.5 text-[11.5px] leading-tight font-medium text-white/80 truncate">Your Instant</span>
               </button>
               {recentPeople.map(({ chat, who }) => (
-                <button key={chat.id} type="button" onClick={() => { setActiveChatId(chat.id); setMobileView('chat'); }} data-testid="messages-person" className="shrink-0 w-[68px] text-center cursor-pointer">
-                  <span className={`block w-[62px] h-[62px] mx-auto rounded-full overflow-hidden ${isUserOnline(who.id) ? 'ring-[2.5px] ring-[#2ee6b1] ring-offset-2 ring-offset-[#075030]' : 'ring-2 ring-white/25 ring-offset-2 ring-offset-[#075030]'}`}>
-                    <img src={who.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full object-cover" />
+                <button key={chat.id} type="button" onClick={() => { setActiveChatId(chat.id); setMobileView('chat'); }} data-testid="messages-person" className="shrink-0 w-[66px] text-center cursor-pointer">
+                  <span className="block w-[64px] h-[64px] mx-auto rounded-full p-[3px] border-[2.5px] border-[#2ee6b1] bg-[#06502e]">
+                    <img src={who.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover" />
                   </span>
-                  <span className="block mt-1.5 text-[10.5px] font-semibold text-white/80 truncate">{(who.displayName || who.username || '').split(' ')[0]}</span>
+                  <span className="block mt-1.5 text-[11.5px] leading-tight font-medium text-white/80 truncate">{(who.displayName || who.username || '').split(' ')[0]}</span>
                 </button>
               ))}
             </div>
 
             {showSearchField && (
-              <div className="mt-3 flex items-center bg-black/25 border border-white/15 rounded-full px-4 py-2.5 focus-within:border-emerald-300 transition-colors relative">
+              <div className="mt-3.5 flex items-center bg-black/25 border border-white/15 rounded-full px-4 py-2.5 focus-within:border-emerald-300 transition-colors relative">
                 <Search className="w-4 h-4 text-white/70 mr-2.5 shrink-0" />
                 <input
                   type="text"
@@ -1852,7 +1810,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div className="msg-sheet relative z-[1] -mt-6 rounded-t-[30px] min-h-[70vh]">
 
           {/* Filter Chips matching screenshot (All, Unread, Favourites, Groups) */}
-          <div className="msg-sticky sticky top-0 z-10 rounded-t-[30px] px-4 pt-4 pb-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar" data-testid="messages-filters">
+          <div className="msg-sticky sticky top-0 z-10 rounded-t-[30px] px-5 pt-5 pb-3 flex items-center gap-2.5 overflow-x-auto no-scrollbar" data-testid="messages-filters">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -1875,7 +1833,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilterTab(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-4 py-[7px] rounded-full text-[14.5px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                     isActive
                       ? 'msg-pill-on'
                       : 'msg-pill'
@@ -1884,8 +1842,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   <span>{tab.label}</span>
                   {count > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        isActive ? 'bg-[#26d9a8] text-[#04382a]' : 'bg-white/10 text-zinc-400'
+                      className={`text-[11px] min-w-[22px] text-center px-1.5 py-[1px] rounded-full font-bold ${
+                        isActive ? 'bg-[#26d9a8] text-[#04382a]' : 'bg-transparent text-zinc-500'
                       }`}
                     >
                       {count}
@@ -1925,7 +1883,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setActiveChatId(c.id);
                     setMobileView('chat');
                   }}
-                  className={`msg-row ${cs['chat.compactList'] ? 'px-4 py-1.5' : 'px-4 py-3'} flex items-center gap-3.5 cursor-pointer group relative ${
+                  className={`msg-row ${cs['chat.compactList'] ? 'px-5 py-1.5' : 'px-5 py-[10px]'} flex items-center gap-3.5 cursor-pointer group relative ${
                     // marked only on a wide screen, where the open chat sits next to the list; the mark is a shadow inside the row (a coloured border here also coloured the line between rows)
                     isSelected
                       ? 'md:bg-zinc-900/95 md:shadow-[inset_3px_0_0_0_var(--color-noob)] hover:bg-zinc-900/50 md:hover:bg-zinc-900/95'
@@ -1940,7 +1898,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <img
                           src={c.avatar || '/noob-logo-circle.png'}
                           alt=""
-                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover`}
+                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-[54px] h-[54px]'} rounded-full object-cover`}
                         />
                         <span className="absolute -bottom-0.5 -right-0.5 px-1 py-0.2 rounded bg-purple-600 text-white text-[7px] font-black uppercase tracking-tight shadow">
                           group
@@ -1954,10 +1912,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                           }
                           alt=""
-                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover`}
+                          className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-[54px] h-[54px]'} rounded-full object-cover`}
                         />
                         {isUserOnline(partner.id) && (
-                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#0dedae] border-2 border-[#0a0b0f] rounded-full" />
+                          <span className="absolute bottom-0 right-0 w-[13px] h-[13px] bg-[#26d9a8] border-2 border-[#0a0b0f] rounded-full" />
                         )}
                       </div>
                     )}
@@ -1969,7 +1927,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {/* Header: Title + Tag ('group' or 'chat') + Time */}
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[16.5px] font-bold text-white truncate transition-colors">
+                        <span className="text-[17px] leading-tight font-bold text-white truncate transition-colors tracking-[-0.01em]">
                           {displayName}
                         </span>
 
@@ -1984,14 +1942,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         {!c.isGroup && partner.isVerified && <VerifiedBadge size="xs" />}
                       </div>
 
-                      <span className="text-[12px] text-zinc-500 shrink-0 font-medium">
+                      <span className="text-[12px] text-zinc-500 shrink-0 font-medium tabular-nums">
                         {c.lastMessage?.createdAt ? fmtClock(c.lastMessage.createdAt) : 'Active'}
                       </span>
                     </div>
 
                     {/* Subtitle: Delivery status + Snippet + Unread badge */}
                     <div className="flex items-center justify-between mt-1 gap-2">
-                      <div className="flex items-center text-xs text-zinc-400 truncate min-w-0">
+                      <div className="flex items-center text-[13.5px] text-zinc-500 truncate min-w-0">
                         {isMine && (
                           <span className="inline-flex items-center mr-1 shrink-0">
                             {lastMsg?.status === 'read' ? (
@@ -2018,7 +1976,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                         )}
                         {cs['chat.unreadBadges'] && c.unreadCount && c.unreadCount > 0 ? (
-                          <span className="min-w-[22px] h-[22px] px-1 rounded-full bg-[#26d9a8] text-[#04382a] text-[11px] font-extrabold flex items-center justify-center shadow-sm">
+                          <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-[#26d9a8] text-[#04382a] text-[11px] font-extrabold flex items-center justify-center shadow-sm">
                             {c.unreadCount}
                           </span>
                         ) : null}
@@ -2090,6 +2048,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
           </div>
           </div>
+          {/* the round green "new chat" button floating at the bottom right (like the design) */}
+          <button type="button" onClick={() => setShowNewChatModal(true)} aria-label="New chat" title="New chat" data-testid="messages-fab"
+            className="absolute right-5 bottom-5 z-20 w-14 h-14 rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center shadow-[0_10px_24px_rgba(38,217,168,.35)] active:scale-95 transition-transform cursor-pointer">
+            <SquarePen className="w-6 h-6" strokeWidth={2.2} />
+          </button>
         </aside>
 
         {/* RIGHT COLUMN: Active Conversation View */}

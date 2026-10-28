@@ -4,8 +4,9 @@ import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { coverTint, fallbackTint, tintGlow, tintGradient, type CoverTint } from '../../utils/coverColor';
 
 /** Keys: A, W, left arrow and "," = the song before; D, S, right arrow and "." = the next song (not while someone is typing). */
-export function useSongKeys(enabled: boolean): void {
-  const { nextTrack, prevTrack } = useMusicPlayer();
+export function useSongKeys(enabled: boolean, handlers?: { next: () => void; prev: () => void }): void {
+  const player = useMusicPlayer();
+  const nextTrack = handlers?.next ?? player.nextTrack, prevTrack = handlers?.prev ?? player.prevTrack;
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
@@ -30,32 +31,75 @@ const mmss = (sec: number): string => {
 };
 
 export const NowPlaying: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { currentTrack: track, isPlaying, progress, isMuted, shuffle, repeat, elapsedSec, totalSec, togglePlay, nextTrack, prevTrack, toggleMute, toggleLike, toggleShuffle, toggleRepeat, seekTo, playbackError } = useMusicPlayer();
+  const { tracks, currentTrack: track, isPlaying, progress, isMuted, shuffle, repeat, elapsedSec, totalSec, togglePlay, playTrack, toggleMute, toggleLike, toggleShuffle, toggleRepeat, seekTo, playbackError } = useMusicPlayer();
   const [tint, setTint] = useState<CoverTint>(() => fallbackTint(track?.title || ''));
-  // swiping: the sleeve follows the finger; a swipe to the left plays the next song, to the right the one before
+  const calm = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  // The songs are a row of pages: the one before, this one, the next one. A finger drags the whole row, so the next song is seen coming in (nothing plays yet); on letting go the row
+  // settles on the nearer page and only then does that song start. The same slide is used by the back / next buttons and the keys.
+  const pager = useRef<HTMLDivElement>(null);
   const [dx, setDx] = useState(0);
-  const [slide, setSlide] = useState<'next' | 'prev' | ''>('');
-  const drag = useRef<{ x: number; y: number; id: number; on: boolean } | null>(null);
-  const goNext = () => { setSlide('next'); nextTrack(); };
-  const goPrev = () => { setSlide('prev'); prevTrack(); };
+  const [anim, setAnim] = useState(false);
+  const drag = useRef<{ x: number; y: number; id: number; on: boolean; lastX: number; lastT: number; vx: number } | null>(null);
+  const busy = useRef(false);
+  const nextPick = useRef(-1);
+  const idx = track ? tracks.findIndex((t) => t.id === track.id) : -1;
+  const many = tracks.length > 1 && idx >= 0;
+  if (many && shuffle && (nextPick.current < 0 || nextPick.current === idx || nextPick.current >= tracks.length)) {
+    do { nextPick.current = Math.floor(Math.random() * tracks.length); } while (nextPick.current === idx);
+  }
+  const before = many ? tracks[(idx - 1 + tracks.length) % tracks.length] : null;
+  const after = many ? tracks[shuffle ? nextPick.current : (idx + 1) % tracks.length] : null;
+
+  const SETTLE_MS = 330;
+  const commit = (dir: 1 | -1) => {
+    const target = dir === 1 ? after : before;
+    if (!many || !target || busy.current) return;
+    busy.current = true;
+    const w = pager.current?.offsetWidth || window.innerWidth;
+    setAnim(!calm);
+    setDx(-dir * w);
+    window.setTimeout(() => {
+      setAnim(false);
+      setDx(0);
+      nextPick.current = -1;
+      busy.current = false;
+      playTrack(target);
+    }, calm ? 0 : SETTLE_MS);
+  };
+  const snapBack = () => { setAnim(!calm); setDx(0); window.setTimeout(() => setAnim(false), SETTLE_MS); };
+  const goNext = () => commit(1);
+  const goPrev = () => commit(-1);
+
   const onDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button, input, a')) return;
-    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, on: false };
+    if (busy.current || (e.target as HTMLElement).closest('button, input, a')) return;
+    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, on: false, lastX: e.clientX, lastT: performance.now(), vx: 0 };
   };
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
     const mx = e.clientX - d.x, my = e.clientY - d.y;
-    if (!d.on) { if (Math.abs(mx) > 10 && Math.abs(mx) > Math.abs(my) * 1.3) d.on = true; else return; }
-    setDx(mx);
+    if (!d.on) {
+      if (Math.abs(mx) > 8 && Math.abs(mx) > Math.abs(my) * 1.3) { d.on = true; try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* fine without */ } }
+      else return;
+    }
+    const now = performance.now();
+    if (now > d.lastT) d.vx = 0.7 * d.vx + 0.3 * ((e.clientX - d.lastX) / (now - d.lastT));
+    d.lastX = e.clientX; d.lastT = now;
+    setAnim(false);
+    // with no song to go to on a side, the page only gives a little (like pulling past the end of a list)
+    const blocked = !many || (mx < 0 ? !after : !before);
+    setDx(blocked ? mx * 0.25 : mx);
   };
   const onUp = (e: React.PointerEvent) => {
     const d = drag.current;
     drag.current = null;
-    if (!d || d.id !== e.pointerId || !d.on) { setDx(0); return; }
-    const mx = e.clientX - d.x;
-    setDx(0);
-    if (mx < -60) goNext(); else if (mx > 60) goPrev();
+    if (!d || d.id !== e.pointerId || !d.on) return;
+    const mx = e.clientX - d.x, w = pager.current?.offsetWidth || window.innerWidth;
+    const flick = Math.abs(d.vx) > 0.45 && Math.abs(mx) > 24;
+    if (many && (mx < -w * 0.22 || (flick && d.vx < 0 && mx < 0))) commit(1);
+    else if (many && (mx > w * 0.22 || (flick && d.vx > 0 && mx > 0))) commit(-1);
+    else snapBack();
   };
 
   useEffect(() => {
@@ -66,7 +110,7 @@ export const NowPlaying: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return () => { alive = false; };
   }, [track?.id, track?.coverUrl]);
 
-  useSongKeys(true);
+  useSongKeys(true, { next: goNext, prev: goPrev });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -89,7 +133,7 @@ export const NowPlaying: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
-      onPointerCancel={() => { drag.current = null; setDx(0); }}
+      onPointerCancel={() => { drag.current = null; snapBack(); }}
     >
       <div className="mx-auto w-full max-w-md min-h-full flex flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         {/* the top: close, where it comes from, like */}
@@ -108,30 +152,58 @@ export const NowPlaying: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         </div>
 
-        {/* the sleeve, with the record behind it and the arm over it */}
-        <div className="relative mt-6 mx-auto w-[min(62vw,280px)] aspect-square" style={{ transform: `translateX(calc(-13% + ${dx}px))`, transition: dx ? 'none' : 'transform 300ms cubic-bezier(.2,.9,.3,1)' }}>
-          <div aria-hidden="true" className="absolute -inset-[18%] rounded-full pointer-events-none" style={{ background: `radial-gradient(closest-side, ${tintGlow(tint)}, transparent 72%)`, filter: 'blur(14px)' }} />
-          <div className="absolute inset-0" style={{ transform: 'translateX(30%)' }}>
-            <div className={`w-full h-full rounded-full music-vinyl ${isPlaying ? 'music-vinyl-playing' : ''}`} />
+        {/* the songs: the one before, this one, the next one, side by side (a finger drags them all); the arm stays where it is and lands on the record while a song plays */}
+        <div ref={pager} className="relative -mx-5 mt-6 overflow-hidden" data-testid="now-pager">
+          <div className="grid">
+            {([[-1, before], [0, track], [1, after]] as const).map(([k, t]) => t && (
+              <div
+                key={k}
+                aria-hidden={k !== 0}
+                className="[grid-area:1/1] flex flex-col items-center"
+                style={{ transform: `translateX(calc(${k * 100}% + ${dx}px))`, transition: anim ? `transform ${SETTLE_MS}ms cubic-bezier(.22,.9,.3,1)` : 'none', willChange: 'transform' }}
+              >
+                <div className="relative w-[min(62vw,280px)] aspect-square" style={{ transform: 'translateX(-13%)' }}>
+                  {k === 0 && <div aria-hidden="true" className="absolute -inset-[18%] rounded-full pointer-events-none" style={{ background: `radial-gradient(closest-side, ${tintGlow(tint)}, transparent 72%)`, filter: 'blur(14px)' }} />}
+                  <div className="absolute inset-0" style={{ transform: 'translateX(30%)' }}>
+                    <div className={`w-full h-full rounded-full music-vinyl ${k === 0 && isPlaying ? 'music-vinyl-playing' : ''}`} />
+                  </div>
+                  <img
+                    src={t.coverUrl}
+                    alt={k === 0 ? t.title : ''}
+                    draggable={false}
+                    className="relative w-full h-full rounded-[10px] object-cover bg-black/40 shadow-[0_28px_70px_rgba(0,0,0,.7)] ring-1 ring-white/10"
+                  />
+                </div>
+                <div className="mt-9 text-center px-7 w-full">
+                  <h2 className="text-[20px] font-bold tracking-tight leading-tight truncate" data-testid={k === 0 ? 'now-title' : undefined}>{t.title}</h2>
+                  <p className="mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-white/50 truncate">{t.artist}</p>
+                </div>
+              </div>
+            ))}
           </div>
-          <img
-            key={track.id}
-            src={track.coverUrl}
-            alt={track.title}
-            draggable={false}
-            className={`relative w-full h-full rounded-[10px] object-cover bg-black/40 shadow-[0_28px_70px_rgba(0,0,0,.7)] ring-1 ring-white/10 ${slide === 'next' ? 'music-slide-from-right' : slide === 'prev' ? 'music-slide-from-left' : ''}`}
-          />
-          <svg viewBox="0 0 40 120" className="absolute -top-3 -right-[21%] w-[13%] pointer-events-none" aria-hidden="true" style={{ transformOrigin: '50% 8%', transform: `rotate(${isPlaying ? 0 : -26}deg)`, transition: 'transform 600ms cubic-bezier(.3,.9,.3,1)' }}>
-            <circle cx="20" cy="10" r="8" fill="#c9ccd1" stroke="rgba(0,0,0,.35)" strokeWidth="1.5" />
-            <path d="M20 10 L20 92 L28 112" fill="none" stroke="#d7dade" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-            <rect x="22" y="104" width="12" height="14" rx="2" fill="#aeb2b8" transform="rotate(-12 28 111)" />
-          </svg>
-        </div>
-
-        {/* the song */}
-        <div key={`t-${track.id}`} className={`mt-9 text-center px-2 ${slide ? 'music-fade-up' : ''}`}>
-          <h2 className="text-[20px] font-bold tracking-tight leading-tight truncate" data-testid="now-title">{track.title}</h2>
-          <p className="mt-1 text-[12px] font-medium uppercase tracking-[0.16em] text-white/50 truncate">{track.artist}</p>
+          {/* the tonearm: its foot is fixed beside the record; it swings in and rests on the grooves while the song plays, and lifts away when it stops or a page is dragged */}
+          <div className="absolute inset-x-0 top-0 flex justify-center pointer-events-none" aria-hidden="true">
+            <div className="relative w-[min(62vw,280px)] aspect-square" style={{ transform: 'translateX(-13%)' }}>
+              <svg
+                viewBox="0 0 24 140"
+                data-testid="tonearm"
+                className="absolute"
+                style={{ left: '136%', top: '-7.1%', width: '9.5%', height: '66%', transformOrigin: '50% 7.14%', transform: `translateX(-50%) rotate(${isPlaying && !dx ? 38 : 4}deg)`, transition: 'transform 900ms cubic-bezier(.35,.8,.25,1)', filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.45))' }}
+              >
+                <defs>
+                  <linearGradient id="arm-metal" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stopColor="#9aa0a8" /><stop offset=".45" stopColor="#f2f4f7" /><stop offset="1" stopColor="#8b9199" /></linearGradient>
+                </defs>
+                <rect x="6.5" y="0" width="11" height="9" rx="3" fill="#3a3d43" />
+                <circle cx="12" cy="10" r="8.2" fill="#1d1f23" stroke="#4b4f56" strokeWidth="1.2" />
+                <circle cx="12" cy="10" r="4" fill="url(#arm-metal)" />
+                <rect x="10.2" y="14" width="3.6" height="104" rx="1.8" fill="url(#arm-metal)" />
+                <g transform="rotate(-9 12 118)">
+                  <rect x="6.5" y="116" width="11" height="17" rx="2.5" fill="#24262b" stroke="#50545b" strokeWidth="1" />
+                  <rect x="9.5" y="131" width="5" height="6" rx="1" fill="#d9a441" />
+                </g>
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 min-h-6" />

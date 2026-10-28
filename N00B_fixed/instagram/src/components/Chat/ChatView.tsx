@@ -1610,6 +1610,54 @@ export const ChatView: React.FC<ChatViewProps> = ({
       )
     : messages;
 
+  // The Messages scroller: the green header slides away a little slower than the page and fades, and each chat row fades in (one after the other) as it comes into view.
+  const listRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const rowsKey = finalFilteredConversations.map((c) => c.id).join(',');
+  useEffect(() => {
+    const box = listRef.current;
+    if (!box) return;
+    const calm = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const found = box.querySelectorAll<HTMLElement>('.msg-row:not([data-in])');
+    const rows: HTMLElement[] = [];
+    for (let i = 0; i < found.length; i++) rows.push(found[i]);
+    let io: IntersectionObserver | null = null;
+    if (calm || typeof IntersectionObserver === 'undefined') rows.forEach((r) => r.setAttribute('data-in', '1'));
+    else {
+      io = new IntersectionObserver((entries) => {
+        let n = 0;
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const el = e.target as HTMLElement;
+          el.style.transitionDelay = `${Math.min(n++, 8) * 45}ms`;
+          el.setAttribute('data-in', '1');
+          io?.unobserve(el);
+          window.setTimeout(() => { el.style.transitionDelay = ''; }, 900);
+        }
+      }, { root: box, threshold: 0.05 });
+      rows.forEach((r) => io!.observe(r));
+    }
+    return () => io?.disconnect();
+  }, [rowsKey, activeFilterTab, searchQuery, mobileView]);
+  useEffect(() => {
+    const box = listRef.current;
+    if (!box || (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const h = headRef.current;
+        if (!h) return;
+        const y = Math.max(0, box.scrollTop);
+        h.style.transform = `translate3d(0, ${(y * 0.3).toFixed(1)}px, 0)`;
+        h.style.opacity = String(Math.max(0, 1 - y / 220));
+      });
+    };
+    box.addEventListener('scroll', onScroll, { passive: true });
+    return () => { box.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [mobileView]);
+
   // the people of the row under the icons: one-to-one chats, in the order of the list, up to 12
   const recentPeople = sortedConversations
     .filter((c) => !c.isGroup)
@@ -1641,12 +1689,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         {/* LEFT COLUMN: WhatsApp-style Chats List (Matching Screenshot) */}
         <aside
-          className={`relative w-full md:max-w-2xl md:mx-auto shrink-0 bg-zinc-950 md:border-x border-zinc-800/80 flex flex-col z-20 ${
+          className={`msg-page force-dark relative w-full md:max-w-2xl md:mx-auto shrink-0 md:border-x border-zinc-800/80 flex flex-col z-20 ${
             mobileView === 'chat' ? 'hidden' : 'flex'
           }`}
         >
           {/* Messages header: back, the title with the number of chats, and one row of round icons (search, find a person, calls, new group) */}
-          <div className="msg-head force-dark shrink-0 px-4 pt-3.5 pb-8" data-testid="messages-header">
+          {/* Instants: a small tab at the right edge of the list (Instagram style), it takes no room from the chats */}
+          <InstantsStack
+            onOpenCamera={() => setShowInstantCamera(true)}
+            onOpenViewer={(queue) => setInstantViewerQueue(queue)}
+            refreshKey={instantsRefreshKey}
+          />
+
+          {/* ONE scroller: the green header scrolls away with the page, the filters stay on top, the chats appear line by line */}
+          <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar [-webkit-overflow-scrolling:touch]" data-testid="messages-list">
+          <div ref={headRef} className="msg-head force-dark px-4 pt-3.5 pb-9 will-change-transform" data-testid="messages-header">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
@@ -1658,33 +1715,33 @@ export const ChatView: React.FC<ChatViewProps> = ({
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <h1 className="text-[28px] leading-none font-extrabold text-white tracking-tight flex items-center gap-2.5 min-w-0">
+              <h1 className="text-[26px] leading-none font-extrabold text-white tracking-tight flex items-center gap-2.5 min-w-0">
                 <span className="truncate">Messages</span>
-                <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-[#26d9a8] text-[#04382a] shrink-0">
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#26d9a8] text-[#04382a] shrink-0">
                   {visibleConversations.length + friendsWithoutConversation.length}
                 </span>
               </h1>
               <div className="ml-auto flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => setShowChatSettings(true)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
                   title="Chat settings"
                   aria-label="Chat settings"
                   data-testid="chat-settings-button"
                 >
-                  <Settings className="w-[18px] h-[18px]" />
+                  <Settings className="w-4 h-4" />
                 </button>
                 <div className="relative" ref={leftMenuRef}>
                                 <button
                                   onClick={() => setShowLeftMenu(!showLeftMenu)}
-                                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+                                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
                                     showLeftMenu
                                       ? 'bg-white/25 text-white'
                                       : 'bg-white/10 hover:bg-white/20 text-white'
                                   }`}
                                   title="Chat Options"
                                 >
-                                  <MoreVertical className="w-4 h-4" />
+                                  <MoreVertical className="w-[15px] h-[15px]" />
                                 </button>
                 
                                 {showLeftMenu && (
@@ -1732,24 +1789,24 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             </div>
 
-            <div className="mt-3.5 flex items-center gap-2.5" data-testid="messages-actions">
+            <div className="mt-3 flex items-center gap-2" data-testid="messages-actions">
               <button type="button" onClick={() => setShowSearchField((v) => !v)} aria-label="Search" title="Search" data-testid="messages-search"
-                className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer transition-colors ${showSearchField || searchQuery ? 'bg-emerald-400 text-emerald-950' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
-                <Search className="w-5 h-5" />
+                className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${showSearchField || searchQuery ? 'bg-emerald-400 text-emerald-950' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
+                <Search className="w-[17px] h-[17px]" />
               </button>
               <button type="button" onClick={() => setShowNewChatModal(true)} aria-label="Find a person to chat with" title="Find a person to chat with" data-testid="messages-new-chat"
-                className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
-                <UserPlus className="w-5 h-5" />
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
+                <UserPlus className="w-[17px] h-[17px]" />
               </button>
               {callsOn && (
               <button type="button" onClick={() => setShowCallLogs(true)} aria-label="Calls" title="Calls" data-testid="messages-calls"
-                className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
-                <CallIcon className="w-5 h-5" />
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
+                <CallIcon className="w-[17px] h-[17px]" />
               </button>
               )}
               <button type="button" onClick={() => setShowCreateGroup(true)} aria-label="New group" title="New group" data-testid="messages-new-group"
-                className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
-                <Users className="w-5 h-5" />
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors">
+                <Users className="w-[17px] h-[17px]" />
               </button>
             </div>
 
@@ -1757,17 +1814,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <div className="mt-4 -mx-4 px-4 flex items-start gap-3.5 overflow-x-auto no-scrollbar pb-0.5" data-testid="messages-people">
               <button type="button" onClick={() => setShowInstantCamera(true)} aria-label="Your Instant" data-testid="messages-your-instant" className="shrink-0 w-[68px] text-center cursor-pointer">
                 <span className="relative block w-[62px] h-[62px] mx-auto">
-                  <img src={currentUser.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover ring-2 ring-white/70" />
-                  <span className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center border-2 border-[#01472b]"><Plus className="w-3 h-3" strokeWidth={3} /></span>
+                  <img src={currentUser.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full rounded-full object-cover ring-2 ring-white/80" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full bg-[#26d9a8] text-[#04382a] flex items-center justify-center border-2 border-[#075030]"><Plus className="w-2.5 h-2.5" strokeWidth={3.5} /></span>
                 </span>
-                <span className="block mt-1.5 text-[11px] font-semibold text-white/85 truncate">Your Instant</span>
+                <span className="block mt-1.5 text-[10.5px] font-semibold text-white/80 truncate">Your Instant</span>
               </button>
               {recentPeople.map(({ chat, who }) => (
                 <button key={chat.id} type="button" onClick={() => { setActiveChatId(chat.id); setMobileView('chat'); }} data-testid="messages-person" className="shrink-0 w-[68px] text-center cursor-pointer">
-                  <span className={`block w-[62px] h-[62px] mx-auto rounded-full overflow-hidden ${isUserOnline(who.id) ? 'ring-[3px] ring-[#26d9a8]' : 'ring-2 ring-white/25'}`}>
+                  <span className={`block w-[62px] h-[62px] mx-auto rounded-full overflow-hidden ${isUserOnline(who.id) ? 'ring-[2.5px] ring-[#2ee6b1] ring-offset-2 ring-offset-[#075030]' : 'ring-2 ring-white/25 ring-offset-2 ring-offset-[#075030]'}`}>
                     <img src={who.avatar || '/noob-logo-circle.png'} alt="" className="w-full h-full object-cover" />
                   </span>
-                  <span className="block mt-1.5 text-[11px] font-semibold text-white/85 truncate">{(who.displayName || who.username || '').split(' ')[0]}</span>
+                  <span className="block mt-1.5 text-[10.5px] font-semibold text-white/80 truncate">{(who.displayName || who.username || '').split(' ')[0]}</span>
                 </button>
               ))}
             </div>
@@ -1791,18 +1848,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
             )}
           </div>
 
-          {/* Instants: a small tab at the right edge of the list (Instagram style), it takes no room from the chats */}
-          <InstantsStack
-            onOpenCamera={() => setShowInstantCamera(true)}
-            onOpenViewer={(queue) => setInstantViewerQueue(queue)}
-            refreshKey={instantsRefreshKey}
-          />
-
           {/* the rounded sheet that holds the filters and the chats, overlapping the header */}
-          <div className="msg-sheet relative -mt-5 flex-1 min-h-0 flex flex-col rounded-t-[30px] overflow-hidden">
+          <div className="msg-sheet relative z-[1] -mt-6 rounded-t-[30px] min-h-[70vh]">
 
           {/* Filter Chips matching screenshot (All, Unread, Favourites, Groups) */}
-          <div className="shrink-0 px-4 pt-4 pb-2 flex items-center gap-2 overflow-x-auto no-scrollbar" data-testid="messages-filters">
+          <div className="msg-sticky sticky top-0 z-10 rounded-t-[30px] px-4 pt-4 pb-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar" data-testid="messages-filters">
             {(
               [
                 { id: 'all', label: 'All' },
@@ -1825,7 +1875,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilterTab(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                     isActive
                       ? 'msg-pill-on'
                       : 'msg-pill'
@@ -1847,7 +1897,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
 
           {/* Chat List Rows */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain no-scrollbar" data-testid="messages-list">
+          <div data-testid="messages-rows">
             {finalFilteredConversations.length === 0 && filteredFriendsWithoutChat.length === 0 && (
               <div className="p-8 text-center text-zinc-500 text-xs space-y-2">
                 <MessageCircle className="w-8 h-8 text-zinc-600 mx-auto opacity-50" />
@@ -1875,7 +1925,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     setActiveChatId(c.id);
                     setMobileView('chat');
                   }}
-                  className={`${cs['chat.compactList'] ? 'px-4 py-1.5' : 'px-4 py-3'} flex items-center gap-3.5 cursor-pointer transition-colors group relative ${
+                  className={`msg-row ${cs['chat.compactList'] ? 'px-4 py-1.5' : 'px-4 py-3'} flex items-center gap-3.5 cursor-pointer group relative ${
                     // marked only on a wide screen, where the open chat sits next to the list; the mark is a shadow inside the row (a coloured border here also coloured the line between rows)
                     isSelected
                       ? 'md:bg-zinc-900/95 md:shadow-[inset_3px_0_0_0_var(--color-noob)] hover:bg-zinc-900/50 md:hover:bg-zinc-900/95'
@@ -1907,7 +1957,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           className={`${cs['chat.compactList'] ? 'w-9 h-9' : 'w-14 h-14'} rounded-full object-cover`}
                         />
                         {isUserOnline(partner.id) && (
-                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#0dedae] border-2 border-[var(--page)] rounded-full" />
+                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#0dedae] border-2 border-[#0a0b0f] rounded-full" />
                         )}
                       </div>
                     )}
@@ -2024,7 +2074,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
 
           {/* Bottom Security Note */}
-          <div className="p-2.5 bg-zinc-950 border-t border-zinc-900 text-center flex items-center justify-center gap-1.5 text-[10px] text-zinc-500 font-medium">
+          <div className="p-3 text-center flex items-center justify-center gap-1.5 text-[10px] text-zinc-500 font-medium">
             <Lock className="w-3 h-3 text-noob" />
             <span>
               Your personal messages are{' '}
@@ -2037,6 +2087,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 end-to-end encrypted
               </button>
             </span>
+          </div>
           </div>
           </div>
         </aside>

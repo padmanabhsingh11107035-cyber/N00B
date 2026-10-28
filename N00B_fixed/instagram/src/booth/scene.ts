@@ -106,7 +106,7 @@ export function photoRect(p: PhotoSrc, win: Win, zoom: number, panX: number, pan
 
 /** Draw one sticker or buddy with its transform. A sticker gets its white edge and soft shadow first, then its colours; a buddy is drawn in colour only (it makes its own shadow on the ground).
  *  `size` is the width of its 200-unit box in pixels. */
-export function drawSticker(c: Ctx, id: string, cx: number, cy: number, size: number, rot: number, flip: boolean, t: number): void {
+export function drawSticker(c: Ctx, id: string, cx: number, cy: number, size: number, rot: number, flip: boolean, t: number, lite = false): void {
   const d = stickerById(id);
   if (!d) return;
   c.save();
@@ -118,7 +118,7 @@ export function drawSticker(c: Ctx, id: string, cx: number, cy: number, size: nu
   const tt = inLoop(t);
   if (d.outline !== false) {
     c.save();
-    c.shadowColor = 'rgba(25,10,45,.4)'; c.shadowBlur = size * 0.05; c.shadowOffsetY = size * 0.022;
+    if (!lite) { c.shadowColor = 'rgba(25,10,45,.4)'; c.shadowBlur = size * 0.05; c.shadowOffsetY = size * 0.022; }   // (lite: a slow phone keeps the white edge and drops the soft shadow, the costliest part)
     d.draw(c, kitAt(tt, true));
     c.restore();
   }
@@ -149,12 +149,12 @@ export function nameTagOf(c: Ctx, list: ReadonlyArray<Placed>, W: number, H: num
   return { x, y, w, h, rot: first.flip ? 0.045 : -0.045, top, name };
 }
 
-function drawNameTag(c: Ctx, t: NameTag, W: number): void {
+function drawNameTag(c: Ctx, t: NameTag, W: number, lite = false): void {
   c.save();
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.translate(t.x, t.y); c.rotate(t.rot);
   const { w, h } = t;
-  c.shadowColor = 'rgba(20,10,40,.38)'; c.shadowBlur = W * 0.014; c.shadowOffsetY = W * 0.004;
+  if (!lite) { c.shadowColor = 'rgba(20,10,40,.38)'; c.shadowBlur = W * 0.014; c.shadowOffsetY = W * 0.004; }
   pRR(c, -w / 2, -h / 2, w, h, h * 0.3); c.fillStyle = 'rgba(255,255,255,.97)'; c.fill();
   c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0;
   const br = h * 0.32, bx = -w / 2 + h * 0.3 + br;
@@ -213,6 +213,8 @@ export interface RenderOpts {
   guide?: Guide | null;
   /** picture pixels for one screen pixel (the live preview: the handles keep the same size on the screen) */
   unit?: number;
+  /** a slow phone: no soft shadows under the stickers and the name tag (only the live preview ever asks for this; a saved picture is always whole) */
+  lite?: boolean;
 }
 
 export function renderScene(c: Ctx, sc: Scene, W: number, H: number, o: RenderOpts): void {
@@ -238,9 +240,9 @@ export function renderScene(c: Ctx, sc: Scene, W: number, H: number, o: RenderOp
   if (o.guide) drawStandHere(c, win, o.guide, t);
   c.restore();
   drawFrameFront(c, f, W, H, t, win);
-  for (const p of sc.stickers) drawSticker(c, p.id, p.x * W, p.y * H, p.s * W, p.r, p.flip, t);
+  for (const p of sc.stickers) drawSticker(c, p.id, p.x * W, p.y * H, p.s * W, p.r, p.flip, t, o.lite);
   const hasBuddy = sc.stickers.some((p) => isBuddy(p.id));
-  if (hasBuddy && sc.tag !== false) { const nt = nameTagOf(c, sc.stickers, W, H, win); if (nt) drawNameTag(c, nt, W); }
+  if (hasBuddy && sc.tag !== false) { const nt = nameTagOf(c, sc.stickers, W, H, win); if (nt) drawNameTag(c, nt, W, o.lite); }
   if (hasBuddy) drawCaption(c, f, W, H, win, '#NOOBbuddies');
   drawTag(c, f, W, H, win, o.logo);
   if (o.guides && o.selected != null) {

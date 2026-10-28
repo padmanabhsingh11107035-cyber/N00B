@@ -279,7 +279,7 @@ check(/React\.lazy\(\(\) => import\('\.\/BuddyBooth'\)\)/.test(host) && /import\
 check(!/\bfetch\(|XMLHttpRequest|WebSocket|sendBeacon|supabase|dangerouslySetInnerHTML|innerHTML|eval\(|new Function/.test(booth + sheet + read('src/booth/camera.ts') + read('src/booth/media.ts') + read('src/booth/scene.ts') + read('src/booth/frames.ts')), 'the booth sends nothing anywhere: no network call, no storage call, no HTML from text');
 check(/stopStream\(stream\)/.test(booth) && /return \(\) => \{ cancelled = true; stopStream\(stream\);/.test(booth) && /capture="environment"/.test(booth) && /accept="image\/\*"/.test(booth), 'the camera is let go when it is not needed, and the phone\'s own camera app is the way out when the page has no camera');
 check(/URL\.revokeObjectURL/.test(sheet) && /role="dialog" aria-modal="true"/.test(booth) && /role="dialog" aria-modal="true"/.test(sheet) && /Touch and hold the picture/.test(sheet), 'the finished picture frees its memory, and tells how to save it with a long touch');
-check(/<Thumb id=/.test(booth) && !/setInterval/.test(booth) && /window\.setInterval\(tick, 83\)/.test(read('src/components/Booth/Thumb.tsx')) && /IntersectionObserver/.test(read('src/components/Booth/Thumb.tsx')), 'all the small moving pictures share one clock and only the ones on the screen are drawn');
+check(/<Thumb id=/.test(booth) && !/setInterval/.test(booth) && /window\.setInterval\(tick, 100\)/.test(read('src/components/Booth/Thumb.tsx')) && /IntersectionObserver/.test(read('src/components/Booth/Thumb.tsx')), 'all the small moving pictures share one clock and only the ones on the screen are drawn');
 const cssRules = css.split('\n').filter((l) => l.includes('{') && !/^\s/.test(l) && !l.startsWith('@') && !l.startsWith('/*'));
 check(cssRules.length > 60 && cssRules.every((l) => l.slice(0, l.indexOf('{')).split(/,(?![^(]*\))/).every((sel) => sel.trim().startsWith('.bb-') || sel.trim().startsWith(':where(.bb-root)'))), 'every style of the booth starts with bb- (nothing else in the app is touched)');
 check(/camera=\(self\)/.test(read('public/_headers')), 'the site\'s own pages may use the camera');
@@ -333,6 +333,23 @@ section('10. The opening art (4 seconds) and the page /booth');
   check(/booth: path\.resolve\(__dirname, 'booth\.html'\)/.test(vite) && /\^\\\/booth\(\\\?\|\$\)/.test(vite) && /BuddyBooth onClose=\{\(\) => \{ window\.location\.assign\('\/'\); \}\}/.test(entry) && !/App|supabase|AuthView/.test(entry), 'the build makes it as a third page, the address works while developing too, and its code starts nothing of the app');
   check(/onUse\?: \(file: File, target: BoothTarget\) => void/.test(booth) && /onUse=\{onUse \? use : undefined\}/.test(booth) && /onUse\?: \(file: File, target: BoothTarget\) => void/.test(sheet) && /\{onUse && <button/.test(sheet), 'on that page there is no Story / Post / Reel creator, so those buttons are not shown (Save and Share are)');
   check(/const \[opening, setOpening\] = useState\(\(\) =>/.test(booth) && /prefers-reduced-motion: reduce/.test(booth) && /if \(screen === 'pick' && opening\)/.test(booth) && /onPointerDown=\{onDone\}/.test(read('src/components/Booth/BoothOpening.tsx')) && /if \(result \|\| opening\) return;/.test(booth), 'the opening plays when the booth opens, a tap or a key skips it, and a phone set to less motion goes straight in');
+}
+
+section('11. A smoother preview');
+{
+  const big = ME.previewSize(2400, 1800, 702, 878), small = ME.previewSize(900, 1100, 702, 878);
+  check(big && Math.max(big.w, big.h) === Math.ceil(878 * 1.3) && near(big.w / big.h, 2400 / 1800, 0.01), 'a big photo gets a smaller copy for the live preview (about 1.3 times the preview, the same shape)');
+  check(small === null && ME.previewSize(1200, 1400, 702, 878) === null && typeof ME.makePreview === 'function', 'a photo that is already about that small is used as it is');
+  check((await ME.makePreview({ img: {}, w: 2400, h: 1800 }, 702, 878)) === null, 'a browser that can not make the smaller copy simply draws the whole photo (never a crash)');
+  const scr2 = recorder('S:');
+  FR.setCanvasFactory((w, h) => ({ width: w, height: h, style: {}, getContext: () => scr2.ctx }));
+  const draw = (sc, o = {}) => { const r = recorder(); SC.renderScene(r.ctx, sc, 1080, 1350, { t: 0.7, logo: { width: 640, height: 207 }, ...o }); return r.log; };
+  const sc = base({ stickers: [bud(1), stk(2), stk(3, 'pp-heart'), stk(4, 'an-eyes')] });
+  const soft = (log) => log.filter((l) => l.startsWith('shadowBlur=') && l !== 'shadowBlur=0').length;
+  const normal = draw(sc), lite = draw(sc, { lite: true });
+  check(soft(lite) < soft(normal) && lite.length < normal.length, 'a slow phone drops the soft shadows under the stickers and the name tag (only the live preview ever asks for it)');
+  check(lite.filter((l) => l === 'fill()').length === normal.filter((l) => l === 'fill()').length && lite.filter((l) => l.startsWith('drawImage(')).length === normal.filter((l) => l.startsWith('drawImage(')).length, 'and nothing else is left out: the picture is still complete (same shapes, same wordmark)');
+  check(/lite: liteRef\.current/.test(booth) && /avg > 16\) liteRef\.current = true/.test(booth) && /previewRef\.current\.of === s\.photo && s\.zoom <= 1\.5/.test(booth) && !/lite/.test(read('src/booth/media.ts')), 'the preview measures itself and drops the shadows after about 40 slow pictures; the saved picture and the video never do');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

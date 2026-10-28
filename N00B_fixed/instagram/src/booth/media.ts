@@ -41,6 +41,21 @@ export async function loadPhoto(file: File, maxSide = 2400): Promise<PhotoSrc> {
   return { img: cv, w: cv.width, h: cv.height };
 }
 
+/** The size a photo needs for the live preview: about 1.3 times the preview itself. A phone photo is several times bigger than the screen, and drawing it whole 30 times a second is the heaviest
+ *  thing the preview does. null = the photo is already about that small. */
+export function previewSize(pw: number, ph: number, cw: number, ch: number): { w: number; h: number } | null {
+  const want = Math.ceil(Math.max(cw, ch) * 1.3), have = Math.max(pw, ph);
+  if (have <= want * 1.25) return null;
+  const k = want / have;
+  return { w: Math.max(2, Math.round(pw * k)), h: Math.max(2, Math.round(ph * k)) };
+}
+/** A smaller copy of the photo to draw while editing (an ImageBitmap, which the phone can not empty the way it can a canvas). null = not needed, or this browser can not make one. The saved picture always uses the whole photo. */
+export async function makePreview(p: PhotoSrc, cw: number, ch: number): Promise<ImageBitmap | null> {
+  const sz = previewSize(p.w, p.h, cw, ch);
+  if (!sz || typeof createImageBitmap !== 'function') return null;
+  try { return await createImageBitmap(p.img as ImageBitmapSource, { resizeWidth: sz.w, resizeHeight: sz.h, resizeQuality: 'medium' }); } catch { return null; }
+}
+
 /** The picture the camera shows right now, taken as a photo (not larger than `maxSide`). It is not mirrored: a scene that shows a selfie camera has `mirror` set. null = the camera has no picture yet. */
 export function snapshot(video: HTMLVideoElement, maxSide = 2000): PhotoSrc | null {
   const vw = video.videoWidth, vh = video.videoHeight;

@@ -5,11 +5,11 @@ import type { FieldId, PackId } from '../../booth/kit';
 import { FRAMES, frameById, windowOf } from '../../booth/frames';
 import type { FrameId, Logo } from '../../booth/frames';
 import { MAX_BUDDIES, MAX_STICKERS, SHAPES, START_SIZE, addPlaced, guideSpot, isBuddy, reflow, renderScene, shapeById, sizeLimits, startSpot, toFront } from '../../booth/scene';
-import type { Placed, Pt, Scene, ShapeId } from '../../booth/scene';
+import type { PhotoSrc, Placed, Pt, Scene, ShapeId } from '../../booth/scene';
 import { dragHandle, moved, panned, pickHandle, pickTop, pinched, zoomed } from '../../booth/gestures';
 import { cameraProblem, cameraSupported, countCameras, keepAwake, openStream, stopStream } from '../../booth/camera';
 import type { CamState, Facing } from '../../booth/camera';
-import { loadLogo, loadPhoto, snapshot } from '../../booth/media';
+import { loadLogo, loadPhoto, makePreview, snapshot } from '../../booth/media';
 import { Thumb } from './Thumb';
 import { ResultSheet } from './ResultSheet';
 import { BoothOpening } from './BoothOpening';
@@ -95,6 +95,8 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse?: (file: File, target: B
   const appRef = useRef<HTMLInputElement>(null);
   const ptrs = useRef(new Map<number, Pt>());
   const gest = useRef<Gesture>({ kind: 'none' });
+  const liteRef = useRef(false);
+  const previewRef = useRef<{ of: PhotoSrc; bmp: ImageBitmap } | null>(null);
 
   const sc = sceneRef.current;
   const shape = shapeById(sc.shape);
@@ -161,7 +163,7 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse?: (file: File, target: B
 
   // ---- drawing: once for every picture the screen shows (the photo, or the camera, with the buddies and stickers on it)
   useEffect(() => {
-    let raf = 0, last = -1000;
+    let raf = 0, last = -1000, avg = 0, frames = 0;
     const tick = (ms: number): void => {
       raf = requestAnimationFrame(tick);
       if (pausedRef.current || document.hidden || ms - last < 28) return;   // 30 pictures a second are enough (the camera and the saved video do not give more) and spare the battery
@@ -172,9 +174,14 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse?: (file: File, target: B
       const s = sceneRef.current;
       let photo = s.photo;
       if (modeRef.current === 'camera') { const v = videoRef.current; photo = v && v.readyState >= 2 && v.videoWidth ? { img: v, w: v.videoWidth, h: v.videoHeight } : null; }
+      else if (previewRef.current && previewRef.current.of === s.photo && s.zoom <= 1.5 && s.photo) photo = { img: previewRef.current.bmp, w: s.photo.w, h: s.photo.h };   // the small copy of the photo (the saved picture uses the whole one)
       const view: Scene = photo === s.photo ? s : { ...s, photo };
       const guide = modeRef.current === 'camera' && guideRef.current ? guideSpot(s.stickers, s.shape, s.frame) : null;
-      renderScene(c, view, cv.width, cv.height, { t: ms / 1000, logo: logoRef.current, selected: selectedRef.current, guides: true, guide, unit: cv.width / Math.max(1, cv.clientWidth) });
+      const t0 = performance.now();
+      renderScene(c, view, cv.width, cv.height, { t: ms / 1000, logo: logoRef.current, selected: selectedRef.current, guides: true, guide, unit: cv.width / Math.max(1, cv.clientWidth), lite: liteRef.current });
+      // a phone that needs more than ~16 ms to draw a picture drops the soft shadows (for the rest of the visit) so the preview stays smooth
+      avg = avg * 0.92 + (performance.now() - t0) * 0.08;
+      if (!liteRef.current && ++frames > 40 && avg > 16) liteRef.current = true;
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -202,6 +209,20 @@ const BuddyBooth: React.FC<{ onClose: () => void; onUse?: (file: File, target: B
     const cv = canvasRef.current;
     if (cv && (cv.width !== cw || cv.height !== ch)) { cv.width = cw; cv.height = ch; }
   }, [cw, ch, screen]);
+
+  // ---- while editing, the picture is drawn from a smaller copy of the photo (30 times a second, a 2000-pixel photo is the heaviest part of the preview); the saved picture uses the whole photo
+  const stillPhoto = sceneRef.current.photo;
+  useEffect(() => {
+    if (mode !== 'edit' || !stillPhoto) return;
+    let live = true;
+    void makePreview(stillPhoto, cw, ch).then((bmp) => {
+      if (!live) { bmp?.close(); return; }
+      previewRef.current?.bmp.close();
+      previewRef.current = bmp ? { of: stillPhoto, bmp } : null;
+    });
+    return () => { live = false; };
+  }, [mode, stillPhoto, cw, ch]);
+  useEffect(() => () => { previewRef.current?.bmp.close(); previewRef.current = null; }, []);
 
   // ---- adding, removing and changing what stands on the picture
   const nextUid = (): number => uidRef.current++;

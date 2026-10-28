@@ -51,6 +51,13 @@ Unchanged (`src/booth/packs/`, `catalog.ts`): the same drawing kit (`kit.ts`), a
 - `scripts/booth/sheet.mjs`: draws contact sheets of the art (needs the `@napi-rs/canvas` package that is in `node_modules`).
 - `scripts/supabase/test-booth.mjs`: 96 checks (every buddy and sticker drawn at six moments, the loop seam, the name tag always inside the photo, the wordmark last, gestures, camera messages, the wiring and what the booth may not touch).
 
+## Speed
+
+The live preview draws at most 30 pictures a second (the camera and the saved video do not give more) and does three things to stay smooth on a slow phone:
+- **A smaller copy of the photo** while editing (an `ImageBitmap` about 1.3 times the size of the preview, `previewSize` / `makePreview` in `media.ts`): a phone photo is several times bigger than the screen and drawing it whole 30 times a second was the heaviest part. Drawing it on a processor-only canvas went from 3.3 ms to 1.2 ms; a picture with a buddy and 24 stickers from about 13.5 ms to 10.7 ms. The saved picture and the video always use the whole photo; while zoomed in more than 1.5 times the whole photo is used too.
+- **Slow-phone mode**: the preview times its own drawing; after about 40 pictures averaging more than 16 ms it drops the soft shadows under the stickers and the name tag (about 18% less, 10.7 ms to 8.7 ms) for the rest of the visit. Never used for the saved picture or video.
+- **The small moving pictures** (the buddy cards, the sticker buttons) share one clock at 10 a second and only the ones on screen are drawn.
+
 ## Safe by design
 
 Everything happens on the device: the camera, the drawing, the saved file. No network call, no storage call, no HTML made from text (`test-booth.mjs` forbids them in the booth's files). The camera is let go when the picture is taken, when the screen is left and when the page goes to the background. The site's own pages may use the camera (`Permissions-Policy: camera=(self)` in `public/_headers`).

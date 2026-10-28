@@ -27,7 +27,7 @@ const watcher = typeof IntersectionObserver !== 'undefined'
 function add(e: Entry): void {
   entries.add(e); byEl.set(e.cv, e); watcher?.observe(e.cv);
   paint(e, performance.now() / 1000);
-  if (!timer) timer = window.setInterval(tick, 83);
+  if (!timer) timer = window.setInterval(tick, 100);
 }
 function remove(e: Entry): void {
   entries.delete(e); byEl.delete(e.cv); watcher?.unobserve(e.cv);

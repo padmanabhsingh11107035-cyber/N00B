@@ -129,12 +129,12 @@ const MoodPage: React.FC<MoodPageProps> = ({ currentUser, onLogin, onBack }) => 
       )}
 
       {/* the mood, in words */}
-      <div className="absolute left-0 right-0 text-center font-bold tracking-tight pointer-events-none" style={{ top: '15%', fontSize: 'clamp(40px, 12vw, 56px)', color: 'rgba(255,255,255,.88)', textShadow: '0 2px 10px rgba(0,0,0,.18)' }} data-testid="mood-word" aria-live="polite">
+      <div className="absolute left-0 right-0 text-center font-bold tracking-tight pointer-events-none" style={{ top: '11%', fontSize: 'clamp(40px, 12vw, 56px)', color: '#000', textShadow: 'none' }} data-testid="mood-word" aria-live="polite">
         {MOODS[idx].label.toLowerCase()}
       </div>
 
       {/* the face */}
-      <svg viewBox="0 0 375 300" className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: '27%', width: 'min(100%, 460px)' }} aria-hidden="true">
+      <svg viewBox="0 0 375 300" className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ top: '19%', width: 'min(100%, 460px)' }} aria-hidden="true">
         <defs>
           <filter id="mood-soft" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="12" stdDeviation="9" floodColor="#000" floodOpacity=".28" /></filter>
           <filter id="mood-lip" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="3" floodColor="#000" floodOpacity=".3" /></filter>

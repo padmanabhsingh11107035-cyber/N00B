@@ -16,6 +16,14 @@ interface MusicPlayerContextType {
   nextTrack: () => void;
   prevTrack: () => void;
   toggleMute: () => void;
+  // Shuffle: the next song is a random one. Repeat: the song that ends plays again.
+  shuffle: boolean;
+  repeat: boolean;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
+  // Where the song is, in seconds (the length is the real one once the file has loaded).
+  elapsedSec: number;
+  totalSec: number;
   refreshTracks: () => Promise<void>;
   seekTo: (percentage: number) => void;
   // Like / unlike a track (saved in the database — one like per person per track).
@@ -31,6 +39,10 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [totalSec, setTotalSec] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -115,7 +127,10 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const nextTrack = () => {
     if (tracks.length === 0) return;
     const currentIndex = tracks.findIndex((t) => t.id === currentTrack?.id);
-    const nextIndex = (currentIndex + 1) % tracks.length;
+    let nextIndex = (currentIndex + 1) % tracks.length;
+    if (shuffle && tracks.length > 1) {
+      do { nextIndex = Math.floor(Math.random() * tracks.length); } while (nextIndex === currentIndex);
+    }
     playTrack(tracks[nextIndex]);
   };
 
@@ -135,7 +150,20 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const cur = audioRef.current.currentTime;
       const total = audioRef.current.duration || 1;
       setProgress((cur / total) * 100);
+      setElapsedSec(cur);
+      if (isFinite(audioRef.current.duration)) setTotalSec(audioRef.current.duration);
     }
+  };
+
+  // The song ended: with Repeat on it starts again, otherwise the next one plays.
+  const handleEnded = () => {
+    const audio = audioRef.current;
+    if (repeat && audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => setIsPlaying(false));
+      return;
+    }
+    nextTrack();
   };
 
   const seekTo = (percentage: number) => {
@@ -161,6 +189,12 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         nextTrack,
         prevTrack,
         toggleMute,
+        shuffle,
+        repeat,
+        toggleShuffle: () => setShuffle((v) => !v),
+        toggleRepeat: () => setRepeat((v) => !v),
+        elapsedSec,
+        totalSec,
         refreshTracks: loadTracks,
         seekTo,
         toggleLike
@@ -174,7 +208,8 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           ref={audioRef}
           src={currentTrack.audioUrl}
           onTimeUpdate={handleTimeUpdate}
-          onEnded={nextTrack}
+          onEnded={handleEnded}
+          onLoadedMetadata={(e) => { const d = (e.target as HTMLAudioElement).duration; setTotalSec(isFinite(d) ? d : 0); setElapsedSec(0); }}
           onError={(e) => {
             console.warn('Audio playback error:', e);
             setIsPlaying(false);

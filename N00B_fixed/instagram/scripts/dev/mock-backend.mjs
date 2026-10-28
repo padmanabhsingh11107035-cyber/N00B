@@ -68,7 +68,13 @@ const authUser = { id: ME.id, aud: 'authenticated', role: 'authenticated', email
 const session = () => ({ access_token: jwt(), refresh_token: 'mock-refresh', token_type: 'bearer', expires_in: 86400 * 30, expires_at: Math.floor(Date.now() / 1000) + 86400 * 30, user: authUser });
 
 let forms = [];
+// NOOB Music preview: made-up songs (cover = a coloured picture, sound = a few seconds of silence) so the Music page has something to show
+const coverSvg = (c1, c2, t) => 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="200" height="200" fill="url(#g)"/><circle cx="100" cy="100" r="46" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="6"/><text x="100" y="112" font-size="34" font-family="Arial" font-weight="700" fill="#fff" text-anchor="middle">${t}</text></svg>`);
+const silentWav = (() => { const n = 8000 * 30, b = Buffer.alloc(44 + n); b.write('RIFF', 0); b.writeUInt32LE(36 + n, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(8000, 24); b.writeUInt32LE(8000, 28); b.writeUInt16LE(1, 32); b.writeUInt16LE(8, 34); b.write('data', 36); b.writeUInt32LE(n, 40); b.fill(128, 44); return 'data:audio/wav;base64,' + b.toString('base64'); })();
+const songs = [['Midnight Drive', 'Nova', 'Synthwave', '#e11d48', '#4c0519'], ['Lo-Fi Rain', 'Mira', 'Lo-Fi', '#0ea5e9', '#1e1b4b'], ['Night Shift', 'Zane', 'Phonk', '#7c3aed', '#0f0a1e'], ['Golden Hour', 'Roxy', 'Ambient', '#f59e0b', '#7c2d12'], ['Neon Streets', 'Kairo', 'Cyberpunk', '#10b981', '#022c22'], ['Bass Garden', 'Blaze', 'EDM', '#ec4899', '#500724'], ['Quiet Moon', 'Ivory', 'Lo-Fi', '#64748b', '#0f172a'], ['Run It Up', 'Rogue', 'Hip Hop', '#f97316', '#431407']]
+  .map(([title, artist, genre, c1, c2], i) => ({ id: 'm000000' + i, title, artist, genre, audioUrl: silentWav, coverUrl: coverSvg(c1, c2, title[0]), duration: '0:30', uploaderId: i === 1 ? ME.id : 'u' + i, uploaderUsername: artist.toLowerCase(), uploaderAvatar: null, likesCount: i * 3 % 7, playsCount: 120 - i * 9, isLiked: i === 2, createdAt: new Date(Date.now() - i * 86400000).toISOString() }));
 const rpcAnswers = {
+  list_music_tracks: () => songs,
   form_role: () => 'owner',
   form_collab_list: () => [],
   form_publish: (a) => { const f = forms.find((x) => x.id === a.p_id); if (!f) return { ok: false, problems: ['Form not found'] }; f.published = f.draft; f.status = 'published'; f.slug = f.slug || 'abcdefgh12'; f.version += 1; return { ok: true, slug: f.slug, version: f.version }; },

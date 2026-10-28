@@ -1197,3 +1197,36 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
   .msg-head.force-dark, body.light .msg-head.force-dark { background-color: #01472b !important; }
   :root[data-theme="light"] .msg-head.force-dark { background-color: #0e4331 !important; }
 }
+
+/* NOOB Music: the opening animation, the vinyl record and the Now Playing screen */
+.music-vinyl {
+  background:
+    radial-gradient(circle at 50% 50%, #d9a441 0 15%, #1a1a1a 15.5% 17%, transparent 17.5%),
+    repeating-radial-gradient(circle at 50% 50%, #111 0 2px, #1b1b1b 2px 4px),
+    #0d0d0d;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.music-splash-vinyl { transform: translateX(46%); }
+@media (prefers-reduced-motion: no-preference) {
+  .music-splash-sleeve { animation: music-sleeve-in 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+  .music-splash-vinyl { animation: music-vinyl-out 0.9s 0.55s cubic-bezier(0.25, 0.9, 0.3, 1) both; }
+  .music-splash-word { animation: music-word-in 0.7s 1.15s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+  .music-vinyl-spin { animation: music-spin 3.2s linear infinite; }
+  .music-splash-out { animation: music-splash-away 0.55s ease both; }
+  .music-vinyl-playing { animation: music-spin 4s linear infinite; }
+  .music-row-in { animation: music-row-in 0.5s both cubic-bezier(0.2, 0.9, 0.3, 1); }
+  .music-eq i { animation: music-eq 0.9s ease-in-out infinite; }
+  .music-eq i:nth-child(2) { animation-delay: -0.3s; }
+  .music-eq i:nth-child(3) { animation-delay: -0.6s; }
+}
+.music-vinyl-paused { animation-play-state: paused; }
+@keyframes music-sleeve-in { from { opacity: 0; transform: scale(0.88) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes music-vinyl-out { from { transform: translateX(0); } to { transform: translateX(46%); } }
+@keyframes music-word-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes music-spin { to { transform: rotate(360deg); } }
+@keyframes music-splash-away { to { opacity: 0; transform: scale(1.04); } }
+@keyframes music-row-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes music-eq { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+.music-range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px; outline: none; cursor: pointer; }
+.music-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
+.music-range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; }

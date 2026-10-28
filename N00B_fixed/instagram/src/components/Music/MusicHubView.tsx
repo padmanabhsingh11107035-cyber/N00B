@@ -3,15 +3,13 @@ import { Heart,
   Music,
   Play,
   Pause,
-  Volume2,
-  VolumeX,
   Upload,
   Plus,
   Search,
-  Sparkles,
-  Flame,
-  Radio,
-  Share2,
+  ChevronRight,
+  MoreHorizontal,
+  SkipBack,
+  SkipForward,
   Check,
   Clock,
   Pencil,
@@ -26,6 +24,9 @@ import { getAudioDuration } from '../../utils/mediaCompressor';
 import { isVideoFile, extractAudioFromVideoFile, MAX_MUSIC_UPLOAD_SECONDS } from '../../utils/extractAudioFromVideo';
 import { isMainAdmin } from '../../adminAccess';
 import confetti from 'canvas-confetti';
+import { MusicSplash } from './MusicSplash';
+import { NowPlaying } from './NowPlaying';
+import { coverTint, fallbackTint, type CoverTint } from '../../utils/coverColor';
 
 interface MusicHubViewProps {
   currentUser: User;
@@ -37,12 +38,11 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
     currentTrack: currentPlayingTrack,
     isPlaying,
     progress: audioProgress,
-    isMuted,
     playbackError,
     togglePlay,
-    toggleMute,
+    nextTrack,
+    prevTrack,
     refreshTracks,
-    seekTo,
     toggleLike,
     pauseTrack
   } = useMusicPlayer();
@@ -55,6 +55,26 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [likedOnly, setLikedOnly] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [menuTrackId, setMenuTrackId] = useState<string | null>(null);
+  const [showPlayer, setShowPlayer] = useState(false);
+  // the colour of the song that is on: the mini player takes it
+  const [tint, setTint] = useState<CoverTint>(() => fallbackTint(''));
+  useEffect(() => {
+    if (!currentPlayingTrack) return;
+    let alive = true;
+    setTint(fallbackTint(currentPlayingTrack.title));
+    void coverTint(currentPlayingTrack.coverUrl, currentPlayingTrack.title).then((t) => { if (alive) setTint(t); });
+    return () => { alive = false; };
+  }, [currentPlayingTrack?.id, currentPlayingTrack?.coverUrl]);
+  useEffect(() => {
+    if (!menuTrackId) return;
+    const close = () => setMenuTrackId(null);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [menuTrackId]);
 
   // Upload Form
   const [titleInput, setTitleInput] = useState('');
@@ -275,17 +295,31 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.genre.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesGenre && matchesSearch;
+    return matchesGenre && matchesSearch && (!likedOnly || !!t.isLiked);
   });
+  // the first few songs are "Popular songs"; "All songs" opens the whole list
+  const searching = showSearch && searchQuery.trim() !== '';
+  const LIST_PREVIEW = 6;
+  const shownTracks = showAll || searching || likedOnly || selectedGenre !== 'all' ? filteredTracks : filteredTracks.slice(0, LIST_PREVIEW);
+  const totalPlays = tracks.reduce((n, t) => n + (t.playsCount || 0), 0);
 
   const genres = ['all', 'Synthwave', 'Lo-Fi', 'EDM', 'Hip Hop', 'Phonk', 'Cyberpunk', 'Ambient'];
 
+  const isOwn = (t: MusicTrack) => t.uploaderId === currentUser.id;
+  const hasMenu = (t: MusicTrack) => isOwn(t) || isMasterAdmin;
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 pb-28 pt-2">
+    <div className="w-full max-w-xl mx-auto pb-[calc(var(--nav-h,4rem)+6.5rem)] text-white" data-testid="music-hub">
+      <MusicSplash />
       <input ref={coverEditFileRef} type="file" accept="image/*" onChange={handleCoverFileChosen} className="hidden" />
-      {/* Music Header */}
-      <div className="flex items-center justify-between gap-4 mb-6 p-5 rounded-3xl bg-zinc-950 border border-zinc-800/80 shadow-2xl">
-        <div className="flex items-center gap-3.5 min-w-0">
+
+      {/* The spotlight: one big picture, the name over it */}
+      <section className="relative w-full aspect-[5/6] max-h-[80vh] overflow-hidden sm:rounded-b-[32px] bg-black" aria-label="NOOB Music">
+        <img src="/music/spotlight.webp" alt="" width={1000} height={1200} draggable={false} className="absolute inset-0 w-full h-full object-cover object-top" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0d] via-[#0b0b0d]/45 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
+
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-3">
           {/* NOOB Music's own picture: a chalk drawing of a disc player (public/noob-music-logo.jpg) */}
           <img
             src="/noob-music-logo.jpg"
@@ -293,293 +327,215 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             width={400}
             height={400}
             data-testid="music-logo"
-            className="w-14 h-14 rounded-[22%] object-cover shrink-0 bg-black"
+            className="w-10 h-10 rounded-[22%] object-cover shrink-0 bg-black shadow-lg"
             draggable={false}
           />
-          <h1 className="text-xl font-black text-white tracking-tight truncate">NOOB Music</h1>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => { setShowSearch((v) => !v); if (showSearch) setSearchQuery(''); }} aria-label="Search songs" aria-pressed={showSearch} className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center cursor-pointer active:scale-90 transition ${showSearch ? 'bg-white text-black' : 'bg-black/35 text-white'}`}>
+              <Search className="w-[18px] h-[18px]" />
+            </button>
+            <button type="button" onClick={() => { setLikedOnly((v) => !v); setShowAll(true); }} aria-label="Songs you liked" aria-pressed={likedOnly} className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center cursor-pointer active:scale-90 transition ${likedOnly ? 'bg-white text-black' : 'bg-black/35 text-white'}`}>
+              <Heart className={`w-[18px] h-[18px] ${likedOnly ? 'fill-black' : ''}`} />
+            </button>
+            <button type="button" onClick={() => setShowUploadModal(true)} aria-label="Upload a track" title="Upload a track" className="w-10 h-10 rounded-full bg-black/35 backdrop-blur-md text-white flex items-center justify-center cursor-pointer active:scale-90 transition">
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="p-2.5 rounded-2xl bg-transparent border border-zinc-700 text-white hover:border-noob hover:text-noob hover:bg-noob/10 transition-all cursor-pointer shrink-0"
-          title="Upload a track"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-      </div>
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-white/55">Spotlight</p>
+          <h1 className="mt-1 text-[44px] leading-[1.02] font-extrabold tracking-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,.5)]">NOOB Music</h1>
+          <p className="mt-1.5 text-[11px] text-white/50">
+            {tracks.length.toLocaleString()} {tracks.length === 1 ? 'song' : 'songs'}{totalPlays > 0 ? ` · ${totalPlays.toLocaleString()} plays` : ''}
+          </p>
+        </div>
+      </section>
 
-      {/* Active Sticky Player Banner */}
-      {currentPlayingTrack && (
-        <div className="mb-6 p-4 rounded-3xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-purple-950/40 border border-purple-500/30 shadow-2xl flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/10">
-                <img
-                  src={currentPlayingTrack.coverUrl}
-                  alt={currentPlayingTrack.title}
-                  className={`w-full h-full object-cover ${isPlaying ? 'animate-spin-slow' : ''}`}
-                />
-                <div className="absolute inset-0 bg-black/20" />
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-xs font-black text-white truncate block">
-                  {currentPlayingTrack.title}
-                </span>
-                <span className="text-[11px] text-zinc-400 truncate block">
-                  {currentPlayingTrack.artist} • <span className="text-purple-400 font-semibold">{currentPlayingTrack.genre}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Playback Controls */}
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={toggleMute}
-                className="p-2 rounded-full text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-
-              <button
-                onClick={() => togglePlay(currentPlayingTrack)}
-                className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform cursor-pointer"
-              >
-                {isPlaying ? <Pause className="w-5 h-5 fill-black" /> : <Play className="w-5 h-5 fill-black ml-0.5" />}
-              </button>
-            </div>
+      <div className="px-4">
+        {showSearch && (
+          <div className="relative mt-4">
+            <Search className="w-4 h-4 text-white/45 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Songs, artists or genres"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white/10 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:bg-white/15"
+            />
           </div>
+        )}
 
-          {/* Scrubbable Progress Bar */}
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={0.1}
-            value={Number.isFinite(audioProgress) ? audioProgress : 0}
-            onChange={(e) => seekTo(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-noob"
-            style={{
-              background: `linear-gradient(to right, #ffffff ${audioProgress}%, #3f3f46 ${audioProgress}%)`
-            }}
-            aria-label="Seek track position"
-          />
-
-          {playbackError && (
-            <p className="text-[11px] text-rose-400 font-semibold text-center bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-1.5">
-              {playbackError}
-            </p>
+        {/* Popular songs */}
+        <div className="mt-6 flex items-center justify-between">
+          <h2 className="text-[17px] font-bold">{likedOnly ? 'Songs you liked' : searching ? 'Results' : 'Popular songs'}</h2>
+          {!likedOnly && !searching && filteredTracks.length > LIST_PREVIEW && selectedGenre === 'all' && (
+            <button type="button" onClick={() => setShowAll((v) => !v)} className="flex items-center gap-0.5 rounded-full bg-white/10 pl-3 pr-2 py-1 text-[11px] font-semibold text-white/85 cursor-pointer active:scale-95 transition">
+              {showAll ? 'Fewer songs' : 'All songs'} <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showAll ? 'rotate-90' : ''}`} />
+            </button>
           )}
         </div>
-      )}
 
-      {/* Search & Genre Filters */}
-      <div className="space-y-3 mb-6">
-        <div className="relative">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search community tracks, artists, or genres..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-noob"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
           {genres.map((g) => (
             <button
               key={g}
-              onClick={() => setSelectedGenre(g)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
-                selectedGenre === g
-                  ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]'
-                  : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+              onClick={() => { setSelectedGenre(g); }}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-all cursor-pointer ${
+                selectedGenre === g ? 'bg-white text-black' : 'bg-white/10 text-white/70 hover:text-white'
               }`}
             >
               {g}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Track List Grid */}
-      {filteredTracks.length === 0 ? (
-        <div className="py-16 text-center bg-zinc-950 rounded-3xl border border-zinc-800 space-y-2">
-          <Music className="w-8 h-8 text-zinc-600 mx-auto" />
-          <p className="text-sm font-bold text-white">No tracks yet</p>
-          <p className="text-xs text-zinc-500">Be the first to upload one to the Community Music Hub.</p>
-        </div>
-      ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {filteredTracks.map((track) => {
-          const isSelected = currentPlayingTrack?.id === track.id;
-          return (
-            <div
-              key={track.id}
-              onClick={() => togglePlay(track)}
-              className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group ${
-                isSelected
-                  ? 'bg-purple-950/30 border-purple-500/50 shadow-[0_0_15px_rgba(255,255,255,0.15)]'
-                  : 'bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                  <img
-                    src={track.coverUrl}
-                    alt={track.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    {isSelected && isPlaying ? (
-                      <Pause className="w-5 h-5 text-white fill-white" />
-                    ) : (
-                      <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+        {filteredTracks.length === 0 ? (
+          <div className="py-16 text-center space-y-2">
+            <Music className="w-8 h-8 text-white/30 mx-auto" />
+            <p className="text-sm font-bold">{likedOnly ? 'No liked songs yet' : tracks.length === 0 ? 'No tracks yet' : 'Nothing found'}</p>
+            <p className="text-xs text-white/45">{likedOnly ? 'Tap the heart on a song to keep it here.' : tracks.length === 0 ? 'Tap + to upload the first one.' : 'Try another word or genre.'}</p>
+          </div>
+        ) : (
+          <ul className="mt-2">
+            {shownTracks.map((track, i) => {
+              const isSelected = currentPlayingTrack?.id === track.id;
+              return (
+                <li
+                  key={track.id}
+                  onClick={() => togglePlay(track)}
+                  className="music-row-in relative flex items-center gap-3 py-2.5 cursor-pointer group"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                >
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white/10">
+                    <img src={track.coverUrl} alt="" className="w-full h-full object-cover" draggable={false} />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-black/50 flex items-end justify-center gap-[3px] pb-3 music-eq" aria-hidden="true">
+                        <i className="block w-[3px] h-4 bg-white rounded-full origin-bottom" style={isPlaying ? undefined : { transform: 'scaleY(.35)' }} />
+                        <i className="block w-[3px] h-4 bg-white rounded-full origin-bottom" style={isPlaying ? undefined : { transform: 'scaleY(.6)' }} />
+                        <i className="block w-[3px] h-4 bg-white rounded-full origin-bottom" style={isPlaying ? undefined : { transform: 'scaleY(.35)' }} />
+                      </div>
                     )}
                   </div>
-                </div>
 
-                <div className="min-w-0">
-                  {editingTrackId === track.id ? (
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        autoFocus
-                        value={editTitleDraft}
-                        onChange={(e) => setEditTitleDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') submitRename(track.id);
-                          if (e.key === 'Escape') cancelRename();
-                        }}
-                        maxLength={100}
-                        disabled={isRenaming}
-                        className="min-w-0 flex-1 bg-zinc-950 border border-purple-500/50 rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        disabled={isRenaming}
-                        onClick={() => submitRename(track.id)}
-                        className="w-6 h-6 rounded-full bg-noob text-black flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
-                        title="Save name"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isRenaming}
-                        onClick={cancelRename}
-                        className="w-6 h-6 rounded-full bg-zinc-800 text-zinc-300 flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
-                        title="Cancel"
-                      >
-                        <XIcon className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <h4 className="text-xs font-bold text-white truncate group-hover:text-purple-300 transition-colors flex items-center gap-1.5">
-                      <span className="truncate">{track.title}</span>
-                      {track.uploaderId === currentUser.id && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startRename(track);
+                  <div className="min-w-0 flex-1">
+                    {editingTrackId === track.id ? (
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          autoFocus
+                          value={editTitleDraft}
+                          onChange={(e) => setEditTitleDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') submitRename(track.id);
+                            if (e.key === 'Escape') cancelRename();
                           }}
-                          className="shrink-0 text-zinc-500 hover:text-purple-300 cursor-pointer"
-                          title="Rename your track"
-                        >
-                          <Pencil className="w-3 h-3" />
+                          maxLength={100}
+                          disabled={isRenaming}
+                          className="min-w-0 flex-1 bg-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none"
+                        />
+                        <button type="button" disabled={isRenaming} onClick={() => submitRename(track.id)} className="w-7 h-7 rounded-full bg-white text-black flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50" title="Save name">
+                          <Check className="w-4 h-4" />
                         </button>
-                      )}
-                      {track.uploaderId === currentUser.id && (
-                        <button
-                          type="button"
-                          disabled={updatingCoverTrackId === track.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startChangeCover(track);
-                          }}
-                          className="shrink-0 text-zinc-500 hover:text-purple-300 cursor-pointer disabled:opacity-50"
-                          title="Change cover image"
-                        >
-                          <ImageIcon className="w-3 h-3" />
+                        <button type="button" disabled={isRenaming} onClick={cancelRename} className="w-7 h-7 rounded-full bg-white/15 text-white flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50" title="Cancel">
+                          <XIcon className="w-4 h-4" />
                         </button>
-                      )}
-                    </h4>
-                  )}
-                  {editingTrackId === track.id && renameError && (
-                    <p className="text-[10px] text-rose-400 mt-0.5">{renameError}</p>
-                  )}
-                  {updatingCoverTrackId === track.id && (
-                    <p className="text-[10px] text-purple-300 mt-0.5">Updating cover...</p>
-                  )}
-                  {coverUpdateErrorTrackId === track.id && coverUpdateError && (
-                    <p className="text-[10px] text-rose-400 mt-0.5">{coverUpdateError}</p>
-                  )}
-                  <p className="text-[11px] text-zinc-400 truncate">
-                    {track.artist} • <span className="text-zinc-500">{track.genre}</span>
-                  </p>
-                </div>
-              </div>
+                      </div>
+                    ) : (
+                      <p className="text-[15px] font-semibold truncate">{track.title}</p>
+                    )}
+                    {editingTrackId === track.id && renameError && <p className="text-[11px] text-rose-300 mt-0.5">{renameError}</p>}
+                    {updatingCoverTrackId === track.id && <p className="text-[11px] text-white/60 mt-0.5">Updating cover...</p>}
+                    {coverUpdateErrorTrackId === track.id && coverUpdateError && <p className="text-[11px] text-rose-300 mt-0.5">{coverUpdateError}</p>}
+                    <p className="text-[12px] text-white/45 truncate">{track.artist} · {track.genre}</p>
+                  </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Like (saved) */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLike(track.id);
-                  }}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold transition-colors cursor-pointer ${
-                    track.isLiked ? 'text-rose-400 hover:text-rose-300' : 'text-zinc-500 hover:text-white'
-                  }`}
-                  title={track.isLiked ? 'Unlike' : 'Like'}
-                  aria-label={track.isLiked ? `Unlike ${track.title}` : `Like ${track.title}`}
-                  aria-pressed={!!track.isLiked}
-                >
-                  <Heart className={`w-4 h-4 ${track.isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  {track.likesCount > 0 && <span>{track.likesCount}</span>}
-                </button>
-                <span className="text-xs font-mono text-zinc-500">{track.duration}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    togglePlay(track);
-                  }}
-                  className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-white text-zinc-300 hover:text-black flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  {isSelected && isPlaying ? (
-                    <Pause className="w-3.5 h-3.5 fill-current" />
-                  ) : (
-                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                  )}
-                </button>
-                {isMasterAdmin && (
                   <button
                     type="button"
-                    disabled={deletingTrackId === track.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Permanently delete "${track.title}"? This removes it from NOOB's servers for everyone and cannot be undone.`)) {
-                        confirmDeleteTrack(track);
-                      }
-                    }}
-                    className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Permanently delete this track (admin)"
+                    onClick={(e) => { e.stopPropagation(); toggleLike(track.id); }}
+                    className={`shrink-0 flex items-center gap-1 h-9 px-2 rounded-full text-[12px] font-semibold cursor-pointer active:scale-90 transition ${track.isLiked ? 'text-white' : 'text-white/40 hover:text-white'}`}
+                    title={track.isLiked ? 'Unlike' : 'Like'}
+                    aria-label={track.isLiked ? `Unlike ${track.title}` : `Like ${track.title}`}
+                    aria-pressed={!!track.isLiked}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Heart className={`w-[18px] h-[18px] ${track.isLiked ? 'fill-white' : ''}`} />
+                    {track.likesCount > 0 && <span>{track.likesCount}</span>}
                   </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+
+                  {hasMenu(track) ? (
+                    <div className="relative shrink-0" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                      <button type="button" onClick={() => setMenuTrackId(menuTrackId === track.id ? null : track.id)} aria-label={`More for ${track.title}`} aria-expanded={menuTrackId === track.id} className="w-9 h-9 rounded-full text-white/55 hover:text-white flex items-center justify-center cursor-pointer active:scale-90 transition">
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                      {menuTrackId === track.id && (
+                        <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-2xl bg-[#1c1c20] border border-white/10 shadow-2xl p-1.5">
+                          {isOwn(track) && (
+                            <button type="button" onClick={() => { setMenuTrackId(null); startRename(track); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white hover:bg-white/10 cursor-pointer">
+                              <Pencil className="w-4 h-4 text-white/60" /> Rename
+                            </button>
+                          )}
+                          {isOwn(track) && (
+                            <button type="button" disabled={updatingCoverTrackId === track.id} onClick={() => { setMenuTrackId(null); startChangeCover(track); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white hover:bg-white/10 cursor-pointer disabled:opacity-50">
+                              <ImageIcon className="w-4 h-4 text-white/60" /> Change cover
+                            </button>
+                          )}
+                          {isMasterAdmin && (
+                            <button
+                              type="button"
+                              disabled={deletingTrackId === track.id}
+                              onClick={() => {
+                                setMenuTrackId(null);
+                                if (window.confirm(`Permanently delete "${track.title}"? This removes it from NOOB's servers for everyone and cannot be undone.`)) confirmDeleteTrack(track);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-rose-300 hover:bg-rose-500/10 cursor-pointer disabled:opacity-40"
+                              title="Permanently delete this track (admin)"
+                            >
+                              <Trash2 className="w-4 h-4" /> Delete for everyone
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="shrink-0 w-10 text-right text-[12px] tabular-nums text-white/35">{track.duration}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {isMasterAdmin && deleteError && (
+          <p className="text-[11px] text-rose-300 text-center mt-2">{deleteError}</p>
+        )}
       </div>
+
+      {/* The mini player: the colour of the song that is on; tap it for the full player */}
+      {currentPlayingTrack && !showPlayer && (
+        <div
+          data-testid="music-mini"
+          className="fixed left-3 right-[5.25rem] sm:right-auto sm:left-1/2 sm:-translate-x-1/2 bottom-[calc(var(--nav-h,4rem)+0.6rem)] z-40 sm:w-[calc(100%-1.5rem)] max-w-[460px] rounded-2xl overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,.55)] border border-white/10"
+          style={{ background: `linear-gradient(90deg, hsl(${tint.hue} ${Math.round(Math.min(0.8, tint.sat + 0.1) * 100)}% 22%), hsl(${tint.hue} ${Math.round(Math.min(0.8, tint.sat + 0.1) * 80)}% 13%))` }}
+        >
+          <div className="flex items-center gap-3 p-2.5 pr-3">
+            <button type="button" onClick={() => setShowPlayer(true)} className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer" aria-label="Open the player">
+              <img src={currentPlayingTrack.coverUrl} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0 bg-black/40" draggable={false} />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold truncate">{currentPlayingTrack.title}</span>
+                <span className="block text-[11px] text-white/55 truncate">{currentPlayingTrack.artist}</span>
+              </span>
+            </button>
+            <button type="button" onClick={prevTrack} aria-label="Previous song" className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 cursor-pointer active:scale-90 transition"><SkipBack className="w-[18px] h-[18px] fill-current" /></button>
+            <button type="button" onClick={() => togglePlay(currentPlayingTrack)} aria-label={isPlaying ? 'Pause' : 'Play'} className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center cursor-pointer active:scale-90 transition">
+              {isPlaying ? <Pause className="w-[18px] h-[18px] fill-black" /> : <Play className="w-[18px] h-[18px] fill-black ml-0.5" />}
+            </button>
+            <button type="button" onClick={nextTrack} aria-label="Next song" className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 cursor-pointer active:scale-90 transition"><SkipForward className="w-[18px] h-[18px] fill-current" /></button>
+          </div>
+          <div className="h-[3px] bg-white/10"><div className="h-full bg-white/80" style={{ width: `${Number.isFinite(audioProgress) ? audioProgress : 0}%` }} /></div>
+          {playbackError && <p className="px-3 py-1.5 text-[11px] font-semibold text-rose-200 bg-black/40">{playbackError}</p>}
+        </div>
       )}
-      {isMasterAdmin && deleteError && (
-        <p className="text-[11px] text-rose-400 text-center mt-2">{deleteError}</p>
-      )}
+
+      {showPlayer && currentPlayingTrack && <NowPlaying onClose={() => setShowPlayer(false)} />}
 
       {/* Upload Track Modal */}
       {showUploadModal && (

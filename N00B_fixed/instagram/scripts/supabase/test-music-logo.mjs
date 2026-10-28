@@ -6,5 +6,8 @@ const hub = fs.readFileSync('src/components/Music/MusicHubView.tsx', 'utf8');
 check(fs.existsSync('public/noob-music-logo.jpg') && fs.statSync('public/noob-music-logo.jpg').size < 120 * 1024, 'the picture is a file in the site, small enough to load at once');
 check(/<img\s+src="\/noob-music-logo\.jpg"\s+alt="NOOB Music logo"/.test(hub) && /data-testid="music-logo"/.test(hub), 'the Music Hub header shows it');
 check(!/conic-gradient/.test(hub) && !/Disc3/.test(hub), 'the old rainbow icon with the spinning disc is gone');
+const splash = fs.readFileSync('src/components/Music/MusicSplash.tsx', 'utf8');
+check(/src="\/noob-music-logo\.jpg"/.test(splash) && /Feel every/.test(splash) && /data-noob-keep/.test(splash), 'the opening animation shows the sleeve, the vinyl and the name');
+check(fs.existsSync('public/music/spotlight.webp') && fs.statSync('public/music/spotlight.webp').size < 150 * 1024 && /\/music\/spotlight\.webp/.test(hub), 'the spotlight picture is a small file in the site and the page shows it');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -18,7 +18,7 @@ check(!!line, 'the line is found');
 check(/max-w-full/.test(line?.[1] || '') && /min-w-0/.test(line?.[1] || ''), 'its button can not grow wider than the card (max-w-full min-w-0)', line?.[1]);
 check(/min-w-0/.test(line?.[2] || '') && /break-words/.test(line?.[2] || '') && !/truncate/.test(line?.[2] || ''), 'the text wraps onto a second line instead of running off the screen', line?.[2]);
 check(/<span className="text-xs text-zinc-400 font-medium truncate min-w-0">@\{targetUser\.username\}<\/span>/.test(pv), 'the @username in the bar above a profile shrinks instead of pushing the bar wider');
-check(/<span className="min-w-0 text-center break-words \[overflow-wrap:anywhere\]">\{targetUser\.displayName \|\| targetUser\.username\}<\/span>/.test(pv), 'a long display name under the picture wraps');
+check(/<h2 className="[^"]*min-w-0 break-words \[overflow-wrap:anywhere\]">\{targetUser\.displayName \|\| targetUser\.username\}<\/h2>/.test(pv), 'a long display name beside the picture wraps');
 
 section('2. The Ask card, the post header, the story header');
 const fun = read('src/components/Profile/ProfileFunCards.tsx');

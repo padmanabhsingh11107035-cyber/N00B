@@ -76,6 +76,7 @@ const REVIEWED = new Set([
   'Profile/ProfileView.tsx|setActiveHighlightForViewer|setShowHighlightManager(true)',    // the highlight viewer plays stories by itself: it must stop while the highlight is edited
   'Profile/ProfileView.tsx|setEditingHighlight|setShowHighlightManager(true)',            // a new highlight: nothing was open
   'Profile/ProfileView.tsx|setShowSettingsHub|onOpenProfessionalDashboard(',              // the Settings hub walks the browser history itself (its own back stack)
+  'Profile/ProfileView.tsx|setShowSettingsHub|setShowAvatarPicker(true)',                 // the avatar page replaces the Settings hub (which walks its own history)
 ]);
 const pat = /(?:(set[A-Z]\w*)\((?:false|null)\)|\b(onClose)\(\))\s*;\s*(?:\n\s*)?(set[A-Z]\w*\(true\)|on(?:Open|Navigate|Upgrade|Select)\w*\()/g;
 const found = [];

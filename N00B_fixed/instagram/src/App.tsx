@@ -1658,6 +1658,7 @@ export default function App() {
       }}
       onNavigateToUserProfile={handleNavigateToUserProfile}
       onOpenLongVideo={handleNavigateToVideo}
+      onOpenCreate={() => setShowPostCreationModal(true)}
       onSwitchToAdminPanel={isMainAdmin(currentUser) ? () => setViewAsUser(false) : undefined}
     /></React.Suspense>
   );

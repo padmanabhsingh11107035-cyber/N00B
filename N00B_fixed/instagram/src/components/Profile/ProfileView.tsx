@@ -45,6 +45,9 @@ import {
   EyeOff,
   Eye,
   ChevronDown,
+  Link2,
+  Menu,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Post, Reel, SavedCollection, User, Story, StoryHighlight, LongVideo } from '../../types';
 import { avatarStoredUrl } from '../../data/avatars';
@@ -161,6 +164,8 @@ interface ProfileViewProps {
   // App.tsx's viewAsUser + AdminControlModal's "Use as User" button) — switches back to the admin
   // console. Absent for every other account, so the icon simply never renders for them.
   onSwitchToAdminPanel?: () => void;
+  // The + at the top left of your own profile (and on your picture): opens Create (post, reel, story ...).
+  onOpenCreate?: () => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -186,7 +191,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onNavigateToChatWithUser,
   onNavigateToUserProfile,
   onOpenLongVideo,
-  onSwitchToAdminPanel
+  onSwitchToAdminPanel,
+  onOpenCreate
 }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'reels' | 'feed' | 'saved' | 'liked' | 'archive'>('posts');
   // The "Feed" tab: this person's video posts, one wide card per row. Loaded from the server when the tab is opened (the app itself only
@@ -578,6 +584,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const isBusiness = targetUser.accountType === 'business' || targetUser.isBusiness;
   const isPrivate = targetUser.accountType === 'private';
 
+  const profileTabs: { id: typeof activeTab; label: string; title: string; Icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }[] = [
+    { id: 'posts', label: 'Posts', title: 'Posts', Icon: Grid },
+    { id: 'reels', label: 'Reels', title: 'Reels', Icon: Film },
+    { id: 'feed', label: 'Feed', title: 'Videos shared in the Feed', Icon: PlaySquare },
+    ...(isOwnProfile ? [
+      // Saved, Liked and Archive are private: only the profile's own owner sees these tabs at all.
+      { id: 'saved' as const, label: 'Saved', title: 'Organized Private Collections', Icon: Bookmark },
+      { id: 'liked' as const, label: 'Liked', title: 'Liked Posts', Icon: Heart },
+      { id: 'archive' as const, label: 'Archive', title: 'Archived Posts Vault', Icon: Archive }
+    ] : [])
+  ];
+
   return (
     <div id="profile-view-container" className="w-full max-w-4xl mx-auto px-4 pt-4 pb-28">
       {/* Top Banner when viewing another user's profile */}
@@ -607,23 +625,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       )}
 
-      {/* 1. Organized Profile Header */}
-      <div className="relative bg-zinc-950 border border-zinc-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl mb-6 space-y-6">
-        {/* Three-dots menu button only (top-right corner). Fixed width/height here
-            keeps the trigger pinned in place — without it, this absolutely-positioned
-            wrapper shrink-to-fits around its widest child, so once the w-72 dropdown
-            below mounts as a child, the wrapper (and the button inside it) jumps left. */}
+      {/* 1. Profile header, laid out like Instagram's: a top bar, the picture with the numbers beside it, the bio, the buttons, the highlights, then the tabs and an edge-to-edge grid */}
+      <div className="relative mb-4">
+        <div className="flex items-center gap-3 mb-4">
+          {isOwnProfile && onOpenCreate && (
+            <button type="button" onClick={onOpenCreate} aria-label="Create" data-testid="profile-create" className="shrink-0 p-1 -ml-1 text-white cursor-pointer active:scale-90 transition-transform"><Plus className="w-7 h-7" strokeWidth={1.75} /></button>
+          )}
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <h1 className="text-xl font-extrabold text-white tracking-tight truncate min-w-0" data-testid="profile-username">{targetUser.username}</h1>
+            {isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => setShowSwitchAccount(true)}
+                className="p-1 rounded-full hover:bg-white/10 cursor-pointer shrink-0"
+                title="Switch account"
+                aria-label="Switch account"
+              >
+                <ChevronDown className="w-5 h-5 text-white" />
+              </button>
+            )}
+          </div>
         {isOwnProfile && onSwitchToAdminPanel && (
           <button
             onClick={onSwitchToAdminPanel}
-            className="liquid-glass absolute top-4 right-14 sm:top-6 sm:right-16 z-20 p-2 rounded-xl text-zinc-300 hover:text-noob transition-all cursor-pointer"
+            className="liquid-glass shrink-0 z-20 p-2 rounded-xl text-zinc-300 hover:text-noob transition-all cursor-pointer"
             title="Switch back to the Admin Control Panel"
             aria-label="Switch back to the Admin Control Panel"
           >
             <Monitor className="w-5 h-5" />
           </button>
         )}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-9 h-9" ref={menuRef}>
+        <div className="relative shrink-0 z-20 w-9 h-9" ref={menuRef}>
           <button
             onClick={() => {
               // Your own profile: the three dots open "Settings and activity" as a full page. Other people's profiles keep the small menu (block, hide, report, share).
@@ -631,16 +663,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             }}
             onPointerEnter={isOwnProfile ? preloadSettingsHub : undefined}
             onTouchStart={isOwnProfile ? preloadSettingsHub : undefined}
-            className={`liquid-glass relative p-2 rounded-xl transition-all active:scale-90 touch-manipulation cursor-pointer ${
+            className={`relative p-2 rounded-xl transition-all active:scale-90 touch-manipulation cursor-pointer ${
               showThreeDotsMenu
-                ? 'liquid-glass-btn-active text-noob'
-                : 'text-zinc-300 hover:text-white'
+                ? 'bg-white/10 text-noob'
+                : 'text-white hover:bg-white/10'
             }`}
             title={isOwnProfile ? 'Settings and activity' : 'Options'}
             aria-label={isOwnProfile ? 'Settings and activity' : 'Options'}
             data-testid="profile-three-dots"
           >
-            <MoreVertical className="w-5 h-5" />
+            {isOwnProfile ? <Menu className="w-6 h-6" strokeWidth={1.75} /> : <MoreHorizontal className="w-6 h-6" strokeWidth={1.75} />}
           </button>
 
           {/* Dropdown Menu */}
@@ -768,250 +800,147 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           )}
         </div>
 
-        {/* Clean, Organised Vertical Layout: Profile -> Username -> Name -> Stats */}
-        <div className="flex flex-col items-center text-center space-y-4">
-          {/* 1. Profile Avatar at the Top */}
-          <div className="relative cursor-pointer group" onClick={() => setShowFullscreenAvatar(true)} title="View profile picture full screen">
-            <div
-              className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full p-[3.5px] shadow-2xl transition-transform group-hover:scale-105 ${
-                isBusiness
-                  ? 'bg-gradient-to-tr from-noob to-noob-strong shadow-[0_0_20px_rgba(255,255,255,0.3)]'
-                  : isPrivate
-                  ? 'bg-gradient-to-tr from-purple-500 to-pink-500 shadow-[0_0_20px_rgba(255,255,255,0.3)]'
-                  : 'bg-gradient-to-tr from-[#ff4e6a] via-[#ff758c] to-[#ff9966] shadow-[0_0_20px_rgba(255,78,106,0.3)]'
-              }`}
-            >
-              <AvatarMedia
-                src={targetUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                isLiveAvatar={targetUser.isLiveAvatar}
-                liveAvatarVideoUrl={targetUser.liveAvatarVideoUrl}
-                alt={targetUser.username}
-                className="w-full h-full rounded-full object-cover p-0.5 bg-black"
-              />
+        </div>
+
+        <div className="flex items-center gap-5 sm:gap-8">
+          {/* The picture: tap for full screen. The note sits above it like a speech bubble; on your own profile a small + adds a story. */}
+          <div className={`relative shrink-0 ${targetUser.statusNote ? 'mt-7' : ''}`}>
+            <div className="relative cursor-pointer group" onClick={() => setShowFullscreenAvatar(true)} title="View profile picture full screen">
+              <div
+                className={`w-[88px] h-[88px] sm:w-28 sm:h-28 rounded-full p-[3px] shadow-2xl transition-transform group-hover:scale-105 ${
+                  isBusiness
+                    ? 'bg-gradient-to-tr from-noob to-noob-strong shadow-[0_0_20px_rgba(255,255,255,0.3)]'
+                    : isPrivate
+                    ? 'bg-gradient-to-tr from-purple-500 to-pink-500 shadow-[0_0_20px_rgba(255,255,255,0.3)]'
+                    : 'bg-gradient-to-tr from-[#ff4e6a] via-[#ff758c] to-[#ff9966] shadow-[0_0_20px_rgba(255,78,106,0.3)]'
+                }`}
+              >
+                <AvatarMedia
+                  src={targetUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                  isLiveAvatar={targetUser.isLiveAvatar}
+                  liveAvatarVideoUrl={targetUser.liveAvatarVideoUrl}
+                  alt={targetUser.username}
+                  className="w-full h-full rounded-full object-cover p-0.5 bg-black"
+                />
+              </div>
             </div>
-            {/* Status Note Floating Pill */}
             {targetUser.statusNote && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-zinc-900 border border-[#ff4e6a]/60 rounded-full px-2.5 py-0.5 text-[10px] text-pink-400 font-bold shadow-lg flex items-center gap-1 whitespace-nowrap">
-                <span>{targetUser.statusNote.text}</span>
-                {targetUser.statusNote.musicTrack && <Volume2 className="w-3 h-3 text-pink-400 animate-pulse" />}
+              <div className="absolute -top-7 left-1 max-w-[8.5rem] rounded-2xl bg-zinc-800 border border-zinc-700/60 px-2.5 py-1.5 text-[11px] leading-tight font-medium text-zinc-200 shadow-lg flex items-center gap-1 pointer-events-none">
+                <span className="line-clamp-2 break-words min-w-0">{targetUser.statusNote.text}</span>
+                {targetUser.statusNote.musicTrack && <Volume2 className="w-3 h-3 text-zinc-300 animate-pulse shrink-0" />}
               </div>
             )}
-          </div>
-
-          {/* 2. Username, exactly centred on the page (like the name below it): the verified tick and the
-                switch-account arrow hang off its right side without pushing it off centre. */}
-          <div className="w-full flex justify-center pt-1 px-14">
-            <div className="relative min-w-0">
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight text-center break-all">
-              @{targetUser.username}
-            </h1>
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-1.5 flex items-center gap-1">
-            {isOwnProfile && (
-              <button
-                type="button"
-                onClick={() => setShowSwitchAccount(true)}
-                className="p-1 -ml-1 rounded-full hover:bg-white/10 cursor-pointer"
-                title="Switch account"
-                aria-label="Switch account"
-              >
-                <ChevronDown className="w-5 h-5 text-white" />
-              </button>
-            )}
-            {targetUser.isVerified ? (
-              <VerifiedBadge size="md" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4 text-noob fill-noob/20" />
-            )}
-            </div>
-            </div>
-          </div>
-
-          {/* 3. Display Name in Perfect Line */}
-          <div className="flex items-center justify-center gap-1.5 text-sm text-zinc-300 font-bold -mt-2 max-w-full">
-            <span className="min-w-0 text-center break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</span>
-            {targetUser.pronouns && (
-              <span className="text-xs text-zinc-500 font-normal shrink-0">({targetUser.pronouns})</span>
+            {isOwnProfile && onOpenCreate && (
+              <button type="button" onClick={onOpenCreate} aria-label="Add a story" className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-noob text-black border-[3px] border-black flex items-center justify-center cursor-pointer active:scale-90 transition-transform"><Plus className="w-4 h-4" strokeWidth={3} /></button>
             )}
           </div>
 
-          {/* Account type (Business or Private; no "Public" tag), centred under the name */}
-          {(isBusiness || isPrivate) && (
-            <div className="flex justify-center -mt-2">
-              {isBusiness ? (
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1 whitespace-nowrap">
-                  <Briefcase className="w-3 h-3" /> Business
-                </span>
+          {/* The name and the three numbers beside the picture */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-extrabold text-white leading-tight min-w-0 break-words [overflow-wrap:anywhere]">{targetUser.displayName || targetUser.username}</h2>
+              {targetUser.isVerified ? (
+                <VerifiedBadge size="md" />
               ) : (
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-1 whitespace-nowrap">
-                  <Lock className="w-3 h-3" /> Private
-                </span>
+                <CheckCircle2 className="w-4 h-4 text-noob fill-noob/20 shrink-0" />
               )}
+              {isBusiness ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-noob/20 text-noob font-bold border border-noob/30 flex items-center gap-1 whitespace-nowrap"><Briefcase className="w-3 h-3" /> Business</span>
+              ) : isPrivate ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30 flex items-center gap-1 whitespace-nowrap"><Lock className="w-3 h-3" /> Private</span>
+              ) : null}
             </div>
+            <div className="mt-2 flex items-start justify-between gap-2 max-w-sm">
+              <div className="min-w-0">
+                <span className="text-xl font-extrabold text-white block leading-tight">{displayedPosts.length}</span>
+                <span className="text-sm text-zinc-300 block truncate">posts</span>
+              </div>
+              <button onClick={() => setFollowListTab('followers')} className="text-left min-w-0 cursor-pointer">
+                <span className="text-xl font-extrabold text-white block leading-tight">{(targetUser.followersCount || 0).toLocaleString()}</span>
+                <span className="text-sm text-zinc-300 block truncate">followers</span>
+              </button>
+              <button onClick={() => setFollowListTab('following')} className="text-left min-w-0 cursor-pointer">
+                <span className="text-xl font-extrabold text-white block leading-tight">{(targetUser.followingCount || 0).toLocaleString()}</span>
+                <span className="text-sm text-zinc-300 block truncate">following</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* The bio: what kind of account it is (grey), the words, the link, then the rest of what this person shared */}
+        <div className="mt-3 space-y-1.5">
+          {isBusiness && (
+            <p className="text-sm text-zinc-400">{targetUser.businessCategory || 'Digital Creator'}</p>
+          )}
+          {targetUser.pronouns && (
+            <p className="text-sm text-zinc-400">{targetUser.pronouns}</p>
+          )}
+          <p className="text-sm text-white whitespace-pre-line leading-snug max-w-2xl break-words [overflow-wrap:anywhere]">
+            {targetUser.bio || (isOwnProfile ? 'Welcome to my NOOB profile! Tap Edit Profile to customize your bio.' : 'No bio available yet.')}
+          </p>
+
+          {safeExternalUrl(targetUser.website) && (
+            <a
+              href={safeExternalUrl(targetUser.website) as string}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-sky-400 hover:underline font-semibold text-sm min-w-0"
+            >
+              <Link2 className="w-4 h-4 shrink-0" />
+              <span className="truncate">{targetUser.website.replace(/^https?:\/\//, '')}</span>
+            </a>
           )}
 
           {/* Mood Status: how this person feels, only when they chose to share it with the person looking (and it has not expired) */}
           {!isTargetBlocked && <ProfileMoodChip userId={targetUser.id} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />}
 
-          {/* 4. Symmetrical Stats Numbers Box */}
-          <div className="grid grid-cols-3 divide-x divide-zinc-800 bg-zinc-900/90 border border-zinc-800/80 rounded-2xl py-3.5 px-1 sm:px-6 w-full max-w-md shadow-inner">
-            <div className="text-center px-1 sm:px-2 min-w-0">
-              <span className="text-lg sm:text-xl font-black text-white block leading-tight">{displayedPosts.length}</span>
-              <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Posts</span>
-            </div>
-            <button
-              onClick={() => setFollowListTab('followers')}
-              className="text-center px-1 sm:px-2 min-w-0 cursor-pointer"
-            >
-              <span className="text-lg sm:text-xl font-black text-white block leading-tight">
-                {(targetUser.followersCount || 0).toLocaleString()}
-              </span>
-              <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Followers</span>
-            </button>
-            <button
-              onClick={() => setFollowListTab('following')}
-              className="text-center px-1 sm:px-2 min-w-0 cursor-pointer"
-            >
-              <span className="text-lg sm:text-xl font-black text-white block leading-tight">
-                {(targetUser.followingCount || 0).toLocaleString()}
-              </span>
-              <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wide sm:tracking-wider block truncate">Following</span>
-            </button>
-          </div>
-
-          {/* 5. Primary Action Buttons (Edit / Share vs Follow / Message / Unblock) */}
-          <div className="flex items-center justify-center gap-2.5 w-full max-w-md pt-1">
-            {isOwnProfile ? (
-              <>
-                <button
-                  onClick={() => setShowProfileQrModal(true)}
-                  className="flex-1 py-2 px-4 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white"
-                  title="Share Profile"
-                >
-                  <Share2 className="w-3.5 h-3.5 text-cyan-400" /> Share Profile
-                </button>
-              </>
-            ) : (
-              <>
-                {isTargetBlocked ? (
-                  <button
-                    onClick={handleToggleBlockTargetUser}
-                    className="flex-1 py-2 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <UserCheck className="w-3.5 h-3.5" /> Unblock @{targetUser.username}
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleToggleFollowTargetUser}
-                      className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
-                        isTargetFollowing || isTargetFollowRequested
-                          ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-red-500/40 hover:text-red-400'
-                          : 'bg-noob hover:bg-[#00e65c] text-black font-extrabold'
-                      }`}
-                    >
-                      {isTargetFollowing ? (
-                        <>
-                          <UserCheck className="w-3.5 h-3.5 text-red-400 group-hover:text-red-500" /> Unnoob
-                        </>
-                      ) : isTargetFollowRequested ? (
-                        <>
-                          <Clock className="w-3.5 h-3.5" /> Requested
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-3.5 h-3.5" /> {targetUser.accountType === 'private' ? 'Request' : 'Noob'}
-                        </>
-                      )}
-                    </button>
-
-                    {onNavigateToChatWithUser && canMessageTarget && (
-                      <button
-                        onClick={() => onNavigateToChatWithUser(targetUser)}
-                        className="flex-1 py-2 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-blue-500/50 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 text-blue-400" /> Message
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => setShowProfileQrModal(true)}
-                      className="py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center cursor-pointer shadow-sm bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white"
-                      title="Share Profile"
-                    >
-                      <Share2 className="w-3.5 h-3.5 text-cyan-400" />
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* 2. Comprehensive Bio, City, Website & Social Badges */}
-        <div className="space-y-3 pt-3 border-t border-zinc-800/80">
-          <p className="text-xs sm:text-sm text-zinc-200 whitespace-pre-line leading-relaxed max-w-2xl font-normal">
-            {targetUser.bio || (isOwnProfile ? 'Welcome to my NOOB profile! Tap Edit Profile to customize your bio.' : 'No bio available yet.')}
-          </p>
-
           {mutualFollowers.length > 0 && (
-            <button
-              onClick={() => setShowMutualFollowersSheet(true)}
-              className="flex items-center gap-2 text-left cursor-pointer group max-w-full min-w-0"
-              data-testid="mutual-followers-line"
-            >
-              <div className="flex -space-x-2 shrink-0">
-                {mutualFollowers.slice(0, 3).map((m) => (
-                  <img
-                    key={m.id}
-                    src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                    alt={m.username}
-                    referrerPolicy="no-referrer"
-                    className="w-5 h-5 rounded-full object-cover ring-2 ring-zinc-950 bg-black"
-                  />
-                ))}
-              </div>
-              <p className="min-w-0 text-[11px] leading-snug text-zinc-400 break-words [overflow-wrap:anywhere] group-hover:text-zinc-300 transition-colors">
-                Followed by{' '}
-                <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[0].username}</span>
-                {mutualFollowers.length === 2 && (
-                  <>
-                    {' '}and <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[1].username}</span>
-                  </>
-                )}
-                {mutualFollowers.length > 2 && (
-                  <> and <span className="text-zinc-200 font-semibold">{mutualFollowers.length - 1} others</span></>
-                )}
-              </p>
-            </button>
+          <button
+            onClick={() => setShowMutualFollowersSheet(true)}
+            className="flex items-center gap-2 text-left cursor-pointer group max-w-full min-w-0"
+            data-testid="mutual-followers-line"
+          >
+            <div className="flex -space-x-2 shrink-0">
+              {mutualFollowers.slice(0, 3).map((m) => (
+                <img
+                  key={m.id}
+                  src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                  alt={m.username}
+                  referrerPolicy="no-referrer"
+                  className="w-5 h-5 rounded-full object-cover ring-2 ring-zinc-950 bg-black"
+                />
+              ))}
+            </div>
+            <p className="min-w-0 text-[11px] leading-snug text-zinc-400 break-words [overflow-wrap:anywhere] group-hover:text-zinc-300 transition-colors">
+              Followed by{' '}
+              <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[0].username}</span>
+              {mutualFollowers.length === 2 && (
+                <>
+                  {' '}and <span className="text-zinc-200 font-semibold" translate="no">@{mutualFollowers[1].username}</span>
+                </>
+              )}
+              {mutualFollowers.length > 2 && (
+                <> and <span className="text-zinc-200 font-semibold">{mutualFollowers.length - 1} others</span></>
+              )}
+            </p>
+          </button>
+        )}
+
+          {(targetUser.city || targetUser.countryCode) && (
+            <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+              {targetUser.city && (
+                <span className="flex items-center gap-1 text-zinc-300">
+                  <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                  <span>{targetUser.city}</span>
+                </span>
+              )}
+              {targetUser.countryCode && (
+                <span className="text-[10px] text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-800 font-mono">
+                  {targetUser.countryCode}
+                </span>
+              )}
+            </div>
           )}
-
-          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 pt-1">
-            {targetUser.city && (
-              <span className="flex items-center gap-1 text-zinc-300">
-                <MapPin className="w-3.5 h-3.5 text-rose-400" />
-                <span>{targetUser.city}</span>
-              </span>
-            )}
-
-            {safeExternalUrl(targetUser.website) && (
-              <a
-                href={safeExternalUrl(targetUser.website) as string}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 text-cyan-400 hover:underline font-semibold"
-              >
-                <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="truncate max-w-[200px]">{targetUser.website.replace(/^https?:\/\//, '')}</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-
-            {targetUser.countryCode && (
-              <span className="text-[10px] text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-800 font-mono">
-                {targetUser.countryCode}
-              </span>
-            )}
-          </div>
 
           {/* Social profiles: the apps' own icons as buttons (never the link itself); a button opens the link the person added */}
           <SocialLinkButtons links={targetUser.socialLinks} />
@@ -1030,12 +959,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           )}
 
-          {/* Business Category & Direct Contact */}
-          {isBusiness && (
-            <div className="pt-2 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold text-noob bg-noob/10 px-3 py-1 rounded-full border border-noob/20">
-                {targetUser.businessCategory || 'Digital Creator'}
-              </span>
+          {/* Business Direct Contact */}
+          {isBusiness && (targetUser.email || targetUser.mobileNumber) && (
+            <div className="pt-1 flex flex-wrap items-center gap-2">
               {targetUser.email && (
                 <a
                   href={`mailto:${targetUser.email}`}
@@ -1053,6 +979,91 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </a>
               )}
             </div>
+          )}
+        </div>
+
+        {/* Professional dashboard: a grey card under the bio (your own business account only) */}
+        {isOwnProfile && isBusiness && (
+          <button
+            type="button"
+            onClick={onOpenProfessionalDashboard}
+            data-testid="profile-dashboard-card"
+            className="mt-3 w-full text-left rounded-xl bg-zinc-800/80 hover:bg-zinc-800 px-4 py-3 cursor-pointer transition-colors"
+          >
+            <span className="block text-base font-extrabold text-white">Professional dashboard</span>
+            <span className="block text-sm text-zinc-400">Live organic impressions, profile engagement &amp; growth</span>
+          </button>
+        )}
+
+        {/* The buttons: two equal grey ones (Edit profile / Share profile), or Follow / Message / share on someone else's profile */}
+        <div className="mt-3 flex items-center gap-2 w-full">
+          {isOwnProfile ? (
+            <>
+              <button
+                onClick={() => setShowEditProfileModal(true)}
+                data-testid="profile-edit"
+                className="flex-1 min-w-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold truncate cursor-pointer transition-colors active:scale-[0.98]"
+              >
+                Edit profile
+              </button>
+              <button
+                onClick={() => setShowProfileQrModal(true)}
+                className="flex-1 min-w-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold truncate cursor-pointer transition-colors active:scale-[0.98]"
+                title="Share Profile"
+              >
+                Share profile
+              </button>
+            </>
+          ) : isTargetBlocked ? (
+            <button
+              onClick={handleToggleBlockTargetUser}
+              className="flex-1 py-2 px-4 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <UserCheck className="w-4 h-4" /> Unblock @{targetUser.username}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleToggleFollowTargetUser}
+                className={`flex-1 min-w-0 py-2 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] ${
+                  isTargetFollowing || isTargetFollowRequested
+                    ? 'bg-zinc-800 hover:bg-zinc-700 text-white hover:text-red-400'
+                    : 'bg-noob hover:bg-[#00e65c] text-black font-extrabold'
+                }`}
+              >
+                {isTargetFollowing ? (
+                  <>
+                    <UserCheck className="w-4 h-4" /> Unnoob
+                  </>
+                ) : isTargetFollowRequested ? (
+                  <>
+                    <Clock className="w-4 h-4" /> Requested
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" /> {targetUser.accountType === 'private' ? 'Request' : 'Noob'}
+                  </>
+                )}
+              </button>
+
+              {onNavigateToChatWithUser && canMessageTarget && (
+                <button
+                  onClick={() => onNavigateToChatWithUser(targetUser)}
+                  className="flex-1 min-w-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                >
+                  <MessageSquare className="w-4 h-4" /> Message
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowProfileQrModal(true)}
+                className="shrink-0 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                title="Share Profile"
+                aria-label="Share Profile"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1100,37 +1111,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       )}
 
-      {/* 4. Professional Creator Dashboard Banner (Only for Business Accounts) */}
-      {isBusiness && (
-        <div className="my-4 p-4 bg-gradient-to-r from-zinc-900 via-zinc-900 to-[#0e2417] border border-noob/30 rounded-3xl flex items-center justify-between shadow-xl">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-noob/10 border border-noob/30 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-noob shrink-0" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-white">Professional Creator Insights</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-noob/20 text-noob font-bold">LIVE</span>
-              </div>
-              <span className="text-[11px] text-zinc-400">
-                Live organic impressions, profile engagement &amp; growth metrics
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={onOpenProfessionalDashboard}
-            className="px-4 py-2 bg-noob hover:bg-[#00e65c] text-black text-xs font-black rounded-xl hover:scale-105 transition-transform cursor-pointer"
-          >
-            View Insights
-          </button>
-        </div>
-      )}
-
       {/* 5. Story Highlights: every story this person has posted, auto-saved and grouped by the
           day it went up (see the 22 Sep story/highlight redesign) — plus, on your own profile,
           any you made directly with "+ New" without ever posting a story for them. */}
       {(isOwnProfile || highlights.length > 0) && (
-        <div className="mb-6 flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar">
+        <div className="mb-4 flex items-start gap-4 overflow-x-auto pb-2 no-scrollbar">
           {isOwnProfile && (
             <div
               onClick={() => {
@@ -1139,10 +1124,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               }}
               className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
             >
-              <div className="w-14 h-14 rounded-full bg-zinc-900 border border-dashed border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:border-noob group-hover:text-noob transition-all group-hover:scale-105">
+              <div className="w-16 h-16 rounded-full bg-black border border-zinc-600 flex items-center justify-center text-zinc-400 group-hover:border-noob group-hover:text-noob transition-all group-hover:scale-105">
                 <Plus className="w-5 h-5" />
               </div>
-              <span className="text-[11px] text-zinc-400 font-bold group-hover:text-noob transition-colors">New</span>
+              <span className="text-xs text-white font-semibold group-hover:text-noob transition-colors">New</span>
             </div>
           )}
 
@@ -1150,7 +1135,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div key={hl.id} className="flex flex-col items-center gap-1.5 shrink-0 relative group">
               <div
                 onClick={() => setActiveHighlightForViewer(hl)}
-                className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-noob group-hover:to-noob-strong transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
+                className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-zinc-700 via-zinc-800 to-zinc-700 group-hover:from-noob group-hover:to-noob-strong transition-all group-hover:scale-105 shadow-md cursor-pointer relative"
               >
                 <img
                   src={hl.coverUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
@@ -1190,7 +1175,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               <span
                 onClick={() => setActiveHighlightForViewer(hl)}
-                className="text-[11px] text-zinc-300 font-medium truncate max-w-[68px] text-center cursor-pointer hover:text-noob transition-colors"
+                className="text-xs text-white font-semibold truncate max-w-[72px] text-center cursor-pointer hover:text-noob transition-colors"
               >
                 {hl.title}
               </span>
@@ -1202,76 +1187,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* The Fun pages' cards: Ask Me Anything (and, on someone's profile, the answers they published) */}
       {!isTargetBlocked && <ProfileAskCard profileUser={targetUser} isOwnProfile={isOwnProfile} onOpenFunPage={onOpenFunPage} />}
 
-      {/* 6. Profile Content Navigation Tabs */}
-      <div className="flex items-center justify-around border-b border-zinc-800 text-xs font-bold pt-2 mb-4">
-        <button
-          onClick={() => setActiveTab('posts')}
-          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'posts' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Grid className="w-4 h-4" />
-          <span className="hidden sm:inline">POSTS</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('reels')}
-          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'reels' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Film className="w-4 h-4" />
-          <span className="hidden sm:inline">REELS</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('feed')}
-          className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-            activeTab === 'feed' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-          }`}
-          title="Videos shared in the Feed"
-        >
-          <PlaySquare className="w-4 h-4" />
-          <span className="hidden sm:inline">FEED</span>
-        </button>
-
-        {/* Saved, Liked and Archive are private — only the profile's own owner sees these tabs at all. */}
-        {isOwnProfile && (
-          <>
-            <button
-              onClick={() => setActiveTab('saved')}
-              className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'saved' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Organized Private Collections"
-            >
-              <Bookmark className="w-4 h-4" />
-              <span className="hidden sm:inline">SAVED</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('liked')}
-              className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'liked' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Liked Posts"
-            >
-              <Heart className="w-4 h-4" />
-              <span className="hidden sm:inline">LIKED</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('archive')}
-              className={`pb-3 flex items-center gap-1.5 transition-colors border-b-2 cursor-pointer ${
-                activeTab === 'archive' ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Archived Posts Vault"
-            >
-              <Archive className="w-4 h-4" />
-              <span className="hidden sm:inline">ARCHIVE</span>
-            </button>
-          </>
-        )}
+      {/* 6. Profile Content Navigation Tabs: only icons, spread over the whole width, the open one underlined */}
+      <div role="tablist" className="flex items-stretch border-b border-zinc-800 -mx-4 sm:mx-0 mb-0.5" data-testid="profile-tabs">
+        {profileTabs.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={activeTab === t.id}
+            aria-label={t.label}
+            title={t.title}
+            onClick={() => setActiveTab(t.id)}
+            className={`flex-1 flex items-center justify-center py-3 transition-colors border-b-2 -mb-px cursor-pointer ${
+              activeTab === t.id ? 'border-noob text-noob' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <t.Icon className="w-6 h-6" strokeWidth={1.75} />
+          </button>
+        ))}
       </div>
 
       {/* 7. Active Tab Content Area */}
@@ -1285,12 +1217,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <p className="text-xs text-zinc-500">Capture photos and videos to share with your friends!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
               {displayedPosts.map((post) => (
                 <div
                   key={post.id}
                   onClick={() => onSelectPost(post)}
-                  className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800/80 shadow-md"
+                  className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
                 >
                   <PostThumbnailMedia
                     src={post.slides?.[0]?.mediaUrl}
@@ -1321,11 +1253,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-sm font-bold text-zinc-300 block">No reels shared yet</span>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
               {displayedReels.map((reel) => (
               <div
                 key={reel.id}
-                className="relative aspect-[9/16] bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800/80 shadow-md"
+                className="relative aspect-[9/16] bg-zinc-900 overflow-hidden group cursor-pointer"
               >
                 {reel.thumbnailUrl ? (
                   <img loading="lazy" decoding="async"
@@ -1467,12 +1399,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             {/* All Saved Posts Grid */}
             {savedPosts.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
                 {savedPosts.map((post) => (
                   <div
                     key={post.id}
                     onClick={() => onSelectPost(post)}
-                    className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800 shadow-md"
+                    className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
                   >
                     <PostThumbnailMedia
                       src={post.slides?.[0]?.mediaUrl}
@@ -1533,12 +1465,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* D. LIKED POSTS (owner only) */}
         {activeTab === 'liked' && isOwnProfile && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
             {likedPosts.map((post) => (
               <div
                 key={post.id}
                 onClick={() => onSelectPost(post)}
-                className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-zinc-800"
+                className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
               >
                 <PostThumbnailMedia
                   src={post.slides?.[0]?.mediaUrl}
@@ -1558,12 +1490,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <p className="text-xs text-zinc-400">
               Only you can see posts in your archive vault. They are removed from your public grid without being deleted.
             </p>
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-3 gap-[2px] -mx-4 sm:mx-0">
               {archivedPosts.map((post) => (
                 <div
                   key={post.id}
                   onClick={() => onSelectPost(post)}
-                  className="relative aspect-square bg-zinc-900 rounded-2xl overflow-hidden group cursor-pointer border border-amber-500/30"
+                  className="relative aspect-square bg-zinc-900 overflow-hidden group cursor-pointer"
                 >
                   <PostThumbnailMedia
                     src={post.slides?.[0]?.mediaUrl}

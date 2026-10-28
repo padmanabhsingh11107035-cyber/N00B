@@ -845,7 +845,9 @@ export interface GuestSupportAnswer {
 async function guestCall(body: Record<string, unknown>): Promise<GuestSupportAnswer> {
   const unavailable = 'Support is unavailable right now. Please try again in a moment.';
   try {
-    const { data, error } = await supabase.functions.invoke('recover-account', { body });
+    // a server that is down or restricted may never answer: after 25 seconds the chat says "unavailable" instead of waiting for ever
+    const slow = new Promise<{ data: null; error: Error }>((resolve) => setTimeout(() => resolve({ data: null, error: new Error(unavailable) }), 25000));
+    const { data, error } = await Promise.race([supabase.functions.invoke('recover-account', { body }), slow]);
     if (error) return { status: 'unavailable', error: await functionError(error, unavailable) };
     if (!data || typeof data.status !== 'string') return { status: 'unavailable', error: unavailable };
     return data as GuestSupportAnswer;

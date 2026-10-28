@@ -49,6 +49,7 @@ export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: Us
   const [ended, setEnded] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ready, setReady] = useState(false);
+  const [down, setDown] = useState(false);                      // the server could not be reached at the start: "Try again" instead of the questions
   const [remaining, setRemaining] = useState(GUEST_USES);
   const [email, setEmail] = useState('');                      // what was typed: only in this screen's memory
   const [masked, setMasked] = useState('');
@@ -85,19 +86,25 @@ export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: Us
         setReady(true);
         return;
       }
-      const st = await guestSupportStatus(browser.current);
-      if (!alive) return;
-      if (st.status === 'limit_reached') { setBlocked(true); setRemaining(0); } else if (st.status === 'ok') {
-        const left = Number(st.remaining ?? GUEST_USES);
-        setRemaining(left);
-        setMsgs([{ id: nid(), from: 'bot', text: greeting(left), time: time() }]);
-      } else {
-        setMsgs([{ id: nid(), from: 'bot', text: UNAVAILABLE_TEXT, time: time() }]);
-      }
-      setReady(true);
+      await checkStatus(() => alive);
     })();
     return () => { alive = false; };
   }, []);
+  /** asks how many uses this browser has left; if the server can not be reached the chat says so and offers "Try again" */
+  async function checkStatus(alive: () => boolean): Promise<void> {
+    const st = await guestSupportStatus(browser.current);
+    if (!alive()) return;
+    if (st.status === 'limit_reached') { setBlocked(true); setRemaining(0); setDown(false); } else if (st.status === 'ok') {
+      const left = Number(st.remaining ?? GUEST_USES);
+      setRemaining(left); setDown(false);
+      setMsgs([{ id: nid(), from: 'bot', text: greeting(left), time: time() }]);
+    } else {
+      setDown(true);
+      setMsgs([{ id: nid(), from: 'bot', text: UNAVAILABLE_TEXT, time: time() }]);
+    }
+    setReady(true);
+  }
+  const retry = async (): Promise<void> => { setReady(false); setDown(false); setMsgs([]); await checkStatus(() => true); };
 
   // ---- what is remembered while this tab is open (never the email, never the code; the messages only in their hidden form)
   useEffect(() => {
@@ -346,7 +353,10 @@ export const GuestSupport: React.FC<{ onClose: () => void; onLoggedIn: (user: Us
               )}
 
               {/* what the person can do now: the bar at the bottom changes with the step */}
-              {!ended && ready && (
+              {!ended && ready && down && (
+                <div className="gs-dock" data-testid="guest-step-down"><div className="gs-actions"><button type="button" className="sd-chip" onClick={() => void retry()} data-testid="guest-retry">Try again</button></div></div>
+              )}
+              {!ended && ready && !down && (
                 <div className="gs-dock" data-testid={`guest-step-${step}`}>
                   {step === 'email' && (
                     <>

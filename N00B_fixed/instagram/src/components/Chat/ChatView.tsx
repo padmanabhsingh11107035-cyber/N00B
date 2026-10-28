@@ -556,6 +556,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const chatId = activeChatId;
 
     const poll = async () => {
+      if (document.visibilityState !== 'visible') return;   // a tab nobody is looking at asks nothing (every ask is bytes out of the database plan)
       const users = await fetchTypingUsers(chatId);
       if (activeChatIdRef.current !== chatId) return;
       setTypingUsers(users);

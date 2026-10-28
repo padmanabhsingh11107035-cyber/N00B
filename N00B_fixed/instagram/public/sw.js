@@ -20,6 +20,9 @@ const isAppleTouchDevice =
 // What this listener does besides that: when a PAGE cannot be fetched at all (the website is down, or the phone is offline) or the server answers with an error (5xx), the person sees
 // NOOB's own "NOOB is taking a short break" page (public/app-down.html) instead of the browser's or the host's error page. Only page loads (navigations) and the four small
 // files that page needs are touched; every other request goes straight to the network exactly as before.
+// Safety net for Supabase's Cached Egress: a picture, video or song asked for at Supabase's own storage address is asked for at our cached /m/<key> address instead (the page already
+// does this by itself; this catches anything it missed, e.g. a background-image in a style). The piece asked for (Range) is passed on.
+const DIRECT_MEDIA = /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/media\/([^?#]+)/;
 const DOWN_CACHE = 'noob-down-page-v1';
 const DOWN_FILES = ['/app-down.html', '/boot-guard.js', '/noob-logo-circle.png', '/favicon-32.png'];
 const DOWN_PAGE = '/app-down.html';
@@ -28,6 +31,12 @@ if (!isAppleTouchDevice) {
   self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
+    const direct = DIRECT_MEDIA.exec(req.url);
+    if (direct) {
+      const range = req.headers.get('Range');
+      event.respondWith(fetch(self.location.origin + '/m/' + direct[1], range ? { headers: { Range: range } } : undefined).catch(() => fetch(req)));
+      return;
+    }
     if (req.mode === 'navigate') {
       event.respondWith(fetch(req).then((res) => (res.status >= 500 && res.status < 600 ? downResponse() : res)).catch(() => downResponse()));
       return;

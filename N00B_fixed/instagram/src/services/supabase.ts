@@ -4,6 +4,7 @@ import { recordDiag } from './authDiag';
 import { makeServiceAwareFetch, reportServiceDown, reportServiceUp } from './serviceHealth';
 import { createTabSessions, type KV } from './tabSessions';
 import { mediaOrigin } from '../utils/siteUrl';
+import { cachedFromDirect } from '../utils/mediaGuard';
 
 // Public values — safe to ship to every browser (the publishable key only ever grants what the
 // database's row-level-security rules allow a logged-in or logged-out visitor to do).
@@ -103,6 +104,11 @@ export const MEDIA_BUCKET = 'media';
 // the Cloudflare dashboard) kept whole pictures but missed most pieces of videos and songs (a browser loads those in pieces), so each play went back to Supabase.
 // /m/ keeps the WHOLE file in the data centre's cache and answers every piece from it. The old /media/ address still works (an app that is open on the old version uses it).
 const DIRECT_PREFIX = url ? `${url}/storage/v1/object/public/${MEDIA_BUCKET}/` : '';
+/** Supabase's own storage address of a file -> the cached /m/ address (anything else untouched): used by utils/mediaGuard.ts as a last safety net */
+export function rewriteDirectMedia(value: string): string {
+  return cachedFromDirect(value, DIRECT_PREFIX, mediaOrigin());
+}
+
 export function resolveMedia(value?: string | null): string {
   if (!value) return '';
   // inside the Android app the website's own /m/ route needs the full address (see utils/siteUrl.ts); on the website mediaOrigin() is empty

@@ -36,7 +36,8 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2 } from 'lucide-react';
+import { Wand2, ScanFace } from 'lucide-react';
+import { openLenses, useLensOpen } from '../Lenses/lensStore';
 import { VenetianMask } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
@@ -320,7 +321,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const pageHiddenRef = useRef(pageHidden);
   pageHiddenRef.current = pageHidden;
   const studioOpen = useStudioState().open;
-  const entryPageOpen = !!(menuPageOpen || showJoinUsModal || showSparkXModal || studioOpen);
+  const lensesOpen = useLensOpen();
+  const entryPageOpen = !!(menuPageOpen || showJoinUsModal || showSparkXModal || studioOpen || lensesOpen);
   const entryPageWasOpen = useRef(false);
   const backToMenu = () => {
     const id = currentMenuEntry();
@@ -943,6 +945,24 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Studio <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
                     <span className="text-[10px] text-zinc-300 block truncate">Edit photos and videos: filters, text, music, export</span>
+                  </div>
+                </button>
+              )}
+              {/* NOOB Lenses: the camera with face filters (a picture, saved or shared with the NOOB tag; everything happens on the device) */}
+              {featOn('lenses') && (
+                <button
+                  onClick={() => { markMenuEntry('lenses'); setShowNoobMenu(false); openLenses(); }}
+                  data-menu-entry="lenses"
+                  data-testid="menu-lenses"
+                  className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-amber-300/40 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(251,146,60,0.28), rgba(244,114,182,0.22) 60%, rgba(250,204,21,0.14))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-pink-300 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(251,146,60,0.5)]">
+                    <ScanFace className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Lenses <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-[10px] text-zinc-300 block truncate">Face filters: take a picture, save it or share it anywhere</span>
                   </div>
                 </button>
               )}

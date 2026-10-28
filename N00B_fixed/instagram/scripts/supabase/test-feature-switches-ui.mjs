@@ -31,7 +31,7 @@ const keys = F.FEATURES.map((f) => f.key);
 check(keys.length >= 25 && new Set(keys).size === keys.length, 'a page has one entry each and none is listed twice', String(keys.length));
 check(keys.every((k) => /^[a-z0-9-]{2,40}$/.test(k)), 'every key is a name the database accepts (lower case, digits, dashes)');
 check(F.FEATURES.every((f) => f.label && f.blurb && F.FEATURE_GROUPS.includes(f.group)), 'each has a name, a line of text and a group');
-check(['explore', 'reels', 'videos', 'create', 'chat', 'games', 'music', 'draw', 'studio', 'team', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'drinks', 'creations', 'support', 'suggestions', 'fun-this-or-that', 'fun-ask', 'fun-mood', 'fun-polls'].every((k) => keys.includes(k)), 'every main page, menu page, fun page and help page is on the list');
+check(['explore', 'reels', 'videos', 'create', 'chat', 'games', 'music', 'draw', 'studio', 'lenses', 'team', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'drinks', 'creations', 'support', 'suggestions', 'fun-this-or-that', 'fun-ask', 'fun-mood', 'fun-polls'].every((k) => keys.includes(k)), 'every main page, menu page, fun page and help page is on the list');
 check(!keys.includes('feed') && !keys.includes('profile'), 'Home and the profile are not on the list: they can not be switched off');
 check(F.FEATURES.filter((f) => f.legacy).map((f) => f.key).join() === 'music', 'the Music page keeps its older switch (one switch, one truth)');
 const funIds = [...read('src/utils/funRoutes.ts').matchAll(/id: '([a-z-]+)', label:/g)].map((m) => m[1]);
@@ -71,7 +71,7 @@ check(bare.includes('id="nav-item-feed"') && bare.includes('id="nav-item-profile
 fs.rmSync(navOut, { force: true });
 
 section('5. The menu on Home');
-for (const k of ['draw', 'studio', 'team', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'support', 'suggestions', 'drinks', 'creations']) {
+for (const k of ['draw', 'studio', 'lenses', 'team', 'anonymous', 'daily', 'rooms', 'song', 'lounge', 'shop', 'ai', 'support', 'suggestions', 'drinks', 'creations']) {
   check(new RegExp(`\\{featOn\\('${k}'\\) && \\(`).test(feed), `${k}: its entry is drawn only while the page is on`);
 }
 check(/\{onOpenTab && featOn\('videos'\) && \(/.test(feed), 'the Feed (long videos) entry too');
@@ -80,7 +80,7 @@ check(/const featuresOff = useFeaturesOff\(\);/.test(feed), 'the menu reads the 
 
 section('6. Other doors');
 check(/if \(featuresOff\.has\(funFeatureKey\(loc\.feature\)\)\) return;/.test(app) && /if \(featuresOff\.has\(funFeatureKey\(bootFun\.feature\)\)\) \{ setBootFun\(null\); return; \}/.test(app), 'a fun page that is off does not open from a link or from its own address');
-check(/if \(featuresOff\.has\('studio'\)\) closeStudio\(\); if \(featuresOff\.has\('draw'\)\) closeNoobDraw\(\);/.test(app) && /if \(kind === 'studio'\) \{ if \(featOn\('studio'\)\) openStudio\(\); \}/.test(app), 'Studio and Draw close again if they were opened (an address, a link) while off, and Studio is not started from the Create sheet');
+check(/if \(featuresOff\.has\('studio'\)\) closeStudio\(\); if \(featuresOff\.has\('draw'\)\) closeNoobDraw\(\); if \(featuresOff\.has\('lenses'\)\) closeLenses\(\);/.test(app) && /if \(kind === 'studio'\) \{ if \(featOn\('studio'\)\) openStudio\(\); \}/.test(app), 'Studio and Draw close again if they were opened (an address, a link) while off, and Studio is not started from the Create sheet');
 const funCards = read('src/components/Profile/ProfileFunCards.tsx');
 check(/useFeatureOn\('fun-ask'\)/.test(funCards) && /useFeatureOn\('fun-mood'\)/.test(funCards) && /if \(!pageOn \|\| !ready \|\| !onOpenFunPage\) return null;/.test(funCards), 'the Ask and Mood cards on profiles are not drawn while those pages are off');
 const hub = read('src/components/Settings/SettingsHub.tsx'), help = read('src/components/Settings/pages/support.tsx');

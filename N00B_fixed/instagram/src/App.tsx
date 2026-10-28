@@ -104,6 +104,8 @@ import { InAppBrowserHost } from './components/Common/InAppBrowser';
 import { NoobDrawHost } from './components/Draw/NoobDrawHost';
 import { StudioHost } from './components/Studio/StudioHost';
 import { closeStudio, openStudio } from './components/Studio/studioStore';
+import { LensHost } from './components/Lenses/LensHost';
+import { closeLenses, openLenses } from './components/Lenses/lensStore';
 import { closeNoobDraw } from './components/Draw/drawStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { StudyHost } from './components/Study/StudyHost';
@@ -426,7 +428,7 @@ export default function App() {
   // the address /studio opens NOOB Studio
   useEffect(() => { try { if (/^\/studio\/?$/i.test(window.location.pathname)) openStudio(); } catch { /* the app opens as usual */ } }, []);
   // (the settings arrive a moment after the address opens it: if Studio or Draw is switched off for this person it closes again)
-  useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); }, [featuresOff]);
+  useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); }, [featuresOff]);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
@@ -2270,6 +2272,11 @@ export default function App() {
         if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
         else { setStudioFile(file); setCreateKind(target); }
       }} />
+      {/* NOOB Lenses: a picture with a face filter goes into the normal Post / Story creator (nothing is published from the camera itself) */}
+      <LensHost onUse={(file, target) => {
+        if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
+        else { setStudioFile(file); setCreateKind('post'); }
+      }} />
       <TeamJoinHost currentUser={currentUser} />
       <StudyHost currentUser={currentUser} />
 
@@ -2313,6 +2320,7 @@ export default function App() {
             if (kind === 'post' || kind === 'reel' || kind === 'thought') setCreateKind(kind);
             else if (kind === 'story') setShowCreateStoryModal(true);
             else if (kind === 'studio') { if (featOn('studio')) openStudio(); }
+            else if (kind === 'lenses') { if (featOn('lenses')) openLenses(); }
             else if (kind === 'video') setShowUploadVideoModal(true);
             else if (kind === 'live') handleGoLiveTap();
           }}

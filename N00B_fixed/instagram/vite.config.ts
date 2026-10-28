@@ -18,6 +18,16 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       {
+        // NOOB Lenses is a page of its own (lenses.html, no app inside): the address /lenses opens it, here while developing and in the preview as it does on the website (Cloudflare serves lenses.html there)
+        name: 'lenses-page-address',
+        configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
+          server.middlewares.use((req, _res, next) => { if (req.url && /^\/lenses(\?|$)/.test(req.url)) req.url = '/lenses.html' + req.url.slice('/lenses'.length); next(); });
+        },
+        configurePreviewServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
+          server.middlewares.use((req, _res, next) => { if (req.url && /^\/lenses(\?|$)/.test(req.url)) req.url = '/lenses.html' + req.url.slice('/lenses'.length); next(); });
+        }
+      },
+      {
         name: 'write-build-version',
         writeBundle(options: { dir?: string }) {
           const outDir = options.dir || 'dist';
@@ -27,6 +37,12 @@ export default defineConfig(() => {
     ],
     define: {
       __BUILD_ID__: JSON.stringify(buildId)
+    },
+    build: {
+      rollupOptions: {
+        // two pages: the app (index.html) and NOOB Lenses (lenses.html)
+        input: { main: path.resolve(__dirname, 'index.html'), lenses: path.resolve(__dirname, 'lenses.html') }
+      }
     },
     resolve: {
       alias: {

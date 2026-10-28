@@ -24,6 +24,7 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
 
   { key: 'draw', label: 'NOOB Draw', blurb: 'The weekly free prize spins', group: 'Home menu' },
   { key: 'studio', label: 'NOOB Studio', blurb: 'The photo and video editor', group: 'Home menu' },
+  { key: 'lenses', label: 'NOOB Lenses', blurb: 'The camera with face filters', group: 'Home menu' },
   { key: 'team', label: 'Our Team', blurb: 'The people behind NOOB', group: 'Home menu' },
   { key: 'anonymous', label: 'Anonymous Messages', blurb: 'Messages with no author shown', group: 'Home menu' },
   { key: 'daily', label: 'Daily NOOB', blurb: 'Today\'s challenge and the podium', group: 'Home menu' },

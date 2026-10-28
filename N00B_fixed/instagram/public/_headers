@@ -31,6 +31,22 @@
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.pwnedpasswords.com https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz https://api.github.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors *; base-uri 'self'; object-src 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
 
+# NOOB Lenses (/lenses, the camera with face filters) is a page of its own, and the app shows it in a frame of its own (the one place besides the games where the app frames itself, by itself only).
+# It finds faces with Google's MediaPipe, a small WebAssembly program that runs on the phone (public/lenses/): that is the one extra thing this page is allowed, 'wasm-unsafe-eval' (it compiles the
+# program; it does NOT allow eval() of text). It needs no network except its own files, no other site and no frames; the camera is the page's own (Permissions-Policy above).
+/lenses
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
+/lenses.html
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
+/lenses/*
+  Cache-Control: public, max-age=604800
+
 # Helix Fall (the 3D tower game on the Games page) runs inside the app in a frame of its own, from this same site. It is the one place the app is allowed to be framed (by itself only),
 # and its own scripts and ball model are the only things it loads. Everything else stays as strict as the rest of the site: no other site, no network, no frames.
 /games/helix-fall/*

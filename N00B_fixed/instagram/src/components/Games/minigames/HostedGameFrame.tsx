@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X } from 'lucide-react';
+import { colorSortLeaderboard, colorSortLevelDone } from '../../../services/api';
 
 // A game that is a page of its own (Neon Alley: Last Call, served from this site's /games/neon-alley/) shown inside the game window.
 // It is added to the page as soon as the game's page opens, out of sight, so the download (the first time it is big) is already running while the person looks at the pictures;
@@ -17,6 +18,8 @@ interface HostedGameFrameProps {
   lazy?: boolean;
   /** true: the game is made to be held upright (a puzzle): full screen on a phone, but it is never turned on its side and the screen is not locked sideways. */
   portrait?: boolean;
+  /** 'color-sort': the game reports the levels a player clears and asks for the ranking; this page (which knows who is signed in) answers. */
+  ranking?: 'color-sort';
 }
 
 const useUpright = (): boolean => {
@@ -30,7 +33,7 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
@@ -53,6 +56,25 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     } catch { /* nothing to undo */ }
   };
+
+  // The game and this page talk by messages, only to and from this one frame on this same site: the game says "level N was cleared" and "send me the ranking".
+  useEffect(() => {
+    if (ranking !== 'color-sort') return;
+    const onMessage = async (e: MessageEvent) => {
+      const win = frameRef.current?.contentWindow;
+      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      const d = e.data as { noobGame?: string; type?: string; level?: unknown } | null;
+      if (!d || d.noobGame !== 'color-sort') return;
+      if (d.type === 'level-done' && typeof d.level === 'number' && Number.isInteger(d.level)) {
+        await colorSortLevelDone(d.level);
+      } else if (d.type === 'board-request') {
+        const board = await colorSortLeaderboard();
+        win.postMessage({ noobGame: 'color-sort', type: 'board', ok: !!board, board }, window.location.origin);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [ranking]);
 
   // The keyboard goes to the game as soon as it is brought into view; on a phone Play goes straight to full screen.
   useEffect(() => {

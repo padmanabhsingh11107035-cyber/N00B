@@ -3625,6 +3625,27 @@ export async function helixLeaderboard(period: 'today' | 'all'): Promise<HelixBo
   }
 }
 
+// Color Sort (migration 20261029000001): every player has one row, the highest level they cleared; the board shows the best 50.
+export interface ColorSortBoardEntry { rank: number; userId: string; username: string; displayName: string; avatar?: string; level: number; isMe: boolean }
+export interface ColorSortBoard { total: number; entries: ColorSortBoardEntry[]; me: { rank: number; level: number } | null }
+
+export async function colorSortLevelDone(level: number): Promise<{ success: boolean; bestLevel?: number; newBest?: boolean; error?: string }> {
+  try {
+    return await rpc<any>('color_sort_level_done', { p_level: level });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not save this level.') };
+  }
+}
+
+export async function colorSortLeaderboard(): Promise<ColorSortBoard | null> {
+  try {
+    const res = await rpc<any>('color_sort_leaderboard', {});
+    return { ...res, entries: (res.entries || []).map((e: any) => ({ ...e, avatar: e.avatar ? resolveMedia(e.avatar) : e.avatar })) };
+  } catch {
+    return null;
+  }
+}
+
 export async function sendGameInvite(
   targetUserId: string,
   gameId: string,

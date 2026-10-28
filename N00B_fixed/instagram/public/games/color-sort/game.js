@@ -1,5 +1,6 @@
-// Color Sort: a pouring puzzle. Tap a bottle (it lifts), then tap where its top colour should go. A pour needs an empty bottle or the same colour on top; the big tube on the left holds
-// ten units, a bottle four. The puzzle is solved when no bottle or tube holds more than one colour. Every level was won by the solver in color-sort/ before it was shipped (levels.js).
+// Color Sort: a pouring puzzle. Tap a bottle (it lifts), then tap where its top colour should go. A pour needs an empty bottle or the same colour on top. Every colour is exactly four units, so
+// it can fill one bottle completely: that bottle gets a cap and is finished (it can not be used any more). The level is won when every bottle that holds anything is capped. Every level was won
+// by the solver in color-sort/ before it was shipped (levels.js). Inside NOOB the game tells the page around it which level was cleared and asks it for the ranking (a message each way, see "ranking").
 // The rules are in rules.js; this file draws the bottles as one svg that scales to fit the screen, animates the pours and plays the sounds (made here, no sound files).
 (function () {
   'use strict';
@@ -8,13 +9,12 @@
   if (!R || !LEVELS || !LEVELS.length) return;
 
   var NS = 'http://www.w3.org/2000/svg';
-  var COLOURS = ['#2e86ee', '#38a84a', '#2b2b32', '#f2782f', '#eef1f6', '#8b5cf6'];   // blue, green, black, orange, white, purple
+  // blue, green, black, orange, white, purple, red, yellow, pink, teal, brown, lime, sky, magenta, grey, gold
+  var COLOURS = ['#2e86ee', '#38a84a', '#2b2b32', '#f2782f', '#eef1f6', '#8b5cf6', '#e5383b', '#f7c92b', '#f472b6', '#14b8a6', '#8a5a3c', '#a3e635', '#38bdf8', '#c026d3', '#9ca3af', '#b8860b'];
   var U = 30;                          // the height of one unit of liquid
   var BW = 64, BH = 170, BASE = 164;   // a bottle: its box, and the line its liquid stands on
-  var TW = 84, TH = 358, TBASE = 350;  // the big tube
-  var GAPX = 16, GAPY = 34, GUTTER = 30, TOP = 34, LIFT = 18;
+  var GAPX = 16, GAPY = 34, TOP = 34, LIFT = 18;
   var BOTTLE_PATH = 'M18 6H46V28C46 40 60 44 60 64V150Q60 166 44 166H20Q4 166 4 150V64C4 44 18 40 18 28Z';
-  var TUBE_PATH = 'M8 10H76V338Q76 354 60 354H24Q8 354 8 338Z';
   var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var Q = reduced ? 0.01 : 1;          // 1 = animations at full length
 
@@ -28,7 +28,8 @@
   function write(key, value) { try { window.localStorage.setItem(key, value); } catch (e) { /* nothing is remembered */ } }
 
   // ------------------------------------------------------------------ the game
-  var levelNo = Math.max(1, parseInt(read('noob_colorsort_level') || '1', 10) || 1);
+  var LEVEL_KEY = 'noob_colorsort_level2';   // (the first version of the game saved its level under another name: its levels were different)
+  var levelNo = Math.max(1, parseInt(read(LEVEL_KEY) || '1', 10) || 1);
   var state = [], history = [], moves = 0, sel = null, busy = false, solved = false;
   var soundOn = read('noob_colorsort_sound') !== '0';
   var els = [], sceneW = 0, sceneH = 0, vignetteKey = '';
@@ -36,7 +37,7 @@
   function levelData(n) {
     var lap = Math.floor((n - 1) / LEVELS.length), rows = LEVELS[(n - 1) % LEVELS.length];
     if (!lap) return rows;
-    return rows.map(function (b) { return b.split('').map(function (d) { return String((Number(d) + lap) % COLOURS.length); }).join(''); });   // a second time round the colours are shifted
+    return rows.map(function (b) { return b.split('').map(function (d) { return String.fromCharCode(48 + (d.charCodeAt(0) - 48 + lap) % COLOURS.length); }).join(''); });   // a second time round the colours are shifted
   }
 
   function load(n) {
@@ -65,8 +66,7 @@
 
   var defs = el('defs', {}, scene);
   el('clipPath', { id: 'cb' }, defs).appendChild(el('path', { d: BOTTLE_PATH }));
-  el('clipPath', { id: 'ct' }, defs).appendChild(el('path', { d: TUBE_PATH }));
-  [['shadeB', 4, 60], ['shadeT', 8, 76]].forEach(function (g) {
+  [['shadeB', 4, 60]].forEach(function (g) {
     var lg = el('linearGradient', { id: g[0], gradientUnits: 'userSpaceOnUse', x1: g[1], x2: g[2], y1: 0, y2: 0 }, defs);
     [[0, '#fff', .38], [.22, '#fff', .12], [.55, '#000', 0], [1, '#000', .24]].forEach(function (s) { el('stop', { offset: s[0], 'stop-color': s[1], 'stop-opacity': s[2] }, lg); });
   });
@@ -77,11 +77,6 @@
   el('path', { d: 'M11 74V146', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 5, 'stroke-linecap': 'round', fill: 'none' }, glassB);
   el('path', { d: 'M52 78V132', stroke: 'rgba(255,255,255,.55)', 'stroke-width': 3, 'stroke-linecap': 'round', fill: 'none' }, glassB);
   el('path', { d: 'M23 12V30', stroke: 'rgba(255,255,255,.8)', 'stroke-width': 3, 'stroke-linecap': 'round', fill: 'none' }, glassB);
-  var glassT = el('g', { id: 'glassT' }, defs);
-  el('path', { d: TUBE_PATH, fill: 'rgba(190,215,245,.16)', stroke: '#8aa8cc', 'stroke-width': 2.4, 'stroke-linejoin': 'round' }, glassT);
-  el('rect', { x: 4, y: 4, width: 76, height: 9, rx: 4.5, fill: '#fff', stroke: '#8aa8cc', 'stroke-width': 2 }, glassT);
-  el('path', { d: 'M17 40V330', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 6, 'stroke-linecap': 'round', fill: 'none' }, glassT);
-  el('path', { d: 'M68 50V250', stroke: 'rgba(255,255,255,.55)', 'stroke-width': 3.5, 'stroke-linecap': 'round', fill: 'none' }, glassT);
   var world = el('g', {}, scene);
   var fly = el('g', {}, scene);
 
@@ -89,13 +84,12 @@
   function arrange(nb, rows) {
     var cols = Math.ceil(nb / rows);
     var gridW = cols * BW + (cols - 1) * GAPX, gridH = rows * BH + (rows - 1) * GAPY;
-    var innerH = Math.max(TH, gridH);
-    var spots = [{ x: 0, y: TOP + (innerH - TH) / 2 }];
-    for (var i = 0; i < nb; i++) spots.push({ x: TW + GUTTER + (i % cols) * (BW + GAPX), y: TOP + (innerH - gridH) / 2 + Math.floor(i / cols) * (BH + GAPY) });
-    return { w: TW + GUTTER + gridW, h: innerH + TOP + 8, spots: spots };
+    var spots = [];
+    for (var i = 0; i < nb; i++) spots.push({ x: (i % cols) * (BW + GAPX), y: TOP + Math.floor(i / cols) * (BH + GAPY) });
+    return { w: gridW, h: gridH + TOP + 8, spots: spots };
   }
 
-  /** the bottles in as many rows as fit the screen best (the tube stays on the left) */
+  /** the bottles in as many rows as fit the screen best */
   function fitLayout(nb) {
     var aw = Math.max(120, stage.clientWidth - 16), ah = Math.max(120, stage.clientHeight - 8), all = [], top = 0;
     for (var rows = 1; rows <= 6; rows++) {
@@ -106,13 +100,13 @@
       all.push(lay);
       if (lay.scale > top) top = lay.scale;
     }
-    // the fewest rows that still keep the bottles nearly as big as they can be (24 bottles: 6 across and 4 down on a phone, 8 across and 3 down on a wide screen)
+    // the fewest rows that still keep the bottles nearly as big as they can be (16 bottles: 4 across and 4 down on a phone, 8 across and 2 down on a wide screen)
     for (var i = 0; i < all.length; i++) if (all[i].scale >= top * 0.82) return all[i];
     return all[0];
   }
 
   function build() {
-    var nb = state.length - 1;
+    var nb = state.length;
     var lay = fitLayout(nb);
     sceneW = lay.w; sceneH = lay.h;
     scene.setAttribute('viewBox', '0 0 ' + lay.w + ' ' + lay.h);
@@ -121,15 +115,19 @@
     while (world.firstChild) world.removeChild(world.firstChild);
     while (fly.firstChild) fly.removeChild(fly.firstChild);
     els = [];
-    for (var i = 0; i <= nb; i++) {
-      var tube = i === 0, spot = lay.spots[i];
+    for (var i = 0; i < nb; i++) {
+      var spot = lay.spots[i];
       var g = el('g', { 'class': 'ct', 'data-i': i }, world);
-      el('ellipse', { cx: tube ? 42 : 32, cy: tube ? TH - 4 : BH - 3, rx: tube ? 40 : 28, ry: 5, fill: 'rgba(60,80,120,.10)' }, g);
-      var liq = el('g', { 'clip-path': 'url(#' + (tube ? 'ct' : 'cb') + ')' }, g);
+      el('ellipse', { cx: 32, cy: BH - 3, rx: 28, ry: 5, fill: 'rgba(60,80,120,.10)' }, g);
+      var liq = el('g', { 'clip-path': 'url(#cb)' }, g);
       var liqIn = el('g', {}, liq);
-      el('use', { href: '#' + (tube ? 'glassT' : 'glassB') }, g);
-      el('rect', { 'class': 'hit', x: tube ? 0 : -2, y: tube ? 0 : -6, width: tube ? TW : BW + 4, height: tube ? TH : BH + 8 }, g);
-      els.push({ g: g, liqIn: liqIn, x: spot.x, y: spot.y, mx: tube ? 42 : 32, my: tube ? 9 : 8, cx: tube ? 42 : 32, cy: tube ? 190 : 105, w: tube ? TW : BW, tilt: 0 });
+      el('use', { href: '#glassB' }, g);
+      var cap = el('g', { 'class': 'cap' }, g);
+      cap.style.display = 'none';
+      el('rect', { x: 13, y: -9, width: 38, height: 17, rx: 6, 'class': 'capbody', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1.6 }, cap);
+      el('rect', { x: 17, y: -6, width: 30, height: 4, rx: 2, fill: 'rgba(255,255,255,.45)' }, cap);
+      el('rect', { 'class': 'hit', x: -2, y: -12, width: BW + 4, height: BH + 14 }, g);
+      els.push({ g: g, liqIn: liqIn, cap: cap, capped: false, x: spot.x, y: spot.y, mx: 32, my: 8, cx: 32, cy: 105, w: BW, tilt: 0 });
       g.addEventListener('pointerdown', onDown);
       pose(i, 0, 0, 0);
     }
@@ -147,7 +145,7 @@
   }
 
   function drawLiquid(i, runs, tilt) {
-    var c = els[i], tube = i === 0, base = tube ? TBASE : BASE, y = base, s = '';
+    var c = els[i], base = BASE, y = base, s = '';
     for (var r = 0; r < runs.length; r++) {
       var h = runs[r].h * U;
       y -= h;
@@ -155,15 +153,30 @@
       if (r) s += '<rect x="-40" y="' + (y + h - 0.6).toFixed(2) + '" width="170" height="1.2" fill="rgba(0,0,0,.14)"/>';
     }
     if (runs.length) {
-      s += '<rect x="-40" y="' + y.toFixed(2) + '" width="170" height="' + (base - y).toFixed(2) + '" fill="url(#' + (tube ? 'shadeT' : 'shadeB') + ')"/>';
-      s += '<ellipse cx="' + c.cx + '" cy="' + y.toFixed(2) + '" rx="' + (tube ? 30 : 24) + '" ry="5" fill="rgba(255,255,255,.3)"/>';
+      s += '<rect x="-40" y="' + y.toFixed(2) + '" width="170" height="' + (base - y).toFixed(2) + '" fill="url(#shadeB)"/>';
+      s += '<ellipse cx="' + c.cx + '" cy="' + y.toFixed(2) + '" rx="24" ry="5" fill="rgba(255,255,255,.3)"/>';
     }
     c.liqIn.innerHTML = s;
     if (tilt) c.liqIn.setAttribute('transform', 'rotate(' + (-tilt).toFixed(2) + ' ' + c.cx + ' ' + c.cy + ')');
     else c.liqIn.removeAttribute('transform');
   }
 
-  function renderAll() { for (var i = 0; i < els.length; i++) drawLiquid(i, runsOf(state[i]), els[i].tilt); }
+  function renderAll() { for (var i = 0; i < els.length; i++) drawLiquid(i, runsOf(state[i]), els[i].tilt); syncCaps(false); }
+
+  /** a bottle that is full of one colour wears a cap in that colour (it drops on when the bottle has just been finished) */
+  function syncCaps(animate) {
+    for (var i = 0; i < els.length; i++) {
+      var c = els[i], on = R.isCapped(state[i]);
+      if (on === c.capped) continue;
+      c.capped = on;
+      c.cap.style.display = on ? '' : 'none';
+      c.g.classList.toggle('done', on);
+      if (on) {
+        c.cap.firstChild.setAttribute('fill', COLOURS[state[i][0]]);
+        if (animate && !reduced) { c.cap.classList.remove('drop'); void c.cap.getBoundingClientRect(); c.cap.classList.add('drop'); }
+      }
+    }
+  }
 
   function pose(i, dx, dy, ang) {
     var c = els[i];
@@ -234,7 +247,7 @@
         if (rb.length && rb[rb.length - 1].c === colour) rb[rb.length - 1].h += k * p; else if (p > 0) rb.push({ c: colour, h: k * p });
         drawLiquid(to, rb, 0);
         var th = t * Math.PI / 180, lipX = a.x + dxP + a.mx + 14 * dir * Math.cos(th), lipY = a.y + dyP + a.my + 14 * dir * Math.sin(th);
-        var surface = b.y + (to === 0 ? TBASE : BASE) - (before[to].length + k * p) * U;
+        var surface = b.y + BASE - (before[to].length + k * p) * U;
         var y0 = p > 0.9 ? lerp(lipY, surface, (p - 0.9) / 0.1) : lipY;
         stream.setAttribute('x', (lipX - 3.5).toFixed(2)); stream.setAttribute('width', '7');
         stream.setAttribute('y', y0.toFixed(2)); stream.setAttribute('height', Math.max(0, surface - y0).toFixed(2));
@@ -245,6 +258,8 @@
       state = after; moves++;
       drawLiquid(to, runsOf(state[to]), 0);
       drawLiquid(from, runsOf(state[from]), els[from].tilt);
+      syncCaps(true);
+      if (R.isCapped(state[to])) sfx('cap');
       hud();
       var tiltNow = els[from].tilt;
       return tween(300 * Q, function (p) {
@@ -274,7 +289,7 @@
     unlockAudio();
     if (busy || solved || i < 0 || i >= els.length) return;
     if (sel === null) {
-      if (!state[i].length) { sfx('no'); shake(i); return; }
+      if (!state[i].length || R.isCapped(state[i])) { sfx('no'); shake(i); return; }
       select(i);
       return;
     }
@@ -282,7 +297,8 @@
     if (R.canPour(state, sel, i)) { pourAnim(sel, i); return; }
     sfx('no');
     var old = sel;
-    if (state[i].length) { sel = null; tween(120 * Q, function (p) { pose(old, 0, -LIFT * (1 - ease(p)), 0); }); select(i); }
+    if (R.isCapped(state[i])) shake(i);                                    // a finished bottle can not be used: the lifted one stays lifted
+    else if (state[i].length) { sel = null; tween(120 * Q, function (p) { pose(old, 0, -LIFT * (1 - ease(p)), 0); }); select(i); }
     else shake(old).then(deselect);
   }
 
@@ -318,10 +334,11 @@
   // ------------------------------------------------------------------ the end of a level
   function won() {
     solved = true;
-    write('noob_colorsort_level', String(levelNo + 1));
+    write(LEVEL_KEY, String(levelNo + 1));
     sfx('win');
     confetti();
-    $('winText').textContent = 'Level ' + levelNo + ' done in ' + moves + (moves === 1 ? ' pour.' : ' pours.');
+    $('winText').textContent = 'Level ' + levelNo + ' done in ' + moves + (moves === 1 ? ' pour.' : ' pours.') + ' All ' + R.cappedCount(state) + ' bottles are capped.';
+    tell({ type: 'level-done', level: levelNo });
     window.setTimeout(function () { winEl.hidden = false; }, reduced ? 0 : 750);
   }
 
@@ -331,7 +348,7 @@
     for (var i = 0; i < 46; i++) {
       var p = document.createElement('i');
       p.style.left = (Math.random() * 100).toFixed(1) + '%';
-      p.style.background = COLOURS[i % COLOURS.length === 4 ? 0 : i % COLOURS.length];
+      p.style.background = COLOURS[i % 6 === 4 ? 0 : i % 6];
       p.style.setProperty('--dx', ((Math.random() - 0.5) * 160).toFixed(0) + 'px');
       p.style.setProperty('--rot', ((Math.random() - 0.5) * 900).toFixed(0) + 'deg');
       p.style.animationDuration = (1.3 + Math.random() * 1.1).toFixed(2) + 's';
@@ -375,6 +392,7 @@
     try {
       if (name === 'pick') blip(520, 760, 0.07, 0.07, 'sine');
       else if (name === 'no') blip(200, 130, 0.16, 0.08, 'triangle');
+      else if (name === 'cap') { blip(880, 1320, 0.09, 0.07, 'triangle'); blip(1320, 1760, 0.12, 0.05, 'sine', 0.07); }
       else if (name === 'win') [523.3, 659.3, 784, 1046.5].forEach(function (f, i) { blip(f, f * 1.002, 0.34, 0.09, 'triangle', i * 0.1); });
       else if (name === 'pour') {
         // water running into a bottle: a little noise through a filter, rising as the bottle fills, with a few glugs
@@ -393,6 +411,54 @@
       }
     } catch (e) { /* silent */ }
   }
+
+  // ------------------------------------------------------------------ ranking: the page around the game (NOOB) knows who is playing and keeps the ranking; the game only sends
+  // "level N was cleared" and asks for the board (one message each way, only ever to and from the page that shows this game, on this same site)
+  var inFrame = window.parent && window.parent !== window;
+  var boardEl = $('board'), boardList = $('boardList'), boardMe = $('boardMe'), btnBoard = $('rank'), boardWait = 0;
+  function tell(msg) {
+    if (!inFrame) return;
+    msg.noobGame = 'color-sort';
+    try { window.parent.postMessage(msg, window.location.origin); } catch (e) { /* nobody listens: the game is still fully playable */ }
+  }
+  function sameSiteImage(u) { return typeof u === 'string' && ((u.charAt(0) === '/' && u.charAt(1) !== '/') || u.indexOf(window.location.origin + '/') === 0); }
+  function boardNote(text) { boardList.textContent = ''; var li = document.createElement('li'); li.className = 'empty'; li.textContent = text; boardList.appendChild(li); boardMe.textContent = ''; }
+  function showBoard(data) {
+    window.clearTimeout(boardWait);
+    var rows = data && Array.isArray(data.entries) ? data.entries : null;
+    if (!rows) { boardNote('The ranking is not available right now.'); return; }
+    boardList.textContent = '';
+    if (!rows.length) { boardNote('Nobody is on the board yet. Clear a level to be the first!'); return; }
+    rows.forEach(function (r) {
+      var li = document.createElement('li');
+      if (r.isMe) li.className = 'me';
+      var rank = document.createElement('span'); rank.className = 'rk'; rank.textContent = String(r.rank);
+      var pic = document.createElement('span'); pic.className = 'pic';
+      if (sameSiteImage(r.avatar)) { var img = document.createElement('img'); img.alt = ''; img.src = r.avatar; pic.appendChild(img); }
+      else pic.textContent = String(r.displayName || r.username || '?').charAt(0).toUpperCase();
+      var name = document.createElement('span'); name.className = 'nm'; name.textContent = String(r.displayName || r.username || '');
+      var lv = document.createElement('span'); lv.className = 'lv'; lv.textContent = 'Level ' + r.level;
+      li.appendChild(rank); li.appendChild(pic); li.appendChild(name); li.appendChild(lv);
+      boardList.appendChild(li);
+    });
+    boardMe.textContent = data.me ? 'You are number ' + data.me.rank + ' of ' + data.total + ', at level ' + data.me.level + '.' : 'Clear a level to get on the board.';
+  }
+  function openBoard() {
+    boardEl.hidden = false;
+    boardNote('Loading the ranking…');
+    tell({ type: 'board-request' });
+    window.clearTimeout(boardWait);
+    boardWait = window.setTimeout(function () { boardNote('The ranking is not available right now.'); }, 8000);
+  }
+  if (!inFrame) btnBoard.hidden = true;
+  btnBoard.addEventListener('click', openBoard);
+  $('boardClose').addEventListener('click', function () { boardEl.hidden = true; });
+  boardEl.addEventListener('pointerdown', function (e) { if (e.target === boardEl) boardEl.hidden = true; });
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || e.origin !== window.location.origin) return;
+    var d = e.data;
+    if (d && d.noobGame === 'color-sort' && d.type === 'board' && !boardEl.hidden) showBoard(d.ok ? d.board : null);
+  });
 
   // ------------------------------------------------------------------ start
   btnSound.classList.toggle('off', !soundOn);

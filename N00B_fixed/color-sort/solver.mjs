@@ -18,24 +18,21 @@ export function loadRules(file = RULES_FILE) {
 
 const R = loadRules();
 
-/** how mixed a position is: for every container the colour changes inside it, plus one for a container that holds more than one colour */
+/** how mixed a position is: for every bottle the colour changes inside it, plus one for a bottle that holds more than one colour; a part-filled single-colour bottle still has work to do */
 function mixed(state) {
   let h = 0;
   for (let i = 0; i < state.length; i++) {
     const c = state[i];
     let changes = 0;
     for (let k = 1; k < c.length; k++) if (c[k] !== c[k - 1]) changes++;
-    h += changes ? changes + 1 : 0;
+    h += changes ? changes + 1 : (c.length && !R.isCapped(c) ? 1 : 0);
   }
   return h;
 }
 
 /** the same position whichever way the bottles are lined up */
 function keyOf(state) {
-  const bottles = [];
-  for (let i = 1; i < state.length; i++) bottles.push(state[i].join(''));
-  bottles.sort();
-  return state[0].join('') + '|' + bottles.join(',');
+  return state.map((c) => c.join('')).sort().join(',');
 }
 
 class Heap {
@@ -81,7 +78,7 @@ export function solve(start, maxNodes = 200000, maxMs = 4000) {
       const fromMono = R.isMono(s[i]);
       for (let j = 0; j < s.length; j++) {
         if (i === j || !R.canPour(s, i, j)) continue;
-        if (fromMono && !s[j].length) continue;           // moving a single-colour container into an empty one changes nothing
+        if (fromMono && !s[j].length) continue;           // moving a single-colour bottle into an empty one changes nothing
         const next = R.pour(s, i, j);
         const key = keyOf(next);
         if (seen.has(key)) continue;

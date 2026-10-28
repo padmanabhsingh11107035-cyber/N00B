@@ -242,6 +242,8 @@ export {
   helixLevelComplete,
   helixSubmitRun,
   helixLeaderboard,
+  colorSortLevelDone,
+  colorSortLeaderboard,
   sendGameInvite,
   joinGameRoom,
   getGameRoom,

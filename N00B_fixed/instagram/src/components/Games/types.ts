@@ -93,7 +93,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     id: 'color_sort',
     title: 'Color Sort',
     category: 'puzzle',
-    description: 'Pour the colours from bottle to bottle, with the big tube to help, until every bottle holds just one colour. 30 levels, from a handful of bottles to a full board of 24, and every one can be won. Undo as often as you like.',
+    description: 'Pour the colours from bottle to bottle until each colour fills a bottle of its own: a full bottle gets a cap and is finished. 40 levels, from 3 colours to 14, and every one can be won. Undo as often as you like, and climb the ranking: the highest level cleared by every player.',
     bannerBg: 'from-[#2e86ee] to-[#1b1838]',
     badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
     pointsReward: 0,
@@ -105,7 +105,7 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     isNew: true,
     ownSound: true,
     embedPortrait: true,
-    embedControls: 'Tap a bottle, then tap where its colour should go. Undo and Restart are at the top. It has its own sounds (the speaker button turns them off); no NOOBs for this one, it is just for fun.',
+    embedControls: 'Tap a bottle, then tap where its colour should go. A bottle full of one colour is capped and can not be used again; cap them all to clear the level. Undo, Restart and the Ranking (trophy) are at the top. It has its own sounds (the speaker button turns them off); no NOOBs for this one, it is just for fun.',
     embedUrl: '/games/color-sort/',
     posters: [
       '/game-posters/color-sort/01-cover.webp',

@@ -1,0 +1,37 @@
+/* The help chat on the login page (GuestSupport.tsx). It uses the support desk look (supportDesk.css); this file only adds what is new: the bar at the bottom that changes with the step,
+   the box for the emailed code and the "guest help is used up" card. (The floating help button of the login page is styled in AuthView.tsx, which is loaded before this file.) */
+
+.gs-dock { flex: none; background: #fff; border-top: 1px solid #edf0f3; }
+.gs-dock .sd-composer { border-top: 0; }
+.gs-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 2px; }
+.gs-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; line-height: 20px; padding: 10px 0; color: #1c1c1c; font-weight: 500; }
+.gs-field input::placeholder { color: #9aa1ab; }
+.gs-sr { display: none; }
+
+/* the box for the emailed code */
+.gs-otp { flex: none; margin: 4px 12px 8px; padding: 12px 14px 14px; border-radius: 16px; background: #fff; border: 1.500px solid #bfe3c6; box-shadow: 0 6px 22px rgba(12, 131, 31, .12); animation: gs-rise .22s ease-out; }
+.gs-otp-head { display: flex; align-items: center; gap: 8px; color: #0c831f; font-size: 14.500px; }
+.gs-otp-head svg { width: 18px; height: 18px; flex: none; }
+.gs-otp-head strong { flex: 1; min-width: 0; color: #1c1c1c; font-weight: 800; }
+.gs-x { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #6b7280; flex: none; }
+.gs-x:active { background: #eef0f3; }
+.gs-x svg { width: 16px; height: 16px; }
+.gs-otp p { margin: 6px 0 10px; font-size: 13px; line-height: 1.4; color: #4b5563; font-weight: 500; overflow-wrap: anywhere; }
+.gs-otp p b { color: #1c1c1c; font-weight: 800; }
+.gs-code { display: block; width: 100%; text-align: center; letter-spacing: .5em; text-indent: .5em; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; padding: 12px 8px; border-radius: 14px; border: 1.500px solid #e3e7ec; background: #f7f8fa; color: #1c1c1c; outline: 0; }
+.gs-code::placeholder { color: #c3c9d1; letter-spacing: .5em; }
+.gs-code:focus { border-color: #0c831f; background: #fff; }
+.gs-code:disabled { opacity: .6; }
+.gs-error { margin: 8px 0 0 !important; color: #d92d20 !important; font-weight: 700 !important; }
+.gs-row { display: flex; gap: 8px; margin-top: 10px; }
+.gs-row .sd-btn { padding: 11px 10px; font-size: 14px; }
+.gs-row .sd-btn:disabled { opacity: .55; }
+@keyframes gs-rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* "guest help is used up" */
+.gs-blocked { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 28px 24px; text-align: center; background: #f5f7fa; }
+.gs-blocked svg { width: 46px; height: 46px; color: #0c831f; }
+.gs-blocked h2 { margin: 0; font-size: 19px; font-weight: 800; color: #1c1c1c; }
+.gs-blocked p { margin: 0 0 8px; max-width: 320px; font-size: 14px; line-height: 1.5; color: #4b5563; font-weight: 500; }
+.gs-blocked .sd-btn { flex: none; width: 100%; max-width: 320px; }
+@media (prefers-reduced-motion: reduce) { .gs-otp { animation: none; } }

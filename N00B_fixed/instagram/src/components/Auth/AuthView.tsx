@@ -73,6 +73,9 @@ import confetti from 'canvas-confetti';
 import { phoneRuleFor, cleanPhoneInput, phoneProblem, phoneLengthText } from '../../utils/phoneRules';
 import { isOnOtherNoobAddress, installAddress } from '../../utils/siteUrl';
 
+// The help chat for people who are not logged in (the character button at the bottom right of this screen). Loaded only when it is opened.
+const GuestSupport = React.lazy(() => import('../Support/GuestSupport').then((m) => ({ default: m.GuestSupport })));
+
 interface AuthViewProps {
   onAuthSuccess: (user: User) => void;
   // Shown once, e.g. when a session was force-ended (account suspended)
@@ -335,8 +338,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   // no-dashboard-needed kill switch on top of, not instead of, the Supabase project's own
   // "Allow new users to sign up" toggle, which stays the deeper backstop.
   const [signupsEnabled, setSignupsEnabled] = useState(true);
+  // The help chat for people who are not logged in: its button is hidden while the administrator has switched the Support page off (Admin > Pages)
+  const [guestHelpOn, setGuestHelpOn] = useState(true);
+  const [guestHelpOpen, setGuestHelpOpen] = useState(false);
   useEffect(() => {
-    fetchPublicPlatformSettings().then((s) => setSignupsEnabled(s.signupsEnabled));
+    fetchPublicPlatformSettings().then((s) => {
+      setSignupsEnabled(s.signupsEnabled);
+      setGuestHelpOn(!(s.disabledFeatures ?? []).includes('support'));
+    });
   }, []);
 
   // Legal Modals
@@ -2210,6 +2219,26 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
             </button>
           </div>
         </div>
+      )}
+
+      {/* Help for people who can not log in: the NOOB support character, bottom right. It opens a chat that asks for the email, the problem and the User ID, and can email a one-time code that logs
+          the person in right there (see components/Support/GuestSupport.tsx). */}
+      {guestHelpOn && !guestHelpOpen && !deviceConflict && (
+        <button
+          type="button"
+          onClick={() => setGuestHelpOpen(true)}
+          className="noob-buddy-btn fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:bottom-8 right-4 sm:right-8 z-40 w-16 h-16 flex items-end cursor-pointer"
+          title="Need help logging in? Chat with NOOB Support"
+          aria-label="Need help? Open NOOB Support"
+          data-testid="guest-help-button"
+        >
+          <img src="/noob-support-character.png" alt="" width={64} height={64} draggable={false} className="noob-buddy w-16 h-16 object-contain select-none pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.55)]" />
+        </button>
+      )}
+      {guestHelpOpen && (
+        <React.Suspense fallback={<div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-white" /></div>}>
+          <GuestSupport onClose={() => setGuestHelpOpen(false)} onLoggedIn={(u) => { setGuestHelpOpen(false); void proceedAfterAuth(u); }} />
+        </React.Suspense>
       )}
     </div>
   );

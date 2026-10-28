@@ -33,6 +33,11 @@
 // (action: "delete-account") runs delete_my_account as the caller (their own bearer token) and, once it succeeds, emails a
 // deletion receipt to the address that was on the account — grabbed from the RPC's own return value before the row is gone.
 //
+// (actions: "guest-support-status" / "-email" / "-begin" / "-id" / "-otp-request" / "-otp-verify" / "-close") the help chat on the LOGIN page, for people who are not logged in:
+// it asks for the email of the account, then the problem, then the User ID (or "I forgot my ID"); then it can email a 6-digit code to the address on file and, when the code is typed
+// back in the chat, logs the person in with the same one-time sign-in token as every other emailed-code path. Every check, limit (3 uses a browser, 3 codes a chat ...) and secret lives in
+// the database (migration 20261029000001_guest_support.sql): this function only asks the questions, sends the email and hands out the token. The code and the address are never sent to the page.
+//
 // Deploy with "Verify JWT" switched OFF (a logged-out visitor calls this; the database checks are the gate).
 // The keys it uses (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY) are provided to every Edge Function automatically.
 // Secret this function also needs for every emailed code (optional — without it, otp-request/signup-otp-request answer "not
@@ -306,6 +311,78 @@ async function startApproval(admin: ReturnType<typeof createClient>, userId: str
   return json({ success: true, required: true, challengeId: made.id, pollToken: made.poll, maskedEmail: maskEmail(String(made.email)), expiresInSeconds: 600 });
 }
 
+// ---------------------------------------------------------------- guest support (the help chat on the login page)
+const sendSupportOtpEmail = (email: string, code: string, username: string) =>
+  sendEmail(
+    email,
+    `${code} is your NOOB support login code`,
+    `Your NOOB login code is ${code}. You asked NOOB Support (the help chat on the login page) to send it. It expires in 10 minutes and can be used once. Your NOOB User ID is @${username}. If you did not ask for this, you can ignore this email: nothing changes until the code is used.`,
+    `<div style="font-family:system-ui,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#111">
+      <p style="font-size:15px">Your NOOB login code is:</p>
+      <p style="font-size:32px;font-weight:800;letter-spacing:6px;margin:12px 0">${code}</p>
+      <p style="font-size:13px;color:#555">You asked NOOB Support (the help chat on the login page) to send it. It expires in 10 minutes and can be used once.</p>
+      <p style="font-size:13px;color:#555">Your NOOB User ID is <b>@${username.replace(/[^A-Za-z0-9_.-]/g, '')}</b>.</p>
+      <p style="font-size:13px;color:#555">If you did not ask for this, you can ignore this email: nothing changes until the code is used.</p>
+    </div>`
+  );
+
+// Every answer is a 200 with a "status" (the page decides what to say); only a broken server answers with an error code. Nothing secret is ever put in an answer: the emailed code and the
+// address stay here, the person gets the address with most of its letters hidden.
+async function guestSupport(body: any, admin: ReturnType<typeof createClient>, ip: string): Promise<Response> {
+  const browser = String(body?.browser ?? '').slice(0, 100);
+  const caseArgs = { p_case: String(body?.caseId ?? '').slice(0, 64), p_key: String(body?.caseKey ?? '').slice(0, 200), p_browser: browser };
+  const fail = json({ status: 'unavailable', error: 'Support is unavailable right now. Please try again in a moment.' }, 500);
+  switch (body?.action) {
+    case 'guest-support-status': {
+      const { data, error } = await admin.rpc('guest_support_status', { p_browser: browser });
+      return error || !data ? fail : json(data);
+    }
+    case 'guest-support-email': {
+      const email = String(body?.email ?? '').slice(0, 300);
+      const { data, error } = await admin.rpc('guest_support_email_check', { p_browser: browser, p_ip: ip, p_email: email });
+      if (error || !data) return fail;
+      return json(data.status === 'found' ? { ...data, maskedEmail: maskEmail(email.trim().toLowerCase()) } : data);
+    }
+    case 'guest-support-begin': {
+      const email = String(body?.email ?? '').slice(0, 300);
+      const { data, error } = await admin.rpc('guest_support_begin', { p_browser: browser, p_ip: ip, p_email: email, p_issue: String(body?.issue ?? '').slice(0, 2000), p_kind: String(body?.kind ?? '').slice(0, 20) });
+      if (error || !data) return fail;
+      return json(data.status === 'ok' ? { ...data, maskedEmail: maskEmail(email.trim().toLowerCase()) } : data);
+    }
+    case 'guest-support-id': {
+      const { data, error } = await admin.rpc('guest_support_id_check', { ...caseArgs, p_username: String(body?.username ?? '').slice(0, 60), p_forgot: body?.forgot === true });
+      return error || !data ? fail : json(data);
+    }
+    case 'guest-support-otp-request': {
+      // Checked BEFORE the database: if emailing is not switched on, nothing is generated and no allowance is spent.
+      if (!(Deno.env.get('RESEND_API_KEY') || '').trim()) return json({ status: 'not_configured', error: 'Emailing a code is not switched on yet.' });
+      const { data, error } = await admin.rpc('guest_support_otp_request', { ...caseArgs, p_ip: ip });
+      if (error || !data) return fail;
+      if (data.status !== 'ok') return json({ status: data.status, ...(data.seconds ? { seconds: Number(data.seconds) } : {}) });
+      const sent = await sendSupportOtpEmail(String(data.email), String(data.code), String(data.username));
+      if (!sent) return json({ status: 'send_failed', error: 'We could not send the email right now. Please try again in a moment.' });
+      return json({ status: 'sent', maskedEmail: maskEmail(String(data.email)), sendsLeft: Number(data.sendsLeft) });
+    }
+    case 'guest-support-otp-verify': {
+      const { data, error } = await admin.rpc('guest_support_otp_verify', { ...caseArgs, p_ip: ip, p_code: String(body?.code ?? '').slice(0, 20) });
+      if (error || !data) return fail;
+      if (data.status !== 'ok') return json({ status: data.status });
+      const tokenHash = await issueSignInToken(admin, String(data.userId));
+      if (!tokenHash) {
+        // The code was right but the sign-in token could not be made: open the chat again, so the person can ask for a new code (the chat keeps its limits).
+        await admin.from('guest_support_cases').update({ status: 'open' }).eq('id', caseArgs.p_case);
+        return json({ status: 'token_failed', error: 'We could not sign you in just now. Please ask for a new code.' });
+      }
+      return json({ status: 'ok', tokenHash });
+    }
+    case 'guest-support-close': {
+      const { data, error } = await admin.rpc('guest_support_close', caseArgs);
+      return error || !data ? fail : json(data);
+    }
+  }
+  return json({ status: 'unknown_action' }, 400);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -323,6 +400,11 @@ Deno.serve(async (req) => {
   });
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || (req.headers.get('cf-connecting-ip') ?? 'unknown');
   const unavailable = { error: 'Recovery is unavailable right now. Please try again later.' };
+
+  // -------------------------------------------------------------- guest support: the help chat on the login page (the network address comes from Cloudflare's own header first: a visitor can not write that one)
+  if (typeof body?.action === 'string' && body.action.startsWith('guest-support-')) {
+    return await guestSupport(body, admin, (req.headers.get('cf-connecting-ip') || '').trim() || ip);
+  }
 
   // -------------------------------------------------------------- welcome email, right after signing up
   // Called by the app with the BRAND NEW account's own fresh session token — never blocks or fails the signup itself either way,

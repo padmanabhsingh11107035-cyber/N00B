@@ -27,7 +27,7 @@ export function createClient(url, key, opts) {
     rpc: async (fn, args) => globalThis.__fake.rpc(fn, args),
     from: (table) => {
       const f = { table, eq: {} };
-      const q = { select: () => q, eq: (k, v) => { f.eq[k] = v; return q; }, maybeSingle: async () => globalThis.__fake.select(f), insert: async (row) => globalThis.__fake.insert(table, row) };
+      const q = { select: () => q, eq: (k, v) => { f.eq[k] = v; return q; }, maybeSingle: async () => globalThis.__fake.select(f), insert: async (row) => globalThis.__fake.insert(table, row), update: (row) => ({ eq: async (k, v) => { globalThis.__fake.updates.push([table, row, k, v]); return { error: null }; } }) };
       return q;
     }
   };
@@ -46,6 +46,7 @@ let rpcCalls = [];
 let dbPlan = {};
 let tables = {};
 globalThis.__fake = {
+  updates: [],
   rpc: async (fn, args) => { rpcCalls.push({ fn, args }); return dbPlan[fn] ? dbPlan[fn](args) : { data: null, error: { message: 'unknown rpc ' + fn } }; },
   getUserById: async (id) => (id === 'u-ok' ? { data: { user: { email: `${id}@users.nooob.xyz` } }, error: null } : { data: { user: null }, error: { message: 'not found' } }),
   createUser: async (opts) => { events.push(['createUser', opts.email]); return globalThis.__fake.createUserAnswer(opts); },
@@ -266,6 +267,94 @@ const res = await handler(new Request('https://x.supabase.co/functions/v1/recove
 check(res.status === 405, 'a GET request is refused');
 const opt = await handler(new Request('https://x.supabase.co/functions/v1/recover-account', { method: 'OPTIONS' }));
 check(opt.status === 200 && opt.headers.get('access-control-allow-origin') === '*', 'a CORS preflight is answered');
+
+section('4c. Guest support: the help chat on the login page');
+env.RESEND_API_KEY = 're_test';
+const secrets = [];   // every answer is kept, to prove that no code and no address ever leaves in one
+const gcall = async (body, headers = {}) => { const out = await call({ browser: 'browser-aaaaaaaaaaaaaaaa', ...body }, headers); secrets.push(JSON.stringify(out.json)); return out; };
+reset(); globalThis.__fake.updates = [];
+dbPlan.guest_support_status = () => ({ data: { status: 'ok', uses: 1, remaining: 2, limit: 3 }, error: null });
+r = await gcall({ action: 'guest-support-status' });
+check(r.status === 200 && r.json.remaining === 2 && rpcCalls[0].fn === 'guest_support_status' && rpcCalls[0].args.p_browser === 'browser-aaaaaaaaaaaaaaaa', 'asks the database how many uses the browser has left');
+
+reset();
+dbPlan.guest_support_email_check = () => ({ data: { status: 'found', many: false, suspended: false }, error: null });
+r = await gcall({ action: 'guest-support-email', email: ' Ana.Smith@Example.com ' }, { 'cf-connecting-ip': '5.6.7.8', 'x-forwarded-for': '1.1.1.1' });
+check(r.status === 200 && r.json.status === 'found' && /^a•+@e•*@?/.test('') === false && r.json.maskedEmail && !r.json.maskedEmail.includes('Smith') && !r.json.maskedEmail.toLowerCase().includes('ana.smith') && r.json.maskedEmail.endsWith('.com'), 'a found email is answered with the address mostly hidden');
+check(rpcCalls[0].args.p_ip === '5.6.7.8' && rpcCalls[0].args.p_email === ' Ana.Smith@Example.com ', 'the network address is Cloudflare\'s own header (a visitor can not write it); the database cleans the email itself');
+reset(); dbPlan.guest_support_email_check = () => ({ data: { status: 'found' }, error: null });
+await gcall({ action: 'guest-support-email', email: 'a@b.com' }, { 'x-forwarded-for': '9.9.9.9, 8.8.8.8' });
+check(rpcCalls[0].args.p_ip === '9.9.9.9', 'without it, the first forwarded address is used');
+for (const status of ['no_account', 'invalid_email', 'rate_limited', 'limit_reached', 'bad_browser']) {
+  reset(); dbPlan.guest_support_email_check = () => ({ data: { status }, error: null });
+  r = await gcall({ action: 'guest-support-email', email: 'x@y.com' });
+  check(r.status === 200 && r.json.status === status && !('maskedEmail' in r.json), `"${status}" is passed on as it is (no address is shown)`);
+}
+reset(); dbPlan.guest_support_email_check = () => ({ data: null, error: { message: 'db down' } });
+r = await gcall({ action: 'guest-support-email', email: 'x@y.com' });
+check(r.status === 500 && r.json.status === 'unavailable' && !/db down/.test(JSON.stringify(r.json)), 'a database error is a polite "unavailable" without technical details');
+
+reset();
+dbPlan.guest_support_begin = (a) => ({ data: { status: 'ok', caseId: 'case-1', caseKey: 'k'.repeat(64), remaining: 2, accountFound: true, many: false }, error: null });
+r = await gcall({ action: 'guest-support-begin', email: 'ana@example.com', issue: 'x'.repeat(5000), kind: 'login' });
+check(r.status === 200 && r.json.caseId === 'case-1' && r.json.caseKey === 'k'.repeat(64) && r.json.remaining === 2 && r.json.maskedEmail && rpcCalls[0].args.p_issue.length === 2000, 'starting a chat hands back the chat id and its key once (the problem is cut at 2000 letters)');
+reset(); dbPlan.guest_support_begin = () => ({ data: { status: 'limit_reached' }, error: null });
+r = await gcall({ action: 'guest-support-begin', email: 'ana@example.com', issue: 'help me', kind: 'login' });
+check(r.json.status === 'limit_reached' && !('caseKey' in r.json), 'a browser with no uses left gets no key');
+
+reset(); dbPlan.guest_support_id_check = () => ({ data: { status: 'match' }, error: null });
+await gcall({ action: 'guest-support-id', caseId: 'c', caseKey: 'k', username: '@ana', forgot: 'true' });
+check(rpcCalls[0].args.p_forgot === false && rpcCalls[0].args.p_username === '@ana' && rpcCalls[0].args.p_case === 'c' && rpcCalls[0].args.p_browser === 'browser-aaaaaaaaaaaaaaaa', '"I forgot my ID" counts only when it is exactly true');
+await gcall({ action: 'guest-support-id', caseId: 'c', caseKey: 'k', forgot: true });
+check(rpcCalls[1].args.p_forgot === true, '... and does when it is');
+
+section('4d. Guest support: the emailed code');
+reset(); delete env.RESEND_API_KEY;
+dbPlan.guest_support_otp_request = () => ({ data: { status: 'ok' }, error: null });
+r = await gcall({ action: 'guest-support-otp-request', caseId: 'c', caseKey: 'k' });
+check(r.status === 200 && r.json.status === 'not_configured' && rpcCalls.length === 0 && resendCalls.length === 0, 'if emailing is not switched on, nothing is asked of the database and no allowance is spent');
+env.RESEND_API_KEY = 're_test';
+reset();
+dbPlan.guest_support_otp_request = () => ({ data: { status: 'ok', userId: 'u-ok', email: 'ana@example.com', username: 'ana_guest', code: '482913', sendsLeft: 2 }, error: null });
+r = await gcall({ action: 'guest-support-otp-request', caseId: 'c', caseKey: 'k' });
+const mail = resendCalls[0];
+check(r.status === 200 && r.json.status === 'sent' && r.json.sendsLeft === 2 && r.json.maskedEmail && Object.keys(r.json).sort().join() === 'maskedEmail,sendsLeft,status', 'the answer says only "sent", the hidden address and the codes left');
+check(resendCalls.length === 1 && mail.to[0] === 'ana@example.com' && /482913/.test(mail.text) && /482913/.test(mail.html) && /@ana_guest/.test(mail.text) && /10 minutes/.test(mail.text) && /help chat on the login page/.test(mail.text), 'the code goes by email to the address ON FILE only (with the User ID, for someone who forgot it)');
+check(!JSON.stringify(r.json).includes('482913') && !JSON.stringify(r.json).includes('ana@example.com') && !JSON.stringify(r.json).includes('u-ok') && !JSON.stringify(r.json).includes('ana_guest'), 'and the code, the address, the account id and the User ID are not in the answer');
+reset(); dbPlan.guest_support_otp_request = () => ({ data: { status: 'cooldown', seconds: 31 }, error: null });
+r = await gcall({ action: 'guest-support-otp-request', caseId: 'c', caseKey: 'k' });
+check(r.json.status === 'cooldown' && r.json.seconds === 31 && resendCalls.length === 0, 'the wait is passed on, nothing is sent');
+for (const status of ['id_required', 'no_account', 'need_id', 'suspended', 'rate_limited', 'case_limit', 'bad_case']) {
+  reset(); dbPlan.guest_support_otp_request = () => ({ data: { status }, error: null });
+  r = await gcall({ action: 'guest-support-otp-request', caseId: 'c', caseKey: 'k' });
+  check(r.json.status === status && resendCalls.length === 0, `"${status}": no email is sent`);
+}
+reset(); globalThis.__resend = () => ({ ok: false, status: 500, text: async () => 'boom' });
+dbPlan.guest_support_otp_request = () => ({ data: { status: 'ok', userId: 'u-ok', email: 'ana@example.com', username: 'ana_guest', code: '111222', sendsLeft: 1 }, error: null });
+r = await gcall({ action: 'guest-support-otp-request', caseId: 'c', caseKey: 'k' });
+check(r.json.status === 'send_failed' && !JSON.stringify(r.json).includes('111222'), 'if the email can not be sent, the person is told (and the code is still not in the answer)');
+
+reset(); globalThis.__fake.updates = [];
+dbPlan.guest_support_otp_verify = () => ({ data: { status: 'ok', userId: 'u-ok' }, error: null });
+r = await gcall({ action: 'guest-support-otp-verify', caseId: 'c', caseKey: 'k', code: ' 123456 ' });
+check(r.status === 200 && r.json.status === 'ok' && r.json.tokenHash === 'th-u-ok@users.nooob.xyz' && Object.keys(r.json).sort().join() === 'status,tokenHash' && rpcCalls[0].args.p_code === ' 123456 ', 'the right code gives a one-time sign-in token (the same kind as every other emailed-code login)');
+for (const status of ['mismatch', 'expired', 'too_many_attempts', 'rate_limited', 'case_locked', 'bad_format', 'missing', 'suspended', 'bad_case', 'id_required']) {
+  reset(); dbPlan.guest_support_otp_verify = () => ({ data: { status, userId: 'u-ok' }, error: null });
+  r = await gcall({ action: 'guest-support-otp-verify', caseId: 'c', caseKey: 'k', code: '000000' });
+  check(r.status === 200 && r.json.status === status && !('tokenHash' in r.json), `"${status}": no token is made`);
+}
+reset(); globalThis.__fake.updates = [];
+dbPlan.guest_support_otp_verify = () => ({ data: { status: 'ok', userId: 'u-missing' }, error: null });
+r = await gcall({ action: 'guest-support-otp-verify', caseId: 'case-77', caseKey: 'k', code: '123456' });
+check(r.json.status === 'token_failed' && !('tokenHash' in r.json) && globalThis.__fake.updates.length === 1 && globalThis.__fake.updates[0][0] === 'guest_support_cases' && globalThis.__fake.updates[0][1].status === 'open' && globalThis.__fake.updates[0][3] === 'case-77', 'if the right code could not be turned into a sign-in, the chat is opened again so a new code can be asked for');
+
+reset(); dbPlan.guest_support_close = () => ({ data: { status: 'ok' }, error: null });
+r = await gcall({ action: 'guest-support-close', caseId: 'c', caseKey: 'k' });
+check(r.json.status === 'ok' && rpcCalls[0].fn === 'guest_support_close', 'a chat can be ended');
+r = await gcall({ action: 'guest-support-nonsense' });
+check(r.status === 400 && r.json.status === 'unknown_action', 'an unknown guest action is refused');
+check(secrets.every((x) => !/482913|111222|ana@example\.com|ana\.smith@example/i.test(x)), 'across all of this, no code and no whole email address was ever in any answer');
+check(!/serviceKey|service_role|SUPABASE_SERVICE/i.test(secrets.join('')), 'and no key of the server');
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${passed} passed, ${failed} failed`);

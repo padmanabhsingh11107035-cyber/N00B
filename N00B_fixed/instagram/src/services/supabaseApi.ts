@@ -833,6 +833,65 @@ export async function verifyLoginOtp(payload: { username: string; code: string }
   }
 }
 
+// ---- Guest support: the help chat on the login page, for people who are not logged in. Every call goes to the "recover-account" function, which asks the database (all limits, all secrets live
+// there: 3 uses a browser, 3 codes a chat ...). Every answer is { status: ... }; "unavailable" means the server could not be reached or broke.
+export interface GuestSupportAnswer {
+  status: string;
+  error?: string;
+  remaining?: number; limit?: number; uses?: number;
+  many?: boolean; suspended?: boolean; accountFound?: boolean;
+  maskedEmail?: string; caseId?: string; caseKey?: string; seconds?: number; sendsLeft?: number;
+}
+async function guestCall(body: Record<string, unknown>): Promise<GuestSupportAnswer> {
+  const unavailable = 'Support is unavailable right now. Please try again in a moment.';
+  try {
+    const { data, error } = await supabase.functions.invoke('recover-account', { body });
+    if (error) return { status: 'unavailable', error: await functionError(error, unavailable) };
+    if (!data || typeof data.status !== 'string') return { status: 'unavailable', error: unavailable };
+    return data as GuestSupportAnswer;
+  } catch (err) {
+    return { status: 'unavailable', error: errorText(err, unavailable) };
+  }
+}
+export const guestSupportStatus = (browser: string) => guestCall({ action: 'guest-support-status', browser });
+export const guestSupportCheckEmail = (browser: string, email: string) => guestCall({ action: 'guest-support-email', browser, email });
+export const guestSupportBegin = (browser: string, email: string, issue: string, kind: string) => guestCall({ action: 'guest-support-begin', browser, email, issue, kind });
+export const guestSupportCheckId = (browser: string, c: { caseId: string; caseKey: string }, username: string, forgot: boolean) => guestCall({ action: 'guest-support-id', browser, ...c, username, forgot });
+export const guestSupportRequestCode = (browser: string, c: { caseId: string; caseKey: string }) => guestCall({ action: 'guest-support-otp-request', browser, ...c });
+export const guestSupportClose = (browser: string, c: { caseId: string; caseKey: string }) => guestCall({ action: 'guest-support-close', browser, ...c });
+/** The code typed in the chat. Right: the person is signed in (the one-time token is exchanged for a normal session, like every other emailed-code login) and comes back as `user`. */
+export async function guestSupportVerifyCode(browser: string, c: { caseId: string; caseKey: string }, code: string): Promise<{ status: string; user?: User; error?: string }> {
+  const answer = await guestCall({ action: 'guest-support-otp-verify', browser, ...c, code });
+  const tokenHash = (answer as unknown as { tokenHash?: string }).tokenHash;
+  if (answer.status !== 'ok' || !tokenHash) return { status: answer.status, error: answer.error };
+  try {
+    const { error: signInError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
+    if (signInError) return { status: 'token_failed' };
+    const user = await rpc<any>('get_my_user');
+    return { status: 'ok', user: startChatKeys(mapUser(user)) as User };
+  } catch (err) {
+    return { status: 'token_failed', error: errorText(err, 'Could not sign you in. Please try again.') };
+  }
+}
+/** The AI helper inside a guest chat (it answers only while the chat is open, and the database counts every message: 40 a chat). */
+export async function askGuestSupportAssistant(
+  message: string,
+  conversationHistory: Array<{ sender: 'user' | 'bot'; text: string }>,
+  guest: { caseId: string; caseKey: string; browser: string }
+): Promise<{ success: boolean; reply: string; error?: string; limited?: boolean }> {
+  const fallback = 'Our assistant is taking a short break right now. Please try again in a little while.';
+  try {
+    const { data, error } = await supabase.functions.invoke(AI_FUNCTION, { body: { action: 'support', message, conversationHistory, lang: getLanguage(), channel: 'text', guest } });
+    if (error) {
+      const text = await functionError(error, fallback);
+      return { success: false, reply: text, error: text, limited: /message limit/i.test(text) };
+    }
+    return { success: !!data?.success, reply: String(data?.reply || fallback), error: data?.error };
+  } catch (err) {
+    return { success: false, reply: fallback, error: errorText(err, fallback) };
+  }
+}
+
 // Log out of THIS device only. (The library's default, "global", also ends the same account's login on every other device: logging
 // out on the phone used to sign the laptop out within the hour.) The note lets other tabs of this browser say why they were signed out.
 export async function logoutUser(): Promise<{ success: boolean }> {

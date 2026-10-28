@@ -105,6 +105,10 @@ const rpcAnswers = {
 };
 const listLike = /^(list_|get_|my_|fetch_|search_|explore_|feed|reels|stories)/;
 
+// the made-up memory of the guest support chat: how many times each browser used it, the open chats, and the accounts that exist
+const guestUses = new Map(), guestCases = new Map();
+const guestAccounts = { 'ana@example.com': [{ username: 'ana_guest' }], 'twins@example.com': [{ username: 'twin_a' }, { username: 'twin_b' }], 'sus@example.com': [{ username: 'sus_guest', suspended: true }] };
+
 const readBody = (req) => new Promise((res) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => { try { res(JSON.parse(Buffer.concat(c).toString() || 'null')); } catch { res(null); } }); });
 
 const server = http.createServer(async (req, res) => {
@@ -148,6 +152,59 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'DELETE') { const id = (url.searchParams.get('id') || '').replace('eq.', ''); notes = notes.filter((x) => x.id !== id); return send(204); }
   }
   if (p.startsWith('/rest/v1/')) return send(200, req.method === 'GET' ? [] : null);
+  // Guest support (the help chat on the login page): a small made-up copy of the real rules (3 uses a browser, an ID step, 3 codes a chat), so the screen can be tried. The emailed code is always 123456.
+  //   try: ana@example.com (one account, User ID ana_guest) | twins@example.com (two accounts: twin_a, twin_b) | sus@example.com (suspended) | anything else = no account
+  if (p === '/auth/v1/verify') { await readBody(req); return send(200, session()); }
+  if (p === '/functions/v1/recover-account' || p === '/functions/v1/dynamic-handler') {
+    const b = (await readBody(req)) || {};
+    const act = String(b.action || '');
+    if (p.endsWith('dynamic-handler')) return send(200, { success: true, reply: act === 'support' ? '(made-up helper) Happy to help with that. Tell me a little more and I will guide you.' : '' });
+    const uses = guestUses.get(b.browser) || 0;
+    const chat = guestCases.get(b.caseId);
+    const okCase = !!chat && chat.key === b.caseKey && chat.browser === b.browser;
+    const accts = guestAccounts[String(b.email || (chat && chat.email) || '').trim().toLowerCase()] || [];
+    const hide = (e) => { const [n, d] = String(e).split('@'); const dot = d.lastIndexOf('.'); return `${n[0]}••••@${d[0]}••••${d.slice(dot)}`; };
+    if (act === 'guest-support-status') return send(200, uses >= 3 ? { status: 'limit_reached', uses, limit: 3, remaining: 0 } : { status: 'ok', uses, limit: 3, remaining: 3 - uses });
+    if (act === 'guest-support-email') {
+      const e = String(b.email || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return send(200, { status: 'invalid_email' });
+      if (!accts.length) return send(200, { status: 'no_account' });
+      return send(200, { status: 'found', maskedEmail: hide(e), many: accts.length > 1, suspended: !!accts[0].suspended });
+    }
+    if (act === 'guest-support-begin') {
+      if (uses >= 3) return send(200, { status: 'limit_reached' });
+      if (String(b.issue || '').trim().length < 3) return send(200, { status: 'invalid_issue' });
+      guestUses.set(b.browser, uses + 1);
+      const id = 'g0000000-0000-4000-8000-' + String(guestCases.size + 1).padStart(12, '0');
+      const key = Math.random().toString(16).slice(2).padEnd(64, 'a');
+      guestCases.set(id, { key, browser: b.browser, email: String(b.email || '').trim().toLowerCase(), id: 'none', sends: 0, last: 0, fails: 0 });
+      return send(200, { status: 'ok', caseId: id, caseKey: key, remaining: 2 - uses, accountFound: accts.length > 0, many: accts.length > 1 });
+    }
+    if (!okCase) return send(200, { status: 'bad_case' });
+    if (act === 'guest-support-id') {
+      if (b.forgot === true) { if (accts.length > 1) return send(200, { status: 'need_id' }); chat.id = 'forgot'; return send(200, { status: 'forgot' }); }
+      const u = String(b.username || '').trim().replace(/^@/, '').toLowerCase();
+      if (!u) return send(200, { status: 'invalid_id' });
+      if (accts.some((x) => x.username === u)) { chat.id = 'matched'; return send(200, { status: 'match' }); }
+      return send(200, { status: 'mismatch' });
+    }
+    if (act === 'guest-support-otp-request') {
+      if (!accts.length) return send(200, { status: 'no_account' });
+      if (accts[0].suspended) return send(200, { status: 'suspended' });
+      if (chat.id !== 'matched' && (accts.length > 1 || chat.id !== 'forgot')) return send(200, { status: accts.length > 1 ? 'need_id' : 'id_required' });
+      if (Date.now() - chat.last < 45000) return send(200, { status: 'cooldown', seconds: Math.ceil((45000 - (Date.now() - chat.last)) / 1000) });
+      if (chat.sends >= 3) return send(200, { status: 'case_limit' });
+      chat.sends += 1; chat.last = Date.now();
+      return send(200, { status: 'sent', maskedEmail: hide(chat.email), sendsLeft: 3 - chat.sends });
+    }
+    if (act === 'guest-support-otp-verify') {
+      if (chat.fails >= 8) return send(200, { status: 'case_locked' });
+      if (String(b.code || '').trim() === '123456') return send(200, { status: 'ok', tokenHash: 'mock-token-hash' });
+      chat.fails += 1; return send(200, { status: 'mismatch' });
+    }
+    if (act === 'guest-support-close') { guestCases.delete(b.caseId); return send(200, { status: 'ok' }); }
+    return send(400, { status: 'unknown_action' });
+  }
   if (p.startsWith('/functions/v1/')) { await readBody(req); return send(200, { success: true }); }
   return send(404, { message: 'mock: nothing here' });
 });

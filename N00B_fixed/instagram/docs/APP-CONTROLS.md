@@ -22,3 +22,16 @@ Other controls that already exist:
 - **Maintenance**: the Platform tab can put the whole app under maintenance.
 
 Not switchable on their own yet: the read side of posts / reels / explore (they only read), and Chat messages on the server (switching Chat off hides it; the messages table is not guarded because the app itself writes system messages there).
+
+## NOOB Safety - the AI moderator (Admin Control Panel -> Moderator, main administrator only)
+
+Not visible to normal people. It judges only what is PUBLISHED: posts and reels (caption + first pictures), comments and replies, bio and display name. Chats, group chats, calls, anonymous messages, rooms and drafts are never read (no trigger exists on those tables).
+
+- Flow: a trigger writes a job (`moderation_jobs`) and asks the Edge Function `moderator` through pg_net -> Groq gives a verdict -> `mod_apply()` enforces it in SQL -> in-app notice (realtime) + e-mail. Every 5 minutes `retry_moderation()` asks again for anything unfinished (AI or e-mail down); nobody is punished because the AI was down.
+- Modes: **Off**, **Watch only** (default: judges and logs, touches nothing, tells nobody), **Enforce**.
+- Actions: a bad word in a comment / caption / bio / name -> only the word is removed; a severe comment -> deleted; a severe post / reel (or a picture that breaks the rules) -> the whole post / reel is deleted. Every enforced action is a warning; at N warnings in D days (default 3 in 30) the account is suspended with the reason logged (`profile_private.suspended_reason`). A critical violation suspends at once.
+- Not sure (below the confidence setting, default 85%): nothing is touched; from 60% it appears in the log as "Needs a look".
+- The administrator can withdraw a warning (the person is told), suspend / restore from the log, and try the AI on any text or picture address without saving anything.
+- Never judged: the administrator, accounts marked admin, AI accounts.
+- Costs: one Groq call per published item (keys `GROQ_API_KEY` … `_6` are rotated); pictures are fetched by the AI through the cached `/m/` address, so Supabase storage is not charged again. Switch to Off to stop all of it.
+- Not covered: the video itself (only the reel's thumbnail and caption), stories, live comments, rooms, usernames.

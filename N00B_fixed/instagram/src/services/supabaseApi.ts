@@ -6306,3 +6306,78 @@ export async function fetchActiveAds(page: AdPage): Promise<ActiveAd[]> {
     return hit?.ads || [];
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------- AI moderator (NOOB Safety) - main administrator only
+export type ModerationMode = 'off' | 'watch' | 'enforce';
+export interface ModerationSettings { mode: ModerationMode; strictness: 'standard' | 'strict'; strikesToSuspend: number; strikeWindowDays: number; minConfidence: number }
+export interface ModerationOverview {
+  settings: ModerationSettings;
+  counts: { removed24h: number; wordsRemoved24h: number; flagged: number; watched: number; suspended7d: number; waiting: number; failed: number; emailsFailed: number };
+}
+export interface ModerationLogRow {
+  id: string; userId: string; username: string; isSuspended: boolean; kind: string; content: string; media: string[]; category: string; severity: 'mild' | 'severe' | 'critical';
+  confidence: number; reason: string; words: string[]; action: 'deleted' | 'words_removed' | 'flagged'; applied: boolean; strikeNo: number; strikeLimit: number;
+  suspended: boolean; forgiven: boolean; emailStatus: 'none' | 'pending' | 'sending' | 'sent' | 'failed' | 'skipped'; emailError: string | null; createdAt: string;
+}
+export interface ModerationVerdict { violation: boolean; severity: string; category: string; confidence: number; words: string[]; reason: string; mediaViolation: boolean }
+export interface ModerationHealth { ok: boolean; keys: number; textModels: string[]; visionModels: string[]; email: boolean }
+
+export async function adminModerationOverview(): Promise<{ success: boolean; overview?: ModerationOverview; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_moderation_overview');
+    return { success: true, overview: { settings: res.settings, counts: res.counts } };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not open the moderator.') };
+  }
+}
+
+export async function adminModerationLog(filter: 'all' | 'removed' | 'flagged' | 'suspended' | 'watched' = 'all', limit = 60): Promise<{ success: boolean; rows: ModerationLogRow[]; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_moderation_log', { p_filter: filter, p_limit: limit });
+    return { success: true, rows: Array.isArray(res?.rows) ? res.rows : [] };
+  } catch (err) {
+    return { success: false, rows: [], error: errorText(err, 'Could not read the moderation log.') };
+  }
+}
+
+export async function adminModerationSet(patch: { mode?: ModerationMode; strictness?: 'standard' | 'strict'; strikes?: number; windowDays?: number; minConfidence?: number }): Promise<{ success: boolean; overview?: ModerationOverview; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_moderation_set', {
+      p_mode: patch.mode ?? null, p_strictness: patch.strictness ?? null, p_strikes: patch.strikes ?? null, p_window: patch.windowDays ?? null, p_min_confidence: patch.minConfidence ?? null
+    });
+    return { success: true, overview: { settings: res.settings, counts: res.counts } };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not change the moderator.') };
+  }
+}
+
+export async function adminModerationForgive(logId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await rpc<any>('admin_moderation_forgive', { p_log: logId });
+    return res?.success ? { success: true } : { success: false, error: res?.error || 'Could not withdraw the warning.' };
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not withdraw the warning.') };
+  }
+}
+
+export async function adminModerationHealth(): Promise<{ success: boolean; health?: ModerationHealth; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('moderator', { body: { action: 'health' } });
+    if (error || !data?.ok) return { success: false, error: 'The moderator function is not reachable. Deploy the "moderator" function first.' };
+    return { success: true, health: data };
+  } catch {
+    return { success: false, error: 'The moderator function is not reachable. Deploy the "moderator" function first.' };
+  }
+}
+
+// Asks the AI about a piece of text / a picture WITHOUT touching anything - to see how it judges before switching it on.
+export async function adminModerationTest(text: string, opts?: { imageUrl?: string; kind?: string; strictness?: 'standard' | 'strict' }): Promise<{ success: boolean; verdict?: ModerationVerdict; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('moderator', { body: { action: 'test', text, imageUrl: opts?.imageUrl || '', kind: opts?.kind || 'comment', strictness: opts?.strictness || 'standard' } });
+    if (error) return { success: false, error: 'The moderator function is not reachable. Deploy the "moderator" function first.' };
+    if (!data?.ok) return { success: false, error: data?.error || 'The AI did not answer.' };
+    return { success: true, verdict: data.verdict };
+  } catch {
+    return { success: false, error: 'The moderator function is not reachable. Deploy the "moderator" function first.' };
+  }
+}

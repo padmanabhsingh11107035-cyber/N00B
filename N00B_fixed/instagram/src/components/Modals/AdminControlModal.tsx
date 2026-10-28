@@ -85,6 +85,7 @@ import { phoneFacts } from '../../utils/phoneLookup';
 import { AdminDailyNoobPanel } from './AdminDailyNoobPanel';
 import { AdminStoragePanel } from './AdminStoragePanel';
 import { AdminAdsPanel } from './AdminAdsPanel';
+import { AdminModerationPanel } from './AdminModerationPanel';
 import { AdminFeaturesPanel } from './AdminFeaturesPanel';
 import { adminFetchAdApplications } from '../../services/api';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
@@ -120,7 +121,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'pages' | 'settings';
+type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1433,6 +1434,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
               data-testid="admin-tab-ads"
             >
               <Megaphone className="w-4 h-4" /> Ads{adsPending > 0 ? ` (${adsPending})` : ''}
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('moderation')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'moderation'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+              data-testid="admin-tab-moderation"
+            >
+              <ShieldAlert className="w-4 h-4" /> Moderator
             </button>
           )}
 
@@ -2772,6 +2787,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminStoragePanel />
           ) : activeTab === 'ads' && main ? (
             <AdminAdsPanel onPendingChange={setAdsPending} />
+          ) : activeTab === 'moderation' && main ? (
+            <AdminModerationPanel />
           ) : activeTab === 'pages' && main ? (
             <AdminFeaturesPanel />
           ) : activeTab === 'settings' && main ? (

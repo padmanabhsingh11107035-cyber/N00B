@@ -44,6 +44,7 @@ export const LensApp: React.FC = () => {
   const [fit, setFit] = useState({ w: 0, h: 0 });
   const [ratio, setRatio] = useState(9 / 16);
   const [cameras, setCameras] = useState(0);
+  const [taught, setTaught] = useState(false);   // the first-time tip goes away after the first lens change or picture
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -227,7 +228,7 @@ export const LensApp: React.FC = () => {
     if (!rail) return;
     grow();
     const i = clamp(Math.round(rail.scrollLeft / STRIDE), 0, LENSES.length - 1);
-    if (LENSES[i].id !== lensRef.current.id) { fromRail.current = true; setLensId(LENSES[i].id); }
+    if (LENSES[i].id !== lensRef.current.id) { fromRail.current = true; setLensId(LENSES[i].id); setTaught(true); }
   }, [grow]);
   useLayoutEffect(() => {
     const rail = railRef.current;
@@ -242,7 +243,7 @@ export const LensApp: React.FC = () => {
     const st = stillRef.current, v = videoRef.current;
     let src: CanvasImageSource, sw: number, sh: number;
     if (st) { src = st; sw = st.width; sh = st.height; } else if (v && v.videoWidth) { src = v; sw = v.videoWidth; sh = v.videoHeight; } else return;
-    setFlash(true); window.setTimeout(() => setFlash(false), 200);
+    setFlash(true); setTaught(true); window.setTimeout(() => setFlash(false), 200);
     const k = Math.min(1, EXPORT_SHORT / Math.min(sw, sh), EXPORT_LONG / Math.max(sw, sh));
     const ew = Math.round(sw * k), eh = Math.round(sh * k);
     const cv = document.createElement('canvas');
@@ -287,6 +288,17 @@ export const LensApp: React.FC = () => {
   };
 
   useEffect(() => () => { if (shot) URL.revokeObjectURL(shot.url); }, [shot]);
+
+  // Escape: back to the camera from a finished picture, or out of the lenses when they are shown inside the app
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return;
+      if (phase === 'review') retake();
+      else if (embed) toApp({ type: 'close' });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const q = query.trim().toLowerCase();
   const shown = q ? LENSES.filter((l) => l.name.toLowerCase().includes(q)) : LENSES;
@@ -342,6 +354,7 @@ export const LensApp: React.FC = () => {
           {/* a phone: the strip of lenses; the ring in the middle is the shutter */}
           <div className="lz-strip">
             <div className="lz-name">{lens.name}</div>
+            {!taught && <div className="lz-tip">Swipe for more lenses · tap the circle to take a picture</div>}
             <div className="lz-railbox">
               <div className="lz-ring" aria-hidden="true" />
               <div className="lz-rail" ref={railRef} onScroll={onRail} role="listbox" aria-label="Lenses">
@@ -398,7 +411,7 @@ export const LensApp: React.FC = () => {
               {embed && <button className="lz-btn" onClick={() => toApp({ type: 'use', file: shot.file, target: 'story' })}><Send size={18} /> Story</button>}
               {embed && <button className="lz-btn" onClick={() => toApp({ type: 'use', file: shot.file, target: 'post' })}><Send size={18} /> Post</button>}
             </div>
-            <p className="lz-foot">Share it to any app. The NOOB tag stays on the picture.</p>
+            <p className="lz-foot">Share it to any app, or touch and hold the picture to save it. The NOOB tag stays on it.</p>
           </>
         )
       )}

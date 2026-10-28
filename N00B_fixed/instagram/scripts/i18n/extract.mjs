@@ -12,7 +12,8 @@ import ts from 'typescript';
 
 const { normalizeText, textId, looksLikeUiText, decodeEntities } = await import(pathToFileURL(path.resolve('src/i18n/textKey.ts')).href);
 
-const SKIP_FILES = [/mockData\.ts$/, /^src[\\/]types\.ts$/, /\.d\.ts$/, /[\\/]i18n[\\/]/, /vite-env/];
+// (src/lenses is the NOOB Lenses page: a page of its own that does not run the translator, so its texts are not collected)
+const SKIP_FILES = [/mockData\.ts$/, /^src[\\/]types\.ts$/, /\.d\.ts$/, /[\\/]i18n[\\/]/, /vite-env/, /^src[\\/]lenses[\\/]/];
 // JSX attributes that hold text a person reads
 const UI_ATTRS = new Set(['placeholder', 'title', 'alt', 'aria-label', 'aria-description', 'label', 'description', 'subtitle', 'tooltip', 'message', 'text', 'heading', 'caption', 'helperText', 'confirmLabel', 'cancelLabel', 'emptyText']);
 // Object keys that hold text a person reads

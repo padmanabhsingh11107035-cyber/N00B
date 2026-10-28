@@ -40,6 +40,7 @@ input { font: inherit; color: inherit; user-select: text; -webkit-user-select: t
 /* the strip of lenses (a phone) */
 .lz-strip { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 max(12px, env(safe-area-inset-bottom)); }
 .lz-name { height: 20px; font-size: 15px; font-weight: 700; opacity: .95; }
+.lz-tip { margin-top: -2px; padding: 0 16px; text-align: center; font-size: 12px; opacity: .6; }
 .lz-railbox { position: relative; width: 100%; height: 104px; }
 .lz-rail { position: absolute; inset: 0; display: flex; align-items: center; gap: 16px; padding: 0 calc(50% - 34px); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .lz-rail::-webkit-scrollbar { display: none; }

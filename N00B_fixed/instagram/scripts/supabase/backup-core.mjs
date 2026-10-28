@@ -17,6 +17,30 @@ export const TABLES = [
   'game_rooms', 'matchmaking_queue', 'user_game_state', 'recovery_attempts'
 ];
 const PAGE = 1000;
+
+// Every table the project exposes. The built-in TABLES list above can only ever be older than the database (the live project has 200+ tables, the list 48), so the
+// backup asks the project itself which tables exist (PostgREST publishes them at /rest/v1/ for the secret key). Read-only: it is one GET.
+export async function discoverTables(url, key, fetchImpl = fetch) {
+  const res = await fetchImpl(`${String(url).replace(/\/$/, '')}/rest/v1/`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+  if (!res.ok) throw new Error(`table list: HTTP ${res.status}`);
+  const spec = await res.json();
+  const names = spec.definitions ? Object.keys(spec.definitions) : Object.keys(spec.paths || {}).map((p) => p.replace(/^\//, '')).filter((p) => p && !p.startsWith('rpc/'));
+  return [...new Set(names.filter((n) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(n)))].sort();
+}
+
+// The accounts themselves (e-mail, phone, sign-in method, metadata) from the auth service. Password hashes are never returned by this API; the full database export
+// (scripts/verify-db-export.mjs describes it) is the copy that holds them.
+export async function backupAuthUsers(client) {
+  const users = [];
+  for (let page = 1; ; page++) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: PAGE });
+    if (error) throw new Error(`auth users: ${error.message}`);
+    const batch = (data && data.users) || [];
+    users.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return users;
+}
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
 export async function backupTable(client, table) {
@@ -56,7 +80,7 @@ export async function listMedia(client, bucket = 'media') {
   return files;
 }
 
-export async function runBackup({ client, outDir, tables = TABLES, log = console.log, withMedia = true, bucket = 'media' }) {
+export async function runBackup({ client, outDir, tables = TABLES, log = console.log, withMedia = true, bucket = 'media', withAuth = false }) {
   const problems = [];
   const manifest = { createdAt: new Date().toISOString(), tables: {}, media: { files: 0, bytes: 0, missing: [] } };
   fs.mkdirSync(path.join(outDir, 'tables'), { recursive: true });
@@ -72,6 +96,20 @@ export async function runBackup({ client, outDir, tables = TABLES, log = console
       problems.push(e.message);
       manifest.tables[t] = { error: e.message };
       log(`  ${t.padEnd(22)} FAILED: ${e.message}`);
+    }
+  }
+
+  if (withAuth) {
+    try {
+      const users = await backupAuthUsers(client);
+      const body = Buffer.from(JSON.stringify(users, null, 1), 'utf8');
+      fs.writeFileSync(path.join(outDir, 'tables', 'auth.users.json'), body);
+      manifest.tables['auth.users'] = { rows: users.length, bytes: body.length, sha256: sha256(body), note: 'no password hashes: the auth API never returns them' };
+      log(`  ${'auth.users'.padEnd(22)} ${String(users.length).padStart(6)} rows`);
+    } catch (e) {
+      problems.push(e.message);
+      manifest.tables['auth.users'] = { error: e.message };
+      log(`  ${'auth.users'.padEnd(22)} FAILED: ${e.message}`);
     }
   }
 

@@ -10,7 +10,7 @@
 //   node scripts/backup-supabase.mjs --verify backups/supabase-<date>    (re-check an existing backup, no internet needed)
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-import { runBackup, verifyBackupFolder } from './supabase/backup-core.mjs';
+import { TABLES, runBackup, verifyBackupFolder, discoverTables } from './supabase/backup-core.mjs';
 
 const args = process.argv.slice(2);
 const verifyIdx = args.indexOf('--verify');
@@ -28,11 +28,21 @@ const client = createClient(url, key, { auth: { persistSession: false, autoRefre
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const outDir = path.join('backups', `supabase-${stamp}`);
 console.log(`Saving a copy of the NOOB data to ${outDir}\n`);
-const manifest = await runBackup({ client, outDir, withMedia: !args.includes('--no-media') });
+let tables = TABLES;
+try {
+  tables = await discoverTables(url, key);
+  console.log(`The project has ${tables.length} tables (the built-in list knows ${TABLES.length}): saving all of them.
+`);
+} catch (e) {
+  console.log(`WARNING: could not read the project's table list (${e.message}). Saving only the built-in list of ${TABLES.length} tables - that is NOT everything.
+`);
+  process.exitCode = 1;
+}
+const manifest = await runBackup({ client, outDir, tables, withAuth: true, withMedia: !args.includes('--no-media') });
 const check = verifyBackupFolder(outDir);
 const totalRows = Object.values(manifest.tables).reduce((s, t) => s + (t.rows || 0), 0);
 console.log(`\n${manifest.ok && check.ok ? 'BACKUP COMPLETE' : 'BACKUP FAILED'}: ${totalRows} rows in ${Object.keys(manifest.tables).length} tables, ${manifest.media.files} media files (${(manifest.media.bytes / 1048576).toFixed(1)} MB).`);
 for (const p of [...manifest.problems, ...check.problems]) console.log(` - ${p}`);
 console.log(`Folder: ${path.resolve(outDir)}`);
-process.exitCode = manifest.ok && check.ok ? 0 : 1;
+process.exitCode = manifest.ok && check.ok && !process.exitCode ? 0 : 1;
 setTimeout(() => process.exit(process.exitCode), 300);

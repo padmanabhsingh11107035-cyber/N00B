@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { runBackup, verifyBackupFolder, listMedia } from './backup-core.mjs';
+import { runBackup, verifyBackupFolder, listMedia, discoverTables, backupAuthUsers, TABLES } from './backup-core.mjs';
 
 let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
@@ -93,6 +93,31 @@ check(!v.ok && v.problems.some((p) => /posts: file is missing/.test(p)), 'a dele
 section('5. Listing files');
 const listed = await listMedia(fakeClient({ tables, files }));
 check(listed.length === 4 && listed.map((f) => f.key).sort().join() === ['avatars/b.png', 'posts/a.jpg', 'stories/deep/er/c.mp4', 'top.txt'].join(), 'every file in every folder is found', JSON.stringify(listed));
+
+section('6. Every table of the project is found, not only the built-in list');
+const swagger = (body, ok = true, status = 200) => async (u, init) => { swagger.last = { u, init }; return { ok, status, json: async () => body }; };
+let names = await discoverTables('https://x.supabase.co/', 'secret', swagger({ swagger: '2.0', definitions: { profiles: {}, chat_keys: {}, zz_new_table: {}, 'bad-name': {} }, paths: {} }));
+check(names.join() === 'chat_keys,profiles,zz_new_table', 'the names come from the project itself (sorted, odd names left out)', JSON.stringify(names));
+check(swagger.last.u === 'https://x.supabase.co/rest/v1/' && !swagger.last.init.method && swagger.last.init.headers.apikey === 'secret', 'it is one plain GET (nothing is written) with the key in the header');
+names = await discoverTables('https://x.supabase.co', 'secret', swagger({ paths: { '/': {}, '/messages': {}, '/rpc/do_something': {}, '/study_notes': {} } }));
+check(names.join() === 'messages,study_notes', 'when the project only lists paths, tables are read from them and the rpc functions are skipped', JSON.stringify(names));
+let threw = null; try { await discoverTables('https://x.supabase.co', 'secret', swagger({}, false, 402)); } catch (e) { threw = e.message; }
+check(/HTTP 402/.test(threw || ''), 'a refusal (for example while the project is restricted) is reported, never silently ignored', String(threw));
+check(TABLES.length >= 40 && new Set(TABLES).size === TABLES.length, 'the built-in list is still there as a fallback');
+
+section('7. The accounts are saved too');
+const manyUsers = Array.from({ length: 2300 }, (_, i) => ({ id: `u${i}`, email: `user${i}@example.com`, identities: [{ provider: 'google' }] }));
+const withAuth = Object.assign(fakeClient({ tables, files }), { auth: { admin: { listUsers: async ({ page, perPage }) => ({ data: { users: manyUsers.slice((page - 1) * perPage, page * perPage) }, error: null }) } } });
+check((await backupAuthUsers(withAuth)).length === 2300, 'every page of accounts is read (2300 accounts over three pages)');
+out = tmp();
+m = await runBackup({ client: withAuth, outDir: out, tables: ['profiles'], log: () => {}, withMedia: false, withAuth: true });
+check(m.ok && m.tables['auth.users'].rows === 2300 && JSON.parse(fs.readFileSync(path.join(out, 'tables', 'auth.users.json'), 'utf8')).length === 2300, 'the accounts are in the backup with the other tables');
+check(verifyBackupFolder(out).ok, 'and the finished backup, accounts included, verifies');
+const brokenAuth = Object.assign(fakeClient({ tables, files }), { auth: { admin: { listUsers: async () => ({ data: null, error: { message: 'not allowed' } }) } } });
+m = await runBackup({ client: brokenAuth, outDir: tmp(), tables: ['profiles'], log: () => {}, withMedia: false, withAuth: true });
+check(!m.ok && m.problems.some((p) => /auth users: not allowed/.test(p)), 'if the accounts can not be read, the backup says FAILED');
+m = await runBackup({ client: fakeClient({ tables, files }), outDir: tmp(), tables: ['profiles'], log: () => {}, withMedia: false });
+check(m.ok && !m.tables['auth.users'], '(control) without the accounts option nothing changes for the older callers');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exitCode = failed ? 1 : 0;

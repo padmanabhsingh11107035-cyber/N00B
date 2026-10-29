@@ -2,6 +2,8 @@
 
 A room for a family (or friends) where everybody sees everybody's live place on a detailed world map. Free, optional, shown only to the people in the room, and **end-to-end encrypted**.
 
+**Where to open it:** a round map-pin button on the Messages page (next to search and find-a-person), the Home menu entry, or the address below.
+
 **Address:** `https://noobsocials.com/family` (a page of its own, `family.html`) and the same screens inside the app (Home menu > Family Map). Open `https://noobsocials.com/family?demo=1` for a made-up demo that needs no account and no database. An invitation link looks like `https://noobsocials.com/family#join=K7QM2XPD` (the code sits after the `#`, so no server ever sees it).
 
 ## What a person sees

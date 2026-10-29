@@ -63,8 +63,10 @@ import {
   Paperclip,
   Film,
   UserCircle2,
-  Youtube
+  Youtube,
+  MapPinned
 } from 'lucide-react';
+import { openFamily, preloadFamily } from '../Family/familyStore';
 import { copyText, messageCopyText } from '../../utils/clipboard';
 import { showNotice } from '../../utils/likeSync';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
@@ -299,6 +301,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const callsOn = useFeatureOn('calls');   // the administrator can switch calls off
+  const familyOn = useFeatureOn('family'); // the administrator can switch Family Map off
   // True only when THIS person tapped "Start a call" themselves — false when the call screen was
   // opened by accepting someone else's ring (see the pendingCallChatId effect below). Controls
   // whether ChatCallModal rings the other chat members at all.
@@ -1819,6 +1822,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 className="w-[45px] h-[45px] rounded-full bg-[var(--head-btn)] hover:bg-[var(--head-btn-hover)] text-white flex items-center justify-center cursor-pointer transition-colors">
                 <UserPlus className="w-[21px] h-[21px]" strokeWidth={2.1} />
               </button>
+              {/* Family Map: rooms where a family or friends see each other live on a map (opens over the chats) */}
+              {familyOn && (
+                <button type="button" onClick={openFamily} onPointerDown={preloadFamily} aria-label="Family Map: see your family live on a map" title="Family Map" data-testid="messages-family-map"
+                  className="w-[45px] h-[45px] rounded-full bg-[var(--head-btn)] hover:bg-[var(--head-btn-hover)] text-white flex items-center justify-center cursor-pointer transition-colors">
+                  <MapPinned className="w-[21px] h-[21px]" strokeWidth={2.1} />
+                </button>
+              )}
             </div>
 
             {/* the people row: "Your Instant" first (it opens the camera), then the verified people you chat with (pinned first) in a mint ring */}

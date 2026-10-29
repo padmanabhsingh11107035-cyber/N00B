@@ -2,16 +2,20 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CloudOff, LogIn, RefreshCw, Sparkles, Wrench } from 'lucide-react';
 import './family.css';
 import { ERROR_TEXT, FamilyOffline, type FamilyApi, type FamilyRoom } from '../../family/api';
+import { backgroundSupported } from '../../family/background';
+import { backgroundWanted, locationAllowed, setAutoShare, setBackgroundWanted, setLocationAllowed } from '../../family/consent';
 import type { Fix, LatLng } from '../../family/geo';
 import { askForLocation, permissionState, type Problem } from '../../family/locate';
+import { restartTracker, startTracker, tracker } from '../../family/trackerLive';
 import { Gate } from './Gate';
 import { RoomView } from './RoomView';
 import { AllowSheet, CreateSheet, JoinSheet, MadeSheet } from './Sheets';
 import { Notice, Toast } from './parts';
 
 // NOOB Family Map: a room for a family (or friends) where everybody sees everybody's live place on a map. This file is the order of the screens:
-//   first page (earth + Create room / Join room + the rooms you are in) -> allow the location -> make a room (its code) or join one (type its code) -> the room's map.
-// A room stays on the person's account: opening the page later shows it in "Your rooms" and one tap enters it, no code to type again.
+//   first page (earth + Create room / Join room + the rooms you are in) -> allow the location (only the very first time) -> make a room (its code) or join one (type its code) -> the room's map.
+// A room stays on the person's account: opening the page later shows it in "Your rooms" and one tap enters it, no code to type again. The location is asked once; after that "Share my
+// location" is one switch the person can turn off whenever they want (and the phone's own settings can always take the permission away).
 type Step =
   | { s: 'boot' }
   | { s: 'offline'; kind: 'down' | 'setup' }
@@ -47,17 +51,21 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
   const [place, setPlace] = useState<Fix | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [share, setShare] = useState(true);
+  const [shareAll, setShareAll] = useState(true);
+  const [bgOn, setBgOn] = useState(backgroundWanted);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [made, setMade] = useState<FamilyRoom | null>(null);
   const [toast, setToast] = useState('');
   const invited = useRef(startCode);
   const say = useCallback((t: string): void => { setToast(t); window.setTimeout(() => setToast(''), 2800); }, []);
+  const live = api.mode === 'live';
 
   const refresh = useCallback(async (): Promise<boolean> => {
     try {
-      const list = await api.myRooms();
+      const [list, prefs] = await Promise.all([api.myRooms(), api.getPrefs()]);
       setRooms(list);
+      setShareAll(prefs.shareDefault);
       setStep((s) => (s.s === 'boot' || s.s === 'offline' ? { s: 'gate' } : s));
       return true;
     } catch (e) {
@@ -74,15 +82,24 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
   }, [loggedOut, refresh]);
 
   const found = (fix: Fix): void => { setPlace(fix); (api as FamilyApi & { setAnchor?: (p: LatLng) => void }).setAnchor?.(fix); };
+  // sharing is on for this person: remembered, so it starts by itself next time and the location is never asked again
+  const remember = async (): Promise<void> => {
+    setLocationAllowed(true);
+    if (live) { const uid = await api.userId(); if (uid) setAutoShare(uid, true); }
+  };
 
-  // Create / Join: if the browser already has the location permission nothing is asked; otherwise the "Turn on your location" step comes first
+  // Create / Join. The "Turn on your location" step comes only the very first time: when the person allowed it before (or the browser already says yes) the place is simply read, and when the
+  // person turned "Share my location" off, the room is made or joined without sharing and nothing is asked at all.
   const begin = async (next: 'create' | 'join'): Promise<void> => {
-    setError(''); setProblem(null); setShare(true);
-    if ((await permissionState()) === 'granted') {
+    setError(''); setProblem(null);
+    const prefs = await api.getPrefs();
+    setShareAll(prefs.shareDefault);
+    if (!prefs.shareDefault) { setShare(false); setStep({ s: next }); return; }
+    setShare(true);
+    if (locationAllowed() || (await permissionState()) === 'granted') {
       const a = await askForLocation();
-      if (a.ok) found(a.fix); else setShare(false);
-      setStep({ s: next });
-      return;
+      if ('fix' in a) { found(a.fix); setStep({ s: next }); return; }
+      setProblem(a.reason);
     }
     setStep({ s: 'allow', next });
   };
@@ -99,13 +116,13 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
     setBusy(true); setError('');
     const r = await api.createRoom(name, emoji, share);
     setBusy(false);
-    if (r.ok) { setMade(r.room); writeLast(r.room.id); setLastId(r.room.id); await refresh(); setStep({ s: 'made' }); } else setError(ERROR_TEXT[r.error]);
+    if (r.ok) { if (share) await remember(); setMade(r.room); writeLast(r.room.id); setLastId(r.room.id); await refresh(); setStep({ s: 'made' }); } else setError(ERROR_TEXT[r.error]);
   };
   const join = async (code: string): Promise<void> => {
     setBusy(true); setError('');
     const r = await api.joinRoom(code, share);
     setBusy(false);
-    if (r.ok) { await refresh(); open(r.room.id); } else setError(ERROR_TEXT[r.error]);
+    if (r.ok) { if (share) await remember(); await refresh(); open(r.room.id); } else setError(ERROR_TEXT[r.error]);
   };
   const gone = (why: 'left' | 'deleted' | 'removed'): void => {
     if (readLast()) writeLast('');
@@ -113,6 +130,27 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
     say(why === 'left' ? 'You left the room' : why === 'deleted' ? 'The room was deleted' : 'You are not in that room any more');
     setStep({ s: 'gate' });
     void refresh();
+  };
+
+  // the one switch: "Share my location" for all rooms (remembered, also for the rooms made or joined later)
+  const switchShareAll = async (on: boolean): Promise<void> => {
+    if (on) {
+      const a = await askForLocation();
+      if (!('fix' in a)) { say(a.reason === 'denied' ? 'Location is blocked. Allow it in your browser or phone settings.' : 'Could not find your place. Please try again.'); return; }
+      found(a.fix);
+    }
+    setShareAll(on);
+    const r = await api.setSharingAll(on);
+    if (!r.ok) { setShareAll(!on); say('Could not change that. Try again.'); return; }
+    if (live) { const uid = await api.userId(); if (uid) setAutoShare(uid, on && rooms.length > 0); }
+    if (on) { setLocationAllowed(true); void startTracker(api, true); } else tracker.stop();
+    void refresh();
+    say(on ? 'Sharing is on' : 'Sharing is off. Nobody sees where you are.');
+  };
+  const switchBackground = (on: boolean): void => {
+    setBgOn(on); setBackgroundWanted(on);
+    if (tracker.state().running) void restartTracker(api, true);
+    say(on ? 'NOOB keeps sharing when the app is closed' : 'Sharing stops when the app is closed');
   };
 
   const demo = api.mode === 'demo';
@@ -144,7 +182,8 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
   } else {
     body = (
       <>
-        <Gate rooms={rooms} lastId={lastId} place={place} demo={demo} onCreate={() => void begin('create')} onJoin={() => void begin('join')} onOpen={open} onBack={onClose} />
+        <Gate rooms={rooms} lastId={lastId} place={place} demo={demo} onCreate={() => void begin('create')} onJoin={() => void begin('join')} onOpen={open} onBack={onClose}
+          shareAll={shareAll} onShareAll={(on) => void switchShareAll(on)} bgSupported={backgroundSupported()} bgOn={bgOn} onBg={switchBackground} />
         {step.s === 'allow' && <AllowSheet next={step.next} problem={problem} busy={busy} onAllow={() => void allow(step.next)} onWithout={() => without(step.next)} onClose={() => setStep({ s: 'gate' })} />}
         {step.s === 'create' && <CreateSheet error={error} busy={busy} onCreate={(n, e) => void create(n, e)} onClose={() => setStep({ s: 'gate' })} />}
         {step.s === 'join' && <JoinSheet initial={startCode} error={error} busy={busy} sharing={share} onJoin={(c) => void join(c)} onClose={() => setStep({ s: 'gate' })} />}

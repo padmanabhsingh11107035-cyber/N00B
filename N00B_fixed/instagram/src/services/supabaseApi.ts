@@ -29,6 +29,7 @@ import type { DrawState, DrawSpinResult } from '../utils/noobDraw';
 import type { TeamMember, MyTeamApplication, TeamAdminState, TeamApplicationRow, ApplicationStatus } from '../utils/ourTeam';
 import { isTeamPhotoKey } from '../utils/ourTeam';
 import { createE2ee } from '../e2ee/service.ts';
+import { deviceLabel } from '../e2ee/label.ts';
 import { bindMessages } from '../e2ee/messages.ts';
 import { browserKeyStore } from '../e2ee/keyring.ts';
 import { markSeen, mergeSeen } from '../utils/seenContent';
@@ -2817,12 +2818,6 @@ const seenStore = {
   set: (k: string, v: string) => { try { localStorage.setItem(`noob_e2ee_seen_v1_${k}`, v); } catch { /* remembered next time */ } }
 };
 
-const deviceLabel = (): string => {
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iPhone/iPad' : /Windows/i.test(ua) ? 'Windows' : /Mac OS X/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Device';
-  const br = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'browser';
-  return `${os} · ${br}`;
-};
 
 const webLocks = typeof navigator !== 'undefined' ? (navigator as any).locks : undefined;
 

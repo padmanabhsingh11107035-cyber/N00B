@@ -108,6 +108,7 @@ import { LensHost } from './components/Lenses/LensHost';
 import { closeLenses, openLenses } from './components/Lenses/lensStore';
 import { BoothHost } from './components/Booth/BoothHost';
 import { FamilyHost } from './components/Family/FamilyHost';
+import { FamilyTracker } from './components/Family/FamilyTracker';
 import { closeBooth } from './components/Booth/boothStore';
 import { closeFamily } from './components/Family/familyStore';
 import { closeNoobDraw } from './components/Draw/drawStore';
@@ -2289,6 +2290,7 @@ export default function App() {
       }} />
       {/* Family Map: rooms where a family or friends see each other live on a map (opened from the Home menu; the same map is also the page /family) */}
       <FamilyHost />
+      <FamilyTracker />
       <TeamJoinHost currentUser={currentUser} />
       <StudyHost currentUser={currentUser} />
 

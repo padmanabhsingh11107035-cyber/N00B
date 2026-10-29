@@ -115,6 +115,10 @@ jobs:
       - name: Sync web build into the native project
         run: npx cap sync android
 
+      # Family Map keeps sharing when the app is closed through the plugin @capacitor-community/background-geolocation; this stops it from silently going missing from the app
+      - name: Check that the background location plugin is linked into the app
+        run: grep -q "capacitor-community-background-geolocation" android/capacitor.settings.gradle
+
       # Firebase Cloud Messaging config for push notifications (optional —
       # only written once the GOOGLE_SERVICES_JSON secret is set; Capacitor's
       # template already skips the google-services Gradle plugin cleanly

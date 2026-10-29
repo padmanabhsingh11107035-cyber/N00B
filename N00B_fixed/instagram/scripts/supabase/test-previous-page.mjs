@@ -69,6 +69,7 @@ const REVIEWED = new Set([
   'Profile/LiveProfilePictureModal.tsx|setPickedFile|setIsUploading(true)', 'Profile/ShareToChatModal.tsx|setSending|setDone(true)', 'Reels/ReelsView.tsx|setIsVideoBuffering|setVideoFailed(true)',
   'Team/TeamJoinPage.tsx|setError|setUploading(true)', 'Videos/VideoPlayer.tsx|setPlaying|setShowControls(true)', 'Videos/VideoPlayer.tsx|setFailed|setBuffering(true)',
   'src/context/MusicPlayerContext.tsx|setPlaybackError|setIsPlaying(true)', 'Games/GamePlayModal.tsx|setGameResult|setRematchRequested(true)',
+  'Family/FamilyMap.tsx|setProblem|setShare(true)', 'Support/GuestSupport.tsx|setConfirmEnd|setBusy(true)', // Family Map: the message about the location is cleared and sharing is on again; Guest support: the end-chat question is answered and the call is sent
   // a hand-over to something that cannot sit underneath
   'Chat/ChatView.tsx|setCallIsOutgoing|setShowCallModal(true)',                            // an incoming call replaces what was on screen
   'src/App.tsx|setLiveLoungeMeetingId|setShowLiveLoungeUpsell(true)',                      // a notification opens a page of another tab: the notification list closes (the tab is under it)

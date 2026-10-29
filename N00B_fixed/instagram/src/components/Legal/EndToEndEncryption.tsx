@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Lock, LockOpen, KeyRound, ShieldCheck, Smartphone, Eye, AlertTriangle, CheckCircle2, X, Users, FileWarning } from 'lucide-react';
+import { Lock, LockOpen, KeyRound, ShieldCheck, Smartphone, Eye, AlertTriangle, CheckCircle2, X, Users, FileWarning, MapPin } from 'lucide-react';
 
 interface EndToEndEncryptionProps {
   onClose: () => void;
@@ -135,6 +135,18 @@ export const EndToEndEncryption: React.FC<EndToEndEncryptionProps> = ({ onClose 
               <li>NOOB does not yet use a &ldquo;ratchet&rdquo; like Signal does. If somebody stole an unlocked phone together with its keys, they could open the messages stored for that phone.</li>
               <li>Encryption can not protect a chat from a person you sent it to (they can screenshot or share it), or from someone using your unlocked phone.</li>
               <li>Unless people compare their security codes, the server could in theory hand out a wrong public key. The code check in section 6 is what closes that gap.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-blue-400" />
+              8. Family Map places
+            </h3>
+            <ul className="list-disc pl-5 space-y-1 text-zinc-400">
+              <li>Your place in a Family Map room is locked the same way as a message: on your phone, for the devices of the people in that room, before it is sent. NOOB&apos;s servers keep only the locked place and can not read where you are.</li>
+              <li>What NOOB can still see: the room&apos;s name, who is in it, whether you are sharing, and when a place was last sent. Not where it was.</li>
+              <li>The same honest limits apply (no ratchet; the server hands out the public keys). A new member sees places from the next update after they join, and a person you remove stops getting new places at once.</li>
             </ul>
           </section>
 

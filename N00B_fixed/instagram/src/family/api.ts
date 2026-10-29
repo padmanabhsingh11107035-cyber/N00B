@@ -5,14 +5,14 @@ import type { Fix } from './geo.ts';
 
 export interface FamilyRoom {
   id: string; code: string; name: string; emoji: string; ownerId: string;
-  role: 'owner' | 'member'; sharing: boolean; memberCount: number; createdAt: string;
+  role: 'owner' | 'member'; sharing: boolean; memberCount: number; createdAt: string; locked: boolean;
 }
 export interface FamilyMember {
   id: string; name: string; username: string; avatar: string; role: 'owner' | 'member'; sharing: boolean; me: boolean;
   lat: number | null; lng: number | null; accuracy: number | null; heading: number | null; speed: number | null; updatedAt: string | null;
 }
 export type FamilyError =
-  | 'not_signed_in' | 'switched_off' | 'bad_name' | 'bad_code' | 'not_found' | 'too_many_tries' | 'room_full' | 'too_many_rooms' | 'not_member' | 'not_owner' | 'failed';
+  | 'not_signed_in' | 'switched_off' | 'bad_name' | 'bad_code' | 'not_found' | 'too_many_tries' | 'room_full' | 'too_many_rooms' | 'room_locked' | 'not_member' | 'not_owner' | 'failed';
 export type Outcome<T = object> = ({ ok: true } & T) | { ok: false; error: FamilyError };
 export interface RoomState { room: FamilyRoom; members: FamilyMember[]; now: number }
 
@@ -24,6 +24,14 @@ export class FamilyOffline extends Error {
 
 export interface FamilyApi {
   readonly mode: 'live' | 'demo';
+  /** the id of the person who is logged in (the "keep sharing" switch is remembered per person) */
+  userId(): Promise<string | null>;
+  /** the person's "share my location" switch: what a new room starts with */
+  getPrefs(): Promise<{ shareDefault: boolean }>;
+  /** "share my location" for all rooms at once */
+  setSharingAll(on: boolean): Promise<Outcome>;
+  /** the owner locks a room (nobody new can join) or unlocks it */
+  setLocked(roomId: string, on: boolean): Promise<Outcome>;
   myRooms(): Promise<FamilyRoom[]>;
   createRoom(name: string, emoji: string, share: boolean): Promise<Outcome<{ room: FamilyRoom }>>;
   joinRoom(code: string, share: boolean): Promise<Outcome<{ room: FamilyRoom }>>;
@@ -45,6 +53,7 @@ export const ERROR_TEXT: Record<FamilyError, string> = {
   too_many_tries: 'Too many wrong codes. Please wait 10 minutes and try again.',
   room_full: 'This room is full (20 people).',
   too_many_rooms: 'You are in 10 rooms already. Leave one first.',
+  room_locked: 'This room is locked, so nobody new can join. Ask the person who made it to unlock it.',
   not_member: 'You are not in this room any more.',
   not_owner: 'Only the person who made the room can do that.',
   failed: 'Something went wrong. Please try again.'
@@ -57,7 +66,7 @@ const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
 export function parseRoom(j: any): FamilyRoom {
   return {
     id: str(j?.id), code: str(j?.code), name: str(j?.name), emoji: str(j?.emoji), ownerId: str(j?.ownerId),
-    role: j?.role === 'owner' ? 'owner' : 'member', sharing: j?.sharing !== false, memberCount: num(j?.memberCount) ?? 1, createdAt: str(j?.createdAt)
+    role: j?.role === 'owner' ? 'owner' : 'member', sharing: j?.sharing !== false, memberCount: num(j?.memberCount) ?? 1, createdAt: str(j?.createdAt), locked: j?.locked === true
   };
 }
 /** `resolve` turns a stored picture into an address (services/supabase.ts resolveMedia); anything that is not an http(s), relative, data or blob address is dropped */

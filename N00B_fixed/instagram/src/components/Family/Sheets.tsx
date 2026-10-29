@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Check, Copy, KeyRound, Loader2, MapPin, Share2, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { Check, Copy, KeyRound, Loader2, Lock, MapPin, Share2, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import type { FamilyRoom } from '../../family/api';
 import { formatCode, isCode, normaliseCode } from '../../family/geo';
+import { backgroundSupported, openPhoneSettings } from '../../family/background';
 import type { Problem } from '../../family/locate';
 import { copyText, Modal, shareInvite } from './parts';
 
 // The steps between the first page and a room: ask for the location, make a room (and show its code), join with a code.
 const WHY = [
   { icon: <Users size={18} />, text: 'Only the people in your room can see where you are.' },
-  { icon: <ShieldCheck size={18} />, text: 'Pause sharing or leave the room whenever you want.' },
-  { icon: <MapPin size={18} />, text: 'Only your latest place is kept, never a trail of where you went.' }
+  { icon: <Lock size={18} />, text: 'Your place is locked on your phone (end-to-end encrypted): not even NOOB can read it. Only the latest place is kept, never a trail.' },
+  { icon: <ShieldCheck size={18} />, text: 'You allow it once. After that it stays on until you switch "Share my location" off.' }
 ];
 const PROBLEM_TEXT: Record<Problem, string> = {
   denied: 'Location is blocked for this site. Allow Location for NOOB in your browser or phone settings, then tap Try again.',
@@ -26,6 +27,7 @@ export const AllowSheet: React.FC<{ next: 'create' | 'join'; problem: Problem | 
       <p className="fm-lead">{next === 'create' ? 'Your room shows everyone on a live map, starting with you.' : 'To appear on the map for your family, NOOB needs to know where you are.'}</p>
       <ul className="fm-why">{WHY.map((w, i) => <li key={i}><span>{w.icon}</span>{w.text}</li>)}</ul>
       {problem && <p className="fm-warn" role="alert">{PROBLEM_TEXT[problem]}</p>}
+      {problem === 'denied' && backgroundSupported() && <button type="button" className="fm-btn fm-btn--glass" onClick={() => void openPhoneSettings()}>Open phone settings</button>}
       <button type="button" className="fm-btn fm-btn--primary" onClick={onAllow} disabled={busy} data-testid="family-allow">
         {busy ? <Loader2 size={19} className="fm-spin" /> : <MapPin size={19} />} {problem ? 'Try again' : 'Allow location'}
       </button>
@@ -76,7 +78,7 @@ export const MadeSheet: React.FC<{ room: FamilyRoom; origin: string; onOpen: () 
           <button type="button" className="fm-btn fm-btn--glass" onClick={async () => say((await copyText(formatCode(room.code))) ? 'Code copied' : 'Press and hold to copy')}><Copy size={18} /> Copy code</button>
         </div>
         <button type="button" className="fm-btn fm-btn--primary" onClick={onOpen} data-testid="family-open-map"><MapPin size={19} /> Open the map</button>
-        <p className="fm-note fm-note--tight" aria-live="polite">{note || 'Anyone with this code can join, so send it only to people you trust.'}</p>
+        <p className="fm-note fm-note--tight" aria-live="polite">{note || 'Anyone with this code can join, so send it only to people you trust. Lock the room in its menu once everybody is in.'}</p>
       </div>
     </Modal>
   );

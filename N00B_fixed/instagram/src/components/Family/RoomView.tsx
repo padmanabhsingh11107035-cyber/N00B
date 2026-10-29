@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Box, Layers, LocateFixed, LogOut, MapPinOff, MoreVertical, RefreshCw, Share2, Trash2, UserMinus, Users } from 'lucide-react';
+import { ArrowLeft, Box, Layers, LocateFixed, Lock, LogOut, MapPinOff, MoreVertical, RefreshCw, Share2, Trash2, UserMinus, Users } from 'lucide-react';
 import type { FamilyApi, RoomState } from '../../family/api';
-import { agoText, distanceM, formatCode, formatDistance, freshness, initialOf, pinHue, shouldPush, speedText, type Fix, type Freshness } from '../../family/geo';
-import { watchLocation, type Problem } from '../../family/locate';
+import { agoText, distanceM, formatCode, formatDistance, freshness, initialOf, pinHue, speedText, type Fix, type Freshness } from '../../family/geo';
+import { autoShareOn } from '../../family/consent';
+import type { Problem } from '../../family/locate';
+import { startTracker, tracker } from '../../family/trackerLive';
 import type { PinData } from '../../family/markers';
 import { keepAwake } from '../../booth/camera';
 import { MapCanvas, type MapApi, type MapLook } from './MapCanvas';
@@ -26,7 +28,7 @@ const savePrefs = (p: Prefs): void => { try { localStorage.setItem(PREFS_SLOT, J
 
 const PEEK = 184;
 const snaps = (): number[] => [PEEK, Math.round(window.innerHeight * 0.52), Math.round(window.innerHeight - 112)];
-const POLL_MS = 5000, HEARTBEAT_MS = 20000;
+const POLL_MS = 5000;
 
 export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, onGone }) => {
   const [data, setData] = useState<RoomState | null>(null);
@@ -45,12 +47,10 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
   const [toast, setToast] = useState('');
   const map = useRef<MapApi | null>(null);
   const fitted = useRef(false);
-  const lastPush = useRef<{ lat: number; lng: number; at: number } | null>(null);
   const fixRef = useRef<Fix | null>(place);
   const drag = useRef<{ y: number; h: number } | null>(null);
   const sharing = !!data && data.room.sharing;
-  const sharingRef = useRef(sharing);
-  sharingRef.current = sharing;
+  const knownIds = useRef<Set<string> | null>(null);
   const say = useCallback((t: string): void => { setToast(t); window.setTimeout(() => setToast(''), 2400); }, []);
 
   // ---- the room and its people, every 5 seconds while the page is on the screen
@@ -66,21 +66,26 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
     return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
   }, [load]);
 
-  // ---- this phone's own place: shown at once, sent when it moved (or every 20 seconds so a person standing still stays "live")
-  const push = useCallback((f: Fix): void => { lastPush.current = { lat: f.lat, lng: f.lng, at: Date.now() }; void api.pushLocation(f); }, [api]);
+  // ---- this phone's own place: the app's one tracker follows the phone and sends the place (locked) to the rooms the person shares with; this screen only shows "you" on the map
   useEffect(() => {
-    const stop = watchLocation((f) => {
-      fixRef.current = f; setFix(f); setGeo(null);
-      if (sharingRef.current && shouldPush(lastPush.current, f, Date.now())) push(f);
-    }, (p) => setGeo(p));
-    const beat = window.setInterval(() => {
-      const f = fixRef.current;
-      if (f && sharingRef.current && Date.now() - (lastPush.current?.at ?? 0) >= HEARTBEAT_MS) push({ ...f, at: Date.now() });
-    }, POLL_MS);
+    const off = tracker.subscribe((t) => { if (t.fix) { fixRef.current = t.fix; setFix(t.fix); } setGeo(t.problem); });
+    void startTracker(api, true);
     const clock = window.setInterval(() => setNow(Date.now()), 15000);
-    return () => { stop(); window.clearInterval(beat); window.clearInterval(clock); };
-  }, [push]);
-  useEffect(() => { if (sharing && fixRef.current) push(fixRef.current); }, [sharing, push]);
+    return () => {
+      off(); window.clearInterval(clock);
+      // the tracker goes on by itself when this person keeps sharing while NOOB is open; otherwise it stops with the screen
+      void api.userId().then((uid) => { if (!(api.mode === 'live' && uid && autoShareOn(uid))) tracker.stop(); });
+    };
+  }, [api]);
+  // a place goes out at once when sharing comes back on
+  useEffect(() => { if (sharing && fixRef.current) void api.pushLocation({ ...fixRef.current, at: Date.now() }); }, [sharing, api]);
+  // somebody new in the room
+  useEffect(() => {
+    if (!data) return;
+    const known = knownIds.current;
+    if (known) { const fresh = data.members.find((m) => !m.me && !known.has(m.id)); if (fresh) say(`${fresh.name} joined the room`); }
+    knownIds.current = new Set(data.members.map((m) => m.id));
+  }, [data, say]);
   useEffect(() => (prefs.awake ? keepAwake() : undefined), [prefs.awake]);
   useEffect(() => { if (!ask) return; const t = window.setTimeout(() => setAsk(''), 4000); return () => window.clearTimeout(t); }, [ask]);
   const update = (p: Partial<Prefs>): void => { const next = { ...prefs, ...p }; setPrefs(next); savePrefs(next); };
@@ -138,6 +143,12 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
     else if (kind === 'delete') { const r = await api.deleteRoom(roomId); if (r.ok) onGone('deleted'); else say('Could not delete. Try again.'); }
     else if (kind === 'code') { const r = await api.rotateCode(roomId); if (r.ok) { say('New code ready. The old one stopped working.'); void load(); } else say('Could not make a new code.'); }
     else { const r = await api.removeMember(roomId, userId); if (r.ok) { say('Removed from the room'); setSel(''); void load(); } else say('Could not remove. Try again.'); }
+  };
+  const lockRoom = async (on: boolean): Promise<void> => {
+    setData((d) => (d ? { ...d, room: { ...d.room, locked: on } } : d));
+    const r = await api.setLocked(roomId, on);
+    if (!r.ok) say('Could not change that. Try again.');
+    void load();
   };
   const setSharing = async (on: boolean): Promise<void> => {
     setData((d) => (d ? { ...d, room: { ...d.room, sharing: on } } : d));
@@ -204,9 +215,11 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
               <small>Room code</small>
               <button type="button" className="fm-code fm-code--sm" onClick={async () => say((await copyText(formatCode(room.code))) ? 'Code copied' : 'Press and hold to copy')}>{formatCode(room.code)}</button>
               <button type="button" className="fm-btn fm-btn--glass" onClick={() => void invite()}><Share2 size={17} /> Share invite</button>
+              <small className="fm-enc"><Lock size={12} /> Places in this room are end-to-end encrypted</small>
             </div>
             <div className="fm-line"><span><b>Share my location</b><small>{sharing ? 'People in this room see you on the map.' : 'Paused: nobody in this room sees you.'}</small></span><Switch on={sharing} onChange={(v) => void setSharing(v)} label="Share my location" /></div>
             <div className="fm-line"><span><b>Keep screen on</b><small>A website can only send your place while this page is open.</small></span><Switch on={prefs.awake} onChange={(v) => update({ awake: v })} label="Keep screen on" /></div>
+            {owner && <div className="fm-line"><span><b>Lock the room</b><small>{room.locked ? 'Locked: nobody new can join, even with the code.' : 'Lock it once everybody has joined, so the code cannot be used.'}</small></span><Switch on={room.locked} onChange={(v) => void lockRoom(v)} label="Lock the room" /></div>}
             {owner && <button type="button" className="fm-menu-btn" onClick={() => (ask === 'code' ? void run('code') : setAsk('code'))}><RefreshCw size={17} /> {ask === 'code' ? 'Tap again: old code stops working' : 'Make a new code'}</button>}
             <button type="button" className="fm-menu-btn fm-menu-btn--danger" onClick={() => (ask === 'leave' ? void run('leave') : setAsk('leave'))} data-testid="family-leave"><LogOut size={17} /> {ask === 'leave' ? 'Tap again to leave' : 'Leave room'}</button>
             {owner && <button type="button" className="fm-menu-btn fm-menu-btn--danger" onClick={() => (ask === 'delete' ? void run('delete') : setAsk('delete'))}><Trash2 size={17} /> {ask === 'delete' ? 'Tap again to delete for everyone' : 'Delete room for everyone'}</button>}

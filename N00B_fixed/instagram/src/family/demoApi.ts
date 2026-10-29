@@ -28,7 +28,7 @@ const WALKERS: Walker[] = [
 
 const ME_ID = 'demo-me';
 const mk = (id: string, name: string, emoji: string, role: 'owner' | 'member', count: number): FamilyRoom =>
-  ({ id, code: SAMPLE_CODE, name, emoji, ownerId: role === 'owner' ? ME_ID : 'demo-priya', role, sharing: true, memberCount: count, createdAt: new Date().toISOString() });
+  ({ id, code: SAMPLE_CODE, name, emoji, ownerId: role === 'owner' ? ME_ID : 'demo-priya', role, sharing: true, memberCount: count, createdAt: new Date().toISOString(), locked: false });
 
 export function createDemoApi(): FamilyApi & { setAnchor(p: LatLng): void } {
   let anchor: LatLng = FALLBACK, anchored = false, myFix: Fix | null = null;
@@ -66,6 +66,10 @@ export function createDemoApi(): FamilyApi & { setAnchor(p: LatLng): void } {
 
   return {
     mode: 'demo',
+    userId: async () => 'demo-me',
+    getPrefs: async () => ({ shareDefault: sharing }),
+    async setSharingAll(on) { sharing = on; rooms = rooms.map((r) => ({ ...r, sharing: on })); return { ok: true }; },
+    async setLocked(id, on) { rooms = rooms.map((r) => (r.id === id ? { ...r, locked: on } : r)); return { ok: true }; },
     setAnchor(p) { if (!anchored) { anchor = p; anchored = true; } },
     myRooms: () => wait(rooms.map((r) => ({ ...r }))),
     createRoom(name, emoji) {
@@ -79,6 +83,7 @@ export function createDemoApi(): FamilyApi & { setAnchor(p: LatLng): void } {
       const c = normaliseCode(code);
       if (!isCode(c)) return wait({ ok: false, error: 'bad_code' });
       if (c === 'AAAAAAAA') return wait({ ok: false, error: 'not_found' });
+      if (c === 'BBBBBBBB') return wait({ ok: false, error: 'room_locked' });
       const found = rooms.find((r) => r.code === c);
       if (found) return wait({ ok: true, room: found });
       const room = mk(`demo-room-${rooms.length + 1}`, 'Weekend Gang', '🎒', 'member', 4);

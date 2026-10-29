@@ -56,10 +56,12 @@ export const MapCanvas: React.FC<Props> = (props) => {
     let dead = false, spinRaf = 0, idleTimer = 0, paused = false;
     (async () => {
       try {
-        const [mod, style] = await Promise.all([import('maplibre-gl'), styleFor(latest.current.look)]);
+        const [mod, style, worker] = await Promise.all([import('maplibre-gl'), styleFor(latest.current.look), import('maplibre-gl/dist/maplibre-gl-worker.mjs?url')]);
         await import('maplibre-gl/dist/maplibre-gl.css');
         if (dead || !box.current) return;
         const gl: any = (mod as any).default ?? mod;
+        // the map's worker is a file of its own: the library looks for it next to itself, which is wrong once the build has renamed and moved the library, so it is told where the file really is
+        gl.setWorkerUrl(worker.default);
         libRef.current = gl;
         const globe = latest.current.variant === 'globe', el = box.current;
         const zoom0 = globe ? Math.max(0.2, Math.log2((Math.min(el.clientWidth, el.clientHeight) * 0.92 * Math.PI) / 512)) : 2;

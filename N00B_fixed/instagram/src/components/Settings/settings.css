@@ -1,0 +1,129 @@
+/* "Settings and activity", the premium look. The app's own black-and-white doodle theme stays: every colour here is taken from the theme's variables (the zinc scale, --page, --color-noob and the
+   doodle colour), so Dark and Light both follow. What changes is the build: a big title, a mood card, cards with a stitched edge, sticker-like icon tiles, springy switches, and pages that slide.
+   Every class starts with nst-; nothing here touches the rest of the app. People who asked for less motion get none (the last block). */
+.nst-root {
+  --nst-line: rgba(var(--doodle-rgb), 0.14);
+  --nst-line-strong: rgba(var(--doodle-rgb), 0.27);
+  --nst-wash: rgba(var(--doodle-rgb), 0.05);
+  --nst-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --nst-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- the bar on top: glass, with a hairline and a shadow that fade in once the page has been scrolled */
+.nst-header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--page) 74%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid transparent; transition: border-color 0.25s, box-shadow 0.25s; }
+.nst-header.is-stuck { border-bottom-color: var(--nst-line); box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.55); }
+.nst-header-in { max-width: 42rem; margin: 0 auto; padding: 0 14px; height: 64px; display: flex; align-items: center; gap: 12px; }
+.nst-back { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--color-zinc-900); border: 1.5px solid var(--nst-line-strong); box-shadow: 2px 2px 0 rgba(var(--doodle-rgb), 0.12); cursor: pointer; transition: transform 0.3s var(--nst-spring), border-color 0.2s, box-shadow 0.2s; }
+.nst-back:hover { border-color: rgba(var(--doodle-rgb), 0.55); }
+.nst-back:active { transform: translateX(-3px) scale(0.9); box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+.nst-back svg { transition: transform 0.3s var(--nst-spring); }
+.nst-back:hover svg { transform: translateX(-2px); }
+.nst-htitle { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nst-hsub { margin: 1px 0 0; font-size: 11.5px; color: var(--color-zinc-400); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nst-body { max-width: 42rem; margin: 0 auto; padding: 0 14px 96px; }
+
+/* ---------- the big title of the first screen, with a squiggle that draws itself */
+.nst-hero { padding: 20px 4px 2px; animation: nst-rise 0.6s var(--nst-ease) both; }
+.nst-hero .nst-big { margin: 0; font-size: 36px; line-height: 1.04; font-weight: 800; letter-spacing: -0.035em; }
+.nst-hero p { margin: 8px 0 0; font-size: 14.5px; line-height: 1.4; color: var(--color-zinc-400); }
+.nst-squiggle { display: block; width: 118px; height: 12px; margin-top: 6px; overflow: visible; }
+.nst-squiggle path { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 160; stroke-dashoffset: 160; animation: nst-draw 0.9s 0.3s var(--nst-ease) forwards; opacity: 0.85; }
+
+/* ---------- the search pill */
+.nst-search { position: relative; display: block; margin-top: 18px; animation: nst-rise 0.6s 0.05s var(--nst-ease) both; }
+.nst-search input { width: 100%; height: 52px; border-radius: 999px; padding: 0 46px 0 48px; font-size: 15px; color: inherit; background: var(--color-zinc-900); border: 1.5px solid var(--nst-line); outline: none; box-shadow: 2px 2px 0 rgba(var(--doodle-rgb), 0.08); transition: border-color 0.2s, box-shadow 0.3s, transform 0.35s var(--nst-spring); }
+.nst-search input::placeholder { color: var(--color-zinc-500); }
+.nst-search input:focus { border-color: var(--nst-line-strong); box-shadow: 0 0 0 6px rgba(var(--doodle-rgb), 0.07); transform: scale(1.012); }
+.nst-search > svg { position: absolute; left: 18px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--color-zinc-500); transition: color 0.2s, transform 0.35s var(--nst-spring); pointer-events: none; }
+.nst-search:focus-within > svg { color: inherit; transform: translateY(-50%) rotate(-12deg) scale(1.12); }
+.nst-clear { position: absolute; right: 12px; top: 50%; width: 28px; height: 28px; transform: translateY(-50%); display: grid; place-items: center; border-radius: 50%; color: var(--color-zinc-500); cursor: pointer; transition: background-color 0.2s, color 0.2s, transform 0.3s var(--nst-spring); }
+.nst-clear:hover { background: var(--nst-wash); color: inherit; }
+.nst-clear:active { transform: translateY(-50%) scale(0.85); }
+
+/* ---------- the mood card: dark or light with one tap, and the whole app is washed over by a circle that grows from the switch */
+.nst-mood { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 16px 16px 16px 16px; border-radius: 26px; text-align: left; width: 100%; cursor: pointer; color: inherit; background: linear-gradient(135deg, var(--color-zinc-900), color-mix(in srgb, var(--color-zinc-900) 62%, var(--page))); border: 1.5px solid var(--nst-line-strong); box-shadow: 3px 3px 0 rgba(var(--doodle-rgb), 0.08), 0 22px 40px -28px rgba(0, 0, 0, 0.7); animation: nst-rise 0.6s 0.1s var(--nst-ease) both; transition: transform 0.35s var(--nst-spring); }
+.nst-mood:active { transform: scale(0.985); }
+.nst-mood::before { content: ""; position: absolute; right: -34px; top: -40px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(closest-side, rgba(var(--doodle-rgb), 0.13), transparent); pointer-events: none; }
+.nst-orb { position: relative; flex: none; width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: var(--color-zinc-950); border: 1.5px solid var(--nst-line-strong); box-shadow: 2px 2px 0 rgba(var(--doodle-rgb), 0.15); overflow: hidden; }
+.nst-orb svg { position: absolute; width: 24px; height: 24px; transition: transform 0.6s var(--nst-spring), opacity 0.35s; }
+.nst-orb .sun { transform: rotate(-110deg) scale(0.3); opacity: 0; }
+.nst-orb .moon { transform: none; opacity: 1; }
+.nst-mood[data-mode="light"] .sun { transform: none; opacity: 1; }
+.nst-mood[data-mode="light"] .moon { transform: rotate(110deg) scale(0.3); opacity: 0; }
+.nst-mood-text { min-width: 0; flex: 1; }
+.nst-mood-text b { display: block; font-size: 16.5px; font-weight: 800; letter-spacing: -0.01em; }
+.nst-mood-text small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--color-zinc-400); }
+
+/* ---------- a section: a small doodle and a title, then a card with a stitched edge */
+.nst-sec { margin-top: 26px; animation: nst-rise 0.6s var(--nst-ease) both; animation-delay: calc(var(--i, 0) * 60ms + 150ms); }
+.nst-sec h2 { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0 8px 10px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-zinc-400); }
+.nst-sec h2 svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+.nst-card { position: relative; overflow: hidden; border-radius: 26px; background: var(--color-zinc-950); border: 1.5px solid var(--nst-line-strong); box-shadow: 3px 3px 0 rgba(var(--doodle-rgb), 0.08), 0 22px 40px -30px rgba(0, 0, 0, 0.7); }
+.nst-card::after { content: ""; position: absolute; inset: 5px; border-radius: 21px; border: 1.5px dashed rgba(var(--doodle-rgb), 0.09); pointer-events: none; }
+.nst-note-line { padding: 10px 12px 0; font-size: 11.5px; line-height: 1.5; color: var(--color-zinc-400); }
+
+/* ---------- a row: a sticker-like icon tile, the words, a small value, a chevron that leans forward */
+.nst-row { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; text-align: left; color: inherit; transition: background-color 0.15s, scale 0.28s var(--nst-spring); }
+.nst-row + .nst-row::before { content: ""; position: absolute; left: 72px; right: 16px; top: 0; height: 1px; background: var(--nst-line); }
+button.nst-row:hover { background: var(--nst-wash); }
+button.nst-row:active { background: rgba(var(--doodle-rgb), 0.1); }
+.nst-ico { position: relative; width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 15px; background: var(--color-zinc-900); border: 1.5px solid var(--nst-line-strong); box-shadow: 2px 2px 0 rgba(var(--doodle-rgb), 0.14); transition: transform 0.35s var(--nst-spring), box-shadow 0.2s; }
+button.nst-row:hover .nst-ico { transform: rotate(-4deg); }
+button.nst-row:active .nst-ico { transform: rotate(-9deg) scale(0.9); box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+.nst-ico--danger { color: #f87171; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.45); box-shadow: 2px 2px 0 rgba(239, 68, 68, 0.16); }
+.nst-words { min-width: 0; flex: 1; }
+.nst-label { display: block; font-size: 15.5px; font-weight: 700; line-height: 1.25; letter-spacing: -0.005em; }
+.nst-sub { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.38; color: var(--color-zinc-400); }
+.nst-value { flex: none; max-width: 42%; padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--color-zinc-300); background: var(--nst-wash); border: 1px solid var(--nst-line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nst-chev { width: 18px; height: 18px; flex: none; color: var(--color-zinc-500); transition: transform 0.35s var(--nst-spring), color 0.2s; }
+button.nst-row:hover .nst-chev { transform: translateX(3px); color: var(--color-zinc-300); }
+button.nst-row:active .nst-chev { transform: translateX(6px); }
+
+/* ---------- a switch with a thumb that stretches under the finger, and a tick that draws itself */
+.nst-switch { position: relative; flex: none; width: 56px; height: 34px; border-radius: 999px; cursor: pointer; background: var(--color-zinc-800); border: 1.5px solid var(--nst-line-strong); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28); transition: background-color 0.3s, border-color 0.3s, opacity 0.2s; }
+.nst-switch[aria-checked="true"], .nst-switch[data-on="true"] { background: var(--color-noob); border-color: var(--color-noob); }
+.nst-switch:disabled { opacity: 0.5; cursor: default; }
+.nst-switch i { position: absolute; top: 3px; left: 3px; width: 25px; height: 25px; border-radius: 999px; display: grid; place-items: center; background: var(--color-noob); box-shadow: 0 2px 7px rgba(0, 0, 0, 0.4); transition: left 0.4s var(--nst-spring), width 0.22s var(--nst-ease), background-color 0.3s; }
+.nst-switch[aria-checked="true"] i, .nst-switch[data-on="true"] i { left: 26px; background: var(--page); }
+.nst-switch:active:not(:disabled) i { width: 32px; }
+.nst-switch[aria-checked="true"]:active:not(:disabled) i { left: 19px; }
+.nst-switch i svg { width: 13px; height: 13px; fill: none; stroke: var(--color-noob); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; transition: stroke-dashoffset 0.35s 0.08s var(--nst-ease); }
+.nst-switch[aria-checked="true"] i svg, .nst-switch[data-on="true"] i svg { stroke-dashoffset: 0; }
+
+/* ---------- one choice out of a few: a ring that fills */
+.nst-radio { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--color-zinc-600); transition: border-color 0.2s, background-color 0.25s, transform 0.4s var(--nst-spring); }
+.nst-radio i { width: 10px; height: 10px; border-radius: 50%; background: var(--page); transform: scale(0); transition: transform 0.4s var(--nst-spring); }
+.nst-radio[data-on="true"] { border-color: var(--color-noob); background: var(--color-noob); transform: scale(1.08); }
+.nst-radio[data-on="true"] i { transform: scale(1); }
+
+/* ---------- a note, and the little button */
+.nst-note { margin-top: 18px; display: flex; gap: 10px; padding: 13px 15px; border-radius: 20px; border: 1.5px dashed var(--nst-line-strong); background: var(--nst-wash); color: var(--color-zinc-300); font-size: 12.5px; line-height: 1.55; animation: nst-rise 0.5s var(--nst-ease) both; }
+.nst-note[data-tone="bad"] { border-color: rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.1); color: #fca5a5; }
+.nst-note[data-tone="good"] { border-color: rgba(16, 185, 129, 0.45); background: rgba(16, 185, 129, 0.1); color: #6ee7b7; }
+.nst-pill { transition: background-color 0.1s, transform 0.3s var(--nst-spring), border-color 0.1s; }
+
+/* the title in the bar of the first screen shows itself once the big one has scrolled away */
+.nst-late { opacity: 0; transform: translateY(6px); transition: opacity 0.25s, transform 0.3s var(--nst-ease); }
+.is-stuck .nst-late { opacity: 1; transform: none; }
+/* sections that a page draws one after the other come in one after the other */
+.nst-body > .nst-sec:nth-of-type(2) { --i: 1; } .nst-body > .nst-sec:nth-of-type(3) { --i: 2; } .nst-body > .nst-sec:nth-of-type(4) { --i: 3; }
+.nst-body > .nst-sec:nth-of-type(5) { --i: 4; } .nst-body > .nst-sec:nth-of-type(6) { --i: 5; } .nst-body > .nst-sec:nth-of-type(7) { --i: 6; }
+
+/* ---------- pages: the next one slides in from the right, going back slides in from the left */
+.nst-page { animation: nst-in-fwd 0.4s var(--nst-ease) both; }
+.nst-page.back { animation-name: nst-in-back; }
+
+/* ---------- the circle that washes over the app when the mood changes (the browser's own view transition, only while one runs) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
+@keyframes nst-rise { from { opacity: 0; transform: translateY(16px) scale(0.985); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes nst-draw { to { stroke-dashoffset: 0; } }
+@keyframes nst-in-fwd { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: none; } }
+@keyframes nst-in-back { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .nst-root *, .nst-root *::before, .nst-root *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important; }
+  .nst-squiggle path { stroke-dashoffset: 0; }
+}

@@ -1115,7 +1115,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
             <>
           {/* A hosted game (its own page) is added here, out of sight, as soon as its page opens, and shown when Play is pressed */}
           {game.embedUrl && (currentMode === 'select_mode' || currentMode === 'play_bot') && (
-            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} lazy={game.embedLazy} portrait={game.embedPortrait} ranking={game.id === 'color_sort' ? 'color-sort' : undefined} />
+            <HostedGameFrame url={game.embedUrl} title={game.title} visible={currentMode === 'play_bot'} lazy={game.embedLazy} portrait={game.embedPortrait} ranking={game.id === 'color_sort' ? 'color-sort' : game.id === 'brick_escape' ? 'brick-escape' : undefined} />
           )}
 
           {/* 1. SELECT MODE VIEW */}

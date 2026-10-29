@@ -259,6 +259,8 @@ export {
   helixLeaderboard,
   colorSortLevelDone,
   colorSortLeaderboard,
+  brickEscapeLevelDone,
+  brickEscapeLeaderboard,
   sendGameInvite,
   joinGameRoom,
   getGameRoom,

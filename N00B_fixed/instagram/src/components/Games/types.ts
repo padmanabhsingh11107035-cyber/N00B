@@ -114,6 +114,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: BRICK ESCAPE (a sliding-brick puzzle on its own page, /games/brick-escape/, shown in a frame; the source is the page itself, public/games/brick-escape, and the solver that made and checked its levels is in brick-escape/) ---
+  {
+    id: 'brick_escape',
+    title: 'Brick Escape',
+    category: 'puzzle',
+    description: 'A tray full of studded bricks, with doors in its walls. Slide the bricks out of the way and out through the door of their own colour until the tray is empty. 40 levels, from one brick to a packed tray with big bricks and wide doors, and every one can be won. Win up to 3 stars (the fewer moves the better), ask for a hint, undo as often as you like, and climb the ranking: the highest level each player has cleared.',
+    bannerBg: 'from-[#7a66ff] to-[#14113d]',
+    badgeColor: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'brickescape',
+    tags: ['Puzzle', 'Sliding', 'Bricks'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Drag a brick to slide it, or flick it to send it all the way. Tap a brick to see which ways it can go. Slide a brick into the door of its colour to send it out; clear the tray to win. Hint, Undo, Restart, Sound and the Ranking (trophy) are at the top; tap Level to pick any level you have reached. It has its own sounds (the speaker button).',
+    embedUrl: '/games/brick-escape/',
+    posters: [
+      '/game-posters/brick-escape/01-cover.webp',
+      '/game-posters/brick-escape/02-slide.webp',
+      '/game-posters/brick-escape/03-doors.webp'
+    ]
+  },
+
   // --- NEW: CRITTER KART (a 3D item kart racer on its own page, /games/critterkart/, shown in a frame — see minigames/HostedGameFrame and utils/critterWarmup) ---
   {
     id: 'critter_kart',

@@ -216,7 +216,7 @@ check(handlerVoids <= 2, 'the page buttons hand their promise to the button, so 
 check(/getCachedList\(kind\)/.test(account) && /getCachedList\('muted'\)/.test(read('src/components/Settings/pages/see.tsx')) && /export function warmLists/.test(read('src/services/settingsApi.ts')) && /warmLists\(\)/.test(hub), 'lists of people that were opened before (or warmed in the background) show at once, and refresh quietly');
 check(/Promise\.all\(ids\.map\(/.test(account) && /if \(ready\.length > 0\) \{ setPeople\(ready\); return; \}/.test(interact), 'Blocked asks for everybody at the same time, and Invite starts from the people the app already has');
 check(/const OrdersView = lazy\(/.test(read('src/components/Settings/pages/support.tsx')), 'the orders list (a big part of the shop) is fetched only when that page is opened');
-check(/animate-in fade-in duration-150/.test(hub), 'a page fades in instead of jumping');
+check(/nst-page\$\{goingBack \? ' back' : ''\}/.test(hub) && /@keyframes nst-in-fwd/.test(read('src/components/Settings/settings.css')) && /@keyframes nst-in-back/.test(read('src/components/Settings/settings.css')), 'a page slides in (from the right going deeper, from the left going back) instead of jumping');
 
 section('10b. About NOOB stays inside the app');
 check(/'about-noob': AboutNoobPage/.test(pagesIndex) && /export const AboutNoobPage/.test(read('src/components/Settings/pages/support.tsx')) && /go\('about-noob'\)/.test(read('src/components/Settings/pages/support.tsx')), 'the About row opens the About NOOB page inside Settings, so Back comes back to the page before');

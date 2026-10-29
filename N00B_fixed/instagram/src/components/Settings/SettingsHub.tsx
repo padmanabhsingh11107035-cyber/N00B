@@ -1,13 +1,50 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { ArrowLeft, Moon, Search, Sun, X } from 'lucide-react';
 import { useFullPage } from '../../utils/fullPage';
-import { PageLoading, Row, Section } from './kit';
+import { PageLoading, Row, Section, useStuck } from './kit';
 import { LoginApprovalRow } from './LoginApprovalRow';
 import { ROWS, SECTIONS, searchRows, type RowDef } from './registry';
 import { useFeaturesOff } from '../../utils/featureFlags';
 import { PAGES } from './pages';
 import { loadSettings, useAccountSettings, warmLists } from '../../services/settingsApi';
 import type { SettingsContext } from './types';
+import { getThemePreference, resolveTheme, setThemePreference, subscribeToTheme } from '../../utils/theme';
+
+// Dark or light with one tap: the new mood is washed over the whole app by a circle that grows from the switch (the browser's own view transition; where there is none, or for people who
+// asked for less motion, the mood just changes).
+function changeMood(next: 'dark' | 'light', x: number, y: number): void {
+  const doc = document as Document & { startViewTransition?: (update: () => void) => { ready: Promise<unknown> } };
+  const calm = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!doc.startViewTransition || calm) { setThemePreference(next); return; }
+  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const transition = doc.startViewTransition(() => setThemePreference(next));
+  void transition.ready.then(() => {
+    (document.documentElement as unknown as { animate: (k: unknown, o: unknown) => unknown }).animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+      { duration: 720, easing: 'cubic-bezier(.3, .7, .2, 1)', pseudoElement: '::view-transition-new(root)' }
+    );
+  }).catch(() => undefined);
+}
+
+const MoodCard: React.FC = () => {
+  const [mode, setMode] = useState<'dark' | 'light'>(() => resolveTheme(getThemePreference()));
+  useEffect(() => subscribeToTheme((_pref, resolved) => setMode(resolved)), []);
+  const flip = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const sw = e.currentTarget.querySelector('.nst-switch')?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect();
+    changeMood(mode === 'dark' ? 'light' : 'dark', sw.left + sw.width / 2, sw.top + sw.height / 2);
+    try { navigator.vibrate?.(8); } catch { /* not on this device */ }
+  };
+  return (
+    <button type="button" className="nst-mood" data-mode={mode} onClick={flip} role="switch" aria-checked={mode === 'dark'} aria-label="Dark mode" data-testid="settings-mood">
+      <span className="nst-orb"><Moon className="moon" /><Sun className="sun" /></span>
+      <span className="nst-mood-text">
+        <b>Dark mode</b>
+        <small>{mode === 'dark' ? 'On: easy on the eyes. Tap to switch the mood.' : 'Off: the paper look. Tap to switch the mood.'}</small>
+      </span>
+      <span className="nst-switch" data-on={mode === 'dark'} aria-hidden="true"><i><svg viewBox="0 0 16 16"><path d="M3.4 8.6 6.6 11.7 12.6 4.7" /></svg></i></span>
+    </button>
+  );
+};
 
 // "Settings and activity": a full-screen page opened from the profile's three dots. The first screen is the list of everything (with a search box); each row opens its own page,
 // and some pages open more pages. It is a stack of pages like any other in the app: the phone's back button, a back swipe and the Back arrow all go up one page, and from the
@@ -25,6 +62,8 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   stackRef.current = stack;
   const pushed = useRef(false);
   const scroller = useRef<HTMLDivElement | null>(null);
+  const [mark, stuck] = useStuck();
+  const lastDepth = useRef(0);
   const settings = useAccountSettings();
   useFullPage(true);
 
@@ -78,6 +117,9 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
 
   // every page starts at its top
   useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [stack.length]);
+  // going deeper slides the next page in from the right, going back slides it in from the left
+  const goingBack = stack.length < lastDepth.current;
+  useEffect(() => { lastDepth.current = stack.length; }, [stack.length]);
 
   // Escape = Back
   useEffect(() => {
@@ -109,49 +151,57 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   const current = stack[stack.length - 1];
   const Page = current ? PAGES[current] : null;
 
+  let section = 0;
   const view = (
-    <div ref={scroller} className="fixed inset-0 z-[45] bg-page doodle-wallpaper overflow-y-auto text-white" role="region" aria-label="Settings and activity" data-testid="settings-hub">
+    <div ref={scroller} className="nst-root fixed inset-0 z-[45] bg-page doodle-wallpaper overflow-y-auto text-white" role="region" aria-label="Settings and activity" data-testid="settings-hub">
       {Page ? (
         <Suspense fallback={<PageLoading />}>
-          <div key={current} className="animate-in fade-in duration-150"><Page ctx={ctx} go={go} back={back} /></div>
+          <div key={current} className={`nst-page${goingBack ? ' back' : ''}`}><Page ctx={ctx} go={go} back={back} /></div>
         </Suspense>
       ) : (
-        <div className="min-h-full">
-          <header className="sticky top-0 z-10 bg-page/95 backdrop-blur-md border-b border-white/10">
-            <div className="max-w-2xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-3">
-              <button type="button" onClick={back} aria-label="Back" data-testid="settings-back" className="w-10 h-10 shrink-0 rounded-full border border-white/25 bg-zinc-900/90 hover:border-white/60 flex items-center justify-center text-white cursor-pointer transition-colors">
+        <div className={`min-h-full nst-page${goingBack ? ' back' : ''}`}>
+          <div ref={mark} className="h-px -mb-px" aria-hidden="true" />
+          <header className={`nst-header${stuck ? ' is-stuck' : ''}`}>
+            <div className="nst-header-in">
+              <button type="button" onClick={back} aria-label="Back" data-testid="settings-back" className="nst-back">
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h1 className="text-lg font-black tracking-tight truncate">Settings and activity</h1>
+              <h1 className="nst-htitle nst-late">Settings and activity</h1>
             </div>
           </header>
-          <div className="max-w-2xl mx-auto px-3 sm:px-4 pb-24">
-            <label className="relative block mt-4">
-              <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <div className="nst-body">
+            <div className="nst-hero">
+              <h2 className="nst-big">Settings</h2>
+              <svg className="nst-squiggle" viewBox="0 0 120 12" aria-hidden="true"><path d="M3 7c7-7 12-7 19 0s12 7 19 0 12-7 19 0 12 7 19 0 12-7 19 0" /></svg>
+              <p>Your account, your look, your rules, and everything you did on NOOB.</p>
+            </div>
+            <label className="nst-search">
+              <Search />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search settings"
                 aria-label="Search settings"
                 data-testid="settings-search"
-                className="w-full bg-zinc-900/95 border border-white/15 focus:border-white/50 rounded-full pl-11 pr-10 py-3 text-sm text-white outline-none placeholder:text-zinc-500"
               />
-              {query && <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>}
+              {query && <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="nst-clear"><X className="w-4 h-4" /></button>}
             </label>
+
+            {!query.trim() && <MoodCard />}
 
             {query.trim() ? (
               found.length === 0 ? (
                 <p className="text-center text-sm text-zinc-400 py-14">Nothing matches &ldquo;{query.trim()}&rdquo;.</p>
               ) : (
-                <Section title={`${found.length} result${found.length === 1 ? '' : 's'}`}>{found.map(renderRow)}</Section>
+                <Section index={0} title={`${found.length} result${found.length === 1 ? '' : 's'}`}>{found.map(renderRow)}</Section>
               )
             ) : (
               SECTIONS.map((title) => {
                 const list = rows.filter((r) => r.section === title);
-                return list.length ? <Section key={title} title={title}>{list.map(renderRow)}</Section> : null;
+                return list.length ? <Section key={title} index={section++} title={title}>{list.map(renderRow)}</Section> : null;
               })
             )}
-            <p className="text-center text-[11px] text-zinc-600 pt-8">NOOB Socials &middot; run by students</p>
+            <p className="text-center text-[11px] text-zinc-600 pt-9">NOOB Socials &middot; run by students</p>
           </div>
         </div>
       )}

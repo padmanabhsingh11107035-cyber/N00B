@@ -3,40 +3,64 @@ import { ArrowLeft, ChevronRight, Info, Loader2, Search, X } from 'lucide-react'
 import type { User } from '../../types';
 import { fetchUsers } from '../../services/api';
 import { NoobStackLoader } from '../Common/NoobStackLoader';
+import './settings.css';
 
 // The small building blocks every page of "Settings and activity" is made from, so all of them look and behave the same: a page with a Back button, sections
 // drawn as rounded cards, rows (with an icon, a value and a chevron, or a switch), choices, notes, and a list of people with a search to add more.
 // The look is the app's own black-and-white doodle style (stitched card edges, bold white text, white accent) - nothing here comes from anywhere else.
 
-export const PageShell: React.FC<{ title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; subtitle?: string }> = ({ title, onBack, children, right, subtitle }) => (
-  <div className="min-h-full">
-    <header className="sticky top-0 z-10 bg-page/95 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 h-16 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back"
-          data-testid="settings-back"
-          className="w-10 h-10 shrink-0 rounded-full border border-white/25 bg-zinc-900/90 hover:border-white/60 flex items-center justify-center text-white cursor-pointer transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-black tracking-tight text-white truncate">{title}</h1>
-          {subtitle && <p className="text-[11px] text-zinc-400 truncate -mt-0.5">{subtitle}</p>}
-        </div>
-        {right}
-      </div>
-    </header>
-    <div className="max-w-2xl mx-auto px-3 sm:px-4 pb-24">{children}</div>
-  </div>
-);
+/** true once the page has been scrolled a little: the bar on top then shows its hairline and shadow (the mark is a 1 px strip at the very top of the page) */
+export function useStuck() {
+  const mark = useRef<HTMLDivElement | null>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const el = mark.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => setStuck(!entry.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return [mark, stuck] as const;
+}
 
-export const Section: React.FC<{ title?: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
-  <section className="mt-5">
-    {title && <h2 className="px-2 pb-2 text-[11px] font-extrabold uppercase tracking-[.14em] text-zinc-400">{title}</h2>}
-    <div className="relative rounded-3xl bg-zinc-950/95 border border-white/15 overflow-hidden divide-y divide-white/10">{children}</div>
-    {note && <p className="px-3 pt-2 text-[11.5px] leading-relaxed text-zinc-400">{note}</p>}
+export const PageShell: React.FC<{ title: string; onBack: () => void; children: React.ReactNode; right?: React.ReactNode; subtitle?: string }> = ({ title, onBack, children, right, subtitle }) => {
+  const [mark, stuck] = useStuck();
+  return (
+    <div className="nst-root min-h-full">
+      <div ref={mark} className="h-px -mb-px" aria-hidden="true" />
+      <header className={`nst-header${stuck ? ' is-stuck' : ''}`}>
+        <div className="nst-header-in">
+          <button type="button" onClick={onBack} aria-label="Back" data-testid="settings-back" className="nst-back">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="nst-htitle">{title}</h1>
+            {subtitle && <p className="nst-hsub">{subtitle}</p>}
+          </div>
+          {right}
+        </div>
+      </header>
+      <div className="nst-body">{children}</div>
+    </div>
+  );
+};
+
+// a small hand-drawn doodle in front of every section title (one of six, the same one for the same title)
+const DOODLES = [
+  'M12 3.4l2.5 5.3 5.7.7-4.2 4 1.1 5.7L12 16.3 6.9 19.1 8 13.4 3.8 9.4l5.7-.7z',
+  'M3 15c1.8-5.4 3.7-5.4 5.5-.4s3.7 5.4 5.5.3 3.7-5.2 6-.4',
+  'M12 20.2s-7.2-4.5-7.2-9.9A4.1 4.1 0 0 1 12 7.7a4.1 4.1 0 0 1 7.2 2.6c0 5.4-7.2 9.9-7.2 9.9z',
+  'M12 3.5v4.2M12 16.3v4.2M3.5 12h4.2M16.3 12h4.2M6 6l2.9 2.9M15.1 15.1 18 18M18 6l-2.9 2.9M8.9 15.1 6 18',
+  'M5 15.5c-2.2-3 .6-8 4.8-6.6 3.8 1.3 2.3 6.4-1.3 5.6-2.9-.6-2-4.4.7-4.3 3.2.1 5.9 2.8 9.8 1.1',
+  'M4 17.5c4.2-.8 6.6-5 7.6-10.2M11.6 7.3l-.3 5.4M11.6 7.3l5.2 2'
+];
+const doodleFor = (text: string): string => { let h = 0; for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return DOODLES[h % DOODLES.length]; };
+
+export const Section: React.FC<{ title?: string; note?: string; children: React.ReactNode; index?: number }> = ({ title, note, children, index }) => (
+  <section className="nst-sec" style={index === undefined ? undefined : ({ ['--i' as string]: Math.min(index, 9) } as React.CSSProperties)}>
+    {title && <h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d={doodleFor(title)} /></svg>{title}</h2>}
+    <div className="nst-card">{children}</div>
+    {note && <p className="nst-note-line">{note}</p>}
   </section>
 );
 
@@ -70,34 +94,37 @@ function useBusy(): [boolean, (run: (() => unknown) | undefined) => void] {
   return [busy, start];
 }
 
-const PRESS = 'hover:bg-white/[.04] active:bg-white/[.1] active:scale-[.985] transition-[background-color,transform] duration-100 touch-manipulation';
+const PRESS = 'active:scale-[.985] touch-manipulation';
 
 export const Row: React.FC<RowProps> = ({ icon: Icon, label, sub, value, onClick, danger, right, chevron = true, disabled, testId }) => {
   const [busy, start] = useBusy();
   const inner = (
     <>
       {Icon && (
-        <span className={`w-9 h-9 shrink-0 rounded-xl border flex items-center justify-center ${danger ? 'border-red-500/40 bg-red-500/10 text-red-400' : 'border-white/20 bg-zinc-900 text-white'}`}>
-          <Icon className="w-[18px] h-[18px]" />
+        <span className={`nst-ico${danger ? ' nst-ico--danger' : ''}`}>
+          <Icon className="w-5 h-5" />
         </span>
       )}
-      <span className="min-w-0 flex-1">
-        <span className={`block text-[15px] font-bold leading-snug ${danger ? 'text-red-400' : 'text-white'}`}>{label}</span>
-        {sub && <span className="block text-xs text-zinc-400 leading-snug mt-0.5">{sub}</span>}
+      <span className="nst-words">
+        <span className={`nst-label ${danger ? 'text-red-400' : 'text-white'}`}>{label}</span>
+        {sub && <span className="nst-sub">{sub}</span>}
       </span>
-      {value && <span className="shrink-0 max-w-[40%] truncate text-[13px] text-zinc-400">{value}</span>}
+      {value && <span className="nst-value">{value}</span>}
       {right}
       {onClick && busy && <Loader2 className="w-5 h-5 shrink-0 text-zinc-300 animate-spin" aria-label="Working" />}
-      {onClick && !busy && chevron && !right && <ChevronRight className="w-5 h-5 shrink-0 text-zinc-500" />}
+      {onClick && !busy && chevron && !right && <ChevronRight className="nst-chev" />}
     </>
   );
-  if (!onClick) return <div className="flex items-center gap-3 px-4 py-3.5" data-testid={testId}>{inner}</div>;
+  if (!onClick) return <div className="nst-row" data-testid={testId}>{inner}</div>;
   return (
-    <button type="button" onClick={() => start(onClick)} disabled={disabled} aria-busy={busy} data-testid={testId} className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${PRESS} cursor-pointer disabled:opacity-50 disabled:cursor-default`}>
+    <button type="button" onClick={() => start(onClick)} disabled={disabled} aria-busy={busy} data-testid={testId} className={`nst-row ${PRESS} cursor-pointer disabled:opacity-50 disabled:cursor-default`}>
       {inner}
     </button>
   );
 };
+
+/** a short buzz under the finger on phones that can (not everywhere) */
+const buzz = (ms = 6): void => { try { navigator.vibrate?.(ms); } catch { /* not on this device */ } };
 
 export const Switch: React.FC<{ on: boolean; onChange: (next: boolean) => void; label: string; disabled?: boolean }> = ({ on, onChange, label, disabled }) => (
   <button
@@ -106,10 +133,10 @@ export const Switch: React.FC<{ on: boolean; onChange: (next: boolean) => void; 
     aria-checked={on}
     aria-label={label}
     disabled={disabled}
-    onClick={(e) => { e.stopPropagation(); onChange(!on); }}
-    className={`relative w-11 h-6 shrink-0 rounded-full border transition-colors cursor-pointer disabled:opacity-50 ${on ? 'bg-white border-white' : 'bg-zinc-800 border-white/25'}`}
+    onClick={(e) => { e.stopPropagation(); buzz(); onChange(!on); }}
+    className="nst-switch"
   >
-    <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full transition-all ${on ? 'left-[22px] bg-black' : 'left-[2px] bg-white'}`} />
+    <i><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.6 6.6 11.7 12.6 4.7" /></svg></i>
   </button>
 );
 
@@ -156,13 +183,13 @@ export function Choice<T extends string>({ value, onChange, options, disabled }:
             disabled={disabled}
             data-testid={`choice-${o.value}`}
             onClick={() => { if (!on) pick(o.value); }}
-            className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${PRESS} cursor-pointer disabled:opacity-50`}
+            className={`nst-row ${PRESS} cursor-pointer disabled:opacity-50`}
           >
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-bold text-white leading-snug">{o.label}</span>
-              {o.sub && <span className="block text-xs text-zinc-400 leading-snug mt-0.5">{o.sub}</span>}
+            <span className="nst-words">
+              <span className="nst-label text-white">{o.label}</span>
+              {o.sub && <span className="nst-sub">{o.sub}</span>}
             </span>
-            <span className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${on ? 'border-white' : 'border-zinc-600'}`}>{on && <span className="w-2.5 h-2.5 rounded-full bg-white" />}</span>
+            <span className="nst-radio" data-on={on}><i /></span>
           </button>
         );
       })}
@@ -171,7 +198,7 @@ export function Choice<T extends string>({ value, onChange, options, disabled }:
 }
 
 export const Note: React.FC<{ children: React.ReactNode; tone?: 'info' | 'good' | 'bad' }> = ({ children, tone = 'info' }) => (
-  <div role="status" className={`mt-4 flex gap-2.5 rounded-2xl border border-dashed px-3.5 py-3 text-[12.5px] leading-relaxed ${tone === 'bad' ? 'border-red-500/40 bg-red-500/10 text-red-300' : tone === 'good' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-white/25 bg-white/[.03] text-zinc-300'}`}>
+  <div role="status" data-tone={tone} className="nst-note">
     <Info className="w-4 h-4 shrink-0 mt-0.5" />
     <div className="min-w-0">{children}</div>
   </div>
@@ -212,7 +239,7 @@ export const SmallButton: React.FC<{ onClick: () => unknown; children: React.Rea
       disabled={disabled || busy}
       aria-busy={busy}
       data-testid={testId}
-      className={`shrink-0 min-w-[3.5rem] inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-[background-color,transform,border-color] duration-100 active:scale-95 touch-manipulation cursor-pointer disabled:opacity-60 ${tone === 'solid' ? 'bg-white text-black hover:bg-zinc-200' : tone === 'danger' ? 'border border-red-500/50 text-red-400 hover:bg-red-500/10' : 'border border-white/30 text-white hover:border-white/70'}`}
+      className={`nst-pill shrink-0 min-w-[3.5rem] inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-[12.5px] font-extrabold active:scale-95 touch-manipulation cursor-pointer disabled:opacity-60 ${tone === 'solid' ? 'bg-white text-black hover:bg-zinc-200' : tone === 'danger' ? 'border border-red-500/50 text-red-400 hover:bg-red-500/10' : 'border border-white/30 text-white hover:border-white/70'}`}
     >
       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-label="Working" /> : children}
     </button>

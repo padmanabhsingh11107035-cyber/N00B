@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X } from 'lucide-react';
-import { colorSortLeaderboard, colorSortLevelDone } from '../../../services/api';
+import { brickEscapeLeaderboard, brickEscapeLevelDone, colorSortLeaderboard, colorSortLevelDone } from '../../../services/api';
 
 // A game that is a page of its own (Neon Alley: Last Call, served from this site's /games/neon-alley/) shown inside the game window.
 // It is added to the page as soon as the game's page opens, out of sight, so the download (the first time it is big) is already running while the person looks at the pictures;
@@ -18,8 +18,8 @@ interface HostedGameFrameProps {
   lazy?: boolean;
   /** true: the game is made to be held upright (a puzzle): full screen on a phone, but it is never turned on its side and the screen is not locked sideways. */
   portrait?: boolean;
-  /** 'color-sort': the game reports the levels a player clears and asks for the ranking; this page (which knows who is signed in) answers. */
-  ranking?: 'color-sort';
+  /** 'color-sort' / 'brick-escape': the game reports the levels a player clears and asks for the ranking; this page (which knows who is signed in) answers. */
+  ranking?: 'color-sort' | 'brick-escape';
 }
 
 const useUpright = (): boolean => {
@@ -59,17 +59,17 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
 
   // The game and this page talk by messages, only to and from this one frame on this same site: the game says "level N was cleared" and "send me the ranking".
   useEffect(() => {
-    if (ranking !== 'color-sort') return;
+    if (!ranking) return;
     const onMessage = async (e: MessageEvent) => {
       const win = frameRef.current?.contentWindow;
       if (!win || e.source !== win || e.origin !== window.location.origin) return;
       const d = e.data as { noobGame?: string; type?: string; level?: unknown } | null;
-      if (!d || d.noobGame !== 'color-sort') return;
+      if (!d || d.noobGame !== ranking) return;
       if (d.type === 'level-done' && typeof d.level === 'number' && Number.isInteger(d.level)) {
-        await colorSortLevelDone(d.level);
+        await (ranking === 'color-sort' ? colorSortLevelDone : brickEscapeLevelDone)(d.level);
       } else if (d.type === 'board-request') {
-        const board = await colorSortLeaderboard();
-        win.postMessage({ noobGame: 'color-sort', type: 'board', ok: !!board, board }, window.location.origin);
+        const board = await (ranking === 'color-sort' ? colorSortLeaderboard : brickEscapeLeaderboard)();
+        win.postMessage({ noobGame: ranking, type: 'board', ok: !!board, board }, window.location.origin);
       }
     };
     window.addEventListener('message', onMessage);

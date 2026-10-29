@@ -3706,6 +3706,24 @@ export async function colorSortLeaderboard(): Promise<ColorSortBoard | null> {
   }
 }
 
+// Brick Escape (migration 20261030000001): the same ranking as Color Sort, kept in its own table (the highest level each player has cleared).
+export async function brickEscapeLevelDone(level: number): Promise<{ success: boolean; bestLevel?: number; newBest?: boolean; error?: string }> {
+  try {
+    return await rpc<any>('brick_escape_level_done', { p_level: level });
+  } catch (err) {
+    return { success: false, error: errorText(err, 'Could not save this level.') };
+  }
+}
+
+export async function brickEscapeLeaderboard(): Promise<ColorSortBoard | null> {
+  try {
+    const res = await rpc<any>('brick_escape_leaderboard', {});
+    return { ...res, entries: (res.entries || []).map((e: any) => ({ ...e, avatar: e.avatar ? resolveMedia(e.avatar) : e.avatar })) };
+  } catch {
+    return null;
+  }
+}
+
 export async function sendGameInvite(
   targetUserId: string,
   gameId: string,

@@ -18,7 +18,7 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   X-Permitted-Cross-Domain-Policies: none
-  Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.pwnedpasswords.com https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz https://api.github.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob: https://static.cloudflareinsights.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://tiles.openfreemap.org https://tile.openstreetmap.org https://api.pwnedpasswords.com https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co https://cloudflareinsights.com https://ai.nooob.xyz https://api.github.com https://*.agora.io wss://*.agora.io https://*.sd-rtn.com wss://*.sd-rtn.com https://*.metered.live stun: turn: turns:; frame-src https:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
 
 # The page the two buttons of the "Is this you?" login email open: its address carries a one-time secret after the #, so it is never cached and never sent on as a referrer.
 /login-approval
@@ -46,6 +46,17 @@
   Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
 /lenses/*
   Cache-Control: public, max-age=604800
+
+# NOOB Family Map (/family, the live places of a family or friends on a map) is a page of its own, and the app shows the same map inside itself (the connect-src of the whole site above names the two map
+# servers for that). The page draws the map with MapLibre (WebGL) from OpenFreeMap's free map files (tiles.openfreemap.org; when that is down, plain OpenStreetMap pictures from tile.openstreetmap.org), keeps
+# the map's worker in a blob: address, and talks to the NOOB database for the room (the family_* functions). No other site, no frames; the location permission is the page's own (Permissions-Policy above).
+# Pictures may come from any https address (profile pictures).
+/family
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; media-src 'none'; connect-src 'self' https://tiles.openfreemap.org https://tile.openstreetmap.org https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self' blob:; child-src 'self' blob:; upgrade-insecure-requests
+/family.html
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https:; media-src 'none'; connect-src 'self' https://tiles.openfreemap.org https://tile.openstreetmap.org https://abffssydapumuhwgzeck.supabase.co wss://abffssydapumuhwgzeck.supabase.co; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self' blob:; child-src 'self' blob:; upgrade-insecure-requests
 
 # Helix Fall (the 3D tower game on the Games page) runs inside the app in a frame of its own, from this same site. It is the one place the app is allowed to be framed (by itself only),
 # and its own scripts and ball model are the only things it loads. Everything else stays as strict as the rest of the site: no other site, no network, no frames.

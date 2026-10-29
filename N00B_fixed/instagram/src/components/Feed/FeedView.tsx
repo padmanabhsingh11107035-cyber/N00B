@@ -36,8 +36,9 @@ import {
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
 import { preloadStudio } from '../Studio/StudioHost';
-import { Wand2, ScanFace } from 'lucide-react';
+import { Wand2, ScanFace, MapPinned } from 'lucide-react';
 import { openLenses, useLensOpen } from '../Lenses/lensStore';
+import { openFamily, preloadFamily } from '../Family/familyStore';
 import { VenetianMask } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { ScrollMoreHint, useScrollMore } from './ScrollMoreHint';
@@ -963,6 +964,25 @@ export const FeedView: React.FC<FeedViewProps> = ({
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-black text-white flex items-center gap-1.5">NOOB Lenses <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
                     <span className="text-[10px] text-zinc-300 block truncate">Face filters: take a picture, save it or share it anywhere</span>
+                  </div>
+                </button>
+              )}
+              {/* Family Map: a room for a family or friends where everybody sees everybody's live place on a map (free, optional; the place is shown only to the people in the room) */}
+              {featOn('family') && (
+                <button
+                  onClick={() => { markMenuEntry('family'); setShowNoobMenu(false); openFamily(); }}
+                  onPointerDown={preloadFamily}
+                  data-menu-entry="family"
+                  data-testid="menu-family"
+                  className="force-dark studio-banner draw-shine relative w-full p-3 mb-1 rounded-2xl flex items-center gap-3 text-left cursor-pointer border border-sky-300/40 active:scale-[0.99] transition-transform"
+                  style={{ background: 'linear-gradient(120deg, rgba(124,92,255,0.3), rgba(37,212,255,0.2) 60%, rgba(46,229,157,0.14))' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-300 to-cyan-300 flex items-center justify-center shrink-0 shadow-[0_0_18px_rgba(124,92,255,0.5)]">
+                    <MapPinned className="w-[18px] h-[18px] text-black" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">Family Map <span className="px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-black tracking-wider">NEW</span></span>
+                    <span className="text-[10px] text-zinc-300 block truncate">See your family live on a map, in a private room</span>
                   </div>
                 </button>
               )}

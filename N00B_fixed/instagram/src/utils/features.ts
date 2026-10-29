@@ -26,6 +26,7 @@ export const FEATURES: ReadonlyArray<FeatureDef> = [
   { key: 'studio', label: 'NOOB Studio', blurb: 'The photo and video editor', group: 'Home menu' },
   { key: 'lenses', label: 'NOOB Lenses', blurb: 'The camera with face filters', group: 'Home menu' },
   { key: 'booth', label: 'Buddy Booth', blurb: 'Photos with a buddy next to you, in a premium frame (opened from the profile)', group: 'Home menu' },
+  { key: 'family', label: 'Family Map', blurb: 'Rooms where a family or friends see each other live on a map (also stops new rooms, members and places on the server)', group: 'Home menu' },
   { key: 'team', label: 'Our Team', blurb: 'The people behind NOOB', group: 'Home menu' },
   { key: 'anonymous', label: 'Anonymous Messages', blurb: 'Messages with no author shown', group: 'Home menu' },
   { key: 'daily', label: 'Daily NOOB', blurb: 'Today\'s challenge and the podium', group: 'Home menu' },

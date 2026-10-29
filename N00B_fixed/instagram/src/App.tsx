@@ -107,7 +107,9 @@ import { closeStudio, openStudio } from './components/Studio/studioStore';
 import { LensHost } from './components/Lenses/LensHost';
 import { closeLenses, openLenses } from './components/Lenses/lensStore';
 import { BoothHost } from './components/Booth/BoothHost';
+import { FamilyHost } from './components/Family/FamilyHost';
 import { closeBooth } from './components/Booth/boothStore';
+import { closeFamily } from './components/Family/familyStore';
 import { closeNoobDraw } from './components/Draw/drawStore';
 import { TeamJoinHost } from './components/Team/TeamJoinHost';
 import { StudyHost } from './components/Study/StudyHost';
@@ -430,7 +432,7 @@ export default function App() {
   // the address /studio opens NOOB Studio
   useEffect(() => { try { if (/^\/studio\/?$/i.test(window.location.pathname)) openStudio(); } catch { /* the app opens as usual */ } }, []);
   // (the settings arrive a moment after the address opens it: if Studio or Draw is switched off for this person it closes again)
-  useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); }, [featuresOff]);
+  useEffect(() => { if (featuresOff.has('studio')) closeStudio(); if (featuresOff.has('draw')) closeNoobDraw(); if (featuresOff.has('lenses')) closeLenses(); if (featuresOff.has('booth')) closeBooth(); if (featuresOff.has('family')) closeFamily(); }, [featuresOff]);
   const [createSound, setCreateSound] = useState<null | { title: string; artist?: string; coverUrl?: string; audioUrl?: string; trackId?: string }>(null);   // "Use this sound" on a reel
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
   // Bumped after a successful long-video upload so HomeVideoFeedView refetches — simpler than
@@ -2285,6 +2287,8 @@ export default function App() {
         if (target === 'story') { setStudioStoryFile(file); setShowCreateStoryModal(true); }
         else { setStudioFile(file); setCreateKind(target); }
       }} />
+      {/* Family Map: rooms where a family or friends see each other live on a map (opened from the Home menu; the same map is also the page /family) */}
+      <FamilyHost />
       <TeamJoinHost currentUser={currentUser} />
       <StudyHost currentUser={currentUser} />
 

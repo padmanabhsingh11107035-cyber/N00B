@@ -3,13 +3,13 @@ import { CloudOff, LogIn, RefreshCw, Sparkles, Wrench } from 'lucide-react';
 import './family.css';
 import { ERROR_TEXT, FamilyOffline, type FamilyApi, type FamilyRoom } from '../../family/api';
 import { backgroundSupported } from '../../family/background';
-import { backgroundWanted, locationAllowed, setAutoShare, setBackgroundWanted, setLocationAllowed } from '../../family/consent';
+import { backgroundWanted, locationAllowed, reportInformed, setAutoShare, setBackgroundWanted, setLocationAllowed, setReportInformed } from '../../family/consent';
 import type { Fix, LatLng } from '../../family/geo';
 import { askForLocation, permissionState, type Problem } from '../../family/locate';
-import { restartTracker, startTracker, tracker } from '../../family/trackerLive';
+import { refreshReport, restartTracker, startTracker, tracker } from '../../family/trackerLive';
 import { Gate } from './Gate';
 import { RoomView } from './RoomView';
-import { AllowSheet, CreateSheet, JoinSheet, MadeSheet } from './Sheets';
+import { AllowSheet, CreateSheet, JoinSheet, MadeSheet, ReportSheet } from './Sheets';
 import { Notice, Toast } from './parts';
 
 // NOOB Family Map: a room for a family (or friends) where everybody sees everybody's live place on a map. This file is the order of the screens:
@@ -52,6 +52,8 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
   const [problem, setProblem] = useState<Problem | null>(null);
   const [share, setShare] = useState(true);
   const [shareAll, setShareAll] = useState(true);
+  const [reportAll, setReportAll] = useState(false);
+  const [askReport, setAskReport] = useState(false);
   const [bgOn, setBgOn] = useState(backgroundWanted);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +68,7 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
       const [list, prefs] = await Promise.all([api.myRooms(), api.getPrefs()]);
       setRooms(list);
       setShareAll(prefs.shareDefault);
+      setReportAll(prefs.reportDefault);
       setStep((s) => (s.s === 'boot' || s.s === 'offline' ? { s: 'gate' } : s));
       return true;
     } catch (e) {
@@ -144,8 +147,26 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
     if (!r.ok) { setShareAll(!on); say('Could not change that. Try again.'); return; }
     if (live) { const uid = await api.userId(); if (uid) setAutoShare(uid, on && rooms.length > 0); }
     if (on) { setLocationAllowed(true); void startTracker(api, true); } else tracker.stop();
+    refreshReport();
     void refresh();
     say(on ? 'Sharing is on' : 'Sharing is off. Nobody sees where you are.');
+  };
+  // the day report: where I went today. Switching it on is explained once; switching it off deletes it at once (here, on the phone, and in the rooms)
+  const turnReport = async (on: boolean): Promise<void> => {
+    setBusy(true);
+    const r = await api.setReportAll(on);
+    setBusy(false); setAskReport(false);
+    if (!r.ok) { say('Could not change that. Try again.'); return; }
+    setReportAll(on);
+    if (on) { setReportInformed(); if (live) { const uid = await api.userId(); if (uid) setAutoShare(uid, true); } void startTracker(api, true); }
+    refreshReport();
+    void refresh();
+    say(on ? 'Day report is on. It is deleted every night at 12.' : 'Day report is off. What was recorded today is deleted.');
+  };
+  const switchReportAll = (on: boolean): void => {
+    if (!on) { void turnReport(false); return; }
+    if (!shareAll) { say('Turn on Share my location first.'); return; }
+    if (reportInformed()) void turnReport(true); else setAskReport(true);
   };
   const switchBackground = (on: boolean): void => {
     setBgOn(on); setBackgroundWanted(on);
@@ -183,11 +204,12 @@ export const FamilyMap: React.FC<FamilyMapProps> = ({ api, onClose, origin, star
     body = (
       <>
         <Gate rooms={rooms} lastId={lastId} place={place} demo={demo} onCreate={() => void begin('create')} onJoin={() => void begin('join')} onOpen={open} onBack={onClose}
-          shareAll={shareAll} onShareAll={(on) => void switchShareAll(on)} bgSupported={backgroundSupported()} bgOn={bgOn} onBg={switchBackground} />
+          shareAll={shareAll} onShareAll={(on) => void switchShareAll(on)} reportAll={reportAll} onReportAll={switchReportAll} bgSupported={backgroundSupported()} bgOn={bgOn} onBg={switchBackground} />
         {step.s === 'allow' && <AllowSheet next={step.next} problem={problem} busy={busy} onAllow={() => void allow(step.next)} onWithout={() => without(step.next)} onClose={() => setStep({ s: 'gate' })} />}
         {step.s === 'create' && <CreateSheet error={error} busy={busy} onCreate={(n, e) => void create(n, e)} onClose={() => setStep({ s: 'gate' })} />}
         {step.s === 'join' && <JoinSheet initial={startCode} error={error} busy={busy} sharing={share} onJoin={(c) => void join(c)} onClose={() => setStep({ s: 'gate' })} />}
         {step.s === 'made' && made && <MadeSheet room={made} origin={origin} onOpen={() => open(made.id)} />}
+        {askReport && <ReportSheet busy={busy} onTurnOn={() => void turnReport(true)} onClose={() => setAskReport(false)} />}
       </>
     );
   }

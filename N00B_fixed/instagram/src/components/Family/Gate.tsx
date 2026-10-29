@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ChevronRight, KeyRound, Lock, MapPin, Plus, Smartphone } from 'lucide-react';
+import { ArrowLeft, ChevronRight, KeyRound, Lock, MapPin, Plus, Route, Smartphone } from 'lucide-react';
 import type { FamilyRoom } from '../../family/api';
 import type { LatLng } from '../../family/geo';
 import { MapCanvas, type MapApi } from './MapCanvas';
@@ -18,12 +18,15 @@ interface Props {
   onBack: () => void;
   shareAll: boolean;
   onShareAll: (on: boolean) => void;
+  /** the day report: where I went today, shown to my rooms and deleted at 00:00 */
+  reportAll: boolean;
+  onReportAll: (on: boolean) => void;
   /** the Android app can keep sharing while it is closed */
   bgSupported: boolean;
   bgOn: boolean;
   onBg: (on: boolean) => void;
 }
-export const Gate: React.FC<Props> = ({ rooms, lastId, place, demo, onCreate, onJoin, onOpen, onBack, shareAll, onShareAll, bgSupported, bgOn, onBg }) => {
+export const Gate: React.FC<Props> = ({ rooms, lastId, place, demo, onCreate, onJoin, onOpen, onBack, shareAll, onShareAll, reportAll, onReportAll, bgSupported, bgOn, onBg }) => {
   const map = useRef<MapApi | null>(null);
   const [broken, setBroken] = useState(false);
   const [ready, setReady] = useState(false);
@@ -64,6 +67,11 @@ export const Gate: React.FC<Props> = ({ rooms, lastId, place, demo, onCreate, on
               <span className="fm-line-icon"><MapPin size={17} /></span>
               <span><b>Share my location</b><small>{shareAll ? 'On: your rooms see where you are. Allowed once, never asked again.' : 'Off: nobody sees where you are. Turn it on any time.'}</small></span>
               <Switch on={shareAll} onChange={onShareAll} label="Share my location" />
+            </div>
+            <div className="fm-line" data-testid="family-report-line">
+              <span className="fm-line-icon"><Route size={17} /></span>
+              <span><b>Share my day report</b><small>{reportAll ? 'On: your rooms see where you went today. Deleted every night at 12.' : 'Off. Turn it on to show your rooms the places you went today. Deleted every night at 12.'}</small></span>
+              <Switch on={reportAll} onChange={onReportAll} label="Share my day report" />
             </div>
             {bgSupported ? (
               <div className="fm-line">

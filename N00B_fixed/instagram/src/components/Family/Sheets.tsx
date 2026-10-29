@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Copy, KeyRound, Loader2, Lock, MapPin, Share2, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { Check, Clock, Copy, KeyRound, Loader2, Lock, MapPin, Route, Share2, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import type { FamilyRoom } from '../../family/api';
 import { formatCode, isCode, normaliseCode } from '../../family/geo';
 import { backgroundSupported, openPhoneSettings } from '../../family/background';
@@ -33,6 +33,29 @@ export const AllowSheet: React.FC<{ next: 'create' | 'join'; problem: Problem | 
       </button>
       {problem && <button type="button" className="fm-btn fm-btn--ghost" onClick={onWithout}>{next === 'join' ? 'Join without sharing for now' : 'Make the room without sharing for now'}</button>}
       {!problem && <button type="button" className="fm-btn fm-btn--ghost" onClick={onClose}>Not now</button>}
+    </div>
+  </Modal>
+);
+
+const REPORT_WHY = [
+  { icon: <Users size={18} />, text: 'The people in your rooms see the places you stayed at and the trips between them, for today only.' },
+  { icon: <Lock size={18} />, text: 'It is locked on your phone (end-to-end encrypted): not even NOOB can read it.' },
+  { icon: <Clock size={18} />, text: 'At 12 every night it is deleted and a new day begins. Switch it off any time and it is deleted at once.' },
+  { icon: <ShieldCheck size={18} />, text: 'Only what happens after you turn it on is shared. Turn it on only with everybody\'s knowledge.' }
+];
+
+/** what the day report is, asked once before it is switched on (it shows where a person went, which is more than where they are) */
+export const ReportSheet: React.FC<{ busy: boolean; onTurnOn: () => void; onClose: () => void }> = ({ busy, onTurnOn, onClose }) => (
+  <Modal onClose={onClose}>
+    <div className="fm-allow">
+      <div className="fm-allow-hero" aria-hidden="true"><span className="fm-ring fm-ring--1" /><span className="fm-ring fm-ring--2" /><span className="fm-ring fm-ring--3" /><Route size={34} strokeWidth={2.4} /></div>
+      <h2>Share where you went today?</h2>
+      <p className="fm-lead">The day report shows your rooms your day, like a timeline: where you stopped and how you got there.</p>
+      <ul className="fm-why">{REPORT_WHY.map((w, i) => <li key={i}><span>{w.icon}</span>{w.text}</li>)}</ul>
+      <button type="button" className="fm-btn fm-btn--primary" onClick={onTurnOn} disabled={busy} data-testid="family-report-on">
+        {busy ? <Loader2 size={19} className="fm-spin" /> : <Route size={19} />} Turn on my day report
+      </button>
+      <button type="button" className="fm-btn fm-btn--ghost" onClick={onClose}>Not now</button>
     </div>
   </Modal>
 );

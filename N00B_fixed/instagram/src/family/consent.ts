@@ -5,6 +5,7 @@
 const ALLOWED_SLOT = 'noob_family_loc_v1';
 const AUTO_SLOT = 'noob_family_auto_v1';
 const BG_SLOT = 'noob_family_bg_v1';
+const REPORT_SLOT = 'noob_family_report_v1';
 
 const read = (slot: string): string => { try { return localStorage.getItem(slot) || ''; } catch { return ''; } };
 const write = (slot: string, value: string): void => { try { if (value) localStorage.setItem(slot, value); else localStorage.removeItem(slot); } catch { /* a private window keeps nothing: it asks again next time */ } };
@@ -26,6 +27,10 @@ export function setAutoShare(userId: string, on: boolean): void {
   if (on) map[userId] = true; else delete map[userId];
   write(AUTO_SLOT, Object.keys(map).length ? JSON.stringify(map) : '');
 }
+
+/** the person has been told what the day report is (once, the first time they switch it on) */
+export const reportInformed = (): boolean => read(REPORT_SLOT) === 'yes';
+export const setReportInformed = (): void => write(REPORT_SLOT, 'yes');
 
 /** the Android app keeps sharing when it is closed (on unless the person switched it off) */
 export const backgroundWanted = (): boolean => read(BG_SLOT) !== 'off';

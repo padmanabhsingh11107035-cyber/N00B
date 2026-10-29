@@ -24,7 +24,7 @@ export const FamilyTracker: React.FC = () => {
         if (!dead) await live.startTracker(liveApi, false);
       };
       void attempt();
-      const { data } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') live.tracker.stop(); else if (event === 'SIGNED_IN') void attempt(); });
+      const { data } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') { live.tracker.stop(); live.forgetReport(); } else if (event === 'SIGNED_IN') void attempt(); });
       unsubscribe = () => data.subscription.unsubscribe();
     })();
     return () => { dead = true; unsubscribe(); };

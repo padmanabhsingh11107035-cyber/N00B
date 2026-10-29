@@ -12,6 +12,10 @@ export interface TrackerDeps {
   now: () => number;
   /** calls `fn` every `ms` milliseconds; returns the way to stop */
   every: (fn: () => void, ms: number) => () => void;
+  /** told about every place that is sent (the day report is made from them) */
+  onSample?: (f: Fix) => void;
+  /** called every few seconds while the tracker runs */
+  onTick?: () => void;
 }
 const HEARTBEAT_MS = 20_000, BEAT_CHECK_MS = 5_000;
 
@@ -22,7 +26,7 @@ export function createTracker(deps: TrackerDeps) {
   let last: { lat: number; lng: number; at: number } | null = null;
 
   const set = (p: Partial<TrackerState>): void => { state = { ...state, ...p }; listeners.forEach((l) => l(state)); };
-  const send = (f: Fix): void => { last = { lat: f.lat, lng: f.lng, at: deps.now() }; void api?.pushLocation(f); };
+  const send = (f: Fix): void => { last = { lat: f.lat, lng: f.lng, at: deps.now() }; deps.onSample?.(f); void api?.pushLocation(f); };
 
   /** begins following and sending (nothing happens when it already runs) */
   function start(a: FamilyApi): Promise<void> {
@@ -37,7 +41,7 @@ export function createTracker(deps: TrackerDeps) {
       if (!state.running) { stop(); return; } // stopped while it was starting
       stopWatch = stop;
       // standing still sends nothing by itself: a heartbeat every 20 seconds keeps the person "live" for the others
-      stopBeat = deps.every(() => { const f = state.fix; if (f && deps.now() - (last?.at ?? 0) >= HEARTBEAT_MS) send({ ...f, at: deps.now() }); }, BEAT_CHECK_MS);
+      stopBeat = deps.every(() => { const f = state.fix; if (f && deps.now() - (last?.at ?? 0) >= HEARTBEAT_MS) send({ ...f, at: deps.now() }); deps.onTick?.(); }, BEAT_CHECK_MS);
     })().finally(() => { starting = null; });
     return starting;
   }

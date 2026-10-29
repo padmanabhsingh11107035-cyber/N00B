@@ -3,10 +3,19 @@ import type { Map as GlMap, Marker as GlMarker } from 'maplibre-gl';
 import { boundsOf, distanceM, easeOut, lerpLngLat, type LatLng } from '../../family/geo';
 import { fallbackStyle, nightStyle, SKY_NIGHT, STYLE_URL, type MapStyle } from '../../family/mapStyle';
 import { buildPin, refreshPin, type PinData } from '../../family/markers';
+import type { Mode } from '../../family/timeline';
 
 export type MapLook = 'night' | 'streets';
+/** one person's day on the map: the trips as lines, the places they stayed at as numbered dots */
+export interface TrailData {
+  hue: number;
+  trips: { id: string; path: LatLng[]; mode: Mode }[];
+  stays: { id: string; at: LatLng; n: number; ongoing: boolean; r: number }[];
+  selected: string;
+}
 export interface MapApi {
   fly(p: LatLng, zoom?: number): void;
+  trail(t: TrailData | null): void;
   fit(points: LatLng[], bottom?: number): void;
   tilt(on: boolean): void;
   north(): void;
@@ -17,6 +26,7 @@ interface Props {
   look: MapLook;
   pins: PinData[];
   onPin?: (id: string) => void;
+  onStay?: (id: string) => void;
   onReady?: () => void;
   onFail?: () => void;
   apiRef?: React.MutableRefObject<MapApi | null>;
@@ -46,6 +56,8 @@ export const MapCanvas: React.FC<Props> = (props) => {
   const mapRef = useRef<GlMap | null>(null);
   const libRef = useRef<any>(null);
   const pins = useRef(new Map<string, Live>());
+  const stays = useRef(new Map<string, GlMarker>());
+  const trailNow = useRef<TrailData | null>(null);
   const raf = useRef(0);
   const latest = useRef(props);
   latest.current = props;
@@ -96,7 +108,39 @@ export const MapCanvas: React.FC<Props> = (props) => {
           };
           spinRaf = requestAnimationFrame(spin);
         }
+        // the route of one person's day: lines for the trips (dashed on foot), numbered dots for the places; drawn again whenever the style is replaced
+        const SRC = 'fm-trail';
+        const paintTrail = (): void => {
+          stays.current.forEach((m) => m.remove()); stays.current.clear();
+          const t = trailNow.current;
+          try {
+            const data: any = { type: 'FeatureCollection', features: (t?.trips ?? []).filter((x) => x.path.length > 1).map((x) => ({ type: 'Feature', properties: { id: x.id, sel: x.id === t?.selected ? 1 : 0, mode: x.mode, color: `hsl(${t?.hue ?? 200} 85% 64%)` }, geometry: { type: 'LineString', coordinates: x.path.map((p) => [p.lng, p.lat]) } })) };
+            const src: any = map.getSource(SRC);
+            if (src) src.setData(data);
+            else if (t) {
+              const width: any = ['case', ['==', ['get', 'sel'], 1], 6, 4];
+              map.addSource(SRC, { type: 'geojson', data });
+              map.addLayer({ id: 'fm-trail-casing', type: 'line', source: SRC, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#050816', 'line-opacity': 0.8, 'line-width': ['case', ['==', ['get', 'sel'], 1], 9, 7] } } as any);
+              map.addLayer({ id: 'fm-trail-line', type: 'line', source: SRC, filter: ['!=', ['get', 'mode'], 'w'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': width } } as any);
+              map.addLayer({ id: 'fm-trail-walk', type: 'line', source: SRC, filter: ['==', ['get', 'mode'], 'w'], layout: { 'line-cap': 'butt', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-dasharray': [1.2, 1.4], 'line-width': width } } as any);
+            }
+          } catch { /* the style is still loading: it is drawn again when it is ready */ }
+          if (!t) return;
+          for (const s of t.stays) {
+            const el = document.createElement('div');
+            el.className = `fm-stay${s.id === t.selected ? ' is-sel' : ''}${s.ongoing ? ' is-now' : ''}`;
+            el.style.setProperty('--hue', String(t.hue));
+            el.textContent = String(s.n);
+            el.setAttribute('role', 'button'); el.tabIndex = 0; el.setAttribute('aria-label', `Place ${s.n}`);
+            const tap = (e: Event): void => { e.stopPropagation(); latest.current.onStay?.(s.id); };
+            el.addEventListener('click', tap);
+            el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') tap(e); });
+            stays.current.set(s.id, new gl.Marker({ element: el, anchor: 'center' }).setLngLat([s.at.lng, s.at.lat]).addTo(map));
+          }
+        };
+        map.on('style.load', paintTrail);
         const api: MapApi = {
+          trail: (t) => { trailNow.current = t; paintTrail(); },
           fly: (p, z) => map.flyTo({ center: [p.lng, p.lat], zoom: z ?? Math.max(map.getZoom(), 14.5), speed: 1.2, curve: 1.5, essential: true }),
           fit: (pts, bottom = 220) => {
             const b = boundsOf(pts);
@@ -115,6 +159,7 @@ export const MapCanvas: React.FC<Props> = (props) => {
     return () => {
       dead = true; cancelAnimationFrame(spinRaf); cancelAnimationFrame(raf.current); window.clearTimeout(idleTimer);
       pins.current.forEach((l) => l.marker.remove()); pins.current.clear();
+      stays.current.forEach((m) => m.remove()); stays.current.clear();
       try { mapRef.current?.remove(); } catch { /* already gone */ }
       mapRef.current = null;
       if (latest.current.apiRef) latest.current.apiRef.current = null;

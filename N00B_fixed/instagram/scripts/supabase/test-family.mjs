@@ -12,6 +12,7 @@ import { memoryKeyStore } from '../../src/e2ee/keyring.ts';
 import { createDemoApi } from '../../src/family/demoApi.ts';
 import { createPlaceCrypto, readPlace } from '../../src/family/sealed.ts';
 import { createTracker } from '../../src/family/tracker.ts';
+import * as T from '../../src/family/timeline.ts';
 
 let passed = 0, failed = 0;
 const check = (cond, label, detail = '') => { if (cond) { passed++; console.log(`  ok   ${label}`); } else { failed++; console.log(`  FAIL ${label} ${detail}`); } };
@@ -142,8 +143,8 @@ check(readPlace(wire({ lat: 91 }), 5000) === null && readPlace(wire({ lng: -181 
 check(readPlace(wire({ at: 9e15 }), 5000).at === 5000 + 120000, 'a time far in the future (a wrong clock, or a trick) is held at two minutes ahead');
 
 section('7. The database');
-const sql1 = read('supabase/migrations/20261031000001_family_map.sql'), sql2 = read('supabase/migrations/20261031000002_family_sealed.sql'), sql = sql1 + '\n' + sql2;
-check(['family_rooms', 'family_members', 'family_sealed', 'family_join_misses', 'family_prefs'].every((t) => new RegExp(`alter table public\\.${t} enable row level security`).test(sql)) && /revoke all on public\.family_prefs, public\.family_sealed from public, anon, authenticated/.test(sql2) && !/create policy/.test(sql) && !/grant (select|insert|update|delete|all) on public\.family/.test(sql), 'row-level security on, nothing granted on the tables, no policy: only the functions can reach them');
+const sql1 = read('supabase/migrations/20261031000001_family_map.sql'), sql2 = read('supabase/migrations/20261031000002_family_sealed.sql'), sql3 = read('supabase/migrations/20261031000003_family_day_report.sql'), sql = sql1 + '\n' + sql2 + '\n' + sql3;
+check(['family_rooms', 'family_members', 'family_sealed', 'family_join_misses', 'family_prefs', 'family_timeline', 'family_housekeeping'].every((t) => new RegExp(`alter table public\\.${t} enable row level security`).test(sql)) && /revoke all on public\.family_prefs, public\.family_sealed from public, anon, authenticated/.test(sql2) && !/create policy/.test(sql) && !/grant (select|insert|update|delete|all) on public\.family/.test(sql), 'row-level security on, nothing granted on the tables, no policy: only the functions can reach them');
 check((sql.match(/security definer set search_path = public/g) || []).length >= 20 && !/delete from public\.(profiles|posts|messages)|alter table public\.(profiles|posts)/i.test(sql) && /drop table if exists public\.family_locations/.test(sql2) && /drop function if exists public\.family_push_location/.test(sql2), 'every function checks who is asking; the plain places and the function that wrote them are removed; nothing else that exists is touched');
 const db = await createTestDb();
 // an account the way the importer makes one: the sign-up rules (email check, photo) are for people signing up, the importer's accounts carry a legacy_id and get their profile by hand
@@ -298,6 +299,119 @@ check(lim === 'too_many_rooms' && (await rpc(busy, 'family_my_rooms')).length ==
 const bigKeys = await callAs(asha, 'family_room_keys', { p_room: big.id });
 check(bigKeys.ok && bigKeys.members.length === 20, 'the keys of a room are listed for its members');
 
+
+section('7b. The day report (database)');
+const TZI = 'Asia/Kolkata';
+const dayOf = async (tz, add = 0) => (await raw(`select (public.family_today($1) + $2::int)::text as d`, [tz, add]))[0].d;
+const dayIST = await dayOf(TZI), dayStart = T.dayStartFromKey(dayIST, TZI), dayEnd = T.endOfDay(dayStart + 1, TZI);
+const stayWire = (min, len = 20) => T.toWire({ k: 's', a: dayStart + min * 60000, b: dayStart + (min + len) * 60000, lat: 19.0761, lng: 72.8778, r: 24 });
+const tripWire = (min) => T.toWire({ k: 't', a: dayStart + min * 60000, b: dayStart + (min + 15) * 60000, d: 4200, m: 'd', path: [[19.076, 72.8777], [19.09, 72.89], [19.1, 72.9]] });
+const rd = (await rpc(asha, 'family_create_room', ['Day room', null, true])).room;
+await rpc(ravi, 'family_join_room', [rd.code, true]); await rpc(tina, 'family_join_room', [rd.code, true]);
+const send = async (uid, items) => callAs(uid, 'family_push_timeline', { p_items: items });
+const lock = async (uid, wire) => phoneOf(uid).sealJson(rd.id, 'day', wire);
+const item = async (uid, seq, wire, extra = {}) => ({ room: rd.id, day: dayIST, tz: TZI, seq, env: await lock(uid, wire), ...extra });
+const count = async (uid) => (await raw('select count(*)::int n from public.family_timeline where user_id = $1', [uid]))[0].n;
+const calmTimeline = async () => raw(`update public.family_timeline set updated_at = updated_at - interval '5 seconds'`);
+
+check(!/create policy/.test(sql3) && /alter table public\.family_timeline enable row level security/.test(sql3) && /revoke all on public\.family_timeline, public\.family_housekeeping from public, anon, authenticated/.test(sql3), 'the report table has row-level security on and nothing granted: only the functions reach it');
+let stateD = await rpc(asha, 'family_room_state', [rd.id]);
+check(stateD.members.every((m) => m.report === false) && (await rpc(ravi, 'family_my_rooms')).every((r) => r.report === false), 'nobody has the day report on until they switch it on');
+check((await send(ravi, [await item(ravi, 1, stayWire(10))])).saved === 0, 'a report from somebody who has not switched it on is not stored');
+check((await callAs(ravi, 'family_my_prefs')).reportDefault === false && (await callAs(ravi, 'family_set_report_all', { p_on: true })).ok && (await callAs(asha, 'family_set_report_all', { p_on: true })).ok && (await callAs(ravi, 'family_my_prefs')).reportDefault === true, 'the switch is one for all rooms and is remembered');
+stateD = await rpc(asha, 'family_room_state', [rd.id]);
+check(byName(stateD, 'fam_ravi').report === true && byName(stateD, 'fam_asha').report === true && byName(stateD, 'fam_tina').report === false && (await rpc(ravi, 'family_my_rooms'))[0].report === true, 'the room shows who shares a report (and nothing else about it)');
+const r2 = (await rpc(asha, 'family_create_room', ['Second report room', null, true])).room;
+const r3 = (await rpc(eve, 'family_create_room', ['Eve room', null, true])).room;
+await rpc(asha, 'family_join_room', [r3.code, false]);
+check((await rpc(asha, 'family_my_rooms')).find((r) => r.id === r2.id).report === true && (await rpc(asha, 'family_my_rooms')).find((r) => r.id === r3.id).report === false, 'a room made later starts with the report on for a person who switched it on and shares; a room joined without sharing starts with it off');
+
+// ---- sending, reading, who may see
+const it1 = await item(ravi, 600, stayWire(10)), it2 = await item(ravi, 630, tripWire(30));
+const sent1 = await send(ravi, [it1, it2]);
+check(sent1.ok && sent1.saved === 2 && (await count(ravi)) === 2, 'Ravi sends a stay and a trip, locked on his phone: both are taken');
+const stored2 = (await raw('select envelope::text t from public.family_timeline')).map((r) => r.t).join(' ');
+check(!/19\.076|72\.877|4200/.test(stored2) && stored2.length > 400, 'the database holds only locked data: no coordinate, no distance can be found in it');
+const got = await callAs(asha, 'family_timeline_get', { p_room: rd.id, p_user: ravi });
+check(got.ok && got.on === true && got.rows.length === 2 && got.seqs.join() === '600,630' && got.rows[0].tz === TZI && got.rows[0].day === dayIST, 'a member of the room reads the report of today (its day, its time zone, the numbers of its parts)');
+const openedDay = await phoneOf(asha).openJson(rd.id, 'day', ravi, got.rows[0].env);
+const asStay = openedDay.ok ? T.fromWire(openedDay.value, dayStart, dayEnd) : null;
+check(openedDay.ok && asStay && asStay.k === 's' && asStay.a === dayStart + 10 * 60000 && asStay.lat === 19.0761 && Object.keys(got.rows[0].env.keys).length === 1, "Asha's phone opens it: the stay is as it was sent, and the envelope carries only her own lock");
+const asTrip = T.fromWire((await phoneOf(asha).openJson(rd.id, 'day', ravi, got.rows[1].env)).value, dayStart, dayEnd);
+check(asTrip && asTrip.k === 't' && asTrip.d === 4200 && asTrip.path.length === 3, 'and the trip with its route');
+const tinaGot = await callAs(tina, 'family_timeline_get', { p_room: rd.id, p_user: ravi });
+check(tinaGot.ok && tinaGot.rows.length === 2 && Object.keys(tinaGot.rows[0].env.keys).length === 0 && (await phoneOf(tina).openJson(rd.id, 'day', ravi, tinaGot.rows[0].env)).ok === false, 'a member who has no key for it gets the locked data and can not open it');
+check((await callAs(eve, 'family_timeline_get', { p_room: rd.id, p_user: ravi })).error === 'not_member' && (await callAs(asha, 'family_timeline_get', { p_room: rd.id, p_user: eve })).error === 'not_member', 'a stranger can not read it, and nobody can read the report of somebody who is not in the room');
+const none = await callAs(asha, 'family_timeline_get', { p_room: rd.id, p_user: tina });
+check(none.ok && none.on === false && none.rows.length === 0, 'a person who has not switched it on shows nothing');
+const placeEnv = await phoneOf(ravi).seal(rd.id, fix(19.1, 72.9));
+check((await phoneOf(asha).openJson(rd.id, 'day', ravi, placeEnv)).ok === false && (await phoneOf(asha).open(rd.id, ravi, got.rows[0].env)).ok === false, 'a live place can not be passed off as a report, nor a report as a place (what is locked is bound to what it is for)');
+check((await phoneOf(asha).openJson(r2.id, 'day', ravi, got.rows[0].env)).ok === false, 'and a report of one room does not open as the report of another');
+
+// ---- only today of the person's own time zone
+const bad = async (over) => (await send(ravi, [{ ...(await item(ravi, 700, stayWire(40))), ...over }])).saved;
+check((await bad({ day: await dayOf(TZI, -1) })) === 0 && (await bad({ day: await dayOf(TZI, 1) })) === 0, 'a report of yesterday or of tomorrow (a wrong clock) is not stored');
+check((await bad({ tz: 'Nope/Zone' })) === 0 && (await bad({ tz: 'x'.repeat(70) })) === 0 && (await bad({ tz: '; drop table x' })) === 0 && (await bad({ day: '2026-13-45' })) === 0 && (await bad({ day: 'today' })) === 0 && (await bad({ seq: 1601 })) === 0 && (await bad({ seq: '-1' })) === 0 && (await bad({ room: 'nope' })) === 0, 'odd input (a time zone or day that does not exist, a number out of range, an injection) is skipped, never an error');
+check((await bad({ env: undefined })) === 0 && (await bad({ env: { v: 1 } })) === 0 && (await bad({ env: it1.env, room: r3.id })) === 0, 'no envelope, a broken one, or a room the person is not in: skipped');
+check((await send(asha, [{ ...(await item(ravi, 701, stayWire(40))) }])).saved === 0 && (await send(ravi, [await item(asha, 701, stayWire(40))])).saved === 0, 'an envelope made with somebody else\'s key is not accepted as mine');
+check((await send(ravi, '"x"')).ok === false && (await send(ravi, Array.from({ length: 41 }, () => it1))).ok === false && (await send(ravi, [])).saved === 0, 'a wrong shape or more than 40 parts in one go is refused');
+const KIR = 'Pacific/Kiritimati', PAG = 'Pacific/Pago_Pago';
+const dK = await dayOf(KIR), dP = await dayOf(PAG);
+check(dK !== dP, 'at any moment these two places are on different days (the test needs it)');
+check((await send(ravi, [{ ...(await item(ravi, 5, stayWire(10))), tz: KIR, day: dK }])).saved === 1 && (await send(ravi, [{ ...(await item(ravi, 6, stayWire(10))), tz: KIR, day: dP }])).saved === 0, 'every person has their own day: it is today in Kiritimati only with the date of Kiritimati');
+let afterTz = await callAs(asha, 'family_timeline_get', { p_room: rd.id, p_user: ravi });
+check(afterTz.seqs.join() === '5' && await count(ravi) === 1, 'a new time zone replaces the old report at once (nothing of two days is mixed)');
+await calmTimeline();
+check((await send(ravi, [it1, it2])).saved === 2 && (await count(ravi)) === 2, 'and back again');
+
+// ---- 00:00: nothing of an old day is handed out or kept
+await raw(`update public.family_housekeeping set purged_at = now()`); // the clean-up is not due yet
+await raw(`update public.family_timeline set day = day - 1 where user_id = $1`, [ravi]); // the clocks of his time zone have just passed 00:00
+const midnight = await callAs(asha, 'family_timeline_get', { p_room: rd.id, p_user: ravi });
+check(midnight.ok && midnight.rows.length === 0 && midnight.seqs.length === 0 && (await count(ravi)) === 2, 'the moment the day is over nothing of it is handed out, even before the clean-up has run');
+await raw(`update public.family_housekeeping set purged_at = 'epoch'`);
+await callAs(asha, 'family_timeline_get', { p_room: rd.id, p_user: ravi });
+check((await count(ravi)) === 0, 'and the next call deletes it for good');
+check((await send(ravi, [it1])).saved === 1 && (await send(ravi, [{ ...it1, seq: 601 }])).saved === 1, 'a new day starts empty and accepts the new day');
+await raw(`insert into public.family_timeline (room_id, user_id, day, tz, seq, envelope) values ($1, $2, public.family_today($3) - 1, $3, 9, '{}'::jsonb)`, [rd.id, ravi, TZI]);
+check((await count(ravi)) >= 2, 'an old row can exist before the clean-up');
+await raw(`update public.family_housekeeping set purged_at = 'epoch'`);
+await calmTimeline();
+await send(ravi, [it1]);
+check((await raw(`select count(*)::int n from public.family_timeline where user_id = $1 and day < public.family_today(tz)`, [ravi]))[0].n === 0, 'sending also clears what is left of an older day');
+await raw(`update public.family_timeline set updated_at = now() - interval '3 days' where user_id = $1`, [ravi]);
+check((await raw('select public.family_purge_timeline() as n'))[0].n >= 1 && (await count(ravi)) === 0, 'anything not touched for 48 hours goes, whatever its day');
+check(/cron\.schedule\('noob-family-purge', '\* \* \* \* \*'/.test(sql3) && /\(now\(\) at time zone t\.tz\)::date/.test(sql3) && /family_purge_if_due\(\)/.test(sql3), 'the clean-up also runs every minute where the database has pg_cron, and uses the clock of every row\'s own time zone');
+
+// ---- limits and the guard against a flood
+await send(ravi, [it1]); await send(ravi, [it2]);
+check((await send(ravi, [it1])).saved === 0, 'the same part sent again within 2 seconds is ignored');
+await calmTimeline();
+await raw(`delete from public.family_timeline where user_id = $1`, [ravi]);
+await raw(`insert into public.family_timeline (room_id, user_id, day, tz, seq, envelope, updated_at) select $1, $2, $3::date, $4, g, '{}'::jsonb, now() - interval '1 minute' from generate_series(1, 700) g`, [rd.id, ravi, dayIST, TZI]);
+check((await send(ravi, [await item(ravi, 800, stayWire(60))])).saved === 0 && (await send(ravi, [await item(ravi, 5, stayWire(60))])).saved === 1, 'a person can have at most 700 parts in a room: a new one is refused, an existing one can still be updated');
+await raw(`delete from public.family_timeline where user_id = $1`, [ravi]);
+
+// ---- switching off, pausing, leaving: gone at once
+await send(ravi, [it1]);
+check((await count(ravi)) === 1 && (await rpc(ravi, 'family_set_sharing', [rd.id, false])).ok && (await count(ravi)) === 0, 'pausing the location removes the report from that room at once');
+await rpc(ravi, 'family_set_sharing', [rd.id, true]); await calmTimeline();
+check(byName(await rpc(asha, 'family_room_state', [rd.id]), 'fam_ravi').report === true && (await send(ravi, [it1])).saved === 1, 'resuming brings the report back (from then on)');
+check((await callAs(ravi, 'family_set_report_all', { p_on: false })).ok && (await count(ravi)) === 0 && (await callAs(ravi, 'family_my_prefs')).reportDefault === false && byName(await rpc(asha, 'family_room_state', [rd.id]), 'fam_ravi').report === false, 'switching the report off deletes every report of the person at once');
+check((await send(ravi, [it1])).saved === 0, 'and nothing more is taken');
+await callAs(ravi, 'family_set_report_all', { p_on: true }); await calmTimeline();
+await send(ravi, [it1]);
+await rpc(ravi, 'family_leave_room', [rd.id]);
+check((await count(ravi)) === 0, 'leaving the room deletes the person\'s report in it');
+await rpc(ravi, 'family_join_room', [rd.code, true]);
+await send(asha, [await item(asha, 3, stayWire(5))]);
+check((await count(asha)) >= 1 && (await rpc(asha, 'family_delete_room', [rd.id])).ok && (await raw('select count(*)::int n from public.family_timeline where room_id = $1', [rd.id]))[0].n === 0, 'deleting the room deletes every report in it');
+await raw('delete from auth.users where id = $1', [tina]);
+check((await raw('select count(*)::int n from public.family_timeline where user_id = $1', [tina]))[0].n === 0, 'deleting an account removes its reports');
+await raw(`update public.platform_settings set disabled_features = array['family'] where id = true`);
+check((await callAs(asha, 'family_set_report_all', { p_on: true })).error === 'switched_off' && (await send(asha, [])).error === 'switched_off', 'when Family Map is switched off by the administrator no report is taken');
+await raw(`update public.platform_settings set disabled_features = '{}' where id = true`);
+
 // the administrators' Pages switch
 await raw(`update public.platform_settings set disabled_features = array['family'] where id = true`);
 const off2 = await rpc(eve, 'family_create_room', ['Nope', null, true]);
@@ -338,7 +452,7 @@ check(/@capacitor-community\/background-geolocation/.test(pkg) && /registerPlugi
 const sigs = Object.fromEntries([...sql.matchAll(/create or replace function public\.(family_\w+)\(([^)]*)\)/g)].map((m) => [m[1], m[2].split(',').map((x) => x.trim().split(/\s+/)[0]).filter(Boolean)]));
 const calls = [...live.matchAll(/call\('(family_\w+)'(?:, \{([^}]*)\})?/g), ...sealedSrc.matchAll(/rpc\('(family_\w+)', \{([^}]*)\}/g)].map((m) => [m[1], (m[2] || '').split(',').map((x) => x.trim().split(':')[0]).filter(Boolean)]);
 const names = new Set(calls.map(([fn]) => fn));
-check(names.size === 14 && calls.every(([fn, keys]) => sigs[fn] && keys.every((k) => sigs[fn].includes(k))), 'the page calls 14 database functions, each with argument names that exist in the SQL', JSON.stringify(calls.filter(([fn, keys]) => !sigs[fn] || !keys.every((k) => sigs[fn].includes(k)))) + ' ' + [...names].join());
+check(names.size === 17 && calls.every(([fn, keys]) => sigs[fn] && keys.every((k) => sigs[fn].includes(k))), 'the page calls 17 database functions, each with argument names that exist in the SQL', JSON.stringify(calls.filter(([fn, keys]) => !sigs[fn] || !keys.every((k) => sigs[fn].includes(k)))) + ' ' + [...names].join());
 const cssBare = css.replace(/\/\*[\s\S]*?\*\//g, '');
 const sels = [...cssBare.matchAll(/(^|\n|\})\s*([^@{}\n][^{}]*)\{/g)].flatMap((m) => m[2].split(/,(?![^(]*\))/)).map((x) => x.trim()).filter(Boolean);
 const loose = sels.filter((x) => !/^(:where\(\.fm-root[ )]|\.fm-|\.maplibregl-|\d+%|from|to)/.test(x));
@@ -348,9 +462,9 @@ check(fs.existsSync('docs/FAMILY-MAP.md') && /test-family\.mjs/.test(pkg), 'docu
 
 section('9. The legal pages say it');
 const legal = { privacy: read('src/components/Legal/PrivacyPolicy.tsx'), terms: read('src/components/Legal/TermsAndConditions.tsx'), e2ee: read('src/components/Legal/EndToEndEncryption.tsx'), privacyPage: read('public/privacy.html'), termsPage: read('public/terms.html'), deletePage: read('public/data-deletion.html') };
-check([legal.privacy, legal.privacyPage].every((t) => /Family Map/.test(t) && /precise location/i.test(t) && /end-to-end encrypted/i.test(t) && /OpenFreeMap/.test(t) && /24 hours/.test(t) && /background/i.test(t)), 'the Privacy Policy (in the app and on the website) lists the precise location, who sees it, that it is locked, how long it is kept, the Android background service and the map companies');
-check([legal.terms, legal.termsPage].every((t) => /Family Map/.test(t) && /consent/i.test(t) && /emergenc/i.test(t) && /(parent|guardian)/i.test(t)), 'the Terms (in the app and on the website) ask for everybody\'s consent, say it is not an emergency service and put the guardian in charge of a child');
-check(/Family Map/.test(legal.e2ee) && /Family Map/.test(legal.deletePage), 'the encryption page and the data-deletion page mention Family Map');
+check([legal.privacy, legal.privacyPage].every((t) => /Family Map/.test(t) && /precise location/i.test(t) && /end-to-end encrypted/i.test(t) && /OpenFreeMap/.test(t) && /24 hours/.test(t) && /background/i.test(t) && /day report/i.test(t) && /midnight/i.test(t) && /at once/i.test(t)), 'the Privacy Policy (in the app and on the website) lists the precise location, who sees it, that it is locked, how long it is kept, the Android background service, the map companies and the day report (what it holds, that it is deleted at midnight and when it is switched off)');
+check([legal.terms, legal.termsPage].every((t) => /Family Map/.test(t) && /consent/i.test(t) && /emergenc/i.test(t) && /(parent|guardian)/i.test(t) && /day report/i.test(t)), 'the Terms (in the app and on the website) ask for everybody\'s consent, say it is not an emergency service, put the guardian in charge of a child and say the day report is only for people who switch it on themselves');
+check(/Family Map/.test(legal.e2ee) && /Family Map/.test(legal.deletePage) && /day report/i.test(legal.e2ee) && /day report/i.test(legal.deletePage), 'the encryption page and the data-deletion page mention Family Map and the day report');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -146,6 +146,7 @@ export const EndToEndEncryption: React.FC<EndToEndEncryptionProps> = ({ onClose 
             <ul className="list-disc pl-5 space-y-1 text-zinc-400">
               <li>Your place in a Family Map room is locked the same way as a message: on your phone, for the devices of the people in that room, before it is sent. NOOB&apos;s servers keep only the locked place and can not read where you are.</li>
               <li>What NOOB can still see: the room&apos;s name, who is in it, whether you are sharing, and when a place was last sent. Not where it was.</li>
+              <li>The day report (the places you stayed at and your trips, only if you turn it on) is locked the same way, for the people in the room. NOOB&apos;s servers keep only locked data, only for the current day of your time zone: at midnight it is deleted and a new day begins, and switching the report off deletes it at once.</li>
               <li>The same honest limits apply (no ratchet; the server hands out the public keys). A new member sees places from the next update after they join, and a person you remove stops getting new places at once.</li>
             </ul>
           </section>

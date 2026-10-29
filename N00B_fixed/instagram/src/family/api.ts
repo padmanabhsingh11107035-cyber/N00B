@@ -1,4 +1,6 @@
 import type { Fix } from './geo.ts';
+import type { PushItem } from './dayRecorder.ts';
+import type { Seg } from './timeline.ts';
 
 // NOOB Family Map: what the screens ask for (FamilyApi) and how the database answers are read. Two implementations exist: liveApi.ts (the real database) and demoApi.ts (made-up people in
 // memory, so the design can be seen without an account). This file has no imports from the app, so it is tested on its own.
@@ -6,15 +8,21 @@ import type { Fix } from './geo.ts';
 export interface FamilyRoom {
   id: string; code: string; name: string; emoji: string; ownerId: string;
   role: 'owner' | 'member'; sharing: boolean; memberCount: number; createdAt: string; locked: boolean;
+  /** the day report: I share where I went today with this room */
+  report: boolean;
 }
 export interface FamilyMember {
   id: string; name: string; username: string; avatar: string; role: 'owner' | 'member'; sharing: boolean; me: boolean;
+  /** shares the day report (and the location) with this room */
+  report: boolean;
   lat: number | null; lng: number | null; accuracy: number | null; heading: number | null; speed: number | null; updatedAt: string | null;
 }
 export type FamilyError =
   | 'not_signed_in' | 'switched_off' | 'bad_name' | 'bad_code' | 'not_found' | 'too_many_tries' | 'room_full' | 'too_many_rooms' | 'room_locked' | 'not_member' | 'not_owner' | 'failed';
 export type Outcome<T = object> = ({ ok: true } & T) | { ok: false; error: FamilyError };
 export interface RoomState { room: FamilyRoom; members: FamilyMember[]; now: number }
+/** one person's report of today, as the database hands it out and the phone has opened it (day = the calendar day in `tz`, the person's own time zone) */
+export interface DaySource { on: boolean; now: number; day: string; tz: string; segs: Seg[]; updatedAt: number | null; unreadable: number }
 
 /** the database cannot be reached ('down'), the Family Map functions are not installed yet ('setup'), or there is no login any more ('login') */
 export class FamilyOffline extends Error {
@@ -27,7 +35,15 @@ export interface FamilyApi {
   /** the id of the person who is logged in (the "keep sharing" switch is remembered per person) */
   userId(): Promise<string | null>;
   /** the person's "share my location" switch: what a new room starts with */
-  getPrefs(): Promise<{ shareDefault: boolean }>;
+  getPrefs(): Promise<{ shareDefault: boolean; reportDefault: boolean }>;
+  /** "share my day report" for all rooms at once (deleted at 00:00 every night; switching it off deletes it at once) */
+  setReportAll(on: boolean): Promise<Outcome>;
+  /** the rooms that get my day report right now (null: could not be asked) */
+  reportRooms(): Promise<string[] | null>;
+  /** send the stays and trips of today to one room (locked on the phone first); false = they did not arrive */
+  pushDay(roomId: string, day: string, tz: string, items: PushItem[]): Promise<boolean>;
+  /** the report of today of one person in a room */
+  getDay(roomId: string, userId: string): Promise<Outcome<{ day: DaySource }>>;
   /** "share my location" for all rooms at once */
   setSharingAll(on: boolean): Promise<Outcome>;
   /** the owner locks a room (nobody new can join) or unlocks it */
@@ -66,7 +82,7 @@ const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
 export function parseRoom(j: any): FamilyRoom {
   return {
     id: str(j?.id), code: str(j?.code), name: str(j?.name), emoji: str(j?.emoji), ownerId: str(j?.ownerId),
-    role: j?.role === 'owner' ? 'owner' : 'member', sharing: j?.sharing !== false, memberCount: num(j?.memberCount) ?? 1, createdAt: str(j?.createdAt), locked: j?.locked === true
+    role: j?.role === 'owner' ? 'owner' : 'member', sharing: j?.sharing !== false, memberCount: num(j?.memberCount) ?? 1, createdAt: str(j?.createdAt), locked: j?.locked === true, report: j?.report === true
   };
 }
 /** `resolve` turns a stored picture into an address (services/supabase.ts resolveMedia); anything that is not an http(s), relative, data or blob address is dropped */
@@ -74,7 +90,7 @@ export function parseMember(j: any, resolve: (v: string) => string): FamilyMembe
   const avatar = resolve(str(j?.avatar));
   return {
     id: str(j?.id), name: str(j?.name) || str(j?.username) || 'Someone', username: str(j?.username), avatar: /^(https?:|data:image\/|blob:|\/)/i.test(avatar) ? avatar : '',
-    role: j?.role === 'owner' ? 'owner' : 'member', sharing: j?.sharing !== false, me: j?.me === true,
+    role: j?.role === 'owner' ? 'owner' : 'member', sharing: j?.sharing !== false, me: j?.me === true, report: j?.report === true,
     lat: num(j?.lat), lng: num(j?.lng), accuracy: num(j?.accuracy), heading: num(j?.heading), speed: num(j?.speed), updatedAt: typeof j?.updatedAt === 'string' ? j.updatedAt : null
   };
 }

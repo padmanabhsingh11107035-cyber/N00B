@@ -1,5 +1,7 @@
 import type { FamilyApi, FamilyMember, FamilyRoom, Outcome, RoomState } from './api.ts';
 import { isCode, normaliseCode, type Fix, type LatLng } from './geo.ts';
+import { buildDemoDay, DEMO_PLANS } from './demoDay.ts';
+import { localZone, dayKey, startOfDay } from './timeline.ts';
 
 // A made-up Family Map that lives in memory (open /family?demo=1): a sample room with people who walk, cycle and drive around the visitor's own place, one who paused sharing and one who
 // has not been heard of for a while, so the whole design can be seen without an account or a database. Nothing is stored or sent anywhere; reloading the page forgets it.
@@ -28,12 +30,12 @@ const WALKERS: Walker[] = [
 
 const ME_ID = 'demo-me';
 const mk = (id: string, name: string, emoji: string, role: 'owner' | 'member', count: number): FamilyRoom =>
-  ({ id, code: SAMPLE_CODE, name, emoji, ownerId: role === 'owner' ? ME_ID : 'demo-priya', role, sharing: true, memberCount: count, createdAt: new Date().toISOString(), locked: false });
+  ({ id, code: SAMPLE_CODE, name, emoji, ownerId: role === 'owner' ? ME_ID : 'demo-priya', role, sharing: true, memberCount: count, createdAt: new Date().toISOString(), locked: false, report: false });
 
 export function createDemoApi(): FamilyApi & { setAnchor(p: LatLng): void } {
   let anchor: LatLng = FALLBACK, anchored = false, myFix: Fix | null = null;
   let rooms: FamilyRoom[] = [mk('demo-room-1', 'The Sharma Family', '🏠', 'member', 6)];
-  let sharing = true;
+  let sharing = true, reportOn = false;
 
   const metersToDeg = (dx: number, dy: number): LatLng => ({ lat: anchor.lat + dy / 111320, lng: anchor.lng + dx / (111320 * Math.cos((anchor.lat * Math.PI) / 180)) });
   const at = (w: Walker, tSec: number) => {
@@ -48,14 +50,14 @@ export function createDemoApi(): FamilyApi & { setAnchor(p: LatLng): void } {
     const now = Date.now(), t = now / 1000;
     const here = myFix || { ...anchor, accuracy: 12, heading: null, speed: 0, at: now };
     const members: FamilyMember[] = [{
-      id: ME_ID, name: 'You', username: 'you', avatar: face('#8b6bff', '#25d4ff', '#34d399', '#e6b48f', '#241a33', 3), role: room.role, sharing, me: true,
+      id: ME_ID, name: 'You', username: 'you', avatar: face('#8b6bff', '#25d4ff', '#34d399', '#e6b48f', '#241a33', 3), role: room.role, sharing, me: true, report: sharing && reportOn,
       lat: sharing ? here.lat : null, lng: sharing ? here.lng : null, accuracy: here.accuracy, heading: here.heading, speed: here.speed, updatedAt: sharing ? new Date(now - 2000).toISOString() : null
     }];
     for (const w of WALKERS.slice(0, Math.max(1, Math.min(WALKERS.length, room.memberCount - 1)))) {
       const p = at(w, t);
       const visible = w.sharing;
       members.push({
-        id: w.id, name: w.name, username: w.name.toLowerCase(), avatar: w.avatar, role: w.role, sharing: w.sharing, me: false,
+        id: w.id, name: w.name, username: w.name.toLowerCase(), avatar: w.avatar, role: w.role, sharing: w.sharing, me: false, report: w.sharing,
         lat: visible ? p.lat : null, lng: visible ? p.lng : null, accuracy: visible ? 15 : null, heading: visible && p.speed > 1 ? p.heading : null, speed: visible ? p.speed : null,
         updatedAt: visible ? new Date(now - (w.staleMin ? w.staleMin * 60000 : 1500 + ((w.phase * 997) % 6000))).toISOString() : null
       });
@@ -67,7 +69,17 @@ export function createDemoApi(): FamilyApi & { setAnchor(p: LatLng): void } {
   return {
     mode: 'demo',
     userId: async () => 'demo-me',
-    getPrefs: async () => ({ shareDefault: sharing }),
+    getPrefs: async () => ({ shareDefault: sharing, reportDefault: reportOn }),
+    async setReportAll(on) { reportOn = on; rooms = rooms.map((r) => ({ ...r, report: on })); return { ok: true }; },
+    reportRooms: async () => [],
+    pushDay: async () => true,
+    async getDay(_roomId, userId) {
+      const now = Date.now(), tz = localZone(), start = startOfDay(now, tz), w = WALKERS.find((x) => x.id === userId), plan = DEMO_PLANS[userId];
+      const on = userId === ME_ID ? sharing && reportOn : !!w && w.sharing;
+      if (!plan || !on) return wait({ ok: true as const, day: { on: false, now, day: '', tz: '', segs: [], updatedAt: null, unreadable: 0 } });
+      const segs = buildDemoDay(plan, (dx, dy) => metersToDeg(dx, dy), start, now);
+      return wait({ ok: true as const, day: { on: true, now, day: dayKey(now, tz), tz, segs, updatedAt: now - (plan.quiet ?? 0) * 60000 - 2000, unreadable: 0 } });
+    },
     async setSharingAll(on) { sharing = on; rooms = rooms.map((r) => ({ ...r, sharing: on })); return { ok: true }; },
     async setLocked(id, on) { rooms = rooms.map((r) => (r.id === id ? { ...r, locked: on } : r)); return { ok: true }; },
     setAnchor(p) { if (!anchored) { anchor = p; anchored = true; } },

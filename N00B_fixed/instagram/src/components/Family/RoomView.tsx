@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Box, Layers, LocateFixed, Lock, LogOut, MapPinOff, MoreVertical, RefreshCw, Share2, Trash2, UserMinus, Users } from 'lucide-react';
+import { ArrowLeft, Box, Layers, LocateFixed, Lock, LogOut, MapPinOff, MoreVertical, RefreshCw, Route, Share2, Trash2, UserMinus, Users } from 'lucide-react';
 import type { FamilyApi, RoomState } from '../../family/api';
 import { agoText, distanceM, formatCode, formatDistance, freshness, initialOf, pinHue, speedText, type Fix, type Freshness } from '../../family/geo';
-import { autoShareOn } from '../../family/consent';
+import { autoShareOn, reportInformed, setReportInformed } from '../../family/consent';
 import type { Problem } from '../../family/locate';
-import { startTracker, tracker } from '../../family/trackerLive';
+import { refreshReport, startTracker, tracker } from '../../family/trackerLive';
 import type { PinData } from '../../family/markers';
 import { keepAwake } from '../../booth/camera';
-import { MapCanvas, type MapApi, type MapLook } from './MapCanvas';
+import { MapCanvas, type MapApi, type MapLook, type TrailData } from './MapCanvas';
+import { DayPanel } from './DayPanel';
+import { ReportSheet } from './Sheets';
 import { Avatar, copyText, Modal, shareInvite, Switch, Toast } from './parts';
 
 // A room: the detailed map full-screen with everybody's picture on their exact place, and a sheet below that lists the people (drag it up to see all of them).
@@ -45,7 +47,12 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
   const [mapReady, setMapReady] = useState(false);
   const [broken, setBroken] = useState(false);
   const [toast, setToast] = useState('');
+  const [dayFor, setDayFor] = useState('');
+  const [askReport, setAskReport] = useState(false);
+  const [busy, setBusy] = useState(false);
   const map = useRef<MapApi | null>(null);
+  const hRef = useRef(PEEK);
+  hRef.current = h;
   const fitted = useRef(false);
   const fixRef = useRef<Fix | null>(place);
   const drag = useRef<{ y: number; h: number } | null>(null);
@@ -110,6 +117,15 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
     id: r.m.id, name: r.m.name, avatar: r.m.avatar, lat: r.lat, lng: r.lng, state: r.st, me: r.m.me, moving: ((r.m.me ? fix?.speed : r.m.speed) ?? 0) > 1.5, hue: pinHue(r.m.id), initial: initialOf(r.m.name)
   }]), [rows, fix]);
   const liveCount = rows.filter((r) => r.m.sharing && r.st === 'live').length;
+  // the day report of one person: their route on the map, the list in the sheet (everybody else's pin steps aside)
+  const dayMember = dayFor ? data?.members.find((m) => m.id === dayFor) ?? null : null;
+  const shown = useMemo(() => (dayFor ? pins.filter((p) => p.id === dayFor) : pins), [pins, dayFor]);
+  const onTrail = useCallback((t: TrailData | null): void => { map.current?.trail(t); }, []);
+  const onFit = useCallback((pts: { lat: number; lng: number }[]): void => { map.current?.fit(pts, hRef.current + 40); }, []);
+  const onFly = useCallback((p: { lat: number; lng: number }): void => { map.current?.fly(p, 16); }, []);
+  const openDay = (id: string): void => { setDayFor(id); setSel(''); setH((v) => Math.max(v, snaps()[1])); };
+  const closeDay = (): void => { setDayFor(''); map.current?.trail(null); map.current?.fit(pins, snaps()[0] + 40); };
+  useEffect(() => { if (dayFor && data && !dayMember) setDayFor(''); }, [dayFor, data, dayMember]);
 
   // the first time the map is ready and the people are known, show all of them
   useEffect(() => {
@@ -154,14 +170,31 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
     setData((d) => (d ? { ...d, room: { ...d.room, sharing: on } } : d));
     const r = await api.setSharing(roomId, on);
     if (!r.ok) say('Could not change that. Try again.');
+    refreshReport();
     void load();
+  };
+  // "my day report" for all my rooms; the first time it is explained (it shows where a person went, not only where they are)
+  const turnReport = async (on: boolean): Promise<void> => {
+    setBusy(true);
+    const r = await api.setReportAll(on);
+    setBusy(false); setAskReport(false);
+    if (!r.ok) { say('Could not change that. Try again.'); return; }
+    if (on) setReportInformed();
+    refreshReport();
+    void load();
+    say(on ? 'Day report is on. It is deleted every night at 12.' : 'Day report is off. What was recorded today is deleted.');
+  };
+  const switchReport = (on: boolean): void => {
+    if (!on) { void turnReport(false); return; }
+    if (!sharing) { say('Turn on Share my location first.'); return; }
+    if (reportInformed()) void turnReport(true); else setAskReport(true);
   };
   const invite = async (): Promise<void> => { if (!room) return; const r = await shareInvite(room, origin); if (r === 'copied') say('Invitation copied'); };
 
   return (
     <div className="fm-room-screen" style={{ ['--fm-sheet-h' as string]: `${h}px` }}>
       {broken ? <div className="fm-map-broken"><MapPinOff size={30} /><p>This phone cannot show the map. The list below still works.</p></div>
-        : <MapCanvas variant="room" look={prefs.look} pins={pins} apiRef={map} onPin={(id) => { setSel(id); setH((v) => Math.max(v, snaps()[1])); const r = rows.find((x) => x.m.id === id); if (r && r.lat != null && r.lng != null) map.current?.fly({ lat: r.lat, lng: r.lng }, 16); }}
+        : <MapCanvas variant="room" look={prefs.look} pins={shown} apiRef={map} onStay={() => undefined} onPin={(id) => { setSel(id); setH((v) => Math.max(v, snaps()[1])); const r = rows.find((x) => x.m.id === id); if (r && r.lat != null && r.lng != null) map.current?.fly({ lat: r.lat, lng: r.lng }, 16); }}
             onReady={() => setMapReady(true)} onFail={() => setBroken(true)} className="fm-fill" />}
 
       <div className="fm-top">
@@ -182,19 +215,23 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
 
       <div className={`fm-sheet${dragging ? ' is-dragging' : ''}`} style={{ height: h }}>
         <div className="fm-sheet-grab" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}><span /></div>
-        <div className="fm-sheet-head">
+        {!dayFor && <div className="fm-sheet-head">
           <div className="fm-avstack">{rows.slice(0, 4).map((r) => <Avatar key={r.m.id} id={r.m.id} name={r.m.name} src={r.m.avatar} size={36} state={r.m.sharing ? r.st : 'paused'} />)}</div>
           <div className="fm-sheet-count"><b>{liveCount} live now</b><small>{data ? `${rows.length} in this room` : 'Loading…'}</small></div>
           <button type="button" className="fm-chip fm-chip--solid" onClick={() => void invite()}><Share2 size={14} /> Invite</button>
-        </div>
+        </div>}
         <div className="fm-sheet-list">
-          {rows.map((r) => (
+          {dayFor && dayMember && <DayPanel key={dayFor} api={api} roomId={roomId} member={dayMember} onBack={closeDay} onTrail={onTrail} onFit={onFit} onFly={onFly} onTurnOn={() => switchReport(true)} />}
+          {!dayFor && rows.map((r) => (
             <div key={r.m.id} className={`fm-person${sel === r.m.id ? ' is-sel' : ''}`}>
-              <button type="button" className="fm-person-main" onClick={() => picked(r.m.id)} data-testid="family-person">
-                <Avatar id={r.m.id} name={r.m.name} src={r.m.avatar} size={46} state={r.m.sharing ? r.st : 'paused'} />
-                <span className="fm-person-text"><b>{r.m.me ? 'You' : r.m.name}{r.m.role === 'owner' ? <i>Owner</i> : null}</b><small className={r.st === 'live' && r.m.sharing ? 'is-live' : ''}>{r.status}</small></span>
-                <span className="fm-person-dist">{r.dist != null ? formatDistance(r.dist) : ''}</span>
-              </button>
+              <div className="fm-person-row">
+                <button type="button" className="fm-person-main" onClick={() => picked(r.m.id)} data-testid="family-person">
+                  <Avatar id={r.m.id} name={r.m.name} src={r.m.avatar} size={46} state={r.m.sharing ? r.st : 'paused'} />
+                  <span className="fm-person-text"><b>{r.m.me ? 'You' : r.m.name}{r.m.role === 'owner' ? <i>Owner</i> : null}</b><small className={r.st === 'live' && r.m.sharing ? 'is-live' : ''}>{r.status}</small></span>
+                  <span className="fm-person-dist">{r.dist != null ? formatDistance(r.dist) : ''}</span>
+                </button>
+                {r.m.report && <button type="button" className="fm-day-btn" onClick={() => openDay(r.m.id)} aria-label={`${r.m.me ? 'Your' : `${r.m.name}'s`} day: where ${r.m.me ? 'you' : 'they'} went today`} title="Where they went today" data-testid="family-day-open"><Route size={18} /></button>}
+              </div>
               {sel === r.m.id && !r.m.me && owner && (
                 <div className="fm-person-actions">
                   <button type="button" className="fm-small fm-small--danger" onClick={() => (ask === `rm:${r.m.id}` ? void run('remove', r.m.id) : setAsk(`rm:${r.m.id}`))}>
@@ -204,7 +241,7 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
               )}
             </div>
           ))}
-          {!data && <div className="fm-skeleton" aria-hidden="true"><i /><i /><i /></div>}
+          {!dayFor && !data && <div className="fm-skeleton" aria-hidden="true"><i /><i /><i /></div>}
         </div>
       </div>
 
@@ -218,6 +255,7 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
               <small className="fm-enc"><Lock size={12} /> Places in this room are end-to-end encrypted</small>
             </div>
             <div className="fm-line"><span><b>Share my location</b><small>{sharing ? 'People in this room see you on the map.' : 'Paused: nobody in this room sees you.'}</small></span><Switch on={sharing} onChange={(v) => void setSharing(v)} label="Share my location" /></div>
+            <div className="fm-line" data-testid="family-report-menu"><span><b>My day report</b><small>{room.report && sharing ? 'Your rooms see where you went today. Deleted every night at 12.' : 'Off. Show your rooms the places you went today. Deleted every night at 12.'}</small></span><Switch on={room.report && sharing} onChange={switchReport} label="My day report" /></div>
             <div className="fm-line"><span><b>Keep screen on</b><small>A website can only send your place while this page is open.</small></span><Switch on={prefs.awake} onChange={(v) => update({ awake: v })} label="Keep screen on" /></div>
             {owner && <div className="fm-line"><span><b>Lock the room</b><small>{room.locked ? 'Locked: nobody new can join, even with the code.' : 'Lock it once everybody has joined, so the code cannot be used.'}</small></span><Switch on={room.locked} onChange={(v) => void lockRoom(v)} label="Lock the room" /></div>}
             {owner && <button type="button" className="fm-menu-btn" onClick={() => (ask === 'code' ? void run('code') : setAsk('code'))}><RefreshCw size={17} /> {ask === 'code' ? 'Tap again: old code stops working' : 'Make a new code'}</button>}
@@ -226,6 +264,7 @@ export const RoomView: React.FC<Props> = ({ api, roomId, place, origin, onBack, 
           </div>
         </Modal>
       )}
+      {askReport && <ReportSheet busy={busy} onTurnOn={() => void turnReport(true)} onClose={() => setAskReport(false)} />}
       <Toast text={toast} />
     </div>
   );

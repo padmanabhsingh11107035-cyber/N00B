@@ -1,8 +1,9 @@
 import { supabase, resolveMedia } from '../services/supabase';
 import { browserKeyStore } from '../e2ee/keyring.ts';
 import { deviceLabel } from '../e2ee/label.ts';
-import { FamilyOffline, parseOutcome, parseRoom, parseRoomOutcome, parseStateOutcome, type FamilyApi, type FamilyRoom } from './api';
+import { FamilyOffline, parseOutcome, parseRoom, parseRoomOutcome, parseStateOutcome, type FamilyApi, type FamilyError, type FamilyRoom } from './api';
 import { createPlaceCrypto } from './sealed.ts';
+import { dayStartFromKey, endOfDay, fromWire, toWire, type Seg } from './timeline.ts';
 
 // The Family Map on the real database: every call is one of the family_* functions (migrations 20261031000001 and 20261031000002), which check who is asking. Nothing is read from a table directly,
 // and a place never travels or rests unlocked: it is locked on this phone for the devices of the room (sealed.ts) and opened here again for the others.
@@ -40,16 +41,20 @@ const places = createPlaceCrypto({
   deviceLabel
 });
 
-// the rooms this person shares with (asked at most every 45 seconds: a place is sent every few seconds)
-let sharingRooms: { at: number; rooms: FamilyRoom[] } | null = null;
-async function roomsToShareWith(): Promise<FamilyRoom[]> {
-  if (sharingRooms && Date.now() - sharingRooms.at < 45_000) return sharingRooms.rooms;
+// the rooms this person is in (asked at most every 45 seconds: a place is sent every few seconds); the ones they share with, and the ones that get their day report, are picked from it
+let myRoomsCache: { at: number; rooms: FamilyRoom[] } | null = null;
+async function allRooms(): Promise<FamilyRoom[]> {
+  if (myRoomsCache && Date.now() - myRoomsCache.at < 45_000) return myRoomsCache.rooms;
   const list = await call('family_my_rooms');
-  const rooms = (Array.isArray(list) ? list : []).map(parseRoom).filter((r) => r.sharing);
-  sharingRooms = { at: Date.now(), rooms };
+  const rooms = (Array.isArray(list) ? list : []).map(parseRoom);
+  myRoomsCache = { at: Date.now(), rooms };
   return rooms;
 }
-const changed = (roomId?: string): void => { sharingRooms = null; places.forget(roomId); };
+const roomsToShareWith = async (): Promise<FamilyRoom[]> => (await allRooms()).filter((r) => r.sharing);
+const changed = (roomId?: string): void => { myRoomsCache = null; places.forget(roomId); };
+
+// the day report of other people, kept here so that asking again only fetches what changed (a stay or trip is one small locked row)
+const dayCache = new Map<string, { since: string | null; rows: Map<number, { seg: Seg; at: number }>; day: string; tz: string }>();
 
 // an envelope opened once is not opened again every 5 seconds: it is kept by room, person and the envelope's own random number
 const opened = new Map<string, Awaited<ReturnType<typeof places.open>>>();
@@ -91,7 +96,53 @@ export const liveApi: FamilyApi = {
       if (items.length) await call('family_push_sealed', { p_items: items });
     } catch { /* ignored */ }
   },
-  async getPrefs() { try { const j = await call('family_my_prefs'); return { shareDefault: j?.shareDefault !== false }; } catch { return { shareDefault: true }; } },
+  async getPrefs() { try { const j = await call('family_my_prefs'); return { shareDefault: j?.shareDefault !== false, reportDefault: j?.reportDefault === true }; } catch { return { shareDefault: true, reportDefault: false }; } },
+  setReportAll: (on) => safe(async () => { const r = parseOutcome(await call('family_set_report_all', { p_on: on })); changed(); dayCache.clear(); return r; }, { ok: false, error: 'failed' }),
+  async reportRooms() { try { return (await allRooms()).filter((r) => r.sharing && r.report).map((r) => r.id); } catch { return null; } },
+  async pushDay(roomId, day, tz, items) {
+    try {
+      const out: { room: string; day: string; tz: string; seq: number; env: unknown }[] = [];
+      for (const it of items) {
+        if (!it.seg) { out.push({ room: roomId, day, tz, seq: it.seq, env: null }); continue; }
+        const env = await places.sealJson(roomId, 'day', toWire(it.seg));
+        if (!env) return false;
+        out.push({ room: roomId, day, tz, seq: it.seq, env });
+      }
+      let saved = 0;
+      for (let i = 0; i < out.length; i += 30) {
+        const batch = out.slice(i, i + 30);
+        const r = await call('family_push_timeline', { p_items: batch });
+        if (!r || r.ok !== true) return false;
+        saved += Number(r.saved) || 0;
+      }
+      return saved >= out.length;
+    } catch { return false; }
+  },
+  getDay: (roomId, userId) => safe(async () => {
+    const key = `${roomId}:${userId}`;
+    let c = dayCache.get(key);
+    const j = await call('family_timeline_get', { p_room: roomId, p_user: userId, p_since: c?.since ?? null });
+    if (!j || j.ok !== true) return parseOutcome(j) as { ok: false; error: FamilyError };
+    const nowMs = Number.isFinite(Date.parse(String(j.now))) ? Date.parse(String(j.now)) : Date.now();
+    if (j.on !== true) { dayCache.delete(key); return { ok: true as const, day: { on: false, now: nowMs, day: '', tz: '', segs: [], updatedAt: null, unreadable: 0 } }; }
+    if (!c) { c = { since: null, rows: new Map(), day: '', tz: '' }; dayCache.set(key, c); }
+    const keep = new Set<number>((Array.isArray(j.seqs) ? j.seqs : []).map(Number));
+    for (const k of [...c.rows.keys()]) if (!keep.has(k)) c.rows.delete(k);
+    let newest = c.since ? Date.parse(c.since) + 2000 : 0, unreadable = 0;
+    for (const row of Array.isArray(j.rows) ? j.rows : []) {
+      const at = Date.parse(String(row?.at));
+      if (at > newest) newest = at;
+      const start = typeof row?.day === 'string' && typeof row?.tz === 'string' ? dayStartFromKey(row.day, row.tz) : null;
+      const opened = start == null ? null : await places.openJson(roomId, 'day', userId, row.env);
+      const seg = start != null && opened && opened.ok ? fromWire(opened.value, start, endOfDay(start + 1, row.tz)) : null;
+      if (!seg) { unreadable++; continue; }
+      c.rows.set(Number(row.seq), { seg, at }); c.day = row.day; c.tz = row.tz;
+    }
+    if (newest) c.since = new Date(newest - 2000).toISOString();
+    if (!c.rows.size) { c.day = ''; c.tz = ''; }
+    const rows = [...c.rows.values()];
+    return { ok: true as const, day: { on: true, now: nowMs, day: c.day, tz: c.tz, segs: rows.map((r) => r.seg), updatedAt: rows.reduce((m, r) => Math.max(m, r.at), 0) || null, unreadable } };
+  }, { ok: false, error: 'failed' }),
   setSharing: (id, on) => safe(async () => { const r = parseOutcome(await call('family_set_sharing', { p_room: id, p_on: on })); changed(); return r; }, { ok: false, error: 'failed' }),
   setSharingAll: (on) => safe(async () => { const r = parseOutcome(await call('family_set_sharing_all', { p_on: on })); changed(); return r; }, { ok: false, error: 'failed' }),
   setLocked: (id, on) => safe(async () => parseOutcome(await call('family_set_locked', { p_room: id, p_locked: on })), { ok: false, error: 'failed' }),

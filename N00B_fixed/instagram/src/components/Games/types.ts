@@ -35,6 +35,33 @@ export interface MiniGameMeta {
 // games felt repeated. Add a new entry here only alongside a real,
 // distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
+  // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
+  {
+    id: 'siegecraft',
+    title: 'Siegecraft',
+    category: 'arcade',
+    description: 'Wind back the catapult, find the angle and bring two castles down: a wooden fort and a bluestone keep, built from hundreds of pieces that really fall. Red powder barrels chain the blast, every big hit plays out in slow motion, and the fewer stones you use the more stars you win. Made by NOOB developers. On a phone it plays sideways, and your best scores are kept on your device.',
+    bannerBg: 'from-[#6b3fa0] to-[#1b1838]',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'siegecraft',
+    tags: ['3D', 'Physics', 'Castles'],
+    isNew: true,
+    ownSound: true,
+    embedLazy: true,
+    embedControls: 'Drag down and let go to fire, drag sideways to turn, the mouse wheel (or W and S) sets the angle, V or Survey looks around the castle. On a phone: drag to aim and charge, the little stick sets the angle. It has its own music and sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/siegecraft/',
+    posters: [
+      '/game-posters/siegecraft/01-cover.webp',
+      '/game-posters/siegecraft/02-aim.webp',
+      '/game-posters/siegecraft/03-impact.webp',
+      '/game-posters/siegecraft/04-keep.webp'
+    ]
+  },
+
   // --- NEW: COIL RUSH (a 3D worm arena on its own page, /games/coil-rush/, shown in a frame — see minigames/HostedGameFrame and utils/coilRushWarmup) ---
   {
     id: 'coil_rush',

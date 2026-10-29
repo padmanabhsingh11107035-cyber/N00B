@@ -1,0 +1,15 @@
+{
+ "shell": [
+  "build/game-BBU6y38g.js",
+  "build/index-C2jP1V0f.css",
+  "build/index-Z1M2TGjW.js",
+  "build/physics-FtWvYBVR.js",
+  "build/renderer-CWmpH8ZO.js",
+  "build/stone-projectile-ka-k92M7.glb",
+  "build/three.core-DzZkVX3P.js",
+  "fonts/Sora-VF.subset.woff2",
+  "fonts/Figtree-VF.subset.woff2",
+  "logo.png"
+ ],
+ "race": []
+}

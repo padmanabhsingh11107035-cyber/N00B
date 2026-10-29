@@ -152,6 +152,23 @@
   Cache-Control: public, max-age=31536000, immutable
 /games/critterkart/fonts/*
   Cache-Control: public, max-age=604800
+# Siegecraft (a 3D catapult game made with Three.js and the Rapier physics engine) runs in a frame of its own, from this same site, like Critter Kart: only its own scripts, model and fonts, no network,
+# no frames; WebAssembly is allowed because the physics engine is one. Its scripts, style and stone model are fingerprinted (build/), so they are kept for ever; its fonts and logo keep their names, so they are kept for a week.
+/games/siegecraft/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/siegecraft/index.html
+  Cache-Control: no-cache
+/games/siegecraft/warm.json
+  Cache-Control: no-cache
+/games/siegecraft/build/*
+  Cache-Control: public, max-age=31536000, immutable
+/games/siegecraft/fonts/*
+  Cache-Control: public, max-age=604800
+/games/siegecraft/logo.png
+  Cache-Control: public, max-age=604800
 # Coil Rush (a 3D worm arena made with Three.js) runs in a frame of its own, from this same site, like Critter Kart: only its own scripts, pictures, sounds and fonts, no network,
 # no frames, no WebAssembly. Its scripts and style are fingerprinted (build/), so they are kept for ever; its pictures, sounds and fonts keep their names (assets/), so they are kept for a day.
 /games/coil-rush/*

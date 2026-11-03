@@ -2,8 +2,8 @@ name: Build Android APK
 
 on:
   workflow_dispatch: {}
-  # The app carries its own screens (the built website is inside the app file; it is not a window onto the website). Anything that changes the app's screens or code needs a new app file,
-  # so every change to the app's source builds one (and publishes it for the "Update the app" button inside the app).
+  # Since 2026-11-03 the app shows the LIVE website (capacitor.config.json server.url), so ordinary changes reach it by themselves once the website is deployed. A new app file is only
+  # needed when something NATIVE changes (installer, secure window, icon switch, permissions). Every push still builds one and publishes it for the "Update the app" button inside the app.
   push:
     branches: [main]   # we push the same commit to both branches; one build is enough (two at once raced for the same release and sent "failed" mails)
     paths:

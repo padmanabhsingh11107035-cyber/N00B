@@ -1,4 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PageLock } from '../Common/AppLockGate';
 import { ArrowLeft, Moon, Search, Sun, X } from 'lucide-react';
 import { useFullPage } from '../../utils/fullPage';
 import { PageLoading, Row, Section, useStuck } from './kit';
@@ -154,6 +155,7 @@ export const SettingsHub: React.FC<{ ctx: SettingsContext; onClose: () => void }
   let section = 0;
   const view = (
     <div ref={scroller} className="nst-root fixed inset-0 z-[45] bg-page doodle-wallpaper overflow-y-auto text-white" role="region" aria-label="Settings and activity" data-testid="settings-hub">
+      <PageLock user={ctx.currentUser} page="settings" onLeave={onClose} />
       {Page ? (
         <Suspense fallback={<PageLoading />}>
           <div key={current} className={`nst-page${goingBack ? ' back' : ''}`}><Page ctx={ctx} go={go} back={back} /></div>

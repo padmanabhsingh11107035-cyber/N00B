@@ -216,6 +216,7 @@ export {
   hideMessageForMe,
   fetchLinkedAccounts,
   signInLinkedAccount,
+  verifyMyPassword,
   sendMessage,
   editMessage,
   deleteMessage,

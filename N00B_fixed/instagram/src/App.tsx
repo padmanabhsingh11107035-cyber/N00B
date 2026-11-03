@@ -137,6 +137,7 @@ import { SystemPage } from './components/Common/SystemPage';
 import { NoobStackLoader } from './components/Common/NoobStackLoader';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
+import { AppLockGate } from './components/Common/AppLockGate';
 import { detectPlatform } from './utils/appPlatform';
 import { startVisitTracking, noteVisit } from './services/visitTracker';
 import { getDeviceId, getDeviceLabel } from './utils/deviceId';
@@ -2291,7 +2292,7 @@ export default function App() {
         else { setStudioFile(file); setCreateKind(target); }
       }} />
       {/* Family Map: rooms where a family or friends see each other live on a map (opened from the Home menu; the same map is also the page /family) */}
-      <FamilyHost />
+      <FamilyHost lockUser={currentUser} />
       <FamilyTracker />
       <TeamJoinHost currentUser={currentUser} />
       <StudyHost currentUser={currentUser} />
@@ -2316,6 +2317,9 @@ export default function App() {
           }}
         /></React.Suspense>
       )}
+
+      {/* App lock: Face ID / fingerprint before NOOB or a chosen page opens (Settings and activity > App lock) */}
+      <AppLockGate user={currentUser} activeTab={activeTab} onLeave={() => setActiveTab('feed')} />
 
       {/* 2. Story Creation Modal */}
       {showCreateStoryModal && (

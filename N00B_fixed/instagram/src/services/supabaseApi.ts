@@ -717,6 +717,20 @@ export async function fetchLinkedAccounts(): Promise<{ accounts: LinkedAccount[]
   }
 }
 
+// Checks the password of the signed-in account without changing anything (a throw-away client, nothing is saved): used before a lock is set up or turned off.
+export async function verifyMyPassword(username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+  if (!username || !password) return { ok: false, error: 'Please enter your password.' };
+  try {
+    const email = await rpc<string>('resolve_login_email', { identifier: username });
+    const { error } = await createIsolatedClient().auth.signInWithPassword({ email, password });
+    if (!error || /approval by email/i.test(error.message)) return { ok: true };   // an account that asks for an approval by email got past the password itself
+    if (/rate|too many/i.test(error.message)) return { ok: false, error: 'Too many attempts. Please wait a moment and try again.' };
+    return { ok: false, error: 'Incorrect password.' };
+  } catch {
+    return { ok: false, error: 'Could not check the password. Check your connection and try again.' };
+  }
+}
+
 // Signs in to another of the person's accounts, once. The login is saved on this device next to the others (src/services/tabSessions.ts), so the password
 // is asked this one time and never again: the password itself is not kept, the saved login is renewed by the app until the person removes the account
 // from the list or logs out of it. This tab keeps using its own account until the caller switches (tabSessions.switchTo) and reloads.

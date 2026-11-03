@@ -11,6 +11,7 @@ import { ChatSettingsPage } from './chats';
 import { SubscriptionHistoryPage } from './subscription';
 import { SearchSongPage } from './searchsong';
 import { NotepadPage } from './notepad';
+import { AppLockPage } from './lock';
 
 // Every page of "Settings and activity", by name. All of them come in the same file as the hub, so tapping a row opens its page at once (nothing is fetched first); the
 // hub itself is loaded in the background while the profile is on screen (ProfileView). The hub shows a row only when its page is in this list (registry.ts), and
@@ -26,6 +27,7 @@ export const PAGES: Record<string, PageComponent> = {
   // your account
   account: AccountPage,
   password: PasswordPage,
+  'app-lock': AppLockPage,
   'account-type': AccountTypePage,
   // how you use NOOB
   archive: ArchivePage,

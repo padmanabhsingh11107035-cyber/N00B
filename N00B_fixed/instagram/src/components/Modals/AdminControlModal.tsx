@@ -66,7 +66,7 @@ import {
   UtensilsCrossed,
   Lightbulb,
   BellRing,
-  BellOff, GraduationCap, BarChart3, Megaphone } from 'lucide-react';
+  BellOff, GraduationCap, BarChart3, Megaphone , Scale } from 'lucide-react';
 import { User } from '../../types';
 import { AdminOrdersPanel } from './AdminOrdersPanel';
 import { AdminFoodStallPanel } from './AdminFoodStallPanel';
@@ -89,6 +89,7 @@ import { AdminModerationPanel } from './AdminModerationPanel';
 import { AdminFeaturesPanel } from './AdminFeaturesPanel';
 import { adminFetchAdApplications } from '../../services/api';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
+import { AdminGrievancesPanel } from './AdminGrievancesPanel';
 import {
   fetchAdminUsersList, suspendUserAccount, deleteUserAccount, bulkDeleteUserAccounts, fetchAdminActionRequests, resolveAdminActionRequest,
   sendAdminNotification, fetchAdminReports, takeAdminReportAction, adjustUserPoints, adminSetVerification,
@@ -121,7 +122,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'settings';
+type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -220,6 +221,7 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
   const [loading, setLoading] = useState(true);
   const [loadingReports, setLoadingReports] = useState(false);
   const [suggestionOpenCount, setSuggestionOpenCount] = useState(0);
+  const [grievanceOpenCount, setGrievanceOpenCount] = useState(0);
   const [aiFeedbackList, setAiFeedbackList] = useState<NoobAiFeedbackItem[]>([]);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [aiFeedbackReplyDrafts, setAiFeedbackReplyDrafts] = useState<Record<string, string>>({});
@@ -1281,6 +1283,22 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
                 <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
                   {aiFeedbackList.filter((f) => f.status === 'open').length}
                 </span>
+              )}
+            </button>
+          )}
+
+          {main && (
+            <button
+              onClick={() => setActiveTab('grievances')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'grievances'
+                  ? 'border-rose-400 text-rose-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Scale className="w-4 h-4" /> Grievances
+              {grievanceOpenCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">{grievanceOpenCount}</span>
               )}
             </button>
           )}
@@ -2461,6 +2479,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminOrdersPanel />
           ) : activeTab === 'foodStall' && canManageStore ? (
             <AdminFoodStallPanel />
+          ) : activeTab === 'grievances' && main ? (
+            <AdminGrievancesPanel onOpenCountChange={setGrievanceOpenCount} />
           ) : activeTab === 'suggestions' && main ? (
             <AdminSuggestionsPanel onOpenCountChange={setSuggestionOpenCount} />
           ) : activeTab === 'signIn' && main ? (

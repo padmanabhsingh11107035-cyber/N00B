@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { listenRoom, pingRoom } from '../../utils/roomPing';
 import { BurgerSmall } from '../Common/BurgerLoading';
 import {
   X,
@@ -417,6 +418,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     (async () => {
       try {
         const res = await joinGameRoom(onlineMatch.roomCode, game.id, game.title);
+        pingRoom(onlineMatch.roomCode);
         if (cancelled) return;
         if (res.success && res.room) {
           if (res.room.status === 'ready') {
@@ -448,7 +450,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // above): poll the shared room until the other person joins.
   useEffect(() => {
     if (!onlineMatch || onlineMatch.phase !== 'waiting_opponent_join') return;
-    const interval = setInterval(pollOnce(async () => {
+    const tick = pollOnce(async () => {
       try {
         const res = await getGameRoom(onlineMatch.roomCode);
         if (res.success && res.room && res.room.status !== 'waiting') {
@@ -458,8 +460,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }), 2000);
-    return () => clearInterval(interval);
+    });
+    const interval = setInterval(tick, 1000);   // a safety net: the other player's poke (utils/roomPing.ts) makes it run at once
+    window.addEventListener('noob-room-poke', tick);
+    const stopListening = listenRoom(onlineMatch.roomCode, tick);
+    return () => { clearInterval(interval); window.removeEventListener('noob-room-poke', tick); stopListening(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode]);
 
@@ -467,7 +472,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // submitted theirs too so the head-to-head outcome can be shown.
   useEffect(() => {
     if (!onlineMatch || onlineMatch.phase !== 'waiting_opponent_result') return;
-    const interval = setInterval(pollOnce(async () => {
+    const tick = pollOnce(async () => {
       try {
         const res = await getGameRoom(onlineMatch.roomCode);
         if (res.success && res.room && res.room.status === 'finished') {
@@ -477,8 +482,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }), 2000);
-    return () => clearInterval(interval);
+    });
+    const interval = setInterval(tick, 1000);   // a safety net: the other player's poke (utils/roomPing.ts) makes it run at once
+    window.addEventListener('noob-room-poke', tick);
+    const stopListening = listenRoom(onlineMatch.roomCode, tick);
+    return () => { clearInterval(interval); window.removeEventListener('noob-room-poke', tick); stopListening(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode]);
 
@@ -487,7 +495,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   // player who makes the winning move learns the outcome directly.
   useEffect(() => {
     if (!onlineMatch || onlineMatch.phase !== 'in_progress' || !SYNCED_GAME_IDS.includes(game.id)) return;
-    const interval = setInterval(pollOnce(async () => {
+    const tick = pollOnce(async () => {
       try {
         const res = await getGameRoom(onlineMatch.roomCode);
         if (!res.success || !res.room) return;
@@ -500,8 +508,11 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }), 1200);
-    return () => clearInterval(interval);
+    });
+    const interval = setInterval(tick, 700);   // a safety net: the other player's poke (utils/roomPing.ts) makes it run at once
+    window.addEventListener('noob-room-poke', tick);
+    const stopListening = listenRoom(onlineMatch.roomCode, tick);
+    return () => { clearInterval(interval); window.removeEventListener('noob-room-poke', tick); stopListening(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode, game.id]);
 
@@ -533,6 +544,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setIsSubmitting(true);
     try {
       const res = await submitGameRoomResult(onlineMatch.roomCode, result);
+      pingRoom(onlineMatch.roomCode);
       if (res.success && res.room) {
         if (res.room.status === 'finished' && res.room.outcome) {
           finalizeOnlineMatch(res.room);
@@ -832,6 +844,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     setIsSubmitting(true);
     try {
       const res = await submitGameRoomMove(onlineMatch.roomCode, index);
+      pingRoom(onlineMatch.roomCode);
       if (res.success && res.room) {
         if (res.room.status === 'finished' && res.room.outcome) {
           finalizeOnlineMatch(res.room);
@@ -947,6 +960,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       // previously missing entirely (the invite used to just be a chat
       // message with no real link between the two sides).
       const res = await joinGameRoom(generatedRoomCode, game.id, game.title);
+      pingRoom(generatedRoomCode);
       if (res.success && res.room) {
         setOnlineMatch({ roomCode: generatedRoomCode, phase: 'waiting_opponent_join' });
         setCurrentMode('play_match');
@@ -991,6 +1005,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     try {
       await sendGameInvite(lastOpponent.id, game.id, game.title, rematchRoomCode);
       const res = await joinGameRoom(rematchRoomCode, game.id, game.title);
+      pingRoom(rematchRoomCode);
       if (res.success && res.room) {
         setOnlineMatch({ roomCode: rematchRoomCode, phase: 'waiting_opponent_join' });
       } else {

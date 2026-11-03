@@ -584,16 +584,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (!activeChatId) return;
     const chatId = activeChatId;
 
+    // Asks every 1.5 s while somebody is typing (or just was); a quiet chat is asked less and less often (up to every 3 s), which keeps the same feel and saves most of the asks.
+    let quiet = 0;
+    let timer = 0;
     const poll = async () => {
-      if (document.visibilityState !== 'visible') return;   // a tab nobody is looking at asks nothing (every ask is bytes out of the database plan)
-      const users = await fetchTypingUsers(chatId);
-      if (activeChatIdRef.current !== chatId) return;
-      setTypingUsers(users);
+      if (document.visibilityState === 'visible') {   // a tab nobody is looking at asks nothing (every ask is bytes out of the database plan)
+        const users = await fetchTypingUsers(chatId);
+        if (activeChatIdRef.current !== chatId) return;
+        setTypingUsers(users);
+        quiet = users.length > 0 ? 0 : Math.min(quiet + 1, 8);
+      }
+      timer = window.setTimeout(poll, quiet < 3 ? 1500 : quiet < 6 ? 2200 : 3000);
     };
-    poll();
-    const interval = setInterval(poll, 1500);
+    void poll();
     return () => {
-      clearInterval(interval);
+      window.clearTimeout(timer);
       // Navigating away mid-type would otherwise leave the OTHER person
       // staring at a stuck "typing…" for the rest of its TTL — tell the
       // server it stopped the moment this chat is no longer the open one.

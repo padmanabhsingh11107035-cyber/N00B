@@ -3720,6 +3720,15 @@ export async function colorSortLeaderboard(): Promise<ColorSortBoard | null> {
   }
 }
 
+// The Grievance Officer's inbox (migration 20261103000001): only the NOOB administrator can read and answer complaints.
+export interface AdminGrievance { id: string; ticket: string; name?: string; contact: string; username?: string; topic: string; message: string; status: 'open' | 'acknowledged' | 'resolved' | 'rejected'; resolution?: string; createdAt: string; ackAt?: string; resolvedAt?: string; ackLate: boolean; resolveLate: boolean }
+export async function adminGrievances(): Promise<{ success: true; items: AdminGrievance[] } | { success: false; error: string }> {
+  try { return { success: true, items: (await rpc<AdminGrievance[]>('admin_grievances', {})) || [] }; } catch (err) { return { success: false, error: errorText(err, 'Could not load the complaints.') }; }
+}
+export async function adminGrievanceUpdate(id: string, status: 'acknowledged' | 'resolved' | 'rejected', resolution?: string): Promise<{ success: boolean; error?: string }> {
+  try { return await rpc<any>('admin_grievance_update', { p_id: id, p_status: status, p_resolution: resolution || null }); } catch (err) { return { success: false, error: errorText(err, 'Could not save.') }; }
+}
+
 // The score games (migration 20261103000002): one best score per player per game; the board shows the best 50 and your own place.
 export interface GameScoreBoard { label?: string; higherIsBetter?: boolean; me: { rank: number; best: number } | null; rows: Array<{ rank: number; username: string; displayName: string; avatar?: string; best: number; isMe: boolean }> }
 export async function gameScoreSubmit(game: string, score: number): Promise<{ success: boolean; best?: number; newBest?: boolean; error?: string }> {

@@ -1,0 +1,20 @@
+// The Grievance Officer's inbox tab in the admin panel, and the quick "poke" that makes online games feel live. Usage: node --liftoff-only scripts/supabase/test-grievance-inbox-room-ping.mjs
+import fs from 'node:fs';
+let passed = 0, failed = 0;
+const check = (c, l, d = '') => { if (c) { passed++; console.log(`  ok   ${l}`); } else { failed++; console.log(`  FAIL ${l} ${d}`); } };
+const read = (p) => fs.readFileSync(p, 'utf8').split('\r').join('');
+const panel = read('src/components/Modals/AdminGrievancesPanel.tsx'), modal = read('src/components/Modals/AdminControlModal.tsx'), api = read('src/services/supabaseApi.ts');
+console.log('\n1. The inbox');
+check(/rpc<AdminGrievance\[\]>\('admin_grievances'/.test(api) && /rpc<any>\('admin_grievance_update', \{ p_id: id, p_status: status, p_resolution/.test(api), 'it reads and answers complaints through the two administrator-only functions');
+check(/'grievances'/.test(modal) && /<AdminGrievancesPanel onOpenCountChange=\{setGrievanceOpenCount\}/.test(modal) && /activeTab === 'grievances' && main/.test(modal), 'it is a tab of the admin panel, for the main administrator only');
+check(/Acknowledge/.test(panel) && /Mark resolved/.test(panel) && /Reject/.test(panel) && /ackLate/.test(panel) && /resolveLate/.test(panel) && /24 hours/.test(panel) && /15 days/.test(panel), 'the officer can acknowledge, resolve or reject, and late complaints are marked (24 hours, 15 days)');
+console.log('\n2. Online games');
+const ping = read('src/utils/roomPing.ts'), gm = read('src/components/Games/GamePlayModal.tsx');
+check(/event: 'poke'/.test(ping) && /supabase\.channel\(`noob-room-\$\{code\}`\)/.test(ping) && !/payload: \{ [a-z]/.test(ping), 'a poke is a tiny Realtime message on the room\'s own channel and carries no game data');
+check((gm.match(/listenRoom\(onlineMatch\.roomCode, tick\)/g) || []).length === 3, 'the three room checks (friend joining, waiting for the result, live board) all react to a poke at once');
+check(/setInterval\(tick, 700\)/.test(gm) && (gm.match(/setInterval\(tick, 1000\)/g) || []).length === 2, 'and the safety-net check runs every 0.7 s on a live board and every 1 s otherwise (it was 1.2 s and 2 s)');
+check((gm.match(/pingRoom\(/g) || []).length >= 5, 'every join, move and result pokes the other player');
+const chat = read('src/components/Chat/ChatView.tsx');
+check(/quiet < 3 \? 1500 : quiet < 6 \? 2200 : 3000/.test(chat), 'the "is typing" check in a quiet chat backs off to every 3 s (fewer asks to the database), and is back to 1.5 s as soon as somebody types');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

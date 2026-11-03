@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { HatBoy } from './HatBoy';
 
 import { ANDROID_APK_URL } from '../../utils/appVersion';
 
@@ -544,6 +545,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  // The log-in page first asks HOW to continue (a social account, or log in / sign up); "Log in" then opens the page with the boy in the hat.
+  const [loginStage, setLoginStage] = useState<'choose' | 'form'>('choose');
+  const [passwordFocus, setPasswordFocus] = useState(false);
 
   // Forgot Password recovery flow: gated on a valid, already-entered
   // username (checked before the form even opens), then requires the
@@ -1197,7 +1201,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
             </div>
           )}
 
-          {((mode === 'signup' && signupsEnabled && signupStep === 'form') || mode === 'login') && (
+          {((mode === 'signup' && signupsEnabled && signupStep === 'form') || (mode === 'login' && loginStage === 'choose')) && (
             <div className="mb-5" data-testid="auth-social-top">
               <SocialLoginButtons onError={setErrorMessage} variant="row" />
               <div className="flex items-center gap-3 mt-5">
@@ -1205,6 +1209,17 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                 <span className="text-[12px] text-white/70 font-semibold">{mode === 'signup' ? 'Or sign up with' : 'Or log in with'}</span>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
+            </div>
+          )}
+
+          {mode === 'login' && loginStage === 'choose' && (
+            <div className="space-y-3" data-testid="login-choose">
+              <button type="button" onClick={() => setLoginStage('form')} data-testid="login-choose-login" className="w-full py-3.5 rounded-2xl bg-white text-black font-black text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-transform">
+                <Lock className="w-4 h-4" /> Log in with ID, email or phone
+              </button>
+              <button type="button" onClick={openSignupPage} data-testid="login-choose-signup" className="w-full py-3.5 rounded-2xl bg-white/5 border border-white/20 text-white font-extrabold text-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-white/10 transition-colors">
+                <Zap className="w-4 h-4 text-cyan-400" /> Create a new account
+              </button>
             </div>
           )}
 
@@ -1782,8 +1797,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
           )}
 
           {/* ================= LOG IN FORM ================= */}
-          {mode === 'login' && (
+          {mode === 'login' && loginStage === 'form' && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <button type="button" onClick={() => { setLoginStage('choose'); setPasswordFocus(false); }} data-testid="login-form-back" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-white/20 text-xs font-extrabold text-white cursor-pointer">
+                <ArrowLeft className="w-4 h-4" /> Other ways
+              </button>
+              <div className="mx-auto w-full max-w-[17rem] aspect-[32/25] rounded-3xl bg-gradient-to-b from-zinc-800 to-zinc-950 border border-white/10 overflow-hidden shadow-[0_18px_40px_rgba(0,0,0,0.5)]">
+                <HatBoy covering={passwordFocus || (loginPassword.length > 0 && showPassword === false)} look={Math.min(1, loginIdentifier.length / 24)} />
+              </div>
               <div>
                 <label className="text-xs font-bold text-zinc-300 block mb-1.5">
                   User ID, Email or Phone
@@ -1794,6 +1815,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                     required
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
+                    onFocus={() => setPasswordFocus(false)}
                     autoComplete="username"
                     name="username"
                     placeholder="Enter your @user_id, email or phone number"
@@ -1820,6 +1842,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess, notice, hint 
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
+                  onFocus={() => setPasswordFocus(true)}
+                  onBlur={() => setPasswordFocus(false)}
                   autoComplete="current-password"
                   name="password"
                   placeholder="Enter your password"

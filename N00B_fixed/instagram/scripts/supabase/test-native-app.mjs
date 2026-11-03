@@ -9,9 +9,9 @@ const read = (p) => fs.readFileSync(p, 'utf8').split(String.fromCharCode(13)).jo
 
 section('1. The app carries its own screens');
 const cap = JSON.parse(read('capacitor.config.json'));
-check(!cap.server.url && cap.webDir === 'dist' && cap.server.androidScheme === 'https', 'no website address is loaded: the built screens inside the app are shown');
+check(/^https:\/\//.test(cap.server.url) && cap.webDir === 'dist' && cap.server.androidScheme === 'https', 'the app shows the live website (server.url), so website changes reach it by themselves');
 const wf = read('../../.github/workflows/android-build.yml');
-check(/N00B_fixed\/instagram\/src\/\*\*/.test(wf) && /group: android-build/.test(wf) && /cancel-in-progress: false/.test(wf), 'every change to the screens builds a new app file, one build at a time');
+check(/android-overrides\/\*\*/.test(wf) && /group: android-build/.test(wf) && /cancel-in-progress: false/.test(wf), 'only native changes build a new app file, one build at a time');
 check(/android:scheme="com\.noob\.social"/.test(wf), 'the build gives the app its own link for coming back from a sign-in');
 
 section('2. Coming back from "Continue with ..."');

@@ -177,149 +177,75 @@ export const AccountsStatisticsModal: React.FC<AccountsStatisticsModalProps> = (
     >
       <div className="w-full max-w-xl bg-zinc-950 border border-zinc-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-extrabold text-white tracking-tight">Wallet</h2>
+            <p className="text-[11px] text-zinc-400">Your NOOB Points, badges &amp; activity</p>
+          </div>
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowMyQr(true)}
               title="Your QR code — let someone scan it to send you NOOB Points"
               aria-label="Show your QR code"
-              className="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-noob/50 flex items-center justify-center text-zinc-300 hover:text-noob shrink-0 cursor-pointer transition-colors"
+              className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex items-center justify-center text-zinc-200 cursor-pointer transition-colors"
             >
-              <QrCode className="w-4.5 h-4.5" />
+              <QrCode className="w-[18px] h-[18px]" />
             </button>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500/20 to-yellow-400/30 border border-yellow-500/40 flex items-center justify-center text-yellow-400 shadow-sm">
-              <Trophy className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
-                Wallet
-              </h2>
-              <p className="text-[11px] text-zinc-400">
-                Detailed points management, milestones &amp; participation badges
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 flex items-center justify-center text-zinc-200 cursor-pointer transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white p-1.5 rounded-full hover:bg-zinc-900 transition-colors cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
-        {/* Hero Points Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500/10 via-amber-600/5 to-zinc-900 border border-yellow-500/30 p-5 shadow-lg">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-yellow-400 flex items-center gap-1.5">
-                <Coins className="w-4 h-4" /> Accumulated noobPoints
-              </span>
-              <div className="flex items-baseline gap-2.5 mt-1">
-                <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                  {formatNoobPoints(exactPoints)}
-                </span>
-                <span className="text-xs font-semibold text-zinc-400">
-                  ({exactPoints.toLocaleString()} exact pts)
-                </span>
-              </div>
-              <p className="text-xs text-zinc-300 mt-1">
-                Level status:{' '}
-                <span className="font-bold text-yellow-300">
-                  {exactPoints >= 2500
-                    ? 'Grand Legend Tier'
-                    : exactPoints >= 1000
-                    ? 'Cyber Champion Tier'
-                    : exactPoints >= 500
-                    ? 'Arcade Ace Tier'
-                    : 'Pioneer Gamer Tier'}
-                </span>
-              </p>
-            </div>
-
-            <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-right shrink-0">
-              <span className="text-[10px] text-zinc-400 uppercase font-bold block">Badges Earned</span>
-              <span className="text-xl font-extrabold text-noob">
-                {unlockedBadgesCount} / {badges.length}
-              </span>
+        {/* Balance card: a NOOB card in the wallet's own green */}
+        <div
+          data-testid="wallet-card"
+          className="relative overflow-hidden rounded-[26px] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.5)] text-white min-h-[188px] flex flex-col justify-between"
+          style={{ background: 'linear-gradient(135deg,#1f6a4f 0%,#0E4B37 55%,#0a3a2b 100%)' }}
+        >
+          <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(115deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0.08) 75%,rgba(255,255,255,0) 100%)' }} />
+          <div className="relative flex items-start justify-between">
+            <span className="text-[22px] font-black tracking-[0.2em] leading-none">NOOB</span>
+            <span className="text-[10px] font-extrabold tracking-widest px-2.5 py-1 rounded-full bg-black/30">
+              {exactPoints >= 2500 ? 'GRAND LEGEND' : exactPoints >= 1000 ? 'CYBER CHAMPION' : exactPoints >= 500 ? 'ARCADE ACE' : 'PIONEER'}
+            </span>
+          </div>
+          <div className="relative">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5"><Coins className="w-3.5 h-3.5" /> Balance</span>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-4xl font-black tracking-tight">{formatNoobPoints(exactPoints)}</span>
+              <span className="text-[11px] font-semibold text-white/60">({exactPoints.toLocaleString()} exact pts)</span>
             </div>
           </div>
-
-          {/* Progress Bar towards next milestone */}
-          <div className="mt-4 pt-3 border-t border-yellow-500/20">
-            <div className="flex justify-between text-[11px] text-zinc-400 font-medium mb-1.5">
-              <span>Next Milestone Target</span>
-              <span className="text-white font-bold">
-                {exactPoints < 500 ? '500 pts (Arcade Ace)' : exactPoints < 1000 ? '1,000 pts (Champion)' : '2,500 pts (Legend)'}
-              </span>
+          <div className="relative">
+            <div className="flex justify-between text-[10px] text-white/70 font-semibold mb-1">
+              <span>Next milestone</span>
+              <span className="text-white font-bold">{exactPoints < 500 ? '500 pts' : exactPoints < 1000 ? '1,000 pts' : '2,500 pts'}</span>
             </div>
-            <div className="w-full bg-zinc-800/80 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-yellow-400 to-noob h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, Math.round((exactPoints / (exactPoints < 500 ? 500 : exactPoints < 1000 ? 1000 : 2500)) * 100))}%`
-                }}
-              />
+            <div className="w-full bg-black/30 rounded-full h-1.5 overflow-hidden">
+              <div className="bg-white h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, Math.round((exactPoints / (exactPoints < 500 ? 500 : exactPoints < 1000 ? 1000 : 2500)) * 100))}%` }} />
             </div>
           </div>
         </div>
 
-        {/* Send / Gift Points */}
-        <button
-          onClick={() => setShowSendPoints(true)}
-          className="w-full p-3 rounded-2xl bg-noob/10 hover:bg-noob/15 border border-noob/30 flex items-center justify-between transition-colors cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-noob/20 border border-noob/40 flex items-center justify-center text-noob shrink-0">
-              <Send className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-bold text-white block group-hover:text-noob transition-colors">
-                Send / Gift Points
-              </span>
-              <span className="text-[10px] text-zinc-400 block">Transfer NOOB Points to another user</span>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-noob transition-colors" />
-        </button>
-
-        {/* Payment Requests (friends asking you to pay for something) */}
-        <button
-          onClick={() => setShowPaymentRequests(true)}
-          className="w-full p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30 flex items-center justify-between transition-colors cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-              <HeartHandshake className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-bold text-white block group-hover:text-amber-300 transition-colors">
-                Payment Requests
-              </span>
-              <span className="text-[10px] text-zinc-400 block">Approve or decline what friends asked you to pay for</span>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-amber-400 transition-colors" />
-        </button>
-
-        {/* My Coupons */}
-        <button
-          onClick={() => setShowCoupons(true)}
-          className="w-full p-3 rounded-2xl bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/30 flex items-center justify-between transition-colors cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
-              <Ticket className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="text-xs font-bold text-white block group-hover:text-blue-300 transition-colors">
-                My Coupons
-              </span>
-              <span className="text-[10px] text-zinc-400 block">Discounts for NOOB Pro &amp; verification</span>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-blue-400 transition-colors" />
-        </button>
+        {/* Quick actions: round buttons */}
+        <div className="grid grid-cols-3 gap-3" data-testid="wallet-actions">
+          {[
+            { label: 'Send', sub: 'Gift points', icon: <Send className="w-5 h-5" />, run: () => setShowSendPoints(true), tone: 'bg-noob text-black' },
+            { label: 'Requests', sub: 'Friends ask', icon: <HeartHandshake className="w-5 h-5" />, run: () => setShowPaymentRequests(true), tone: 'bg-zinc-900 text-amber-300 border border-zinc-800' },
+            { label: 'Coupons', sub: 'Pro & verify', icon: <Ticket className="w-5 h-5" />, run: () => setShowCoupons(true), tone: 'bg-zinc-900 text-blue-300 border border-zinc-800' }
+          ].map((x) => (
+            <button key={x.label} onClick={x.run} className="flex flex-col items-center gap-1.5 cursor-pointer group">
+              <span className={`w-14 h-14 rounded-full flex items-center justify-center shadow-md group-active:scale-95 transition-transform ${x.tone}`}>{x.icon}</span>
+              <span className="text-xs font-bold text-white leading-none">{x.label}</span>
+              <span className="text-[10px] text-zinc-500 leading-none">{x.sub}</span>
+            </button>
+          ))}
+        </div>
 
         {/* Sub-tab Navigation */}
         <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">

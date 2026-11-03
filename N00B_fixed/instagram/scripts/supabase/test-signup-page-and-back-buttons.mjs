@@ -19,7 +19,7 @@ check(/const backToLogin = \(\) => \{[\s\S]{0,260}window\.history\.back\(\)[\s\S
 check(/window\.addEventListener\('popstate', onPop\)/.test(auth) && /noobAuth\?: string/.test(auth) && /setMode\(onSignup \? 'signup' : 'login'\)/.test(auth), "the phone's back button, a back swipe and the browser's Back / Forward move between the two pages");
 check(/data-testid="signup-back"/.test(auth) && /<ArrowLeft className="w-4 h-4" \/> Back/.test(auth) && /\{mode === 'signup' && \(\s*<div className="mb-3">/.test(auth), 'a clear Back button at the top of the sign-up page, only there');
 check(!/mode === 'signup' && signupsEnabled && signupStep === 'form' && \(\s*<div className="mb-4">\s*<SocialLoginButtons/.test(auth), 'the Continue with buttons are gone from the sign-up page');
-check((auth.match(/<SocialLoginButtons/g) || []).length === 1 && /\{mode === 'login' && \(\s*<form onSubmit=\{handleLoginSubmit\}/.test(auth), '... and stay on the log-in page, which is the only place they are drawn');
+check((auth.match(/<SocialLoginButtons/g) || []).length === 1 && /\{mode === 'login' && loginStage === 'form' && \(\s*<form onSubmit=\{handleLoginSubmit\}/.test(auth) && /mode === 'login' && loginStage === 'choose'/.test(auth), '... and stay on the log-in page, which is the only place they are drawn');
 check(/Or sign up with/.test(auth) && /variant=\"row\"/.test(auth), 'the sign-up page shows the round social buttons at the top, with Or sign up with under them');
 check(!/setMode\('login'\)\}\s*className/.test(auth) && (auth.match(/onClick=\{backToLogin\}/g) || []).length >= 3, 'every other "back to log in" link uses the same logic');
 check(/<div key=\{mode\} className="animate-in fade-in duration-200 /.test(auth), 'the change of page is a short fade');

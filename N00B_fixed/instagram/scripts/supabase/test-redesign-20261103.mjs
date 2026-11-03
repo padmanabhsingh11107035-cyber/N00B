@@ -1,0 +1,18 @@
+// Log-in chooser + boy in the hat, NOOB Pro cards, wallet card. Usage: node --liftoff-only scripts/supabase/test-redesign-20261103.mjs
+import fs from 'node:fs';
+let passed = 0, failed = 0;
+const check = (c, l) => { if (c) { passed++; console.log(`  ok   ${l}`); } else { failed++; console.log(`  FAIL ${l}`); } };
+const read = (p) => fs.readFileSync(p, 'utf8').split('\r').join('');
+const auth = read('src/components/Auth/AuthView.tsx'), boy = read('src/components/Auth/HatBoy.tsx'), pro = read('src/components/Profile/ProFeaturesModal.tsx'), wal = read('src/components/Profile/AccountsStatisticsModal.tsx');
+console.log('\n1. Log in');
+check(/useState<'choose' \| 'form'>\('choose'\)/.test(auth) && /data-testid="login-choose-login"/.test(auth) && /data-testid="login-choose-signup"/.test(auth), 'the page first offers social accounts, log in or sign up');
+check(/loginStage === 'form'[\s\S]{0,1200}<HatBoy covering=/.test(auth) && /onFocus=\{\(\) => setPasswordFocus\(true\)\}/.test(auth), 'the boy page opens on "log in" and the hat comes down when the password is touched');
+check(/translateY\(30px\)/.test(boy) && /data-covering/.test(boy), 'the hat slides over his eyes');
+console.log('\n2. NOOB Pro cards');
+check(/data-testid="pro-cards"/.test(pro) && /snap-x/.test(pro) && /NOOB<\/span>/.test(pro), 'a sideways row of cards with NOOB written on them');
+check(['starter', 'plus', 'pro', 'elite', 'ultimate'].every((t) => new RegExp(`${t}: \{ bg:`).test(pro)), 'every plan has its own colour');
+check(/Choose \$\{tier\.name\}/.test(pro) && /Confirm order/.test(pro) && /ProReceipt/.test(pro) && /upgradeProTier/.test(pro), 'Choose -> Confirm order -> receipt, same payment logic');
+console.log('\n3. Wallet');
+check(/data-testid="wallet-card"/.test(wal) && /data-testid="wallet-actions"/.test(wal) && /setShowSendPoints\(true\)/.test(wal) && /setShowPaymentRequests\(true\)/.test(wal) && /setShowCoupons\(true\)/.test(wal), 'balance card and round Send / Requests / Coupons buttons, all still wired');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

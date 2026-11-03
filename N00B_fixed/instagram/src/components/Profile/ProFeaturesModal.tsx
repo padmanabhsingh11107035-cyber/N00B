@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ProReceipt, type ProReceiptData } from './ProReceipt';
 import { X, Sparkles, Check, Crown, Loader2, RefreshCw, HeartHandshake, Search, Timer, Wallet, Ticket } from 'lucide-react';
 import { User } from '../../types';
@@ -61,7 +61,31 @@ const TIERS: ProTier[] = [
 
 const YEARLY_DISCOUNT = 0.17;
 
+// The colour of each plan's card (cheapest to dearest): silver, blue, violet, gold, black.
+const TIER_LOOK: Record<string, { bg: string; ink: string; chip: string }> = {
+  starter: { bg: 'linear-gradient(135deg,#d9dde3,#aab1bb 55%,#c9ced6)', ink: '#1d2127', chip: 'linear-gradient(135deg,#f3f4f6,#9aa1ab)' },
+  plus: { bg: 'linear-gradient(135deg,#3b82f6,#1d4ed8 60%,#2563eb)', ink: '#ffffff', chip: 'linear-gradient(135deg,#dbeafe,#7aa7f5)' },
+  pro: { bg: 'linear-gradient(135deg,#8b5cf6,#5b21b6 60%,#7c3aed)', ink: '#ffffff', chip: 'linear-gradient(135deg,#ede9fe,#a78bfa)' },
+  elite: { bg: 'linear-gradient(135deg,#e6c36a,#b8913a 55%,#d9b255)', ink: '#2a1f06', chip: 'linear-gradient(135deg,#fff3c4,#c9a24a)' },
+  ultimate: { bg: 'linear-gradient(135deg,#232323,#050505 60%,#161616)', ink: '#f5d98a', chip: 'linear-gradient(135deg,#f5d98a,#8a6d1f)' },
+};
+
 export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser, onClose, onUserUpdated, allUsers = [], focusTier, focusBilling }) => {
+  const railRef = useRef<HTMLDivElement>(null);
+  const [cardIdx, setCardIdx] = useState(() => { const i = TIERS.findIndex((t) => t.id === (focusTier || currentUser.proTier || 'pro')); return i < 0 ? 2 : i; });
+  const onRailScroll = () => {
+    const rail = railRef.current;
+    if (!rail || rail.children.length === 0) return;
+    const mid = rail.scrollLeft + rail.clientWidth / 2;
+    let best = 0, bestD = Infinity;
+    Array.from(rail.children).forEach((c, i) => { const el = c as HTMLElement; const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid); if (d < bestD) { bestD = d; best = i; } });
+    if (best !== cardIdx) setCardIdx(best);
+  };
+  const railTo = (i: number) => {
+    const el = railRef.current?.children[i] as HTMLElement | undefined;
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  };
+  useEffect(() => { const t = window.setTimeout(() => railTo(cardIdx), 60); return () => window.clearTimeout(t); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
   const [billing, setBilling] = useState<'monthly' | 'yearly'>(focusBilling === 'yearly' ? 'yearly' : 'monthly');
   const [autoRenew, setAutoRenew] = useState(true);
   const [couponInput, setCouponInput] = useState('');
@@ -329,47 +353,60 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           </div>
         )}
 
-        {/* Tiers */}
-        <div className="space-y-2.5">
-          {TIERS.map((tier) => {
-            const price = priceFor(tier);
+        {/* Tiers: a row of NOOB cards, one colour per plan; swipe sideways for more, "Choose" opens the payment sheet */}
+        <div data-testid="pro-cards">
+          <div
+            ref={railRef}
+            onScroll={onRailScroll}
+            className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-3 -mx-5 px-[11%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {TIERS.map((tier, i) => {
+              const look = TIER_LOOK[tier.id];
+              const price = priceFor(tier);
+              const isCurrentTier = currentUser.proTier === tier.id;
+              return (
+                <div
+                  key={tier.id}
+                  id={`pro-plan-${tier.id}`}
+                  data-testid={`pro-card-${tier.id}`}
+                  onClick={() => railTo(i)}
+                  className={`snap-center shrink-0 w-[78%] aspect-[1.586] rounded-[22px] p-4 relative overflow-hidden flex flex-col justify-between transition-all duration-300 cursor-pointer shadow-[0_14px_30px_rgba(0,0,0,0.45)] ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70 -rotate-2'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
+                  style={{ background: look.bg, color: look.ink }}
+                >
+                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(115deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.12) 70%, rgba(255,255,255,0) 100%)' }} />
+                  <div className="relative flex items-start justify-between">
+                    <span className="text-[26px] font-black tracking-[0.18em] leading-none">NOOB</span>
+                    <span className="flex gap-[3px] pt-1" aria-hidden="true">{[0, 1, 2, 3].map((k) => <span key={k} className="w-[3px] rounded-full" style={{ height: 7 + k * 3, background: look.ink, opacity: 0.55 }} />)}</span>
+                  </div>
+                  <div className="relative w-9 h-7 rounded-md" style={{ background: look.chip }} aria-hidden="true" />
+                  <div className="relative flex items-end justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold tracking-[0.2em] opacity-70">NOOB PRO</p>
+                      <p className="text-base font-extrabold leading-tight truncate">{tier.name}{tier.highlight ? ' ★' : ''}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {appliedCoupon && <span className="text-[10px] line-through opacity-60 block">{price.base.toLocaleString()}</span>}
+                      <p className="text-[13px] font-black leading-tight">{price.display.toLocaleString()}</p>
+                      <p className="text-[9px] font-semibold opacity-70">noobs{price.suffix}</p>
+                    </div>
+                  </div>
+                  {isCurrentTier && <span className="absolute top-3 right-3 text-[9px] font-black px-2 py-0.5 rounded-full bg-black/70 text-white">YOUR PLAN</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-center gap-1.5 mb-2" aria-hidden="true">
+            {TIERS.map((t, i) => <span key={t.id} className={`h-1.5 rounded-full transition-all ${i === cardIdx ? 'w-5 bg-white' : 'w-1.5 bg-zinc-600'}`} />)}
+          </div>
+          {(() => {
+            const tier = TIERS[cardIdx] ?? TIERS[0];
             const isCurrentTier = currentUser.proTier === tier.id;
             return (
-              <div
-                key={tier.id}
-                id={`pro-plan-${tier.id}`}
-                className={`rounded-2xl p-3.5 border ${
-                  tier.highlight
-                    ? 'bg-violet-500/10 border-violet-500/40'
-                    : 'bg-zinc-900/60 border-zinc-800'
-                } ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    {tier.highlight && <Crown className="w-3.5 h-3.5 text-amber-400" />}
-                    <span className="text-sm font-bold text-white">{tier.name}</span>
-                    {tier.highlight && (
-                      <span className="text-[9px] font-black text-violet-300 bg-violet-500/20 px-1.5 py-0.5 rounded-full">
-                        POPULAR
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {appliedCoupon && (
-                      <span className="text-[10px] text-zinc-500 line-through block">
-                        {price.base.toLocaleString()}
-                      </span>
-                    )}
-                    <span className="text-sm font-black text-white">
-                      {price.display.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 ml-1">noobs{price.suffix}</span>
-                  </div>
-                </div>
-                <ul className="space-y-1 mb-3">
+              <div className="space-y-3" data-testid="pro-card-detail">
+                <ul className="space-y-1.5 px-1">
                   {tier.perks.map((perk, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-[11px] text-zinc-300">
-                      <Check className="w-3 h-3 text-noob mt-0.5 shrink-0" />
+                    <li key={i} className="flex items-start gap-2 text-[12px] text-zinc-200">
+                      <Check className="w-3.5 h-3.5 text-noob mt-0.5 shrink-0" />
                       {perk}
                     </li>
                   ))}
@@ -377,17 +414,14 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                 <button
                   onClick={() => { setPurchaseMsg(null); setPayTier(tier); }}
                   disabled={isCurrentTier}
-                  className={`w-full py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${
-                    tier.highlight
-                      ? 'bg-violet-500 text-white hover:bg-zinc-500'
-                      : 'bg-white text-black hover:bg-zinc-200'
-                  }`}
+                  data-testid="pro-choose"
+                  className="w-full py-3.5 rounded-full bg-white text-black text-sm font-extrabold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99] transition-transform flex items-center justify-center gap-1.5"
                 >
-                  {isCurrentTier ? 'Current Plan' : `Subscribe to ${tier.name}`}
+                  {isCurrentTier ? 'Current Plan' : `Choose ${tier.name}`}
                 </button>
               </div>
             );
-          })}
+          })()}
         </div>
 
         {/* Payment methods: opened by "Subscribe" */}
@@ -400,10 +434,14 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             <div className="fixed inset-0 z-[110] bg-black/80 flex items-end sm:items-center justify-center p-3" onClick={() => { if (!busy) setPayTier(null); }}>
               <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white">How do you want to pay?</h3>
+                  <h3 className="text-base font-bold text-white">Confirm order</h3>
                   <button onClick={() => setPayTier(null)} disabled={busy} className="text-zinc-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
                 </div>
 
+                <div className="rounded-[18px] p-3.5 h-24 flex flex-col justify-between relative overflow-hidden shadow-lg" style={{ background: TIER_LOOK[payTier.id].bg, color: TIER_LOOK[payTier.id].ink }} data-testid="pay-card">
+                  <span className="text-lg font-black tracking-[0.18em] leading-none">NOOB</span>
+                  <span className="text-[11px] font-extrabold tracking-wider opacity-80">NOOB PRO · {payTier.name.toUpperCase()}</span>
+                </div>
                 <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white">NOOB Pro {payTier.name} · {word.toLowerCase()}</p>

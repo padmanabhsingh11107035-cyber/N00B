@@ -91,6 +91,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: ROYAL LUDO (the classic race home for 2 to 4 players with computer opponents, on its own page, /games/royal-ludo/, shown in a frame; source in royal-ludo/) ---
+  {
+    id: 'royal_ludo',
+    title: 'Royal Ludo',
+    category: 'puzzle',
+    description: 'The classic race home for 2 to 4 players: roll a six to leave the yard, capture rivals, use the safe star tiles and reach home with an exact roll. Play with friends on one screen or against computer players (relaxed, balanced or strategic), Classic with 4 tokens or Quick with 2. It fits your phone on one screen, with nothing to scroll. Made by NOOB developers.',
+    bannerBg: 'from-[#3a3f66] to-[#0d111a]',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Easy',
+    players: 'Solo / Friend',
+    iconType: 'royalludo',
+    tags: ['Board', 'Ludo', '2-4 players'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Tap Roll the dice, then tap a glowing token. A six lets a token out of the yard. On a computer: Space rolls and 1 to 4 choose a token. The buttons at the top turn the sound, the light theme and full screen on and off. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/royal-ludo/',
+    posters: [
+      '/game-posters/royal-ludo/01-cover.webp',
+      '/game-posters/royal-ludo/02-play.webp',
+      '/game-posters/royal-ludo/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

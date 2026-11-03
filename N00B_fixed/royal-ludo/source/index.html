@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#10131d" />
+    <title>Royal Ludo — The Table Is Yours</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="crest" aria-hidden="true">♛</span>
+        <div>
+          <strong>ROYAL LUDO</strong
+          ><small>A classic. Exceptionally played.</small>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span class="offline">OFFLINE & PRIVATE</span
+        ><button
+          class="icon"
+          id="soundBtn"
+          aria-label="Toggle sound"
+          title="Sound"
+        >
+          ♫</button
+        ><button
+          class="icon"
+          id="themeBtn"
+          aria-label="Toggle light theme"
+          title="Theme"
+        >
+          ◐</button
+        ><button
+          class="icon"
+          id="fullscreenBtn"
+          aria-label="Toggle fullscreen"
+          title="Fullscreen"
+        >
+          ⛶</button
+        ><button
+          class="icon"
+          id="settingsBtn"
+          aria-label="Open settings"
+          title="Settings"
+        >
+          ⚙
+        </button>
+      </div>
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <div class="eyebrow">Your table. Your rules.</div>
+          <h1>A little luck. A royal finish.</h1>
+          <p>The classic race home, with a touch of gold.</p>
+        </div>
+        <span class="match-pill" id="matchPill">CLASSIC · 2 PLAYERS</span>
+      </section>
+      <div class="layout">
+        <section class="arena" aria-label="Ludo game board">
+          <div class="player-row" id="topPlayers"></div>
+          <div class="board-wrap">
+            <svg
+              id="board"
+              viewBox="0 0 600 600"
+              role="group"
+              aria-label="Ludo board. Roll the dice, then choose a highlighted token."
+            ></svg>
+          </div>
+          <div class="player-row" id="bottomPlayers"></div>
+          <div class="board-caption">
+            <span class="legend"
+              ><span class="star-symbol">✦</span> Star tiles are safe</span
+            ><span id="boardStatus">Make yourself at home.</span>
+          </div>
+        </section>
+        <aside class="sidebar">
+          <section class="card turn-card">
+            <div class="card-label">
+              At the table <span id="turnNumber">TURN 1</span>
+            </div>
+            <div>
+              <h2 class="turn-title" id="turnTitle">Your move</h2>
+              <p class="turn-message" id="turnMessage" aria-live="polite">
+                Roll a six to bring a token into play.
+              </p>
+            </div>
+            <div class="dice-zone">
+              <div
+                class="dice"
+                id="dice"
+                role="img"
+                aria-label="Dice showing one"
+              ></div>
+            </div>
+            <button id="rollBtn" class="primary">Roll the dice ↗</button>
+            <p class="hint" id="rollHint">Roll, then select a glowing token.</p>
+          </section>
+          <section class="card">
+            <div class="card-label">
+              Match overview <span id="timer">00:00</span>
+            </div>
+            <div class="stats">
+              <div><strong id="movesStat">0</strong><span>Moves</span></div>
+              <div>
+                <strong id="capturesStat">0</strong><span>Captures</span>
+              </div>
+              <div><strong id="homeStat">0</strong><span>Home</span></div>
+            </div>
+            <div class="mini-actions">
+              <button id="newBtn">＋ New game</button
+              ><button id="rulesBtn">How to play</button>
+            </div>
+          </section>
+          <section class="card">
+            <div class="card-label">The play-by-play <span>↗</span></div>
+            <div class="activity" id="activity" aria-live="polite"></div>
+          </section>
+          <section class="tip-card">
+            <span style="color: var(--gold); font-size: 20px">✧</span>
+            <div>
+              <b id="tipTitle">Made for game night</b>
+              <p id="tipText">
+                Pass the screen, challenge a friend, or outplay the computer. No
+                connection required.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </div>
+      <footer>
+        <span
+          >ROYAL LUDO <span style="opacity: 0.5">/</span> An original,
+          independent game</span
+        ><span class="keyboard"
+          ><kbd>Space</kbd> roll &nbsp; <kbd>1–4</kbd> choose token &nbsp;
+          <kbd>Esc</kbd> close</span
+        ><span id="saveStatus">Progress saved on this device</span>
+      </footer>
+    </main>
+    <div class="overlay" id="setupModal">
+      <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="setupTitle"
+      >
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">Reserve your seats</div>
+            <h2 id="setupTitle">Every game starts here.</h2>
+            <p class="desc">Play together, or take on the house.</p>
+          </div>
+          <button class="icon close" aria-label="Close">×</button>
+        </div>
+        <label class="form-label">PLAYERS</label>
+        <div class="segmented" id="countOptions">
+          <button data-count="2" class="selected">2 players</button
+          ><button data-count="3">3 players</button
+          ><button data-count="4">4 players</button>
+        </div>
+        <div id="setupPlayers"></div>
+        <label class="form-label" for="difficulty">COMPUTER DIFFICULTY</label
+        ><select id="difficulty">
+          <option value="easy">Relaxed — a little luck</option>
+          <option value="normal" selected>Balanced — a fair challenge</option>
+          <option value="hard">Strategic — plays to win</option></select
+        ><label class="form-label">GAME STYLE</label>
+        <div class="segmented" id="modeOptions">
+          <button data-mode="classic" class="selected">
+            Classic · 4 tokens</button
+          ><button data-mode="quick">Quick · 2 tokens</button>
+        </div>
+        <label class="toggle"
+          ><span
+            >Bonus roll after capture<small
+              >Keep the momentum after sending a rival home.</small
+            ></span
+          ><input type="checkbox" id="captureBonus" checked /></label
+        ><label class="toggle"
+          ><span
+            >Bonus roll after reaching home<small
+              >A royal reward for an exact finish.</small
+            ></span
+          ><input type="checkbox" id="homeBonus" checked /></label
+        ><label class="toggle"
+          ><span
+            >Three sixes lose the turn<small
+              >The third consecutive six cannot be played.</small
+            ></span
+          ><input type="checkbox" id="tripleSix" checked /></label
+        ><label class="toggle"
+          ><span
+            >Finish the rankings<small
+              >Keep playing after the first winner.</small
+            ></span
+          ><input type="checkbox" id="rankings"
+        /></label>
+        <div class="modal-foot">
+          <button class="quiet close">Cancel</button
+          ><button class="primary" id="startBtn">Take your seats →</button>
+        </div>
+        <p class="desc" style="font-size: 10px; margin-top: 13px">
+          Starting a new game replaces your saved match. Two players sit
+          opposite each other.
+        </p>
+      </section>
+    </div>
+    <div class="overlay" id="rulesModal">
+      <section
+        class="modal rules"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rulesTitle"
+      >
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">The house rules</div>
+            <h2 id="rulesTitle">Easy to learn. Hard to leave.</h2>
+          </div>
+          <button class="icon close" aria-label="Close">×</button>
+        </div>
+        <p>
+          <b>The goal.</b> Race all your tokens around the board and up your own
+          colored home lane. Classic uses four tokens; Quick uses two.
+        </p>
+        <p>
+          <b>Enter with a six.</b> Roll a six to release a token from its yard
+          onto its colored start tile. A six also earns another roll, even if no
+          move is available.
+        </p>
+        <p>
+          <b>Make your move.</b> Click or tap a glowing token after rolling.
+          Tokens travel clockwise. You must use the exact number to reach the
+          center; overshooting is not allowed.
+        </p>
+        <p>
+          <b>Send a rival back.</b> Land on an opponent on an unprotected square
+          to return their token to the yard. All opposing tokens on that
+          unprotected square are captured.
+        </p>
+        <p>
+          <b>Stay safe.</b> The eight star tiles, including the four colored
+          starts, are safe. Different colors may share them. Your colored home
+          lane is private.
+        </p>
+        <p>
+          <b>Sharing a square.</b> Tokens can share and pass through squares;
+          this version does not use blockades. Tap a highlighted stack to move
+          its next eligible token. Use keys 1–4 to choose a particular token.
+        </p>
+        <p>
+          <b>Bonus turns.</b> Capture and home-entry bonuses are optional. A six
+          and bonuses never stack into multiple future turns. If enabled, the
+          third consecutive six forfeits only that roll and ends the turn;
+          earlier moves stay.
+        </p>
+        <p>
+          <b>Play your way.</b> Add up to four local players or computer
+          opponents. Strategic computers prioritize finishes, captures and
+          safety. Balanced mixes tactics and variety; Relaxed chooses randomly.
+        </p>
+        <p>
+          <b>Your progress.</b> Games auto-save in this browser when storage is
+          available. Downloaded files may have different storage permissions
+          across browsers. Keep the same HTML file and browser to resume.
+        </p>
+        <p>
+          <b>Rankings.</b> By default, the first player to bring every token
+          home wins. Turn on “Finish the rankings” to play out the remaining
+          places.
+        </p>
+        <div class="modal-foot">
+          <button class="primary close">Back to the table</button>
+        </div>
+      </section>
+    </div>
+    <div class="overlay" id="settingsModal">
+      <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settingsTitle"
+      >
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">The finishing touches</div>
+            <h2 id="settingsTitle">Make it yours.</h2>
+          </div>
+          <button class="icon close" aria-label="Close">×</button>
+        </div>
+        <label class="toggle"
+          ><span
+            >Sound effects<small
+              >Gentle dice, moves and celebrations.</small
+            ></span
+          ><input type="checkbox" id="soundSetting" /></label
+        ><label class="toggle"
+          ><span
+            >Light appearance<small
+              >Warm ivory instead of midnight blue.</small
+            ></span
+          ><input type="checkbox" id="lightSetting" /></label
+        ><label class="toggle"
+          ><span
+            >Reduced motion<small
+              >Keep the table calm and animations minimal.</small
+            ></span
+          ><input type="checkbox" id="motionSetting" /></label
+        ><label class="toggle"
+          ><span
+            >Fast computer turns<small
+              >Less waiting between computer moves.</small
+            ></span
+          ><input type="checkbox" id="fastSetting"
+        /></label>
+        <div class="score-list" id="lifetimeStats"></div>
+        <p class="desc">
+          Rule changes are available when starting a new game. Opening a panel
+          pauses computer play and the match clock.
+        </p>
+        <div class="modal-foot">
+          <button class="primary close">Done</button>
+        </div>
+      </section>
+    </div>
+    <div class="overlay" id="winModal">
+      <section
+        class="modal winner"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="winTitle"
+      >
+        <div class="eyebrow">A finish fit for royalty</div>
+        <div class="trophy" aria-hidden="true">♛</div>
+        <h2 id="winTitle">A new champion.</h2>
+        <p class="desc" id="winDesc"></p>
+        <div class="podium" id="podium"></div>
+        <div class="modal-foot">
+          <button class="quiet close">View board</button
+          ><button class="primary" id="playAgainBtn">Play again →</button>
+        </div>
+      </section>
+    </div>
+    <div id="toast" role="status"></div>
+    <script src="game.js"></script>
+  </body>
+</html>

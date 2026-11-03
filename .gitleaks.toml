@@ -19,8 +19,9 @@ paths = [
 regexes = [
   '''^noob_stickers_recent_v1$''',
   '''^noob_booth_prefs_v1$''',
-  '''^noob_booth_tip_v1
-'',
+  '''^noob_booth_tip_v1$''',
+  # NOOB Run 3D saves its progress in the browser under names that all start with noob_run_ (words in lines called ..._KEY, not secrets)
+  '''^noob_run_[a-z_]+$''',
   # the publishable (public by design) key that every NOOB page carries; public/grievance.js uses it to send a complaint without a login. Only this exact value is skipped.
   '''^sb_publishable_g20GG46EXeMr1jcNwVJtmw_rAZKsuA3$''',
 ]

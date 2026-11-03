@@ -217,6 +217,8 @@ export {
   fetchLinkedAccounts,
   signInLinkedAccount,
   verifyMyPassword,
+  gameScoreSubmit,
+  gameScoreBoard,
   sendMessage,
   editMessage,
   deleteMessage,

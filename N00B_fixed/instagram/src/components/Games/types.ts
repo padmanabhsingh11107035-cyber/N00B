@@ -26,6 +26,8 @@ export interface MiniGameMeta {
   // A hosted game made to be held upright (a puzzle): it is not turned on its side on a phone. Its page is small, so the page of the game says so, and gives its own controls line.
   embedPortrait?: boolean;
   embedControls?: string;
+  // A score game with a ranking (public.game_score_rules): its id there. The game sends its score and asks for the board through utils (public/games/_shared/noob-score.js).
+  scoreGame?: string;
 }
 
 // Every entry here has its own dedicated gameplay implementation in
@@ -35,6 +37,60 @@ export interface MiniGameMeta {
 // games felt repeated. Add a new entry here only alongside a real,
 // distinct component wired up in GamePlayModal.
 export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
+  // --- NEW: NOOB RUN 3D (a 3D endless runner on its own page, /games/noob-run-3d/, shown in a frame; ranking: the shared score board, scoreGame; source in noob-run-3d/) ---
+  {
+    id: 'noob_run_3d',
+    title: 'NOOB Run 3D',
+    category: 'arcade',
+    description: 'A 3D endless runner: dash through three railway lanes, dodge trains, jump and slide, collect coins and grab power-ups while an inspector and his dog chase you. Missions, skins, weather and a real ranking of every runner best score. Made by NOOB developers.',
+    bannerBg: 'from-[#ffb300] to-[#0b1020]',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'noobrun',
+    tags: ['3D', 'Runner', 'Ranking'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    scoreGame: 'noob_run_3d',
+    embedControls: 'Swipe left or right to change lane, up to jump, down to slide (or the arrow keys). Missions, skins and the ranking are in the menu. It has its own music and sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/noob-run-3d/',
+    posters: [
+      '/game-posters/noob-run-3d/01-cover.webp',
+      '/game-posters/noob-run-3d/02-play.webp',
+      '/game-posters/noob-run-3d/03-more.webp'
+    ]
+  },
+
+  // --- NEW: FLAPPY BIRD 20 (a tap-to-flap game with 20 levels on its own page, /games/flappy20/, shown in a frame; ranking: the shared score board, scoreGame) ---
+  {
+    id: 'flappy20',
+    title: 'Flappy Bird 20',
+    category: 'reflex',
+    description: 'Tap to flap and fly through the pipes. 20 levels: reach the target score of each level to unlock the next one, and climb the ranking, where your best scores of all levels are added up. Made by NOOB developers.',
+    bannerBg: 'from-[#4fb7d6] to-[#1a1a2e]',
+    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'flappy20',
+    tags: ['Tap', 'Levels', 'Ranking'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    scoreGame: 'flappy20',
+    embedControls: 'Tap the screen (or press Space) to flap, and fly through the gaps. Reach the target score to unlock the next level. The trophy button (top right) shows the ranking. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/flappy20/',
+    posters: [
+      '/game-posters/flappy20/01-cover.webp',
+      '/game-posters/flappy20/02-play.webp',
+      '/game-posters/flappy20/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

@@ -3720,6 +3720,18 @@ export async function colorSortLeaderboard(): Promise<ColorSortBoard | null> {
   }
 }
 
+// The score games (migration 20261103000002): one best score per player per game; the board shows the best 50 and your own place.
+export interface GameScoreBoard { label?: string; higherIsBetter?: boolean; me: { rank: number; best: number } | null; rows: Array<{ rank: number; username: string; displayName: string; avatar?: string; best: number; isMe: boolean }> }
+export async function gameScoreSubmit(game: string, score: number): Promise<{ success: boolean; best?: number; newBest?: boolean; error?: string }> {
+  try { return await rpc<any>('hosted_score_submit', { p_game: game, p_score: Math.floor(score) }); } catch (err) { return { success: false, error: errorText(err, 'Could not save this score.') }; }
+}
+export async function gameScoreBoard(game: string): Promise<GameScoreBoard | null> {
+  try {
+    const res = await rpc<any>('hosted_score_board', { p_game: game, p_limit: 50 });
+    return { ...res, rows: (res.rows || []).map((e: any) => ({ ...e, avatar: e.avatar ? resolveMedia(e.avatar) : e.avatar })) };
+  } catch { return null; }
+}
+
 // Brick Escape (migration 20261030000001): the same ranking as Color Sort, kept in its own table (the highest level each player has cleared).
 export async function brickEscapeLevelDone(level: number): Promise<{ success: boolean; bestLevel?: number; newBest?: boolean; error?: string }> {
   try {

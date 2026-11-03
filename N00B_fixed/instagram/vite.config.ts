@@ -45,7 +45,13 @@ export default defineConfig(() => {
     define: {
       __BUILD_ID__: JSON.stringify(buildId)
     },
+    // What a person can download of the app is the built bundle, so it is built to give away as little as possible: no source maps (the original files and their names are not
+    // shipped), no comments or licence banners, no debugger statements, and the plain console.log / debug / info lines are cut out. (A website's code can never be fully hidden from
+    // the browser that runs it: what protects NOOB is that every rule is enforced in the database, see supabase/migrations and scripts/security-audit-db.mjs.)
+    esbuild: { drop: ['debugger'] as ('debugger' | 'console')[], pure: ['console.log', 'console.debug', 'console.info'], legalComments: 'none' as const },
     build: {
+      sourcemap: false,
+      minify: 'esbuild' as const,
       rollupOptions: {
         // four pages: the app (index.html), NOOB Lenses (lenses.html), the Buddy Booth (booth.html) and the Family Map (family.html)
         input: { main: path.resolve(__dirname, 'index.html'), lenses: path.resolve(__dirname, 'lenses.html'), booth: path.resolve(__dirname, 'booth.html'), family: path.resolve(__dirname, 'family.html') }

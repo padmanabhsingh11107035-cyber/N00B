@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, X } from 'lucide-react';
-import { brickEscapeLeaderboard, brickEscapeLevelDone, colorSortLeaderboard, colorSortLevelDone } from '../../../services/api';
+import { brickEscapeLeaderboard, brickEscapeLevelDone, colorSortLeaderboard, colorSortLevelDone, gameScoreBoard, gameScoreSubmit } from '../../../services/api';
 
 // A game that is a page of its own (Neon Alley: Last Call, served from this site's /games/neon-alley/) shown inside the game window.
 // It is added to the page as soon as the game's page opens, out of sight, so the download (the first time it is big) is already running while the person looks at the pictures;
@@ -20,6 +20,8 @@ interface HostedGameFrameProps {
   portrait?: boolean;
   /** 'color-sort' / 'brick-escape': the game reports the levels a player clears and asks for the ranking; this page (which knows who is signed in) answers. */
   ranking?: 'color-sort' | 'brick-escape';
+  /** a score game (public.game_score_rules): the game sends its score and asks for the board with the messages of public/games/_shared/noob-score.js; this page answers. */
+  scoreGame?: string;
 }
 
 const useUpright = (): boolean => {
@@ -33,7 +35,7 @@ const useUpright = (): boolean => {
   return upright;
 };
 
-export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking }) => {
+export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, visible, lazy, portrait, ranking, scoreGame }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [full, setFull] = useState(false);
@@ -75,6 +77,26 @@ export const HostedGameFrame: React.FC<HostedGameFrameProps> = ({ url, title, vi
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [ranking]);
+
+  // Score games: {noobScore: <game id>, type: 'submit', score} and {type: 'board-request'}, from this one frame on this same site only.
+  useEffect(() => {
+    if (!scoreGame) return;
+    const onMessage = async (e: MessageEvent) => {
+      const win = frameRef.current?.contentWindow;
+      if (!win || e.source !== win || e.origin !== window.location.origin) return;
+      const d = e.data as { noobScore?: string; type?: string; score?: unknown } | null;
+      if (!d || d.noobScore !== scoreGame) return;
+      if (d.type === 'submit' && typeof d.score === 'number' && Number.isFinite(d.score)) {
+        const res = await gameScoreSubmit(scoreGame, d.score);
+        win.postMessage({ noobScore: scoreGame, type: 'submitted', ok: !!res.success, best: res.best, newBest: !!res.newBest, error: res.error }, window.location.origin);
+      } else if (d.type === 'board-request') {
+        const board = await gameScoreBoard(scoreGame);
+        win.postMessage({ noobScore: scoreGame, type: 'board', ok: !!board, board }, window.location.origin);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [scoreGame]);
 
   // The keyboard goes to the game as soon as it is brought into view; on a phone Play goes straight to full screen.
   useEffect(() => {

@@ -28,6 +28,7 @@
     <image:image><image:loc>https://noobsocials.com/screens/noob-socials-settings.jpg</image:loc><image:title>NOOB Socials – Settings</image:title><image:caption>Settings and activity: your account, saved posts, archive, notifications, privacy and more.</image:caption></image:image>
   </url>
   <url><loc>https://noobsocials.com/privacy</loc><lastmod>2026-10-16</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://noobsocials.com/grievance.html</loc><lastmod>2026-11-03</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://noobsocials.com/terms</loc><lastmod>2026-10-16</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://noobsocials.com/data-deletion</loc><lastmod>2026-10-16</lastmod><changefreq>yearly</changefreq><priority>0.2</priority></url>
   <!-- features:start -->

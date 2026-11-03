@@ -37,7 +37,9 @@ const OPEN_TO_VISITORS = {
   public_post: 'a shared link: private and suspended accounts are not shown (public_account_ok)',
   public_reel: 'a shared link: private and suspended accounts are not shown (public_account_ok)',
   public_video: 'a shared link: private and suspended accounts are not shown (public_account_ok)',
-  record_public_view: 'counts a view of a shared link: one per visitor, robots are not counted'
+  record_public_view: 'counts a view of a shared link: one per visitor, robots are not counted',
+  submit_grievance: 'the Grievance Officer form (grievance.html) works without login on purpose (the IT Rules of India want a reachable officer); length, 3 a day per contact and 200 an hour are checked inside',
+  track_grievance: 'looks up a complaint by its ticket number AND the contact it was filed with; nothing else is returned'
 };
 
 const db = await createTestDb({ autoExpose: true });

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ProReceipt, type ProReceiptData } from './ProReceipt';
 import { X, Sparkles, Check, Crown, Loader2, RefreshCw, HeartHandshake, Search, Timer, Wallet, Ticket } from 'lucide-react';
 import { User } from '../../types';
 import { redeemCouponCode, upgradeProTier, toggleProAutoRenew, requestProPayment, fetchMySentPaymentRequests, cancelPaymentRequest, fetchCurrentUser } from '../../services/api';
@@ -177,7 +178,10 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
     }
   };
 
+  const [receipt, setReceipt] = useState<ProReceiptData | null>(null);
   const handleSubscribe = async (tier: ProTier) => {
+    const quote = priceFor(tier);
+    const coupon = appliedCoupon;
     setSubscribingTier(tier.id);
     setPurchaseMsg(null);
     const res = await upgradeProTier({
@@ -191,6 +195,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
       onUserUpdated?.(res.user);
       setCurrentAutoRenew(res.user.proAutoRenew !== false);
       setPurchaseMsg({ type: 'success', text: `You're now on the ${tier.name} plan!` });
+      setReceipt({ planName: tier.name, billing, base: quote.base, total: quote.display, couponCode: coupon?.code, couponPercent: coupon?.percent, autoRenew: reloadOn, at: new Date() });
       setPayTier(null);
     } else {
       setPurchaseMsg({ type: 'error', text: res.error || 'Could not complete the upgrade.' });
@@ -210,6 +215,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-3" onClick={onClose}>
+      {receipt && <ProReceipt receipt={receipt} onDone={() => setReceipt(null)} />}
       <div
         className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}

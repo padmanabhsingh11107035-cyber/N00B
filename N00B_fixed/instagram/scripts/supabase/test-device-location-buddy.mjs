@@ -61,7 +61,7 @@ check(geo.status === 200 && gj.city === 'Surat' && gj.region === 'Gujarat' && gj
 const none = await (await worker.fetch({ url: 'https://noobsocials.com/__geo', method: 'GET', headers: new Headers() }, {}, { waitUntil() {} })).json();
 check(none.city === '' && none.country === '', 'where it is not known the answer is empty (never an error)');
 
-check(/run_worker_first[^\]]*"\/__geo"/.test(read('wrangler.jsonc')), 'the website hands that address to the Worker (otherwise the app page would answer it)');
+check(/run_worker_first[^\]]*"\/__geo"/.test(read('wrangler.jsonc')) || read('wrangler.jsonc').includes('"run_worker_first": ["/*", "!/assets/*"'),'the website hands that address to the Worker (otherwise the app page would answer it)');
 
 section('4. The Terms and the Privacy Policy say it');
 for (const f of ['src/components/Legal/PrivacyPolicy.tsx', 'src/components/Legal/TermsAndConditions.tsx', 'public/privacy.html', 'public/terms.html']) {

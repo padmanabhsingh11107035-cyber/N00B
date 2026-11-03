@@ -138,6 +138,16 @@ export const EndToEndEncryption: React.FC<EndToEndEncryptionProps> = ({ onClose 
             </ul>
           </section>
 
+                    <section className="space-y-2" data-testid="e2ee-translate">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <FileWarning className="w-4 h-4 text-amber-300" />
+              Translate: the one thing that leaves your phone
+            </h3>
+            <p>
+              A locked message is opened only on your phone. If you tap <strong className="text-white">Translate</strong> on it, your phone sends <strong className="text-white">only that one message&apos;s text</strong> to an AI language service (Groq) to be translated. NOOB does not store the text or the translation, but the service sees it for that moment, so a message you translate is not private from that service. If you never tap Translate, nothing is sent.
+            </p>
+          </section>
+
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <MapPin className="w-4 h-4 text-blue-400" />

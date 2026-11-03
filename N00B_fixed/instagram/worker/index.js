@@ -4,6 +4,7 @@
 //   2. every picture, video and song of the app, at  /m/<key>  (the key of the file in the "media" bucket of Supabase Storage). See serveMedia() below for why this exists.
 //      The older address  /media/<key>  (what app versions from before the cache still ask for: an Android app that was not updated, a tab left open for days) is the same thing.
 // Every other address is served straight from the files, as before.
+import { botGate } from './botGate.js';
 const RELEASE = 'https://github.com/padmanabhsingh11107035-cyber/N00B/releases/download/game-data/';
 
 /** address under /games/neon-alley/data/  ->  file in the release (the version is part of the name, so a changed file is a new address) */
@@ -217,6 +218,8 @@ export default {
   /** @param {Request} request @param {{ ASSETS: { fetch: (r: Request) => Promise<Response> } }} env @param {{ waitUntil: (p: Promise<unknown>) => void }} ctx */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const refused = botGate(request);   // AI programs read only the legal and information pages (worker/botGate.js)
+    if (refused) return refused;
     if (url.pathname.startsWith('/m/') || url.pathname.startsWith('/media/')) return serveMedia(request, ctx);
     // The approximate place of the connection (city, region, country), as Cloudflare works it out from the internet address: told only to the person who asks, about their own
     // connection, never stored here, never sent to anyone else (the Terms and the Privacy Policy say so). The app saves it on the person's account.

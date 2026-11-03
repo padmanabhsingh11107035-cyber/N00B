@@ -43,6 +43,8 @@ interface StoryViewerModalProps {
   // recording, "seen by", comments or delete menu — those all need a live `stories` row, which a
   // highlight's older pages no longer have once the original story expires and is deleted.
   isHighlight?: boolean;
+  // NOOB Pro Ultimate, a press and hold on a circle: the story plays but is NOT recorded as seen (no name in "Seen by", the ring stays unseen).
+  peek?: boolean;
   // Only relevant with isHighlight: opens the highlight editor (rename / add / remove media) for
   // whichever highlight is currently being viewed. Omitted (or the viewer isn't its owner) hides
   // the edit pencil entirely — editing someone else's highlight isn't a thing.
@@ -61,6 +63,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   onNavigateToProfile,
   onNavigateToHashtag,
   isHighlight = false,
+  peek = false,
   onEditHighlight
 }) => {
   // Re-renders every second so any Countdown sticker's "time left" keeps ticking.
@@ -183,7 +186,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   // for the owner's own story, same as the reel view-recording pattern
   // (recordReelView on currentReel change).
   useEffect(() => {
-    if (isHighlight || !story || story.userId === currentUser.id) return;
+    if (isHighlight || peek || !story || story.userId === currentUser.id) return;
     recordStoryView(story.id).catch(() => {});
     onStoryViewed?.(story.id);
   }, [isHighlight, story?.id, currentUser.id]);
@@ -461,6 +464,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         onTouchStart={() => setIsPaused(true)}
         onTouchEnd={() => setIsPaused(false)}
       >
+        {peek && (
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 z-40 px-3 py-1 rounded-full bg-black/60 backdrop-blur border border-white/20 text-[11px] font-semibold text-white/90 flex items-center gap-1.5 pointer-events-none" data-testid="story-peek-pill">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-300" /> Quiet look: they won’t see you
+          </div>
+        )}
         {/* Top Progress Bars */}
         <div className="absolute top-2 inset-x-2 z-30 flex items-center gap-1.5 px-2">
           {stories.slice(groupStart, groupEnd + 1).map((s, i) => {

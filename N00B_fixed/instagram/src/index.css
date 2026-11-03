@@ -1182,7 +1182,7 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 .msg-page {
   --mint: #07eca8; --mint-ring: #26efb1; --panel: #0a0c0e;
   /* the green is the picture's (#02472b) taken a quarter darker; the round buttons and the gap inside a ring are lighter steps of it */
-  --head: #02351f; --head-btn: #164b32; --head-btn-hover: #1b5a3d; --head-gap: #023e25;
+  --head: #0E4B37; --head-btn: #1f6a4f; --head-btn-hover: #258060; --head-gap: #115440;
   /* the big rounded top corners of the black sheet: 32 px on a phone, up to 52 px on a wide column; the green header goes exactly that far behind them */
   --msg-r: clamp(32px, 8vw, 52px);
   /* the app makes its small fixed text 1.38 times bigger (--tx); the picture's sizes are the plain ones, so here that factor is 1 at the normal setting and still follows Settings > Text size */
@@ -1218,9 +1218,9 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 .msg-page [data-testid="messages-people"] button { transition: transform .15s ease; }
 .msg-page [data-testid="messages-people"] button:active { transform: scale(.95); }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
-html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #02351f) !important; transition: background-color .25s ease; }
+html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #0E4B37) !important; transition: background-color .25s ease; }
 @layer base {
-  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #02351f !important; background-image: none !important; }
+  .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #0E4B37 !important; background-image: none !important; }
   .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }
 }
 

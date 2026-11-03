@@ -6,6 +6,7 @@
   // the Worker's log lines (which files were fetched from Supabase) can be read in Cloudflare > Workers > n00b > Logs
   "observability": { "enabled": true },
   "compatibility_date": "2026-09-01",
+  // The worker now sees every address except the big folders of plain files (they are listed with "!"; a negative entry beats a positive one, so Neon Alley's own folder is not excluded): it keeps AI programs out (worker/botGate.js), and does the rest as below.
   // A small script answers only the two big files of Neon Alley (too large for a website file, kept in the repository's "game-data" release) and every picture, video and song
   // of the app (/m/<key>, kept in the data centre's cache so Supabase Storage is not asked for the same file again and again); and /__geo (the approximate place of the person who asks: city, region, country), every other address is served straight from the
   // files, as before. See worker/index.js.
@@ -14,6 +15,6 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/games/neon-alley/data/*", "/m/*", "/media/*", "/__geo"]
+    "run_worker_first": ["/*", "!/assets/*", "!/games/brick-escape/*", "!/games/canyon-rush/*", "!/games/coil-rush/*", "!/games/color-sort/*", "!/games/critterkart/*", "!/games/helix-fall/*", "!/games/siegecraft/*", "!/games/the-rogue/*", "!/games/underhall/*", "!/game-posters/*", "!/brand/*", "!/music/*", "!/features/*", "!/screens/*", "!/lenses/*", "!/cold-drinks/*", "!/avatars/*", "!/live-avatars/*", "!/draw-stickers/*", "!/opening/*", "!/food-hero/*"]
   }
 }

@@ -120,7 +120,7 @@ interface FeedViewProps {
   onToggleLikeCount: (postId: string) => void;
   onDeletePost: (postId: string) => void;
   onDeleteSlide?: (postId: string, slideId: string) => void;
-  onOpenStoryViewer: (index: number) => void;   // an index into storyTray.viewerStories
+  onOpenStoryViewer: (index: number, peek?: boolean) => void;   // an index into storyTray.viewerStories
   onOpenCreateStory: () => void;
   // Create moved to this header (used to be a bottom-nav tab) — opens the post/reel picker.
   onOpenPostCreation?: () => void;

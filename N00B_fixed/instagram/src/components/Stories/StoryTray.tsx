@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Plus, Check, Clock, Volume2 } from 'lucide-react';
 import { User, StatusNote } from '../../types';
 import { predictFollowToggle } from '../../utils/followPredict';
@@ -11,7 +11,7 @@ interface StoryTrayProps {
   /** Who is in the tray and in which order (utils/storyTray.ts). */
   model: StoryTrayModel;
   /** Opens the full-screen viewer at this position of `model.viewerStories`. */
-  onOpenStoryViewer: (startIndex: number) => void;
+  onOpenStoryViewer: (startIndex: number, peek?: boolean) => void;
   onOpenCreateStory: () => void;
   onOpenStatusNoteModal: () => void;
   onClearStatusNote?: () => void;
@@ -66,6 +66,8 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
   onToggleFollowUser,
   allUsers = []
 }) => {
+  const peekTimer = useRef(0);
+  const peekFired = useRef(false);
   const [selectedNoteViewer, setSelectedNoteViewer] = useState<{
     note: StatusNote;
     user: { id?: string; username: string; displayName?: string; avatar?: string };
@@ -202,7 +204,19 @@ export const StoryTray: React.FC<StoryTrayProps> = ({
               <div key={`story-${item.userId}`} id={`story-item-${item.userId}`} className="flex flex-col items-center flex-shrink-0 group">
                 <div className="relative">
                   <button
-                    onClick={() => onOpenStoryViewer(item.startIndex)}
+                    onClick={() => { if (peekFired.current) { peekFired.current = false; return; } onOpenStoryViewer(item.startIndex); }}
+                    onPointerDown={() => {
+                      // NOOB Pro Ultimate: press and hold = a quiet look (the story opens, nobody is told)
+                      if (currentUser.proTier !== 'ultimate') return;
+                      peekFired.current = false;
+                      window.clearTimeout(peekTimer.current);
+                      peekTimer.current = window.setTimeout(() => { peekFired.current = true; navigator.vibrate?.(12); onOpenStoryViewer(item.startIndex, true); }, 450);
+                    }}
+                    onPointerUp={() => window.clearTimeout(peekTimer.current)}
+                    onPointerLeave={() => window.clearTimeout(peekTimer.current)}
+                    onPointerCancel={() => window.clearTimeout(peekTimer.current)}
+                    onContextMenu={(e) => { if (currentUser.proTier === 'ultimate') e.preventDefault(); }}
+                    style={currentUser.proTier === 'ultimate' ? { WebkitTouchCallout: 'none', userSelect: 'none' } : undefined}
                     className="block cursor-pointer"
                     title={`View ${item.username}'s Story`}
                     aria-label={`View ${item.username}'s story`}

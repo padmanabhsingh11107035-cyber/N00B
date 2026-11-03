@@ -1207,9 +1207,11 @@ export default function App() {
   };
 
   // Tapping a circle in the tray: play from that person's first unseen story. The order is frozen for as long as the viewer is open.
-  const handleOpenStoryViewer = (index: number) => {
+  const [storyPeek, setStoryPeek] = useState(false);   // NOOB Pro Ultimate: pressing and holding a circle shows the story without being counted as a viewer
+  const handleOpenStoryViewer = (index: number, peek = false) => {
     const list = storyTray.viewerStories;
     if (!list[index]) return;
+    setStoryPeek(peek && currentUser?.proTier === 'ultimate' && list[index].userId !== currentUser?.id);
     setStoryViewerOrder(list.map((s) => s.id));
     setActiveStoryViewerIndex(index);
     if (list[index].userId === currentUser?.id) {
@@ -2299,8 +2301,9 @@ export default function App() {
         <React.Suspense fallback={null}><StoryViewerModal
           stories={storyViewerStories}
           initialIndex={activeStoryViewerIndex}
-          onClose={() => setActiveStoryViewerIndex(null)}
+          onClose={() => { setActiveStoryViewerIndex(null); setStoryPeek(false); }}
           currentUser={currentUser}
+          peek={storyPeek}
           onStoryViewed={handleStoryViewed}
           onAddComment={handleAddStoryComment}
           onToggleLike={handleToggleStoryLike}

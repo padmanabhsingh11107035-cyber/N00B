@@ -11,6 +11,7 @@
 # connect-src or the browser silently blocks every connection to it — this is why both looked "broken" (stuck
 # on Connecting, NETWORK_ERROR in the console) everywhere despite the app's own code and Agora account being fine.
 /*
+  X-Robots-Tag: noai, noimageai
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin

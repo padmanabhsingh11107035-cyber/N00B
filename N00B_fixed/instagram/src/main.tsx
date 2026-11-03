@@ -15,6 +15,7 @@ import { installMediaGuard } from './utils/mediaGuard.ts';
 import { rewriteDirectMedia } from './services/supabase.ts';
 import { installPageFrames } from './utils/pageFrames.ts';
 import { installKeyboardFill } from './utils/keyboardFill.ts';
+import { initStatusStrip } from './utils/statusStrip';
 import './utils/devicePrefs.ts';   // reads this device's saved choices (text size, less motion, ...) and applies them before anything is drawn
 import { initLanguage } from './i18n/engine.ts';
 import { startTextFit } from './utils/textFit.ts';
@@ -79,6 +80,7 @@ installPageFrames();   // a tall window that floated over a dimmed page becomes 
 installKeyboardFill();         // the phone's see-through keyboard shows the colour of the screen above it, never the page behind (utils/keyboardFill.ts)
 cleanReloadMark();   // a page that was reloaded to get the newest version carries a small "?_r=" mark: take it off the address (utils/reloadApp.ts)
 initTheme();
+initStatusStrip();
 void initLanguage();
 startTextFit();   // a bar that runs out of room (top bar, bottom bar ...) takes back some of the bigger text until it fits
 

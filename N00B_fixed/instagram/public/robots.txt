@@ -1,4 +1,382 @@
-# NOOB Socials - everything public is open to search engines.
+# NOOB Socials - the public pages are open to search engines (Google, Bing ...).
+# AI programs (crawlers that collect pages to train AI, and assistants that fetch a page) may read ONLY the legal and information pages: privacy, terms, about, data deletion, grievance.
+# Everything else (the app, public links, reels, posts, pictures, videos) is closed to them here and, for the ones that identify themselves, refused by the server too (worker/botGate.js).
+User-agent: GPTBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: ChatGPT-User
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: OAI-SearchBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: ClaudeBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Claude-Web
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Claude-User
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Claude-SearchBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: anthropic-ai
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: PerplexityBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Perplexity-User
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Google-Extended
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Google-CloudVertexBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: GoogleOther
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Gemini-Deep-Research
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: CCBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Bytespider
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Amazonbot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Applebot-Extended
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: meta-externalagent
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: meta-externalfetcher
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: FacebookBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: cohere-ai
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: cohere-training-data-crawler
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Diffbot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: ImagesiftBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Omgilibot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Omgili
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: YouBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Timpibot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: AI2Bot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Ai2Bot-Dolma
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: DuckAssistBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: MistralAI-User
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: PanguBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: PetalBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Webzio
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: img2dataset
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: SemrushBot-OCOB
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: ICC-Crawler
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: FriendlyCrawler
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Quora-Bot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: NovaAct
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Manus
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: Genspark
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: LinerBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: TavilyBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
+User-agent: ExaBot
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /data-deletion
+Allow: /grievance
+Disallow: /
+
 User-agent: *
 Allow: /
 

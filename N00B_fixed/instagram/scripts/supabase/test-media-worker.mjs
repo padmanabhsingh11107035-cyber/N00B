@@ -193,7 +193,7 @@ section('6. The Worker sends /m/ and the older /media/ here');
 
 section('7. Wiring');
 const wr = fs.readFileSync('wrangler.jsonc', 'utf8');
-check(/"run_worker_first": \["\/games\/neon-alley\/data\/\*", "\/m\/\*", "\/media\/\*", "\/__geo"\]/.test(wr), 'the Worker runs first for /m/* and /media/*');
+check(wr.includes('"run_worker_first": ["/*", "!/assets/*"') && !wr.includes('"!/m/') && !wr.includes('"!/media/') && !wr.includes('"!/games/neon-alley'), 'the Worker runs first for every address (so also /m/*, /media/*, /__geo and Neon Alley data), except the big folders of plain files');
 
 section('8. The addresses the app uses (src/services/supabase.ts)');
 {

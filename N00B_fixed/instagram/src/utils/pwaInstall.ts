@@ -15,6 +15,11 @@ export interface BeforeInstallPromptEvent extends Event {
 
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 let installed = false;
+// An installed Android app can be opened in a plain Chrome tab too, where the page is not "standalone" and no install prompt fires: so the install is remembered
+// (set when the app is installed or opened as an app), and forgotten when the browser offers the prompt again.
+const INSTALLED_KEY = 'noob_app_installed';
+const rememberedInstall = (): boolean => { try { return localStorage.getItem(INSTALLED_KEY) === '1'; } catch { return false; } };
+const remember = (on: boolean) => { try { if (on) localStorage.setItem(INSTALLED_KEY, '1'); else localStorage.removeItem(INSTALLED_KEY); } catch { /* no storage */ } };
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((cb) => cb());
 
@@ -22,13 +27,16 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e as BeforeInstallPromptEvent;
+    installed = false; remember(false);   // the browser offers the install, so the app is not on this phone (any more)
     notify();
   });
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
-    installed = true;
+    installed = true; remember(true);
     notify();
   });
+  // opened as an app: remember it, so a plain browser tab on the same phone knows the app is installed
+  window.addEventListener('load', () => { if (isStandalone()) remember(true); });
 }
 
 export function isStandalone(): boolean {
@@ -56,7 +64,7 @@ export function chromeInstallUrl(href: string): string {
 export const SAMSUNG_INSTALL_HINT = 'Samsung Internet’s installer is blocked by Google Play Protect. Opening Chrome, which installs NOOB safely. If Chrome does not open, install Chrome from the Play Store and open noobsocials.com there.';
 
 export const canInstallNow = (): boolean => !!deferredPrompt;
-export const isInstalled = (): boolean => installed || isStandalone();
+export const isInstalled = (): boolean => installed || isStandalone() || (rememberedInstall() && !deferredPrompt);
 
 export function onInstallStateChange(cb: () => void): () => void {
   listeners.add(cb);

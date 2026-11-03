@@ -14,6 +14,8 @@ public class MainActivity extends BridgeActivity {
     getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
     // "Update the app" (src/services/nativeUpdate.ts): downloads the newest app file and hands it to Android's installer. Plugins of our own are registered before the bridge starts.
     registerPlugin(AppUpdaterPlugin.class);
+    // The icon on the home screen (normal / NOOB Pro, Settings and activity > App icon, src/utils/appIcon.ts).
+    registerPlugin(AppIconPlugin.class);
     super.onCreate(savedInstanceState);
   }
 }

@@ -40,6 +40,7 @@ export const ROWS: RowDef[] = [
   // ---------------------------------------------------------------- Your account
   { id: 'account', section: 'Your account', label: 'Your NOOB account', sub: 'Personal details, password and security, ownership and control', icon: UserCog, page: 'account', keywords: 'profile name email phone password security delete download data verified username' },
   { id: 'app-lock', section: 'Your account', label: 'App lock', sub: 'Face ID or fingerprint before NOOB, or chosen pages, opens', icon: ScanFace, page: 'app-lock', keywords: 'face id touch id fingerprint lock passcode biometric screen lock privacy security' },
+  { id: 'app-icon', section: 'Your account', label: 'App icon', sub: 'NOOB Pro members can pick the Pro icon', icon: Crown, page: 'app-icon', keywords: 'icon logo home screen pro app icon change', value: (c) => (c.currentUser.proTier ? undefined : 'NOOB Pro') },
 
   // ---------------------------------------------------------------- How you use NOOB
   { id: 'saved', section: 'How you use NOOB', label: 'Saved', icon: Bookmark, action: 'showProfileTab', keywords: 'bookmarks collections saved posts' },

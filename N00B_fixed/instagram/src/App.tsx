@@ -138,6 +138,7 @@ import { NoobStackLoader } from './components/Common/NoobStackLoader';
 import { useUpdateAvailable } from './utils/appVersion';
 import { isInstalled } from './utils/pwaInstall';
 import { AppLockGate } from './components/Common/AppLockGate';
+import { applyAppIcon } from './utils/appIcon';
 import { detectPlatform } from './utils/appPlatform';
 import { startVisitTracking, noteVisit } from './services/visitTracker';
 import { getDeviceId, getDeviceLabel } from './utils/deviceId';
@@ -218,6 +219,8 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 // On the coaching address NOOB STUDY is opened as soon as the person is signed in
 const CoachingEntry: React.FC<{ currentUser: User }> = ({ currentUser }) => {
   useEffect(() => { openStudy('home'); }, []);
+  // The icon on the phone's home screen follows the NOOB Pro plan: the Pro icon while a plan that chose it runs, the normal one when it ends (utils/appIcon.ts; only the Android app can change it)
+  useEffect(() => { if (currentUser) void applyAppIcon(currentUser.proTier); }, [currentUser?.proTier]);
   return <StudyHost currentUser={currentUser} />;
 };
 

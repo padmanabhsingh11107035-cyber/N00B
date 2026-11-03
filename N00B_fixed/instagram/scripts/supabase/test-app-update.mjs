@@ -32,7 +32,7 @@ check(/connect-src[^;]*https:\/\/api\.github\.com/.test(read('public/_headers'))
 section('3. The installer inside the app (native)');
 const java = read('android-overrides/AppUpdaterPlugin.java');
 const main = read('android-overrides/MainActivity.java');
-check(/@CapacitorPlugin\(name = "AppUpdater"\)/.test(java) && /registerPlugin\(AppUpdaterPlugin\.class\);\s*super\.onCreate/.test(main), 'the installer is registered before the app starts');
+check(/@CapacitorPlugin\(name = "AppUpdater"\)/.test(java) && /registerPlugin\(AppUpdaterPlugin\.class\);[\s\S]*?super\.onCreate/.test(main), 'the installer is registered before the app starts');
 check(/ALLOWED_PREFIX = "https:\/\/github\.com\/padmanabhsingh11107035-cyber\/N00B\/releases\/download\/"/.test(java) && /!address\.startsWith\(ALLOWED_PREFIX\)/.test(java), 'it downloads only from NOOB’s own release page, never from any other address');
 check(/MIN_BYTES/.test(java) && /MAX_BYTES/.test(java), 'and only a file of a sensible size');
 check(/canRequestPackageInstalls/.test(java) && /ACTION_MANAGE_UNKNOWN_APP_SOURCES/.test(java) && /needsPermission/.test(java), 'the first time it sends the person to the one Android setting that allows it, then asks them to tap Update again');

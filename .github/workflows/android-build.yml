@@ -103,6 +103,12 @@ jobs:
           # "Continue with Google ..." comes back to the app through its own link, com.noob.social://auth (see src/services/nativeAuth.ts)
           sed -i 's#</activity>#<intent-filter><action android:name="android.intent.action.VIEW" /><category android:name="android.intent.category.DEFAULT" /><category android:name="android.intent.category.BROWSABLE" /><data android:scheme="com.noob.social" /></intent-filter></activity>#' android/app/src/main/AndroidManifest.xml
           grep -q 'android:scheme="com.noob.social"' android/app/src/main/AndroidManifest.xml
+          # The icon on the home screen can be switched between the normal NOOB icon and the NOOB Pro icon (two launcher entries of the manifest; see android-overrides/add-icon-aliases.py)
+          cp android-overrides/AppIconPlugin.java android/app/src/main/java/com/noob/social/AppIconPlugin.java
+          cp -r android-overrides/icons/. android/app/src/main/res/
+          python3 android-overrides/add-icon-aliases.py android/app/src/main/AndroidManifest.xml
+          grep -q 'IconPro' android/app/src/main/AndroidManifest.xml
+          grep -q 'IconDefault' android/app/src/main/AndroidManifest.xml
 
       - name: Generate app icon & splash screen from the NOOB logo
         # Installed here rather than as a committed devDependency: it pulls in

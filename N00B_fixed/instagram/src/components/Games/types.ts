@@ -221,6 +221,81 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: FROSTLINE ZERO (on its own page, /games/frostzero/, shown in a frame; source in frostzero/) ---
+  {
+    id: 'frostzero',
+    title: 'Frostline Zero',
+    category: 'arcade',
+    description: 'An avalanche run down a frozen mountain: the avalanche is behind you and the abyss below, so carve, jump and dash through the crystal gallery, dodge the red crystals, reach the checkpoints and ride to the finish as fast as you can. One hit and you are back at the last checkpoint. Your best times are kept on your device. Made by NOOB developers.',
+    bannerBg: 'from-[#1b3b5c] to-[#08111c]',
+    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'frostzero',
+    tags: ['Racing', '3D', 'Snow'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Steer left and right to dodge the red crystals; jump and dash with the on-screen buttons. On a computer: A and D or the arrow keys steer, Space jumps, Shift sprints, F dashes, P pauses. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/frostzero/',
+    posters: [
+      '/game-posters/frostzero/01-cover.webp',
+      '/game-posters/frostzero/02-play.webp',
+      '/game-posters/frostzero/03-more.webp'
+    ]
+  },
+
+  // --- NEW: FARBOUND: RUINS BEYOND (on its own page, /games/farbound/, shown in a frame; source in farbound/) ---
+  {
+    id: 'farbound',
+    title: 'Farbound: Ruins Beyond',
+    category: 'arcade',
+    description: 'A small, quiet 3D exploration adventure above the clouds: wander a hill, meet a fox and an old guardian, and uncover ten star memories as the world slowly wakes up. No timers, no enemies, just a story to walk through. Your progress is kept on your device. Made by NOOB developers.',
+    bannerBg: 'from-[#2c4a52] to-[#0f1f24]',
+    badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Easy',
+    players: 'Solo',
+    iconType: 'farbound',
+    tags: ['Adventure', 'Story', 'Exploration'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Touch: use the on-screen stick to walk and the buttons to jump and listen. On a computer: WASD walks, drag the mouse to look, Shift walks faster, Space jumps and E listens or talks; Esc pauses. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/farbound/',
+    posters: [
+      '/game-posters/farbound/01-cover.webp',
+      '/game-posters/farbound/02-play.webp',
+      '/game-posters/farbound/03-more.webp'
+    ]
+  },
+
+  // --- NEW: APEX DRIFT (on its own page, /games/apexdrift/, shown in a frame; source in apexdrift/) ---
+  {
+    id: 'apexdrift',
+    title: 'Apex Drift',
+    category: 'arcade',
+    description: 'A 60-second 3D arcade drift score attack: chain controlled slides, build a multiplier and bank as many points as you can before the clock ends. Clip the rings for bonus points, but crash or spin and the chain is lost. A new set of weather, time of day and clip positions every day, and your best runs are kept on your device. Made by NOOB developers.',
+    bannerBg: 'from-[#3a2a5c] to-[#0d0a18]',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'apexdrift',
+    tags: ['Racing', 'Drift', '3D'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Touch: on-screen buttons and wheel for throttle, brake, steering and handbrake. On a computer: W or Up throttles, S or Down brakes, A and D or Left and Right steer, Space is the handbrake, R resets, Enter starts. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/apexdrift/',
+    posters: [
+      '/game-posters/apexdrift/01-cover.webp',
+      '/game-posters/apexdrift/02-play.webp',
+      '/game-posters/apexdrift/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

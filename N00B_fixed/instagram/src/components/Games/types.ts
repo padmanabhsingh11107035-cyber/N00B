@@ -397,6 +397,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: VERTICAL PLATFORMER (on its own page, /games/vertical-platformer/, shown in a frame; source in vertical-platformer/) ---
+  {
+    id: 'vertical_platformer',
+    title: 'Vertical Platformer',
+    category: 'arcade',
+    description: 'An endless vertical climber: jump from platform to platform, collect stars, unlock new looks and keep climbing, because there is no finish line. Made by NOOB developers.',
+    bannerBg: 'from-[#2a6f9e] to-[#0d2233]',
+    badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'verticalplatformer',
+    tags: ['Platformer', 'Endless', 'Climb'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Your jumper bounces by itself: steer left and right to land on the next platform and keep climbing. Touch: use the on-screen arrows. On a computer: hold A and D or the Left and Right arrows; H opens help and Backspace skips the tutorial. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/vertical-platformer/',
+    posters: [
+      '/game-posters/vertical-platformer/01-cover.webp',
+      '/game-posters/vertical-platformer/02-play.webp',
+      '/game-posters/vertical-platformer/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

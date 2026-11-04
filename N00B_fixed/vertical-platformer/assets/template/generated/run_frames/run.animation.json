@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "type": "frame-animation",
+  "managed": true,
+  "name": "Run",
+  "fps": 12,
+  "loop": true,
+  "coverFrame": "assets/template/generated/run_frames/run_00.webp",
+  "frames": [
+    "assets/template/generated/run_frames/run_00.webp",
+    "assets/template/generated/run_frames/run_01.webp",
+    "assets/template/generated/run_frames/run_02.webp",
+    "assets/template/generated/run_frames/run_03.webp",
+    "assets/template/generated/run_frames/run_04.webp",
+    "assets/template/generated/run_frames/run_05.webp",
+    "assets/template/generated/run_frames/run_06.webp",
+    "assets/template/generated/run_frames/run_07.webp",
+    "assets/template/generated/run_frames/run_08.webp",
+    "assets/template/generated/run_frames/run_09.webp",
+    "assets/template/generated/run_frames/run_10.webp",
+    "assets/template/generated/run_frames/run_11.webp",
+    "assets/template/generated/run_frames/run_12.webp",
+    "assets/template/generated/run_frames/run_13.webp",
+    "assets/template/generated/run_frames/run_14.webp",
+    "assets/template/generated/run_frames/run_15.webp",
+    "assets/template/generated/run_frames/run_16.webp"
+  ]
+}

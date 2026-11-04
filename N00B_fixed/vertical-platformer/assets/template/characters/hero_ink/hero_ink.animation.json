@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "type": "frame-animation",
+  "managed": true,
+  "name": "Hero Ink",
+  "fps": 12,
+  "loop": true,
+  "coverFrame": "assets/template/characters/hero_ink/hero_ink_00.webp",
+  "frames": [
+    "assets/template/characters/hero_ink/hero_ink_00.webp",
+    "assets/template/characters/hero_ink/hero_ink_01.webp",
+    "assets/template/characters/hero_ink/hero_ink_02.webp",
+    "assets/template/characters/hero_ink/hero_ink_03.webp",
+    "assets/template/characters/hero_ink/hero_ink_04.webp",
+    "assets/template/characters/hero_ink/hero_ink_05.webp",
+    "assets/template/characters/hero_ink/hero_ink_06.webp",
+    "assets/template/characters/hero_ink/hero_ink_07.webp",
+    "assets/template/characters/hero_ink/hero_ink_08.webp",
+    "assets/template/characters/hero_ink/hero_ink_09.webp",
+    "assets/template/characters/hero_ink/hero_ink_10.webp",
+    "assets/template/characters/hero_ink/hero_ink_11.webp"
+  ]
+}

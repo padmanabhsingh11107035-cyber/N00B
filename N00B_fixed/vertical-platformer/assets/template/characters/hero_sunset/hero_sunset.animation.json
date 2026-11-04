@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "type": "frame-animation",
+  "managed": true,
+  "name": "Hero Sunset",
+  "fps": 12,
+  "loop": true,
+  "coverFrame": "assets/template/characters/hero_sunset/hero_sunset_00.webp",
+  "frames": [
+    "assets/template/characters/hero_sunset/hero_sunset_00.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_01.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_02.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_03.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_04.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_05.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_06.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_07.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_08.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_09.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_10.webp",
+    "assets/template/characters/hero_sunset/hero_sunset_11.webp"
+  ]
+}

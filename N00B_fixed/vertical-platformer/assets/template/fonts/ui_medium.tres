@@ -1,0 +1,9 @@
+[gd_resource type="FontVariation" load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://assets/template/fonts/NoobSans-Medium.woff2" id="1_primary"]
+[ext_resource type="FontVariation" path="res://assets/template/fonts/noto_sans_sc_medium.tres" id="2_cjk"]
+
+[resource]
+resource_name = "NoobSans (ui_medium)"
+base_font = ExtResource("1_primary")
+fallbacks = Array[Font]([ExtResource("2_cjk")])

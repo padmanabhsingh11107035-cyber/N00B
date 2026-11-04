@@ -1,0 +1,195 @@
+{
+  "asset_name": "Vertical Platformer \u2014 Paper Sky",
+  "scope": "One original generated soundtrack for Vertical Platformer, with a loop edit of the same recording. Untouched original is archived at its SHA-keyed public URL; runtime includes only the edited OGG.",
+  "generation": {
+    "actual_tool": "noob-tools.generate_music",
+    "requested_model": "Lyria 3 Pro",
+    "actual_model_identifier": "lyria-3-pro-preview",
+    "model_verification": "Verified from the completed session musicGenerateNotify event via the official read-only dev-session export; tool receipt alone omits model identity.",
+    "generation_date_utc": "2026-09-23",
+    "job_started_receipt_utc": "2026-09-23T07:37:27Z",
+    "completion_notice_utc": "2026-09-23T07:38:10.593000+00:00",
+    "job_id": "job_m_39682f2d35f1",
+    "calls": 1,
+    "successful_results": 1,
+    "exact_submitted_prompt": "Instrumental only, no vocals, speech, chants or human voice. Exactly 96 seconds, 100 BPM, 4/4, playful and buoyant but gentle enough for repeated play. Original paper-sky jumping-game music in D major with a warm added-sixth color: light marimba, plucked/pizzicato strings, soft rounded synth bass, delicate shakers, brushed taps and restrained whimsical electronic percussion. A compact memorable bouncing motif, clean transients, open mids that leave room for short game effects, moderate density, cheerful upward motion without tension or excessive loudness. Arrangement: 0\u201324 seconds introduce the full loop groove immediately; 24\u201348 seconds add one light answering phrase; 48\u201372 seconds vary texture while keeping the same pulse; 72\u201396 seconds return seamlessly to the opening groove. Stable repeating loop body; no long intro, final cadence, dramatic ending, fade-out, silence, or tempo change. Final timestamp 96 seconds. Clean professional stereo mix, no clipping. Do not imitate a named artist, song, album or existing soundtrack. Instrumental only, no vocals",
+    "prompt_note": "The supplied music prompt was retained verbatim, with the tool-required final phrase \"Instrumental only, no vocals\" appended.",
+    "requested_output_path": "/home/ubuntu/vertical-platformer-audio/vertical-platformer-paper-sky-source.wav",
+    "receipt": "Successfully generated music, file saved to path: /home/ubuntu/vertical-platformer-audio/vertical-platformer-paper-sky-source.wav",
+    "provider": "gemini",
+    "verification_event_uid": "7cbMeXqZPE5ZY4k1uu6J8Y",
+    "verification_session_uid": "CnronKmrDAhg7bbaVLO7vq"
+  },
+  "source": {
+    "filename": "vertical-platformer-paper-sky-source.mp3",
+    "format": "mp3",
+    "codec": "mp3",
+    "sample_format": "fltp",
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "channel_layout": "stereo",
+    "container_duration_seconds": 94.24975,
+    "decoded_sample_frames": 4156416,
+    "decoded_duration_seconds": 94.24979591836734,
+    "integrated_loudness_lufs": -12.08,
+    "true_peak_dbtp": 0.41,
+    "loudness_range_lu": 2.8,
+    "sample_peak_dbfs": 0.3229,
+    "samples_at_or_above_full_scale": 43,
+    "sha256": "4f990802930e3b848e01cd157331c60a89706e86bf8c370418dc30d253156829",
+    "bytes": 2269662,
+    "public_url": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/23/4f990802930e3b848e01cd157331c60a89706e86bf8c370418dc30d253156829.mp3",
+    "cdn_byte_exact_round_trip": true
+  },
+  "prior_runtime_unedited": {
+    "filename": "vertical-platformer-paper-sky.ogg",
+    "format": "ogg",
+    "codec": "vorbis",
+    "sample_format": "fltp",
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "channel_layout": "stereo",
+    "container_duration_seconds": 94.249796,
+    "decoded_sample_frames": 4156416,
+    "decoded_duration_seconds": 94.24979591836734,
+    "integrated_loudness_lufs": -17.99,
+    "true_peak_dbtp": -5.41,
+    "loudness_range_lu": 2.8,
+    "sample_peak_dbfs": -5.4764,
+    "samples_at_or_above_full_scale": 0,
+    "sha256": "27980e73632848cd9020d56b601bc28c2da52241b0e3ae3c1c989a036cf8f56a",
+    "bytes": 2062983
+  },
+  "prior_processing": {
+    "software": "FFmpeg 6.1.1-3ubuntu5; ffprobe 6.1.1-3ubuntu5; Python and NumPy for PCM edge analysis",
+    "source_preservation": "The tool saved MP3 bytes under a .wav name. Only the filename extension was changed to .mp3. The SHA-256 digest is identical before and after renaming; source audio was not re-encoded or otherwise modified.",
+    "gain_db": -5.92,
+    "gain_reason": "Constant gain chosen from measured source loudness: -18 - (-12.08) = -5.92 dB. Re-measured the encoded OGG, rather than assuming the target was met.",
+    "runtime_encoding": "Ogg Vorbis, libvorbis quality 6, 44100 Hz stereo; metadata stripped.",
+    "composition_preservation": "No trimming, padding, repetition, time-stretching, pitch shifting, mixing, crossfade, fade-in or fade-out. Source and runtime decode to the same frame count. The only audio transformation before lossy encoding was constant gain.",
+    "working_directory": "/home/ubuntu/vertical-platformer-audio",
+    "commands": [
+      "mv vertical-platformer-paper-sky-source.wav vertical-platformer-paper-sky-source.mp3",
+      "ffmpeg -hide_banner -nostdin -y -i vertical-platformer-paper-sky-source.mp3 -map 0:a:0 -map_metadata -1 -af volume=-5.92dB -c:a libvorbis -q:a 6 -ar 44100 -ac 2 vertical-platformer-paper-sky.ogg"
+    ]
+  },
+  "prior_inspection": {
+    "method": "Technical file, decoded PCM and FFmpeg loudness analysis; no perceptual listening certification.",
+    "measurement_commands": [
+      "ffprobe -v error -show_format -show_streams -of json FILE",
+      "ffmpeg -hide_banner -nostats -i FILE -af loudnorm=I=-18:TP=-1:LRA=11:print_format=json -f null -",
+      "ffmpeg -v error -i FILE -map 0:a:0 -c:a pcm_f32le -f f32le -",
+      "sha256sum vertical-platformer-paper-sky-source.mp3 vertical-platformer-paper-sky.ogg"
+    ],
+    "measurement_command_note": "Replace FILE with each delivered audio filename. The loudnorm report input_i/input_tp/input_lra measure the input file; its discarded normalized output is not a deliverable. Duration is also calculated from decoded sample frames / sample rate. PCM RMS aggregates both channels.",
+    "runtime_begin_end_rms_windows_seconds": {
+      "0.01": {
+        "begin_rms_dbfs": -240.0,
+        "end_rms_dbfs": -96.6624
+      },
+      "0.05": {
+        "begin_rms_dbfs": -115.9747,
+        "end_rms_dbfs": -62.5127
+      },
+      "0.1": {
+        "begin_rms_dbfs": -38.3486,
+        "end_rms_dbfs": -59.9836
+      },
+      "0.5": {
+        "begin_rms_dbfs": -20.8143,
+        "end_rms_dbfs": -54.3213
+      },
+      "1": {
+        "begin_rms_dbfs": -22.0475,
+        "end_rms_dbfs": -44.7038
+      },
+      "2": {
+        "begin_rms_dbfs": -21.4029,
+        "end_rms_dbfs": -23.9186
+      },
+      "4": {
+        "begin_rms_dbfs": -21.6328,
+        "end_rms_dbfs": -21.3658
+      },
+      "8": {
+        "begin_rms_dbfs": -20.8789,
+        "end_rms_dbfs": -19.6685
+      }
+    },
+    "runtime_edge_silence_by_rms_threshold_dbfs": {
+      "-60": {
+        "leading_seconds_10ms_resolution": 0.08,
+        "trailing_seconds_10ms_resolution": 0.039796
+      },
+      "-50": {
+        "leading_seconds_10ms_resolution": 0.08,
+        "trailing_seconds_10ms_resolution": 0.449796
+      },
+      "-40": {
+        "leading_seconds_10ms_resolution": 0.08,
+        "trailing_seconds_10ms_resolution": 0.849796
+      }
+    },
+    "runtime_loop_boundary": {
+      "last_to_first_sample_jump_per_channel": [
+        2.697336412893492e-06,
+        5.718878128391225e-06
+      ],
+      "max_last_to_first_sample_jump_dbfs": -104.8538,
+      "adjacent_sample_step_99_9_percentile_near_edges_dbfs": -22.3018,
+      "last_sample_per_channel": [
+        -2.697336412893492e-06,
+        -5.718878128391225e-06
+      ],
+      "first_sample_per_channel": [
+        0.0,
+        0.0
+      ],
+      "interpretation": "Sample continuity and edge energy are technical indicators only; they do not establish beat, harmonic or perceptual seamlessness."
+    },
+    "duration_shortfall_seconds": 1.750204,
+    "last_half_second_rms_below_first_half_second_db": 33.507,
+    "observed_limitations": [
+      "Generation did not meet the exact 96-second instruction: both files decode to 94.249795918 seconds, approximately 1.750204 seconds short. Duration was not forced by adding silence or altering the composition or tempo.",
+      "The ending has a pronounced low-energy tail. The runtime final 0.5 s is -54.3213 dBFS RMS versus -20.8143 dBFS RMS at the opening; approximately the last 0.849796 s stays below -40 dBFS in 10 ms RMS windows. The opening has approximately 0.08 s below that threshold. A repeated full-file playback may therefore have an audible energy dip or gap.",
+      "The decoded last-to-first sample jump is very small (-104.8538 dBFS), but this does not prove rhythm, harmony or perceptual loop continuity. Seamlessness is not established, and this is not certified as a production-ready seamless loop.",
+      "The untouched source measures +0.41 dBTP and has 43 decoded channel samples at or above full scale. MP3 reconstruction can cause overshoot, so this is not conclusive proof of pre-encoding clipping. Gain reduction yields a runtime measurement of -5.41 dBTP with zero decoded samples at or above full scale, but cannot undo distortion already baked into the source.",
+      "The requested 100 BPM, 4/4, D major, instrumentation and absence of voice were prompted but not independently verified by perceptual listening or music transcription."
+    ],
+    "recommended_next_action": "Audition the OGG end-to-start twice in the existing game before integration, paying attention to the low-energy tail. Any loop-boundary editing would require a separate decision; no second generation is authorized or performed."
+  },
+  "runtime": {
+    "filename": "vertical-platformer-paper-sky.ogg",
+    "path": "assets/template/audio/vertical-platformer-paper-sky.ogg",
+    "public_url": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/23/05acd3e4da35d3ca9cacb8dcc6bacd9fcda1602311157f46751fc13349511664.ogg",
+    "format": "ogg",
+    "codec": "vorbis",
+    "sample_rate_hz": 44100,
+    "channels": 2,
+    "duration_seconds": 91.2,
+    "decoded_sample_frames": 4021920,
+    "integrated_loudness_lufs": -17.95,
+    "true_peak_dbtp": -5.28,
+    "bytes": 2010499,
+    "sha256": "05acd3e4da35d3ca9cacb8dcc6bacd9fcda1602311157f46751fc13349511664",
+    "cdn_byte_exact_round_trip": true
+  },
+  "loop_processing": {
+    "software": "Python 3.9, NumPy 2.0.2, soundfile 0.13.1 / libsndfile 1.2.2 Vorbis encoder",
+    "source_start_seconds": 0.68,
+    "period_seconds": 91.2,
+    "wrap_crossfade_seconds": 0.6,
+    "method": "Mix source continuation [91.88,92.48) over first 0.6 seconds using cos(theta) and sin(theta) equal-power weights. Keep a 91.2 second period (38 bars at the prompted 100 BPM). Apply 5ms linear endpoint guards for encoder transients, -5.92 dB constant gain, and Vorbis compression_level 0.4. No additional generation or composition.",
+    "reproduction_script": "make-paper-sky-loop.py",
+    "source_decode_command": "ffmpeg -v error -i vertical-platformer-paper-sky-source.mp3 -f f32le -acodec pcm_f32le source.f32"
+  },
+  "loop_verification": {
+    "decoded_duration_seconds": 91.2,
+    "seam_sample_delta_dbfs": -68.45672,
+    "first_half_second_rms_dbfs": -17.804039,
+    "last_half_second_rms_dbfs": -17.490475,
+    "clipping_samples": 0,
+    "perceptual_audition": "Not completed: this Codex session cannot receive audio input. Technical continuity and loudness were measured; beat/harmony/instrumentation and perceived seamlessness remain unverified.",
+    "actual_model_identifier": "lyria-3-pro-preview"
+  }
+}

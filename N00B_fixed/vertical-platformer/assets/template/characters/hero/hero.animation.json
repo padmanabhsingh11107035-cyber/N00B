@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "type": "frame-animation",
+  "managed": true,
+  "name": "Hero",
+  "fps": 12,
+  "loop": true,
+  "coverFrame": "assets/template/characters/hero/hero_00.webp",
+  "frames": [
+    "assets/template/characters/hero/hero_00.webp",
+    "assets/template/characters/hero/hero_01.webp",
+    "assets/template/characters/hero/hero_02.webp",
+    "assets/template/characters/hero/hero_03.webp",
+    "assets/template/characters/hero/hero_04.webp",
+    "assets/template/characters/hero/hero_05.webp",
+    "assets/template/characters/hero/hero_06.webp",
+    "assets/template/characters/hero/hero_07.webp",
+    "assets/template/characters/hero/hero_08.webp",
+    "assets/template/characters/hero/hero_09.webp",
+    "assets/template/characters/hero/hero_10.webp",
+    "assets/template/characters/hero/hero_11.webp"
+  ]
+}

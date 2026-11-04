@@ -1,0 +1,26 @@
+// Vertical Platformer (Godot web export) on the Games page. Usage: node --liftoff-only scripts/supabase/test-vertical-platformer.mjs
+import fs from 'node:fs';
+let passed = 0, failed = 0;
+const check = (c, l) => { if (c) { passed++; console.log(`  ok   ${l}`); } else { failed++; console.log(`  FAIL ${l}`); } };
+const read = (p) => fs.readFileSync(p, 'utf8').split('\r').join('');
+const dir = 'public/games/vertical-platformer';
+const html = read(`${dir}/index.html`), js = read(`${dir}/index.js`);
+const types = read('src/components/Games/types.ts'), headers = read('public/_headers'), wr = read('wrangler.jsonc');
+const entry = types.slice(types.indexOf("id: 'vertical_platformer'"), types.indexOf('\n  },', types.indexOf("id: 'vertical_platformer'")));
+const NAMES = new RegExp(['ma' + 'nus', 'tri' + 'po'].join('|'), 'i');
+console.log('\n1. On the Games page');
+check(/embedUrl: '\/games\/vertical-platformer\/'/.test(entry) && /pointsReward: 0/.test(entry) && /Made by NOOB developers/.test(entry), 'a card that opens it, no points, "Made by NOOB developers"');
+const posters = [...entry.matchAll(/'(\/game-posters\/[^']+)'/g)].map((m) => m[1]);
+check(posters.length === 3 && posters.every((p) => fs.existsSync('public' + p)), '3 posters, all real files');
+console.log('\n2. The page');
+check(/Made by NOOB developers/.test(html), 'the page says it is made by NOOB developers');
+check(!NAMES.test(html) && !NAMES.test(js), 'nothing in the page or the loader names a maker or a tool');
+const sizes = fs.readdirSync(dir).map((f) => fs.statSync(`${dir}/${f}`).size);
+check(Math.max(...sizes) < 25 * 1024 * 1024 && fs.existsSync(`${dir}/index.wasm.gz`) && !fs.existsSync(`${dir}/index.wasm`), 'no file is over the host\'s 25 MB limit (the engine file is stored gzipped)');
+check(/\.wasm\.gz/.test(js) && /DecompressionStream/.test(js), 'the loader reads the gzipped engine file and unzips it itself if the browser did not');
+const at = headers.indexOf('/games/vertical-platformer/*'), block = headers.slice(at, headers.indexOf('\n/', at + 5));
+check(/frame-ancestors 'self'/.test(block) && /wasm-unsafe-eval/.test(block) && wr.includes('"!/games/vertical-platformer/*"'), 'own policy (framed by this site only), routed past the worker');
+check(headers.split('\n').filter((l) => /^[^ #]/.test(l)).length <= 100, 'public/_headers stays at 100 rules or fewer (Cloudflare refuses more)');
+check(fs.existsSync('../vertical-platformer/project.godot') && fs.existsSync('../vertical-platformer/NOOB-EMBED.md'), 'the source is in the repository (vertical-platformer/)');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

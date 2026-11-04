@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { listenRoom, pingRoom } from '../../utils/roomPing';
+import { listenLive, sendLive } from '../../utils/liveScore';
 import { BurgerSmall } from '../Common/BurgerLoading';
 import {
   X,
@@ -254,6 +255,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
   const [rematchRequested, setRematchRequested] = useState(false);
   const matchmakingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const matchmakingCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const matchmakingListenRef = useRef<(() => void) | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<User | null>(() => {
     if (initialChallenger) {
       return allUsers.find((u) => u.username === initialChallenger) || null;
@@ -296,6 +298,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     if (matchmakingCountdownRef.current) clearInterval(matchmakingCountdownRef.current);
     matchmakingPollRef.current = null;
     matchmakingCountdownRef.current = null;
+    if (matchmakingListenRef.current) { matchmakingListenRef.current(); matchmakingListenRef.current = null; }
   };
   useEffect(() => clearMatchmakingTimers, []);
 
@@ -356,6 +359,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     try {
       const res = await joinMatchmaking(game.id, game.title);
       if (res.matched && res.room) {
+        pingRoom(`mm-${game.id}`);   // tell the player who was waiting, at once
         enterOnlineMatch(res.room, 'matchmaking');
         return;
       }
@@ -375,7 +379,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       });
     }, 1000);
 
-    matchmakingPollRef.current = setInterval(pollOnce(async () => {
+    const checkMatch = pollOnce(async () => {
       try {
         const statusRes = await getMatchmakingStatus();
         if (statusRes.matched && statusRes.room) {
@@ -384,7 +388,9 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
       } catch (err) {
         console.error(err);
       }
-    }), 2000);
+    });
+    matchmakingPollRef.current = setInterval(checkMatch, 1000);   // a safety net: the newcomer's poke makes it run at once
+    matchmakingListenRef.current = listenRoom(`mm-${game.id}`, checkMatch);
   };
 
   const handleCancelMatchmaking = () => {
@@ -515,6 +521,18 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
     return () => { clearInterval(interval); window.removeEventListener('noob-room-poke', tick); stopListening(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlineMatch?.phase, onlineMatch?.roomCode, game.id]);
+
+  // Both players play their own round of these games at the same time; each one sees the other's score climb live (utils/liveScore.ts).
+  const LIVE_SCORE_GAME_IDS = ['speed_math', 'bubble_blitz', 'cyber_snake', 'memory_match', 'rps'];
+  const [opponentLive, setOpponentLive] = useState<number | null>(null);
+  const liveOn = !!onlineMatch && onlineMatch.phase === 'in_progress' && LIVE_SCORE_GAME_IDS.includes(game.id) && currentMode === 'play_bot';
+  useEffect(() => {
+    if (!liveOn || !onlineMatch) { setOpponentLive(null); return; }
+    setOpponentLive(0);
+    return listenLive(onlineMatch.roomCode, (uid, value) => { if (uid !== currentUser.id) setOpponentLive(value); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveOn, onlineMatch?.roomCode]);
+  const reportLive = liveOn && onlineMatch ? (v: number) => sendLive(onlineMatch.roomCode, currentUser.id, v) : undefined;
 
   const finalizeOnlineMatch = (room: GameRoom) => {
     const myOutcome = room.outcome?.results[currentUser.id] || 'tie';
@@ -1727,9 +1745,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
                   Pass and Play — {passPlayStage === 'p1' ? "Player 1's Turn" : "Player 2's Turn"}
                 </div>
               )}
+              {liveOn && opponentLive !== null && (
+                <div className="px-3 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 text-xs font-bold flex items-center justify-between" data-testid="live-opponent">
+                  <span>@{onlineMatch?.opponent?.username || 'Opponent'} is playing live</span>
+                  <span className="text-white text-sm font-black">{opponentLive}</span>
+                </div>
+              )}
               {/* Game Specific Engines */}
               {(game.id === 'cyber_snake' || game.id === 'snake' || game.id === 'pac_grid') && (
-                <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} />
+                <CyberSnakeGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} onProgress={reportLive} />
               )}
 
               {game.id === 'helix_fall' && (
@@ -1843,15 +1867,15 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'rps' && (
-                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} difficulty={botDifficulty} resumeUserId={currentUser.id} />
+                <RockPaperScissorsGame onGameOver={handleGameOver} opponentName={opponentChallenger || 'AI Bot'} bestOf={3} vsBot={!isPassAndPlay} difficulty={botDifficulty} resumeUserId={currentUser.id} onProgress={reportLive} />
               )}
 
               {game.id === 'speed_math' && (
-                <SpeedMathGame onGameOver={handleGameOver} targetScore={6} resumeUserId={currentUser.id} />
+                <SpeedMathGame onGameOver={handleGameOver} targetScore={6} resumeUserId={currentUser.id} onProgress={reportLive} />
               )}
 
               {game.id === 'memory_match' && (
-                <MemoryMatchGame onGameOver={handleGameOver} resumeUserId={currentUser.id} />
+                <MemoryMatchGame onGameOver={handleGameOver} resumeUserId={currentUser.id} onProgress={reportLive} />
               )}
 
               {game.id === 'reaction_tap' && (
@@ -1859,7 +1883,7 @@ export const GamePlayModal: React.FC<GamePlayModalProps> = ({
               )}
 
               {game.id === 'bubble_blitz' && (
-                <ColorRushGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} />
+                <ColorRushGame onGameOver={handleGameOver} targetScore={8} resumeUserId={currentUser.id} onProgress={reportLive} />
               )}
 
               {/* Every catalog id above maps to a dedicated game; this generic

@@ -3,6 +3,7 @@ import { Zap, Clock } from 'lucide-react';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface SpeedMathGameProps {
+  onProgress?: (score: number) => void;
   // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
   resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -15,7 +16,7 @@ interface MathQuestion {
   options: number[];
 }
 
-export const SpeedMathGame: React.FC<SpeedMathGameProps> = ({
+export const SpeedMathGame: React.FC<SpeedMathGameProps> = ({ onProgress,
   onGameOver,
   targetScore = 6,
   resumeUserId
@@ -23,6 +24,7 @@ export const SpeedMathGame: React.FC<SpeedMathGameProps> = ({
   // A refresh carries on with the same score, question and the seconds that were left.
   const [snap] = useState(() => loadGameSnapshot<{ score: number; timeLeft: number; currentQ: MathQuestion | null; streak: number }>(resumeUserId, 'speed_math'));
   const [score, setScore] = useState(snap?.score ?? 0);
+  useEffect(() => { onProgress?.(score); }, [score]); // eslint-disable-line react-hooks/exhaustive-deps
   const [timeLeft, setTimeLeft] = useState(snap?.timeLeft ?? 20);
   const [currentQ, setCurrentQ] = useState<MathQuestion | null>(snap?.currentQ ?? null);
   const [streak, setStreak] = useState(snap?.streak ?? 0);

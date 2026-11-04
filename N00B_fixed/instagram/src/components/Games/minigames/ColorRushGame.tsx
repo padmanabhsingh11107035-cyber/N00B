@@ -3,6 +3,7 @@ import { Sparkles, Clock, Check, X } from 'lucide-react';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface ColorRushGameProps {
+  onProgress?: (score: number) => void;
   // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
   resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -18,7 +19,7 @@ const COLOR_CLASSES: Record<string, string> = {
   PURPLE: 'text-purple-400'
 };
 
-export const ColorRushGame: React.FC<ColorRushGameProps> = ({
+export const ColorRushGame: React.FC<ColorRushGameProps> = ({ onProgress,
   onGameOver,
   targetScore = 8,
   resumeUserId
@@ -26,6 +27,7 @@ export const ColorRushGame: React.FC<ColorRushGameProps> = ({
   // A refresh carries on with the same score, word and the seconds that were left.
   const [snap] = useState(() => loadGameSnapshot<{ score: number; timeLeft: number; word: string; colorKey: string; doesMatch: boolean }>(resumeUserId, 'bubble_blitz'));
   const [score, setScore] = useState(snap?.score ?? 0);
+  useEffect(() => { onProgress?.(score); }, [score]); // eslint-disable-line react-hooks/exhaustive-deps
   const [timeLeft, setTimeLeft] = useState(snap?.timeLeft ?? 15);
   const [word, setWord] = useState(snap?.word ?? '');
   const [colorKey, setColorKey] = useState(snap?.colorKey ?? '');

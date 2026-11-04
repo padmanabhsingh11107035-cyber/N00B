@@ -3,6 +3,7 @@ import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../
 import { RotateCcw, Trophy, Play } from 'lucide-react';
 
 interface CyberSnakeGameProps {
+  onProgress?: (score: number) => void;
   // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
   resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -16,7 +17,7 @@ const INITIAL_SNAKE = [
   { x: 8, y: 10 }
 ];
 
-export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
+export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({ onProgress,
   onGameOver,
   targetScore = 8,
   resumeUserId
@@ -29,6 +30,7 @@ export const CyberSnakeGame: React.FC<CyberSnakeGameProps> = ({
   const [food, setFood] = useState<{ x: number; y: number }>(snap?.food ?? { x: 5, y: 5 });
   const [direction, setDirection] = useState<'UP' | 'DOWN' | 'LEFT' | 'RIGHT'>(snap?.direction ?? 'UP');
   const [score, setScore] = useState(snap?.score ?? 0);
+  useEffect(() => { onProgress?.(score); }, [score]); // eslint-disable-line react-hooks/exhaustive-deps
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
 

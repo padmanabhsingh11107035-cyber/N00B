@@ -3,6 +3,7 @@ import { Sparkles, RefreshCw } from 'lucide-react';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface MemoryMatchGameProps {
+  onProgress?: (score: number) => void;
   // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
   resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -17,13 +18,14 @@ interface CardItem {
   isMatched: boolean;
 }
 
-export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onGameOver, resumeUserId }) => {
+export const MemoryMatchGame: React.FC<MemoryMatchGameProps> = ({ onProgress, onGameOver, resumeUserId }) => {
   // A refresh puts the same cards back: the matched pairs stay matched, and a pair that was half-turned goes face down again.
   const [snap] = useState(() => loadGameSnapshot<{ cards: CardItem[]; flipsCount: number; matchesFound: number }>(resumeUserId, 'memory_match'));
   const [cards, setCards] = useState<CardItem[]>(() => (snap?.cards ? snap.cards.map((c) => ({ ...c, isFlipped: c.isMatched })) : []));
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
   const [flipsCount, setFlipsCount] = useState(snap?.flipsCount ?? 0);
   const [matchesFound, setMatchesFound] = useState(snap?.matchesFound ?? 0);
+  useEffect(() => { onProgress?.(matchesFound); }, [matchesFound]); // eslint-disable-line react-hooks/exhaustive-deps
   const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {

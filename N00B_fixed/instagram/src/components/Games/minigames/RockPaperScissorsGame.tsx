@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { loadGameSnapshot, saveGameSnapshot, clearGameSnapshot } from '../../../utils/pageResume';
 
 interface RockPaperScissorsGameProps {
+  onProgress?: (score: number) => void;
   // The signed-in account's id: when given, the game keeps its progress so a refresh / reopened app resumes it (utils/pageResume.ts).
   resumeUserId?: string;
   onGameOver: (result: 'win' | 'tie' | 'loss', finalScore: number) => void;
@@ -39,7 +40,7 @@ function pickBotChoice(history: string[], difficulty?: 'easy' | 'normal' | 'hard
   return CHOICES[Math.floor(Math.random() * CHOICES.length)];
 }
 
-export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
+export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({ onProgress,
   onGameOver,
   opponentName = 'AI Bot',
   bestOf = 3,
@@ -51,6 +52,7 @@ export const RockPaperScissorsGame: React.FC<RockPaperScissorsGameProps> = ({
   const [snap] = useState(() => loadGameSnapshot<{ playerScore: number; opponentScore: number }>(resumeUserId, 'rps'));
   const playerHistory = useRef<string[]>([]);
   const [playerScore, setPlayerScore] = useState(snap?.playerScore ?? 0);
+  useEffect(() => { onProgress?.(playerScore); }, [playerScore]); // eslint-disable-line react-hooks/exhaustive-deps
   const [opponentScore, setOpponentScore] = useState(snap?.opponentScore ?? 0);
   const [playerChoice, setPlayerChoice] = useState<typeof CHOICES[0] | null>(null);
   const [opponentChoice, setOpponentChoice] = useState<typeof CHOICES[0] | null>(null);

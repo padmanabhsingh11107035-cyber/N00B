@@ -11,5 +11,8 @@ const z = Number((/body::after \{[^}]*z-index: (\d+)/.exec(css) || [])[1]);
 check(z >= 1 && z <= 5, 'it sits above the page content but below the bar, sheets and dialogs');
 check(/doodleBackground: true/.test(prefs) && /set\('data-doodle', !p\.doodleBackground, 'off'\)/.test(prefs), 'on by default, kept on the device, applied as an attribute on the page');
 check(/data-doodle|doodleBackground/.test(app) && /testId="doodle-background"/.test(app), 'Settings > App > Background has the switch');
+const sys = read('src/components/Common/SystemPage.tsx'), lockGate = read('src/components/Common/AppLockGate.tsx');
+check(/\.doodle-surface \{[^}]*doodle-white\.webp/.test(css) && /body\.light \.doodle-surface \{[^}]*doodle-dark\.webp/.test(css), 'a stronger version of the pattern for the full-screen pages, in the same two colours');
+check(/doodle-surface/.test(sys) && /doodle-surface/.test(lockGate), 'the maintenance page (and the BRB page) and the lock screen wear it too');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

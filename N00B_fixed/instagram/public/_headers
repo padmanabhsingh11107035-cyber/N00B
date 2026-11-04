@@ -280,7 +280,7 @@
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/*/warm.json
   Cache-Control: no-cache
-/games/*/fonts/*
+/games/*.woff2
   Cache-Control: public, max-age=604800
 /games/flappy20/*
   ! X-Frame-Options

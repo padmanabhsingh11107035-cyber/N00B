@@ -78,7 +78,7 @@ const headers = read('public/_headers');
 const block = headers.slice(headers.indexOf('/games/critterkart/*'), headers.indexOf('\n/', headers.indexOf('/games/critterkart/*') + 5));
 check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self' 'wasm-unsafe-eval';/.test(block) && !/[^-]unsafe-eval/.test(block.replace(/wasm-unsafe-eval/g, '')) && /connect-src 'self' blob: data:/.test(block) && /object-src 'none'/.test(block), 'its own scripts only (plus WebAssembly, which the physics engine is), no eval, no network, no plug-ins');
-check(/\/games\/critterkart\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\/fonts\/\*\n  Cache-Control: public, max-age=604800/.test(headers), 'the scripts are kept for ever, the page and the file list are asked for again every time');
+check(/\/games\/critterkart\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\.woff2\n  Cache-Control: public, max-age=604800/.test(headers), 'the scripts are kept for ever, the page and the file list are asked for again every time');
 check(/WebAssembly/.test(builtJs), 'the policy above needs WebAssembly, and the game does use it (so the line is not there for nothing)');
 
 section('6. Always sideways');

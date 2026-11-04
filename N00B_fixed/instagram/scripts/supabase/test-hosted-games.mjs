@@ -57,6 +57,8 @@ check(/rotate\(90deg\)/.test(frame) && /\(pointer: coarse\)/.test(frame) && /loc
 check(/key === 'Escape'/.test(frame) && /Leave full screen/.test(frame), 'there is always a way out');
 // Cloudflare reads at most 100 rules from public/_headers: with 101 the whole site build failed at once.
 check(read('public/_headers').split('\n').filter((l) => /^[^ #]/.test(l)).length <= 100, 'public/_headers has at most 100 rules (Cloudflare refuses more)');
+// Cloudflare ignores a rule with two stars (a path may hold only one splat): a two-star rule silently did nothing once.
+check(read('public/_headers').split('\n').filter((l) => /^[^ #]/.test(l)).every((l) => (l.match(/\*/g) || []).length <= 1), 'no rule in public/_headers has two stars (Cloudflare would ignore it)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

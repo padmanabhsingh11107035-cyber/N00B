@@ -3,6 +3,8 @@ import { ScanFace, KeyRound, Loader2, ArrowLeft } from 'lucide-react';
 import type { User } from '../../types';
 import { LOCK_PAGES, lockNeeded, markUnlocked, startLock, subscribeLock, verifyFace, type LockPage } from '../../utils/appLock';
 import { verifyMyPassword } from '../../services/api';
+import { loadFace } from '../../face/faceId';
+import { FaceCheckSheet } from './FaceCheckSheet';
 
 // The cover that hides NOOB (or one page of it) until the phone has recognised the person's face / finger (utils/appLock.ts). Set up in Settings and activity > App lock.
 
@@ -16,6 +18,8 @@ const LockCover: React.FC<{ user: User; title: string; text: string; onLeave?: (
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [usePassword, setUsePassword] = useState(false);
+  const [faceOpen, setFaceOpen] = useState(false);
+  const ownFace = !!loadFace(user.id)?.unlock;   // NOOB's own face check, if the owner saved their face (Settings > App lock)
   const [password, setPassword] = useState('');
   const tried = useRef(false);
 
@@ -52,6 +56,12 @@ const LockCover: React.FC<{ user: User; title: string; text: string; onLeave?: (
       <button onClick={tryFace} disabled={busy} className="h-12 px-6 rounded-2xl bg-white text-black font-black text-sm flex items-center gap-2 cursor-pointer active:scale-[.97] transition-transform disabled:opacity-60" data-testid="app-lock-unlock">
         {busy && !usePassword ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanFace className="w-5 h-5" />} Unlock with Face ID
       </button>
+      {ownFace && (
+        <button onClick={() => setFaceOpen(true)} disabled={busy} data-testid="app-lock-own-face" className="h-11 px-5 rounded-2xl bg-white/15 border border-white/25 text-white font-bold text-xs flex items-center gap-2 cursor-pointer active:scale-[.97] transition-transform disabled:opacity-50">
+          <ScanFace className="w-4 h-4" /> Unlock with my saved face (camera)
+        </button>
+      )}
+      {faceOpen && <FaceCheckSheet userId={user.id} mode="verify" title="Is it you?" onDone={(ok) => { setFaceOpen(false); if (ok) markUnlocked(); }} />}
       {usePassword ? (
         <form className="w-full max-w-xs flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void unlockWithPassword(); }}>
           <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your NOOB password" className="h-11 rounded-xl bg-white/10 border border-white/20 px-3 text-sm outline-none focus:border-white/60" />

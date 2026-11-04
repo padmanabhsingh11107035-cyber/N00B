@@ -5,6 +5,8 @@ import { transferNoobPoints, fetchUsers } from '../../services/api';
 import { formatNoobPoints, formatPaymentId } from '../../utils/formatPoints';
 import { QrScannerModal } from '../Common/QrScannerModal';
 import confetti from 'canvas-confetti';
+import { loadFace } from '../../face/faceId';
+import { FaceCheckSheet } from '../Common/FaceCheckSheet';
 
 interface SendPointsPageProps {
   currentUser: User;
@@ -56,6 +58,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
   const [confirmingWithPassword, setConfirmingWithPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [faceAsk, setFaceAsk] = useState(false);   // the owner's face is checked before the money step, when the owner turned that on (Settings > App lock)
 
   const balance = currentUser.noobPoints || 0;
   const query = searchQuery.trim().toLowerCase();
@@ -456,7 +459,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
             )}
 
             <button
-              onClick={() => setConfirmingWithPassword(true)}
+              onClick={() => { if (loadFace(currentUser.id)?.money) setFaceAsk(true); else setConfirmingWithPassword(true); }}
               disabled={!recipient || !isValidAmount || exceedsBalance}
               className="w-full py-3 rounded-xl bg-noob text-black font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -477,6 +480,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
           </div>
         </div>
       )}
+      {faceAsk && <FaceCheckSheet userId={currentUser.id} mode="verify" title="Is it you? Check before sending" onDone={(ok) => { setFaceAsk(false); if (ok) setConfirmingWithPassword(true); }} />}
       {showScanner && <QrScannerModal onClose={() => setShowScanner(false)} onScanned={handleScanned} />}
     </div>
   );

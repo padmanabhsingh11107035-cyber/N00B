@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0c13">
+<title>NOCTA · Made by NOOB developers</title>
+<meta name="author" content="NOOB developers">
+<meta name="description" content="A premium UNO-style card game for 2 to 10 players. Pass-and-play or computer opponents. Made by NOOB developers.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230a0c13'/%3E%3Cellipse cx='50' cy='50' rx='34' ry='24' transform='rotate(-22 50 50)' fill='%23e4262f'/%3E%3Ctext x='50' y='62' font-family='Arial' font-size='30' font-weight='bold' fill='white' text-anchor='middle'%3EN%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+
+<!-- ================= SETUP ================= -->
+<main class="screen" id="setup">
+  <div class="setup-wrap">
+    <div class="brand">
+      <div class="logo"><i></i><b>N</b></div>
+      <div>
+        <h1><span>NOCTA</span> — the card game</h1>
+        <p>A premium UNO-style showdown for 2 to 10 players. Match colours or numbers, dump your hand, and remember to call it out.</p>
+        <div class="hero-stats">
+          <span class="pill">108 cards</span>
+          <span class="pill">2–10 players</span>
+          <span class="pill">AI opponents</span>
+          
+        </div>
+      </div>
+    </div>
+
+    <section class="panel card-block">
+      <h2>How do you want to play? <em>mode</em></h2>
+      <div class="modes" role="group" aria-label="Game mode">
+        <button class="mode" data-mode="solo" aria-pressed="true">
+          <span class="mt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.6-3.6 3.3-5.6 6.5-5.6S15 16.4 15.6 20"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 20c-.2-2-.9-3.6-2-4.7"/></svg>
+            Solo vs AI
+          </span>
+          <span class="ms">You against up to 9 bots. Instant start, no waiting.</span>
+        </button>
+        <button class="mode" data-mode="pass" aria-pressed="false">
+          <span class="mt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M7 12h10M7 15h4"/></svg>
+            Pass &amp; play
+          </span>
+          <span class="ms">One device, up to 10 humans taking turns. Perfect on a table.</span>
+        </button>
+        
+      </div>
+    </section>
+
+    <section class="panel card-block">
+      <h2>Table setup <em>players</em></h2>
+      <div class="count-row">
+        <div class="stepper">
+          <button id="minus" aria-label="Remove player">−</button>
+          <output id="countOut">4<small>players</small></output>
+          <button id="plus" aria-label="Add player">+</button>
+        </div>
+        <input class="range" id="countRange" type="range" min="2" max="10" step="1" value="4" aria-label="Number of players">
+        <button class="btn btn-sm" id="quickDuel">2P duel</button>
+        <button class="btn btn-sm" id="quickParty">10P party</button>
+      </div>
+      <div class="seats" id="seats"></div>
+    </section>
+
+    <section class="panel card-block" id="onlineBlock" style="display:none">
+      <h2>Online room <em>peer-to-peer</em></h2>
+      <div id="onlineHostUI">
+        <p class="hint" style="margin:0 0 .9rem">Create a room and send the code to your friends. The host's device runs the game, so keep this tab open. Up to 10 seats total, including you.</p>
+        <div class="room-box">
+          <button class="btn btn-primary" id="createRoom">Create room</button>
+          <span id="roomCodeWrap" class="hidden"><span class="code-chip"><span id="roomCode">------</span></span></span>
+        </div>
+        <div id="roomStatus" class="hint" style="margin-top:.8rem"></div>
+      </div>
+      <div id="onlineJoinUI" style="margin-top:1.1rem; border-top:1px solid var(--stroke); padding-top:1.1rem">
+        <p class="hint" style="margin:0 0 .7rem">Got a code from a friend? Join their table.</p>
+        <div class="room-box">
+          <input id="joinCode" maxlength="6" placeholder="ABC123" autocomplete="off" spellcheck="false" aria-label="Room code">
+          <button class="btn" id="joinRoom">Join room</button>
+        </div>
+        <div id="joinStatus" class="hint" style="margin-top:.7rem"></div>
+      </div>
+    </section>
+
+    <div class="setup-actions">
+      <div class="opt-row">
+        <label class="opt"><input type="checkbox" id="optSound" checked> Sound effects</label>
+        <label class="opt"><input type="checkbox" id="optStack" checked> Draw stacking (+2 / +4)</label>
+        <label class="opt"><input type="checkbox" id="optJump" checked> Jump-in on identical card</label>
+      </div>
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap">
+        <button class="btn btn-ghost" id="rulesBtn">Rules</button>
+        <button class="btn btn-primary" id="startBtn" style="padding:1rem 2rem; font-size:1rem">Deal me in →</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ================= TABLE ================= -->
+<main class="screen hidden" id="table">
+  <header class="topbar">
+    <div class="logo"><i></i><b>N</b></div>
+    <div class="topbar-title">
+      <span id="roundLabel">Round 1</span>
+      <span class="pill" id="modeLabel" style="padding:.15rem .45rem; font-size:.6rem">SOLO</span>
+    </div>
+    <div class="grow"></div>
+    <button class="icon-btn" id="soundBtn" title="Sound on/off" aria-label="Toggle sound">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5 6.5 9H3v6h3.5L11 19V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+    </button>
+    <button class="icon-btn" id="menuBtn" title="Menu" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </header>
+
+  <div class="arena">
+    <div class="opponents" id="opponents"></div>
+    <div class="felt">
+      <div class="center">
+        <div class="pile-wrap">
+          <div class="pile draw" id="drawPile" role="button" tabindex="0" aria-label="Draw a card">
+            <div class="back"><b>NOCTA</b></div>
+            <div class="stack-shadow"></div>
+            <div class="pile-hint" id="drawHint">Tap to draw</div>
+          </div>
+          <div class="pile-label">Draw <span id="deckCount">0</span></div>
+        </div>
+        <div class="pile-wrap">
+          <div class="color-orb" id="colorOrb"><i></i><span id="colorName">red</span></div>
+          <div class="discard-stack" id="discard"></div>
+          <div class="pile-label">Discard</div>
+        </div>
+      </div>
+      <div class="turn-banner" id="turnBanner"><span class="sd"></span><span id="turnText">Your turn</span></div>
+    </div>
+  </div>
+
+  <div class="hand-zone">
+    <div class="you-row">
+      <div class="av" id="youAv">Y</div>
+      <div class="nm" id="youName">You</div>
+      <span class="pill" id="youCount" style="padding:.15rem .5rem">7 cards</span>
+      <div class="grow"></div>
+      <div class="hand-actions">
+        <button class="btn btn-sm" id="passBtn" disabled>Pass</button>
+        <button class="btn btn-sm btn-primary" id="unoBtn" style="display:none">UNO!</button>
+      </div>
+    </div>
+    <div class="hand" id="hand"></div>
+  </div>
+</main>
+
+<div class="log collapsed" id="log">
+  <div class="log-head"><span class="live-dot"></span> Table log</div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<div id="toasts"></div>
+<div id="confetti"></div>
+
+<!-- ================= MODALS ================= -->
+<div class="overlay hidden" id="colorModal">
+  <div class="modal">
+    <h3>Pick a colour</h3>
+    <p>You played a wild card. Choose the colour play continues with.</p>
+    <div class="color-grid">
+      <button class="color-pick" data-color="red" style="--c:var(--red)">Red</button>
+      <button class="color-pick" data-color="yellow" style="--c:var(--yellow)">Yellow</button>
+      <button class="color-pick" data-color="green" style="--c:var(--green)">Green</button>
+      <button class="color-pick" data-color="blue" style="--c:var(--blue)">Blue</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="roundModal">
+  <div class="modal">
+    <div class="trophy" id="trophyIcon">🏆</div>
+    <h3 id="roundTitle">Round won</h3>
+    <p id="roundSub">Someone emptied their hand.</p>
+    <div class="score-list" id="scoreList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="nextRoundBtn">Next round →</button>
+      <button class="btn btn-ghost" id="backToSetupBtn">New game</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="menuModal">
+  <div class="modal">
+    <h3>Paused</h3>
+    <p>Take a breath. The table will wait.</p>
+    <div class="modal-actions" style="flex-direction:column">
+      <button class="btn btn-primary" id="resumeBtn" style="width:100%">Resume</button>
+      <button class="btn btn-ghost" id="rulesBtn2" style="width:100%">How to play</button>
+      <button class="btn btn-ghost" id="restartBtn" style="width:100%">Restart this game</button>
+      <button class="btn btn-ghost" id="quitBtn" style="width:100%">Quit to menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="rulesModal">
+  <div class="modal" style="max-width:520px; text-align:left">
+    <h3 style="text-align:center">How to play</h3>
+    <div style="font-size:.86rem; line-height:1.65; color:var(--muted); max-height:56vh; overflow:auto; padding-right:.4rem">
+      <p><strong style="color:var(--ink)">Goal.</strong> Be the first to empty your hand. Cards left in other hands score against them; lowest total wins the match.</p>
+      <p><strong style="color:var(--ink)">On your turn.</strong> Play a card that matches the top card's <em>colour</em> or <em>number/symbol</em>, or play a wild. If you can't, draw one — if the drawn card is playable you may play it immediately, otherwise your turn ends.</p>
+      <p><strong style="color:var(--ink)">Action cards.</strong> Skip jumps the next player. Reverse flips direction (with only two players it acts as Skip). Draw Two forces the next player to draw 2 and lose their turn. Wild lets you choose a colour. Wild Draw Four forces 4 cards plus a colour change.</p>
+      <p><strong style="color:var(--ink)">UNO!</strong> When you play your second-to-last card you must hit <strong>UNO!</strong> immediately. Stay silent and you'll be caught for a 2-card penalty.</p>
+      <p><strong style="color:var(--ink)">Scoring.</strong> Number cards = face value. Skip, Reverse, Draw Two = 20. Wild and Wild Draw Four = 50.</p>
+      <p><strong style="color:var(--ink)">House rules.</strong> Draw stacking lets you answer a +2 with another +2 to pass the pile on. Jump-in lets anyone holding an identical card play out of turn. Both can be toggled on the start screen.</p>
+    </div>
+    <div class="modal-actions" style="margin-top:1.2rem"><button class="btn btn-primary" id="closeRules">Got it</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="onlineWaitModal">
+  <div class="modal">
+    <h3>Room is live</h3>
+    <p>Share this code with your friends.</p>
+    <div class="code-chip" style="font-size:1.5rem; margin:0 auto .4rem" id="waitCode">------</div>
+    <p id="waitCount" style="font-size:.8rem">0 players connected</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="hostStartBtn">Start game</button>
+      <button class="btn btn-ghost" id="cancelRoomBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="core.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>

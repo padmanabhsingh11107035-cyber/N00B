@@ -117,6 +117,58 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: NOCTA (the UNO-style card game for 2 to 10 players, pass and play or against computer players, on its own page, /games/nocta-uno/, shown in a frame; source in nocta-uno/) ---
+  {
+    id: 'nocta_uno',
+    title: 'Nocta',
+    category: 'puzzle',
+    description: 'A premium UNO-style card game for 2 to 10 players: match colour or number, use Skip, Reverse, Draw Two and the wild cards, stack draws, shout NOCTA on your last card and be the first to empty your hand. Play against up to nine computer players or pass the phone around a table. Made by NOOB developers.',
+    bannerBg: 'from-[#1d2a5c] to-[#0a0c13]',
+    badgeColor: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Easy',
+    players: 'Solo / Friend',
+    iconType: 'noctauno',
+    tags: ['Cards', 'UNO', '2-10 players'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Tap Solo or Pass and play, set the players, then Start. Tap a glowing card from your hand to play it, or the draw pile to draw. Tap the NOCTA button on your last card. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/nocta-uno/',
+    posters: [
+      '/game-posters/nocta-uno/01-cover.webp',
+      '/game-posters/nocta-uno/02-play.webp',
+      '/game-posters/nocta-uno/03-more.webp'
+    ]
+  },
+
+  // --- NEW: NOOB GAMES HUB (a dashboard of quick 1 to 4 player games on one screen, /games/noobgames-hub/, shown in a frame; source in noobgames-hub/) ---
+  {
+    id: 'noobgames_hub',
+    title: 'NOOB Party Pack',
+    category: 'arcade',
+    description: 'A pack of quick games for 1 to 4 players on one screen: pick how many are playing, pick a game and go. Play against the computer or hand the phone around, and collect trophies for every win. Made by NOOB developers.',
+    bannerBg: 'from-[#1E293B] to-[#0b1020]',
+    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Easy',
+    players: 'Solo / Friend',
+    iconType: 'partypack',
+    tags: ['Party', 'Mini-games', '1-4 players'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Tap 1, 2, 3 or 4 players, then tap a game. Each player has their own buttons on the screen, and on a computer their own keys. The trophy at the top counts your wins; tap the cog to reset it. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/noobgames-hub/',
+    posters: [
+      '/game-posters/noobgames-hub/01-cover.webp',
+      '/game-posters/noobgames-hub/02-play.webp',
+      '/game-posters/noobgames-hub/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

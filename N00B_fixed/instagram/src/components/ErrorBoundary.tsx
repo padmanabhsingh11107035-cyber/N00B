@@ -49,7 +49,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         return this.props.fallback;
       }
       return (
-        <div className="doodle-wallpaper-login fixed inset-0 z-[9999] overflow-y-auto text-white" role="alert">
+        <div className="doodle-wallpaper-login doodle-surface fixed inset-0 z-[9999] overflow-y-auto text-white" role="alert">
           <div className="relative min-h-full flex items-center justify-center p-6 overflow-hidden">
             {/* the same small doodles (and, on wide screens, the big pictures) as the sign-in page, behind everything */}
             <LoginDoodles />

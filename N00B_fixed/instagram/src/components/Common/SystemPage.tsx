@@ -60,7 +60,7 @@ export const SystemPage: React.FC<SystemPageProps> = ({ kind, onRetry, retryEver
   useEffect(() => { if (kind !== 'not-found' && left === 0) retry(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [left, kind]);
 
   return (
-    <div className="doodle-wallpaper-login fixed inset-0 z-[9999] overflow-y-auto text-white" role="alert" data-testid={`system-page-${kind}`}>
+    <div className="doodle-wallpaper-login doodle-surface fixed inset-0 z-[9999] overflow-y-auto text-white" role="alert" data-testid={`system-page-${kind}`}>
       <div className="relative min-h-full flex items-center justify-center p-6 overflow-hidden">
         <LoginDoodles />
         <LoginBigDoodles />

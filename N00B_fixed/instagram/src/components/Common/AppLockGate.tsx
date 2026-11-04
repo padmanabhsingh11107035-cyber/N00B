@@ -45,7 +45,7 @@ const LockCover: React.FC<{ user: User; title: string; text: string; onLeave?: (
 
   return (
     <div
-      className={`${inline ? 'absolute' : 'fixed'} inset-0 z-[400] flex flex-col items-center justify-center gap-5 px-8 text-center bg-black/85 backdrop-blur-2xl text-white`}
+      className={`${inline ? 'absolute' : 'fixed'} inset-0 z-[400] flex flex-col items-center justify-center gap-5 px-8 text-center doodle-surface text-white`}
       role="dialog" aria-modal="true" aria-label={title} data-testid="app-lock-cover"
     >
       <img src="/noob-logo-circle.png" alt="" width={64} height={64} className="rounded-2xl opacity-95" draggable={false} />

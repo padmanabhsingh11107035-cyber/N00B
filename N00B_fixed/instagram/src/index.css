@@ -1321,3 +1321,15 @@ body::after {
 body.light::after { background-image: url('/brand/doodle-dark.webp'); opacity: 0.14; }
 html[data-doodle="off"] body::after { display: none; }
 @media print { body::after { display: none; } }
+
+/* The maintenance page, the "BRB" page and the lock screen wear the same doodle pattern as every other page, a little stronger, in the app's own two colours:
+   white doodles on black, black doodles on white. (A dim layer over the picture sets how strong it is.) */
+.doodle-surface {
+  background-color: var(--page) !important;
+  background-image: linear-gradient(rgba(10, 10, 10, 0.72), rgba(10, 10, 10, 0.72)), url('/brand/doodle-white.webp') !important;
+  background-size: auto, 490px auto !important;
+  background-repeat: no-repeat, repeat !important;
+}
+body.light .doodle-surface {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)), url('/brand/doodle-dark.webp') !important;
+}

@@ -169,6 +169,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: STRIKE BOWL (a five-frame 3D bowling game with real pin physics, on its own page, /games/strikebowl/, shown in a frame; source in strikebowl/) ---
+  {
+    id: 'strikebowl',
+    title: 'Strike Bowl',
+    category: 'arcade',
+    description: 'A five-frame 3D bowling challenge with real pin physics: line up the ball, hold to power up, drag sideways to hook it and knock them all down. 150 is the best possible score. Your best runs are kept on your device. Made by NOOB developers.',
+    bannerBg: 'from-[#3b1d6e] to-[#120828]',
+    badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'strikebowl',
+    tags: ['Bowling', '3D', 'Physics'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Tap the arrows to move the ball sideways, hold the big HOLD button to power up and let go to bowl; drag sideways while holding to hook the ball. On a computer: A and D move, the mouse aims, hold click or Space to power up. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/strikebowl/',
+    posters: [
+      '/game-posters/strikebowl/01-cover.webp',
+      '/game-posters/strikebowl/02-play.webp',
+      '/game-posters/strikebowl/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

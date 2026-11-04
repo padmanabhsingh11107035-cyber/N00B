@@ -337,14 +337,6 @@ Allow: /data-deletion
 Allow: /grievance
 Disallow: /
 
-User-agent: Manus
-Allow: /privacy
-Allow: /terms
-Allow: /about
-Allow: /data-deletion
-Allow: /grievance
-Disallow: /
-
 User-agent: Genspark
 Allow: /privacy
 Allow: /terms

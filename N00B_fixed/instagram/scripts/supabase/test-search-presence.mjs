@@ -21,7 +21,7 @@ check(/NOOB Socials/.test(title) && /Student-run/i.test(title) && title.length <
 const desc = html.match(/<meta name="description" content="([^"]*)"/)[1];
 check(/NOOB Socials/.test(desc) && /noobsocials\.com/.test(desc) && /students/i.test(desc) && desc.length >= 90 && desc.length <= 175, 'the description says who we are and what it does, in a length search results show', String(desc.length));
 check(/<link rel="canonical" href="https:\/\/noobsocials\.com\/" \/>/.test(html), 'one canonical address, so noobsocials.com and the older address count as one site');
-check(/<meta name="robots" content="index, follow, max-image-preview:large" \/>/.test(html) && !/noindex|nofollow/i.test(html.replace('index, follow', '')), 'search engines are invited in');
+check(/<meta name="robots" content="index, follow, max-image-preview:large(, noai, noimageai)?" \/>/.test(html) && !/noindex|nofollow/i.test(html.replace('index, follow', '')), 'search engines are invited in');
 check(/og:site_name" content="NOOB Socials"/.test(html) && /og:title" content="NOOB Socials \| The student-run social app"/.test(html), 'link previews use the same name');
 check(/og:image" content="https:\/\/noobsocials\.com\/brand\/og-card\.png"/.test(html) && /og:image:width" content="1200"/.test(html) && /og:image:height" content="630"/.test(html), 'and a proper 1200x630 share card');
 const g = ld(html)['@graph'];
@@ -49,14 +49,14 @@ check(!/<script>/.test(about) && (about.match(/<script src="[^"]+"/g) || []).joi
 check(fs.existsSync('public/brand/noob-wordmark.png'), 'its logo file exists');
 
 section('3. robots.txt and the sitemap');
-check(/User-agent: \*\s*\nAllow: \//.test(robots) && !/Disallow: \/\s*$/m.test(robots) && /Sitemap: https:\/\/noobsocials\.com\/sitemap\.xml/.test(robots), 'robots.txt lets everyone in and points to the sitemap');
+check(/User-agent: \*\s*\nAllow: \//.test(robots) && !/User-agent: \*\s*\n(Allow: \/\s*\n)?Disallow: \/\s*$/m.test(robots) && /Sitemap: https:\/\/noobsocials\.com\/sitemap\.xml/.test(robots), 'robots.txt lets everyone in and points to the sitemap');
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 check(locs.includes('https://noobsocials.com/') && locs.includes('https://noobsocials.com/about'), 'the sitemap lists the home page and the About page');
-check(locs.every((u) => u === 'https://noobsocials.com/' || fs.existsSync('public/' + u.replace('https://noobsocials.com/', '') + '.html') || fs.existsSync('public/' + u.replace('https://noobsocials.com/', '') + '/index.html')), 'every address in it is a real page', locs.join(' '));
+check(locs.every((u) => u === 'https://noobsocials.com/' || fs.existsSync('public/' + u.replace('https://noobsocials.com/', '') + '.html') || fs.existsSync('public/' + u.replace('https://noobsocials.com/', '')) || fs.existsSync('public/' + u.replace('https://noobsocials.com/', '') + '/index.html')), 'every address in it is a real page', locs.join(' '));
 check(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"( xmlns:image="http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1")?>/.test(sitemap), 'standard sitemap format (with the optional picture extension)');
 
 section('4. Nothing keeps search engines away');
-check(!/X-Robots-Tag|noindex/i.test(headers), 'no header tells search engines to skip the site');
+check(!/noindex/i.test(headers) && (headers.match(/X-Robots-Tag:[^\n]*/g) || []).every((l) => /^X-Robots-Tag: noai, noimageai$/.test(l.trim())), 'no header tells search engines to skip the site');
 const profile = read('src/components/Profile/ProfileView.tsx');
 check(/onClick=\{\(\) => go\('about-noob'\)\}/.test(read('src/components/Settings/pages/support.tsx')) && /testId="about-open"/.test(read('src/components/Settings/pages/support.tsx')) && /id: 'about'[^\n]*page: 'about'/.test(read('src/components/Settings/registry.ts')) && !/window\.open\('\/about'/.test(profile), "the profile's three-dots Settings and activity has an About row, and its About NOOB entry opens the About NOOB page inside the app (never the website)");
 check(/<a href="\/about" className="[^"]*">About NOOB<\/a>/.test(auth), 'the sign-in page links to the About page, so it is found from the home page');

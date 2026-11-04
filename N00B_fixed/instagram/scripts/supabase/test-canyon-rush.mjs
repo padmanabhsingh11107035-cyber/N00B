@@ -77,7 +77,7 @@ const headers = read('public/_headers');
 const block = headers.slice(headers.indexOf('/games/canyon-rush/*'), headers.indexOf('\n/', headers.indexOf('/games/canyon-rush/*') + 5));
 check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self';/.test(block) && !/unsafe-eval|wasm-unsafe-eval/.test(block) && /connect-src 'self' blob: data:/.test(block) && /object-src 'none'/.test(block), 'its own scripts only, no eval, no network, no plug-ins');
-check(/\/games\/canyon-rush\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/canyon-rush\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/canyon-rush\/assets\/\*\n  Cache-Control: public, max-age=86400/.test(headers), 'its fingerprinted files are kept for ever, the page and the list are always checked, models and sounds are kept a day');
+check(/\/games\/canyon-rush\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/canyon-rush\/assets\/\*\n  Cache-Control: public, max-age=86400/.test(headers), 'its fingerprinted files are kept for ever, the page and the list are always checked, models and sounds are kept a day');
 
 section('6. Always sideways');
 const frame = read('src/components/Games/minigames/HostedGameFrame.tsx');

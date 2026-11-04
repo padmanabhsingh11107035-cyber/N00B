@@ -114,7 +114,7 @@ const headers = read('public/_headers');
 const block = headers.slice(headers.indexOf('/games/color-sort/*'), headers.indexOf('\n/', headers.indexOf('/games/color-sort/*') + 5));
 check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self';/.test(block) && !/unsafe-eval|wasm/.test(block) && /connect-src 'self';/.test(block) && /object-src 'none'/.test(block), 'its own scripts only, no eval, no WebAssembly, no network, no plug-ins');
-check(/\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && ['game.js', 'rules.js', 'levels.js', 'game.css'].every((f) => new RegExp('/games/color-sort/' + f.replace('.', '\\.') + '\\n  Cache-Control: public, max-age=31536000, immutable').test(headers)), 'the page is asked for again every time, the versioned files are kept for a year');
+check(/\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/color-sort\/\*\.js\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/color-sort\/\*\.css\n  Cache-Control: public, max-age=31536000, immutable/.test(headers), 'the page is asked for again every time, the versioned files are kept for a year');
 
 section('8. The tools are in the repository');
 for (const f of ['solver.mjs', 'generate-levels.mjs', 'README.md']) check(fs.existsSync(path.join(SRC, f)), 'color-sort/' + f);

@@ -92,8 +92,6 @@
   Cache-Control: public, max-age=86400
 /games/underhall/title/*
   Cache-Control: public, max-age=86400
-/games/underhall/fonts/*
-  Cache-Control: public, max-age=604800
 # The Rogue: Shadowfall (a dark-fantasy 3D game made with Three.js) runs in a frame of its own, from this same site, the same way: only its own files, no network, no frames; WebAssembly may only be compiled (the model reader's decoder, unused as no model files are shipped).
 # Its scripts and style have a fingerprint in their names (assets/), so they are kept for ever.
 /games/the-rogue/*
@@ -101,16 +99,12 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/the-rogue/warm.json
-  Cache-Control: no-cache
 /games/the-rogue/the-rogue.css
   Cache-Control: no-cache
 /games/the-rogue/assets/*
   Cache-Control: public, max-age=31536000, immutable
 /games/the-rogue/ui/*
   Cache-Control: public, max-age=86400
-/games/the-rogue/fonts/*
-  Cache-Control: public, max-age=604800
 # NOOB Cold Drinks (the scrolling page of ten 3D cans, at /cold-drinks/) is a page of its own, not framed, under the strict rules of the whole site. Its scripts, style and picture have a
 # fingerprint in their names (assets/), so they are kept for ever; the page itself is asked for again every time.
 /cold-drinks/assets/*
@@ -124,14 +118,10 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/canyon-rush/warm.json
-  Cache-Control: no-cache
 /games/canyon-rush/build/*
   Cache-Control: public, max-age=31536000, immutable
 /games/canyon-rush/assets/*
   Cache-Control: public, max-age=86400
-/games/canyon-rush/fonts/*
-  Cache-Control: public, max-age=604800
 # Critter Kart (a 3D kart racer made with Three.js and the Rapier physics engine) runs in a frame of its own, from this same site, like Canyon Rush: only its own scripts and fonts, no network,
 # no frames; WebAssembly is allowed because the physics engine is one. Its scripts and style are fingerprinted (build/), so they are kept for ever; its fonts keep their names, so they are kept for a week.
 /games/critterkart/*
@@ -139,12 +129,8 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/critterkart/warm.json
-  Cache-Control: no-cache
 /games/critterkart/build/*
   Cache-Control: public, max-age=31536000, immutable
-/games/critterkart/fonts/*
-  Cache-Control: public, max-age=604800
 # Siegecraft (a 3D catapult game made with Three.js and the Rapier physics engine) runs in a frame of its own, from this same site, like Critter Kart: only its own scripts, model and fonts, no network,
 # no frames; WebAssembly is allowed because the physics engine is one. Its scripts, style and stone model are fingerprinted (build/), so they are kept for ever; its fonts and logo keep their names, so they are kept for a week.
 /games/siegecraft/*
@@ -152,12 +138,8 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/siegecraft/warm.json
-  Cache-Control: no-cache
 /games/siegecraft/build/*
   Cache-Control: public, max-age=31536000, immutable
-/games/siegecraft/fonts/*
-  Cache-Control: public, max-age=604800
 /games/siegecraft/logo.png
   Cache-Control: public, max-age=604800
 # Coil Rush (a 3D worm arena made with Three.js) runs in a frame of its own, from this same site, like Critter Kart: only its own scripts, pictures, sounds and fonts, no network,
@@ -167,8 +149,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/coil-rush/warm.json
-  Cache-Control: no-cache
 /games/coil-rush/build/*
   Cache-Control: public, max-age=31536000, immutable
 /games/coil-rush/assets/*
@@ -180,30 +160,22 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/color-sort/game.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/color-sort/rules.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/color-sort/levels.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/color-sort/game.css
-  Cache-Control: public, max-age=31536000, immutable
 # Brick Escape (a sliding-brick puzzle: plain files, no build step) runs in a frame of its own, from this same site, under the same rules as Color Sort above.
 /games/brick-escape/*
   ! X-Frame-Options
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self';
-/games/brick-escape/game.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/brick-escape/rules.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/brick-escape/levels.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/brick-escape/game.css
-  Cache-Control: public, max-age=31536000, immutable
 # Score games made of plain files (Flappy Bird 20 ...): like Color Sort, only their own scripts and style, no network, no frames. The small shared script that sends a score to NOOB and shows
 # the ranking lives in /games/_shared/ (not fingerprinted: kept for a day).
+/games/brick-escape/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/games/brick-escape/*.css
+  Cache-Control: public, max-age=31536000, immutable
+/games/color-sort/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/games/color-sort/*.css
+  Cache-Control: public, max-age=31536000, immutable
 /games/_shared/*
   Cache-Control: public, max-age=86400
 # NOOB Run 3D (a 3D endless runner made with Three.js and React, plain build): own scripts, style and fonts only, no network, no frames, no WebAssembly. Fingerprinted files in build/ are kept for ever.
@@ -212,8 +184,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/noob-run-3d/warm.json
-  Cache-Control: no-cache
 /games/noob-run-3d/build/*
   Cache-Control: public, max-age=31536000, immutable
 # Royal Ludo (a classic board game for 2 to 4 players with computer opponents, plain files, no network): like Flappy Bird 20 above.
@@ -308,6 +278,10 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/*/warm.json
+  Cache-Control: no-cache
+/games/*/fonts/*
+  Cache-Control: public, max-age=604800
 /games/flappy20/*
   ! X-Frame-Options
   ! Content-Security-Policy
@@ -317,8 +291,6 @@
   Cache-Control: public, max-age=31536000, immutable
 /games/helix-fall/assets/*
   Cache-Control: public, max-age=31536000, immutable
-/games/helix-fall/fonts/*
-  Cache-Control: public, max-age=604800
 /game-posters/*
   Cache-Control: public, max-age=604800
 

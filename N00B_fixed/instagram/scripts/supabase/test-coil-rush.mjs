@@ -89,7 +89,7 @@ const headers = read('public/_headers');
 const block = headers.slice(headers.indexOf('/games/coil-rush/*'), headers.indexOf('\n/', headers.indexOf('/games/coil-rush/*') + 5));
 check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self';/.test(block) && !/unsafe-eval/.test(block) && /connect-src 'self' blob: data:/.test(block) && /object-src 'none'/.test(block), 'its own scripts only (no eval, not even WebAssembly), no network, no plug-ins');
-check(/\/games\/coil-rush\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/coil-rush\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/coil-rush\/assets\/\*\n  Cache-Control: public, max-age=86400/.test(headers), 'the scripts are kept for ever, the page and the file list are asked for again every time, the pictures and sounds for a day');
+check(/\/games\/coil-rush\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/\*\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/coil-rush\/assets\/\*\n  Cache-Control: public, max-age=86400/.test(headers), 'the scripts are kept for ever, the page and the file list are asked for again every time, the pictures and sounds for a day');
 check(!/WebAssembly/.test(builtJs) && !files.some((f) => f.endsWith('.wasm')), 'and the game really has no WebAssembly in it (so nothing is allowed that is not needed)');
 
 section('6. Upright on a phone, mouse on a computer');

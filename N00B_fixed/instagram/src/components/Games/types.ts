@@ -372,6 +372,31 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: TERRAFOUNDRY (on its own page, /games/terrafoundry/, shown in a frame; source in terrafoundry/) ---
+  {
+    id: 'terrafoundry',
+    title: 'TerraFoundry',
+    category: 'arcade',
+    description: 'Shape a wild, living world: explore a living forest, gather resources, craft tools and build your own shelter while deer, foxes and wolves roam and night brings worse things. Made by NOOB developers.',
+    bannerBg: 'from-[#2f4a2a] to-[#0d1409]',
+    badgeColor: 'bg-lime-500/20 text-lime-300 border-lime-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'terrafoundry',
+    tags: ['Survival', 'Building', '3D'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Touch: left stick walks, drag the right side to look, tap the buttons to jump, use and open your pack. On a computer: WASD walks, the mouse looks, Space jumps, E uses, I opens the pack. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/terrafoundry/',
+    posters: [
+      '/game-posters/terrafoundry/01-cover.webp',
+      '/game-posters/terrafoundry/02-play.webp',
+      '/game-posters/terrafoundry/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

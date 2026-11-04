@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, Bell, Bold, Camera, Contrast, Download, Globe, HardDrive, Languages, MapPin, Mic, MousePointerClick, Smartphone, Trash2, Type } from 'lucide-react';
+import { Shapes, Archive, Bell, Bold, Camera, Contrast, Download, Globe, HardDrive, Languages, MapPin, Mic, MousePointerClick, Smartphone, Trash2, Type } from 'lucide-react';
 import { PageShell, Section, Row, ToggleRow, Choice, Note, SmallButton, useFlash } from '../kit';
 import type { PageProps } from '../types';
 import { setDevicePrefs, useDevicePrefs, type AutoplayMode, type TextSize, type UploadQuality } from '../../../utils/devicePrefs';
@@ -121,6 +121,9 @@ export const AccessibilityPage: React.FC<PageProps> = ({ back }) => {
           { value: 'light', label: 'Light' },
           { value: 'system', label: 'Same as device' }
         ]} />
+      </Section>
+      <Section title="Background" note="A faint black-and-white doodle pattern of NOOB's icons, drawn over every page.">
+        <ToggleRow icon={Shapes} label="Doodle background" on={prefs.doodleBackground} onChange={(v) => setDevicePrefs({ doodleBackground: v })} testId="doodle-background" />
       </Section>
       <Section title="Text size">
         <Choice value={prefs.textSize} onChange={(v) => setDevicePrefs({ textSize: v })} options={TEXT_SIZES} />

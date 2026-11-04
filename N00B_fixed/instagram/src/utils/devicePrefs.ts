@@ -11,6 +11,8 @@ export type UploadQuality = 'standard' | 'high';
 
 export interface DevicePrefs {
   reduceMotion: boolean;
+  /** The black-and-white doodle pattern drawn faintly over every page (on by default). */
+  doodleBackground: boolean;
   textSize: TextSize;
   highContrast: boolean;
   boldText: boolean;
@@ -28,6 +30,7 @@ export interface DevicePrefs {
 
 export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   reduceMotion: false,
+  doodleBackground: true,
   textSize: 'default',
   highContrast: false,
   boldText: false,
@@ -58,6 +61,7 @@ export function cleanDevicePrefs(raw: unknown): DevicePrefs {
   const brk = Number(r.breakEveryMin);
   return {
     reduceMotion: typeof r.reduceMotion === 'boolean' ? r.reduceMotion : d.reduceMotion,
+    doodleBackground: typeof r.doodleBackground === 'boolean' ? r.doodleBackground : d.doodleBackground,
     textSize: TEXT_SIZES.includes(r.textSize as TextSize) ? (r.textSize as TextSize) : d.textSize,
     highContrast: typeof r.highContrast === 'boolean' ? r.highContrast : d.highContrast,
     boldText: typeof r.boldText === 'boolean' ? r.boldText : d.boldText,
@@ -100,6 +104,7 @@ export function applyDevicePrefs(p: DevicePrefs = current): void {
   const root = document.documentElement;
   const set = (name: string, on: boolean, value = 'on') => { if (on) root.setAttribute(name, value); else root.removeAttribute(name); };
   set('data-reduce-motion', p.reduceMotion);
+  set('data-doodle', !p.doodleBackground, 'off');
   set('data-text-size', p.textSize !== 'default', p.textSize);
   set('data-contrast', p.highContrast, 'high');
   set('data-bold', p.boldText);

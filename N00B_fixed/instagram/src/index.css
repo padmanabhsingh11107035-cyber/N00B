@@ -1290,3 +1290,18 @@ html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-
   /* on a computer the picture sits on the right: the page colour stays solid under the words and melts into the picture, with no edge */
   .music-hero-fade { background: linear-gradient(90deg, #050507 0%, #050507 37%, rgba(5, 5, 7, 0.55) 52%, rgba(5, 5, 7, 0) 80%), linear-gradient(0deg, rgba(5, 5, 7, 0.55), transparent 35%); }
 }
+
+/* NOOB Pro page: the light theme (cream page, black pill buttons). The page was written for dark, so the dark pieces are remapped here. */
+.pro-light { color: #111; }
+.pro-light .text-white { color: #111 !important; }
+.pro-light .text-zinc-200, .pro-light .text-zinc-300 { color: #333 !important; }
+.pro-light .text-zinc-400, .pro-light .text-zinc-500 { color: #6b6b66 !important; }
+.pro-light [class*="bg-zinc-900"], .pro-light [class*="bg-zinc-800"] { background-color: #ffffff !important; }
+.pro-light [class*="border-zinc-800"], .pro-light [class*="border-zinc-700"] { border-color: rgba(0,0,0,0.08) !important; }
+.pro-light input[type="text"], .pro-light input:not([type]) { color: #111; }
+.pro-light .bg-white { background-color: #111 !important; color: #fff !important; }
+.pro-light .bg-white.text-black, .pro-light .bg-white .text-black { color: #fff !important; }
+.pro-light [data-testid="pro-cards"] .text-white, .pro-light [data-testid="pro-cards"] .text-zinc-200 { color: inherit !important; }
+.pro-light [data-testid="pro-card-detail"] .text-zinc-200 { color: #333 !important; }
+.pro-light [data-testid="pro-cards"] [class*="bg-zinc-600"] { background-color: #bdbab2 !important; }
+.pro-light [data-testid="pro-cards"] .bg-white { background-color: #111 !important; }

@@ -14,5 +14,10 @@ check(['starter', 'plus', 'pro', 'elite', 'ultimate'].every((t) => new RegExp(`$
 check(/Choose \$\{tier\.name\}/.test(pro) && /Confirm order/.test(pro) && /ProReceipt/.test(pro) && /upgradeProTier/.test(pro), 'Choose -> Confirm order -> receipt, same payment logic');
 console.log('\n3. Wallet');
 check(/data-testid="wallet-card"/.test(wal) && /data-testid="wallet-actions"/.test(wal) && /setShowSendPoints\(true\)/.test(wal) && /setShowPaymentRequests\(true\)/.test(wal) && /setShowCoupons\(true\)/.test(wal), 'balance card and round Send / Requests / Coupons buttons, all still wired');
+console.log('\n4. Send money + light Pro page');
+const send = read('src/components/Profile/SendPointsPage.tsx'), css = read('src/index.css');
+check(/data-testid="send-keypad"/.test(send) && /pressKey/.test(send) && /data-testid="send-people"/.test(send) && /data-testid="sending-sheet"/.test(send) && /Money sent!/.test(send) && /New balance/.test(send), 'keypad, people strip, "Sending money" sheet, "Money sent!" with the new balance');
+check(/transferNoobPoints\(\{[\s\S]{0,200}password/.test(send), 'the password-confirmed transfer is unchanged');
+check(/className="pro-light /.test(pro) && /\.pro-light \.bg-white/.test(css), 'the Pro page uses the cream light theme with black pill buttons');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

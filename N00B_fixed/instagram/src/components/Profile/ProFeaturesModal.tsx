@@ -241,7 +241,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
     <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-3" onClick={onClose}>
       {receipt && <ProReceipt receipt={receipt} onDone={() => setReceipt(null)} />}
       <div
-        className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"
+        className="pro-light w-full max-w-md bg-[#f1f0ec] border border-black/5 rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -432,7 +432,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
           const word = billing === 'yearly' ? 'Yearly' : 'Monthly';
           return (
             <div className="fixed inset-0 z-[110] bg-black/80 flex items-end sm:items-center justify-center p-3" onClick={() => { if (!busy) setPayTier(null); }}>
-              <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="pro-light w-full max-w-md bg-[#f1f0ec] border border-black/5 rounded-3xl p-5 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-bold text-white">Confirm order</h3>
                   <button onClick={() => setPayTier(null)} disabled={busy} className="text-zinc-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
@@ -522,7 +522,7 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
         {/* Ask a friend to pay: the sheet */}
         {askTier && (
           <div className="fixed inset-0 z-[110] bg-black/80 flex items-end sm:items-center justify-center p-3" onClick={() => setAskTier(null)}>
-            <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-5 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="pro-light w-full max-w-md bg-[#f1f0ec] border border-black/5 rounded-3xl p-5 space-y-3 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><HeartHandshake className="w-4 h-4 text-amber-400" /> Ask a friend to pay</h3>
                 <button onClick={() => setAskTier(null)} className="text-zinc-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>

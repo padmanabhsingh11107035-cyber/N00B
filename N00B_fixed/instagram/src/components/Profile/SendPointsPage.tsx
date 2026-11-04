@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle, QrCode, Lock, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Coins, Search, Send, CheckCircle2, AlertCircle, QrCode, Lock, Eye, EyeOff, Copy, Check, Delete, Loader2 } from 'lucide-react';
 import { User } from '../../types';
 import { transferNoobPoints, fetchUsers } from '../../services/api';
 import { formatNoobPoints, formatPaymentId } from '../../utils/formatPoints';
@@ -68,6 +68,15 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
     )
     .slice(0, 30);
 
+  const pressKey = (k: string) => {
+    setErrorMessage('');
+    setAmount((cur) => {
+      if (k === 'C') return '';
+      if (k === '<') return cur.slice(0, -1);
+      if (cur.length >= 15) return cur;
+      return cur === '' && k === '0' ? '' : cur + k;
+    });
+  };
   const parsedAmount = Math.floor(Number(amount));
   const isValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
   const exceedsBalance = isValidAmount && parsedAmount > balance;
@@ -171,7 +180,7 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 <CheckCircle2 className="w-8 h-8 text-noob" />
               </div>
               <div>
-                <h3 className="text-white text-lg font-bold">Payment Successful</h3>
+                <h3 className="text-white text-lg font-bold" data-testid="money-sent">Money sent!</h3>
                 <p className="text-zinc-400 text-xs mt-1">
                   {successState.amount.toLocaleString()} NOOB Points sent to @{successState.recipient.username}
                 </p>
@@ -213,6 +222,10 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-400">Date &amp; Time</span>
                   <span className="text-white">{new Date(successState.at).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">New balance</span>
+                  <span className="text-white font-bold">{balance.toLocaleString()} pts</span>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
                   <span className="text-zinc-400">Status</span>
@@ -341,6 +354,14 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
                       autoFocus
                     />
                   </div>
+                  <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="send-people">
+                    {candidates.slice(0, 14).map((u) => (
+                      <button key={u.id} onClick={() => setRecipient(u)} className="flex flex-col items-center gap-1 shrink-0 w-14 cursor-pointer">
+                        <img src={u.avatar || '/noob-logo.svg.jpeg'} alt="" loading="lazy" className="w-12 h-12 rounded-full object-cover border-2 border-zinc-800" referrerPolicy="no-referrer" />
+                        <span className="text-[10px] text-zinc-400 truncate w-full text-center">{u.displayName || u.username}</span>
+                      </button>
+                    ))}
+                  </div>
                   <div className="max-h-56 overflow-y-auto rounded-xl border border-zinc-900 divide-y divide-zinc-900">
                     {candidates.length === 0 ? (
                       <p className="text-xs text-zinc-500 py-4 text-center">No matching users.</p>
@@ -369,47 +390,49 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
               )}
             </div>
 
-            {/* Amount */}
-            <div className="space-y-2">
-              <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
-                Amount to Send
-              </label>
-              <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 focus-within:border-noob/60">
-                <Coins className="w-4 h-4 text-amber-400 shrink-0" />
-                <input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0"
-                  className="flex-1 bg-transparent text-sm font-bold text-white placeholder:text-zinc-600 focus:outline-none"
-                />
-                <span className="text-[10px] text-zinc-500 font-bold shrink-0">pts</span>
+            {/* Amount: big number, quick chips, keypad */}
+            <div className="space-y-3" data-testid="send-amount">
+              <div className="text-center py-3">
+                <div className="flex items-baseline justify-center gap-1.5">
+                  <span className="text-lg font-bold text-zinc-500">pts</span>
+                  <span className={`font-black tracking-tight ${amount.length > 9 ? 'text-3xl' : amount.length > 6 ? 'text-4xl' : 'text-5xl'} ${exceedsBalance ? 'text-rose-400' : 'text-white'}`} data-testid="send-amount-value">{amount ? Number(amount).toLocaleString() : '0'}</span>
+                </div>
+                {exceedsBalance && (
+                  <p className="text-[11px] text-rose-400 flex items-center justify-center gap-1.5 mt-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" /> You only have {balance.toLocaleString()} points.
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
                 {QUICK_AMOUNTS.map((q) => (
                   <button
                     key={q}
                     onClick={() => setAmount(String(q))}
-                    className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-noob/50 hover:text-white transition-colors cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-noob/50 hover:text-white transition-colors cursor-pointer"
                   >
                     {q.toLocaleString()}
                   </button>
                 ))}
                 <button
-                  onClick={() => setAmount(String(balance))}
+                  onClick={() => setAmount(String(Math.floor(balance)))}
                   disabled={balance <= 0}
-                  className="px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-noob/50 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                  className="px-3.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-bold text-zinc-300 hover:border-noob/50 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
                 >
                   Max
                 </button>
               </div>
-              {exceedsBalance && (
-                <p className="text-[11px] text-rose-400 flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" /> You only have {balance.toLocaleString()} points.
-                </p>
-              )}
+              <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto" data-testid="send-keypad">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '<'].map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => pressKey(k)}
+                    aria-label={k === '<' ? 'Delete' : k === 'C' ? 'Clear' : k}
+                    className="h-14 rounded-2xl text-2xl font-bold text-white hover:bg-zinc-900 active:bg-zinc-800 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                  >
+                    {k === '<' ? <Delete className="w-6 h-6" /> : k === 'C' ? <span className="text-sm text-zinc-500">Clear</span> : k}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Note */}
@@ -444,6 +467,16 @@ export const SendPointsPage: React.FC<SendPointsPageProps> = ({
         )}
       </div>
 
+      {isSending && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end justify-center" data-testid="sending-sheet">
+          <div className="w-full max-w-lg bg-zinc-950 border-t border-zinc-800 rounded-t-3xl px-6 pt-6 pb-10 flex flex-col items-center gap-3 animate-in slide-in-from-bottom duration-200">
+            {recipient && <img src={recipient.avatar || '/noob-logo.svg.jpeg'} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-noob" referrerPolicy="no-referrer" />}
+            <Loader2 className="w-5 h-5 text-noob animate-spin" />
+            <p className="text-white font-bold">Sending money</p>
+            <p className="text-xs text-zinc-400">{parsedAmount.toLocaleString()} pts to {recipient?.displayName || recipient?.username}</p>
+          </div>
+        </div>
+      )}
       {showScanner && <QrScannerModal onClose={() => setShowScanner(false)} onScanned={handleScanned} />}
     </div>
   );

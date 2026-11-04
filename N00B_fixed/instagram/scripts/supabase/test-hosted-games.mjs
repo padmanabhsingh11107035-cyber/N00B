@@ -55,6 +55,8 @@ check(own.every((f) => !read(f).toLowerCase().includes(word)), 'and our own file
 section('5. Full screen, sideways on a phone');
 check(/rotate\(90deg\)/.test(frame) && /\(pointer: coarse\)/.test(frame) && /lock\?: \(o: string\)/.test(frame), 'on a phone Play goes to full screen; held upright the game is laid on its side to fill the screen');
 check(/key === 'Escape'/.test(frame) && /Leave full screen/.test(frame), 'there is always a way out');
+// Cloudflare reads at most 100 rules from public/_headers: with 101 the whole site build failed at once.
+check(read('public/_headers').split('\n').filter((l) => /^[^ #]/.test(l)).length <= 100, 'public/_headers has at most 100 rules (Cloudflare refuses more)');
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

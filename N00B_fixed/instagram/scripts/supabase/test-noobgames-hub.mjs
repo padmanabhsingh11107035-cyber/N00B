@@ -19,7 +19,7 @@ check(!/https?:\/\/(?!www\.w3\.org)/.test(html + core + js + css), 'nothing is l
 check(!/cdn\.tailwindcss|fonts\.googleapis/.test(html) && /utilities\.css\?v=\d+/.test(html) && fs.existsSync(`${dir}/utilities.css`), 'the Tailwind script and the web fonts (other sites) are replaced by files of its own');
 check(/<title>NOOB Games Hub · Made by NOOB developers<\/title>/.test(html) && /<meta name="author" content="NOOB developers"/.test(html), 'the title and the author tag say it is made by NOOB developers');
 const block = headers.slice(headers.indexOf('/games/noobgames-hub/*'), headers.indexOf('/games/noobgames-hub/index.html'));
-check(/frame-ancestors 'self'/.test(block) && /script-src 'self';/.test(block) && /connect-src 'self';/.test(block) && /\/games\/noobgames-hub\/game\.js\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && wr.includes('"!/games/noobgames-hub/*"'), 'own policy (framed by this site only, no network), cached, routed past the worker');
+check(/frame-ancestors 'self'/.test(block) && /script-src 'self';/.test(block) && /connect-src 'self';/.test(block) && /\/games\/noobgames-hub\/\*\.js\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && wr.includes('"!/games/noobgames-hub/*"'), 'own policy (framed by this site only, no network), cached, routed past the worker');
 check(fs.existsSync('../noobgames-hub/source/index.html') && fs.existsSync('../noobgames-hub/NOOB-EMBED.md'), 'the source is in the repository (noobgames-hub/)');
 
 console.log(`\n${passed} passed, ${failed} failed`);

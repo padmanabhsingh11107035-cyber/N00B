@@ -255,11 +255,9 @@
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/nocta-uno/index.html
   Cache-Control: no-cache
-/games/nocta-uno/core.js
+/games/nocta-uno/*.js
   Cache-Control: public, max-age=31536000, immutable
-/games/nocta-uno/game.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/nocta-uno/styles.css
+/games/nocta-uno/*.css
   Cache-Control: public, max-age=31536000, immutable
 /games/noobgames-hub/*
   ! X-Frame-Options
@@ -268,13 +266,9 @@
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/noobgames-hub/index.html
   Cache-Control: no-cache
-/games/noobgames-hub/core.js
+/games/noobgames-hub/*.js
   Cache-Control: public, max-age=31536000, immutable
-/games/noobgames-hub/game.js
-  Cache-Control: public, max-age=31536000, immutable
-/games/noobgames-hub/styles.css
-  Cache-Control: public, max-age=31536000, immutable
-/games/noobgames-hub/utilities.css
+/games/noobgames-hub/*.css
   Cache-Control: public, max-age=31536000, immutable
 /games/flappy20/*
   ! X-Frame-Options

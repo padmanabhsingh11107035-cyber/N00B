@@ -19,7 +19,7 @@ check(!/https?:\/\/(?!www\.w3\.org)/.test(html + core + js + css), 'nothing is l
 check(!/data-mode="online"/.test(html) && /loadPeer\(\) \{ return Promise\.reject/.test(js), 'the online room (it needed another site) is gone; solo and pass and play remain');
 check(/<title>NOCTA · Made by NOOB developers<\/title>/.test(html) && /<meta name="author" content="NOOB developers"/.test(html), 'the title and the author tag say it is made by NOOB developers');
 const block = headers.slice(headers.indexOf('/games/nocta-uno/*'), headers.indexOf('/games/nocta-uno/index.html'));
-check(/frame-ancestors 'self'/.test(block) && /script-src 'self';/.test(block) && /connect-src 'self';/.test(block) && /\/games\/nocta-uno\/game\.js\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && wr.includes('"!/games/nocta-uno/*"'), 'own policy (framed by this site only, no network), cached, routed past the worker');
+check(/frame-ancestors 'self'/.test(block) && /script-src 'self';/.test(block) && /connect-src 'self';/.test(block) && /\/games\/nocta-uno\/\*\.js\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && wr.includes('"!/games/nocta-uno/*"'), 'own policy (framed by this site only, no network), cached, routed past the worker');
 check(fs.existsSync('../nocta-uno/source/index.html') && fs.existsSync('../nocta-uno/NOOB-EMBED.md'), 'the source is in the repository (nocta-uno/)');
 
 console.log(`\n${passed} passed, ${failed} failed`);

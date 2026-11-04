@@ -51,10 +51,10 @@ check(secrets.length === 0, 'no key, token or password in the source', secrets.j
 
 section('4. Headers: the game may be framed by this site only, and may load only its own files');
 const headers = read('public/_headers');
-const block = headers.slice(headers.indexOf('/games/underhall/*'), headers.indexOf('/games/underhall/index.html'));
+const block = headers.slice(headers.indexOf('/games/underhall/*'), headers.indexOf('\n/', headers.indexOf('/games/underhall/*') + 5));
 check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self';/.test(block) && !/unsafe-eval|wasm-unsafe-eval/.test(block) && /connect-src 'self' blob: data:/.test(block) && /object-src 'none'/.test(block), 'its own scripts only, no eval, no network');
-check(/\/games\/underhall\/assets\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/underhall\/index\.html\n  Cache-Control: no-cache/.test(headers), 'its fingerprinted files are kept, its page is always re-read');
+check(/\/games\/underhall\/assets\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers), 'its fingerprinted files are kept, its page is always re-read');
 
 section('5. Phones and tablets: sideways, joystick and buttons on screen');
 const ui = read(path.join(SRC, 'vendor/super-dungeon/src/ui/ui.ts'));

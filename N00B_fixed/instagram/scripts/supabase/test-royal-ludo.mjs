@@ -20,7 +20,7 @@ check(!/https?:\/\/(?!www\.w3\.org)/.test(html + js + css + fit), 'nothing is lo
 check(!NAME.test(html + js + css + fit), 'nothing in it names where it was made');
 check(/<title>Royal Ludo · Made by NOOB developers<\/title>/.test(html) && /<meta name="author" content="NOOB developers"/.test(html) && /Made by NOOB developers/.test(html.split('<main>')[0]), 'the title, the author tag and the header say it is made by NOOB developers');
 check(/const KEY = "noob\.royalludo\.v1";/.test(js), 'its save has a name of its own (this site holds the saves of every game)');
-const block = headers.slice(headers.indexOf('/games/royal-ludo/*'), headers.indexOf('/games/royal-ludo/index.html'));
+const block = headers.slice(headers.indexOf('/games/royal-ludo/*'), headers.indexOf('\n/', headers.indexOf('/games/royal-ludo/*') + 5));
 check(/frame-ancestors 'self'/.test(block) && /script-src 'self';/.test(block) && /connect-src 'self';/.test(block) && /\/games\/royal-ludo\/fit\.css\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && wr.includes('"!/games/royal-ludo/*"'), 'own policy (framed by this site only, only its own files, no network), cached, routed past the worker');
 
 console.log('\n3. One screen, nothing to scroll');

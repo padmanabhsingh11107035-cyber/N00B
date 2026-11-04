@@ -195,6 +195,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: LANE RUNNER: ENDLESS (on its own page, /games/lane-runner/, shown in a frame; source in lane-runner/) ---
+  {
+    id: 'lane_runner',
+    title: 'Lane Runner: Endless',
+    category: 'arcade',
+    description: 'An endless 3D run-and-gun horde game: lead a squad of real soldiers down a ruined city, steer through gates that add, multiply or arm your squad, dodge eight kinds of traps, melt zombie hordes with automatic fire, pick perks and beat a new boss at the end of every sector. The Daily Run gives everyone the same city. Made by NOOB developers.',
+    bannerBg: 'from-[#1a2230] to-[#07080b]',
+    badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'lanerunner',
+    tags: ['Shooter', 'Runner', '3D'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Drag left and right to steer your squad through the gates; your soldiers shoot by themselves. Tap the pause button to stop. On a computer: A and D or the arrow keys steer. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/lane-runner/',
+    posters: [
+      '/game-posters/lane-runner/01-cover.webp',
+      '/game-posters/lane-runner/02-play.webp',
+      '/game-posters/lane-runner/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

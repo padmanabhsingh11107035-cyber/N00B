@@ -100,10 +100,10 @@ check(!/\.hint-icon::after[^}]*Noto Sans SC/.test(cssSrc) && /\.seg\[data-locale
 
 section('6. Headers: the game may be framed by this site only, and may load only its own files');
 const headers = read('public/_headers');
-const block = headers.slice(headers.indexOf('/games/siegecraft/*'), headers.indexOf('/games/siegecraft/index.html'));
+const block = headers.slice(headers.indexOf('/games/siegecraft/*'), headers.indexOf('\n/', headers.indexOf('/games/siegecraft/*') + 5));
 check(/X-Frame-Options: SAMEORIGIN/.test(block) && /frame-ancestors 'self'/.test(block), 'only this site can show it in a frame');
 check(/script-src 'self' 'wasm-unsafe-eval';/.test(block) && !/[^-]unsafe-eval/.test(block.replace(/wasm-unsafe-eval/g, '')) && /connect-src 'self' blob: data:/.test(block) && /object-src 'none'/.test(block) && /default-src 'self'/.test(block), 'its own scripts only (plus WebAssembly, which the physics engine is), no eval, no network, no plug-ins');
-check(/\/games\/siegecraft\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/siegecraft\/index\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/siegecraft\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/siegecraft\/fonts\/\*\n  Cache-Control: public, max-age=604800/.test(headers) && /\/games\/siegecraft\/logo\.png\n  Cache-Control: public, max-age=604800/.test(headers), 'the scripts and the model are kept for ever, the page and the file list are asked for again every time');
+check(/\/games\/siegecraft\/build\/\*\n  Cache-Control: public, max-age=31536000, immutable/.test(headers) && /\/games\/\*\.html\n  Cache-Control: no-cache/.test(headers) && /\/games\/siegecraft\/warm\.json\n  Cache-Control: no-cache/.test(headers) && /\/games\/siegecraft\/fonts\/\*\n  Cache-Control: public, max-age=604800/.test(headers) && /\/games\/siegecraft\/logo\.png\n  Cache-Control: public, max-age=604800/.test(headers), 'the scripts and the model are kept for ever, the page and the file list are asked for again every time');
 check(/WebAssembly/.test(builtJs), 'the policy above needs WebAssembly, and the game does use it (so the line is not there for nothing)');
 
 section('7. Always sideways');

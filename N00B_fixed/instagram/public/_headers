@@ -80,8 +80,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/underhall/index.html
-  Cache-Control: no-cache
 /games/underhall/assets/*
   Cache-Control: public, max-age=31536000, immutable
 /games/underhall/models/*
@@ -103,8 +101,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/the-rogue/index.html
-  Cache-Control: no-cache
 /games/the-rogue/warm.json
   Cache-Control: no-cache
 /games/the-rogue/the-rogue.css
@@ -128,8 +124,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/canyon-rush/index.html
-  Cache-Control: no-cache
 /games/canyon-rush/warm.json
   Cache-Control: no-cache
 /games/canyon-rush/build/*
@@ -145,8 +139,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/critterkart/index.html
-  Cache-Control: no-cache
 /games/critterkart/warm.json
   Cache-Control: no-cache
 /games/critterkart/build/*
@@ -160,8 +152,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/siegecraft/index.html
-  Cache-Control: no-cache
 /games/siegecraft/warm.json
   Cache-Control: no-cache
 /games/siegecraft/build/*
@@ -177,8 +167,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/coil-rush/index.html
-  Cache-Control: no-cache
 /games/coil-rush/warm.json
   Cache-Control: no-cache
 /games/coil-rush/build/*
@@ -192,8 +180,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/color-sort/index.html
-  Cache-Control: no-cache
 /games/color-sort/game.js
   Cache-Control: public, max-age=31536000, immutable
 /games/color-sort/rules.js
@@ -208,8 +194,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self';
-/games/brick-escape/index.html
-  Cache-Control: no-cache
 /games/brick-escape/game.js
   Cache-Control: public, max-age=31536000, immutable
 /games/brick-escape/rules.js
@@ -228,8 +212,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/noob-run-3d/index.html
-  Cache-Control: no-cache
 /games/noob-run-3d/warm.json
   Cache-Control: no-cache
 /games/noob-run-3d/build/*
@@ -240,8 +222,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/royal-ludo/index.html
-  Cache-Control: no-cache
 /games/royal-ludo/game.js
   Cache-Control: public, max-age=31536000, immutable
 /games/royal-ludo/styles.css
@@ -253,8 +233,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/nocta-uno/index.html
-  Cache-Control: no-cache
 /games/nocta-uno/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/nocta-uno/*.css
@@ -264,8 +242,6 @@
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/noobgames-hub/index.html
-  Cache-Control: no-cache
 /games/noobgames-hub/*.js
   Cache-Control: public, max-age=31536000, immutable
 /games/noobgames-hub/*.css
@@ -277,19 +253,22 @@
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
 /games/strikebowl/assets/*
   Cache-Control: public, max-age=31536000, immutable
+/games/*.html
+  Cache-Control: no-cache
+/games/lane-runner/*
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
+/games/lane-runner/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
 /games/flappy20/*
   ! X-Frame-Options
   ! Content-Security-Policy
   X-Frame-Options: SAMEORIGIN
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'none'
-/games/flappy20/index.html
-  Cache-Control: no-cache
 /games/flappy20/flappy.js
   Cache-Control: public, max-age=31536000, immutable
-/games/neon-alley/index.html
-  Cache-Control: no-cache
-/games/helix-fall/index.html
-  Cache-Control: no-cache
 /games/helix-fall/assets/*
   Cache-Control: public, max-age=31536000, immutable
 /games/helix-fall/fonts/*

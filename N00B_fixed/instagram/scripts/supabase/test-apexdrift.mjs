@@ -1,4 +1,4 @@
-// Apex Drift on the Games page: the card, a page that follows the site's policy (nothing from another site, no maker or tool names anywhere), "Made by NOOB developers".
+// apexdrift on the Games page: the card, a page that follows the site's policy (nothing from another site, no maker or tool names anywhere), "Made by NOOB developers".
 // Usage: node --liftoff-only scripts/supabase/test-apexdrift.mjs
 import fs from 'node:fs';
 let passed = 0, failed = 0;
@@ -21,6 +21,8 @@ check(posters.length === 3 && posters.every((p) => fs.existsSync('public' + p)),
 console.log('\n2. The page');
 check(/<title>[^<]* · Made by NOOB developers<\/title>/.test(html) && /<meta name="author" content="NOOB developers"/.test(html), 'title and author say it is made by NOOB developers');
 check(!NAMES.test(text) && !NAMES.test(models), 'nothing in the page, the scripts, the styles or the models names a maker or a tool');
+const names = []; const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { if (NAMES.test(f.name)) names.push(f.name); if (f.isDirectory()) walk(`${d}/${f.name}`); } }; walk(dir);
+check(names.length === 0, 'no file or folder is named after a maker');
 check(!/https?:\/\/(?!www\.w3\.org)/.test(html) && !/fetch\(["'`]https?:/.test(text), 'nothing is loaded from another site');
 const at = headers.indexOf('/games/apexdrift/*');
 const block = headers.slice(at, headers.indexOf('\n/', at + 5));

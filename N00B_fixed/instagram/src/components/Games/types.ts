@@ -296,6 +296,56 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: BREACHPOINT ZERO (on its own page, /games/breachpt/, shown in a frame; source in breachpt/) ---
+  {
+    id: 'breachpt',
+    title: 'Breachpoint Zero',
+    category: 'arcade',
+    description: 'A 3D first-person shooter: hold the line through eight waves of Onslaught with four computer squad-mates, use between-wave upgrades, style scoring and Overdrive, and take down the Warden at the end, or play an offline six-bot Deathmatch. Enemy-only auto aim is on by default and your best scores are kept on your device. Made by NOOB developers.',
+    bannerBg: 'from-[#2b3340] to-[#0a0d12]',
+    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Hard',
+    players: 'Solo',
+    iconType: 'breachpt',
+    tags: ['Shooter', 'FPS', '3D'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Touch: left stick moves, drag the right side to look and aim, tap the fire, jump, reload and grenade buttons. On a computer: WASD moves, the mouse looks and fires, right click aims, R reloads, Shift sprints, Space jumps, G throws a grenade, F is Overdrive, 1 2 3 switch weapons, Esc pauses. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/breachpt/',
+    posters: [
+      '/game-posters/breachpt/01-cover.webp',
+      '/game-posters/breachpt/02-play.webp',
+      '/game-posters/breachpt/03-more.webp'
+    ]
+  },
+
+  // --- NEW: ASHENFANG: THE COLOSSUS TRAIL (on its own page, /games/ashenfang/, shown in a frame; source in ashenfang/) ---
+  {
+    id: 'ashenfang',
+    title: 'Ashenfang: The Colossus Trail',
+    category: 'arcade',
+    description: 'A single-player 3D action hunt: track three colossal beasts through the Emberwild Basin, read their openings, climb onto their backs and break their weak points before the clock runs out. Made by NOOB developers.',
+    bannerBg: 'from-[#4a2a1a] to-[#120a06]',
+    badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Hard',
+    players: 'Solo',
+    iconType: 'ashenfang',
+    tags: ['Action', 'Boss hunt', '3D'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Touch: left stick moves, drag the right side to look, tap the buttons to attack, dodge, jump and grapple. On a computer: WASD moves, the mouse looks, click attacks, Space jumps. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/ashenfang/',
+    posters: [
+      '/game-posters/ashenfang/01-cover.webp',
+      '/game-posters/ashenfang/02-play.webp',
+      '/game-posters/ashenfang/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

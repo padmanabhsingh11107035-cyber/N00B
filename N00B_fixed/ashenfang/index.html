@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#15130f" />
+    <title>Ashenfang: The Colossus Trail · Made by NOOB developers</title>
+    <meta name="author" content="NOOB developers" />
+    <meta name="description" content="Track towering colossi through the Emberwild Basin. Dodge, grapple, climb and survive the hunt." />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+            <style>
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: #15130f;
+        color: #f3ead7;
+        font-family: 'Sora', system-ui, sans-serif;
+        transition: opacity 0.45s ease;
+      }
+      #boot.done { opacity: 0; pointer-events: none; }
+      .boot-shell { width: min(560px, 88vw); display: grid; justify-items: center; text-align: center; gap: 12px; }
+      .boot-mark { width: 58px; height: 58px; object-fit: contain; filter: drop-shadow(0 0 14px rgba(240, 181, 74, 0.24)); }
+      .boot-title {
+        margin: 4px 0 0;
+        font-size: clamp(2.7rem, 9vw, 5.3rem);
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        line-height: 1;
+        text-transform: uppercase;
+        color: #f3ead7;
+      }
+      .boot-sub {
+        margin: 0;
+        font-size: clamp(0.7rem, 2.3vw, 1.05rem);
+        font-weight: 600;
+        letter-spacing: clamp(0.12em, 0.75vw, 0.35em);
+        text-transform: uppercase;
+        color: #f0b54a;
+      }
+      .boot-foot { width: 100%; margin-top: clamp(36px, 9vh, 76px); }
+      .boot-text { min-height: 1.3em; margin-bottom: 12px; font: 500 0.88rem/1.4 'Figtree', system-ui, sans-serif; color: rgba(243, 234, 215, 0.9); }
+      .boot-bar { position: relative; height: 8px; overflow: hidden; border: 1px solid rgba(240, 181, 74, 0.46); border-radius: 99px; background: #29241a; }
+      .boot-fill { position: absolute; inset: 0; transform: scaleX(0.02); transform-origin: left; background: #f0b54a; transition: transform 0.2s ease-out; }
+      .boot-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: rgba(243, 234, 215, 0.68); font: 0.76rem/1.45 'Figtree', system-ui, sans-serif; }
+      .boot-tip { text-align: left; }
+      .boot-pct { color: #f0b54a; font-variant-numeric: tabular-nums; }
+      .boot-retry { margin-top: 22px; padding: 10px 22px; border: 1px solid #f0b54a; border-radius: 7px; background: #f0b54a; color: #18140c; font: 700 0.82rem 'Sora', system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+      .boot-retry:hover { background: #ffd27a; }
+      .boot-retry:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+      @media (max-width: 560px) {
+        .boot-shell { width: 88vw; }
+        .boot-mark { width: 48px; height: 48px; }
+        .boot-meta { font-size: 0.7rem; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot, .boot-fill { transition: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="ui"></div>
+    <div id="boot" role="status" aria-live="polite">
+      <div class="boot-shell">
+        <img class="boot-mark" src="./favicon.png" alt="" width="58" height="58" />
+        <div class="boot-title">Ashenfang</div>
+        <div class="boot-sub">The Colossus Trail</div>
+        <div class="boot-foot">
+          <div class="boot-text" data-i18n="boot.loading">Preparing the Emberwild Basin…</div>
+          <div class="boot-bar" role="progressbar" aria-label="Hunt loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="boot-fill"></div></div>
+          <div class="boot-meta">
+            <span class="boot-tip" data-i18n="boot.tip1">Tip: dodge through an attack at the last moment to trigger a Flow Evade.</span>
+            <span class="boot-pct">0%</span>
+          </div>
+          <button class="boot-retry" type="button" data-i18n="boot.retry" hidden>Retry</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

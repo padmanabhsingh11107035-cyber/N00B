@@ -346,6 +346,32 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: METRO RUSH (on its own page, /games/metro-rush/, shown in a frame; source in metro-rush/) ---
+  {
+    id: 'metro_rush',
+    title: 'Metro Rush',
+    category: 'arcade',
+    description: 'A colourful 3D endless runner down a three-lane rail line: dodge oncoming trains, jump barriers, roll under signs, surf the train roofs and grab every coin, with a coin magnet, shield, super sneakers and double coins on the way. Pick your style and beat your high score. Made by NOOB developers.',
+    bannerBg: 'from-[#2f6bff] to-[#1b1240]',
+    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'metrorush',
+    tags: ['Runner', '3D', 'Endless'],
+    isNew: true,
+    ownSound: true,
+    embedPortrait: true,
+    embedControls: 'Swipe left and right to change lane, up to jump and down to roll, or use the four round buttons. On a computer: A and D or the arrow keys change lane, W or Up jumps, S or Down rolls. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/metro-rush/',
+    posters: [
+      '/game-posters/metro-rush/01-cover.webp',
+      '/game-posters/metro-rush/02-play.webp',
+      '/game-posters/metro-rush/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

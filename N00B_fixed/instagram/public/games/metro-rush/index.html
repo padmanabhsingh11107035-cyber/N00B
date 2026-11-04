@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#2f6bff">
+<title>Metro Rush · Made by NOOB developers</title>
+<meta name="author" content="NOOB developers">
+<link rel="stylesheet" href="metro-rush.css?v=1">
+</head>
+<body class="loading">
+<canvas id="game" aria-label="Metro Rush 3D game"></canvas>
+<div class="vignette"></div>
+
+<header class="top">
+  <a class="brand" href="#" aria-label="Metro Rush"><span class="logo"><b>METRO</b><i>RUSH</i></span></a>
+  <div class="top-actions">
+    <button id="sound" class="chip-btn" aria-label="Toggle sound" aria-pressed="false"><span class="ico-off">🔇</span><span class="ico-on">🔊</span></button>
+    <button id="pause" class="chip-btn" aria-label="Pause (P)" disabled>❚❚</button>
+  </div>
+</header>
+
+<div id="hud" hidden>
+  <div class="hud-left">
+    <div class="pill score-pill"><span class="mult" id="mult">x1</span><b id="score">0</b></div>
+    <div class="pill coin-pill"><span class="coin-ico"></span><b id="coins">0</b></div>
+  </div>
+  <div class="hud-right">
+    <div class="best">BEST <b id="best">0</b></div>
+    <div class="spd"><b id="speed">0</b> km/h</div>
+  </div>
+  <div class="powers">
+    <div class="pw" id="pw-magnet" hidden style="--c:#ff4f6d"><i>🧲</i><span></span></div>
+    <div class="pw" id="pw-shield" hidden style="--c:#2fd3ff"><i>🛡</i><span></span></div>
+    <div class="pw" id="pw-sneakers" hidden style="--c:#7ee44a"><i>👟</i><span></span></div>
+    <div class="pw" id="pw-double" hidden style="--c:#b07bff"><i>2X</i><span></span></div>
+  </div>
+</div>
+
+<section id="home" class="screen">
+  <div class="hero">
+    <div class="title">
+      <span class="t1">METRO</span>
+      <span class="t2">RUSH</span>
+      <span class="tag">DOWNTOWN LINE</span>
+    </div>
+    <p class="sub">Dodge trains. Surf the roofs. Grab every coin.</p>
+    <button class="play" id="start"><span>PLAY</span></button>
+    <div class="best-card">HIGH SCORE <b id="home-best">0</b></div>
+  </div>
+  <div class="crew">
+    <div class="crew-title">PICK YOUR STYLE</div>
+    <div class="crew-row">
+      <button data-outfit="street" style="--a:#ff3b5c;--b:#16c79a" aria-label="Street outfit"><span></span>STREET</button>
+      <button data-outfit="ocean" style="--a:#2fb8ff;--b:#ff4fa3" aria-label="Ocean outfit"><span></span>OCEAN</button>
+      <button data-outfit="lime" style="--a:#8dff5a;--b:#ff8a1f" aria-label="Lime outfit"><span></span>LIME</button>
+    </div>
+  </div>
+  <footer class="keys">
+    <span><kbd>←</kbd><kbd>→</kbd> DODGE</span><span><kbd>↑</kbd> JUMP</span><span><kbd>↓</kbd> ROLL</span><span class="touch">SWIPE TO PLAY</span>
+  </footer>
+</section>
+
+<div id="toast" role="status"></div>
+
+<div id="mobile-controls" hidden>
+  <button data-action="left" aria-label="Left">◀</button><button data-action="jump" aria-label="Jump">▲</button><button data-action="slide" aria-label="Roll">▼</button><button data-action="right" aria-label="Right">▶</button>
+</div>
+
+<section id="pause-screen" class="modal" hidden>
+  <div class="card">
+    <div class="card-tag">PAUSED</div>
+    <h2>TAKE A<br>BREATHER</h2>
+    <button class="play small" id="resume"><span>RESUME</span></button>
+    <button class="ghost" id="quit">END RUN</button>
+  </div>
+</section>
+
+<section id="end" class="modal" hidden>
+  <div class="card">
+    <div class="card-tag" id="end-tag">BUSTED!</div>
+    <div class="big-score" id="end-score">0</div>
+    <div class="results">
+      <div><span>COINS</span><b><i class="coin-ico"></i><em id="end-coins">0</em></b></div>
+      <div><span>DISTANCE</span><b id="end-dist">0 m</b></div>
+    </div>
+    <button class="play small" id="restart"><span>RUN AGAIN</span></button>
+    <button class="ghost" id="menu">MAIN MENU</button>
+  </div>
+</section>
+
+<div id="loading"><div class="logo big"><b>METRO</b><i>RUSH</i></div><div class="bar"><span></span></div><small>Painting the city…</small></div>
+
+<script src="vendor/three.min.js?v=1"></script>
+<script src="js/mr-core.js?v=1"></script>
+<script src="js/mr-world.js?v=1"></script>
+<script src="js/mr-trains.js?v=1"></script>
+<script src="js/mr-player.js?v=1"></script>
+<script src="js/mr-fx.js?v=1"></script>
+<script src="js/mr-game.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+// Double-tap on the "You" tab switches to the other account of the same e-mail. Usage: node --liftoff-only scripts/supabase/test-quick-switch.mjs
+import fs from 'node:fs';
+const { pickNext } = await import('../../src/utils/quickSwitchPick.ts');
+let passed = 0, failed = 0;
+const check = (c, l) => { if (c) { passed++; console.log(`  ok   ${l}`); } else { failed++; console.log(`  FAIL ${l}`); } };
+const read = (p) => fs.readFileSync(p, 'utf8').split('\r').join('');
+console.log('\n1. Which account');
+const A = { id: 'a' }, B = { id: 'b' }, C = { id: 'c' };
+check(pickNext([], null) === null, 'no other account: nothing to switch to');
+check(pickNext([B], null) === B && pickNext([B], 'b') === B, 'one other account: always that one');
+check(pickNext([B, C], null) === B && pickNext([B, C], 'b') === C && pickNext([B, C], 'c') === B, 'several: the double-taps go round them in turn');
+check(pickNext([B, C], 'gone') === B, 'an unknown "last" starts again from the first');
+console.log('\n2. Wiring');
+const nav = read('src/components/Navigation/FloatingNavBar.tsx'), qs = read('src/utils/quickSwitch.ts'), app = read('src/App.tsx');
+check(/onClick=\{tapProfile\}/.test(nav) && /DOUBLE_TAP_MS/.test(nav) && /onSelectTab\('profile'\)/.test(nav) && /quickSwitchLinked\(\)/.test(nav), 'one tap on "You" still opens the profile; two quick taps switch');
+check(/fetchLinkedAccounts\(\)/.test(qs) && /res\.state !== 'ok'/.test(qs) && /a\.id !== me/.test(qs), 'only accounts of the same e-mail or mobile number (from the server\'s own list), never this one');
+check(/saved\.some\(\(s\) => s\.id === o\.id\)/.test(qs) && /tabSessions\.switchTo\(next\.id\)/.test(qs), 'an account already signed in on this device is switched to at once');
+check(/OPEN_SWITCH_SHEET_EVENT/.test(qs) && /<SwitchAccountModal onClose=\{\(\) => setShowQuickSwitchSheet\(false\)\} \/>/.test(app), 'one that is not signed in here opens the Switch account sheet, which asks for its password (nothing signs in without it)');
+check(/if \(!others\.length\) return 'none'/.test(qs), 'no other account: nothing happens');
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

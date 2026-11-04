@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Home, Compass, Film, MessageSquare, Gamepad2, CirclePlus } from 'lucide-react';
 import { useFeatureOn } from '../../utils/featureFlags';
 import { useKeyboardOpen } from '../../utils/useVisualViewport';
+import { DOUBLE_TAP_MS, quickSwitchLinked } from '../../utils/quickSwitch';
 
 export type NavTab = 'feed' | 'explore' | 'post' | 'reels' | 'chat' | 'games' | 'music' | 'profile' | 'videos';
 
@@ -57,6 +58,15 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   const columns = 2 + [showExplore, showReels, showCreate, showChat, showGames].filter(Boolean).length;
   // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
   const keyboardOpen = useKeyboardOpen();
+  // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
+  const lastProfileTap = useRef(0);
+  const tapProfile = () => {
+    const now = Date.now();
+    const twice = now - lastProfileTap.current < DOUBLE_TAP_MS;
+    lastProfileTap.current = twice ? 0 : now;
+    if (twice) void quickSwitchLinked();
+    else onSelectTab('profile');
+  };
   return (
     <nav
       id="floating-bottom-nav"
@@ -115,7 +125,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           </NavButton>
         )}
 
-        <NavButton id="nav-item-profile" label="You" title="My Profile" active={activeTab === 'profile'} onClick={() => onSelectTab('profile')}>
+        <NavButton id="nav-item-profile" label="You" title="My Profile" active={activeTab === 'profile'} onClick={tapProfile}>
           <span className="nav-ava block w-6 h-6 rounded-full overflow-hidden">
             <img
               src={userAvatar || '/noob-logo.svg.jpeg'}

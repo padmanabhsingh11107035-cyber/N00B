@@ -83,6 +83,8 @@ import { predictFollowToggle, predictFollowersCount } from './utils/followPredic
 import { buildStoryTray, topUpSuggestions, loadOwnSeenStoryIds, saveOwnSeenStoryIds, type StoryTraySuggestion } from './utils/storyTray';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { NotificationSettingsState } from './components/Modals/NotificationsModal';
+import { SwitchAccountModal } from './components/Modals/SwitchAccountModal';
+import { OPEN_SWITCH_SHEET_EVENT, QUICK_SWITCH_MESSAGE_EVENT } from './utils/quickSwitch';
 import { AuthView } from './components/Auth/AuthView';
 import { TermsAndConditions } from './components/Legal/TermsAndConditions';
 import { PrivacyPolicy } from './components/Legal/PrivacyPolicy';
@@ -325,6 +327,16 @@ export default function App() {
     if (key && featuresOff.has(key)) setActiveTab('feed');
   }, [featuresOff, activeTab]);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  // Double-tap on the "You" tab (utils/quickSwitch.ts): the sheet to sign in to another account of the same e-mail, and a short message while switching.
+  const [showQuickSwitchSheet, setShowQuickSwitchSheet] = useState(false);
+  const [quickSwitchMessage, setQuickSwitchMessage] = useState('');
+  useEffect(() => {
+    const open = () => setShowQuickSwitchSheet(true);
+    const say = (e: Event) => { setQuickSwitchMessage(String((e as CustomEvent).detail || '')); window.setTimeout(() => setQuickSwitchMessage(''), 2600); };
+    window.addEventListener(OPEN_SWITCH_SHEET_EVENT, open);
+    window.addEventListener(QUICK_SWITCH_MESSAGE_EVENT, say);
+    return () => { window.removeEventListener(OPEN_SWITCH_SHEET_EVENT, open); window.removeEventListener(QUICK_SWITCH_MESSAGE_EVENT, say); };
+  }, []);
   const isUpdateAvailable = useUpdateAvailable();
   const [posts, setPosts] = useState<Post[]>([]);
   // the same list object until the posts really change, so drawing the app again (e.g. when a profile opens) never makes Home or Explore start over
@@ -2214,6 +2226,11 @@ export default function App() {
           </div>
         </div>
       </aside>
+
+      {showQuickSwitchSheet && <SwitchAccountModal onClose={() => setShowQuickSwitchSheet(false)} />}
+      {quickSwitchMessage && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-[130] px-4 py-2 rounded-full bg-zinc-900/95 border border-white/15 text-white text-xs font-bold shadow-lg" role="status" data-testid="quick-switch-message">{quickSwitchMessage}</div>
+      )}
 
       {/* Bottom navigation bar (phones and tablets; computers have the side menu) */}
       <FloatingNavBar

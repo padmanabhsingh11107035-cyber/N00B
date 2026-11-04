@@ -10,6 +10,7 @@
 // What this does NOT give (and the app says so): a ratchet like Signal's ("forward secrecy" for a stolen device key), and it can not stop
 // the server from handing out a wrong public key unless people compare their security codes (see securityCode).
 
+import { packText, unpackText } from '../utils/textPack.ts';
 const te = new TextEncoder();
 const td = new TextDecoder();
 
@@ -115,7 +116,7 @@ export async function seal(plaintext: string, opts: { chatId: string; sender: De
   const iv = rand(12);
   const aad = te.encode(`${INFO}|${chatId}|${sender.kid}`);
   const aesKey = await crypto.subtle.importKey('raw', buf(K), 'AES-GCM', false, ['encrypt']);
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: buf(iv), additionalData: buf(aad) }, aesKey, buf(te.encode(plaintext))));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: buf(iv), additionalData: buf(aad) }, aesKey, buf(packText(plaintext))));   // packed (src/utils/textPack.ts) when that makes it smaller; the server only ever sees locked bytes
 
   const eph = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: CURVE }, true, ['deriveBits']);
   const ephPub = cleanPublic((await crypto.subtle.exportKey('jwk', eph.publicKey)) as any);
@@ -152,7 +153,7 @@ export async function open(env: unknown, opts: { chatId: string; ring: DeviceKey
     const K = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf(unb64(entry.iv)), additionalData: buf(te.encode(mine.kid)) }, wk, buf(unb64(entry.w))));
     const aesKey = await crypto.subtle.importKey('raw', buf(K), 'AES-GCM', false, ['decrypt']);
     const aad = te.encode(`${INFO}|${opts.chatId}|${env.skid}`);
-    return td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf(iv), additionalData: buf(aad) }, aesKey, buf(unb64(env.ct))));
+    return unpackText(new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf(iv), additionalData: buf(aad) }, aesKey, buf(unb64(env.ct)))));   // old messages were never packed: they come back as they are
   } catch {
     // wrong chat, a changed message, a forged sender, a damaged envelope: all look the same and all fail closed
     throw new E2eeError('damaged', 'This message could not be opened (it was changed, or it is not from who it says).');

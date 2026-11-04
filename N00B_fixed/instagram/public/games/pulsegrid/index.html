@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#06020d" />
+    <meta name="description" content="A 3D rhythm-dance game. Enter directional sequences, hit Space on beat, and press the opposite direction for red prompts. Play offline with keyboard, touch or gamepad." />
+    <title>PulseGrid Arena · Made by NOOB developers</title>
+    <meta name="author" content="NOOB developers" />
+        <style>html,body{background:#06020d;width:100%;height:100%;margin:0;overflow:hidden}#loader{z-index:50;color:#f6f2ff;background:#06020d;place-items:center;padding:24px;font:500 16px/1.5 system-ui,sans-serif;transition:opacity .45s,visibility .45s;display:grid;position:fixed;inset:0}#loader.is-done{opacity:0;visibility:hidden}#loader .box{text-align:center;flex-direction:column;align-items:center;width:min(420px,88vw);display:flex}#loader .mark{border-radius:14px;width:56px;height:56px;margin-bottom:18px;box-shadow:0 0 30px #28f0ff3d}#loader h1{letter-spacing:-.04em;color:#0000;background:linear-gradient(100deg,#ff2bd6,#28f0ff);-webkit-background-clip:text;background-clip:text;margin:0;font:italic 900 clamp(30px,8vw,48px)/1 system-ui,sans-serif}#loader .tip{color:#c1b7dc;min-height:1.5em;margin:12px 0 18px}#loader .bar{background:#ffffff1f;border-radius:99px;width:100%;height:9px;position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff24}#loader .bar i{transform-origin:0;border-radius:inherit;background:linear-gradient(90deg,#ff2bd6,#ffd84a,#28f0ff);transition:transform .2s ease-out;position:absolute;inset:0;transform:scaleX(0)}#loader .pct{color:#a99cc9;letter-spacing:.2em;margin:9px 0 0;font:700 12px/1 system-ui,sans-serif}#loader .retry{color:#f6f2ff;cursor:pointer;background:#15102b;border:1px solid #28f0ff80;border-radius:10px;margin-top:16px;padding:10px 18px;font:700 14px system-ui,sans-serif;display:none}#loader .retry.is-on{display:inline-flex}#game{width:100%;height:100%;display:block;position:fixed;inset:0}#ui{pointer-events:none;position:fixed;inset:0}@media (prefers-reduced-motion:reduce){#loader,#loader .bar i{transition:none}}</style>
+    <script type="module" crossorigin src="./assets/index-Dv5gQeXS.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-djBcVjQQ.css">
+  </head>
+  <body>
+    <div id="loader" role="status" aria-live="polite">
+      <main class="box">
+        <img class="mark" src="./assets/share/favicon.png" width="56" height="56" alt="" />
+        <h1>PulseGrid Arena</h1>
+        <p class="tip">Setting the stage…</p>
+        <div class="bar" aria-hidden="true"><i></i></div>
+        <p class="pct">0%</p>
+        <button class="retry" type="button">Retry</button>
+      </main>
+    </div>
+    <canvas id="game" aria-label="PulseGrid Arena 3D stage"></canvas>
+    <div id="ui"></div>
+  </body>
+</html>

@@ -423,6 +423,31 @@ export const ALL_50_MINI_GAMES: MiniGameMeta[] = [
     ]
   },
 
+  // --- NEW: PULSEGRID ARENA (on its own page, /games/pulsegrid/, shown in a frame; source in pulsegrid/) ---
+  {
+    id: 'pulsegrid',
+    title: 'PulseGrid Arena',
+    category: 'arcade',
+    description: 'A 3D rhythm-dance game: enter the arrow sequence, then land the beat as the marker crosses the target zone. Chain clean hits, build Fever, climb through the songs from a guided warm-up to the hardest stage, and beware the red arrows: press the opposite direction. Made by NOOB developers.',
+    bannerBg: 'from-[#2a0f4a] to-[#06020d]',
+    badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+    pointsReward: 0,
+    rewardNote: 'Play for fun',
+    difficulty: 'Medium',
+    players: 'Solo',
+    iconType: 'pulsegrid',
+    tags: ['Rhythm', 'Dance', '3D'],
+    isNew: true,
+    ownSound: true,
+    embedControls: 'Touch: use the on-screen arrow pad, then tap BEAT on the beat. On a computer: arrow keys or WASD enter the directions, Space hits the beat, Esc pauses. Red arrows are reversed: press the opposite direction. A wrong direction restarts the sequence. It has its own sounds; no NOOBs for this one, it is just for fun.',
+    embedUrl: '/games/pulsegrid/',
+    posters: [
+      '/game-posters/pulsegrid/01-cover.webp',
+      '/game-posters/pulsegrid/02-play.webp',
+      '/game-posters/pulsegrid/03-more.webp'
+    ]
+  },
+
   // --- NEW: SIEGECRAFT (a 3D catapult-and-castles physics game on its own page, /games/siegecraft/, shown in a frame — see minigames/HostedGameFrame and utils/siegecraftWarmup; the source is in siegecraft/) ---
   {
     id: 'siegecraft',

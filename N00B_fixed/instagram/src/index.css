@@ -1355,3 +1355,9 @@ body, body.light { background-color: transparent !important; }
 body.light .fixed.doodle-wallpaper, body.light .fixed.doodle-wallpaper-feed, body.light .chat-wallpaper {
   background-image: linear-gradient(rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.80)), url('/brand/doodle-dark.webp') !important;
 }
+
+/* the doodle inside a chat stays still while only the messages scroll (the picture is fixed to the scrolling box, not to its content) */
+.chat-wallpaper { background-attachment: scroll, scroll !important; }
+/* the help desk always covers the whole page, also the part under the keyboard and whatever page is open behind it */
+.sd-root { background-color: #e8ebf0 !important; }
+.sd-root { bottom: -60vh !important; }   /* reaches far below the screen too, so nothing of the page behind shows when the keyboard slides up */

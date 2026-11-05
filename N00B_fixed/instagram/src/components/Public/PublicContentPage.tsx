@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Heart, MessageCircle, Eye, Lock, Loader2, RotateCcw, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Eye, Lock, Loader2, RotateCcw, BadgeCheck } from 'lucide-react';
 import { fetchPublicItem, recordPublicView, type PublicItem, type PublicResult } from '../../services/publicContent';
 import type { ContentRoute } from '../../utils/routes';
 import { formatNoobPoints } from '../../utils/formatPoints';
@@ -43,10 +43,14 @@ export const PublicContentPage: React.FC<Props> = ({ route, onLogin }) => {
     <div className="fixed inset-0 z-40 overflow-y-auto bg-black text-white media-dark" data-testid="public-page" data-kind={route.kind}>
       <header className="sticky top-0 z-10 bg-black/90 backdrop-blur border-b border-zinc-800">
         <div className="max-w-md mx-auto h-14 px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+          <button type="button" aria-label="Back" title="Back" data-testid="public-back" className="w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-white hover:bg-white/10 cursor-pointer shrink-0"
+            onClick={() => { try { if (window.history.length > 1 && document.referrer) { window.history.back(); return; } } catch { /* go to the home page then */ } window.location.assign('/'); }}><ArrowLeft className="w-5 h-5" /></button>
           <a href="/" className="flex items-center gap-2 no-underline text-white">
             <img src="/noob-logo-circle.png" alt="" className="w-8 h-8 rounded-[24%]" />
             <span className="font-black tracking-tight">NOOB</span>
           </a>
+          </div>
           <div className="flex items-center gap-2">
             <button onClick={onLogin} className="px-4 py-1.5 rounded-full border border-zinc-600 text-xs font-bold cursor-pointer" data-testid="public-login">Log in</button>
             <button onClick={onLogin} className="px-4 py-1.5 rounded-full bg-white text-black text-xs font-black cursor-pointer" data-testid="public-signup">Sign up</button>

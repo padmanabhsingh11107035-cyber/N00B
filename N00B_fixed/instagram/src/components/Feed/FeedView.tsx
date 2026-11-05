@@ -75,6 +75,7 @@ import { AdBanner } from '../Ads/AdBanner';
 import { useFeaturesOff } from '../../utils/featureFlags';
 import { funFeatureKey } from '../../utils/features';
 import { MoreCreationsPage } from './MoreCreationsPage';
+import { ScratchPage } from '../Scratch/ScratchPage';
 import { NoobAiLogo } from '../Profile/NoobAiLogo';
 import { SuggestionBoxModal } from '../Support/SuggestionBoxModal';
 import { takeRestorePage, setResumePage } from '../../utils/pageResume';
@@ -222,6 +223,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   const [showDailyNoob, setShowDailyNoob] = useState(restoredPage === 'daily');
   const [showOurTeam, setShowOurTeam] = useState(false);
   const [showCreations, setShowCreations] = useState(false);
+  const [showScratch, setShowScratch] = useState(false);
   // Anonymous Messages has its own address (/anonymous) so it can be opened and shared directly; the menu entry opens it, closing goes back to the home address.
   const [showAnonymous, setShowAnonymous] = useState(() => typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/anonymous');
   const openAnonymous = () => {
@@ -1075,6 +1077,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
               {featOn('suggestions') && (<MenuBanner tone="idea" entryId="idea" icon={<Lightbulb className="w-[18px] h-[18px]" />} title="Suggestion Box" blurb="Share ideas, improvements or problems" onClick={() => { markMenuEntry('idea'); setShowNoobMenu(false); setShowSuggestionBox(true); }} />)}
               {/* NOOB Cold Drinks: the scrolling page of ten 3D cans, a page of its own at /cold-drinks/ (it has a way back to the app) */}
               {featOn('drinks') && (<MenuBanner tone="drinks" entryId="drinks" icon={<CupSoda className="w-[18px] h-[18px]" />} title="NOOB Cold Drinks" blurb="Ten cans, ten flavours — scroll to explore in 3D" onClick={() => { markMenuEntry('drinks'); setShowNoobMenu(false); window.location.assign('/cold-drinks/'); }} />)}
+              {/* Scratch Reveal: people post a picture sealed under scratch foil, everybody else scratches it away */}
+              {featOn('scratch') && (<MenuBanner tone="scratch" entryId="scratch" icon={<Sparkles className="w-[18px] h-[18px]" />} title="Scratch Reveal" blurb="Scratch the foil to unveil secret photos" onClick={() => { markMenuEntry('scratch'); setShowNoobMenu(false); setShowScratch(true); }} />)}
               {featOn('creations') && (<MenuBanner tone="creations" entryId="creations" icon={<Layers className="w-[18px] h-[18px]" />} title="More of our creations" blurb="Other websites we made — visit and explore" onClick={() => { markMenuEntry('creations'); setShowNoobMenu(false); setShowCreations(true); }} />)}
               </div>
             </div>
@@ -1106,6 +1110,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
         </React.Suspense>
       )}
       {showCreations && <MoreCreationsPage onClose={() => setShowCreations(false)} />}
+      {showScratch && <ScratchPage onClose={() => setShowScratch(false)} onNavigateToProfile={onNavigateToProfile} />}
       {showDailyNoob && (
         <React.Suspense fallback={<LazyFallback />}>
           <DailyNoobView currentUser={currentUser} onNavigateToProfile={onNavigateToProfile} onClose={() => setShowDailyNoob(false)} />

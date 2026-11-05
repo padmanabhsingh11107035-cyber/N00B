@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --doodle-bg: #09090b;
+    --doodle-chalk: #f4f4f5;
+  }
+}
+
+/* Hide default scrollbar tracks everywhere */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+html, body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-x: hidden;
+}
+
+.font-doodle {
+  font-family: 'Architects Daughter', cursive, sans-serif;
+}
+
+.font-marker {
+  font-family: 'Permanent Marker', cursive, sans-serif;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Doodle texture & button shape classes */
+.doodle-card {
+  background-color: #0d0d11;
+  border: 2px solid #ffffff;
+  box-shadow: 4px 4px 0px 0px #ffffff;
+  border-radius: 18px;
+}
+
+.doodle-btn {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid #ffffff;
+  box-shadow: 3px 3px 0px 0px #ffffff;
+}
+
+.doodle-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #ffffff;
+}
+
+.doodle-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px #ffffff;
+}
+
+/* Custom Geometric and Icon Shape Buttons (strictly bounded within 0-100%, zero rotation overflow) */
+.shape-hexagon {
+  clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
+}
+
+.shape-octagon {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%);
+}
+
+.shape-diamond {
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.shape-chamfer {
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+}
+
+.shape-shield {
+  border-radius: 6px 6px 18px 18px;
+}
+
+.shape-teardrop {
+  border-radius: 50% 50% 8px 8px;
+}
+
+.shape-pebble-1 {
+  border-radius: 16px 6px 16px 6px;
+}
+
+.shape-pebble-2 {
+  border-radius: 6px 16px 6px 16px;
+}
+
+.shape-squircle {
+  border-radius: 13px;
+}
+
+.shape-pill {
+  border-radius: 9999px;
+}
+
+.shape-pick {
+  border-radius: 40% 40% 70% 70% / 30% 30% 70% 70%;
+}
+
+.shape-badge {
+  clip-path: polygon(100% 0%, 90% 50%, 100% 100%, 0% 100%, 10% 50%, 0% 0%);
+}
+
+.shape-stamp {
+  border: 2px dashed #ffffff;
+  border-radius: 10px;
+}
+
+/* Subtle chalk grain overlay */
+.chalk-grain {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 0);
+  background-size: 16px 16px;
+}
+
+/* Shimmer animations for metallic & holographic foil preview */
+@keyframes foilShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.05) 100%);
+  background-size: 200% 100%;
+  animation: foilShimmer 3s infinite linear;
+}
+
+/* Prevent unwanted browser dragging while scratching */
+canvas.scratch-canvas {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

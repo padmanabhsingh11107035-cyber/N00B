@@ -29,6 +29,9 @@ function colourAtTop(): string | null {
 // changes), so the colour is ALSO drawn by a thin fixed bar at the very top edge of the page (2 px, no taps), and is written again every time the page moves or changes.
 // A page that has its own colour (the Messages list: green while the header is in view) sets it with setStripColour; with null the colour is read from the screen again.
 let override: string | null = null;
+let overrideOwner: (() => Element | null) | null = null;
+const shown = (el: Element | null): boolean => !!el && (el as HTMLElement).getClientRects().length > 0;
+const activeOverride = (): string | null => (override && (!overrideOwner || shown(overrideOwner())) ? override : null);
 let edge: HTMLElement | null = null;
 
 function edgeBar(): HTMLElement | null {
@@ -48,19 +51,13 @@ let kicked = '';
 function kick(colour: string): void {
   if (kicked === colour) return;
   kicked = colour;
-  const run = () => {
+  [0, 150].forEach((ms) => window.setTimeout(() => {
+    if (kicked !== colour) return;
     try {
       const old = document.querySelector('meta[name="theme-color"]');
-      if (old && old.getAttribute('content') === colour) {
-        const fresh = old.cloneNode() as HTMLMetaElement;
-        old.replaceWith(fresh);
-      }
-      const root = document.documentElement;
-      root.style.transform = 'translateZ(0)';
-      window.setTimeout(() => { root.style.transform = ''; }, 40);
+      if (old && old.getAttribute('content') === colour) old.replaceWith(old.cloneNode());
     } catch { /* a nudge is never a reason to fail */ }
-  };
-  [0, 120, 600].forEach((ms) => window.setTimeout(() => { if (kicked === colour) run(); }, ms));
+  }, ms));
 }
 
 function applyColour(colour: string): void {
@@ -72,13 +69,12 @@ function applyColour(colour: string): void {
   const bar = edgeBar();
   if (bar && bar.style.backgroundColor !== colour) bar.style.backgroundColor = colour;
   last = colour;
-  kick(colour);
 }
 
 function paint(): void {
   queued = false;
   if (document.hidden) return;
-  const colour = override || colourAtTop();
+  const colour = activeOverride() || colourAtTop();
   if (!colour) return;
   applyColour(colour);
 }
@@ -86,11 +82,12 @@ function paint(): void {
 const queue = () => { if (!queued) { queued = true; window.setTimeout(paint, 120); } };
 
 /** A page with a colour of its own (null: read it from the screen again). Applied at once and again a moment later. */
-export function setStripColour(colour: string | null): void {
+export function setStripColour(colour: string | null, owner?: () => Element | null, nudge = false): void {
   if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // on a computer the page has no strip behind a clock
   override = colour;
-  kicked = '';   // a page that sets its colour always gets the nudges, also when the colour is the same as before
-  if (colour) { applyColour(colour); window.setTimeout(() => { if (override === colour) applyColour(colour); }, 90); }
+  overrideOwner = colour ? owner || null : null;
+  if (nudge) kicked = '';
+  if (colour && activeOverride()) { applyColour(colour); if (nudge) kick(colour); window.setTimeout(() => { if (override === colour && activeOverride()) applyColour(colour); }, 90); }
   queue();
 }
 

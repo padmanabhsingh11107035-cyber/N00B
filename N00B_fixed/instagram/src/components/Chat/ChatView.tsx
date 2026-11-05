@@ -1690,16 +1690,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => { io?.disconnect(); window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [rowsKey, activeFilterTab, searchQuery, mobileView]);
   // The strip above the page on a phone (behind the clock) is painted like the header while the green header is in view, and turns dark once it has scrolled away.
-  const setStrip = (green: boolean) => {
+  const setStrip = (green: boolean, nudge = false) => {
     const root = document.documentElement;
     root.style.setProperty('--msg-strip', green ? '#0E4B37' : '#0a0c0e');
-    setStripColour(green ? '#0E4B37' : '#0a0c0e');
+    setStripColour(green ? '#0E4B37' : '#0a0c0e', () => document.querySelector('[data-testid="messages-header"]')?.closest('.msg-page') ?? null, nudge);
   };
   useEffect(() => {
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
-    setStrip(true);
+    setStrip(true, true);
     // coming back from a chat: the colour is set again a moment later, from where the list really is (the header in view = green)
     const again = [80, 400, 1000, 2200].map((ms) => window.setTimeout(() => {
       if (!root.classList.contains('msg-open')) return;

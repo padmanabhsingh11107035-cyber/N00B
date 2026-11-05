@@ -1223,7 +1223,7 @@ html[data-refresh="on"] body { overscroll-behavior-x: none; }
 .msg-page [data-testid="messages-people"] button { transition: transform .15s ease; }
 .msg-page [data-testid="messages-people"] button:active { transform: scale(.95); }
 @media (prefers-reduced-motion: reduce) { .msg-page .msg-row:not([data-in]) { opacity: 1; transform: none; } .msg-page .msg-row { transition: none; } }
-@media (pointer: coarse) { html.msg-open, :root[data-theme="light"].msg-open { background-color: var(--msg-strip, #0E4B37) !important; transition: none !important; } }   /* no fade: a phone that samples the strip colour mid-fade keeps the old colour */
+/* (the colour behind the clock while Messages is open is set by utils/statusStrip.ts, only while the Messages page is on screen) */   /* no fade: a phone that samples the strip colour mid-fade keeps the old colour */
 @layer base {
   .msg-page .msg-head.force-dark, body.light .msg-page .msg-head.force-dark, :root[data-theme="light"] .msg-page .msg-head.force-dark { background-color: #0E4B37 !important; background-image: none !important; }
   .msg-page.force-dark, body.light .msg-page.force-dark { background-color: #0a0c0e !important; }

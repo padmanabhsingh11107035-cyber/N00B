@@ -1702,7 +1702,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const root = document.documentElement;
     root.classList.add('msg-open');
     setStrip(true);
-    return () => { root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); root.style.removeProperty('background-color'); setStripOverride(null); applyTheme(); repaintStrip(); };
+    // coming back from a chat: a phone may not repaint the strip behind the clock on the first change, so the colour is written again a moment later (only if this page is still open and the header is in view)
+    const again = [80, 400, 1000].map((ms) => window.setTimeout(() => {
+      if (!root.classList.contains('msg-open')) return;
+      const y = Math.max(0, listRef.current?.scrollTop ?? 0);
+      setStrip(y < 90);
+    }, ms));
+    return () => { again.forEach((t) => window.clearTimeout(t)); root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); root.style.removeProperty('background-color'); setStripOverride(null); applyTheme(); repaintStrip(); };
   }, [mobileView]);
   useEffect(() => {
     const box = listRef.current;

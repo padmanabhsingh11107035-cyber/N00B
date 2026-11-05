@@ -16,30 +16,62 @@ const hex = (r: number, g: number, b: number) => '#' + [r, g, b].map((n) => Math
 
 function colourAtTop(): string | null {
   let el: Element | null = document.elementFromPoint(Math.floor(window.innerWidth / 2), 3);
-  while (el) {
+  while (el && el !== document.documentElement) {
     const c = toRgba(getComputedStyle(el).backgroundColor);
     if (c && c[3] >= 0.95) return hex(c[0], c[1], c[2]);
     el = el.parentElement;
   }
-  return null;
+  // nothing solid at the top: the page's own colour (never the <html> colour, which is the one this file writes)
+  return document.documentElement.getAttribute('data-theme') === 'light' ? '#ffffff' : '#0a0a0a';
+}
+
+// A phone can miss a change of the page's background colour (iOS reads the colour of the strip from what sits at the top edge of the screen, and only looks again after some
+// changes), so the colour is ALSO drawn by a thin fixed bar at the very top edge of the page (2 px, no taps), and is written again every time the page moves or changes.
+// A page that has its own colour (the Messages list: green while the header is in view) sets it with setStripColour; with null the colour is read from the screen again.
+let override: string | null = null;
+let edge: HTMLElement | null = null;
+
+function edgeBar(): HTMLElement | null {
+  if (typeof document === 'undefined' || !document.body) return null;
+  if (edge && edge.isConnected) return edge;
+  edge = document.createElement('div');
+  edge.id = 'noob-top-edge';
+  edge.setAttribute('aria-hidden', 'true');
+  edge.style.cssText = 'position:fixed;top:0;left:0;right:0;height:2px;z-index:2147483000;pointer-events:none;background:transparent;contain:strict;';
+  document.body.appendChild(edge);
+  return edge;
+}
+
+function applyColour(colour: string): void {
+  const root = document.documentElement;
+  root.style.setProperty('background-color', colour, 'important');
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'theme-color'); document.head.appendChild(meta); }
+  if (meta.getAttribute('content') !== colour) meta.setAttribute('content', colour);
+  const bar = edgeBar();
+  if (bar && bar.style.backgroundColor !== colour) bar.style.backgroundColor = colour;
+  last = colour;
 }
 
 function paint(): void {
   queued = false;
-  const root = document.documentElement;
-  if (root.classList.contains('msg-open') || document.hidden) return;
-  const colour = colourAtTop();
-  if (!colour || colour === last) return;
-  last = colour;
-  root.style.backgroundColor = colour;
-  let meta = document.querySelector('meta[name="theme-color"]');
-  if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'theme-color'); document.head.appendChild(meta); }
-  meta.setAttribute('content', colour);
+  if (document.hidden) return;
+  const colour = override || colourAtTop();
+  if (!colour) return;
+  applyColour(colour);
 }
 
-const queue = () => { if (!queued) { queued = true; window.setTimeout(() => requestAnimationFrame(paint), 120); } };
+const queue = () => { if (!queued) { queued = true; window.setTimeout(paint, 120); } };
 
-/** Paint the strip again from what is on screen now (after a page that painted its own strip has closed). */
+/** A page with a colour of its own (null: read it from the screen again). Applied at once and again a moment later. */
+export function setStripColour(colour: string | null): void {
+  if (typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;   // on a computer the page has no strip behind a clock
+  override = colour;
+  if (colour) { applyColour(colour); window.setTimeout(() => { if (override === colour) applyColour(colour); }, 90); }
+  queue();
+}
+
+/** Paint the strip again from what is on screen now. */
 export function repaintStrip(): void { last = ''; queue(); }
 
 let started = false;
@@ -48,6 +80,7 @@ export function initStatusStrip(): void {
   if (started || typeof window === 'undefined' || !window.matchMedia?.('(pointer: coarse)').matches) return;
   started = true;
   new MutationObserver(queue).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+  window.setInterval(() => { if (!document.hidden) queue(); }, 2500);   // a slow check as well: whatever drifted is put right
   window.addEventListener('scroll', queue, { capture: true, passive: true });
   window.addEventListener('resize', queue);
   window.addEventListener('popstate', queue);

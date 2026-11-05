@@ -72,8 +72,7 @@ import { showNotice } from '../../utils/likeSync';
 import { ChatConversation, Message, User, ShopItem } from '../../types';
 import { can } from '../../adminAccess';
 import { setVisibleInterval } from '../../utils/visibleInterval';
-import { applyTheme, setStripOverride } from '../../utils/theme';
-import { repaintStrip } from '../../utils/statusStrip';
+import { setStripColour } from '../../utils/statusStrip';
 
 const CURATED_GIFS = [
   { id: 'g1', title: 'Victory Dance', url: 'https://i.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
@@ -1694,21 +1693,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const setStrip = (green: boolean) => {
     const root = document.documentElement;
     root.style.setProperty('--msg-strip', green ? '#0E4B37' : '#0a0c0e');
-    root.style.setProperty('background-color', green ? '#0E4B37' : '#0a0c0e', 'important');
-    setStripOverride(green ? '#0E4B37' : '#0a0c0e');
+    setStripColour(green ? '#0E4B37' : '#0a0c0e');
   };
   useEffect(() => {
     if (mobileView !== 'list') return;
     const root = document.documentElement;
     root.classList.add('msg-open');
     setStrip(true);
-    // coming back from a chat: a phone may not repaint the strip behind the clock on the first change, so the colour is written again a moment later (only if this page is still open and the header is in view)
-    const again = [80, 400, 1000].map((ms) => window.setTimeout(() => {
+    // coming back from a chat: the colour is set again a moment later, from where the list really is (the header in view = green)
+    const again = [80, 400, 1000, 2200].map((ms) => window.setTimeout(() => {
       if (!root.classList.contains('msg-open')) return;
-      const y = Math.max(0, listRef.current?.scrollTop ?? 0);
-      setStrip(y < 90);
+      setStrip(Math.max(0, listRef.current?.scrollTop ?? 0) < 90);
     }, ms));
-    return () => { again.forEach((t) => window.clearTimeout(t)); root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); root.style.removeProperty('background-color'); setStripOverride(null); applyTheme(); repaintStrip(); };
+    return () => { again.forEach((t) => window.clearTimeout(t)); root.classList.remove('msg-open'); root.style.removeProperty('--msg-strip'); setStripColour(null); };
   }, [mobileView]);
   useEffect(() => {
     const box = listRef.current;

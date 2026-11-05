@@ -605,6 +605,8 @@ async function handlePush(req: Request, body: any, admin: any): Promise<Response
     notifPayload.tag = `call:${callData.chatId}`;
     notifPayload.requireInteraction = true;
   }
+  // A chat message opens the Chat page when it is tapped. (The service worker keeps it off the screen while the app is open in front of the person.)
+  if (data.type === 'new_message') { notifPayload.url = '/chat'; notifPayload.type = 'new_message'; }
   const payload = te.encode(JSON.stringify(notifPayload));
   const tally = { sent: 0, gone: 0, failed: 0 };
   const dead: { userId: string; endpoint: string }[] = [];

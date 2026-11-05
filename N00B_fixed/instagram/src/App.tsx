@@ -129,6 +129,7 @@ import { usePageLayers, PageLayerSlot, KeepAliveTab, useTabScroll } from './util
 import { LogoLightbox } from './components/Common/LogoLightbox';
 import { MenuList, type MenuGroupSpec, type MenuItemSpec } from './components/Navigation/SideMenu';
 import { useMenuGroups, menuItemClick } from './utils/menuEntries';
+import { useNewSince } from './utils/navBadges';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { FeatureFlagsContext } from './utils/featureFlags';
 import { TAB_FEATURE, disabledFeatureSet, funFeatureKey, setCalcLocked } from './utils/features';
@@ -399,6 +400,14 @@ export default function App() {
   const [pendingExploreSearch, setPendingExploreSearch] = useState<string | null>(null);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  // The red numbers on the bottom bar and the long strip (utils/navBadges.ts): new posts from the people you follow (Home), new reels (Reels), unread messages (Chat, counted by
+  // useUnreadChatCount). The Home number also counts the unread items of the bell (likes, comments, follows ...) and Games the unread challenges. Chat alerts are not in that list:
+  // they only ring the phone.
+  const followsAuthor = useCallback((p: { userId: string }) => !!currentUser?.followingIds?.includes(p.userId), [currentUser?.followingIds]);
+  const newPosts = useNewSince(posts, { uid: currentUser?.id || '', name: 'home', active: activeTab === 'feed', only: followsAuthor });
+  const newReels = useNewSince(reels, { uid: currentUser?.id || '', name: 'reels', active: activeTab === 'reels' });
+  const unreadGames = notifications.filter((n) => !n.isRead && (n.type === 'game_challenge' || n.type === 'noob_draw_ready')).length;
+  const navBadges = { feed: newPosts + Math.max(0, unreadNotificationCount - unreadGames), reels: newReels, games: unreadGames };
   // New notifications make a sound (see utils/notificationSound.ts): the ids already known are remembered, so only ones that
   // arrive after the first load count as new, and nothing sounds for a notification the person has already seen.
   const seenNotificationIdsRef = useRef<Set<string> | null>(null);
@@ -1718,13 +1727,13 @@ export default function App() {
       id: 'pages',
       title: 'Pages',
       items: sideItems([
-        { id: 'home', label: 'Home', icon: <Home />, active: pageTab === 'feed', onClick: () => handleSelectNavTab('feed'), testId: 'side-home' },
+        { id: 'home', label: 'Home', icon: <Home />, active: pageTab === 'feed', badge: navBadges.feed > 0 ? navBadges.feed : undefined, onClick: () => handleSelectNavTab('feed'), testId: 'side-home' },
         featOn('explore') && { id: 'explore', label: 'Explore', icon: <Compass />, active: pageTab === 'explore', onClick: () => handleSelectNavTab('explore'), testId: 'side-explore' },
-        featOn('reels') && { id: 'reels', label: 'Reels', icon: <Film />, active: pageTab === 'reels', onClick: () => handleSelectNavTab('reels'), testId: 'side-reels' },
+        featOn('reels') && { id: 'reels', label: 'Reels', icon: <Film />, active: pageTab === 'reels', badge: navBadges.reels > 0 ? navBadges.reels : undefined, onClick: () => handleSelectNavTab('reels'), testId: 'side-reels' },
         featOn('videos') && { id: 'videos', label: 'Feed', icon: <Youtube />, active: pageTab === 'videos', onClick: () => handleSelectNavTab('videos'), testId: 'side-videos' },
         featOn('create') && { id: 'create', label: 'Create', icon: <CirclePlus />, onClick: () => handleSelectNavTab('post'), testId: 'side-create' },
         featOn('chat') && { id: 'chat', label: 'Chat', icon: <MessageSquare />, active: pageTab === 'chat', badge: unreadChatCount > 0 ? unreadChatCount : undefined, onClick: () => handleSelectNavTab('chat'), testId: 'side-chat' },
-        featOn('games') && { id: 'games', label: 'Mini-Games', icon: <Gamepad2 />, active: pageTab === 'games', onClick: () => handleSelectNavTab('games'), testId: 'side-games' },
+        featOn('games') && { id: 'games', label: 'Mini-Games', icon: <Gamepad2 />, active: pageTab === 'games', badge: navBadges.games > 0 ? navBadges.games : undefined, onClick: () => handleSelectNavTab('games'), testId: 'side-games' },
         !musicHidden && { id: 'music', label: 'Music', icon: <Music />, active: pageTab === 'music', onClick: () => handleSelectNavTab('music'), testId: 'side-music' },
       ]),
     },
@@ -2098,6 +2107,7 @@ export default function App() {
         onPressTab={(tab) => { const hit = TAB_PRELOADS.find(([t]) => t === tab); if (hit) void hit[1]().catch(() => {}); }}
         userAvatar={currentUser.avatar}
         unreadChatCount={unreadChatCount}
+        badges={navBadges}
         hideOnMobile={activeTab === 'chat' && chatConversationOpenOnMobile && pageLayers.layers.length === 0}
       />
 

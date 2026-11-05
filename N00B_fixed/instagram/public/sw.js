@@ -91,6 +91,20 @@ self.addEventListener('push', (event) => {
     ...(isCallRing ? { tag: data.tag, requireInteraction: true } : {})
   };
 
+  // A chat message is an alert for a person who is OUTSIDE the app. While NOOB is open in front of them, the chat list already shows it, so it is not shown as a banner and makes no
+  // sound: it is shown silently and taken away again at once (a phone requires every push to show something, so it is never skipped altogether).
+  if (data.type === 'new_message') {
+    event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const inFront = list.some((c) => c.visibilityState === 'visible');
+      if (!inFront) return self.registration.showNotification(data.title || 'NOOB', options);
+      return self.registration.showNotification(data.title || 'NOOB', { ...options, silent: true, vibrate: [], tag: 'noob-in-app-chat' })
+        .then(() => new Promise((resolve) => setTimeout(resolve, 400)))
+        .then(() => self.registration.getNotifications({ tag: 'noob-in-app-chat' }))
+        .then((shown) => shown.forEach((n) => n.close()));
+    }));
+    return;
+  }
+
   event.waitUntil(self.registration.showNotification(data.title || 'NOOB', options));
 });
 

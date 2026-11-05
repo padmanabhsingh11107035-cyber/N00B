@@ -1555,7 +1555,8 @@ export async function fetchAppNotifications(): Promise<{ notifications: AppNotif
   try {
     if (!(await currentSession())) return { notifications: [] };
     const res = await rpc<{ notifications: any[] }>('my_notifications');
-    return { notifications: (res.notifications || []).map(mapNotification) };
+    // a chat message only rings the phone: it is never listed in the app (the database leaves them out too, this keeps the app right before that is run)
+    return { notifications: (res.notifications || []).filter((n: any) => n?.type !== 'new_message').map(mapNotification) };
   } catch {
     return { notifications: [], failed: true };
   }

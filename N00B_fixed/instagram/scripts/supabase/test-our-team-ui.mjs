@@ -54,7 +54,7 @@ const teamIdx = feed.indexOf("go('team', ");
 const dailyIdx = feed.indexOf("go('daily', ");
 check(drawIdx > 0 && teamIdx > drawIdx && teamIdx < dailyIdx, 'the Home menu: NOOB Draw first, then Our Team, then the rest');
 check(/setShowOurTeam\(true\)/.test(feed) && /<OurTeamPage\s+currentUser=\{currentUser\}\s+onClose=\{\(\) => setShowOurTeam\(false\)\}/.test(feed) && /React\.lazy\(\(\) => import\('\.\.\/Team\/OurTeamPage'\)\)/.test(feed), 'the menu item opens the page, which is fetched only when opened');
-check(/h-full overflow-y-auto overscroll-contain/.test(feed) && /shrink-0 flex items-center justify-between px-4 pt-4 pb-2/.test(feed), 'the Home menu scrolls when its page buttons do not all fit, with the NOOB title and the close button staying put');
+check(/h-full overflow-y-auto overscroll-contain/.test(feed) && /shrink-0 flex items-center gap-2 px-3 pt-3 pb-2/.test(feed), 'the Home menu scrolls when its page buttons do not all fit, with the NOOB title and the close button staying put');
 const page = read('src/components/Team/OurTeamPage.tsx');
 check(/fetchTeamMembers/.test(page) && /Try again/.test(page) && /aria-busy/.test(page) && /coming together/.test(page), 'the page handles loading, a failed load and an empty team');
 check(/onError=\{\(\) => setBroken\(true\)\}/.test(page) && /initials\(member\.name\)/.test(page), 'a photo that fails to load falls back to the initials');

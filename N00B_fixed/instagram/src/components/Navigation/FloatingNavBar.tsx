@@ -11,6 +11,8 @@ interface FloatingNavBarProps {
   onSelectTab: (tab: NavTab) => void;
   userAvatar: string;
   unreadChatCount?: number;
+  // The red numbers on the other pages: how many new things are waiting there (new posts on Home, new reels on Reels, challenges on Games ...). Chat has unreadChatCount.
+  badges?: Partial<Record<NavTab, number>>;
   // Hide the bar on phone-width screens while an active chat conversation
   // fills the screen; it stays available on the chat list and on md+ split view.
   hideOnMobile?: boolean;
@@ -26,6 +28,13 @@ interface NavButtonProps {
   onClick: () => void;
   children: React.ReactNode;
 }
+
+// The red dot with the number of updates on a page's icon (99+ when there are many).
+const NavBadge: React.FC<{ count: number }> = ({ count }) => (count > 0 ? (
+  <span className="nav-badge absolute -top-1.5 -right-2.5 px-1 min-w-[15px] h-[15px] bg-red-500 text-white font-black text-[8px] rounded-full flex items-center justify-center shadow-sm" data-testid="nav-badge" aria-label={`${count} new`}>
+    {count > 99 ? '99+' : count}
+  </span>
+) : null);
 
 // One column of the bar: a line icon with a small label under it (the label is left out for the Create button, which is only a circled plus).
 // The open page is the one in full colour with a heavier icon and bold label; the colours and weights live in index.css (#floating-bottom-nav .nav-item).
@@ -50,6 +59,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   onSelectTab,
   userAvatar,
   unreadChatCount = 0,
+  badges = {},
   hideOnMobile = false,
   onPressTab
 }) => {
@@ -59,6 +69,7 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
   // While the keyboard is open the bar steps aside: the keyboard of a phone is see-through glass, and the bar showed through it (with the posts behind) in the gap above it
   const keyboardOpen = useKeyboardOpen();
   // Tap "You" once: your profile. Tap it twice quickly: jump to your other account with the same e-mail (see utils/quickSwitch.ts).
+  const count = (tab: NavTab): number => (tab === 'chat' ? (unreadChatCount > 0 ? unreadChatCount : 0) : badges[tab] || 0);
   const lastProfileTap = useRef(0);
   const tapProfile = () => {
     const now = Date.now();
@@ -84,18 +95,27 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
         }}
       >
         <NavButton id="nav-item-feed" label="Home" title="Home" active={activeTab === 'feed'} onClick={() => onSelectTab('feed')}>
-          <Home className="nav-ico w-6 h-6" />
+          <div className="relative">
+            <Home className="nav-ico w-6 h-6" />
+            <NavBadge count={count('feed')} />
+          </div>
         </NavButton>
 
         {showExplore && (
           <NavButton id="nav-item-explore" label="Explore" title="Explore" active={activeTab === 'explore'} onClick={() => onSelectTab('explore')}>
-            <Compass className="nav-ico w-6 h-6" />
+            <div className="relative">
+              <Compass className="nav-ico w-6 h-6" />
+              <NavBadge count={count('explore')} />
+            </div>
           </NavButton>
         )}
 
         {showReels && (
           <NavButton id="nav-item-reels" label="Reels" title="Reels" active={activeTab === 'reels'} onClick={() => onSelectTab('reels')}>
-            <Film className="nav-ico w-6 h-6" />
+            <div className="relative">
+              <Film className="nav-ico w-6 h-6" />
+              <NavBadge count={count('reels')} />
+            </div>
           </NavButton>
         )}
 
@@ -110,29 +130,31 @@ export const FloatingNavBar: React.FC<FloatingNavBarProps> = ({
           <NavButton id="nav-item-chat" label="Chat" title="Direct Messages" active={activeTab === 'chat'} onClick={() => onSelectTab('chat')}>
             <div className="relative">
               <MessageSquare className="nav-ico w-6 h-6" />
-              {unreadChatCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 px-1 min-w-[15px] h-[15px] bg-red-500 text-white font-black text-[8px] rounded-full flex items-center justify-center shadow-sm animate-pulse">
-                  {unreadChatCount}
-                </span>
-              )}
+              <NavBadge count={count('chat')} />
             </div>
           </NavButton>
         )}
 
         {showGames && (
           <NavButton id="nav-item-games" label="Games" title="Mini-Games Arena" active={activeTab === 'games'} onClick={() => onSelectTab('games')}>
-            <Gamepad2 className="nav-ico w-6 h-6" />
+            <div className="relative">
+              <Gamepad2 className="nav-ico w-6 h-6" />
+              <NavBadge count={count('games')} />
+            </div>
           </NavButton>
         )}
 
         <NavButton id="nav-item-profile" label="You" title="My Profile" active={activeTab === 'profile'} onClick={tapProfile}>
-          <span className="nav-ava block w-6 h-6 rounded-full overflow-hidden">
-            <img
-              src={userAvatar || '/noob-logo.svg.jpeg'}
-              alt="You"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
+          <span className="relative block">
+            <span className="nav-ava block w-6 h-6 rounded-full overflow-hidden">
+              <img
+                src={userAvatar || '/noob-logo.svg.jpeg'}
+                alt="You"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </span>
+            <NavBadge count={count('profile')} />
           </span>
         </NavButton>
       </div>

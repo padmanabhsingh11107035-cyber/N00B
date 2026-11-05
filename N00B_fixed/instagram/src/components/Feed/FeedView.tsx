@@ -34,7 +34,8 @@ import {
   Youtube,
   Music,
   Bot,
-  UtensilsCrossed
+  UtensilsCrossed,
+  ChevronLeft
 } from 'lucide-react';
 import { openNoobDraw } from '../Draw/drawStore';
 import { openStudio, useStudioState } from '../Studio/studioStore';
@@ -950,28 +951,27 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {showSparkXModal && <SparkXApplicationModal closed={!sparkxOpen} onClose={() => setShowSparkXModal(false)} />}
       {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
 
-      {/* NOOB's menu on a phone: the three lines next to the wordmark open it (a tablet / laptop / computer has the long strip instead) */}
+      {/* NOOB's menu on a phone: the three lines next to the wordmark open it, as a page that fills the whole screen from the first moment (a tablet / laptop / computer has the long strip
+          instead). data-noob-keep: the app's page-frame rules (utils/pageFrames.ts) leave it alone; they used to judge it a narrow drawer and a page by turns, so it grew and shrank. */}
       {showNoobMenu && createPortal(
-        <div className="md:hidden fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start overscroll-contain overflow-hidden touch-pan-y" style={{ touchAction: 'pan-y' }} onClick={() => setShowNoobMenu(false)}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: `${Math.round(Math.min(288, window.innerWidth * 0.85))}px`, minWidth: 0, flex: '0 0 auto', boxSizing: 'border-box', overflowX: 'hidden', touchAction: 'pan-y' }}
-            className="nmenu nmenu-drawer"
-            data-testid="noob-menu-drawer"
-          >
-            <div className="shrink-0 flex items-center justify-between px-4 pt-4 pb-2">
-              <h2 className="nmenu-wordmark text-base">NOOB</h2>
-              <button onClick={() => setShowNoobMenu(false)} className="nmenu-iconbtn" aria-label="Close menu" data-testid="noob-menu-close">
-                <X />
-              </button>
+        <div
+          className="nmenu md:hidden fixed inset-0 z-[95] flex flex-col overscroll-contain overflow-hidden"
+          style={{ touchAction: 'pan-y', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+          data-noob-keep="1"
+          data-testid="noob-menu-drawer"
+        >
+          <div className="shrink-0 flex items-center gap-2 px-3 pt-3 pb-2">
+            <button onClick={() => setShowNoobMenu(false)} className="nmenu-iconbtn" aria-label="Close menu" data-testid="noob-menu-close">
+              <ChevronLeft />
+            </button>
+            <h2 className="nmenu-wordmark text-xl">NOOB</h2>
+          </div>
+          {/* every page of the menu: it scrolls when they do not all fit (short phones, many pages) */}
+          <div className="relative flex-1 min-h-0">
+            <div ref={menuScroll.ref} className="h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] no-scrollbar">
+              <MenuList groups={menuGroups} />
             </div>
-            {/* every page of the menu: it scrolls when they do not all fit (short phones, many pages) */}
-            <div className="relative flex-1 min-h-0">
-              <div ref={menuScroll.ref} className="h-full overflow-y-auto overscroll-contain pb-[max(1rem,env(safe-area-inset-bottom))] no-scrollbar">
-                <MenuList groups={menuGroups} />
-              </div>
-              {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
-            </div>
+            {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
           </div>
         </div>,
         document.body

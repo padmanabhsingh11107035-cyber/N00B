@@ -390,7 +390,7 @@ body { min-height: 100vh; min-height: 100dvh; }
 .nmenu-foot .nmenu-groups { padding-top: 6px; padding-bottom: 8px; }
 
 /* The three-line menu of a phone: the same list in a drawer from the left. */
-.nmenu-drawer { display: flex; flex-direction: column; height: 100%; border-right: 1px solid var(--nm-line); box-shadow: var(--nm-shadow); }
+
 
 /* ============================================
    Liquid Glass — Apple-style translucent glass:

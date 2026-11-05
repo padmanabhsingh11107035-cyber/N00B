@@ -5,6 +5,8 @@ import { formatRelativeTime } from '../../utils/formatTime';
 import { SheetGrip, CLOSE_X_CLASS } from '../Common/SheetGrip';
 import { X, Send, Heart, Pin, Trash2, ShieldCheck, CheckSquare, Square, CornerDownRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Post, PostComment, User } from '../../types';
+import { sendLike } from '../../utils/likeSync';
+import { applyLikes } from '../../utils/likeLedger';
 import { fetchComments, addComment, deleteComment, togglePinComment, toggleCommentLike, fetchUserById } from '../../services/api';
 import { VerifiedBadge } from '../Common/VerifiedBadge';
 import { CommentMediaComposer, CommentAttachmentPreview, CommentMediaView, type CommentAttachment } from './CommentMediaComposer';
@@ -49,7 +51,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
     setLoading(true);
     try {
       const data = await fetchComments(post.id);
-      setComments(Array.isArray(data) ? data : []);
+      setComments(Array.isArray(data) ? applyLikes(data, 'comment') : []);
     } catch (err) {
       console.error(err);
       setComments([]);
@@ -108,23 +110,13 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ post, currentUser,
   // Optimistic, but reconciled with the real (persisted) result — a like used to just flip local
   // state with no backend call at all, so it silently reset the moment the sheet was closed and
   // reopened. Rolled back on failure instead of trusting the optimistic flip.
-  const handleToggleLike = async (commentId: string) => {
-    const prev = comments;
-    setComments((cur) =>
-      cur.map((item) =>
-        item.id === commentId
-          ? { ...item, isLiked: !item.isLiked, likesCount: item.likesCount + (item.isLiked ? -1 : 1) }
-          : item
-      )
-    );
-    const res = await toggleCommentLike(post.id, commentId);
-    if (!res.success) {
-      setComments(prev);
-      return;
-    }
-    setComments((cur) =>
-      cur.map((item) => (item.id === commentId ? { ...item, isLiked: res.isLiked, likesCount: res.likesCount } : item))
-    );
+  const handleToggleLike = (commentId: string) => {
+    const before = comments.find((item) => item.id === commentId);
+    if (!before) return;
+    const want = !before.isLiked;
+    const show = (isLiked: boolean, likesCount: number) => setComments((cur) => cur.map((item) => (item.id === commentId ? { ...item, isLiked, likesCount } : item)));
+    show(want, Math.max(0, before.likesCount + (want ? 1 : -1)));
+    sendLike(`comment:${commentId}`, want, () => toggleCommentLike(post.id, commentId).then((r: any) => (r.success ? r : { error: r.error || 'The like was not saved.' })), (r) => show(r.isLiked, r.likesCount), () => show(before.isLiked, before.likesCount));
   };
 
   const handleBulkDelete = async () => {

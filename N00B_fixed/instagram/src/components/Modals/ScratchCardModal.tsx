@@ -17,7 +17,7 @@ const REVEAL_THRESHOLD = 0.55;
 export const ScratchCardModal: React.FC<ScratchCardModalProps> = ({ scratchCardId, onClose, onUserUpdated }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPointerDown = useRef(false);
-  const [gift, setGift] = useState<{ type: string; value: number | string; label: string } | null>(null);
+  const [gift, setGift] = useState<{ type: string; value: number | string; label: string; addons?: Array<{ type: string; value: number | string; label: string }> } | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -143,6 +143,7 @@ export const ScratchCardModal: React.FC<ScratchCardModalProps> = ({ scratchCardI
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-pink-500/20 via-amber-400/10 to-zinc-900">
                 <PartyPopper className="w-8 h-8 text-amber-400 mb-2" />
                 <span className="text-lg font-black text-white px-3 text-center">{gift?.label}</span>
+                {(gift?.addons || []).map((a, i) => <span key={i} className="text-xs font-bold text-sky-300 px-3 text-center" data-testid="gift-addon">+ {a.label}</span>)}
               </div>
               {!isRevealed && (
                 <canvas

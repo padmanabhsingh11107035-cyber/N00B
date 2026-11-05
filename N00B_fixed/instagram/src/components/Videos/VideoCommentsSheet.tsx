@@ -1,3 +1,5 @@
+import { sendLike } from '../../utils/likeSync';
+import { applyLikes } from '../../utils/likeLedger';
 import React, { useState, useEffect } from 'react';
 import { useSheetBox } from '../../utils/useVisualViewport';
 import { useSheetDrag } from '../../utils/sheetDrag';
@@ -51,7 +53,7 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
     setLoading(true);
     try {
       const data = await fetchLongVideoComments(video.id);
-      setComments(Array.isArray(data) ? data : []);
+      setComments(Array.isArray(data) ? applyLikes(data, 'comment') : []);
     } catch (err) {
       console.error(err);
       setComments([]);
@@ -101,17 +103,13 @@ export const VideoCommentsSheet: React.FC<VideoCommentsSheetProps> = ({ video, c
     }
   };
 
-  const handleToggleLike = async (commentId: string) => {
-    const prev = comments;
-    setComments((cur) =>
-      cur.map((item) => (item.id === commentId ? { ...item, isLiked: !item.isLiked, likesCount: item.likesCount + (item.isLiked ? -1 : 1) } : item))
-    );
-    const res = await toggleLongVideoCommentLike(video.id, commentId);
-    if (!res.success) {
-      setComments(prev);
-      return;
-    }
-    setComments((cur) => cur.map((item) => (item.id === commentId ? { ...item, isLiked: res.isLiked, likesCount: res.likesCount } : item)));
+  const handleToggleLike = (commentId: string) => {
+    const before = comments.find((item) => item.id === commentId);
+    if (!before) return;
+    const want = !before.isLiked;
+    const show = (isLiked: boolean, likesCount: number) => setComments((cur) => cur.map((item) => (item.id === commentId ? { ...item, isLiked, likesCount } : item)));
+    show(want, Math.max(0, before.likesCount + (want ? 1 : -1)));
+    sendLike(`comment:${commentId}`, want, () => toggleLongVideoCommentLike(video.id, commentId).then((r: any) => (r.success ? r : { error: r.error || 'The like was not saved.' })), (r) => show(r.isLiked, r.likesCount), () => show(before.isLiked, before.likesCount));
   };
 
   const handleBulkDelete = async () => {

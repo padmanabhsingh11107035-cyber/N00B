@@ -80,12 +80,29 @@ function applyColour(colour: string): void {
   if (changed) poke(colour);
 }
 
+// A colour read from the screen that is NOT the page's own colour has to be seen twice in a row (about 160 ms apart) before it is used. A page that is scrolled past its end (the
+// rubber-band bounce of a phone), or an element that flashes by for a few frames, used to turn the whole page background white for a moment in the dark theme (and the strip behind
+// the clock with it). During a bounce nothing is read at all; in the dark theme a nearly white reading is never used; the page's own colour is always put at once.
+let pending = '';
+const lightness = (c: string): number => { const n = parseInt(c.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+function bouncing(): boolean {
+  const y = window.scrollY, doc = document.documentElement;
+  return y < 0 || y + window.innerHeight > doc.scrollHeight + 1;
+}
+
 function paint(): void {
   queued = false;
   if (document.hidden) return;
-  const colour = activeOverride() || colourAtTop();
+  const own = activeOverride();
+  if (own) { pending = ''; applyColour(own); return; }
+  if (bouncing()) return;
+  const colour = colourAtTop();
   if (!colour) return;
-  applyColour(colour);
+  if (colour === pageColour() || colour === last) { pending = ''; applyColour(colour); return; }
+  if (document.documentElement.getAttribute('data-theme') !== 'light' && lightness(colour) > 0.75) { pending = ''; return; }
+  if (pending === colour) { pending = ''; applyColour(colour); return; }
+  pending = colour;
+  window.setTimeout(queue, 160);   // look once more: only a colour that stays is used
 }
 
 const queue = () => { if (!queued) { queued = true; window.setTimeout(paint, 120); } };

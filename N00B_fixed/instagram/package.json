@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "guard": "node scripts/guard.mjs",
     "audit:db": "node scripts/security-audit-db.mjs",
     "dev": "tsx server.ts",
     "i18n": "node scripts/i18n/extract.mjs",

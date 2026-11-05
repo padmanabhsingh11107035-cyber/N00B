@@ -130,6 +130,7 @@ import { LogoLightbox } from './components/Common/LogoLightbox';
 import { MenuList, type MenuGroupSpec, type MenuItemSpec } from './components/Navigation/SideMenu';
 import { useMenuGroups, menuItemClick } from './utils/menuEntries';
 import { useNewSince } from './utils/navBadges';
+import { applyLikes, useLikeLedgerVersion } from './utils/likeLedger';
 import { parseFunPath, funPath, type FunLocation } from './utils/funRoutes';
 import { FeatureFlagsContext } from './utils/featureFlags';
 import { TAB_FEATURE, disabledFeatureSet, funFeatureKey, setCalcLocked } from './utils/features';
@@ -350,12 +351,16 @@ export default function App() {
     return () => { window.removeEventListener(OPEN_SWITCH_SHEET_EVENT, open); window.removeEventListener(QUICK_SWITCH_MESSAGE_EVENT, say); };
   }, []);
   const isUpdateAvailable = useUpdateAvailable();
-  const [posts, setPosts] = useState<Post[]>([]);
+  // Every like the person makes is remembered in one place (utils/likeLedger.ts) and every list below is shown through it, so a like can never look lost on another screen.
+  const likeVersion = useLikeLedgerVersion();
+  const [postsState, setPosts] = useState<Post[]>([]);
+  const posts = useMemo(() => applyLikes(postsState, 'post'), [postsState, likeVersion]);
   // the same list object until the posts really change, so drawing the app again (e.g. when a profile opens) never makes Home or Explore start over
   const visiblePosts = useMemo(() => posts.filter((p) => !p.isArchived), [posts]);
   const postsRef = useRef<Post[]>([]);
   postsRef.current = posts;
-  const [stories, setStories] = useState<Story[]>([]);
+  const [storiesState, setStories] = useState<Story[]>([]);
+  const stories = useMemo(() => applyLikes(storiesState, 'story'), [storiesState, likeVersion]);
   // The home-page story tray: the stories this person may see plus random accounts to follow (reshuffled each time the
   // feed loads or is refreshed), worked out in utils/storyTray.ts. The full-screen viewer plays the same list in the same order;
   // that order is fixed when the viewer opens, so a ring turning grey while you watch can't shuffle the stories under you.
@@ -366,7 +371,8 @@ export default function App() {
     const byId = new Map(stories.map((s) => [s.id, s] as const));
     return storyViewerOrder.map((id) => byId.get(id)).filter((s): s is Story => !!s);
   }, [stories, storyViewerOrder]);
-  const [reels, setReels] = useState<Reel[]>([]);
+  const [reelsState, setReels] = useState<Reel[]>([]);
+  const reels = useMemo(() => applyLikes(reelsState, 'reel'), [reelsState, likeVersion]);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
   // The tray's circles: the server's suggestions topped up with random people from the app's own list of users (a new random order each time the feed loads or
   // is refreshed, steady in between), then ordered with the stories (utils/storyTray.ts).

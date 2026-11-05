@@ -1,3 +1,4 @@
+import { applyLikes, useLikeLedgerVersion } from '../../utils/likeLedger';
 import { useFeatureOn } from '../../utils/featureFlags';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdBanner } from '../Ads/AdBanner';
@@ -99,7 +100,9 @@ export const HomeVideoFeedView: React.FC<HomeVideoFeedViewProps> = ({
 }) => {
   const isMasterAdmin = can(currentUser, 'moderate_content');
   const pinnedItems = usePinnedFeedItems();
-  const [videos, setVideos] = useState<LongVideo[]>([]);
+  const [videosState, setVideos] = useState<LongVideo[]>([]);
+  const likeVersion = useLikeLedgerVersion();
+  const videos = useMemo(() => applyLikes(videosState, 'video'), [videosState, likeVersion]);   // a like made anywhere shows here too (utils/likeLedger.ts)
   const [liveStreams, setLiveStreams] = useState<LiveStreamSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [openVideo, setOpenVideo] = useState<LongVideo | null>(null);

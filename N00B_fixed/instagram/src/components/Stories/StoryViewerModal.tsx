@@ -3,6 +3,7 @@ import { openInApp } from '../../utils/inAppLinks';
 import { can } from '../../adminAccess';
 import { X, ChevronLeft, ChevronRight, Heart, Loader2, Send, Sparkles, MessageCircle, MapPin, Check, Volume2, VolumeX, Eye, MoreVertical, Trash2, Pencil, Link2, Music, VenetianMask } from 'lucide-react';
 import { Story, User } from '../../types';
+import { sendLike } from '../../utils/likeSync';
 import { recordStoryView, toggleStoryLike, fetchStoryById, addCommentToStory, fetchStoryViewers, fetchUserById, fetchStoryPollResults, voteStoryPoll, answerStoryQuestion, fetchStoryQuestionResults } from '../../services/api';
 import type { StoryPollResult, StoryQuestionAnswer } from '../../services/api';
 import { formatRelativeTime } from '../../utils/formatTime';
@@ -1101,20 +1102,17 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                   confetti({ particleCount: 30, spread: 45, origin: { y: 0.85 } });
                   setLikeBurstKey((k) => k + 1);
                 }
-                toggleStoryLike(id).then((res) => {
-                  if (!res.success) {
-                    // Roll back — the server rejected it (story expired, no longer visible, etc.)
-                    setLikedStoryIds((prev) => {
-                      const next = new Set(prev);
-                      if (wasLiked) next.add(id); else next.delete(id);
-                      return next;
-                    });
-                    return;
-                  }
-                  // Tell the parent so its own `stories` state stays correct — otherwise this is
-                  // only ever true until the viewer is closed and reopened.
-                  onToggleLike?.(id, !!res.isLiked, res.likesCount ?? 0);
-                });
+                // Sent one at a time and in order, remembered for every screen (utils/likeSync.ts, likeLedger.ts); rolled back if the server refuses (story expired, no longer visible ...)
+                sendLike(
+                  `story:${id}`, !wasLiked,
+                  () => toggleStoryLike(id).then((res) => (res.success ? res : { error: res.error || 'The like was not saved.' })),
+                  (res) => {
+                    setLikedStoryIds((prev) => { const next = new Set(prev); if (res.isLiked) next.add(id); else next.delete(id); return next; });
+                    // Tell the parent so its own `stories` state stays correct (otherwise this is only true until the viewer is closed and reopened).
+                    onToggleLike?.(id, res.isLiked, res.likesCount);
+                  },
+                  () => setLikedStoryIds((prev) => { const next = new Set(prev); if (wasLiked) next.add(id); else next.delete(id); return next; })
+                );
               }}
               className={`relative p-2 rounded-full bg-black/80 backdrop-blur-md border border-neutral-700 cursor-pointer transition-transform ${
                 isLiked ? 'text-red-500 scale-110' : 'text-white/80 hover:text-white'

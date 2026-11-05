@@ -171,6 +171,8 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
   // background the moment it's shown; by the time anyone actually taps, it's usually already in hand.
   const profileCacheRef = useRef<Map<string, User>>(new Map());
 
+  // The page starts over only when the SET of reels changes (never because a like changed one of them)
+  const reelsKey = reels.map((r) => r.id).join('|');
   useEffect(() => {
     if (initialReelId) {
       // Deep-linked reel (e.g. opened from a share or profile grid) plays
@@ -183,7 +185,21 @@ export const ReelsView: React.FC<ReelsViewProps> = ({
       setLocalReels(orderUnseenFirst(reels, currentUser.id, 'reels'));
     }
     setCurrentIndex(0);
-  }, [reels, initialReelId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reelsKey, initialReelId]);
+  // A like (or a count) that changed in the app's list is copied into the reels on this page IN PLACE: the order and the reel being watched never change because of it.
+  useEffect(() => {
+    const fresh = new Map<string, Reel>(reels.map((r): [string, Reel] => [r.id, r]));
+    setLocalReels((prev) => {
+      let changed = false;
+      const next = prev.map((r) => {
+        const f = fresh.get(r.id);
+        if (f && (f.isLiked !== r.isLiked || f.likesCount !== r.likesCount)) { changed = true; return { ...r, isLiked: f.isLiked, likesCount: f.likesCount }; }
+        return r;
+      });
+      return changed ? next : prev;
+    });
+  }, [reels]);
 
   const currentReel = localReels[currentIndex] || localReels[0];
   const nextReel = localReels[currentIndex + 1];

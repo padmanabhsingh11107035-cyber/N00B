@@ -2,6 +2,8 @@
 // keeps quick repeated taps in order. While one request is on its way, later taps only remember what the person wants in the
 // end ("liked" or "not liked"), and when the request comes back one more request is sent only if the server ended up somewhere else.
 // If the server refuses, the heart goes back and a short message says so.
+import { recordLike, forgetLike } from './likeLedger';
+
 export interface LikeAnswer { isLiked: boolean; likesCount: number }
 
 const wishes = new Map<string, boolean>();   // key -> what the person wants now, for every like that is being sent
@@ -17,6 +19,7 @@ export function sendLike(
   onServer: (answer: LikeAnswer) => void,
   onFail: () => void
 ): void {
+  recordLike(key, want);   // every screen shows the person's own answer from this moment (utils/likeLedger.ts)
   if (wishes.has(key)) { wishes.set(key, want); return; }
   wishes.set(key, want);
   void (async () => {
@@ -25,9 +28,10 @@ export function sendLike(
         const res = await send();
         if (!res || res.error || typeof res.isLiked !== 'boolean') throw new Error(res?.error || 'The like was not saved.');
         onServer({ isLiked: res.isLiked, likesCount: Number(res.likesCount) || 0 });
-        if (wishes.get(key) === res.isLiked) return;
+        if (wishes.get(key) === res.isLiked) { recordLike(key, res.isLiked, Number(res.likesCount) || 0); return; }
       }
     } catch (err: any) {
+      forgetLike(key);
       onFail();
       const why = String(err?.message || '');
       showNotice(

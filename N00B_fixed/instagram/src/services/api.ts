@@ -2,7 +2,7 @@
 // this file only lists them under the names the screens have always imported.
 export type { HelixBoard, HelixBoardEntry } from './supabaseApi';
 export type { AdminGrievance, AdminDailyOverview, AdminDailyDay, AdminStorageOverview, ModerationMode, ModerationSettings, ModerationOverview, ModerationLogRow, ModerationVerdict, ModerationHealth, AdminUnusedScan, SuggestionCategory, SuggestionStatus, MySuggestion, AdminSuggestion, GifItem, StoryPollResult, StoryQuestionAnswer, NoobAiFeedbackItem, LiveLoungePendingInvite, LiveLoungeHistoryEntry, SignupPayload, OAuthSignupPayload, OAuthAccountChoice, OAuthSignInResult, SocialProvider, EnabledSocialProvider, CommentMediaInput, PresencePlatform, PresenceEntry, ActiveDeviceSession, ActiveDevice, Storefront, LoginHistoryEntry, AdminSongGuessTrack, SongGuessPresenceEntry, LoginApprovalTicket, LoginApprovalStatus } from './supabaseApi';
-export type { GuestSupportAnswer } from './supabaseApi';
+export type { GuestSupportAnswer, BirthdayItem, BirthdayOverview, BirthdayHistoryRow } from './supabaseApi';
 export {
   guestSupportStatus,
   guestSupportCheckEmail,
@@ -363,6 +363,11 @@ export {
   adminSetPlatformSettings,
   adminSetMusicPageHidden,
   adminSetFeature,
+  fetchBirthdayOverview,
+  saveBirthdayGift,
+  deleteBirthdayGift,
+  saveBirthdayAddon,
+  deleteBirthdayAddon,
   fetchAdminExplorePins,
   requestNoobAiWake,
   adminSetExplorePin,

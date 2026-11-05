@@ -35,6 +35,7 @@ import {
   ToggleLeft,
   Music,
   ToggleRight,
+  Gift,
   ShoppingBag,
   Share2,
   Trophy,
@@ -87,6 +88,7 @@ import { AdminStoragePanel } from './AdminStoragePanel';
 import { AdminAdsPanel } from './AdminAdsPanel';
 import { AdminModerationPanel } from './AdminModerationPanel';
 import { AdminFeaturesPanel } from './AdminFeaturesPanel';
+import { AdminBirthdayPanel } from './AdminBirthdayPanel';
 import { adminFetchAdApplications } from '../../services/api';
 import { AdminSuggestionsPanel } from './AdminSuggestionsPanel';
 import { AdminGrievancesPanel } from './AdminGrievancesPanel';
@@ -122,7 +124,7 @@ interface AdminControlModalProps {
   onUseAsUser?: () => void;
 }
 
-type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'settings';
+type AdminTab = 'signupSources' | 'userLogs' | 'accounts' | 'visitors' | 'users' | 'reports' | 'notify' | 'staff' | 'activity' | 'content' | 'orders' | 'foodStall' | 'noobAi' | 'suggestions' | 'grievances' | 'signIn' | 'joinRequests' | 'sparkxRequests' | 'accountRequests' | 'team' | 'study' | 'analytics' | 'daily' | 'storage' | 'ads' | 'moderation' | 'pages' | 'gifts' | 'settings';
 
 // One line of the activity log, in plain words.
 function describeAudit(e: AdminAuditEntry): string {
@@ -1471,6 +1473,20 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
 
           {main && (
             <button
+              onClick={() => setActiveTab('gifts')}
+              className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'gifts'
+                  ? 'border-amber-400 text-amber-300'
+                  : 'border-transparent text-zinc-400 hover:text-white'
+              }`}
+              data-testid="admin-tab-gifts"
+            >
+              <Gift className="w-4 h-4" /> Gifts
+            </button>
+          )}
+
+          {main && (
+            <button
               onClick={() => setActiveTab('pages')}
               className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-2 border-b-2 whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === 'pages'
@@ -2811,6 +2827,8 @@ export const AdminControlModal: React.FC<AdminControlModalProps> = ({ currentUse
             <AdminModerationPanel />
           ) : activeTab === 'pages' && main ? (
             <AdminFeaturesPanel />
+          ) : activeTab === 'gifts' && main ? (
+            <AdminBirthdayPanel />
           ) : activeTab === 'settings' && main ? (
             /* Platform-wide toggles */
             <div className="space-y-3">

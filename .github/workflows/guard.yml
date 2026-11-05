@@ -1,0 +1,31 @@
+name: Guard
+
+# Free and automatic: on every push, GitHub runs the same checks as `npm run guard` (type check + the tests of everything that has broken before: likes, menus, layout, themes,
+# admin switches ...) and e-mails the owner when one fails. A bug that comes back is caught within minutes of the change that caused it.
+on:
+  push:
+    branches: [supabase-migration, main]
+  pull_request: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: N00B_fixed/instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: N00B_fixed/instagram/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/guard.mjs

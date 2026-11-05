@@ -4204,7 +4204,7 @@ export async function purchaseShopItem(itemId: string): Promise<{ success: boole
 
 export async function revealScratchCard(
   scratchCardId: string
-): Promise<{ success: boolean; gift?: { type: string; value: number | string; label: string }; user?: User; alreadyRevealed?: boolean; error?: string }> {
+): Promise<{ success: boolean; gift?: { type: string; value: number | string; label: string; addons?: Array<{ type: string; value: number | string; label: string }> }; user?: User; alreadyRevealed?: boolean; error?: string }> {
   try {
     const res = await rpc<any>('reveal_scratch_card', { p_card: scratchCardId });
     return { ...res, user: res.user ? mapUser(res.user) : undefined };
@@ -4971,6 +4971,30 @@ export async function adminSetFeature(key: string, on: boolean): Promise<{ succe
     return { success: false, error: errorText(err, 'Could not change the page. Please try again.') };
   }
 }
+
+// ---- Birthday gifts: the administrator's list of gifts, add-ons and history (migration 20261105000002) ----
+export interface BirthdayItem { id: string; kind: 'points' | 'shop_item' | 'coupon'; value: string | null; label: string; weight?: number; chance?: number; active: boolean }
+export interface BirthdayHistoryRow {
+  cardId: string; userId: string; username: string | null; displayName: string | null; avatar: string | null;
+  gift: { type: string; value: number | string; label: string; addons?: Array<{ type: string; value: number | string; label: string }> };
+  givenAt: string; revealed: boolean; revealedAt: string | null;
+}
+export interface BirthdayOverview { gifts: BirthdayItem[]; addons: BirthdayItem[]; shopItems: Array<{ id: string; name: string }>; history: BirthdayHistoryRow[]; totals: { given: number; revealed: number } }
+
+const birthdayCall = async (fn: string, args: Record<string, unknown>): Promise<{ success: boolean; overview?: BirthdayOverview; error?: string }> => {
+  try {
+    return { success: true, overview: await rpc<BirthdayOverview>(fn, args) };
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err ?? '');
+    if (/could not find the function|schema cache/i.test(raw)) return { success: false, error: 'The birthday gifts page needs the latest SQL (20261105000002_birthday_gifts_admin), which has not been run yet.' };
+    return { success: false, error: errorText(err, 'Could not reach the birthday gifts. Please try again.') };
+  }
+};
+export const fetchBirthdayOverview = (limit = 200) => birthdayCall('admin_birthday_overview', { p_limit: limit });
+export const saveBirthdayGift = (g: Partial<BirthdayItem>) => birthdayCall('admin_birthday_save_gift', { p: g });
+export const deleteBirthdayGift = (id: string) => birthdayCall('admin_birthday_delete_gift', { p_id: id });
+export const saveBirthdayAddon = (a: Partial<BirthdayItem>) => birthdayCall('admin_birthday_save_addon', { p: a });
+export const deleteBirthdayAddon = (id: string) => birthdayCall('admin_birthday_delete_addon', { p_id: id });
 
 // ---- "Wake up NOOB": anyone signed in can ask the NOOB AI computer to start NOOB AI (migration 20260927000004) ----
 

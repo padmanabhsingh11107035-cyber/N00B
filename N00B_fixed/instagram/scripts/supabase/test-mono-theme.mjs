@@ -18,7 +18,7 @@ const light = block(':root[data-theme="light"]');
 check(/--page: #ffffff;/.test(light) && /--color-noob: #0a0a0a;/.test(light) && /--color-zinc-50: #000000;/.test(light), 'light: white page, black accent and text (the same palette, flipped)');
 check(/--outline: rgba\(255, 255, 255, \.55\);/.test(css) && /--divider: rgba\(255, 255, 255, \.2\);/.test(css) && /--on-accent: #0a0a0a;/.test(css) && /--radius-2xl: 0\.75rem;/.test(css), 'outlines are a bright white edge, hairlines a softer one, text on the accent #0a0a0a, cards 12px');
 check(!/#d97757|#c6613f|217, ?119, ?87/i.test(css.replace(/\/\*[\s\S]*?\*\//g, '')), 'no orange left in the stylesheet');
-check(/html \{ background-color: #0a0a0a; \}/.test(css), 'the strip above the app on a phone is near-black, not orange');
+check(/html \{ background-color: #0a0a0a;[^}]*\}/.test(css), 'the strip above the app on a phone is near-black, not orange');
 
 section('2. Nothing orange is left in the app');
 const walk = (d, out = []) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p, out); else if (/\.(tsx|ts|css|html|json|js)$/.test(f.name)) out.push(p); } return out; };

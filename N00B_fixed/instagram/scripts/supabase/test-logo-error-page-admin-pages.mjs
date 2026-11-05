@@ -33,7 +33,7 @@ check(/prefers-reduced-motion: reduce\) \{ \.noob-wordmark-wrap:hover \.noob-wor
 
 section('2. The reload page');
 check(/import \{ LoginDoodles \} from '\.\/Auth\/LoginDoodles';/.test(boundary) && /import \{ LoginBigDoodles \} from '\.\/Auth\/LoginBigDoodles';/.test(boundary) && /<LoginDoodles \/>\s*<LoginBigDoodles \/>/.test(boundary), 'it carries the same small doodles (and the big pictures on wide screens) as the sign-in page');
-check(/doodle-wallpaper-login fixed inset-0 z-\[9999\] overflow-y-auto/.test(boundary), 'on the same doodle wallpaper, full screen, scrollable on a short phone');
+check(/doodle-wallpaper-login doodle-surface fixed inset-0 z-\[9999\] overflow-y-auto/.test(boundary), 'on the same doodle wallpaper, full screen, scrollable on a short phone');
 check(/<NoobWordmark className="w-44 sm:w-52" \/>/.test(boundary), 'the NOOB letters on top');
 check(/font-script absolute -top-5 -left-2 text-2xl[^"]*">oops!/.test(boundary) && />NO WORRIES<\/span>/.test(boundary), 'a hand-written "oops!" and a "NO WORRIES" sticker like the ones on the sign-in page');
 check(/border border-dashed border-white\/20/.test(boundary) && /repeating-linear-gradient\(135deg/.test(boundary), 'a stitched dashed card and a striped pill button, as on the sign-in page');

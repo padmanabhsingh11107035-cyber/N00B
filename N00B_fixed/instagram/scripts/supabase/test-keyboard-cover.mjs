@@ -15,9 +15,12 @@ console.log('\n1. What counts as solid');
 check(K.alphaOf('rgb(9, 9, 11)') === 1 && K.alphaOf('rgba(0, 0, 0, 0.75)') === 0.75 && K.alphaOf('rgb(0 0 0 / 50%)') === 0.5 && K.alphaOf('transparent') === 0 && K.alphaOf('rgba(0, 0, 0, 0)') === 0, 'the opacity of a colour is read right (solid, 75%, 50%, clear)');
 const view = { width: 390, height: 844 };
 check(K.coversPage({ width: 390, height: 844 }, view, 'rgb(9, 9, 11)', false), 'a solid full-screen page covers the page under it');
-check(!K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0.75)', false), 'a see-through dimmed layer does not (the page is meant to show there)');
+check(K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0.75)', false), 'a dimmed layer with a sheet on it does too (the strip of page under the sheet is what showed)');
+check(!K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0)', false), 'a plain wrapper with no colour of its own does not');
 check(!K.coversPage({ width: 390, height: 400 }, view, 'rgb(9, 9, 11)', false), 'a half-height sheet does not');
 check(K.coversPage({ width: 390, height: 844 }, view, 'rgba(0, 0, 0, 0)', true), 'a page painted with a gradient or a picture does');
+const notes = read('src/components/Scratch/ScratchNotes.tsx');
+check(/bg-black\/75/.test(notes) && /fixed inset-0/.test(notes), 'the Chalk Notes sheet is a dimmed full-screen layer, so it is covered');
 
 console.log('\n2. The wiring');
 const css = read('src/index.css'), main = read('src/main.tsx'), up = read('src/components/Scratch/ScratchUpload.tsx');

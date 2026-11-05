@@ -29,11 +29,13 @@ check(/^8:26/.test(M.clockLabel('2026-11-05T08:26:04.123456+00:00'.replace('2026
 
 section('2. The page drawn for real');
 const mk = (id, type, d, extra = {}) => ({ id, type, createdAt: d, isRead: true, message: `text of ${id}`, senderUsername: 'ann', senderDisplayName: 'Ann', senderAvatar: '/a.png', ...extra });
+// built from midday today, so the test gives the same answer at any time of day (just after midnight, "an hour ago" would be yesterday)
+const noon = new Date(); noon.setHours(12, 0, 0, 0);
 const list = [
-  mk('n1', 'post_like', new Date().toISOString()),
-  mk('n2', 'new_follower', new Date(Date.now() - 3600_000).toISOString()),
-  mk('n3', 'post_comment', new Date(Date.now() - 86400_000 * 1.2).toISOString()),
-  mk('n4', 'follow_request_received', new Date(Date.now() - 86400_000 * 4).toISOString(), { actionStatus: 'pending', actorId: 'u9' }),
+  mk('n1', 'post_like', noon.toISOString()),
+  mk('n2', 'new_follower', new Date(noon.getTime() - 3600_000).toISOString()),
+  mk('n3', 'post_comment', new Date(noon.getTime() - 86400_000 * 1.2).toISOString()),
+  mk('n4', 'follow_request_received', new Date(noon.getTime() - 86400_000 * 4).toISOString(), { actionStatus: 'pending', actorId: 'u9' }),
 ];
 const settings = { masterEnabled: true, followRequests: true, newFollowers: true, likesComments: true, gamesLeaderboard: true, musicHub: true, soundAlerts: true };
 const html = renderToStaticMarkup(React.createElement(M.NotificationsModal, {

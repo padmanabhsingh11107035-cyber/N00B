@@ -1362,3 +1362,15 @@ html body.light .fixed.doodle-wallpaper, html body.light .fixed.doodle-wallpaper
 /* the help desk always covers the whole page, also the part under the keyboard and whatever page is open behind it */
 .sd-root { background-color: #e8ebf0 !important; }
 .sd-root { bottom: -60vh !important; }   /* reaches far below the screen too, so nothing of the page behind shows when the keyboard slides up */
+
+/* The light theme's own white-for-black rules are !important inside @layer base, and an !important rule of a layer beats an unlayered one. So the doodle's rules are repeated here,
+   in the same layer and after them (and more specific), to win in Light mode too. */
+@layer base {
+  html body, html body.light { background-color: transparent !important; }
+  html body [data-doodle-see], html body.light [data-doodle-see] { background-color: transparent !important; }
+  html body .doodle-wallpaper-feed, html body .doodle-wallpaper, html body.light .doodle-wallpaper-feed, html body.light .doodle-wallpaper { background-color: transparent !important; }
+  html body .fixed.doodle-wallpaper, html body .fixed.doodle-wallpaper-feed, html body.light .fixed.doodle-wallpaper, html body.light .fixed.doodle-wallpaper-feed, html body .chat-wallpaper, html body.light .chat-wallpaper {
+    background-color: var(--page) !important;
+  }
+  html body.light .sd-root { background-color: #e8ebf0 !important; }
+}

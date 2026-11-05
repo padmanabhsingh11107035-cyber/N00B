@@ -62,12 +62,12 @@ const TIERS: ProTier[] = [
 const YEARLY_DISCOUNT = 0.17;
 
 // The colour of each plan's card (cheapest to dearest): silver, blue, violet, gold, black.
-const TIER_LOOK: Record<string, { bg: string; ink: string; chip: string }> = {
-  starter: { bg: 'linear-gradient(135deg,#d9dde3,#aab1bb 55%,#c9ced6)', ink: '#1d2127', chip: 'linear-gradient(135deg,#f3f4f6,#9aa1ab)' },
-  plus: { bg: 'linear-gradient(135deg,#3b82f6,#1d4ed8 60%,#2563eb)', ink: '#ffffff', chip: 'linear-gradient(135deg,#dbeafe,#7aa7f5)' },
-  pro: { bg: 'linear-gradient(135deg,#8b5cf6,#5b21b6 60%,#7c3aed)', ink: '#ffffff', chip: 'linear-gradient(135deg,#ede9fe,#a78bfa)' },
-  elite: { bg: 'linear-gradient(135deg,#e6c36a,#b8913a 55%,#d9b255)', ink: '#2a1f06', chip: 'linear-gradient(135deg,#fff3c4,#c9a24a)' },
-  ultimate: { bg: 'linear-gradient(135deg,#232323,#050505 60%,#161616)', ink: '#f5d98a', chip: 'linear-gradient(135deg,#f5d98a,#8a6d1f)' },
+const TIER_LOOK: Record<string, { bg: string; ink: string; chip: string; glow: string; sub: string }> = {
+  starter: { bg: 'linear-gradient(140deg,#f4f6f9 0%,#c4cbd5 38%,#8d96a3 100%)', ink: '#1b2027', chip: 'linear-gradient(135deg,#ffffff,#a3abb6)', glow: 'rgba(120,132,150,0.55)', sub: 'rgba(27,32,39,0.62)' },
+  plus: { bg: 'linear-gradient(140deg,#5aa0ff 0%,#2f64f0 45%,#14308f 100%)', ink: '#ffffff', chip: 'linear-gradient(135deg,#e7f0ff,#7ea8f7)', glow: 'rgba(37,99,235,0.55)', sub: 'rgba(255,255,255,0.72)' },
+  pro: { bg: 'linear-gradient(140deg,#b18cff 0%,#7c3aed 46%,#3b1285 100%)', ink: '#ffffff', chip: 'linear-gradient(135deg,#f1eaff,#a98af5)', glow: 'rgba(124,58,237,0.55)', sub: 'rgba(255,255,255,0.74)' },
+  elite: { bg: 'linear-gradient(140deg,#fff0b8 0%,#e3b84e 42%,#9a6f17 100%)', ink: '#2b1f05', chip: 'linear-gradient(135deg,#fff8d6,#c9a13f)', glow: 'rgba(201,161,63,0.6)', sub: 'rgba(43,31,5,0.66)' },
+  ultimate: { bg: 'linear-gradient(140deg,#3a3a40 0%,#111114 48%,#000000 100%)', ink: '#f7dc8f', chip: 'linear-gradient(135deg,#f7dc8f,#8a6d1f)', glow: 'rgba(30,30,36,0.7)', sub: 'rgba(247,220,143,0.68)' },
 };
 
 export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser, onClose, onUserUpdated, allUsers = [], focusTier, focusBilling }) => {
@@ -370,27 +370,26 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
                   id={`pro-plan-${tier.id}`}
                   data-testid={`pro-card-${tier.id}`}
                   onClick={() => railTo(i)}
-                  className={`snap-center shrink-0 w-[78%] aspect-[1.586] rounded-[22px] p-4 relative overflow-hidden flex flex-col justify-between transition-all duration-300 cursor-pointer shadow-[0_14px_30px_rgba(0,0,0,0.45)] ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70 -rotate-2'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
-                  style={{ background: look.bg, color: look.ink }}
+                  className={`snap-center shrink-0 w-[78%] aspect-[1.4] rounded-[26px] p-[18px] relative overflow-hidden flex flex-col justify-between transition-all duration-300 cursor-pointer ${i === cardIdx ? 'scale-100 opacity-100' : 'scale-[0.92] opacity-70'} ${focusTier === tier.id ? 'ring-2 ring-noob' : ''}`}
+                  style={{ background: look.bg, color: look.ink, boxShadow: `0 22px 38px -16px ${look.glow}, 0 8px 14px -8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.14)` }}
                 >
-                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(115deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0.12) 70%, rgba(255,255,255,0) 100%)' }} />
+                  {/* the glossy finish: a bright spot top left, a soft diagonal sheen, a darker foot */}
+                  <span aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(120% 70% at 12% -10%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%), linear-gradient(112deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.22) 44%, rgba(255,255,255,0) 58%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.22) 100%)' }} />
                   <div className="relative flex items-start justify-between">
-                    <span className="text-[26px] font-black tracking-[0.18em] leading-none">NOOB</span>
-                    <span className="flex gap-[3px] pt-1" aria-hidden="true">{[0, 1, 2, 3].map((k) => <span key={k} className="w-[3px] rounded-full" style={{ height: 7 + k * 3, background: look.ink, opacity: 0.55 }} />)}</span>
+                    <span className="text-[22px] font-black tracking-[0.2em] leading-none">NOOB</span>
+                    {isCurrentTier
+                      ? <span className="text-[9px] font-black tracking-wider px-2 py-1 rounded-full bg-black/70 text-white">YOUR PLAN</span>
+                      : <span className="w-9 h-7 rounded-md shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]" style={{ background: look.chip }} aria-hidden="true" />}
                   </div>
-                  <div className="relative w-9 h-7 rounded-md" style={{ background: look.chip }} aria-hidden="true" />
-                  <div className="relative flex items-end justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold tracking-[0.2em] opacity-70">NOOB PRO</p>
-                      <p className="text-base font-extrabold leading-tight truncate">{tier.name}{tier.highlight ? ' ★' : ''}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {appliedCoupon && <span className="text-[10px] line-through opacity-60 block">{price.base.toLocaleString()}</span>}
-                      <p className="text-[13px] font-black leading-tight">{price.display.toLocaleString()}</p>
-                      <p className="text-[9px] font-semibold opacity-70">noobs{price.suffix}</p>
-                    </div>
+                  <div className="relative">
+                    <p className="text-[10px] font-bold tracking-[0.24em]" style={{ color: look.sub }}>NOOB PRO</p>
+                    <p className="text-[28px] font-black leading-[1.05] tracking-tight">{tier.name}{tier.highlight ? ' ★' : ''}</p>
                   </div>
-                  {isCurrentTier && <span className="absolute top-3 right-3 text-[9px] font-black px-2 py-0.5 rounded-full bg-black/70 text-white">YOUR PLAN</span>}
+                  <div className="relative">
+                    {appliedCoupon && <span className="text-[10px] line-through block" style={{ color: look.sub }}>{price.base.toLocaleString()}</span>}
+                    <p className="text-[21px] font-black leading-none tabular-nums whitespace-nowrap">{price.display.toLocaleString()}</p>
+                    <p className="mt-1 text-[10px] font-semibold tracking-wide" style={{ color: look.sub }}>noobs{price.suffix}</p>
+                  </div>
                 </div>
               );
             })}
@@ -403,19 +402,22 @@ export const ProFeaturesModal: React.FC<ProFeaturesModalProps> = ({ currentUser,
             const isCurrentTier = currentUser.proTier === tier.id;
             return (
               <div className="space-y-3" data-testid="pro-card-detail">
-                <ul className="space-y-1.5 px-1">
-                  {tier.perks.map((perk, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[12px] text-zinc-200">
-                      <Check className="w-3.5 h-3.5 text-noob mt-0.5 shrink-0" />
-                      {perk}
-                    </li>
-                  ))}
-                </ul>
+                <div className="rounded-[22px] border border-black/5 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.35)] p-4" style={{ background: '#ffffff' }}>
+                  <p className="text-[11px] font-extrabold tracking-[0.18em] text-zinc-400 mb-3">WHAT YOU GET WITH {tier.name.toUpperCase()}</p>
+                  <ul className="space-y-2.5">
+                    {tier.perks.map((perk, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-[13px] leading-snug text-zinc-200">
+                        <span className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: TIER_LOOK[tier.id].bg, color: TIER_LOOK[tier.id].ink }}><Check className="w-3 h-3" strokeWidth={3} /></span>
+                        <span className="min-w-0">{perk}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 <button
                   onClick={() => { setPurchaseMsg(null); setPayTier(tier); }}
                   disabled={isCurrentTier}
                   data-testid="pro-choose"
-                  className="w-full py-3.5 rounded-full bg-white text-black text-sm font-extrabold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99] transition-transform flex items-center justify-center gap-1.5"
+                  className="w-full py-4 rounded-full bg-white text-black text-sm font-extrabold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99] transition-transform flex items-center justify-center gap-1.5 shadow-[0_14px_28px_-12px_rgba(0,0,0,0.55)]"
                 >
                   {isCurrentTier ? 'Current Plan' : `Choose ${tier.name}`}
                 </button>

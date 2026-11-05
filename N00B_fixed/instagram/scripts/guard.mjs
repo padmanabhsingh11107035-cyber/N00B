@@ -14,6 +14,7 @@ const CHECKS = [
   ['No page flash; chat alerts only when away', ['node', 'scripts/supabase/test-no-flash-chat-quiet.mjs']],
   ['Notifications page', ['node', 'scripts/supabase/test-notifications-page.mjs']],
   ['Wallet page', ['node', 'scripts/supabase/test-wallet-page.mjs']],
+  ['Pro plan cards', ['node', 'scripts/supabase/test-pro-cards.mjs']],
   ['Phone menu: full screen and steady', ['node', 'scripts/supabase/test-nav-badges.mjs']],
   ['Menus: one list for phone and strip', ['node', 'scripts/supabase/test-side-menu-fit.mjs']],
   ['Coming back to the menu', ['node', 'scripts/supabase/test-menu-return.mjs']],

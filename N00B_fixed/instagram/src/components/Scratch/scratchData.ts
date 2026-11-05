@@ -90,7 +90,12 @@ const friendly = (e: { message?: string } | null | undefined): string => {
 
 async function call<T = any>(fn: string, args: Record<string, unknown>): Promise<({ ok: true; data: T } | Fail)> {
   try {
-    const { data, error } = await supabase.rpc(fn, args);
+    // never wait for ever: after 20 seconds the person is told, and can try again
+    const answer = await Promise.race([
+      supabase.rpc(fn, args),
+      new Promise<{ data: null; error: { message: string } }>((resolve) => setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 20000))
+    ]);
+    const { data, error } = answer as { data: unknown; error: { message?: string } | null };
     if (error) return { ok: false, error: friendly(error) };
     return { ok: true, data: data as T };
   } catch (e) {

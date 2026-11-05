@@ -308,7 +308,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   // comes back exactly as it was: same posts, same place (the scroll is noted when the menu is opened, which is always before any of its pages).
   const drawOpen = useNoobDrawOpen();
   const studyOpen = useStudyNav().open;
-  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || openPage || drawOpen || studyOpen);
+  const menuPageOpen = !!(showAnonymous || showOurTeam || showCreations || showScratch || openPage || drawOpen || studyOpen);
   useFullPage(menuPageOpen);
   const homeSnapshot = useRef<ScrollSnapshot | null>(null);
   useEffect(() => { if (showNoobMenu) homeSnapshot.current = captureScroll(containerRef.current, 'feed'); }, [showNoobMenu]);

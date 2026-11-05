@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { orderUnseenFirst, mergeIntoOrder } from '../../utils/seenContent';
 import {
   Bell,
@@ -890,12 +891,12 @@ export const FeedView: React.FC<FeedViewProps> = ({
       {showJoinUsModal && <JoinUsModal closed={!joinTeamOpen} onClose={() => setShowJoinUsModal(false)} />}
 
       {/* NOOB's extra-features menu — the hamburger next to the wordmark */}
-      {showNoobMenu && (
+      {showNoobMenu && createPortal(
         <div className="fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm flex items-start overscroll-contain overflow-hidden touch-pan-y" style={{ touchAction: 'pan-y' }} onClick={() => setShowNoobMenu(false)}>
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: 'min(18rem, 85vw)', minWidth: 0, maxWidth: '85vw', flex: '0 0 auto', boxSizing: 'border-box', overflowX: 'hidden', touchAction: 'pan-y' }}
-            className="doodle-panel h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 animate-in slide-in-from-left duration-200 flex flex-col"
+            style={{ width: `${Math.round(Math.min(288, window.innerWidth * 0.85))}px`, minWidth: 0, flex: '0 0 auto', boxSizing: 'border-box', overflowX: 'hidden', touchAction: 'pan-y' }}
+            className="doodle-panel h-full bg-zinc-950 border-r border-zinc-800 shadow-2xl p-4 flex flex-col"
           >
             <div className="shrink-0 flex items-center justify-between mb-4">
               <h2 className="text-sm font-black italic tracking-tighter text-white">NOOB</h2>
@@ -1080,7 +1081,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
             {menuScroll.more && <ScrollMoreHint onClick={menuScroll.scrollDown} />}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       </div>
       {showAnonymous && (

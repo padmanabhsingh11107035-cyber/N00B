@@ -57,7 +57,6 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [likedOnly, setLikedOnly] = useState(false);
-  const [showAll, setShowAll] = useState(false);
   const [menuTrackId, setMenuTrackId] = useState<string | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
   // the colour of the song that is on: the mini player takes it
@@ -299,8 +298,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
   });
   // the first few songs are "Popular songs"; "All songs" opens the whole list
   const searching = showSearch && searchQuery.trim() !== '';
-  const LIST_PREVIEW = 6;
-  const shownTracks = showAll || searching || likedOnly || selectedGenre !== 'all' ? filteredTracks : filteredTracks.slice(0, LIST_PREVIEW);
+  const shownTracks = filteredTracks;   // every song is shown at once; the genre chips and the search only narrow it down
   const totalPlays = tracks.reduce((n, t) => n + (t.playsCount || 0), 0);
 
   const genres = ['all', 'Synthwave', 'Lo-Fi', 'EDM', 'Hip Hop', 'Phonk', 'Cyberpunk', 'Ambient'];
@@ -336,7 +334,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
             <button type="button" onClick={() => { setShowSearch((v) => !v); if (showSearch) setSearchQuery(''); }} aria-label="Search songs" aria-pressed={showSearch} className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center cursor-pointer active:scale-90 transition ${showSearch ? 'bg-white text-black' : 'bg-black/35 text-white'}`}>
               <Search className="w-[18px] h-[18px]" />
             </button>
-            <button type="button" onClick={() => { setLikedOnly((v) => !v); setShowAll(true); }} aria-label="Songs you liked" aria-pressed={likedOnly} className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center cursor-pointer active:scale-90 transition ${likedOnly ? 'bg-white text-black' : 'bg-black/35 text-white'}`}>
+            <button type="button" onClick={() => { setLikedOnly((v) => !v); }} aria-label="Songs you liked" aria-pressed={likedOnly} className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center cursor-pointer active:scale-90 transition ${likedOnly ? 'bg-white text-black' : 'bg-black/35 text-white'}`}>
               <Heart className={`w-[18px] h-[18px] ${likedOnly ? 'fill-black' : ''}`} />
             </button>
             <button type="button" onClick={() => setShowUploadModal(true)} aria-label="Upload a track" title="Upload a track" className="w-10 h-10 rounded-full bg-black/35 backdrop-blur-md text-white flex items-center justify-center cursor-pointer active:scale-90 transition">
@@ -371,12 +369,7 @@ export const MusicHubView: React.FC<MusicHubViewProps> = ({ currentUser }) => {
 
         {/* Popular songs */}
         <div className="mt-6 flex items-center justify-between">
-          <h2 className="text-[17px] font-bold">{likedOnly ? 'Songs you liked' : searching ? 'Results' : 'Popular songs'}</h2>
-          {!likedOnly && !searching && filteredTracks.length > LIST_PREVIEW && selectedGenre === 'all' && (
-            <button type="button" onClick={() => setShowAll((v) => !v)} className="flex items-center gap-0.5 rounded-full bg-white/10 pl-3 pr-2 py-1 text-[11px] font-semibold text-white/85 cursor-pointer active:scale-95 transition">
-              {showAll ? 'Fewer songs' : 'All songs'} <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showAll ? 'rotate-90' : ''}`} />
-            </button>
-          )}
+          <h2 className="text-[17px] font-bold">{likedOnly ? 'Songs you liked' : searching ? 'Results' : selectedGenre !== 'all' ? selectedGenre : 'All songs'}</h2>
         </div>
 
         <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">

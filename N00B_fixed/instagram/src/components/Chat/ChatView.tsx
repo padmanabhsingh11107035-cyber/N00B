@@ -138,6 +138,8 @@ const CURATED_STICKERS = [
 ];
 import {
   fetchChats,
+  fetchChatsStrict,
+  fetchMessagesStrict,
   toggleChatPin,
   subscribeToChatChanges,
   fetchMessages,
@@ -683,29 +685,32 @@ export const ChatView: React.FC<ChatViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typingUsers.length]);
 
-  const loadChats = async () => {
-    try {
-      const data = await fetchChats();
-      // Ensure Chat Page is exclusively for genuine user-to-user peer messaging & groups
-      const realChats = (data || []).filter(
-        (c: any) =>
-          !c.isAi &&
-          c.id !== 'c_ai_assistant' &&
-          // Only ever exclude a chat by its OWN server-set isAi flag — matching
-          // on a participant's username here used to also match any ordinary
-          // human who happened to register "noob_ai", which silently hid that
-          // chat (including the everyone-included Global Lounge) for every
-          // single member, app-wide.
-          !c.participants?.some((p: any) => p.isAi)
-      );
-      setConversations(realChats);
-      safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
-
-      if (realChats.length > 0 && !activeChatIdRef.current) {
-        setActiveChatId(realChats[0].id);
+  const chatsLoadedRef = useRef(false);
+  const chatRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (chatRetryRef.current) clearTimeout(chatRetryRef.current); }, []);
+  // A failed fetch (no session yet, a dropped connection, a slow server) never empties the list: what is on screen stays, and the list is asked for again (2, 4, 8 ... seconds).
+  const loadChats = async (attempt = 0): Promise<void> => {
+    const data = await fetchChatsStrict();
+    if (data === null) {
+      if (attempt < 8) {
+        if (chatRetryRef.current) clearTimeout(chatRetryRef.current);
+        chatRetryRef.current = setTimeout(() => { chatRetryRef.current = null; void loadChats(attempt + 1); }, Math.min(30000, 1500 * 2 ** attempt));
       }
-    } catch (err) {
-      console.error(err);
+      return;
+    }
+    chatsLoadedRef.current = true;
+    // Ensure Chat Page is exclusively for genuine user-to-user peer messaging & groups
+    const realChats = data.filter(
+      (c: any) =>
+        !c.isAi &&
+        c.id !== 'c_ai_assistant' &&
+        // Only ever exclude a chat by its OWN server-set isAi flag (a participant's username must never hide a chat)
+        !c.participants?.some((p: any) => p.isAi)
+    );
+    setConversations(realChats);
+    safeLocalStorageSet(CACHE_KEY_CHATS, safeJsonStringify(realChats));
+    if (realChats.length > 0 && !activeChatIdRef.current) {
+      setActiveChatId(realChats[0].id);
     }
   };
 
@@ -732,8 +737,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const sinceList = Date.now() - lastListFetchRef.current;
       if (sinceList >= CHAT_LIST_MIN_GAP_MS) {
       lastListFetchRef.current = Date.now();
-      const data = await fetchChats();
-      const realChats = (data || []).filter(
+      const data = await fetchChatsStrict();
+      if (data === null) throw new Error('chat list not fetched');   // keep what is shown
+      const realChats = data.filter(
         (c: any) =>
           !c.isAi &&
           c.id !== 'c_ai_assistant' &&
@@ -787,7 +793,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         }
       } catch (e) {}
 
-      const data = await fetchMessages(chatId);
+      let data = await fetchMessagesStrict(chatId);
+      if (data === null) { await new Promise((r) => setTimeout(r, 1500)); data = await fetchMessagesStrict(chatId); }   // one more try; a failed fetch never empties the chat
+      if (data === null) return;
       // The user can switch to a different chat before this fetch resolves
       // (e.g. clicking through the list quickly) — if a slower, older
       // request for the PREVIOUS chat lands after that switch, applying it
@@ -1936,7 +1944,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             {finalFilteredConversations.length === 0 && filteredFriendsWithoutChat.length === 0 && (
               <div className="p-8 text-center text-zinc-500 text-sm space-y-2">
                 <MessageCircle className="w-8 h-8 text-zinc-600 mx-auto opacity-50" />
-                <p>No conversations found</p>
+                <p>{chatsLoadedRef.current ? 'No conversations found' : 'Loading your chats…'}</p>
               </div>
             )}
 

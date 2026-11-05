@@ -208,6 +208,8 @@ export {
   createCollection,
   addPostToCollection,
   fetchChats,
+  fetchChatsStrict,
+  fetchMessagesStrict,
   fetchUnreadChatSummary,
   createChat,
   deleteChat,

@@ -2846,15 +2846,22 @@ export const e2ee = createE2ee({
 
 const { unlockOne, unlockMessages, prepareSend, prepareEdit } = bindMessages(e2ee);
 
-export async function fetchChats(): Promise<ChatConversation[]> {
+/** The list of chats, or null when it could not be fetched (no session yet, the network, the server): the caller then KEEPS what it shows and tries again, instead of showing "no conversations". */
+export async function fetchChatsStrict(): Promise<ChatConversation[] | null> {
   try {
-    if (!(await currentSession())) return [];
-    const chats = ((await rpc<any[]>('my_chats')) || []).map((c) => mapChat(c, true));
+    if (!(await currentSession())) return null;
+    const rows = await rpc<any[] | null>('my_chats');
+    if (!Array.isArray(rows)) return null;
+    const chats = rows.map((c) => mapChat(c, true));
     await Promise.all(chats.map(async (c) => { if (c.lastMessage) c.lastMessage = await unlockOne(c.id, c.lastMessage); }));
     return chats;
   } catch {
-    return [];
+    return null;
   }
+}
+
+export async function fetchChats(): Promise<ChatConversation[]> {
+  return (await fetchChatsStrict()) ?? [];
 }
 
 // Just the numbers behind the unread-chats badge (migration 20261011000001) instead of the whole chat list. null = not installed yet
@@ -2905,6 +2912,17 @@ export async function deleteChat(chatId: string): Promise<boolean> {
 // re-downloading the whole recent history on every poll/realtime tick. Omit it for a fresh/full load.
 export async function fetchMessages(chatId: string, after?: string): Promise<Message[]> {
   return (await fetchMessageUpdates(chatId, after)).messages;
+}
+
+/** The messages of a chat, or null when they could not be fetched (so the caller keeps what it shows instead of an empty chat). */
+export async function fetchMessagesStrict(chatId: string): Promise<Message[] | null> {
+  try {
+    const res = await rpc<{ messages: any[] } | null>('chat_messages', { p_chat: chatId, p_after: null });
+    if (!res || !Array.isArray(res.messages)) return null;
+    return await unlockMessages(chatId, res.messages.map((m) => mapMessage(m, true)));
+  } catch {
+    return null;
+  }
 }
 
 // Same, and also says which messages this person has deleted for themselves since (on another device), so this screen can drop them too.

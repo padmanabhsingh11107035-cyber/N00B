@@ -1391,3 +1391,11 @@ html body.light .chat-bar { background-color: #ffffff; border-color: #e6e6e6; ba
 html body.light .chat-bar [data-testid="chat-composer"] { background-color: #f3f3f3; }
 /* Chat top bar: the name and the status lines may wrap instead of being cut off ("last seen", "End-to-end encrypted" were clipped) */
 .chat-bar h3 { max-width: 100%; }
+
+/* ---- Light mode: what a button looks like while the pointer is on it ----
+   "hover:text-white" is white text, which in Light mode is on a light button: it is dark instead, unless the hover colour of the button itself is dark/solid (then white stays). */
+html body.light [class*="hover:text-white"]:hover:not([class*="hover:bg-noob"]):not([class*="hover:bg-black"]):not([class*="hover:bg-red"]):not([class*="hover:bg-rose"]):not([class*="hover:bg-emerald"]):not([class*="hover:bg-green"]):not([class*="hover:bg-blue"]):not([class*="hover:bg-purple"]):not([class*="hover:bg-indigo"]):not([class*="hover:bg-pink"]):not([class*="hover:bg-orange"]):not([class*="hover:bg-amber"]):not([class*="hover:bg-yellow"]):not([class*="hover:bg-violet"]):not([class*="hover:bg-sky"]):not([class*="hover:bg-cyan"]):not([class*="hover:bg-teal"]):not(.force-dark):not(.force-dark *):not(.media-dark *) { color: #0a0a0a; }
+/* a white hover fill on a light page is invisible: a soft grey instead (solid white buttons with dark text keep their look) */
+html body.light [class*="hover:bg-white"]:hover:not([class*="text-black"]):not([class*="bg-white "]):not(.force-dark):not(.force-dark *) { background-color: #ececec; }
+/* the accent is black in Light mode: text on it is white, also while hovered */
+html body.light [class*="bg-noob"]:not([class*="bg-noob/"]):hover, html body.light [class*="hover:bg-noob"]:not([class*="hover:bg-noob/"]):hover { color: #ffffff; }
